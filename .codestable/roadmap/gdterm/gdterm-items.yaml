@@ -1,0 +1,84 @@
+roadmap: gdterm
+created: 2026-07-24
+
+items:
+  - slug: core-models
+    description: 核心数据模型定义（ConnectionConfig、CredentialRef、TunnelEndpoint、ProtocolType、枚举），所有模块的公共基础
+    depends_on: []
+    status: done
+    feature: 2026-07-24-core-models
+    minimal_loop: false
+    notes: 纯数据模型项目，零外部依赖
+
+  - slug: connections-storage
+    description: 连接配置 JSON 存储（connections.json CRUD）、树形分组管理（GroupPath）、连接导入/导出
+    depends_on: [core-models]
+    status: planned
+    feature: null
+    minimal_loop: false
+    notes: null
+
+  - slug: ssh-tunnel
+    description: SSH.NET 隧道管理器——SSH 连接建立、本地/远程端口转发、动态 SOCKS 代理、跳板链逐跳编排
+    depends_on: [core-models]
+    status: planned
+    feature: null
+    notes: 纯托管代码，不依赖 UI；需 spike 验证 SSH.NET SOCKS 实现
+
+  - slug: terminal-emulator
+    description: SSH 终端会话——封装 .NET 终端模拟库实现全彩 ANSI 渲染，内置 SSH 直连（SSH.NET），支持跳板模式（通过 Tunnel 端口转发）
+    depends_on: [core-models]
+    status: planned
+    feature: null
+    minimal_loop: true
+    notes: 需 spike 验证终端模拟库选型；直连模式不依赖 Tunnel
+
+  - slug: sftp-browser
+    description: SFTP 文件浏览器——远程目录浏览、文件上传/下载（带进度）、删除/重命名/创建目录，支持直连和跳板模式
+    depends_on: [core-models, ssh-tunnel]
+    status: planned
+    feature: null
+    minimal_loop: false
+    notes: 基于 SSH.NET SftpClient；跳板模式通过 Tunnel 端口转发
+
+  - slug: keepass-integration
+    description: KeePass 密码库管理——.kdbx 文件读写、密码条目 CRUD、连接与密码条目关联映射、自动填充凭据、密码强度校验（最小12字符+4类字符+常见弱密码检查）
+    depends_on: [core-models]
+    status: planned
+    feature: null
+    notes: 密码库文件随绿色版走；需确认 KeePassLib 对 .NET 4.6.2 的支持
+
+  - slug: logging-engine
+    description: 日志引擎——结构化审计日志（连接/命令/密码使用/AI交互）、日志轮转（按大小+按天、可配置保留策略）、审计查询接口
+    depends_on: [core-models]
+    status: planned
+    feature: null
+    notes: null
+
+  - slug: ai-assistant
+    description: AI 对话客户端——OpenAI-compatible API 客户端（支持 OpenAI/Ollama/vLLM）、连接上下文感知（hostname/OS/最近N行输出）、建议执行（提取命令发送到终端）、流式响应
+    depends_on: [terminal-emulator]
+    status: planned
+    feature: null
+    notes: 依赖 Terminal 的 ITerminalSession 提供上下文；API Key 加密存储
+
+  - slug: security-idle-lock
+    description: 闲时锁定——空闲无操作检测（可配置超时）、自动锁定密码库和活动会话、主密码管理（设置/修改/验证，bcrypt 存储）、密码强度策略引擎
+    depends_on: [core-models, keepass-integration]
+    status: planned
+    feature: null
+    notes: 复用 KeePass 的密码强度校验逻辑
+
+  - slug: rdp-client
+    description: RDP 客户端——嵌入 AxMsTscLib ActiveX 控件、支持直连和跳板链模式（通过 Tunnel 端口转发连 localhost）、RDP 事件处理（连接/断开/错误）
+    depends_on: [core-models, connections-storage, ssh-tunnel]
+    status: planned
+    feature: null
+    notes: 需实测 Win7/2008 上 AxMsTscLib 兼容性
+
+  - slug: ui-shell
+    description: WinForms 主界面——左侧 TreeView 连接面板（右键菜单管理）、右侧 TabControl 标签页容器（RDP/终端/SFTP/AI面板）、底部 StatusBar（连接/隧道/密码库/AI 状态）、全局菜单和工具栏、闲时锁定遮罩
+    depends_on: [core-models, connections-storage, ssh-tunnel, terminal-emulator, sftp-browser, keepass-integration, logging-engine, ai-assistant, security-idle-lock, rdp-client]
+    status: planned
+    feature: null
+    notes: 最后实现，集成所有模块

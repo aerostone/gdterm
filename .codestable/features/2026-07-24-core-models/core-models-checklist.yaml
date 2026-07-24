@@ -1,0 +1,52 @@
+feature: 2026-07-24-core-models
+created: 2026-07-24
+
+steps:
+  - action: "编排骨架：创建 .NET Framework 4.6.2 类库项目 Gdterm.Core，配置目录结构（Models/Enums/Constants）"
+    exit_signal: "项目编译通过（空项目），.csproj 目标框架为 net462"
+    status: done
+    tdd_required: false
+
+  - action: "类型定义：添加枚举类型 ProtocolType（RDP/SSH）和 TunnelType（LocalForward/DynamicSocks）"
+    exit_signal: "编译通过，枚举值与 roadmap 4.1 契约一致"
+    status: done
+    tdd_required: false
+
+  - action: "类型定义：添加核心模型类 ConnectionConfig、JumpChainConfig、JumpHop、TunnelConfig"
+    exit_signal: "编译通过，属性签名与 roadmap 4.1 契约一致"
+    status: done
+    tdd_required: false
+
+  - action: "类型定义：添加辅助类型 TunnelEndpoint、CredentialPayload、DefaultPorts"
+    exit_signal: "编译通过，所有类型可被外部项目引用"
+    status: done
+    tdd_required: false
+
+checks:
+  - item: "ConnectionConfig 不含 Password 属性，密码通过 CredentialRefId 引用 KeePass"
+    source: 名词契约
+    status: passed
+
+  - item: "JumpChainConfig = null 表示直连，Hops 不可为空列表"
+    source: 名词契约
+    status: passed
+
+  - item: "TunnelConfig.LocalPort = 0 表示自动分配"
+    source: 名词契约
+    status: passed
+
+  - item: "CredentialPayload 仅含 Username + Password，不持久化"
+    source: 名词契约
+    status: passed
+
+  - item: "Gdterm.Core 中无 interface、无业务逻辑分支、无序列化注解"
+    source: 范围守护
+    status: passed
+
+  - item: "所有属性可读写（get/set），支持 WinForms 数据绑定"
+    source: 流程级约束
+    status: passed
+
+  - item: "其他项目引用 Gdterm.Core 后编译通过"
+    source: 验收场景
+    status: passed
