@@ -1,0 +1,40 @@
+feature: 2026-07-24-logging-engine
+created: 2026-07-24
+
+steps:
+  - action: "编排骨架：创建 Gdterm.Logging 项目，引用 Core"
+    exit_signal: "项目编译通过"
+    status: pending
+    tdd_required: false
+
+  - action: "类型定义：实现枚举和数据类"
+    exit_signal: "编译通过"
+    status: pending
+    tdd_required: false
+
+  - action: "接口定义：实现 IAuditLogger 接口"
+    exit_signal: "编译通过，接口与 roadmap 4.6 完全一致"
+    status: pending
+    tdd_required: false
+
+  - action: "核心逻辑：实现 AuditLogger 日志写入、轮转、查询"
+    exit_signal: "单元测试覆盖 LogConnection + Query + 轮转触发"
+    status: pending
+    tdd_required: true
+
+checks:
+  - item: "IAuditLogger 接口与 roadmap 4.6 完全一致"
+    source: 名词契约
+    status: pending
+
+  - item: "日志格式为 JSON Lines"
+    source: 流程级约束
+    status: pending
+
+  - item: "按大小轮转，默认 10MB/文件，最多 10 个文件"
+    source: 流程级约束
+    status: pending
+
+  - item: "无远程日志服务器、无日志加密、无实时日志流推送"
+    source: 范围守护
+    status: pending

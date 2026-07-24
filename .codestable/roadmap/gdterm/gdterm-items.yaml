@@ -51,8 +51,8 @@ items:
   - slug: logging-engine
     description: 日志引擎——结构化审计日志（连接/命令/密码使用/AI交互）、日志轮转（按大小+按天、可配置保留策略）、审计查询接口
     depends_on: [core-models]
-    status: planned
-    feature: null
+    status: done
+    feature: 2026-07-24-logging-engine
     notes: null
 
   - slug: ai-assistant
