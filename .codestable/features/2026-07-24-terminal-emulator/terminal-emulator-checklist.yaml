@@ -1,0 +1,54 @@
+feature: 2026-07-24-terminal-emulator
+created: 2026-07-24
+
+steps:
+  - action: "编排骨架：创建 Gdterm.Terminal 项目，引用 SSH.NET + Core + Tunnel"
+    exit_signal: "项目编译通过"
+    status: done
+    tdd_required: false
+
+  - action: "类型定义：实现 ITerminalSession 接口和 TerminalOutputEventArgs"
+    exit_signal: "编译通过，接口与 roadmap 4.4 完全一致"
+    status: done
+    tdd_required: false
+
+  - action: "渲染层：实现 IRenderer 接口和基础 TerminalRenderer（封装第三方终端模拟库）"
+    exit_signal: "编译通过，TerminalRenderer 可接收文本并渲染"
+    status: done
+    tdd_required: false
+
+  - action: "核心逻辑：实现 TerminalSession（SSH 直连 + ShellStream 数据回调 + 近期输出缓冲）"
+    exit_signal: "单元测试覆盖 ConnectAsync + SendInput + GetRecentOutput + Dispose"
+    status: done
+    tdd_required: true
+
+  - action: "跳板模式：TerminalSession 支持通过 ITunnelManager 建立端口转发后连接"
+    exit_signal: "单元测试覆盖跳板模式连接路径"
+    status: done
+    tdd_required: true
+
+  - action: "UI 控件：实现 TerminalControl（WinForms UserControl，承载渲染控件，Attach/Detach session）"
+    exit_signal: "编译通过，TerminalControl 可 Attach/Detach session"
+    status: done
+    tdd_required: false
+
+checks:
+  - item: "ITerminalSession 接口与 roadmap 4.4 完全一致（ConnectionId/Hostname/OsType/GetRecentOutput/GetSelection/SendInput/OutputReceived）"
+    source: 名词契约
+    status: passed
+
+  - item: "ShellStream.DataReceived 回调触发 OutputReceived 事件"
+    source: 编排骨架
+    status: passed
+
+  - item: "近期输出缓冲区保留最近 500 行"
+    source: 流程级约束
+    status: passed
+
+  - item: "Dispose 顺序：先 ShellStream，再 SshClient"
+    source: 流程级约束
+    status: passed
+
+  - item: "无 SSH 密钥认证、无终端录制/回放、无多标签页管理"
+    source: 范围守护
+    status: passed

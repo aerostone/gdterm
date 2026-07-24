@@ -28,8 +28,8 @@ items:
   - slug: terminal-emulator
     description: SSH 终端会话——封装 .NET 终端模拟库实现全彩 ANSI 渲染，内置 SSH 直连（SSH.NET），支持跳板模式（通过 Tunnel 端口转发）
     depends_on: [core-models]
-    status: planned
-    feature: null
+    status: done
+    feature: 2026-07-24-terminal-emulator
     minimal_loop: true
     notes: 需 spike 验证终端模拟库选型；直连模式不依赖 Tunnel
 
