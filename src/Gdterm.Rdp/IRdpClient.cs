@@ -14,17 +14,12 @@ namespace Gdterm.Rdp
         /// <summary>
         /// 直连 RDP 会话
         /// </summary>
-        /// <param name="config">连接配置</param>
-        /// <param name="credential">凭据</param>
-        void Connect(ConnectionConfig config, CredentialPayload credential);
+        void Connect(ConnectionConfig config, CredentialPayload credential, RdpOptions options = null);
 
         /// <summary>
         /// 通过隧道连接 RDP（跳板模式）
         /// </summary>
-        /// <param name="config">连接配置</param>
-        /// <param name="credential">凭据</param>
-        /// <param name="tunnelEndpoint">隧道接入点（localhost:LocalPort）</param>
-        void ConnectViaTunnel(ConnectionConfig config, CredentialPayload credential, TunnelEndpoint tunnelEndpoint);
+        void ConnectViaTunnel(ConnectionConfig config, CredentialPayload credential, TunnelEndpoint tunnelEndpoint, RdpOptions options = null);
 
         /// <summary>
         /// 断开连接
@@ -42,8 +37,18 @@ namespace Gdterm.Rdp
         UserControl Control { get; }
 
         /// <summary>
+        /// 当前连接选项（连接后可读取）
+        /// </summary>
+        RdpOptions CurrentOptions { get; }
+
+        /// <summary>
         /// 连接状态变化事件
         /// </summary>
         event EventHandler<RdpStateChangedEventArgs> StateChanged;
+
+        /// <summary>
+        /// 文件拖放事件（当文件通过剪贴板传输时触发）
+        /// </summary>
+        event EventHandler<FileTransferEventArgs> FileTransferred;
     }
 }

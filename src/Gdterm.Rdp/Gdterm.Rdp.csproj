@@ -52,6 +52,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="IRdpClient.cs" />
+    <Compile Include="Models\FileTransferEventArgs.cs" />
+    <Compile Include="Models\RdpOptions.cs" />
     <Compile Include="Models\RdpStateChangedEventArgs.cs" />
     <Compile Include="RdpClient.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
