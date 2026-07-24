@@ -65,8 +65,8 @@ items:
   - slug: security-idle-lock
     description: 闲时锁定——空闲无操作检测（可配置超时）、自动锁定密码库和活动会话、主密码管理（设置/修改/验证，bcrypt 存储）、密码强度策略引擎
     depends_on: [core-models, keepass-integration]
-    status: planned
-    feature: null
+    status: done
+    feature: 2026-07-24-security-idle-lock
     notes: 复用 KeePass 的密码强度校验逻辑
 
   - slug: rdp-client

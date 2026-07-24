@@ -19,6 +19,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gdterm.Logging", "src\Gdter
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gdterm.AI", "src\Gdterm.AI\Gdterm.AI.csproj", "{B8C9D0E1-F2A3-4567-BCDE-901234567890}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gdterm.Security", "src\Gdterm.Security\Gdterm.Security.csproj", "{C9D0E1F2-A3B4-5678-CDEF-012345678901}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

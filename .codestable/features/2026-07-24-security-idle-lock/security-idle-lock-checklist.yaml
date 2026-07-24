@@ -1,0 +1,44 @@
+feature: 2026-07-24-security-idle-lock
+created: 2026-07-24
+
+steps:
+  - action: "编排骨架：创建 Gdterm.Security 项目，引用 Core"
+    exit_signal: "项目编译通过"
+    status: pending
+    tdd_required: false
+
+  - action: "类型定义：实现 LockStateChangedEventArgs、MasterPasswordConfig 数据类"
+    exit_signal: "编译通过"
+    status: pending
+    tdd_required: false
+
+  - action: "接口定义：实现 ISecurityManager 接口"
+    exit_signal: "编译通过，接口与 roadmap 4.8 完全一致"
+    status: pending
+    tdd_required: false
+
+  - action: "核心逻辑：实现 SecurityManager（计时器、锁定/解锁、主密码管理）"
+    exit_signal: "单元测试覆盖 ResetIdleTimer + LockNow + Unlock + SetMasterPassword"
+    status: pending
+    tdd_required: true
+
+checks:
+  - item: "ISecurityManager 接口与 roadmap 4.8 完全一致"
+    source: 名词契约
+    status: pending
+
+  - item: "ResetIdleTimer 在 UI 的 MouseMove/KeyDown/Click 事件中调用"
+    source: 流程级约束
+    status: pending
+
+  - item: "超时触发时自动调用 LockNow"
+    source: 流程级约束
+    status: pending
+
+  - item: "主密码哈希存储，不存明文"
+    source: 流程级约束
+    status: pending
+
+  - item: "无密码加密存储、无多因素认证、无生物识别"
+    source: 范围守护
+    status: pending
