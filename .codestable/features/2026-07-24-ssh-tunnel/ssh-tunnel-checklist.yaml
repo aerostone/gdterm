@@ -1,0 +1,53 @@
+feature: 2026-07-24-ssh-tunnel
+created: 2026-07-24
+
+steps:
+  - action: "编排骨架：创建 Gdterm.Tunnel 项目，引用 SSH.NET + Core，配置目录结构"
+    exit_signal: "项目编译通过，NuGet 包 Renci.SshNet 已安装"
+    status: done
+    tdd_required: false
+
+  - action: "类型定义：实现 TunnelException（含 HopIndex）和 TunnelStatus 类型"
+    exit_signal: "编译通过，TunnelException 可携带 HopIndex/Host/Port"
+    status: done
+    tdd_required: false
+
+  - action: "内部逻辑：实现 TunnelSession（管理多个 SshClient 生命周期，ConnectHop/DisposeAll）"
+    exit_signal: "单元测试覆盖 ConnectHop 成功和 DisposeAll 清理"
+    status: done
+    tdd_required: true
+
+  - action: "编排核心：实现 TunnelManager.EstablishAsync（直连模式 + 跳板模式逐 hop 连接）"
+    exit_signal: "单元测试覆盖直连和跳板两种路径，失败时 TunnelException.HopIndex 正确"
+    status: done
+    tdd_required: true
+
+  - action: "编排收尾：实现 TunnelManager.CloseAsync / GetStatus + 重复调用先关闭旧隧道"
+    exit_signal: "单元测试覆盖关闭、状态查询、重复调用"
+    status: done
+    tdd_required: true
+
+checks:
+  - item: "ITunnelManager 接口与 roadmap 4.2 完全一致（EstablishAsync/CloseAsync/GetStatus）"
+    source: 名词契约
+    status: passed
+
+  - item: "TunnelException.HopIndex 指示失败 hop（0-based），非跳板错误为 -1"
+    source: 名词契约
+    status: passed
+
+  - item: "LocalPort=0 时自动分配可用端口"
+    source: 流程级约束
+    status: passed
+
+  - item: "连接失败时已建立的 hop 连接全部释放"
+    source: 流程级约束
+    status: passed
+
+  - item: "同一 connectionId 重复 EstablishAsync 先关闭旧隧道"
+    source: 流程级约束
+    status: passed
+
+  - item: "无 reconnect/retry、无心跳、无 SOCKS5、无 shell 会话"
+    source: 范围守护
+    status: passed
