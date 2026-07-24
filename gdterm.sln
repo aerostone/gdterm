@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gdterm.KeePass", "src\Gdter
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gdterm.Logging", "src\Gdterm.Logging\Gdterm.Logging.csproj", "{A7B8C9D0-E1F2-3456-ABCD-890123456789}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gdterm.AI", "src\Gdterm.AI\Gdterm.AI.csproj", "{B8C9D0E1-F2A3-4567-BCDE-901234567890}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

@@ -58,8 +58,8 @@ items:
   - slug: ai-assistant
     description: AI 对话客户端——OpenAI-compatible API 客户端（支持 OpenAI/Ollama/vLLM）、连接上下文感知（hostname/OS/最近N行输出）、建议执行（提取命令发送到终端）、流式响应
     depends_on: [terminal-emulator]
-    status: planned
-    feature: null
+    status: done
+    feature: 2026-07-24-ai-assistant
     notes: 依赖 Terminal 的 ITerminalSession 提供上下文；API Key 加密存储
 
   - slug: security-idle-lock

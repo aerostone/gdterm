@@ -1,0 +1,44 @@
+feature: 2026-07-24-ai-assistant
+created: 2026-07-24
+
+steps:
+  - action: "编排骨架：创建 Gdterm.AI 项目，引用 Core + Terminal"
+    exit_signal: "项目编译通过"
+    status: pending
+    tdd_required: false
+
+  - action: "类型定义：实现 AiConfiguration、AiResponse、ChatMessage 数据类"
+    exit_signal: "编译通过"
+    status: pending
+    tdd_required: false
+
+  - action: "接口定义：实现 IAiAssistantService 接口"
+    exit_signal: "编译通过"
+    status: pending
+    tdd_required: false
+
+  - action: "核心逻辑：实现 AiAssistantService（API 调用、上下文注入、命令提取）"
+    exit_signal: "单元测试覆盖 SendMessageAsync + ExtractCommands + ExecuteCommand"
+    status: pending
+    tdd_required: true
+
+checks:
+  - item: "IAiAssistantService 接口包含 SendMessageAsync/ExtractCommands/ExecuteCommand/ClearHistory"
+    source: 名词契约
+    status: pending
+
+  - item: "每次请求自动注入连接上下文到 system prompt"
+    source: 流程级约束
+    status: pending
+
+  - item: "命令提取仅匹配 ```bash/```sh/``` 代码块"
+    source: 流程级约束
+    status: pending
+
+  - item: "ExecuteCommand 必须由用户主动调用"
+    source: 流程级约束
+    status: pending
+
+  - item: "无本地模型推理、无自动执行、无对话历史持久化"
+    source: 范围守护
+    status: pending
