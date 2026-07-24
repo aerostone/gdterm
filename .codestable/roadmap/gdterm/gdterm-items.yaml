@@ -44,8 +44,8 @@ items:
   - slug: keepass-integration
     description: KeePass 密码库管理——.kdbx 文件读写、密码条目 CRUD、连接与密码条目关联映射、自动填充凭据、密码强度校验（最小12字符+4类字符+常见弱密码检查）
     depends_on: [core-models]
-    status: planned
-    feature: null
+    status: done
+    feature: 2026-07-24-keepass-integration
     notes: 密码库文件随绿色版走；需确认 KeePassLib 对 .NET 4.6.2 的支持
 
   - slug: logging-engine

@@ -1,0 +1,54 @@
+feature: 2026-07-24-keepass-integration
+created: 2026-07-24
+
+steps:
+  - action: "编排骨架：创建 Gdterm.KeePass 项目，引用 KeePassLib + Core"
+    exit_signal: "项目编译通过"
+    status: pending
+    tdd_required: false
+
+  - action: "类型定义：实现 KeePassEntry、KeePassEntrySummary、WeakPasswordException"
+    exit_signal: "编译通过"
+    status: pending
+    tdd_required: false
+
+  - action: "密码强度：实现 PasswordStrengthValidator（12字符+4类+弱密码检查）"
+    exit_signal: "编译通过，覆盖校验规则"
+    status: pending
+    tdd_required: true
+
+  - action: "接口定义：实现 IKeePassService 接口"
+    exit_signal: "编译通过，接口与 roadmap 4.3 完全一致"
+    status: pending
+    tdd_required: false
+
+  - action: "核心操作：实现 KeePassService Unlock/Lock/GetCredential"
+    exit_signal: "单元测试覆盖 Unlock + GetCredential + Lock"
+    status: pending
+    tdd_required: true
+
+  - action: "CRUD 操作：实现 KeePassService CreateEntry/UpdateEntry/ListEntries + 密码强度集成"
+    exit_signal: "单元测试覆盖 CreateEntry + UpdateEntry + ListEntries"
+    status: pending
+    tdd_required: true
+
+checks:
+  - item: "IKeePassService 接口与 roadmap 4.3 完全一致"
+    source: 名词契约
+    status: pending
+
+  - item: "密码强度校验：最小12字符+大写+小写+数字+特殊字符"
+    source: 流程级约束
+    status: pending
+
+  - item: "ListEntries 不返回密码明文"
+    source: 流程级约束
+    status: pending
+
+  - item: "Lock() 清除内存中的明文密码"
+    source: 流程级约束
+    status: pending
+
+  - item: "无密码生成器、无密码库创建/删除、无多密码库同时打开"
+    source: 范围守护
+    status: pending
