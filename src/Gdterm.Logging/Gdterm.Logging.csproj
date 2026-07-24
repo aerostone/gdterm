@@ -43,10 +43,12 @@
     <Compile Include="IAuditLogger.cs" />
     <Compile Include="Models\AuditEntry.cs" />
     <Compile Include="Models\AuditQuery.cs" />
+    <Compile Include="Models\AuditLogConfig.cs" />
     <Compile Include="Models\LogRotationConfig.cs" />
     <Compile Include="Models\ConnectionAction.cs" />
     <Compile Include="Models\CredentialAction.cs" />
     <Compile Include="Models\SecurityEvent.cs" />
+    <Compile Include="LogSanitizer.cs" />
     <Compile Include="AuditLogger.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

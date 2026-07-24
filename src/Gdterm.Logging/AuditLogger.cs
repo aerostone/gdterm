@@ -2,106 +2,174 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using Gdterm.Logging.Models;
 
 namespace Gdterm.Logging
 {
     /// <summary>
-    /// 审计日志实现——JSON Lines 格式，按大小轮转，支持审计查询
+    /// 审计日志实现——JSON Lines 格式，支持配置化开关、脱敏、加密、轮转
     /// </summary>
     public class AuditLogger : IAuditLogger, IDisposable
     {
         private readonly string _logDirectory;
-        private readonly LogRotationConfig _config;
+        private readonly AuditLogConfig _config;
+        private readonly LogSanitizer _sanitizer;
         private readonly object _lock = new object();
         private StreamWriter _writer;
         private string _currentFilePath;
         private long _currentFileSize;
         private bool _disposed;
 
-        /// <param name="logDirectory">日志文件存储目录</param>
-        /// <param name="config">轮转配置（null 使用默认值）</param>
-        public AuditLogger(string logDirectory, LogRotationConfig config = null)
+        public AuditLogger(string logDirectory, AuditLogConfig config = null)
         {
             _logDirectory = logDirectory ?? throw new ArgumentNullException(nameof(logDirectory));
-            _config = config ?? new LogRotationConfig();
+            _config = config ?? new AuditLogConfig();
+            _sanitizer = new LogSanitizer(_config.SanitizeReplacement);
 
-            // 确保目录存在
-            Directory.CreateDirectory(_logDirectory);
+            if (!Directory.Exists(_logDirectory))
+                Directory.CreateDirectory(_logDirectory);
 
-            // 初始化当前日志文件
-            InitializeCurrentFile();
+            CleanupOldFiles();
         }
 
         public void LogConnection(string connectionId, string host, string protocol, ConnectionAction action)
         {
-            var detail = $"{{\"host\":\"{EscapeJson(host)}\",\"protocol\":\"{EscapeJson(protocol)}\",\"action\":\"{action}\"}}";
-            WriteEntry(connectionId, "Connection", detail);
+            if (!_config.LogConnections) return;
+
+            var entry = new AuditEntry
+            {
+                Timestamp = DateTime.UtcNow,
+                ConnectionId = connectionId,
+                EventType = "Connection",
+                Detail = $"{{\"host\":\"{host}\",\"protocol\":\"{protocol}\",\"action\":\"{action}\"}}"
+            };
+
+            WriteEntry(entry);
         }
 
         public void LogCredentialUse(string connectionId, string credentialRefId, CredentialAction action)
         {
-            var detail = $"{{\"credentialRefId\":\"{EscapeJson(credentialRefId)}\",\"action\":\"{action}\"}}";
-            WriteEntry(connectionId, "Credential", detail);
+            if (!_config.LogCredentialUsage) return;
+
+            // 脱敏：不记录完整的 credentialRefId，只记录前4位
+            var maskedId = !string.IsNullOrEmpty(credentialRefId) && credentialRefId.Length > 4
+                ? credentialRefId.Substring(0, 4) + "****"
+                : "****";
+
+            var entry = new AuditEntry
+            {
+                Timestamp = DateTime.UtcNow,
+                ConnectionId = connectionId,
+                EventType = "Credential",
+                Detail = $"{{\"credentialRef\":\"{maskedId}\",\"action\":\"{action}\"}}"
+            };
+
+            WriteEntry(entry);
         }
 
         public void LogCommand(string connectionId, string command)
         {
-            var detail = $"{{\"command\":\"{EscapeJson(command)}\"}}";
-            WriteEntry(connectionId, "Command", detail);
+            if (!_config.LogCommands) return;
+
+            // 脱敏命令内容
+            var sanitizedCommand = _config.SanitizeCommands
+                ? _sanitizer.Sanitize(command)
+                : command;
+
+            var entry = new AuditEntry
+            {
+                Timestamp = DateTime.UtcNow,
+                ConnectionId = connectionId,
+                EventType = "Command",
+                Detail = $"{{\"command\":\"{EscapeJson(sanitizedCommand)}\"}}"
+            };
+
+            WriteEntry(entry);
         }
 
         public void LogAiInteraction(string connectionId, string prompt, string response)
         {
-            var detail = $"{{\"prompt\":\"{EscapeJson(prompt)}\",\"response\":\"{EscapeJson(response)}\"}}";
-            WriteEntry(connectionId, "AiInteraction", detail);
+            if (!_config.LogAiInteractions) return;
+
+            // 脱敏 AI 交互内容
+            var sanitizedPrompt = _config.SanitizeAiContent
+                ? _sanitizer.Sanitize(prompt)
+                : prompt;
+            var sanitizedResponse = _config.SanitizeAiContent
+                ? _sanitizer.Sanitize(response)
+                : response;
+
+            // 截断过长内容
+            if (sanitizedPrompt.Length > 500)
+                sanitizedPrompt = sanitizedPrompt.Substring(0, 500) + "...";
+            if (sanitizedResponse.Length > 500)
+                sanitizedResponse = sanitizedResponse.Substring(0, 500) + "...";
+
+            var entry = new AuditEntry
+            {
+                Timestamp = DateTime.UtcNow,
+                ConnectionId = connectionId,
+                EventType = "AiInteraction",
+                Detail = $"{{\"prompt\":\"{EscapeJson(sanitizedPrompt)}\",\"response\":\"{EscapeJson(sanitizedResponse)}\"}}"
+            };
+
+            WriteEntry(entry);
         }
 
         public void LogSecurityEvent(SecurityEvent evt, string detail)
         {
-            var detailJson = $"{{\"event\":\"{evt}\",\"detail\":\"{EscapeJson(detail)}\"}}";
-            WriteEntry(null, "Security", detailJson);
+            if (!_config.LogSecurityEvents) return;
+
+            // 脱敏安全事件详情
+            var sanitizedDetail = _config.SanitizeCommands
+                ? _sanitizer.Sanitize(detail)
+                : detail;
+
+            var entry = new AuditEntry
+            {
+                Timestamp = DateTime.UtcNow,
+                ConnectionId = "",
+                EventType = "Security",
+                Detail = $"{{\"event\":\"{evt}\",\"detail\":\"{EscapeJson(sanitizedDetail)}\"}}"
+            };
+
+            WriteEntry(entry);
         }
 
         public IList<AuditEntry> Query(AuditQuery query, int limit = 100)
         {
-            if (query == null) query = new AuditQuery();
+            var result = new List<AuditEntry>();
 
-            var results = new List<AuditEntry>();
-
-            // 获取所有日志文件（按时间倒序）
-            var logFiles = GetLogFilesSorted();
-
-            foreach (var file in logFiles)
+            lock (_lock)
             {
-                if (results.Count >= limit) break;
+                var logFiles = GetLogFilesSorted();
 
-                try
+                foreach (var file in logFiles)
                 {
-                    var lines = File.ReadAllLines(file, Encoding.UTF8);
-                    // 从后往前读（最新在前）
-                    for (int i = lines.Length - 1; i >= 0; i--)
+                    try
                     {
-                        if (results.Count >= limit) break;
-
-                        var entry = ParseAuditEntry(lines[i]);
-                        if (entry == null) continue;
-
-                        // 应用过滤条件
-                        if (MatchesQuery(entry, query))
+                        var lines = File.ReadAllLines(file, Encoding.UTF8);
+                        foreach (var line in lines)
                         {
-                            results.Add(entry);
+                            if (string.IsNullOrWhiteSpace(line)) continue;
+
+                            var entry = ParseAuditEntry(line);
+                            if (entry == null) continue;
+
+                            if (MatchesQuery(entry, query))
+                            {
+                                result.Add(entry);
+                                if (result.Count >= limit) return result;
+                            }
                         }
                     }
-                }
-                catch
-                {
-                    // 文件读取失败，跳过
+                    catch { /* best-effort */ }
                 }
             }
 
-            return results;
+            return result;
         }
 
         public void Dispose()
@@ -117,24 +185,20 @@ namespace Gdterm.Logging
             }
         }
 
-        private void WriteEntry(string connectionId, string eventType, string detail)
+        private void WriteEntry(AuditEntry entry)
         {
-            var entry = new AuditEntry
-            {
-                Timestamp = DateTime.UtcNow,
-                ConnectionId = connectionId,
-                EventType = eventType,
-                Detail = detail
-            };
-
-            var json = SerializeAuditEntry(entry);
-
             lock (_lock)
             {
-                // 检查是否需要轮转
-                if (_currentFileSize + json.Length + Environment.NewLine.Length > _config.MaxFileSizeBytes)
+                if (_writer == null || _currentFileSize > _config.MaxFileSizeMB * 1024 * 1024)
                 {
                     RotateFile();
+                }
+
+                var json = SerializeAuditEntry(entry);
+
+                if (_config.EncryptLogs)
+                {
+                    json = EncryptString(json);
                 }
 
                 _writer.WriteLine(json);
@@ -152,33 +216,26 @@ namespace Gdterm.Logging
 
         private void RotateFile()
         {
-            // 关闭当前文件
             _writer?.Flush();
             _writer?.Dispose();
+            _writer = null;
 
-            // 创建新文件
-            InitializeCurrentFile();
-
-            // 删除超限的旧文件
             CleanupOldFiles();
+            InitializeCurrentFile();
         }
 
         private void CleanupOldFiles()
         {
             var files = GetLogFilesSorted();
 
-            // 按文件数限制删除
+            // 按数量限制
             while (files.Count > _config.MaxFileCount)
             {
-                try
-                {
-                    File.Delete(files[files.Count - 1]);
-                    files.RemoveAt(files.Count - 1);
-                }
+                try { File.Delete(files.Last()); files.RemoveAt(files.Count - 1); }
                 catch { break; }
             }
 
-            // 按保留天数删除
+            // 按天数限制
             var cutoff = DateTime.UtcNow.AddDays(-_config.RetentionDays);
             foreach (var file in files)
             {
@@ -186,11 +243,9 @@ namespace Gdterm.Logging
                 {
                     var fileInfo = new FileInfo(file);
                     if (fileInfo.LastWriteTimeUtc < cutoff)
-                    {
                         File.Delete(file);
-                    }
                 }
-                catch { /* best-effort */ }
+                catch { }
             }
         }
 
@@ -207,39 +262,21 @@ namespace Gdterm.Logging
             sb.Append('{');
             sb.Append($"\"timestamp\":\"{entry.Timestamp:O}\"");
             sb.Append($",\"connectionId\":\"{EscapeJson(entry.ConnectionId ?? "")}\"");
-            sb.Append($",\"eventType\":\"{EscapeJson(entry.EventType)}\"");
-            sb.Append($",\"detail\":{entry.Detail}");
+            sb.Append($",\"eventType\":\"{EscapeJson(entry.EventType ?? "")}\"");
+            sb.Append($",\"detail\":{entry.Detail ?? "{}"}");
             sb.Append('}');
             return sb.ToString();
         }
 
         private static AuditEntry ParseAuditEntry(string json)
         {
-            if (string.IsNullOrWhiteSpace(json) || !json.StartsWith("{"))
-                return null;
-
             try
             {
                 var entry = new AuditEntry();
-
-                // 简单 JSON 解析（不依赖外部库）
-                var ts = ExtractJsonValue(json, "timestamp");
-                if (ts != null && DateTime.TryParse(ts, null, System.Globalization.DateTimeStyles.RoundtripKind, out var dt))
-                    entry.Timestamp = dt;
-
+                entry.Timestamp = DateTime.Parse(ExtractJsonValue(json, "timestamp"));
                 entry.ConnectionId = ExtractJsonValue(json, "connectionId");
                 entry.EventType = ExtractJsonValue(json, "eventType");
-
-                // detail 是嵌套 JSON，提取 "detail": 后面的部分
-                var detailIdx = json.IndexOf("\"detail\":");
-                if (detailIdx >= 0)
-                {
-                    entry.Detail = json.Substring(detailIdx + 9).TrimEnd('}');
-                    // 移除尾部的 }
-                    if (entry.Detail.EndsWith("}"))
-                        entry.Detail = entry.Detail.Substring(0, entry.Detail.Length - 1);
-                }
-
+                entry.Detail = ExtractJsonDetail(json);
                 return entry;
             }
             catch
@@ -250,46 +287,91 @@ namespace Gdterm.Logging
 
         private static string ExtractJsonValue(string json, string key)
         {
-            var search = $"\"{key}\":\"";
-            var start = json.IndexOf(search);
-            if (start < 0) return null;
-
-            start += search.Length;
-            var end = json.IndexOf("\"", start);
-            if (end < 0) return null;
-
-            return UnescapeJson(json.Substring(start, end - start));
+            var keyPattern = $"\"{key}\":\"";
+            var startIndex = json.IndexOf(keyPattern, StringComparison.Ordinal);
+            if (startIndex < 0) return "";
+            startIndex += keyPattern.Length;
+            var endIndex = json.IndexOf('"', startIndex);
+            if (endIndex < 0) return "";
+            return json.Substring(startIndex, endIndex - startIndex);
         }
 
-        private static string EscapeJson(string s)
+        private static string ExtractJsonDetail(string json)
         {
-            if (s == null) return "";
-            return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r").Replace("\t", "\\t");
-        }
-
-        private static string UnescapeJson(string s)
-        {
-            if (s == null) return "";
-            return s.Replace("\\\"", "\"").Replace("\\n", "\n").Replace("\\r", "\r").Replace("\\t", "\t").Replace("\\\\", "\\");
+            var keyPattern = "\"detail\":";
+            var startIndex = json.IndexOf(keyPattern, StringComparison.Ordinal);
+            if (startIndex < 0) return "{}";
+            startIndex += keyPattern.Length;
+            var braceCount = 0;
+            var endIndex = startIndex;
+            for (int i = startIndex; i < json.Length; i++)
+            {
+                if (json[i] == '{') braceCount++;
+                else if (json[i] == '}') braceCount--;
+                if (braceCount == 0)
+                {
+                    endIndex = i + 1;
+                    break;
+                }
+            }
+            return json.Substring(startIndex, endIndex - startIndex);
         }
 
         private static bool MatchesQuery(AuditEntry entry, AuditQuery query)
         {
+            if (query == null) return true;
+
+            if (!string.IsNullOrEmpty(query.ConnectionId) &&
+                entry.ConnectionId != query.ConnectionId)
+                return false;
+
+            if (!string.IsNullOrEmpty(query.EventType) &&
+                entry.EventType != query.EventType)
+                return false;
+
             if (query.From.HasValue && entry.Timestamp < query.From.Value)
                 return false;
 
             if (query.To.HasValue && entry.Timestamp > query.To.Value)
                 return false;
 
-            if (!string.IsNullOrEmpty(query.ConnectionId) &&
-                !string.Equals(entry.ConnectionId, query.ConnectionId, StringComparison.OrdinalIgnoreCase))
-                return false;
-
-            if (!string.IsNullOrEmpty(query.EventType) &&
-                !string.Equals(entry.EventType, query.EventType, StringComparison.OrdinalIgnoreCase))
-                return false;
-
             return true;
+        }
+
+        private static string EscapeJson(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            return s.Replace("\\", "\\\\")
+                    .Replace("\"", "\\\"")
+                    .Replace("\n", "\\n")
+                    .Replace("\r", "\\r")
+                    .Replace("\t", "\\t");
+        }
+
+        /// <summary>
+        /// 简单加密（Base64 + XOR，仅用于基本保护，非强加密）
+        /// </summary>
+        private static string EncryptString(string plainText)
+        {
+            var bytes = Encoding.UTF8.GetBytes(plainText);
+            // XOR with a simple key (实际应用中应使用 AES)
+            var key = Encoding.UTF8.GetBytes("gdterm-audit-log-key");
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                bytes[i] ^= key[i % key.Length];
+            }
+            return Convert.ToBase64String(bytes);
+        }
+
+        private static string DecryptString(string cipherText)
+        {
+            var bytes = Convert.FromBase64String(cipherText);
+            var key = Encoding.UTF8.GetBytes("gdterm-audit-log-key");
+            for (int i = 0; i < bytes.Length; i++)
+            {
+                bytes[i] ^= key[i % key.Length];
+            }
+            return Encoding.UTF8.GetString(bytes);
         }
     }
 }
