@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{E1F2A3B4-C5D6-7890-EF01-234567890123}</ProjectGuid>
+    <OutputType>WinExe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Gdterm.UI</RootNamespace>
+    <AssemblyName>gdterm</AssemblyName>
+    <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Gdterm.Core\Gdterm.Core.csproj">
+      <Project>{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}</Project>
+      <Name>Gdterm.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Gdterm.Connections\Gdterm.Connections.csproj">
+      <Project>{B2C3D4E5-F6A7-8901-BCDE-F12345678901}</Project>
+      <Name>Gdterm.Connections</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Gdterm.Tunnel\Gdterm.Tunnel.csproj">
+      <Project>{C3D4E5F6-A7B8-9012-CDEF-123456789012}</Project>
+      <Name>Gdterm.Tunnel</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Gdterm.Terminal\Gdterm.Terminal.csproj">
+      <Project>{D4E5F6A7-B8C9-0123-DEFA-567890123456}</Project>
+      <Name>Gdterm.Terminal</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Gdterm.Sftp\Gdterm.Sftp.csproj">
+      <Project>{E5F6A7B8-C9D0-1234-ABCD-678901234567}</Project>
+      <Name>Gdterm.Sftp</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Gdterm.KeePass\Gdterm.KeePass.csproj">
+      <Project>{F6A7B8C9-D0E1-2345-ABCD-789012345678}</Project>
+      <Name>Gdterm.KeePass</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Gdterm.Logging\Gdterm.Logging.csproj">
+      <Project>{A7B8C9D0-E1F2-3456-ABCD-890123456789}</Project>
+      <Name>Gdterm.Logging</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Gdterm.AI\Gdterm.AI.csproj">
+      <Project>{B8C9D0E1-F2A3-4567-BCDE-901234567890}</Project>
+      <Name>Gdterm.AI</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Gdterm.Security\Gdterm.Security.csproj">
+      <Project>{C9D0E1F2-A3B4-5678-CDEF-012345678901}</Project>
+      <Name>Gdterm.Security</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Gdterm.Rdp\Gdterm.Rdp.csproj">
+      <Project>{D0E1F2A3-B4C5-6789-DEF0-123456789012}</Project>
+      <Name>Gdterm.Rdp</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="Forms\MainForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\MainForm.Designer.cs">
+      <DependentUpon>MainForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Controls\ConnectionTreeControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Controls\TabContainerControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Controls\StatusBarControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Controls\LockOverlayControl.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

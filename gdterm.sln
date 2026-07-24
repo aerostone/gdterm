@@ -23,6 +23,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gdterm.Security", "src\Gdte
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gdterm.Rdp", "src\Gdterm.Rdp\Gdterm.Rdp.csproj", "{D0E1F2A3-B4C5-6789-DEF0-123456789012}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Gdterm.UI", "src\Gdterm.UI\Gdterm.UI.csproj", "{E1F2A3B4-C5D6-7890-EF01-234567890123}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

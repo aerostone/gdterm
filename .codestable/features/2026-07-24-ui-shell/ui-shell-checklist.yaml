@@ -1,0 +1,59 @@
+feature: 2026-07-24-ui-shell
+created: 2026-07-24
+
+steps:
+  - action: "创建 Gdterm.UI 项目，引用所有模块"
+    exit_signal: "项目编译通过"
+    status: pending
+    tdd_required: false
+
+  - action: "实现 Program.cs 入口点和 MainForm 主窗口骨架"
+    exit_signal: "程序可启动，主窗口显示"
+    status: pending
+    tdd_required: false
+
+  - action: "实现 ConnectionTreeControl 连接面板"
+    exit_signal: "TreeView 正确显示连接树"
+    status: pending
+    tdd_required: false
+
+  - action: "实现 TabContainerControl 标签页容器"
+    exit_signal: "TabControl 支持打开/关闭标签页"
+    status: pending
+    tdd_required: false
+
+  - action: "实现 StatusBarControl 状态栏"
+    exit_signal: "状态栏显示连接/隧道/密码库/AI 状态"
+    status: pending
+    tdd_required: false
+
+  - action: "实现 LockOverlayControl 锁定遮罩"
+    exit_signal: "锁定时遮罩覆盖整个窗口"
+    status: pending
+    tdd_required: false
+
+  - action: "集成所有模块到 MainForm"
+    exit_signal: "所有模块功能可正常使用"
+    status: pending
+    tdd_required: false
+
+checks:
+  - item: "主窗口布局：左 TreeView + 右 TabControl + 底 StatusBar"
+    source: 名词契约
+    status: pending
+
+  - item: "连接面板支持右键菜单（新建、编辑、删除、连接）"
+    source: 流程级约束
+    status: pending
+
+  - item: "标签页支持 SSH 终端、RDP、SFTP、AI 面板"
+    source: 流程级约束
+    status: pending
+
+  - item: "闲时锁定遮罩覆盖整个窗口"
+    source: 流程级约束
+    status: pending
+
+  - item: "无主题/皮肤系统、无多语言支持、无插件系统"
+    source: 范围守护
+    status: pending

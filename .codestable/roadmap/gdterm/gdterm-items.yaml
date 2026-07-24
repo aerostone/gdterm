@@ -79,6 +79,6 @@ items:
   - slug: ui-shell
     description: WinForms 主界面——左侧 TreeView 连接面板（右键菜单管理）、右侧 TabControl 标签页容器（RDP/终端/SFTP/AI面板）、底部 StatusBar（连接/隧道/密码库/AI 状态）、全局菜单和工具栏、闲时锁定遮罩
     depends_on: [core-models, connections-storage, ssh-tunnel, terminal-emulator, sftp-browser, keepass-integration, logging-engine, ai-assistant, security-idle-lock, rdp-client]
-    status: planned
-    feature: null
+    status: done
+    feature: 2026-07-24-ui-shell
     notes: 最后实现，集成所有模块
