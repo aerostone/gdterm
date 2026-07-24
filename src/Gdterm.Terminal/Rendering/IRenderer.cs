@@ -41,5 +41,15 @@ namespace Gdterm.Terminal.Rendering
         /// 获取终端最近 N 行文本内容
         /// </summary>
         string[] GetRecentLines(int lineCount);
+
+        /// <summary>
+        /// 暂停渲染（非活动标签调用，节省 CPU）
+        /// </summary>
+        void Pause();
+
+        /// <summary>
+        /// 恢复渲染并刷新
+        /// </summary>
+        void Resume();
     }
 }

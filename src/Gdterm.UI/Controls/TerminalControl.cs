@@ -3,13 +3,14 @@ using System.Windows.Forms;
 using Gdterm.Core.Models;
 using Gdterm.Logging;
 using Gdterm.Terminal;
+using Gdterm.Terminal.Rendering;
 using Gdterm.Tunnel;
 using Gdterm.Tunnel.Models;
 
 namespace Gdterm.UI.Controls
 {
     /// <summary>
-    /// SSH 终端标签页控件
+    /// SSH 终端标签页控件——支持暂停/恢复渲染
     /// </summary>
     public class TerminalControl : UserControl, IDisposable
     {
@@ -19,6 +20,9 @@ namespace Gdterm.UI.Controls
         private readonly IAuditLogger _auditLogger;
         private ITerminalSession _session;
         private TerminalEndpoint _endpoint;
+        private LightweightRenderer _renderer;
+        private bool _isPaused;
+        private bool _disposed;
 
         public TerminalControl(
             ConnectionConfig config,
@@ -35,20 +39,21 @@ namespace Gdterm.UI.Controls
 
         private void InitializeComponent()
         {
-            // 终端显示区域
-            var terminalPanel = new Panel
-            {
-                Dock = DockStyle.Fill,
-                BackColor = System.Drawing.Color.Black
-            };
-            Controls.Add(terminalPanel);
+            // 创建轻量级渲染器
+            _renderer = new LightweightRenderer();
+            Controls.Add(_renderer.GetControl());
 
-            // 连接
-            Connect();
+            // 延迟连接：标签页创建后不立即连接，等标签页被选中时再连接
+            // 这样可以避免一次性打开15个连接
         }
 
-        private async void Connect()
+        /// <summary>
+        /// 建立连接（延迟调用）
+        /// </summary>
+        public async void Connect()
         {
+            if (_session != null) return; // 已连接
+
             try
             {
                 // 如果需要隧道
@@ -87,26 +92,70 @@ namespace Gdterm.UI.Controls
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"连接失败: {ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                _renderer.Write($"\r\n\x1b[31m连接失败: {ex.Message}\x1b[0m\r\n");
                 _auditLogger.LogConnection(_config.Id, _config.Name, _config.Host, false);
+            }
+        }
+
+        /// <summary>
+        /// 暂停渲染（非活动标签调用）
+        /// </summary>
+        public void PauseRendering()
+        {
+            if (!_isPaused)
+            {
+                _isPaused = true;
+                _renderer?.Pause();
+            }
+        }
+
+        /// <summary>
+        /// 恢复渲染（活动标签调用）
+        /// </summary>
+        public void ResumeRendering()
+        {
+            if (_isPaused)
+            {
+                _isPaused = false;
+                _renderer?.Resume();
+
+                // 如果还没连接，现在连接
+                if (_session == null)
+                {
+                    Connect();
+                }
             }
         }
 
         private void OnTerminalOutput(object sender, TerminalOutputEventArgs e)
         {
+            if (_isPaused) return; // 暂停时不处理输出
+
             if (InvokeRequired)
             {
-                Invoke(new Action(() => OnTerminalOutput(sender, e)));
+                try
+                {
+                    BeginInvoke(new Action(() => OnTerminalOutput(sender, e)));
+                }
+                catch { /* 控件已销毁 */ }
                 return;
             }
 
-            // TODO: 将输出渲染到终端控件
+            _renderer?.Write(e.Text);
         }
 
-        public new void Dispose()
+        protected override void Dispose(bool disposing)
         {
-            _session?.Dispose();
-            base.Dispose();
+            if (!_disposed)
+            {
+                _disposed = true;
+                if (disposing)
+                {
+                    _session?.Dispose();
+                    _session = null;
+                }
+            }
+            base.Dispose(disposing);
         }
     }
 }

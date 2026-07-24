@@ -122,6 +122,16 @@ namespace Gdterm.Terminal.Rendering
             }
         }
 
+        public void Pause()
+        {
+            // RichTextBox 版本不做特殊处理
+        }
+
+        public void Resume()
+        {
+            // RichTextBox 版本不做特殊处理
+        }
+
         private void AppendSegment(AnsiSegment segment)
         {
             if (segment.IsControl)
