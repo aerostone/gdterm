@@ -1,0 +1,40 @@
+feature: 2026-07-24-rdp-client
+created: 2026-07-24
+
+steps:
+  - action: "编排骨架：创建 Gdterm.Rdp 项目，引用 Core + Tunnel"
+    exit_signal: "项目编译通过"
+    status: pending
+    tdd_required: false
+
+  - action: "类型定义：实现 RdpStateChangedEventArgs 数据类"
+    exit_signal: "编译通过"
+    status: pending
+    tdd_required: false
+
+  - action: "接口定义：实现 IRdpClient 接口"
+    exit_signal: "编译通过"
+    status: pending
+    tdd_required: false
+
+  - action: "核心逻辑：实现 RdpClient（AxMsTscLib 封装、直连/跳板模式、事件处理）"
+    exit_signal: "编译通过，覆盖 Connect/ConnectViaTunnel/Disconnect"
+    status: pending
+    tdd_required: false
+
+checks:
+  - item: "IRdpClient 接口包含 Connect/ConnectViaTunnel/Disconnect/IsConnected/Control/StateChanged"
+    source: 名词契约
+    status: pending
+
+  - item: "跳板模式通过 TunnelEndpoint 连接 localhost:LocalPort"
+    source: 流程级约束
+    status: pending
+
+  - item: "连接/断开/错误事件正确触发"
+    source: 流程级约束
+    status: pending
+
+  - item: "无 RDP 文件传输、无剪贴板共享、无打印重定向"
+    source: 范围守护
+    status: pending

@@ -72,8 +72,8 @@ items:
   - slug: rdp-client
     description: RDP 客户端——嵌入 AxMsTscLib ActiveX 控件、支持直连和跳板链模式（通过 Tunnel 端口转发连 localhost）、RDP 事件处理（连接/断开/错误）
     depends_on: [core-models, connections-storage, ssh-tunnel]
-    status: planned
-    feature: null
+    status: done
+    feature: 2026-07-24-rdp-client
     notes: 需实测 Win7/2008 上 AxMsTscLib 兼容性
 
   - slug: ui-shell
