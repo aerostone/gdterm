@@ -36,8 +36,8 @@ items:
   - slug: sftp-browser
     description: SFTP 文件浏览器——远程目录浏览、文件上传/下载（带进度）、删除/重命名/创建目录，支持直连和跳板模式
     depends_on: [core-models, ssh-tunnel]
-    status: planned
-    feature: null
+    status: done
+    feature: 2026-07-24-sftp-browser
     minimal_loop: false
     notes: 基于 SSH.NET SftpClient；跳板模式通过 Tunnel 端口转发
 

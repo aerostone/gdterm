@@ -1,0 +1,45 @@
+feature: 2026-07-24-sftp-browser
+created: 2026-07-24
+
+steps:
+  - action: "编排骨架：创建 Gdterm.Sftp 项目，引用 SSH.NET + Core + Tunnel"
+    exit_signal: "项目编译通过"
+    status: pending
+    tdd_required: false
+
+  - action: "类型定义：实现 SftpFileInfo 和 FileTransferProgress 模型"
+    exit_signal: "编译通过"
+    status: pending
+    tdd_required: false
+
+  - action: "接口定义：实现 ISftpService 接口"
+    exit_signal: "编译通过，接口与 roadmap 4.5 完全一致"
+    status: pending
+    tdd_required: false
+
+  - action: "核心操作：实现 SftpService 连接、列目录、上传、下载"
+    exit_signal: "单元测试覆盖 ConnectAsync + ListDirectoryAsync + UploadAsync + DownloadAsync"
+    status: pending
+    tdd_required: true
+
+  - action: "辅助操作：实现 SftpService 删除、创建目录、重命名、断开"
+    exit_signal: "单元测试覆盖 DeleteAsync + CreateDirectoryAsync + RenameAsync + Disconnect"
+    status: pending
+    tdd_required: true
+
+checks:
+  - item: "ISftpService 接口与 roadmap 4.5 完全一致"
+    source: 名词契约
+    status: pending
+
+  - item: "ListDirectoryAsync 按目录优先 + 名称排序"
+    source: 流程级约束
+    status: pending
+
+  - item: "上传/下载通过 IProgress<FileTransferProgress> 报告进度"
+    source: 流程级约束
+    status: pending
+
+  - item: "无断点续传、无批量队列、无远程编辑"
+    source: 范围守护
+    status: pending
