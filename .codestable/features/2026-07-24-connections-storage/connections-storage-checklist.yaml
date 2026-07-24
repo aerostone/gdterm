@@ -1,0 +1,44 @@
+feature: 2026-07-24-connections-storage
+created: 2026-07-24
+
+steps:
+  - action: "创建 Gdterm.Connections 类库项目，添加 IConnectionStore 接口和 GroupNode 模型"
+    exit_signal: "编译通过，引用 Gdterm.Core"
+    status: done
+    tdd_required: false
+
+  - action: "实现 ConnectionStoreJson 基础读写（LoadAll/SaveAll）"
+    exit_signal: "手动调用可读写 connections.json"
+    status: done
+    tdd_required: false
+
+  - action: "实现 CRUD 操作（Add/Update/Delete/GetById）"
+    exit_signal: "增删改查操作可验证，异常路径正确"
+    status: done
+    tdd_required: false
+
+  - action: "实现 GetGroupTree（树形分组解析）"
+    exit_signal: "输入带 GroupPath 的连接列表返回正确树结构"
+    status: done
+    tdd_required: false
+
+checks:
+  - item: "connections.json 中无 Password 字段"
+    source: 范围守护
+    status: passed
+
+  - item: "connections.json 不存在时自动创建空文件"
+    source: 流程级约束
+    status: passed
+
+  - item: "Update/Delete 传入不存在的 Id 抛出 KeyNotFoundException"
+    source: 名词契约
+    status: passed
+
+  - item: "GetGroupTree 返回正确的树形结构（按 GroupPath / 分隔）"
+    source: 名词契约
+    status: passed
+
+  - item: "无数据库依赖，仅 JSON 文件"
+    source: 范围守护
+    status: passed

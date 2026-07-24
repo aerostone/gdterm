@@ -13,8 +13,8 @@ items:
   - slug: connections-storage
     description: 连接配置 JSON 存储（connections.json CRUD）、树形分组管理（GroupPath）、连接导入/导出
     depends_on: [core-models]
-    status: planned
-    feature: null
+    status: done
+    feature: 2026-07-24-connections-storage
     minimal_loop: false
     notes: null
 
