@@ -8,6 +8,9 @@ namespace Gdterm.Terminal
     /// <summary>
     /// 多通道输入管理器——WindTerm 风格，支持将同一命令同时发送到多个终端会话
     /// 运维场景：批量执行命令、对比多台服务器输出
+    /// 
+    /// 安全策略：只有终端处于就绪状态（命令提示符 $、#、> 等）的会话才允许加入
+    /// 正在执行 top/vim/编译/交互式程序的终端会被拒绝
     /// </summary>
     public class MultiChannelManager : IDisposable
     {
@@ -99,40 +102,69 @@ namespace Gdterm.Terminal
         }
 
         /// <summary>
-        /// 选择/取消选择会话用于多通道输入
+        /// 选择/取消选择会话用于多通道输入（选择时检测终端就绪状态）
         /// </summary>
-        public void ToggleSelection(string sessionId)
+        public SelectResult ToggleSelection(string sessionId)
         {
             lock (_lock)
             {
-                if (_sessions.TryGetValue(sessionId, out var session))
+                if (!_sessions.TryGetValue(sessionId, out var session))
+                    return new SelectResult(false, "会话不存在");
+
+                // 如果已选中，取消选择
+                if (session.IsSelected)
                 {
-                    session.IsSelected = !session.IsSelected;
-
-                    if (session.IsSelected && !_activeGroupIds.Contains(sessionId))
-                        _activeGroupIds.Add(sessionId);
-                    else if (!session.IsSelected)
-                        _activeGroupIds.Remove(sessionId);
-
+                    session.IsSelected = false;
+                    _activeGroupIds.Remove(sessionId);
                     IsBroadcastMode = _activeGroupIds.Count > 1;
+                    return new SelectResult(true, "已移出多通道");
                 }
+
+                // 未选中，尝试选择——检测终端就绪
+                if (!session.Session.IsConnected)
+                    return new SelectResult(false, "会话未连接");
+
+                var readyState = CheckTerminalReady(session.Session);
+                session.LastReadyState = readyState;
+
+                if (!readyState.IsReady)
+                    return new SelectResult(false, readyState.Description);
+
+                session.IsSelected = true;
+                if (!_activeGroupIds.Contains(sessionId))
+                    _activeGroupIds.Add(sessionId);
+                IsBroadcastMode = _activeGroupIds.Count > 1;
+
+                return new SelectResult(true, "已加入多通道");
             }
         }
 
         /// <summary>
-        /// 选择会话
+        /// 选择会话——只有终端就绪（命令提示符状态）的会话才允许加入
         /// </summary>
-        public void Select(string sessionId)
+        public SelectResult Select(string sessionId)
         {
             lock (_lock)
             {
-                if (_sessions.TryGetValue(sessionId, out var session))
-                {
-                    session.IsSelected = true;
-                    if (!_activeGroupIds.Contains(sessionId))
-                        _activeGroupIds.Add(sessionId);
-                    IsBroadcastMode = _activeGroupIds.Count > 1;
-                }
+                if (!_sessions.TryGetValue(sessionId, out var session))
+                    return new SelectResult(false, "会话不存在");
+
+                if (!session.Session.IsConnected)
+                    return new SelectResult(false, "会话未连接");
+
+                // 检测终端是否就绪
+                var readyState = CheckTerminalReady(session.Session);
+                session.LastReadyState = readyState;
+
+                if (!readyState.IsReady)
+                    return new SelectResult(false, readyState.Description);
+
+                session.IsSelected = true;
+                if (!_activeGroupIds.Contains(sessionId))
+                    _activeGroupIds.Add(sessionId);
+                IsBroadcastMode = _activeGroupIds.Count > 1;
+
+                return new SelectResult(true, "已加入多通道");
             }
         }
 
@@ -153,40 +185,75 @@ namespace Gdterm.Terminal
         }
 
         /// <summary>
-        /// 全选某分组
+        /// 全选某分组（只选择终端就绪的会话）
         /// </summary>
-        public void SelectGroup(string group)
+        public List<SelectResult> SelectGroup(string group)
         {
+            var results = new List<SelectResult>();
             lock (_lock)
             {
                 foreach (var kvp in _sessions)
                 {
-                    if (kvp.Value.Group == group)
-                    {
-                        kvp.Value.IsSelected = true;
-                        if (!_activeGroupIds.Contains(kvp.Key))
-                            _activeGroupIds.Add(kvp.Key);
-                    }
-                }
-                IsBroadcastMode = _activeGroupIds.Count > 1;
-            }
-        }
+                    if (kvp.Value.Group != group) continue;
 
-        /// <summary>
-        /// 全选所有会话
-        /// </summary>
-        public void SelectAll()
-        {
-            lock (_lock)
-            {
-                foreach (var kvp in _sessions)
-                {
+                    if (!kvp.Value.Session.IsConnected)
+                    {
+                        results.Add(new SelectResult(false, $"{kvp.Value.DisplayName}: 未连接"));
+                        continue;
+                    }
+
+                    var readyState = CheckTerminalReady(kvp.Value.Session);
+                    kvp.Value.LastReadyState = readyState;
+
+                    if (!readyState.IsReady)
+                    {
+                        results.Add(new SelectResult(false, $"{kvp.Value.DisplayName}: {readyState.Description}"));
+                        continue;
+                    }
+
                     kvp.Value.IsSelected = true;
                     if (!_activeGroupIds.Contains(kvp.Key))
                         _activeGroupIds.Add(kvp.Key);
+                    results.Add(new SelectResult(true, $"{kvp.Value.DisplayName}: 已加入"));
                 }
                 IsBroadcastMode = _activeGroupIds.Count > 1;
             }
+            return results;
+        }
+
+        /// <summary>
+        /// 全选所有就绪会话
+        /// </summary>
+        public List<SelectResult> SelectAll()
+        {
+            var results = new List<SelectResult>();
+            lock (_lock)
+            {
+                foreach (var kvp in _sessions)
+                {
+                    if (!kvp.Value.Session.IsConnected)
+                    {
+                        results.Add(new SelectResult(false, $"{kvp.Value.DisplayName}: 未连接"));
+                        continue;
+                    }
+
+                    var readyState = CheckTerminalReady(kvp.Value.Session);
+                    kvp.Value.LastReadyState = readyState;
+
+                    if (!readyState.IsReady)
+                    {
+                        results.Add(new SelectResult(false, $"{kvp.Value.DisplayName}: {readyState.Description}"));
+                        continue;
+                    }
+
+                    kvp.Value.IsSelected = true;
+                    if (!_activeGroupIds.Contains(kvp.Key))
+                        _activeGroupIds.Add(kvp.Key);
+                    results.Add(new SelectResult(true, $"{kvp.Value.DisplayName}: 已加入"));
+                }
+                IsBroadcastMode = _activeGroupIds.Count > 1;
+            }
+            return results;
         }
 
         /// <summary>
@@ -204,15 +271,43 @@ namespace Gdterm.Terminal
         }
 
         /// <summary>
-        /// 将命令发送到所有选中的会话
+        /// 广播前自动移除已非就绪的会话（如用户在某终端启动了 top）
+        /// </summary>
+        private void AutoRemoveNonReadySessions()
+        {
+            var toRemove = new List<string>();
+            foreach (var id in _activeGroupIds)
+            {
+                if (_sessions.TryGetValue(id, out var session))
+                {
+                    var readyState = CheckTerminalReady(session.Session);
+                    session.LastReadyState = readyState;
+                    if (!readyState.IsReady)
+                        toRemove.Add(id);
+                }
+            }
+            foreach (var id in toRemove)
+            {
+                if (_sessions.TryGetValue(id, out var session))
+                    session.IsSelected = false;
+                _activeGroupIds.Remove(id);
+            }
+        }
+
+        /// <summary>
+        /// 将命令发送到所有选中的会话（广播前自动剔除非就绪终端）
         /// </summary>
         /// <param name="command">要发送的命令</param>
         /// <param name="sourceSessionId">来源会话 ID（不发送给自己）</param>
-        public void BroadcastCommand(string command, string sourceSessionId = null)
+        public List<BroadcastResult> BroadcastCommand(string command, string sourceSessionId = null)
         {
-            if (string.IsNullOrEmpty(command)) return;
+            if (string.IsNullOrEmpty(command)) return new List<BroadcastResult>();
+
+            // 广播前再次检测：移除已变为非就绪的会话
+            AutoRemoveNonReadySessions();
 
             List<ChannelSession> targets;
+            var results = new List<BroadcastResult>();
 
             lock (_lock)
             {
@@ -241,14 +336,33 @@ namespace Gdterm.Terminal
                     target.Session.SendInput(command);
                     target.LastCommandAt = DateTime.UtcNow;
                     target.CommandCount++;
+                    lock (results) { results.Add(new BroadcastResult(target.SessionId, target.DisplayName, true, null)); }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // 发送失败不影响其他会话
+                    lock (results) { results.Add(new BroadcastResult(target.SessionId, target.DisplayName, false, ex.Message)); }
                 }
             })).ToArray();
 
             Task.WaitAll(tasks, TimeSpan.FromSeconds(5));
+            return results;
+        }
+
+        /// <summary>
+        /// 检查指定会话的终端就绪状态
+        /// </summary>
+        public ReadyState CheckSessionReady(string sessionId)
+        {
+            lock (_lock)
+            {
+                if (_sessions.TryGetValue(sessionId, out var session) && session.Session.IsConnected)
+                {
+                    var state = CheckTerminalReady(session.Session);
+                    session.LastReadyState = state;
+                    return state;
+                }
+                return new ReadyState(false, "会话不存在或未连接", ReadyReason.NoOutput);
+            }
         }
 
         /// <summary>
@@ -266,7 +380,8 @@ namespace Gdterm.Terminal
                     IsSelected = s.IsSelected,
                     IsConnected = s.Session?.IsConnected ?? false,
                     CommandCount = s.CommandCount,
-                    LastCommandAt = s.LastCommandAt
+                    LastCommandAt = s.LastCommandAt,
+                    ReadyState = s.LastReadyState
                 }).ToList();
             }
         }
@@ -297,6 +412,22 @@ namespace Gdterm.Terminal
             }
         }
 
+        /// <summary>
+        /// 检测终端就绪状态
+        /// </summary>
+        private static ReadyState CheckTerminalReady(ITerminalSession session)
+        {
+            try
+            {
+                var recentOutput = session.GetRecentOutput(5);
+                return TerminalReadyDetector.Detect(recentOutput);
+            }
+            catch
+            {
+                return new ReadyState(false, "无法获取终端状态", ReadyReason.NoOutput);
+            }
+        }
+
         public void Dispose()
         {
             lock (_lock)
@@ -320,6 +451,41 @@ namespace Gdterm.Terminal
             public DateTime RegisteredAt { get; set; }
             public DateTime? LastCommandAt { get; set; }
             public int CommandCount { get; set; }
+            public ReadyState LastReadyState { get; set; }
+        }
+    }
+
+    /// <summary>
+    /// 选择操作结果
+    /// </summary>
+    public class SelectResult
+    {
+        public bool Success { get; }
+        public string Message { get; }
+
+        public SelectResult(bool success, string message)
+        {
+            Success = success;
+            Message = message;
+        }
+    }
+
+    /// <summary>
+    /// 广播操作结果
+    /// </summary>
+    public class BroadcastResult
+    {
+        public string SessionId { get; }
+        public string DisplayName { get; }
+        public bool Success { get; }
+        public string Error { get; }
+
+        public BroadcastResult(string sessionId, string displayName, bool success, string error)
+        {
+            SessionId = sessionId;
+            DisplayName = displayName;
+            Success = success;
+            Error = error;
         }
     }
 
@@ -335,6 +501,7 @@ namespace Gdterm.Terminal
         public bool IsConnected { get; set; }
         public int CommandCount { get; set; }
         public DateTime? LastCommandAt { get; set; }
+        public ReadyState ReadyState { get; set; }
     }
 
     /// <summary>

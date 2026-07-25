@@ -7,6 +7,7 @@ namespace Gdterm.UI.Controls
 {
     /// <summary>
     /// 多通道输入面板——WindTerm 风格，显示所有会话列表，支持勾选/全选/广播输入
+    /// 带终端就绪状态检测：只有命令提示符状态的终端才允许加入
     /// </summary>
     public class MultiChannelPanel : UserControl
     {
@@ -44,7 +45,7 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(3)
             };
 
-            _btnSelectAll = new Button { Text = "全选", Size = new Size(50, 25), FlatStyle = FlatStyle.Flat };
+            _btnSelectAll = new Button { Text = "全选就绪", Size = new Size(70, 25), FlatStyle = FlatStyle.Flat };
             _btnDeselectAll = new Button { Text = "取消", Size = new Size(50, 25), FlatStyle = FlatStyle.Flat };
             _btnBroadcast = new Button { Text = "广播", Size = new Size(60, 25), FlatStyle = FlatStyle.Flat, Enabled = false };
 
@@ -60,10 +61,11 @@ namespace Gdterm.UI.Controls
                 GridLines = true,
                 HeaderStyle = ColumnHeaderStyle.Nonclickable
             };
-            _sessionList.Columns.Add("主机", 120);
-            _sessionList.Columns.Add("分组", 60);
-            _sessionList.Columns.Add("状态", 50);
-            _sessionList.Columns.Add("命令数", 50);
+            _sessionList.Columns.Add("主机", 100);
+            _sessionList.Columns.Add("分组", 50);
+            _sessionList.Columns.Add("状态", 60);
+            _sessionList.Columns.Add("终端", 55);
+            _sessionList.Columns.Add("命令数", 45);
 
             // 命令输入框
             var inputPanel = new Panel
@@ -111,7 +113,8 @@ namespace Gdterm.UI.Controls
         {
             _btnSelectAll.Click += (s, e) =>
             {
-                _manager.SelectAll();
+                var results = _manager.SelectAll();
+                ShowSelectionResults(results);
                 RefreshList();
             };
 
@@ -153,9 +156,22 @@ namespace Gdterm.UI.Controls
                 if (sessionId != null)
                 {
                     if (e.NewValue == CheckState.Checked)
-                        _manager.Select(sessionId);
+                    {
+                        // 尝试选择——有就绪检测
+                        var result = _manager.Select(sessionId);
+                        if (!result.Success)
+                        {
+                            // 选择失败，恢复未勾选状态
+                            item.Checked = false;
+                            _statusLabel.Text = $"✗ {item.SubItems[0].Text}: {result.Message}";
+                            _statusLabel.ForeColor = Color.Red;
+                            return;
+                        }
+                    }
                     else
+                    {
                         _manager.Deselect(sessionId);
+                    }
                     UpdateStatus();
                 }
             }));
@@ -189,14 +205,27 @@ namespace Gdterm.UI.Controls
             {
                 var item = new ListViewItem(session.DisplayName);
                 item.SubItems.Add(session.Group);
-                item.SubItems.Add(session.IsConnected ? "●" : "○");
+
+                // 连接状态
+                item.SubItems.Add(session.IsConnected ? "● 已连接" : "○ 断开");
+
+                // 终端就绪状态
+                var readyText = "—";
+                if (session.IsConnected && session.ReadyState != null)
+                {
+                    readyText = session.ReadyState.IsReady ? "✓ 就绪" : "✗ 忙";
+                }
+                item.SubItems.Add(readyText);
+
                 item.SubItems.Add(session.CommandCount.ToString());
                 item.Tag = session.SessionId;
                 item.Checked = session.IsSelected;
 
-                // 未连接的会话灰色显示
+                // 未连接或非就绪的终端灰色显示
                 if (!session.IsConnected)
                     item.ForeColor = SystemColors.GrayText;
+                else if (session.ReadyState != null && !session.ReadyState.IsReady)
+                    item.ForeColor = Color.OrangeRed;
 
                 _sessionList.Items.Add(item);
             }
@@ -205,12 +234,28 @@ namespace Gdterm.UI.Controls
             UpdateStatus();
         }
 
+        private void ShowSelectionResults(System.Collections.Generic.List<SelectResult> results)
+        {
+            var rejected = results.FindAll(r => !r.Success);
+            if (rejected.Count > 0)
+            {
+                var msg = string.Join("\n", rejected.ConvertAll(r => $"• {r.Message}"));
+                _statusLabel.Text = $"✗ {rejected.Count} 个会话未就绪";
+                _statusLabel.ForeColor = Color.Red;
+            }
+            else
+            {
+                _statusLabel.ForeColor = SystemColors.ControlText;
+            }
+        }
+
         private void UpdateStatus()
         {
             var total = _manager.GetAllSessions().Count;
             var selected = _manager.SelectedCount;
+            _statusLabel.ForeColor = SystemColors.ControlText;
             _statusLabel.Text = selected > 0
-                ? $"已选中 {selected}/{total} 个会话，广播模式已激活"
+                ? $"已选中 {selected}/{total} 个就绪会话，广播模式已激活"
                 : $"共 {total} 个会话，未选择广播目标";
         }
     }
