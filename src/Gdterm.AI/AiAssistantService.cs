@@ -18,6 +18,8 @@ namespace Gdterm.AI
     public class AiAssistantService : IAiAssistantService, IDisposable
     {
         private readonly List<ChatMessage> _history = new List<ChatMessage>();
+        /// <summary>对话历史硬顶（user+assistant 合计条数），防长会话内存/token 膨胀</summary>
+        public int MaxHistoryMessages { get; set; } = 40;
         private static readonly HttpClient _httpClient = new HttpClient
         {
             Timeout = TimeSpan.FromSeconds(120)
@@ -57,9 +59,9 @@ namespace Gdterm.AI
 
                 if (response.IsSuccess)
                 {
-                    // 添加到历史
-                    _history.Add(new ChatMessage("user", message));
-                    _history.Add(new ChatMessage("assistant", response.Content));
+                    // 添加到历史（带硬顶）
+                    AppendHistory(new ChatMessage("user", message));
+                    AppendHistory(new ChatMessage("assistant", response.Content));
 
                     // 提取命令
                     response.SuggestedCommands = ExtractCommands(response.Content);
@@ -116,6 +118,16 @@ namespace Gdterm.AI
         public void ClearHistory()
         {
             _history.Clear();
+        }
+
+        private void AppendHistory(ChatMessage msg)
+        {
+            if (msg == null) return;
+            _history.Add(msg);
+            var cap = MaxHistoryMessages > 0 ? MaxHistoryMessages : 40;
+            // 成对裁剪，尽量保留完整 user/assistant 轮次
+            while (_history.Count > cap)
+                _history.RemoveAt(0);
         }
 
         private string BuildSystemPrompt(ITerminalSession session)
@@ -384,9 +396,9 @@ namespace Gdterm.AI
                     }
                 }
 
-                _history.Add(new ChatMessage("user", message));
+                AppendHistory(new ChatMessage("user", message));
                 var result = fullContent.ToString();
-                _history.Add(new ChatMessage("assistant", result));
+                AppendHistory(new ChatMessage("assistant", result));
 
                 return new AiResponse
                 {

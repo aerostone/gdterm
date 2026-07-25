@@ -24,6 +24,9 @@
 
 ### 安全约束
 
+- 剪贴板密码复制经 ClipboardProtector，默认 30s TTL 自动清空（内容未变时）
+- AI 对话历史默认 MaxHistoryMessages=40；AiModelStore ApiKey 落盘 gdk1: XOR 混淆（非 DPAPI，长期应进 KeePass）
+
 - 密码库随绿色版走（U盘便携），强制高密码强度策略
 - 主密码会话级解锁，闲时自动锁定
 - Jump Server 手动跳板链，连接配置显式声明

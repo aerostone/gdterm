@@ -132,7 +132,7 @@ namespace Gdterm.AI
                 sb.AppendFormat("\"Id\":\"{0}\"", Escape(models[i].Id));
                 sb.AppendFormat(",\"Name\":\"{0}\"", Escape(models[i].Name));
                 sb.AppendFormat(",\"Endpoint\":\"{0}\"", Escape(models[i].Endpoint));
-                sb.AppendFormat(",\"ApiKey\":\"{0}\"", Escape(models[i].ApiKey));
+                sb.AppendFormat(",\"ApiKey\":\"{0}\"", Escape(ProtectSecret(models[i].ApiKey)));
                 sb.AppendFormat(",\"Model\":\"{0}\"", Escape(models[i].Model));
                 if (models[i].MaxTokens.HasValue) sb.AppendFormat(",\"MaxTokens\":{0}", models[i].MaxTokens.Value);
                 if (models[i].Temperature.HasValue) sb.AppendFormat(",\"Temperature\":{0}", models[i].Temperature.Value.ToString("F1"));
@@ -166,7 +166,7 @@ namespace Gdterm.AI
             m.Id = ExtractString(obj, "Id") ?? "";
             m.Name = ExtractString(obj, "Name") ?? "";
             m.Endpoint = ExtractString(obj, "Endpoint") ?? "";
-            m.ApiKey = ExtractString(obj, "ApiKey") ?? "";
+            m.ApiKey = UnprotectSecret(ExtractString(obj, "ApiKey") ?? "");
             m.Model = ExtractString(obj, "Model") ?? "";
             var maxTok = ExtractRawValue(obj, "MaxTokens"); if (maxTok != null) m.MaxTokens = int.Parse(maxTok);
             var temp = ExtractRawValue(obj, "Temperature"); if (temp != null) m.Temperature = double.Parse(temp);
@@ -200,5 +200,40 @@ namespace Gdterm.AI
         }
 
         private static string Escape(string s) { return (s ?? "").Replace("\\", "\\\\").Replace("\"", "\\\""); }
+
+        // 轻量可逆混淆：打开 data/config 时不直接看见 ApiKey 明文。
+        // 非 DPAPI；完整拷走 data/ 仍可还原。长期应迁入 KeePass。
+        private const string SecretPrefix = "gdk1:";
+        private static readonly byte[] SecretKey = Encoding.UTF8.GetBytes("gdterm-ai-model-key-v1");
+
+        private static string ProtectSecret(string plain)
+        {
+            if (string.IsNullOrEmpty(plain)) return "";
+            if (plain.StartsWith(SecretPrefix, StringComparison.Ordinal)) return plain;
+            var data = Encoding.UTF8.GetBytes(plain);
+            var x = new byte[data.Length];
+            for (int i = 0; i < data.Length; i++)
+                x[i] = (byte)(data[i] ^ SecretKey[i % SecretKey.Length]);
+            return SecretPrefix + Convert.ToBase64String(x);
+        }
+
+        private static string UnprotectSecret(string stored)
+        {
+            if (string.IsNullOrEmpty(stored)) return "";
+            if (!stored.StartsWith(SecretPrefix, StringComparison.Ordinal))
+                return stored; // 兼容旧明文
+            try
+            {
+                var x = Convert.FromBase64String(stored.Substring(SecretPrefix.Length));
+                var data = new byte[x.Length];
+                for (int i = 0; i < x.Length; i++)
+                    data[i] = (byte)(x[i] ^ SecretKey[i % SecretKey.Length]);
+                return Encoding.UTF8.GetString(data);
+            }
+            catch
+            {
+                return "";
+            }
+        }
     }
 }

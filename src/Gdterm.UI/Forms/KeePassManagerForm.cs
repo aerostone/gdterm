@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.KeePass;
 using Gdterm.KeePass.Models;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Forms
 {
@@ -220,8 +221,9 @@ namespace Gdterm.UI.Forms
                 var credential = _keepassService.GetCredential(entryId);
                 if (credential != null && !string.IsNullOrEmpty(credential.Password))
                 {
-                    Clipboard.SetText(credential.Password);
-                    _statusLabel.Text = "密码已复制到剪贴板";
+                    ClipboardProtector.SetTextWithTtl(credential.Password);
+                    // 状态栏提示 TTL
+                    _statusLabel.Text = "密码已复制（约 30 秒后自动清空）";
                 }
                 else
                 {

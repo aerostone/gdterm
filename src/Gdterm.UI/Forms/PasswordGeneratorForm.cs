@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Forms
 {
@@ -309,13 +310,13 @@ namespace Gdterm.UI.Forms
             {
                 try
                 {
-                    Clipboard.SetText(_resultBox.Text);
+                    ClipboardProtector.SetTextWithTtl(_resultBox.Text);
                     AddToHistory(_resultBox.Text);
 
                     // 短暂提示
                     var btn = (Button)sender;
                     var originalText = btn.Text;
-                    btn.Text = "✓ 已复制";
+                    btn.Text = "✓ 已复制(30s清空)";
                     var timer = new Timer { Interval = 1500 };
                     timer.Tick += (s, ev) => { btn.Text = originalText; timer.Stop(); timer.Dispose(); };
                     timer.Start();
@@ -347,7 +348,7 @@ namespace Gdterm.UI.Forms
             {
                 try
                 {
-                    Clipboard.SetText(selected);
+                    ClipboardProtector.SetTextWithTtl(selected);
                 }
                 catch { }
             }
