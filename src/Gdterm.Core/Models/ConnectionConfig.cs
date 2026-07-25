@@ -64,6 +64,11 @@ namespace Gdterm.Core.Models
         public string CredentialRefId { get; set; }
 
         /// <summary>
+        /// 串口配置（仅 Protocol=Serial 时使用）
+        /// </summary>
+        public SerialConfig Serial { get; set; }
+
+        /// <summary>
         /// 扩展字段
         /// </summary>
         public Dictionary<string, string> Metadata { get; set; }

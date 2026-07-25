@@ -13,6 +13,11 @@ namespace Gdterm.Core.Enums
         /// <summary>
         /// SSH 安全外壳
         /// </summary>
-        SSH = 1
+        SSH = 1,
+
+        /// <summary>
+        /// 串口连接
+        /// </summary>
+        Serial = 2
     }
 }
