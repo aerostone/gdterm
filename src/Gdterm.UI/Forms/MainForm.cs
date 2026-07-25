@@ -56,6 +56,8 @@ namespace Gdterm.UI.Forms
         private ConnectionTreeControl _connectionTree;
         private TabContainerControl _tabContainer;
         private ActiveSessionBridge _sessionBridge;
+        private SidePanelFactory _sidePanels;
+        private SessionStateCoordinator _sessionState;
         private StatusBarControl _statusBar;
         private LockOverlayControl _lockOverlay;
         private MenuStrip _menuStrip;
@@ -208,21 +210,21 @@ namespace Gdterm.UI.Forms
             var termMenu = new ToolStripMenuItem("终端(&E)");
             termMenu.DropDownItems.Add("查找 Ctrl+F", null, (s, e) => ShowSearchBar());
             termMenu.DropDownItems.Add("片段搜索 Ctrl+P", null, (s, e) => ShowSnippetSearch());
-            termMenu.DropDownItems.Add("高亮规则", null, (s, e) => ShowSidePanel(CreateHighlightPanel()));
-            termMenu.DropDownItems.Add("快捷键绑定", null, (s, e) => ShowSidePanel(CreateKeyBindingPanel()));
-            termMenu.DropDownItems.Add("登录脚本", null, (s, e) => ShowSidePanel(CreateLogonScriptPanel()));
+            termMenu.DropDownItems.Add("高亮规则", null, (s, e) => ShowSidePanel(_sidePanels.CreateHighlightPanel()));
+            termMenu.DropDownItems.Add("快捷键绑定", null, (s, e) => ShowSidePanel(_sidePanels.CreateKeyBindingPanel()));
+            termMenu.DropDownItems.Add("登录脚本", null, (s, e) => ShowSidePanel(_sidePanels.CreateLogonScriptPanel()));
             termMenu.DropDownItems.Add(new ToolStripSeparator());
-            termMenu.DropDownItems.Add("多通道广播", null, (s, e) => ShowSidePanel(CreateMultiChannelPanel()));
-            termMenu.DropDownItems.Add("批量命令", null, (s, e) => ShowSidePanel(CreateBatchPanel()));
-            termMenu.DropDownItems.Add("命令历史", null, (s, e) => ShowSidePanel(CreateHistoryPanel()));
-            termMenu.DropDownItems.Add("健康监控", null, (s, e) => ShowSidePanel(CreateHealthPanel()));
-            termMenu.DropDownItems.Add("端口转发", null, (s, e) => ShowSidePanel(CreatePortForwardPanel()));
+            termMenu.DropDownItems.Add("多通道广播", null, (s, e) => ShowSidePanel(_sidePanels.CreateMultiChannelPanel()));
+            termMenu.DropDownItems.Add("批量命令", null, (s, e) => ShowSidePanel(_sidePanels.CreateBatchPanel()));
+            termMenu.DropDownItems.Add("命令历史", null, (s, e) => ShowSidePanel(_sidePanels.CreateHistoryPanel()));
+            termMenu.DropDownItems.Add("健康监控", null, (s, e) => ShowSidePanel(_sidePanels.CreateHealthPanel()));
+            termMenu.DropDownItems.Add("端口转发", null, (s, e) => ShowSidePanel(_sidePanels.CreatePortForwardPanel()));
             _menuStrip.Items.Add(termMenu);
 
             // 工具
             var toolsMenu = new ToolStripMenuItem("工具(&T)");
-            toolsMenu.DropDownItems.Add("运维工具箱", null, (s, e) => ShowSidePanel(CreateToolboxPanel()));
-            toolsMenu.DropDownItems.Add("敏感信息扫描", null, (s, e) => ShowSidePanel(CreateSecretScanPanel()));
+            toolsMenu.DropDownItems.Add("运维工具箱", null, (s, e) => ShowSidePanel(_sidePanels.CreateToolboxPanel()));
+            toolsMenu.DropDownItems.Add("敏感信息扫描", null, (s, e) => ShowSidePanel(_sidePanels.CreateSecretScanPanel()));
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
             toolsMenu.DropDownItems.Add("密码库管理(&K)", null, OnKeePassManager);
             toolsMenu.DropDownItems.Add("密码健康报告(&H)", null, OnPasswordHealth);
@@ -266,6 +268,19 @@ namespace Gdterm.UI.Forms
                 _connectionStore,
                 _rdpFactory);
             _sessionBridge = new ActiveSessionBridge(_tabContainer);
+            _sidePanels = new SidePanelFactory(
+                _tabContainer,
+                _sessionBridge,
+                _toolRegistry,
+                _secretScanner,
+                _multiChannelManager,
+                _dangerousCmdDetector,
+                _auditLogger,
+                _commandHistoryStore,
+                _highlightStore,
+                _keyBindingStore,
+                _quickCommandStore,
+                this);
             _tabContainer.Dock = DockStyle.Fill;
             _tabContainer.ActiveSessionChanged += OnActiveSessionChanged;
             _tabContainer.SessionClosed += OnSessionClosed;
@@ -362,6 +377,16 @@ namespace Gdterm.UI.Forms
             Controls.Add(_lockOverlay);
             Controls.Add(_menuStrip);
             _lockOverlay.BringToFront();
+
+            _sessionState = new SessionStateCoordinator(
+                _sessionStore,
+                _connectionStore,
+                _tabContainer,
+                this,
+                () => _currentViewMode,
+                SetViewMode,
+                () => _connectionTree != null ? _connectionTree.Width : 250,
+                w => { if (_connectionTree != null) _connectionTree.Width = w; });
         }
 
         private void SetupEventHandlers()
@@ -394,22 +419,7 @@ namespace Gdterm.UI.Forms
                 _quickBar?.SetActiveSession(session, host, user);
 
             // 同步多通道：注册在线会话，注销已不存在的会话
-            try
-            {
-                if (_multiChannelManager == null) return;
-                var all = _tabContainer.GetConnectedSessions();
-                var liveIds = new System.Collections.Generic.HashSet<string>(all.Keys);
-
-                foreach (var info in _multiChannelManager.GetAllSessions())
-                {
-                    if (info != null && !liveIds.Contains(info.SessionId))
-                        _multiChannelManager.Unregister(info.SessionId);
-                }
-
-                foreach (var kv in all)
-                    _multiChannelManager.Register(kv.Key, kv.Value, kv.Key, null);
-            }
-            catch { }
+            try { _sidePanels?.SyncMultiChannelRegistrations(); } catch { }
         }
 
         private void SetViewMode(ViewMode mode)
@@ -757,7 +767,7 @@ namespace Gdterm.UI.Forms
             }
         }
 
-        // ====== 侧边面板 ======
+        // ====== 侧边面板（工厂在 SidePanelFactory） ======
 
         private void ShowSidePanel(Control panel)
         {
@@ -786,198 +796,28 @@ namespace Gdterm.UI.Forms
             _sideToolHost.Visible = false;
         }
 
-        private Control CreateToolboxPanel()
-        {
-            if (_toolRegistry == null)
-                return new Label { Text = "工具箱未初始化", ForeColor = Color.White, Dock = DockStyle.Fill };
-            var panel = new ToolboxPanel(_toolRegistry);
-            if (_sessionBridge != null) _sessionBridge.BindToolbox(panel);
-            else try { panel.SetRemoteSession(_tabContainer.GetActiveRemoteSession()); } catch { }
-            return panel;
-        }
-
-        private Control CreateSecretScanPanel()
-        {
-            if (_secretScanner == null)
-                return new Label { Text = "扫描器未初始化", ForeColor = Color.White, Dock = DockStyle.Fill };
-            return new SecretScanPanel(_secretScanner);
-        }
-
-        private Control CreateMultiChannelPanel()
-        {
-            // 刷新注册：只保留当前在线会话
-            var all = _tabContainer.GetConnectedSessions();
-            var liveIds = new System.Collections.Generic.HashSet<string>(all.Keys);
-            foreach (var info in _multiChannelManager.GetAllSessions())
-            {
-                if (info != null && !liveIds.Contains(info.SessionId))
-                    _multiChannelManager.Unregister(info.SessionId);
-            }
-            foreach (var kv in all)
-                _multiChannelManager.Register(kv.Key, kv.Value, kv.Key, null);
-            var panel = new MultiChannelPanel(_multiChannelManager);
-            panel.BroadcastCommandRequested += (s, cmd) =>
-            {
-                if (_dangerousCmdDetector != null)
-                {
-                    var check = _dangerousCmdDetector.Check(cmd);
-                    if (check != null && check.IsDangerous)
-                    {
-                        using (var dlg = new DangerousCommandDialog(cmd, check))
-                        {
-                            dlg.ShowDialog(this);
-                            if (!dlg.IsConfirmed)
-                            {
-                                try
-                                {
-                                    _auditLogger?.LogSecurityEvent(
-                                        SecurityEvent.DangerousCommandBlocked,
-                                        "broadcast blocked: " + cmd);
-                                }
-                                catch { }
-                                return;
-                            }
-                            if (dlg.RememberChoice)
-                            {
-                                try { _dangerousCmdDetector.AddToWhitelist(cmd); } catch { }
-                            }
-                        }
-                    }
-                }
-                _multiChannelManager.BroadcastCommand(cmd + "\r");
-                try
-                {
-                    _commandHistoryStore?.RecordCommand(new CommandHistoryEntry
-                    {
-                        Id = Guid.NewGuid().ToString("N"),
-                        Command = cmd,
-                        ExecutedAt = DateTime.UtcNow,
-                        IsBroadcast = true
-                    });
-                }
-                catch { }
-            };
-            return panel;
-        }
-
-        private Control CreateBatchPanel()
-        {
-            var panel = new BatchCommandPanel();
-            panel.SetDangerousDetector(_dangerousCmdDetector);
-            panel.SetSessions(_tabContainer.GetConnectedSessions());
-            return panel;
-        }
-
-        private Control CreateHistoryPanel()
-        {
-            if (_commandHistoryStore == null)
-                return new Label { Text = "命令历史未初始化", ForeColor = Color.White, Dock = DockStyle.Fill };
-            return new CommandHistoryPanel(_commandHistoryStore);
-        }
-
-        private Control CreateHealthPanel()
-        {
-            var panel = new HealthMonitorPanel();
-            var mon = _tabContainer.GetActiveHealthMonitor();
-            if (mon != null) panel.SetMonitor(mon);
-            return panel;
-        }
-
-        private Control CreatePortForwardPanel()
-        {
-            try
-            {
-                var mgr = new Gdterm.Tunnel.PortForwardManager();
-                var panel = new PortForwardPanel(mgr);
-                if (_sessionBridge != null) _sessionBridge.BindPortForward(panel);
-                else
-                {
-                    var host = _tabContainer.GetActivePortForwardHost();
-                    if (host != null) panel.SetPortForwardHost(host);
-                }
-                return panel;
-            }
-            catch (Exception ex)
-            {
-                return new Label { Text = "端口转发不可用: " + ex.Message, ForeColor = Color.White, Dock = DockStyle.Fill };
-            }
-        }
-
-        private Control CreateHighlightPanel()
-        {
-            if (_highlightStore == null)
-                return new Label { Text = "高亮存储未初始化", ForeColor = Color.White, Dock = DockStyle.Fill };
-            return new HighlightRulePanel(_highlightStore);
-        }
-
-        private Control CreateKeyBindingPanel()
-        {
-            if (_keyBindingStore == null)
-                return new Label { Text = "快捷键存储未初始化", ForeColor = Color.White, Dock = DockStyle.Fill };
-            return new KeyBindingPanel(_keyBindingStore);
-        }
-
-        private Control CreateLogonScriptPanel()
-        {
-            try
-            {
-                var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "config", "logon-scripts.json");
-                var store = new LogonScriptStore(path);
-                return new LogonScriptPanel(store);
-            }
-            catch (Exception ex)
-            {
-                return new Label { Text = "登录脚本: " + ex.Message, ForeColor = Color.White, Dock = DockStyle.Fill };
-            }
-        }
-
         private void ShowSearchBar()
         {
-            var tc = _tabContainer.GetActiveTerminalControl();
-            if (tc == null)
-            {
-                MessageBox.Show("请先打开终端标签", "查找", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-            var bar = new TerminalSearchBar();
-            bar.Dock = DockStyle.Top;
-            bar.Height = 32;
-            // 简单挂到 tab 容器顶部
-            _tabContainer.Controls.Add(bar);
-            bar.BringToFront();
-            bar.ShowAndFocus();
-            bar.CloseRequested += () =>
-            {
-                _tabContainer.Controls.Remove(bar);
-                bar.Dispose();
-            };
+            _sidePanels?.AttachSearchBar(_tabContainer);
         }
 
         private void ShowSnippetSearch()
         {
-            List<QuickCommand> cmds = null;
-            try { cmds = _quickCommandStore?.LoadAll(); } catch { }
-            var panel = new SnippetSearchPanel(cmds ?? new List<QuickCommand>());
-            var snipTc = _tabContainer.GetActiveTerminalControl();
-            if (snipTc != null)
-                panel.SetActiveTerminal(snipTc);
-            else
-                panel.SetActiveSession(_tabContainer.GetActiveSession());
-            // 统一经 TerminalControl 闸门
-            panel.SnippetSent += (cmd, qc) =>
+            var panel = _sidePanels.CreateSnippetSearchPanel(cmd =>
             {
                 var tc = _tabContainer.GetActiveTerminalControl();
                 if (tc == null) return;
                 var line = cmd.EndsWith("\r") || cmd.EndsWith("\n") ? cmd : cmd + "\r";
                 tc.SendInput(line);
-            };
+            });
             ShowSidePanel(panel);
-            panel.ShowAndFocus();
+            var snip = panel as SnippetSearchPanel;
+            snip?.ShowAndFocus();
         }
 
         private void OnFormClosing(object sender, FormClosingEventArgs e)
         {
-            try { SaveSessionState(); } catch { }
+            try { _sessionState?.Save(); } catch { }
             _hotkeyManager?.Dispose();
             _tabContainer.CloseAllTabs();
             _tunnelManager.Dispose();
@@ -987,56 +827,12 @@ namespace Gdterm.UI.Forms
 
         private void SaveSessionState()
         {
-            if (_sessionStore == null) return;
-            var state = new SessionState
-            {
-                WindowX = Left,
-                WindowY = Top,
-                WindowWidth = Width,
-                WindowHeight = Height,
-                WindowState = WindowState.ToString(),
-                ViewMode = _currentViewMode.ToString(),
-                ConnectionPanelWidth = _connectionTree?.Width ?? 250,
-                ActiveTabIndex = _tabContainer.ActiveTabIndex,
-                OpenTabs = _tabContainer.GetOpenTabStates()
-            };
-            _sessionStore.Save(state);
+            try { _sessionState?.Save(); } catch { }
         }
 
         private void RestoreSessionState()
         {
-            if (_sessionStore == null) return;
-            var state = _sessionStore.Load();
-            if (state == null) return;
-            try
-            {
-                if (state.WindowWidth > 200 && state.WindowHeight > 200)
-                {
-                    Width = state.WindowWidth;
-                    Height = state.WindowHeight;
-                    StartPosition = FormStartPosition.Manual;
-                    Left = state.WindowX;
-                    Top = state.WindowY;
-                }
-                if (state.WindowState == "Maximized")
-                    WindowState = FormWindowState.Maximized;
-                if (Enum.TryParse(state.ViewMode, out ViewMode vm))
-                    SetViewMode(vm);
-                if (state.ConnectionPanelWidth > 50 && _connectionTree != null)
-                    _connectionTree.Width = state.ConnectionPanelWidth;
-                if (state.OpenTabs != null)
-                {
-                    var all = _connectionStore.LoadAll();
-                    foreach (var tab in state.OpenTabs)
-                    {
-                        var config = all.FirstOrDefault(c => c.Id == tab.ConnectionId);
-                        if (config != null) _tabContainer.OpenConnection(config);
-                    }
-                    if (state.ActiveTabIndex >= 0)
-                        _tabContainer.SetActiveTabIndex(state.ActiveTabIndex);
-                }
-            }
-            catch { }
+            try { _sessionState?.Restore(); } catch { }
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)

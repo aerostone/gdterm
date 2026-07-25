@@ -35,5 +35,11 @@ status: partial
 
 ## 修复状态
 
-- **status**: `partial`
-- **note**: ActiveSessionBridge + CredentialResolver + RdpOptionsBuilder 已抽出；MainForm 侧栏绑定经 bridge；全量 SessionOrchestrator/菜单拆分仍 deferred
+- **status**: `partial`（显著推进，非全量消灭）
+- **done**:
+  - `ActiveSessionBridge` / `CredentialResolver` / `RdpOptionsBuilder`
+  - `SidePanelFactory`（全部 Create* 侧栏面板 + 多通道同步/广播闸门）
+  - `SessionStateCoordinator`（窗口/标签会话保存恢复）
+  - `TabSessionLifecycle`（登录脚本、健康监控/Watch、隧道最后用户关闭、Close 审计）
+- **remaining**: MainForm 菜单/布局仍在同一类（~870 行）；TabContainer 仍持有 SSH/RDP/SFTP 建签 UI（~760 行）；完整 SessionOrchestrator 与协议策略再拆仍 deferred
+- **metrics**: MainForm 1072→~868 行；TabContainer 836→~761 行

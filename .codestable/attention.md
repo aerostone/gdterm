@@ -59,4 +59,4 @@
 - UI 不直接 `new RdpClient` / `TerminalSession` / `SerialSession`；经 `IRdpClientFactory` / `ITerminalSessionFactory`
 - 运维工具走 `ISshRemoteSession`；端口转发走 `ISshPortForwardHost`；隧道走 `ITunnelManager`
 - 凭据解析走 `CredentialResolver`；活动会话侧栏绑定走 `ActiveSessionBridge`
-
+- finding-10 拆分进度：SidePanelFactory / SessionStateCoordinator / TabSessionLifecycle / ActiveSessionBridge / CredentialResolver；MainForm 与 TabContainer 仍是布局+建签枢纽，禁止再堆业务到这两类

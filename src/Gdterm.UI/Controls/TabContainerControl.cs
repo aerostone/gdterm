@@ -37,7 +37,7 @@ namespace Gdterm.UI.Controls
         private readonly DangerousCommandDetector _dangerousDetector;
         private readonly AutoReconnectWatchdog _reconnectWatchdog;
         private readonly IConnectionStore _connectionStore;
-        private LogonScriptStore _logonScriptStore;
+        private readonly TabSessionLifecycle _lifecycle;
         private readonly Dictionary<TabPage, TabSession> _sessions = new Dictionary<TabPage, TabSession>();
         private TabControl _tabControl;
 
@@ -72,6 +72,7 @@ namespace Gdterm.UI.Controls
             _dangerousDetector = dangerousDetector;
             _reconnectWatchdog = reconnectWatchdog;
             _connectionStore = connectionStore;
+            _lifecycle = new TabSessionLifecycle(auditLogger, reconnectWatchdog);
 
             if (_reconnectWatchdog != null)
             {
@@ -365,74 +366,14 @@ namespace Gdterm.UI.Controls
 
         private void TryRunLogonScript(TerminalControl terminal, ConnectionConfig config)
         {
-            if (terminal == null || config == null || string.IsNullOrEmpty(config.Id)) return;
-            try
-            {
-                if (_logonScriptStore == null)
-                {
-                    var path = System.IO.Path.Combine(
-                        AppDomain.CurrentDomain.BaseDirectory, "data", "config", "logon-scripts.json");
-                    _logonScriptStore = new LogonScriptStore(path);
-                }
-                var scripts = _logonScriptStore.Load();
-                if (scripts == null || scripts.Count == 0) return;
-                LogonScript match = null;
-                foreach (var s in scripts)
-                {
-                    if (s == null || !s.Enabled) continue;
-                    if (string.Equals(s.AssociatedConnectionId, config.Id, StringComparison.OrdinalIgnoreCase))
-                    {
-                        match = s;
-                        break;
-                    }
-                }
-                if (match == null || match.Steps == null || match.Steps.Count == 0) return;
-                var session = terminal.Session;
-                if (session == null || !session.IsConnected) return;
-                var engine = new LogonScriptEngine();
-                // fire-and-forget on threadpool; engine disposes after complete
-                System.Threading.Tasks.Task.Run(async () =>
-                {
-                    try
-                    {
-                        await engine.ExecuteAsync(match, session).ConfigureAwait(false);
-                    }
-                    catch (Exception ex)
-                    {
-                        try
-                        {
-                            _auditLogger?.LogSecurityEvent(
-                                SecurityEvent.ApplicationError,
-                                "logon script failed on " + config.Host + ": " + ex.Message);
-                        }
-                        catch { }
-                    }
-                    finally
-                    {
-                        try { engine.Dispose(); } catch { }
-                    }
-                });
-            }
-            catch { }
+            _lifecycle.TryRunLogonScript(terminal, config);
         }
 
         private void WireHealthAndReconnect(TabSession ts, ITerminalSession session)
         {
             if (ts == null || session == null) return;
-
-            try { ts.HealthMonitor?.Dispose(); } catch { }
-            ts.HealthMonitor = new ConnectionHealthMonitor(session)
-            {
-                MaxHistoryEntries = 120,
-                IsPaused = false
-            };
-            ts.HealthMonitor.ConnectionLost += host =>
-            {
-                _reconnectWatchdog?.NotifyConnectionLost(ts.SessionId);
-            };
-            ts.HealthMonitor.Start(5000);
-
-            _reconnectWatchdog?.Watch(ts.SessionId, session);
+            ts.HealthMonitor = _lifecycle.WireHealthAndReconnect(
+                ts.SessionId, session, ts.HealthMonitor);
         }
 
         public void SplitHorizontal() => SplitCurrentTab("horizontal");
@@ -505,37 +446,21 @@ namespace Gdterm.UI.Controls
             // 先从字典移除，再判断同 connectionId 是否还有其他标签共享隧道
             _sessions.Remove(tab);
 
-            if (!string.IsNullOrEmpty(connectionId) && _tunnelManager != null)
+            if (!string.IsNullOrEmpty(connectionId))
             {
-                var stillUsingTunnel = false;
+                var remaining = new List<string>();
                 foreach (var other in _sessions.Values)
                 {
-                    if (other?.Config?.Id == connectionId)
-                    {
-                        stillUsingTunnel = true;
-                        break;
-                    }
+                    if (other?.Config?.Id != null)
+                        remaining.Add(other.Config.Id);
                 }
-
-                if (!stillUsingTunnel)
-                {
-                    try
-                    {
-                        _tunnelManager.CloseAsync(connectionId).GetAwaiter().GetResult();
-                    }
-                    catch { /* best-effort */ }
-                }
+                _lifecycle.CloseTunnelIfLastUser(_tunnelManager, connectionId, remaining);
             }
 
-            try
-            {
-                _auditLogger?.LogConnection(
-                    connectionId,
-                    session.Config?.Host ?? session.Config?.Name,
-                    (session.Protocol).ToString(),
-                    ConnectionAction.Close);
-            }
-            catch { }
+            _lifecycle.LogConnectionClose(
+                connectionId,
+                session.Config?.Host ?? session.Config?.Name,
+                session.Protocol.ToString());
 
             try { _tabControl.TabPages.Remove(tab); } catch { }
 

@@ -152,6 +152,6 @@ mode: standard-plus
 | 13 | P1 | resolved | `0355592` PortForward/Toolbox 会话注入 |
 | 14 | P1 | resolved | `08b913d` ProtocolType 命名 |
 
-**剩余主动债**：finding-10 全量枢纽拆分、finding-12 Rdp/Serial 工厂抽象。ApiKey 已 gdk2 主密码加密（便携，非 DPAPI）。
+**剩余主动债**：finding-10 菜单/协议建签再拆（SidePanelFactory/SessionState/Lifecycle 已落地，MainForm~868、TabContainer~761）；finding-12 已 resolved（工厂+会话门面）。ApiKey 已 gdk2 主密码加密（便携，非 DPAPI）。
 
 **综合观感（修复后预估）**：从 3.3/10 提升到约 **7.0–7.5/10**（P0 闭环，P1 大部分 partial/resolved）。
