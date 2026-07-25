@@ -127,6 +127,13 @@
     <Compile Include="Controls\KeyBindingPanel.cs" />
     <Compile Include="Controls\QuickBarPanel.cs" />
     <Compile Include="Forms\QuickCommandEditorForm.cs" />
+    <Compile Include="Controls\HighlightRulePanel.cs" />
+    <Compile Include="Controls\TerminalSearchBar.cs" />
+    <Compile Include="Controls\PortForwardPanel.cs" />
+    <Compile Include="Controls\HealthMonitorPanel.cs" />
+    <Compile Include="Controls\BatchCommandPanel.cs" />
+    <Compile Include="Controls\LogonScriptPanel.cs" />
+    <Compile Include="Controls\SnippetSearchPanel.cs" />
     <Compile Include="MultiChannelPanel.cs" />
     <Compile Include="CommandHistoryPanel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -49,6 +49,7 @@
     <Compile Include="Models\TunnelSession.cs" />
     <Compile Include="Models\TunnelStatus.cs" />
     <Compile Include="TunnelManager.cs" />
+    <Compile Include="PortForwardManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

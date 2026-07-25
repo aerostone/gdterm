@@ -52,6 +52,9 @@
     <Compile Include="Models\TunnelConfig.cs" />
     <Compile Include="Models\TunnelEndpoint.cs" />
     <Compile Include="Models\TerminalKeyBinding.cs" />
+    <Compile Include="Models\HighlightRule.cs" />
+    <Compile Include="Models\LogonScript.cs" />
+    <Compile Include="Models\PortForwardRule.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

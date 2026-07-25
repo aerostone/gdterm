@@ -56,6 +56,14 @@
     <Compile Include="SerialSession.cs" />
     <Compile Include="TerminalEndpoint.cs" />
     <Compile Include="TerminalKeyBindingResolver.cs" />
+    <Compile Include="HighlightEngine.cs" />
+    <Compile Include="TerminalSearchEngine.cs" />
+    <Compile Include="TerminalAutoLogger.cs" />
+    <Compile Include="LogonScriptEngine.cs" />
+    <Compile Include="TerminalBufferExport.cs" />
+    <Compile Include="ConnectionHealthMonitor.cs" />
+    <Compile Include="BatchCommandExecutor.cs" />
+    <Compile Include="LocalTerminalSession.cs" />
     <Compile Include="TerminalReadyDetector.cs" />
     <Compile Include="MultiChannelManager.cs" />
     <Compile Include="MacroRecorder.cs" />

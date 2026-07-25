@@ -52,6 +52,8 @@
     <Compile Include="IBookmarkStore.cs" />
     <Compile Include="BookmarkStoreJson.cs" />
     <Compile Include="TerminalKeyBindingStore.cs" />
+    <Compile Include="HighlightStore.cs" />
+    <Compile Include="LogonScriptStore.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
