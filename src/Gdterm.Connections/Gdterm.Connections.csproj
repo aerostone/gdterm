@@ -46,6 +46,7 @@
     <Compile Include="IFolderCredentialStore.cs" />
     <Compile Include="SessionStateStore.cs" />
     <Compile Include="QuickCommandStore.cs" />
+    <Compile Include="CommandTemplateStore.cs" />
     <Compile Include="TemplateStore.cs" />
     <Compile Include="FolderCredentialStoreJson.cs" />
     <Compile Include="IBookmarkStore.cs" />

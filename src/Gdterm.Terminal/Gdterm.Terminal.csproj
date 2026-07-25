@@ -52,8 +52,19 @@
     <Compile Include="ITerminalSession.cs" />
     <Compile Include="Models\TerminalOutputEventArgs.cs" />
     <Compile Include="Rendering\IRenderer.cs" />
-    <Compile Include="Rendering\TerminalRenderer.cs" />
     <Compile Include="TerminalSession.cs" />
+    <Compile Include="SerialSession.cs" />
+    <Compile Include="TerminalEndpoint.cs" />
+    <Compile Include="TerminalReadyDetector.cs" />
+    <Compile Include="MultiChannelManager.cs" />
+    <Compile Include="MacroRecorder.cs" />
+    <Compile Include="MultiChannelRecorder.cs" />
+    <Compile Include="Rendering\LightweightRenderer.cs" />
+    <Compile Include="Rendering\TerminalRenderer.cs" />
+    <Compile Include="Transfer\ZmodemHandler.cs" />
+    <Compile Include="ITerminalSessionFactory.cs" />
+    <Compile Include="Themes\ColorSchemes.cs" />
+    <Compile Include="Themes\TerminalTransparency.cs" />
     <Compile Include="TerminalControl.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

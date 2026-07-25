@@ -19,6 +19,11 @@
     <Compile Include="ToolConfigBase.cs" />
     <Compile Include="Models\RemoteCommandResult.cs" />
     <Compile Include="Models\SshRemoteFileTransfer.cs" />
+    <Compile Include="Modules\CertificateInstallerTool.cs" />
+    <Compile Include="Modules\TimeSyncTool.cs" />
+    <Compile Include="Modules\RepoConfigTool.cs" />
+    <Compile Include="Modules\PortScannerTool.cs" />
+    <Compile Include="Modules\NetworkScannerTool.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -51,6 +51,8 @@
     <Compile Include="Models\SftpFileInfo.cs" />
     <Compile Include="Models\FileTransferProgress.cs" />
     <Compile Include="SftpService.cs" />
+    <Compile Include="SftpEnhancements.cs" />
+    <Compile Include="ISftpServiceFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
