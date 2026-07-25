@@ -37,4 +37,4 @@ UI 直接 `new RdpClient` / `new SerialSession` / `TerminalSessionFactory.Create
 ## 修复状态
 
 - **status**: `partial`
-- **note**: d4bd629 ITunnelManager; Rdp/Serial factories and SshClient leak remain
+- **note**: ITunnelManager + ISshRemoteSession + ISshPortForwardHost; UI free of Renci; Rdp/Serial factories still open

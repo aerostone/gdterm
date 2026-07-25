@@ -1,31 +1,62 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using Gdterm.Core.Models;
 using Renci.SshNet;
 
 namespace Gdterm.Tunnel
 {
     /// <summary>
-    /// 端口转发管理器——可视化管理本地/远程/动态端口转发
+    /// 端口转发管理器——可视化管理本地/远程/动态端口转发。
+    /// 对外接受 <see cref="ISshPortForwardHost"/>，内部才解包 SshClient。
     /// </summary>
     public class PortForwardManager : IDisposable
     {
         private readonly Dictionary<string, ForwardedPort> _activeForwards = new Dictionary<string, ForwardedPort>();
         private readonly object _lock = new object();
+        private ISshPortForwardHost _boundHost;
 
         public event Action<string, bool> ForwardStatusChanged; // ruleId, isActive
+
+        /// <summary>绑定当前 SSH 宿主（可换绑；旧转发在 Dispose/Stop 时清理）</summary>
+        public void Bind(ISshPortForwardHost host)
+        {
+            _boundHost = host;
+        }
+
+        public void Unbind()
+        {
+            _boundHost = null;
+        }
+
+        public bool HasBoundHost
+        {
+            get { return _boundHost != null && _boundHost.IsConnected; }
+        }
+
+        /// <summary>启动本地转发（使用已 Bind 的宿主）</summary>
+        public bool StartLocal(PortForwardRule rule)
+        {
+            return StartLocal(ResolveClient(), rule);
+        }
+
+        /// <summary>启动远程转发（使用已 Bind 的宿主）</summary>
+        public bool StartRemote(PortForwardRule rule)
+        {
+            return StartRemote(ResolveClient(), rule);
+        }
+
+        /// <summary>停止转发（使用已 Bind 的宿主）</summary>
+        public bool Stop(string ruleId)
+        {
+            return Stop(ResolveClient(), ruleId);
+        }
 
         /// <summary>启动本地转发</summary>
         public bool StartLocal(SshClient client, PortForwardRule rule)
         {
-            if (client == null || !client.IsConnected) return false;
+            if (client == null || !client.IsConnected || rule == null) return false;
             lock (_lock)
             {
                 if (_activeForwards.ContainsKey(rule.Id)) return false;
@@ -45,7 +76,7 @@ namespace Gdterm.Tunnel
         /// <summary>启动远程转发</summary>
         public bool StartRemote(SshClient client, PortForwardRule rule)
         {
-            if (client == null || !client.IsConnected) return false;
+            if (client == null || !client.IsConnected || rule == null) return false;
             lock (_lock)
             {
                 if (_activeForwards.ContainsKey(rule.Id)) return false;
@@ -79,6 +110,12 @@ namespace Gdterm.Tunnel
                 }
                 catch { return false; }
             }
+        }
+
+        private SshClient ResolveClient()
+        {
+            if (_boundHost == null || !_boundHost.IsConnected) return null;
+            return _boundHost.GetUnderlyingClient() as SshClient;
         }
 
         /// <summary>检查端口是否可用</summary>
@@ -119,6 +156,7 @@ namespace Gdterm.Tunnel
                 }
                 _activeForwards.Clear();
             }
+            _boundHost = null;
         }
     }
 }

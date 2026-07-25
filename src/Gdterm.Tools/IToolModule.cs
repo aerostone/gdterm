@@ -30,14 +30,15 @@ namespace Gdterm.Tools
     }
 
     /// <summary>
-    /// 支持远程 SSH 执行的工具模块
+    /// 支持远程 SSH 执行的工具模块。
+    /// 仅依赖 <see cref="ISshRemoteSession"/>，不暴露 Renci.SshNet。
     /// </summary>
     public interface IRemoteToolModule : IToolModule
     {
-        /// <summary>设置 SSH 会话（用于在远程机器上执行命令）</summary>
-        void SetSshSession(Renci.SshNet.SshClient client);
+        /// <summary>绑定远程会话（用于在远程机器上执行命令）</summary>
+        void SetSshSession(ISshRemoteSession session);
 
-        /// <summary>清除 SSH 会话</summary>
+        /// <summary>清除远程会话</summary>
         void ClearSshSession();
 
         /// <summary>当前是否已连接远程</summary>

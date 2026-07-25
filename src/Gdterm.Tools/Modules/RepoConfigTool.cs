@@ -2,7 +2,6 @@ using System;
 using System.Diagnostics;
 using System.Text;
 using Gdterm.Tools.Models;
-using Renci.SshNet;
 
 namespace Gdterm.Tools.Modules
 {
@@ -11,18 +10,18 @@ namespace Gdterm.Tools.Modules
     /// </summary>
     public class RepoConfigTool : IRemoteToolModule
     {
-        private SshClient _ssh;
+        private ISshRemoteSession _session;
 
         public string ToolId { get { return "repo-config"; } }
         public string DisplayName { get { return "仓库配置"; } }
         public string Description { get { return "远程yum/apt/zypper软件仓库配置管理"; } }
         public string Category { get { return "系统"; } }
-        public bool HasRemoteSession { get { return _ssh != null && _ssh.IsConnected; } }
+        public bool HasRemoteSession { get { return _session != null && _session.IsConnected; } }
 
         public event EventHandler<string> OutputReceived;
 
-        public void SetSshSession(SshClient client) { _ssh = client; }
-        public void ClearSshSession() { _ssh = null; }
+        public void SetSshSession(ISshRemoteSession session) { _session = session; }
+        public void ClearSshSession() { _session = null; }
         public void LoadConfig() { }
         public void SaveConfig() { }
 
@@ -119,18 +118,9 @@ namespace Gdterm.Tools.Modules
 
         private RemoteCommandResult ExecuteRemote(string command)
         {
-            var sw = Stopwatch.StartNew();
-            try
-            {
-                var cmd = _ssh.RunCommand(command);
-                sw.Stop();
-                return new RemoteCommandResult { Command = command, ExitCode = cmd.ExitStatus, Stdout = cmd.Result, Stderr = cmd.Error, Duration = sw.Elapsed };
-            }
-            catch (Exception ex)
-            {
-                sw.Stop();
-                return new RemoteCommandResult { Command = command, ExitCode = -1, Stderr = ex.Message, Duration = sw.Elapsed };
-            }
+            if (_session == null)
+                return new RemoteCommandResult { Command = command, ExitCode = -1, Stderr = "SSH 未连接" };
+            return _session.RunCommand(command);
         }
 
         private void OnOutput(string msg) { OutputReceived?.Invoke(this, msg); }
@@ -155,6 +145,6 @@ namespace Gdterm.Tools.Modules
                 });
         }
 
-        public void Dispose() { _ssh = null; }
+        public void Dispose() { _session = null; }
     }
 }

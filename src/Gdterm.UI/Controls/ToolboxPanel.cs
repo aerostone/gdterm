@@ -17,7 +17,7 @@ namespace Gdterm.UI.Controls
         private readonly Label _lblTitle;
         private readonly Label _lblDescription;
         private readonly RichTextBox _txtOutput;
-        private Renci.SshNet.SshClient _sshClient;
+        private ISshRemoteSession _remoteSession;
 
         public ToolboxPanel(ToolRegistry registry)
         {
@@ -120,26 +120,29 @@ namespace Gdterm.UI.Controls
         }
 
         /// <summary>
-        /// 绑定当前活动 SSH 会话，并注入所有 IRemoteToolModule。
-        /// client 为 null 时清除远程会话。
+        /// 绑定当前活动远程会话，并注入所有 IRemoteToolModule。
+        /// session 为 null 时清除远程会话。
         /// </summary>
-        public void SetSshClient(Renci.SshNet.SshClient client)
+        public void SetRemoteSession(ISshRemoteSession session)
         {
-            _sshClient = client;
+            _remoteSession = session;
             try
             {
                 foreach (var tool in _registry.GetAllTools())
                 {
                     var remote = tool as IRemoteToolModule;
                     if (remote == null) continue;
-                    if (client != null && client.IsConnected)
-                        remote.SetSshSession(client);
+                    if (session != null && session.IsConnected)
+                        remote.SetSshSession(session);
                     else
                         remote.ClearSshSession();
                 }
             }
             catch { }
         }
+
+        /// <summary>兼容旧调用名</summary>
+        public void SetSshClient(ISshRemoteSession client) { SetRemoteSession(client); }
 
         private void OnToolSelected(object sender, EventArgs e)
         {
@@ -153,8 +156,8 @@ namespace Gdterm.UI.Controls
             var remote = tool as IRemoteToolModule;
             if (remote != null)
             {
-                if (_sshClient != null && _sshClient.IsConnected)
-                    remote.SetSshSession(_sshClient);
+                if (_remoteSession != null && _remoteSession.IsConnected)
+                    remote.SetSshSession(_remoteSession);
                 else
                     remote.ClearSshSession();
             }
@@ -180,7 +183,7 @@ namespace Gdterm.UI.Controls
             else
             {
                 _txtOutput.Visible = true;
-                var hint = (_sshClient != null && _sshClient.IsConnected)
+                var hint = (_remoteSession != null && _remoteSession.IsConnected)
                     ? "已绑定活动 SSH 会话，可在工具内执行远程操作。"
                     : "未绑定 SSH：请先打开并连接一个 SSH 终端标签，再执行远程工具。";
                 _txtOutput.Text = string.Format("工具: {0}\n分类: {1}\n描述: {2}\n\n{3}",

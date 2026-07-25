@@ -4,7 +4,6 @@ using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.Core.Models;
 using Gdterm.Tunnel;
-using Renci.SshNet;
 
 namespace Gdterm.UI.Controls
 {
@@ -16,7 +15,7 @@ namespace Gdterm.UI.Controls
         private ListView _lvRules;
         private readonly PortForwardManager _manager;
         private readonly List<PortForwardRule> _rules = new List<PortForwardRule>();
-        private SshClient _client;
+        private ISshPortForwardHost _host;
 
         public PortForwardPanel(PortForwardManager manager)
         {
@@ -26,10 +25,18 @@ namespace Gdterm.UI.Controls
             BuildUI();
         }
 
-        public void SetSshClient(SshClient client) { _client = client; }
+        /// <summary>绑定端口转发宿主（由 Terminal 层适配，UI 不碰 SshClient）</summary>
+        public void SetPortForwardHost(ISshPortForwardHost host)
+        {
+            _host = host;
+            try { _manager.Bind(host); } catch { }
+        }
 
-        /// <summary>当前是否已绑定可用的 SSH 客户端</summary>
-        public bool HasSshClient => _client != null && _client.IsConnected;
+        /// <summary>兼容旧名：内部仍转 Bind</summary>
+        public void SetSshClient(ISshPortForwardHost host) { SetPortForwardHost(host); }
+
+        /// <summary>当前是否已绑定可用的 SSH 宿主</summary>
+        public bool HasSshClient => _host != null && _host.IsConnected;
 
         private void BuildUI()
         {
@@ -139,17 +146,18 @@ namespace Gdterm.UI.Controls
         private void StartSelected()
         {
             if (_lvRules.SelectedItems.Count == 0) return;
-            if (_client == null || !_client.IsConnected)
+            if (_host == null || !_host.IsConnected)
             {
                 MessageBox.Show("请先打开并连接一个 SSH 终端标签，再启动端口转发。", "端口转发",
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
+            try { _manager.Bind(_host); } catch { }
             var rule = _lvRules.SelectedItems[0].Tag as PortForwardRule;
             if (rule == null) return;
             bool ok = rule.Type == PortForwardType.Local
-                ? _manager.StartLocal(_client, rule)
-                : rule.Type == PortForwardType.Remote ? _manager.StartRemote(_client, rule) : false;
+                ? _manager.StartLocal(rule)
+                : rule.Type == PortForwardType.Remote ? _manager.StartRemote(rule) : false;
             if (!ok) MessageBox.Show("启动失败", "gdterm", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             RefreshList();
         }
@@ -158,14 +166,14 @@ namespace Gdterm.UI.Controls
         {
             if (_lvRules.SelectedItems.Count == 0) return;
             var rule = _lvRules.SelectedItems[0].Tag as PortForwardRule;
-            if (rule != null) { _manager.Stop(_client, rule.Id); RefreshList(); }
+            if (rule != null) { try { _manager.Bind(_host); } catch { } _manager.Stop(rule.Id); RefreshList(); }
         }
 
         private void DeleteSelected()
         {
             if (_lvRules.SelectedItems.Count == 0) return;
             var rule = _lvRules.SelectedItems[0].Tag as PortForwardRule;
-            if (rule != null) { _manager.Stop(_client, rule.Id); _rules.Remove(rule); RefreshList(); }
+            if (rule != null) { try { _manager.Bind(_host); } catch { } _manager.Stop(rule.Id); _rules.Remove(rule); RefreshList(); }
         }
 
         private static void Lbl(Form f, string t, int x, int y) { f.Controls.Add(new Label { Text = t, Location = new Point(x, y + 3), AutoSize = true, Font = new Font("Microsoft YaHei", 9f), ForeColor = Color.FromArgb(204, 204, 204) }); }
@@ -176,7 +184,8 @@ namespace Gdterm.UI.Controls
             if (disposing)
             {
                 try { _manager?.Dispose(); } catch { }
-                _client = null;
+                _host = null;
+                try { _manager?.Unbind(); } catch { }
             }
             base.Dispose(disposing);
         }

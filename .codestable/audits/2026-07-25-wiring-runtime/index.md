@@ -144,14 +144,14 @@ mode: standard-plus
 | 5 | P0 | resolved | `3784467` 末标签关隧道 |
 | 6 | P0 | resolved | `3784467` MultiChannel Unregister |
 | 7 | P1 | resolved | `0cc0c8d` 重连等真实连接 |
-| 8 | P1 | partial | `61d0bfc`/`d4bd629` 剪贴板 TTL + CLI 脱敏；DPAPI/kdbx 存 ApiKey 仍待 |
+| 8 | P1 | resolved | gdk2 主密码 AES + 剪贴板 TTL + CLI 脱敏 |
 | 9 | P0 | resolved | `09a9700` 全局异常钩子 |
-| 10 | P1 | deferred | 上帝对象拆分延后 |
+| 10 | P1 | partial | `ActiveSessionBridge` 抽出；MainForm/TabContainer 全量拆分仍待 |
 | 11 | P0 | resolved | `0ee9b4a` ARCHITECTURE 回填 |
-| 12 | P1 | partial | `d4bd629` ITunnelManager；Rdp/Serial 工厂与 SshClient 抽象仍待 |
+| 12 | P1 | partial | ITunnelManager + ISshRemoteSession + ISshPortForwardHost；UI 无 Renci；Rdp/Serial 工厂仍待 |
 | 13 | P1 | resolved | `0355592` PortForward/Toolbox 会话注入 |
 | 14 | P1 | resolved | `08b913d` ProtocolType 命名 |
 
-**剩余主动债**：finding-10 枢纽拆分、finding-12 完整工厂抽象、finding-08 ApiKey 入 kdbx/DPAPI。
+**剩余主动债**：finding-10 全量枢纽拆分、finding-12 Rdp/Serial 工厂抽象。ApiKey 已 gdk2 主密码加密（便携，非 DPAPI）。
 
-**综合观感（修复后预估）**：从 3.3/10 提升到约 **6.5–7.0/10**（P0 闭环，P1 架构债仍在）。
+**综合观感（修复后预估）**：从 3.3/10 提升到约 **7.0–7.5/10**（P0 闭环，P1 大部分 partial/resolved）。

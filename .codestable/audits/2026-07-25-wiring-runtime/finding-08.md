@@ -6,7 +6,7 @@ nature: security
 severity: P1
 confidence: high
 suggested_action: cs-issue
-status: partial
+status: resolved
 ---
 
 # Finding 08：剪贴板无 TTL；API key/命令历史脱敏不足
@@ -36,5 +36,5 @@ KeePass「复制密码」无定时清空；`AiModelStore` 明文写 ApiKey；`Lo
 
 ## 修复状态
 
-- **status**: `partial`
-- **note**: 61d0bfc clipboard TTL + ApiKey obfuscation; d4bd629 CLI sanitizer+history
+- **status**: `resolved`
+- **note**: 61d0bfc/d4bd629/gdk2: master-password PBKDF2+AES ApiKey; clipboard TTL; CLI sanitizer

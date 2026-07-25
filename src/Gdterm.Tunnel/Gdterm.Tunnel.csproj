@@ -52,6 +52,7 @@
     <Compile Include="TunnelManager.cs" />
     <Compile Include="PortForwardManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="ISshPortForwardHost.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

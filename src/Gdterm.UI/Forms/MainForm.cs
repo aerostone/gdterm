@@ -18,6 +18,7 @@ using Gdterm.Tunnel;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Hotkeys;
 
+using Gdterm.UI.Services;
 namespace Gdterm.UI.Forms
 {
     public enum ViewMode
@@ -52,6 +53,7 @@ namespace Gdterm.UI.Forms
 
         private ConnectionTreeControl _connectionTree;
         private TabContainerControl _tabContainer;
+        private ActiveSessionBridge _sessionBridge;
         private StatusBarControl _statusBar;
         private LockOverlayControl _lockOverlay;
         private MenuStrip _menuStrip;
@@ -258,6 +260,7 @@ namespace Gdterm.UI.Forms
                 _dangerousCmdDetector,
                 _reconnectWatchdog,
                 _connectionStore);
+            _sessionBridge = new ActiveSessionBridge(_tabContainer);
             _tabContainer.Dock = DockStyle.Fill;
             _tabContainer.ActiveSessionChanged += OnActiveSessionChanged;
             _tabContainer.SessionClosed += OnSessionClosed;
@@ -641,6 +644,12 @@ namespace Gdterm.UI.Forms
         {
             var aiModelStore = new AiModelStore(
                 Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "config", "ai-models.json"));
+            // ApiKey 用主密码派生 AES（gdk2）；锁定时退回 gdk1
+            aiModelStore.SetMasterPasswordProvider(() =>
+                _securityManager != null && !_securityManager.IsLocked
+                    ? _securityManager.GetMasterPassword()
+                    : null);
+            try { aiModelStore.UpgradeSecretsToMasterKey(); } catch { }
             using (var form = new AiSettingsForm(aiModelStore))
                 form.ShowDialog(this);
         }
@@ -777,8 +786,8 @@ namespace Gdterm.UI.Forms
             if (_toolRegistry == null)
                 return new Label { Text = "工具箱未初始化", ForeColor = Color.White, Dock = DockStyle.Fill };
             var panel = new ToolboxPanel(_toolRegistry);
-            // 注入当前活动 SSH 会话，使 IRemoteToolModule 可执行远程命令
-            try { panel.SetSshClient(_tabContainer.GetActiveSshClient()); } catch { }
+            if (_sessionBridge != null) _sessionBridge.BindToolbox(panel);
+            else try { panel.SetRemoteSession(_tabContainer.GetActiveRemoteSession()); } catch { }
             return panel;
         }
 
@@ -875,9 +884,12 @@ namespace Gdterm.UI.Forms
             {
                 var mgr = new Gdterm.Tunnel.PortForwardManager();
                 var panel = new PortForwardPanel(mgr);
-                var client = _tabContainer.GetActiveSshClient();
-                if (client != null)
-                    panel.SetSshClient(client);
+                if (_sessionBridge != null) _sessionBridge.BindPortForward(panel);
+                else
+                {
+                    var host = _tabContainer.GetActivePortForwardHost();
+                    if (host != null) panel.SetPortForwardHost(host);
+                }
                 return panel;
             }
             catch (Exception ex)

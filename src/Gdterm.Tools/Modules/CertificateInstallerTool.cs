@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Gdterm.Tools.Models;
-using Renci.SshNet;
 
 namespace Gdterm.Tools.Modules
 {
@@ -12,14 +11,14 @@ namespace Gdterm.Tools.Modules
     /// </summary>
     public class CertificateInstallerTool : IRemoteToolModule
     {
-        private SshClient _ssh;
+        private ISshRemoteSession _session;
         private CertificateInstallerConfig _config;
 
         public string ToolId { get { return "cert-installer"; } }
         public string DisplayName { get { return "证书安装器"; } }
         public string Description { get { return "本地和远程证书安装（PEM/DER/PFX/P12）"; } }
         public string Category { get { return "安全"; } }
-        public bool HasRemoteSession { get { return _ssh != null && _ssh.IsConnected; } }
+        public bool HasRemoteSession { get { return _session != null && _session.IsConnected; } }
 
         public event EventHandler<string> OutputReceived;
 
@@ -28,8 +27,8 @@ namespace Gdterm.Tools.Modules
             _config = new CertificateInstallerConfig();
         }
 
-        public void SetSshSession(SshClient client) { _ssh = client; }
-        public void ClearSshSession() { _ssh = null; }
+        public void SetSshSession(ISshRemoteSession session) { _session = session; }
+        public void ClearSshSession() { _session = null; }
         public void LoadConfig() { _config.LoadFromFile(); }
         public void SaveConfig() { _config.SaveToFile(); }
 
@@ -61,9 +60,9 @@ namespace Gdterm.Tools.Modules
 
             try
             {
-                using (var transfer = new SshRemoteFileTransfer(_ssh))
+                using (var transfer = _session.CreateFileTransfer())
                 {
-                    var remotePath = transfer.UploadToTemp(localCertPath, Path.GetFileName(localCertPath));
+                    var remotePath = transfer.UploadToTemp(localCertPath);
                     try
                     {
                         // 检测系统类型并安装
@@ -157,18 +156,9 @@ namespace Gdterm.Tools.Modules
 
         private RemoteCommandResult ExecuteRemote(string command)
         {
-            var sw = System.Diagnostics.Stopwatch.StartNew();
-            try
-            {
-                var cmd = _ssh.RunCommand(command);
-                sw.Stop();
-                return new RemoteCommandResult { Command = command, ExitCode = cmd.ExitStatus, Stdout = cmd.Result, Stderr = cmd.Error, Duration = sw.Elapsed };
-            }
-            catch (Exception ex)
-            {
-                sw.Stop();
-                return new RemoteCommandResult { Command = command, ExitCode = -1, Stderr = ex.Message, Duration = sw.Elapsed };
-            }
+            if (_session == null)
+                return new RemoteCommandResult { Command = command, ExitCode = -1, Stderr = "SSH 未连接" };
+            return _session.RunCommand(command);
         }
 
         private void OnOutput(string msg) { OutputReceived?.Invoke(this, msg); }
@@ -200,7 +190,7 @@ namespace Gdterm.Tools.Modules
 
         public void Dispose()
         {
-            _ssh = null;
+            _session = null;
         }
     }
 

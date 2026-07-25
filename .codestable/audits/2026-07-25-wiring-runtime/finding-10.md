@@ -6,7 +6,7 @@ nature: maintainability
 severity: P1
 confidence: high
 suggested_action: cs-refactor
-status: deferred
+status: partial
 ---
 
 # Finding 10：MainForm / TabContainer 上帝对象
@@ -35,5 +35,5 @@ status: deferred
 
 ## 修复状态
 
-- **status**: `deferred`
-- **note**: God-object split deferred; ITunnelManager is partial step
+- **status**: `partial`
+- **note**: ActiveSessionBridge extracted; full MainForm/TabContainer split still deferred

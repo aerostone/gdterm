@@ -16,6 +16,7 @@ using Gdterm.Rdp.Models;
 using Gdterm.Security;
 using Gdterm.Sftp;
 using Gdterm.Terminal;
+using Gdterm.Tools;
 using Gdterm.Tunnel;
 
 namespace Gdterm.UI.Controls
@@ -845,13 +846,29 @@ namespace Gdterm.UI.Controls
         }
 
         /// <summary>
-        /// 当前活动 SSH 会话的底层 SshClient（端口转发 / 远程工具用）。
-        /// 非 TerminalSession 或未连接时返回 null。
+        /// 当前活动 SSH 的端口转发宿主（UI 不直接持有 SshClient）。
         /// </summary>
-        public Renci.SshNet.SshClient GetActiveSshClient()
+        public ISshPortForwardHost GetActivePortForwardHost()
         {
-            var session = GetActiveSession() as Gdterm.Terminal.TerminalSession;
-            return session != null ? session.UnderlyingClient : null;
+            var session = GetActiveSession() as TerminalSession;
+            if (session == null || session.UnderlyingClient == null) return null;
+            return SshPortForwardHost.Wrap(session.UnderlyingClient);
+        }
+
+        /// <summary>
+        /// 当前活动 SSH 的远程工具会话抽象。
+        /// </summary>
+        public ISshRemoteSession GetActiveRemoteSession()
+        {
+            var session = GetActiveSession() as TerminalSession;
+            if (session == null || session.UnderlyingClient == null) return null;
+            return SshNetRemoteSession.Wrap(session.UnderlyingClient);
+        }
+
+        /// <summary>兼容旧调用：返回端口转发宿主</summary>
+        public ISshPortForwardHost GetActiveSshClient()
+        {
+            return GetActivePortForwardHost();
         }
 
         /// <summary>所有已连接终端会话（多通道/批量命令）</summary>
