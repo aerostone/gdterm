@@ -72,8 +72,8 @@ gdterm 是 **Windows 绿色便携** 运维客户端，目标环境含 **Win7 / S
 | **Gdterm.Logging** | 审计 JSONL、命令历史、脱敏 | `IAuditLogger`, `AuditLogger`, `CommandHistoryStore` | Core |
 | **Gdterm.Security** | 主密码、闲锁、危险命令、密文扫描 | `ISecurityManager`, `DangerousCommandDetector`, `SecretScanner` | Core |
 | **Gdterm.AI** | OpenAI 兼容对话/流式/多模型 | `IAiAssistantService`, `AiModelStore` | Core, Terminal |
-| **Gdterm.Tools** | 内置运维工具模块 | `IToolModule`, `IRemoteToolModule`, `ToolRegistry`, 5 个 Modules | Core（远程面目前泄漏 `Renci.SshNet.SshClient`） |
-| **Gdterm.UI** | 壳、菜单、标签、对话框、诊断 | `Program`, `MainForm`, `TabContainerControl`, `TerminalControl`, panels/forms | 全部库 |
+| **Gdterm.Tools** | 内置运维工具模块 | `IToolModule`, `IRemoteToolModule`, `ISshRemoteSession`, `ToolRegistry`, 5 个 Modules | Core（远程面经 `ISshRemoteSession`，不再直接暴露给 UI） |
+| **Gdterm.UI** | 壳、菜单、标签、对话框、诊断 | `Program`, `MainForm`, `TabContainerControl`, `TerminalControl`, `Services/*`, panels/forms | 全部库 |
 
 ### 3.1 组合根（`Program.cs`）
 
@@ -93,16 +93,33 @@ gdterm 是 **Windows 绿色便携** 运维客户端，目标环境含 **Win7 / S
 ```
 ConnectionTree 双击
     → TabContainerControl.OpenConnection
-        → ResolveCredential（RefId → 文件夹继承 → smart match）
-        → CreateSshTab / CreateRdpTab / CreateSerialTab
+        → ProtocolTabOpener.CreateForConnection
+            → CredentialResolver（RefId → 文件夹继承 → smart match）
+            → CreateSsh / CreateRdp / CreateSerial（返回 OpenedTab）
+        → 挂入 TabControl + _sessions[TabSessionState]
             → 懒连接：选中标签 ResumeRendering / PendingConnect
-            → WireHealthAndReconnect（HealthMonitor + Watchdog）
+            → OnTerminalConnected → TabSessionLifecycle.WireHealthAndReconnect + TryRunLogonScript
     → CloseTab
         → Unwatch + HealthMonitor.Dispose
-        → 若无其他同 connectionId 标签 → TunnelManager.CloseAsync
+        → TabSessionLifecycle.CloseTunnelIfLastUser(connectionId)
         → RDP：CleanupRdpCredential + RdpClient.Dispose
         → SessionClosed → MultiChannelManager.Unregister
 ```
+
+### 3.2.1 UI Services 层（`Gdterm.UI/Services`）
+
+| 类型 | 职责 |
+|------|------|
+| `CredentialResolver` | 三档凭据解析 + SSH 私钥附件 |
+| `ProtocolTabOpener` | 按协议建造 `TabPage` + `TabSessionState`（SSH/RDP/Serial/Local/SFTP/分屏终端） |
+| `TabSessionLifecycle` | 登录脚本、健康监控/Watch、隧道最后用户关闭、Close 审计 |
+| `TabSessionState` / `OpenedTab` | 标签会话状态模型（从 TabContainer 内嵌类提升） |
+| `SidePanelFactory` | 侧栏/终端工具面板创建 + 多通道同步/广播闸 |
+| `SessionStateCoordinator` | 窗口几何与打开标签的保存/恢复 |
+| `MainFormMenuBuilder` | 菜单树构建（回调由 MainForm 提供） |
+| `ActiveSessionBridge` | 活动会话 → Toolbox / PortForward 绑定 |
+
+**约定**：新业务逻辑优先进 Services；`MainForm` 保留布局与事件，`TabContainerControl` 保留 Tab chrome / 字典 / 关签编排。
 
 ### 3.3 凭据与安全边界
 
@@ -173,11 +190,11 @@ ConnectionTree 双击
 | 关标签不关隧道 / 多通道不 Unregister | **已修** | 引用计数式 Close + SessionClosed |
 | 无全局异常钩子 | **已修** | CrashLog + SecurityEvent |
 | ARCHITECTURE 空骨架 | **已修（本文）** | |
-| MainForm / TabContainer 上帝对象 | 未修 | 可维护性；建议 cs-refactor |
-| PortForward / Toolbox 未注入活动 SshClient | 未修 | 菜单能开、执行空转 |
-| `IRemoteToolModule.SetSshSession(SshClient)` 泄漏 SSH.NET | 未修 | 应改为会话抽象 |
-| AI history 无上限、ApiKey 明文 JSON | 未修 | 内存 + 信息泄露 |
-| 剪贴板密码无 TTL | 未修 | 安全 |
+| MainForm / TabContainer 上帝对象 | **部分已修** | Services 抽出（ProtocolTabOpener/SidePanel/Lifecycle/MenuBuilder 等）；MainForm~830、TabContainer~550；完整 SessionOrchestrator 仍 deferred |
+| PortForward / Toolbox 活动会话注入 | **已修** | `ISshPortForwardHost` + `ISshRemoteSession` + ActiveSessionBridge |
+| `IRemoteToolModule` SSH.NET 泄漏 | **已修** | `SetSshSession(ISshRemoteSession)` |
+| AI history 无上限、ApiKey 明文 JSON | **已修** | MaxHistoryMessages=40；ApiKey gdk2 主密码 AES（gdk1 兼容） |
+| 剪贴板密码无 TTL | **已修** | ClipboardProtector 30s |
 
 ### 内存与磁盘门禁（运行时默认）
 
@@ -202,8 +219,10 @@ ConnectionTree 双击
 | SSH 登录方式 | `SshConnectionInfoFactory`（Terminal + Sftp 各一份，改时同步） |
 | 隧道复用 / 关闭 | `TunnelManager`, `TabContainerControl.CloseTab` |
 | 终端输入与危险命令 | `UI/Controls/TerminalControl` |
-| 菜单与侧栏 | `MainForm` |
-| 凭据解析链 | `TabContainerControl.ResolveCredential` |
+| 菜单与侧栏 | `MainForm` + `MainFormMenuBuilder` + `SidePanelFactory` |
+| 协议建签 | `ProtocolTabOpener` |
+| 凭据解析链 | `CredentialResolver` |
+| 标签生命周期策略 | `TabSessionLifecycle` |
 | 审计事件 | `IAuditLogger` + 调用方；崩溃看 `Diagnostics/CrashLog` |
 | 便携路径 | 只动 `Program.cs` 的 dataDir 约定 |
 
