@@ -18,6 +18,7 @@ namespace Gdterm.Terminal.Rendering
         private readonly StringBuilder _currentLine = new StringBuilder();
         private readonly object _lock = new object();
         private const int MaxBufferLines = 500;
+        private static readonly Regex _ansiRegex = new Regex(@"\x1b\[([0-9;]*)([A-Za-z])", RegexOptions.Compiled);
 
         // ANSI 颜色映射
         private static readonly Color[] AnsiColors = new Color[]
@@ -188,7 +189,7 @@ namespace Gdterm.Terminal.Rendering
         {
             var segments = new List<AnsiSegment>();
             // 匹配 ANSI 转义序列：ESC[...m (SGR) 或其他
-            var regex = new Regex(@"\x1b\[([0-9;]*)([A-Za-z])", RegexOptions.Compiled);
+            var regex = _ansiRegex;
             int lastIndex = 0;
 
             foreach (Match match in regex.Matches(text))

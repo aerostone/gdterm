@@ -18,6 +18,17 @@ namespace Gdterm.UI.Controls
         private System.Windows.Forms.Timer _refreshTimer;
         private static readonly Font _titleFont = new Font("Microsoft YaHei", 10f);
         private static readonly Font _labelFont = new Font("Microsoft YaHei", 8f);
+        private readonly Dictionary<Color, SolidBrush> _brushCache = new Dictionary<Color, SolidBrush>();
+
+        private SolidBrush GetBrush(Color color)
+        {
+            if (!_brushCache.TryGetValue(color, out var brush))
+            {
+                brush = new SolidBrush(color);
+                _brushCache[color] = brush;
+            }
+            return brush;
+        }
 
         public HealthMonitorPanel()
         {
@@ -110,7 +121,8 @@ namespace Gdterm.UI.Controls
         {
             var g = e.Graphics;
             var rect = _graphPanel.ClientRectangle;
-            g.FillRectangle(new SolidBrush(Color.FromArgb(25, 25, 25)), rect);
+            var bgBrush = GetBrush(Color.FromArgb(25, 25, 25));
+            g.FillRectangle(bgBrush, rect);
 
             // 边距
             int left = 50, right = 20, top = 30, bottom = 30;
@@ -165,6 +177,8 @@ namespace Gdterm.UI.Controls
                 _refreshTimer?.Stop();
                 _refreshTimer?.Dispose();
                 if (_monitor != null) _monitor.SnapshotUpdated -= OnSnapshot;
+                foreach (var brush in _brushCache.Values) brush.Dispose();
+                _brushCache.Clear();
             }
             base.Dispose(disposing);
         }

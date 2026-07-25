@@ -375,8 +375,7 @@ namespace Gdterm.KeePass
         {
             try
             {
-                // 使用 cmdkey 添加凭据到 Windows 凭据管理器
-                var process = new Process
+                using (var process = new Process
                 {
                     StartInfo = new ProcessStartInfo
                     {
@@ -387,11 +386,12 @@ namespace Gdterm.KeePass
                         RedirectStandardOutput = true,
                         RedirectStandardError = true
                     }
-                };
-
-                process.Start();
-                process.WaitForExit(5000);
-                return process.ExitCode == 0;
+                })
+                {
+                    process.Start();
+                    process.WaitForExit(5000);
+                    return process.ExitCode == 0;
+                }
             }
             catch
             {
@@ -403,7 +403,7 @@ namespace Gdterm.KeePass
         {
             try
             {
-                var process = new Process
+                using (var process = new Process
                 {
                     StartInfo = new ProcessStartInfo
                     {
@@ -412,10 +412,11 @@ namespace Gdterm.KeePass
                         UseShellExecute = false,
                         CreateNoWindow = true
                     }
-                };
-
-                process.Start();
-                process.WaitForExit(5000);
+                })
+                {
+                    process.Start();
+                    process.WaitForExit(5000);
+                }
             }
             catch { }
         }
