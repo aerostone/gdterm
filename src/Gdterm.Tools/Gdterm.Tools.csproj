@@ -17,6 +17,7 @@
     <Compile Include="IToolModule.cs" />
     <Compile Include="ToolRegistry.cs" />
     <Compile Include="ToolConfigBase.cs" />
+    <Compile Include="ToolPanelHelper.cs" />
     <Compile Include="Models\RemoteCommandResult.cs" />
     <Compile Include="Models\SshRemoteFileTransfer.cs" />
     <Compile Include="Modules\CertificateInstallerTool.cs" />

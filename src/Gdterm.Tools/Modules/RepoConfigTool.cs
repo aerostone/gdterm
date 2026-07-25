@@ -134,7 +134,27 @@ namespace Gdterm.Tools.Modules
         }
 
         private void OnOutput(string msg) { OutputReceived?.Invoke(this, msg); }
-        public System.Windows.Forms.Control CreatePanel() { return null; }
+
+        public System.Windows.Forms.Control CreatePanel()
+        {
+            return ToolPanelHelper.CreateActionPanel(
+                DisplayName,
+                "列出远程软件源（需已绑定 SSH）。参数可填 'list'。",
+                null,
+                (inputs, output, status) =>
+                {
+                    if (!HasRemoteSession)
+                    {
+                        status.Text = "未绑定远程 SSH";
+                        ToolPanelHelper.AppendLine(output, "请先在活跃 SSH 会话上使用远程工具");
+                        return;
+                    }
+                    var r = ListRepos();
+                    ToolPanelHelper.AppendLine(output, r.Stdout ?? r.Stderr ?? "");
+                    status.Text = r.IsSuccess ? "完成" : "失败";
+                });
+        }
+
         public void Dispose() { _ssh = null; }
     }
 }

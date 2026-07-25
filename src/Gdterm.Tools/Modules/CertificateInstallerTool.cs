@@ -175,8 +175,27 @@ namespace Gdterm.Tools.Modules
 
         public System.Windows.Forms.Control CreatePanel()
         {
-            // tools-ui 统一实现
-            return null;
+            return ToolPanelHelper.CreateActionPanel(
+                DisplayName,
+                "输入本地证书路径；勾选远程需先绑定 SSH。默认安装到本机受信任根。",
+                null,
+                (inputs, output, status) =>
+                {
+                    var path = (inputs[0].Text ?? "").Trim();
+                    if (string.IsNullOrEmpty(path) || path.StartsWith("目标"))
+                    {
+                        status.Text = "请输入证书路径";
+                        return;
+                    }
+                    var local = InstallLocal(path, true);
+                    ToolPanelHelper.AppendLine(output, "[本地] " + (local.Stdout ?? "") + (local.Stderr ?? ""));
+                    if (HasRemoteSession)
+                    {
+                        var remote = InstallRemote(path, true);
+                        ToolPanelHelper.AppendLine(output, "[远程] " + (remote.Stdout ?? "") + (remote.Stderr ?? ""));
+                    }
+                    status.Text = "完成";
+                });
         }
 
         public void Dispose()

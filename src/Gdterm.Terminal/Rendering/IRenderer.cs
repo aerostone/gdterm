@@ -5,7 +5,7 @@ namespace Gdterm.Terminal.Rendering
     /// <summary>
     /// 终端渲染抽象接口——封装底层终端模拟库，对外隔离实现细节
     /// </summary>
-    internal interface IRenderer
+    public interface IRenderer
     {
         /// <summary>
         /// 写入文本到终端（含 ANSI 转义序列）

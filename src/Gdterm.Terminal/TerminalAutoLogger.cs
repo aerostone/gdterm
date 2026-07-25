@@ -21,8 +21,9 @@ namespace Gdterm.Terminal
 
         // ── 配置 ──
         public string LogDirectory { get; set; }
-        public long MaxFileSizeBytes { get; set; } = 50 * 1024 * 1024; // 50MB
-        public int MaxFileCount { get; set; } = 10;
+        // 默认收紧：10MB x 3，避免便携环境磁盘膨胀（可按需调大）
+        public long MaxFileSizeBytes { get; set; } = 10 * 1024 * 1024; // 10MB
+        public int MaxFileCount { get; set; } = 3;
         public bool EnableTimestamp { get; set; } = true;
         public string DateFormat { get; set; } = "yyyy-MM-dd HH:mm:ss.fff";
 

@@ -139,7 +139,26 @@ namespace Gdterm.Tools.Modules
 
         private void OnOutput(string msg) { OutputReceived?.Invoke(this, msg); }
 
-        public System.Windows.Forms.Control CreatePanel() { return null; }
+        public System.Windows.Forms.Control CreatePanel()
+        {
+            return ToolPanelHelper.CreateActionPanel(
+                DisplayName,
+                "输入 NTP 服务器后点执行；空则用默认阿里云 NTP。远程需先绑定 SSH 会话。",
+                null,
+                (inputs, output, status) =>
+                {
+                    var ntp = string.IsNullOrWhiteSpace(inputs[0].Text) || inputs[0].Text.StartsWith("目标")
+                        ? "ntp.aliyun.com" : inputs[0].Text.Trim();
+                    var local = SyncLocalTime(ntp);
+                    ToolPanelHelper.AppendLine(output, "[本地] exit=" + local.ExitCode + " " + local.Stdout + local.Stderr);
+                    if (HasRemoteSession)
+                    {
+                        var remote = SyncRemoteTime(ntp);
+                        ToolPanelHelper.AppendLine(output, "[远程] exit=" + remote.ExitCode + " " + remote.Stdout + remote.Stderr);
+                    }
+                    status.Text = "完成";
+                });
+        }
 
         public void Dispose() { _ssh = null; }
     }

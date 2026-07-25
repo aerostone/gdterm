@@ -58,7 +58,8 @@ namespace Gdterm.Security
             EntropyThreshold = 4.5;
             MinEntropyStringLength = 8;
             MaxEntropyStringLength = 256;
-            EnableBackgroundScan = true;
+            // 默认关闭后台扫描，避免低配机器磁盘/内存抖动；由用户手动触发
+            EnableBackgroundScan = false;
             BackgroundScanIntervalMinutes = 60;
             ScanPriority = 0; // 空闲优先级
         }

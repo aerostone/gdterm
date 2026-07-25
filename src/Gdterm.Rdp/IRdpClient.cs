@@ -2,7 +2,7 @@ using System;
 using System.Windows.Forms;
 using Gdterm.Core.Models;
 using Gdterm.Rdp.Models;
-using Gdterm.Tunnel.Models;
+// TunnelEndpoint 在 Core.Models
 
 namespace Gdterm.Rdp
 {

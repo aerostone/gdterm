@@ -19,7 +19,7 @@ namespace Gdterm.Terminal.Rendering
     ///   4. 节流机制 — 高频输出时合并重绘，避免卡顿
     ///   5. Double Buffer — Panel 双缓冲，消除闪烁
     /// </summary>
-    internal class LightweightRenderer : IRenderer
+    public class LightweightRenderer : IRenderer
     {
         private readonly DoubleBufferedPanel _canvas;
         private readonly List<ColoredLine> _lineBuffer = new List<ColoredLine>();

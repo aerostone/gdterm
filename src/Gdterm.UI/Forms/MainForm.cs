@@ -12,28 +12,20 @@ using Gdterm.Logging;
 using Gdterm.Security;
 using Gdterm.Sftp;
 using Gdterm.Terminal;
+using Gdterm.Tools;
 using Gdterm.Tunnel;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Hotkeys;
 
 namespace Gdterm.UI.Forms
 {
-    /// <summary>
-    /// 视图模式（参考 WindTerm）
-    /// </summary>
     public enum ViewMode
     {
-        /// <summary>标准视图：左侧连接树 + 右侧标签页 + 底部状态栏</summary>
         Standard,
-        /// <summary>专注模式：只显示终端标签页，隐藏所有面板</summary>
         Focus,
-        /// <summary>紧凑模式：隐藏状态栏和菜单栏，最大化终端空间</summary>
         Compact
     }
 
-    /// <summary>
-    /// 主窗口
-    /// </summary>
     public partial class MainForm : Form
     {
         private readonly IConnectionStore _connectionStore;
@@ -47,6 +39,15 @@ namespace Gdterm.UI.Forms
         private readonly DangerousCommandDetector _dangerousCmdDetector;
         private readonly IFolderCredentialStore _folderCredStore;
         private readonly SessionStateStore _sessionStore;
+        private readonly IBookmarkStore _bookmarkStore;
+        private readonly CommandHistoryStore _commandHistoryStore;
+        private readonly QuickCommandStore _quickCommandStore;
+        private readonly TerminalKeyBindingStore _keyBindingStore;
+        private readonly HighlightStore _highlightStore;
+        private readonly AutoReconnectWatchdog _reconnectWatchdog;
+        private readonly MultiChannelManager _multiChannelManager;
+        private readonly ToolRegistry _toolRegistry;
+        private readonly SecretScanner _secretScanner;
 
         private ConnectionTreeControl _connectionTree;
         private TabContainerControl _tabContainer;
@@ -55,8 +56,10 @@ namespace Gdterm.UI.Forms
         private MenuStrip _menuStrip;
         private GlobalHotkeyManager _hotkeyManager;
         private int _toggleHotkeyId;
+        private QuickBarPanel _quickBar;
+        private Panel _sideToolHost;
+        private Control _activeSidePanel;
 
-        // 视图模式
         private ViewMode _currentViewMode = ViewMode.Standard;
         private ToolStripMenuItem _viewStandardItem;
         private ToolStripMenuItem _viewFocusItem;
@@ -73,7 +76,16 @@ namespace Gdterm.UI.Forms
             ISecurityManager securityManager,
             DangerousCommandDetector dangerousCmdDetector,
             IFolderCredentialStore folderCredStore,
-            SessionStateStore sessionStore)
+            SessionStateStore sessionStore,
+            IBookmarkStore bookmarkStore = null,
+            CommandHistoryStore commandHistoryStore = null,
+            QuickCommandStore quickCommandStore = null,
+            TerminalKeyBindingStore keyBindingStore = null,
+            HighlightStore highlightStore = null,
+            AutoReconnectWatchdog reconnectWatchdog = null,
+            MultiChannelManager multiChannelManager = null,
+            ToolRegistry toolRegistry = null,
+            SecretScanner secretScanner = null)
         {
             _connectionStore = connectionStore;
             _tunnelManager = tunnelManager;
@@ -86,10 +98,18 @@ namespace Gdterm.UI.Forms
             _dangerousCmdDetector = dangerousCmdDetector;
             _folderCredStore = folderCredStore;
             _sessionStore = sessionStore;
+            _bookmarkStore = bookmarkStore;
+            _commandHistoryStore = commandHistoryStore;
+            _quickCommandStore = quickCommandStore;
+            _keyBindingStore = keyBindingStore;
+            _highlightStore = highlightStore;
+            _reconnectWatchdog = reconnectWatchdog;
+            _multiChannelManager = multiChannelManager ?? new MultiChannelManager();
+            _toolRegistry = toolRegistry;
+            _secretScanner = secretScanner;
 
             InitializeComponent();
 
-            // 加载应用图标
             try
             {
                 var iconStream = typeof(MainForm).Assembly.GetManifestResourceStream("Gdterm.UI.Resources.gdterm.ico");
@@ -102,14 +122,9 @@ namespace Gdterm.UI.Forms
             catch { }
 
             SetupEventHandlers();
-
-            // 首次启动后解锁（向导已完成）
             if (!_securityManager.IsLocked)
-            {
                 _lockOverlay.Visible = false;
-            }
 
-            // 恢复上次会话状态
             Shown += (s, e) => RestoreSessionState();
         }
 
@@ -120,10 +135,9 @@ namespace Gdterm.UI.Forms
             StartPosition = FormStartPosition.CenterScreen;
             MinimumSize = new Size(800, 600);
 
-            // ====== 菜单栏 ======
             _menuStrip = new MenuStrip();
 
-            // 文件菜单
+            // 文件
             var fileMenu = new ToolStripMenuItem("文件(&F)");
             fileMenu.DropDownItems.Add("新建连接(&N)", null, OnNewConnection);
             fileMenu.DropDownItems.Add(new ToolStripSeparator());
@@ -133,43 +147,63 @@ namespace Gdterm.UI.Forms
             fileMenu.DropDownItems.Add("退出(&X)", null, (s, e) => Close());
             _menuStrip.Items.Add(fileMenu);
 
-            // 连接菜单
+            // 连接
             var connectionMenu = new ToolStripMenuItem("连接(&C)");
             connectionMenu.DropDownItems.Add("新建连接", null, OnNewConnection);
+            connectionMenu.DropDownItems.Add("本地终端(&L)", null, (s, e) => _tabContainer.OpenLocalTerminal());
+            connectionMenu.DropDownItems.Add("SFTP 浏览器", null, OnOpenSftp);
+            connectionMenu.DropDownItems.Add(new ToolStripSeparator());
+            connectionMenu.DropDownItems.Add("重连当前标签 Ctrl+R", null, (s, e) => _tabContainer.ReconnectActiveTab());
+            connectionMenu.DropDownItems.Add("关闭当前标签 Ctrl+W", null, (s, e) => _tabContainer.CloseActiveTab());
             _menuStrip.Items.Add(connectionMenu);
 
-            // 视图菜单
+            // 视图
             var viewMenu = new ToolStripMenuItem("视图(&V)");
-
-            _viewStandardItem = new ToolStripMenuItem("标准视图(&S)") { Checked = true, CheckOnClick = false };
+            _viewStandardItem = new ToolStripMenuItem("标准视图(&S)") { Checked = true };
             _viewStandardItem.Click += (s, e) => SetViewMode(ViewMode.Standard);
-
-            _viewFocusItem = new ToolStripMenuItem("专注模式(&F)") { CheckOnClick = false };
+            _viewFocusItem = new ToolStripMenuItem("专注模式(&F)");
             _viewFocusItem.Click += (s, e) => SetViewMode(ViewMode.Focus);
-
-            _viewCompactItem = new ToolStripMenuItem("紧凑模式(&C)") { CheckOnClick = false };
+            _viewCompactItem = new ToolStripMenuItem("紧凑模式(&C)");
             _viewCompactItem.Click += (s, e) => SetViewMode(ViewMode.Compact);
-
             viewMenu.DropDownItems.Add(_viewStandardItem);
             viewMenu.DropDownItems.Add(_viewFocusItem);
             viewMenu.DropDownItems.Add(_viewCompactItem);
             viewMenu.DropDownItems.Add(new ToolStripSeparator());
-
-            var toggleTreeItem = new ToolStripMenuItem("切换连接面板(&T)");
-            toggleTreeItem.ShortcutKeys = Keys.Control | Keys.L;
+            var toggleTreeItem = new ToolStripMenuItem("切换连接面板(&T)") { ShortcutKeys = Keys.Control | Keys.L };
             toggleTreeItem.Click += (s, e) => ToggleConnectionTree();
             viewMenu.DropDownItems.Add(toggleTreeItem);
-
             viewMenu.DropDownItems.Add(new ToolStripSeparator());
             viewMenu.DropDownItems.Add("水平分割", null, (s, e) => _tabContainer.SplitHorizontal());
             viewMenu.DropDownItems.Add("垂直分割", null, (s, e) => _tabContainer.SplitVertical());
+            viewMenu.DropDownItems.Add(new ToolStripSeparator());
+            viewMenu.DropDownItems.Add("快捷命令栏", null, (s, e) =>
+            {
+                if (_quickBar != null) _quickBar.Visible = !_quickBar.Visible;
+            });
             _menuStrip.Items.Add(viewMenu);
 
-            // 工具菜单
+            // 终端
+            var termMenu = new ToolStripMenuItem("终端(&E)");
+            termMenu.DropDownItems.Add("查找 Ctrl+F", null, (s, e) => ShowSearchBar());
+            termMenu.DropDownItems.Add("片段搜索 Ctrl+P", null, (s, e) => ShowSnippetSearch());
+            termMenu.DropDownItems.Add("高亮规则", null, (s, e) => ShowSidePanel(CreateHighlightPanel()));
+            termMenu.DropDownItems.Add("快捷键绑定", null, (s, e) => ShowSidePanel(CreateKeyBindingPanel()));
+            termMenu.DropDownItems.Add("登录脚本", null, (s, e) => ShowSidePanel(CreateLogonScriptPanel()));
+            termMenu.DropDownItems.Add(new ToolStripSeparator());
+            termMenu.DropDownItems.Add("多通道广播", null, (s, e) => ShowSidePanel(CreateMultiChannelPanel()));
+            termMenu.DropDownItems.Add("批量命令", null, (s, e) => ShowSidePanel(CreateBatchPanel()));
+            termMenu.DropDownItems.Add("命令历史", null, (s, e) => ShowSidePanel(CreateHistoryPanel()));
+            termMenu.DropDownItems.Add("健康监控", null, (s, e) => ShowSidePanel(CreateHealthPanel()));
+            termMenu.DropDownItems.Add("端口转发", null, (s, e) => ShowSidePanel(CreatePortForwardPanel()));
+            _menuStrip.Items.Add(termMenu);
+
+            // 工具
             var toolsMenu = new ToolStripMenuItem("工具(&T)");
+            toolsMenu.DropDownItems.Add("运维工具箱", null, (s, e) => ShowSidePanel(CreateToolboxPanel()));
+            toolsMenu.DropDownItems.Add("敏感信息扫描", null, (s, e) => ShowSidePanel(CreateSecretScanPanel()));
+            toolsMenu.DropDownItems.Add(new ToolStripSeparator());
             toolsMenu.DropDownItems.Add("密码库管理(&K)", null, OnKeePassManager);
             toolsMenu.DropDownItems.Add("密码健康报告(&H)", null, OnPasswordHealth);
-            toolsMenu.DropDownItems.Add(new ToolStripSeparator());
             toolsMenu.DropDownItems.Add("🔑 密码生成器(&G)", null, OnPasswordGenerator);
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
             toolsMenu.DropDownItems.Add("AI 助手设置(&A)", null, OnAiSettings);
@@ -177,7 +211,7 @@ namespace Gdterm.UI.Forms
             toolsMenu.DropDownItems.Add("危险命令规则(&D)", null, OnDangerousCmdSettings);
             _menuStrip.Items.Add(toolsMenu);
 
-            // 帮助菜单
+            // 帮助
             var helpMenu = new ToolStripMenuItem("帮助(&H)");
             helpMenu.DropDownItems.Add("快捷键列表", null, OnShowHotkeys);
             helpMenu.DropDownItems.Add("关于 gdterm", null, OnAbout);
@@ -186,14 +220,10 @@ namespace Gdterm.UI.Forms
             MainMenuStrip = _menuStrip;
             Controls.Add(_menuStrip);
 
-            // ====== 主布局 ======
-
-            // 左侧连接面板
             _connectionTree = new ConnectionTreeControl(_connectionStore);
             _connectionTree.Dock = DockStyle.Left;
             _connectionTree.Width = 250;
 
-            // 分割条
             var mainSplitter = new Splitter
             {
                 Dock = DockStyle.Left,
@@ -201,7 +231,6 @@ namespace Gdterm.UI.Forms
                 BackColor = Color.FromArgb(60, 60, 60)
             };
 
-            // 右侧标签页容器
             _tabContainer = new TabContainerControl(
                 _tunnelManager,
                 _terminalFactory,
@@ -209,10 +238,40 @@ namespace Gdterm.UI.Forms
                 _aiService,
                 _auditLogger,
                 _keepassService,
-                _folderCredStore);
+                _folderCredStore,
+                _dangerousCmdDetector,
+                _reconnectWatchdog,
+                _connectionStore);
             _tabContainer.Dock = DockStyle.Fill;
+            _tabContainer.ActiveSessionChanged += OnActiveSessionChanged;
 
-            // 底部状态栏
+            // 右侧工具宿主（默认隐藏）
+            _sideToolHost = new Panel
+            {
+                Dock = DockStyle.Right,
+                Width = 360,
+                Visible = false,
+                BackColor = Color.FromArgb(30, 30, 30)
+            };
+            var sideClose = new Button
+            {
+                Text = "✕ 关闭面板",
+                Dock = DockStyle.Top,
+                Height = 28,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(50, 50, 50),
+                ForeColor = Color.White
+            };
+            sideClose.Click += (s, e) => HideSidePanel();
+            _sideToolHost.Controls.Add(sideClose);
+
+            var sideSplitter = new Splitter
+            {
+                Dock = DockStyle.Right,
+                Width = 4,
+                BackColor = Color.FromArgb(60, 60, 60)
+            };
+
             _statusBar = new StatusBarControl(
                 _tunnelManager,
                 _keepassService,
@@ -221,20 +280,31 @@ namespace Gdterm.UI.Forms
             _statusBar.Dock = DockStyle.Bottom;
             _statusBar.Height = 25;
 
-            // 锁定遮罩
+            // QuickBar 底部
+            List<QuickCommand> cmds = null;
+            try { cmds = _quickCommandStore?.LoadAll(); } catch { }
+            _quickBar = new QuickBarPanel(cmds ?? new List<QuickCommand>());
+            _quickBar.Dock = DockStyle.Bottom;
+            _quickBar.Height = 36;
+            _quickBar.CommandSent += (cmd, group) =>
+            {
+                var tc = _tabContainer.GetActiveTerminalControl();
+                if (tc != null) tc.SendInput(cmd + "\r");
+            };
+
             _lockOverlay = new LockOverlayControl(_securityManager);
             _lockOverlay.Dock = DockStyle.Fill;
             _lockOverlay.Visible = _securityManager.IsLocked;
 
-            // 添加控件（顺序影响 Dock 布局）
             Controls.Add(_tabContainer);
+            Controls.Add(sideSplitter);
+            Controls.Add(_sideToolHost);
             Controls.Add(mainSplitter);
             Controls.Add(_connectionTree);
+            Controls.Add(_quickBar);
             Controls.Add(_statusBar);
             Controls.Add(_lockOverlay);
-            // 菜单栏最后添加确保在最顶层
             Controls.Add(_menuStrip);
-
             _lockOverlay.BringToFront();
         }
 
@@ -242,26 +312,39 @@ namespace Gdterm.UI.Forms
         {
             _connectionTree.ConnectionDoubleClicked += OnConnectionDoubleClicked;
             _securityManager.LockStateChanged += OnLockStateChanged;
-
-            // 用户操作 → 重置空闲计时器
             MouseMove += (s, e) => _securityManager.ResetIdleTimer();
             KeyDown += (s, e) => _securityManager.ResetIdleTimer();
             Click += (s, e) => _securityManager.ResetIdleTimer();
-
             InitializeHotkeys();
             FormClosing += OnFormClosing;
         }
 
-        // ====== 视图模式 ======
+        private void OnActiveSessionChanged(object sender, EventArgs e)
+        {
+            var session = _tabContainer.GetActiveSession();
+            var tc = _tabContainer.GetActiveTerminalControl();
+            var host = tc?.Config?.Host;
+            var user = tc?.Config?.Username;
+            _quickBar?.SetActiveSession(session, host, user);
+
+            // 同步多通道注册
+            try
+            {
+                var all = _tabContainer.GetConnectedSessions();
+                foreach (var kv in all)
+                {
+                    _multiChannelManager.Register(kv.Key, kv.Value, kv.Key, null);
+                }
+            }
+            catch { }
+        }
 
         private void SetViewMode(ViewMode mode)
         {
             _currentViewMode = mode;
-
-            // 更新菜单勾选状态
-            _viewStandardItem.Checked = (mode == ViewMode.Standard);
-            _viewFocusItem.Checked = (mode == ViewMode.Focus);
-            _viewCompactItem.Checked = (mode == ViewMode.Compact);
+            _viewStandardItem.Checked = mode == ViewMode.Standard;
+            _viewFocusItem.Checked = mode == ViewMode.Focus;
+            _viewCompactItem.Checked = mode == ViewMode.Compact;
 
             switch (mode)
             {
@@ -270,17 +353,16 @@ namespace Gdterm.UI.Forms
                     _connectionTree.Width = 250;
                     _statusBar.Visible = true;
                     _menuStrip.Visible = true;
+                    if (_quickBar != null) _quickBar.Visible = true;
                     break;
-
                 case ViewMode.Focus:
-                    // 专注模式：只保留终端标签页
                     _connectionTree.Visible = false;
                     _statusBar.Visible = false;
                     _menuStrip.Visible = false;
+                    if (_quickBar != null) _quickBar.Visible = false;
+                    HideSidePanel();
                     break;
-
                 case ViewMode.Compact:
-                    // 紧凑模式：保留连接树和标签页，隐藏状态栏和菜单
                     _connectionTree.Visible = true;
                     _connectionTree.Width = 200;
                     _statusBar.Visible = false;
@@ -293,8 +375,6 @@ namespace Gdterm.UI.Forms
         {
             _connectionTree.Visible = !_connectionTree.Visible;
         }
-
-        // ====== 热键 ======
 
         private void InitializeHotkeys()
         {
@@ -310,17 +390,12 @@ namespace Gdterm.UI.Forms
         private void OnGlobalHotkeyPressed(object sender, HotkeyPressedEventArgs e)
         {
             if (e.HotkeyId == _toggleHotkeyId)
-            {
                 ToggleWindowVisibility();
-            }
         }
 
         private void ToggleWindowVisibility()
         {
-            if (Visible && Form.ActiveForm == this)
-            {
-                Hide();
-            }
+            if (Visible && Form.ActiveForm == this) Hide();
             else
             {
                 Show();
@@ -330,11 +405,33 @@ namespace Gdterm.UI.Forms
             }
         }
 
-        // ====== 事件处理 ======
-
-        private void OnConnectionDoubleClicked(object sender, Core.Models.ConnectionConfig config)
+        private void OnConnectionDoubleClicked(object sender, ConnectionConfig config)
         {
             _tabContainer.OpenConnection(config);
+            try
+            {
+                _bookmarkStore?.AddRecentConnection(new RecentConnection
+                {
+                    ConnectionId = config.Id,
+                    Host = config.Host,
+                    Protocol = config.Protocol.ToString(),
+                    ConnectedAt = DateTime.UtcNow,
+                    Success = true
+                });
+            }
+            catch { }
+        }
+
+        private void OnOpenSftp(object sender, EventArgs e)
+        {
+            var tc = _tabContainer.GetActiveTerminalControl();
+            if (tc?.Config != null)
+            {
+                _tabContainer.OpenSftpBrowser(tc.Config);
+                return;
+            }
+            MessageBox.Show("请先打开一个 SSH 连接，或从连接树双击后再打开 SFTP。", "SFTP",
+                MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void OnLockStateChanged(object sender, LockStateChangedEventArgs e)
@@ -347,14 +444,12 @@ namespace Gdterm.UI.Forms
 
             if (e.IsLocked)
             {
-                // 锁定：同时锁定 KeePass 密码库
                 try { _keepassService.Lock(); } catch { }
                 _lockOverlay.Visible = true;
                 _lockOverlay.BringToFront();
             }
             else
             {
-                // 解锁：同步解锁 KeePass 密码库（同一个主密码）
                 var masterPassword = _securityManager.GetMasterPassword();
                 if (!string.IsNullOrEmpty(masterPassword))
                 {
@@ -378,54 +473,36 @@ namespace Gdterm.UI.Forms
 
         private void OnKeePassManager(object sender, EventArgs e)
         {
-            // 敏感操作：二次验证主密码
-            if (!ReAuthenticate("访问密码库管理"))
-                return;
-
+            if (!ReAuthenticate("访问密码库管理")) return;
             if (!_keepassService.IsUnlocked)
             {
                 MessageBox.Show("密码库未解锁", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-
             using (var form = new KeePassManagerForm(_keepassService))
-            {
                 form.ShowDialog(this);
-            }
         }
 
         private void OnPasswordHealth(object sender, EventArgs e)
         {
-            // 敏感操作：二次验证主密码
-            if (!ReAuthenticate("查看密码健康报告"))
-                return;
-
+            if (!ReAuthenticate("查看密码健康报告")) return;
             if (!_keepassService.IsUnlocked)
             {
                 MessageBox.Show("密码库未解锁", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-
             using (var form = new PasswordHealthForm(_keepassService))
-            {
                 form.ShowDialog(this);
-            }
         }
 
-        /// <summary>
-        /// 敏感操作二次验证——弹出密码输入框验证主密码
-        /// 防止离开电脑时他人操作密码库
-        /// </summary>
         private bool ReAuthenticate(string action)
         {
-            // 如果已锁定，需要先解锁
             if (_securityManager.IsLocked)
             {
                 MessageBox.Show("应用已锁定，请先解锁", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
 
-            // 弹出密码验证
             using (var dialog = new Form())
             {
                 dialog.Text = "安全验证";
@@ -438,13 +515,12 @@ namespace Gdterm.UI.Forms
 
                 var label = new Label
                 {
-                    Text = $"{action}需要验证主密码：",
+                    Text = action + "需要验证主密码：",
                     Font = new Font("Microsoft YaHei", 10f),
                     ForeColor = Color.FromArgb(200, 200, 200),
                     Location = new Point(15, 15),
                     Size = new Size(340, 25)
                 };
-
                 var pwdBox = new TextBox
                 {
                     Location = new Point(15, 45),
@@ -455,7 +531,6 @@ namespace Gdterm.UI.Forms
                     ForeColor = Color.White,
                     BorderStyle = BorderStyle.FixedSingle
                 };
-
                 var errorLabel = new Label
                 {
                     Text = "",
@@ -464,7 +539,6 @@ namespace Gdterm.UI.Forms
                     Location = new Point(15, 78),
                     Size = new Size(335, 20)
                 };
-
                 var okBtn = new Button
                 {
                     Text = "验证",
@@ -472,10 +546,8 @@ namespace Gdterm.UI.Forms
                     Location = new Point(270, 105),
                     FlatStyle = FlatStyle.Flat,
                     BackColor = Color.FromArgb(0, 122, 204),
-                    ForeColor = Color.White,
-                    DialogResult = DialogResult.None
+                    ForeColor = Color.White
                 };
-
                 okBtn.Click += (s, ev) =>
                 {
                     if (_securityManager.VerifyMasterPassword(pwdBox.Text))
@@ -490,64 +562,54 @@ namespace Gdterm.UI.Forms
                         pwdBox.Focus();
                     }
                 };
-
                 pwdBox.KeyDown += (s, ev) =>
                 {
                     if (ev.KeyCode == Keys.Enter) okBtn.PerformClick();
                 };
-
                 dialog.Controls.AddRange(new Control[] { label, pwdBox, errorLabel, okBtn });
                 dialog.AcceptButton = okBtn;
-
                 return dialog.ShowDialog(this) == DialogResult.OK;
             }
         }
 
         private void OnAiSettings(object sender, EventArgs e)
         {
-            var aiModelStore = new Gdterm.AI.AiModelStore(
-                System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "config", "ai-models.json"));
+            var aiModelStore = new AiModelStore(
+                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "config", "ai-models.json"));
             using (var form = new AiSettingsForm(aiModelStore))
-            {
                 form.ShowDialog(this);
-            }
         }
 
         private void OnPasswordGenerator(object sender, EventArgs e)
         {
             using (var form = new PasswordGeneratorForm())
-            {
                 form.ShowDialog(this);
-            }
         }
 
         private void OnDangerousCmdSettings(object sender, EventArgs e)
         {
             using (var form = new DangerousCommandConfigForm(_dangerousCmdDetector))
-            {
                 form.ShowDialog(this);
-            }
         }
 
         private void OnShowHotkeys(object sender, EventArgs e)
         {
             MessageBox.Show(
-                "快捷键列表：\n\n" +
-                "Ctrl + `          呼出/隐藏窗口（全局）\n" +
-                "Ctrl + L           切换连接面板\n" +
-                "Ctrl + Shift + T  水平分屏\n" +
-                "Ctrl + Shift + O  垂直分屏\n\n" +
-                "在专注模式下，按 Esc 可恢复菜单栏",
+                "快捷键：\n\n" +
+                "Ctrl + `          呼出/隐藏窗口\n" +
+                "Ctrl + L          切换连接面板\n" +
+                "Ctrl + R          重连当前标签\n" +
+                "Ctrl + W          关闭当前标签\n" +
+                "Ctrl + F          终端查找\n" +
+                "Ctrl + P          片段搜索\n" +
+                "Esc               专注模式恢复菜单",
                 "快捷键", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void OnAbout(object sender, EventArgs e)
         {
             MessageBox.Show(
-                "gdterm - 绿色运维客户端\n" +
-                "版本 1.0.0\n\n" +
-                "轻量级便携运维工具\n" +
-                "SSH / RDP / SFTP / 串口 / AI 助手",
+                "gdterm - 绿色运维客户端\n版本 1.0.0\n\nSSH / RDP / SFTP / 串口 / 本地终端 / 运维工具箱",
                 "关于", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
@@ -556,36 +618,30 @@ namespace Gdterm.UI.Forms
             using (var dlg = new OpenFileDialog
             {
                 Title = "导入连接",
-                Filter = "所有支持格式|*.json;*.csv;*.xml|JSON 文件|*.json|CSV 文件|*.csv|mRemoteNG XML|*.xml",
-                Multiselect = false
+                Filter = "所有支持格式|*.json;*.csv;*.xml|JSON|*.json|CSV|*.csv|mRemoteNG XML|*.xml"
             })
             {
-                if (dlg.ShowDialog(this) == DialogResult.OK)
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                try
                 {
-                    try
+                    var imported = ImportExport.ConnectionImporterExporter.ImportFromFile(dlg.FileName);
+                    if (imported.Count == 0)
                     {
-                        var imported = Gdterm.UI.ImportExport.ConnectionImporterExporter.ImportFromFile(dlg.FileName);
-                        if (imported.Count == 0)
-                        {
-                            MessageBox.Show("未找到可导入的连接", "导入", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                            return;
-                        }
-
-                        var existing = _connectionStore.LoadAll();
-                        var merge = Gdterm.UI.ImportExport.ConnectionImporterExporter.MergeConnections(existing, imported);
-
-                        foreach (var conn in merge.NewConnections)
-                            _connectionStore.Add(conn);
-
-                        _connectionTree.LoadConnections();
-                        MessageBox.Show(
-                            $"导入完成：\n新增 {merge.NewConnections.Count} 个连接\n跳过 {merge.Duplicates.Count} 个重复",
-                            "导入成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show("未找到可导入的连接", "导入", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
                     }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"导入失败：{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
+                    var existing = _connectionStore.LoadAll();
+                    var merge = ImportExport.ConnectionImporterExporter.MergeConnections(existing, imported);
+                    foreach (var conn in merge.NewConnections)
+                        _connectionStore.Add(conn);
+                    _connectionTree.LoadConnections();
+                    MessageBox.Show(
+                        "导入完成：\n新增 " + merge.NewConnections.Count + "\n跳过 " + merge.Duplicates.Count,
+                        "导入成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("导入失败：" + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -598,38 +654,216 @@ namespace Gdterm.UI.Forms
                 MessageBox.Show("没有可导出的连接", "导出", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-
             using (var dlg = new SaveFileDialog
             {
                 Title = "导出连接",
-                Filter = "JSON 文件|*.json|CSV 文件|*.csv",
+                Filter = "JSON|*.json|CSV|*.csv",
                 FileName = "gdterm-connections"
             })
             {
-                if (dlg.ShowDialog(this) == DialogResult.OK)
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                try
                 {
-                    try
-                    {
-                        if (dlg.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
-                            Gdterm.UI.ImportExport.ConnectionImporterExporter.ExportAsCsv(connections, dlg.FileName);
-                        else
-                            Gdterm.UI.ImportExport.ConnectionImporterExporter.ExportAsJson(connections, dlg.FileName);
-
-                        MessageBox.Show($"已导出 {connections.Count} 个连接到：\n{dlg.FileName}", "导出成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"导出失败：{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
+                    if (dlg.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+                        ImportExport.ConnectionImporterExporter.ExportAsCsv(connections, dlg.FileName);
+                    else
+                        ImportExport.ConnectionImporterExporter.ExportAsJson(connections, dlg.FileName);
+                    MessageBox.Show("已导出 " + connections.Count + " 个连接", "导出成功",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("导出失败：" + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
+        // ====== 侧边面板 ======
+
+        private void ShowSidePanel(Control panel)
+        {
+            if (panel == null) return;
+            if (_activeSidePanel != null)
+            {
+                _sideToolHost.Controls.Remove(_activeSidePanel);
+                try { _activeSidePanel.Dispose(); } catch { }
+            }
+            _activeSidePanel = panel;
+            panel.Dock = DockStyle.Fill;
+            _sideToolHost.Controls.Add(panel);
+            panel.BringToFront();
+            _sideToolHost.Visible = true;
+            _sideToolHost.Width = Math.Max(320, _sideToolHost.Width);
+        }
+
+        private void HideSidePanel()
+        {
+            if (_activeSidePanel != null)
+            {
+                _sideToolHost.Controls.Remove(_activeSidePanel);
+                try { _activeSidePanel.Dispose(); } catch { }
+                _activeSidePanel = null;
+            }
+            _sideToolHost.Visible = false;
+        }
+
+        private Control CreateToolboxPanel()
+        {
+            if (_toolRegistry == null)
+                return new Label { Text = "工具箱未初始化", ForeColor = Color.White, Dock = DockStyle.Fill };
+            return new ToolboxPanel(_toolRegistry);
+        }
+
+        private Control CreateSecretScanPanel()
+        {
+            if (_secretScanner == null)
+                return new Label { Text = "扫描器未初始化", ForeColor = Color.White, Dock = DockStyle.Fill };
+            return new SecretScanPanel(_secretScanner);
+        }
+
+        private Control CreateMultiChannelPanel()
+        {
+            // 刷新注册
+            foreach (var kv in _tabContainer.GetConnectedSessions())
+                _multiChannelManager.Register(kv.Key, kv.Value, kv.Key, null);
+            var panel = new MultiChannelPanel(_multiChannelManager);
+            panel.BroadcastCommandRequested += (s, cmd) =>
+            {
+                if (_dangerousCmdDetector != null)
+                {
+                    var check = _dangerousCmdDetector.Check(cmd);
+                    if (check != null && check.IsDangerous)
+                    {
+                        using (var dlg = new DangerousCommandDialog(cmd, check))
+                        {
+                            dlg.ShowDialog(this);
+                            if (!dlg.IsConfirmed) return;
+                            if (dlg.RememberChoice)
+                            {
+                                try { _dangerousCmdDetector.AddToWhitelist(cmd); } catch { }
+                            }
+                        }
+                    }
+                }
+                _multiChannelManager.BroadcastCommand(cmd + "\r");
+                try
+                {
+                    _commandHistoryStore?.RecordCommand(new CommandHistoryEntry
+                    {
+                        Id = Guid.NewGuid().ToString("N"),
+                        Command = cmd,
+                        ExecutedAt = DateTime.UtcNow,
+                        IsBroadcast = true
+                    });
+                }
+                catch { }
+            };
+            return panel;
+        }
+
+        private Control CreateBatchPanel()
+        {
+            var panel = new BatchCommandPanel();
+            panel.SetSessions(_tabContainer.GetConnectedSessions());
+            return panel;
+        }
+
+        private Control CreateHistoryPanel()
+        {
+            if (_commandHistoryStore == null)
+                return new Label { Text = "命令历史未初始化", ForeColor = Color.White, Dock = DockStyle.Fill };
+            return new CommandHistoryPanel(_commandHistoryStore);
+        }
+
+        private Control CreateHealthPanel()
+        {
+            var panel = new HealthMonitorPanel();
+            var mon = _tabContainer.GetActiveHealthMonitor();
+            if (mon != null) panel.SetMonitor(mon);
+            return panel;
+        }
+
+        private Control CreatePortForwardPanel()
+        {
+            try
+            {
+                var mgr = new Gdterm.Tunnel.PortForwardManager();
+                return new PortForwardPanel(mgr);
+            }
+            catch (Exception ex)
+            {
+                return new Label { Text = "端口转发不可用: " + ex.Message, ForeColor = Color.White, Dock = DockStyle.Fill };
+            }
+        }
+
+        private Control CreateHighlightPanel()
+        {
+            if (_highlightStore == null)
+                return new Label { Text = "高亮存储未初始化", ForeColor = Color.White, Dock = DockStyle.Fill };
+            return new HighlightRulePanel(_highlightStore);
+        }
+
+        private Control CreateKeyBindingPanel()
+        {
+            if (_keyBindingStore == null)
+                return new Label { Text = "快捷键存储未初始化", ForeColor = Color.White, Dock = DockStyle.Fill };
+            return new KeyBindingPanel(_keyBindingStore);
+        }
+
+        private Control CreateLogonScriptPanel()
+        {
+            try
+            {
+                var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "config", "logon-scripts.json");
+                var store = new LogonScriptStore(path);
+                return new LogonScriptPanel(store);
+            }
+            catch (Exception ex)
+            {
+                return new Label { Text = "登录脚本: " + ex.Message, ForeColor = Color.White, Dock = DockStyle.Fill };
+            }
+        }
+
+        private void ShowSearchBar()
+        {
+            var tc = _tabContainer.GetActiveTerminalControl();
+            if (tc == null)
+            {
+                MessageBox.Show("请先打开终端标签", "查找", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            var bar = new TerminalSearchBar();
+            bar.Dock = DockStyle.Top;
+            bar.Height = 32;
+            // 简单挂到 tab 容器顶部
+            _tabContainer.Controls.Add(bar);
+            bar.BringToFront();
+            bar.ShowAndFocus();
+            bar.CloseRequested += () =>
+            {
+                _tabContainer.Controls.Remove(bar);
+                bar.Dispose();
+            };
+        }
+
+        private void ShowSnippetSearch()
+        {
+            List<QuickCommand> cmds = null;
+            try { cmds = _quickCommandStore?.LoadAll(); } catch { }
+            var panel = new SnippetSearchPanel(cmds ?? new List<QuickCommand>());
+            panel.SetActiveSession(_tabContainer.GetActiveSession());
+            panel.SnippetSent += (cmd, qc) =>
+            {
+                var tc = _tabContainer.GetActiveTerminalControl();
+                tc?.SendInput(cmd + "\r");
+            };
+            ShowSidePanel(panel);
+            panel.ShowAndFocus();
+        }
+
         private void OnFormClosing(object sender, FormClosingEventArgs e)
         {
-            // 保存会话状态
-            try { SaveSessionState(); } catch { /* 不影响关闭 */ }
-
+            try { SaveSessionState(); } catch { }
             _hotkeyManager?.Dispose();
             _tabContainer.CloseAllTabs();
             _tunnelManager.Dispose();
@@ -637,9 +871,6 @@ namespace Gdterm.UI.Forms
             _securityManager.Dispose();
         }
 
-        /// <summary>
-        /// 保存当前窗口布局和标签页状态
-        /// </summary>
         private void SaveSessionState()
         {
             if (_sessionStore == null) return;
@@ -658,18 +889,13 @@ namespace Gdterm.UI.Forms
             _sessionStore.Save(state);
         }
 
-        /// <summary>
-        /// 恢复上次的窗口布局和标签页
-        /// </summary>
         private void RestoreSessionState()
         {
             if (_sessionStore == null) return;
             var state = _sessionStore.Load();
             if (state == null) return;
-
             try
             {
-                // 恢复窗口位置和大小
                 if (state.WindowWidth > 200 && state.WindowHeight > 200)
                 {
                     Width = state.WindowWidth;
@@ -678,63 +904,53 @@ namespace Gdterm.UI.Forms
                     Left = state.WindowX;
                     Top = state.WindowY;
                 }
-
                 if (state.WindowState == "Maximized")
                     WindowState = FormWindowState.Maximized;
-
-                // 恢复视图模式
                 if (Enum.TryParse(state.ViewMode, out ViewMode vm))
                     SetViewMode(vm);
-
-                // 恢复连接面板宽度
                 if (state.ConnectionPanelWidth > 50 && _connectionTree != null)
                     _connectionTree.Width = state.ConnectionPanelWidth;
-
-                // 恢复标签页
                 if (state.OpenTabs != null)
                 {
-                    var allConnections = _connectionStore.LoadAll();
+                    var all = _connectionStore.LoadAll();
                     foreach (var tab in state.OpenTabs)
                     {
-                        var config = allConnections.FirstOrDefault(c => c.Id == tab.ConnectionId);
-                        if (config != null)
-                            _tabContainer.OpenConnection(config);
+                        var config = all.FirstOrDefault(c => c.Id == tab.ConnectionId);
+                        if (config != null) _tabContainer.OpenConnection(config);
                     }
-
                     if (state.ActiveTabIndex >= 0)
                         _tabContainer.SetActiveTabIndex(state.ActiveTabIndex);
                 }
             }
-            catch { /* 恢复失败，使用默认布局 */ }
+            catch { }
         }
-
-        // ====== 重写按键 ======
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
-            // 专注模式下按 Esc 恢复菜单栏
             if (keyData == Keys.Escape && _currentViewMode == ViewMode.Focus)
             {
                 _menuStrip.Visible = true;
                 return true;
             }
-            // Ctrl+R 重连当前标签页
             if (keyData == (Keys.Control | Keys.R))
             {
                 _tabContainer.ReconnectActiveTab();
                 return true;
             }
-            // Ctrl+W 关闭当前标签页
             if (keyData == (Keys.Control | Keys.W))
             {
                 _tabContainer.CloseActiveTab();
                 return true;
             }
-            // Ctrl+Shift+L 聚焦命令输入框（如果有多通道面板）
-            if (keyData == (Keys.Control | Keys.Shift | Keys.L))
+            if (keyData == (Keys.Control | Keys.F))
             {
-                // 由多通道面板处理
-                return base.ProcessCmdKey(ref msg, keyData);
+                ShowSearchBar();
+                return true;
+            }
+            if (keyData == (Keys.Control | Keys.P))
+            {
+                ShowSnippetSearch();
+                return true;
             }
             return base.ProcessCmdKey(ref msg, keyData);
         }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Gdterm.Core.Models;
 using Gdterm.Terminal.Models;
 
 namespace Gdterm.Terminal

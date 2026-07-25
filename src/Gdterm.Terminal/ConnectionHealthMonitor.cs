@@ -52,10 +52,17 @@ namespace Gdterm.Terminal
             _uptime.Start();
         }
 
+        /// <summary>历史条数硬顶（低内存）</summary>
+        public int MaxHistoryEntries { get; set; } = 120;
+
+        /// <summary>是否暂停采样（非活动标签应暂停）</summary>
+        public bool IsPaused { get; set; }
+
         /// <summary>启动监控（默认 5 秒间隔）</summary>
         public void Start(int intervalMs = 5000)
         {
             _timer?.Dispose();
+            // 立即采一次，之后按间隔；非活动标签通过 IsPaused 跳过
             _timer = new Timer(OnTick, null, 0, intervalMs);
         }
 
@@ -85,6 +92,7 @@ namespace Gdterm.Terminal
 
         private void OnTick(object state)
         {
+            if (IsPaused) return;
             try
             {
                 bool connected = _session?.IsConnected == true;
@@ -107,7 +115,9 @@ namespace Gdterm.Terminal
                 lock (_lock)
                 {
                     _history.Add(snapshot);
-                    if (_history.Count > 1000) _history.RemoveRange(0, _history.Count - 500);
+                    var cap = MaxHistoryEntries > 0 ? MaxHistoryEntries : 120;
+                    if (_history.Count > cap)
+                        _history.RemoveRange(0, _history.Count - cap);
                 }
 
                 SnapshotUpdated?.Invoke(snapshot);

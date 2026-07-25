@@ -23,7 +23,11 @@ namespace Gdterm.Tools
         /// <summary>从文件加载配置</summary>
         public virtual void LoadFromFile()
         {
-            if (string.IsNullOrEmpty(ConfigFilePath)) throw new InvalidOperationException("ConfigFilePath not set");
+            if (string.IsNullOrEmpty(ConfigFilePath))
+            {
+                ResetDefaults();
+                return;
+            }
             if (!File.Exists(ConfigFilePath)) { ResetDefaults(); SaveToFile(); return; }
 
             var json = File.ReadAllText(ConfigFilePath, Encoding.UTF8);
@@ -33,7 +37,7 @@ namespace Gdterm.Tools
         /// <summary>保存配置到文件</summary>
         public virtual void SaveToFile()
         {
-            if (string.IsNullOrEmpty(ConfigFilePath)) throw new InvalidOperationException("ConfigFilePath not set");
+            if (string.IsNullOrEmpty(ConfigFilePath)) return;
             var json = ToJson();
             File.WriteAllText(ConfigFilePath, json, Encoding.UTF8);
         }

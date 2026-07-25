@@ -10,6 +10,8 @@ using Gdterm.Security;
 using Gdterm.Security.Models;
 using Gdterm.Sftp;
 using Gdterm.Terminal;
+using Gdterm.Tools;
+using Gdterm.Tools.Modules;
 using Gdterm.Tunnel;
 using Gdterm.UI.Forms;
 
@@ -17,74 +19,62 @@ namespace Gdterm.UI
 {
     static class Program
     {
-        /// <summary>
-        /// 应用程序入口点
-        /// </summary>
         [STAThread]
         static void Main()
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // ====== 统一数据目录（可迁移） ======
-            // 所有用户数据都在 data/ 目录下，整体拷贝即可迁移
             var appDir = AppDomain.CurrentDomain.BaseDirectory;
             var dataDir = Path.Combine(appDir, "data");
             var configDir = Path.Combine(dataDir, "config");
             var logsDir = Path.Combine(dataDir, "logs");
+            var toolsConfigDir = Path.Combine(configDir, "tools");
 
             Directory.CreateDirectory(dataDir);
             Directory.CreateDirectory(configDir);
             Directory.CreateDirectory(logsDir);
+            Directory.CreateDirectory(toolsConfigDir);
+            Directory.CreateDirectory(Path.Combine(logsDir, "commands"));
+            Directory.CreateDirectory(Path.Combine(logsDir, "terminal"));
 
-            // 数据文件路径
             var connectionsPath = Path.Combine(dataDir, "connections.json");
             var keepassPath = Path.Combine(dataDir, "gdterm.kdbx");
             var passwordConfigPath = Path.Combine(dataDir, "master-password.json");
-            var bookmarksPath = Path.Combine(dataDir, "bookmarks.json");
-            var recentPath = Path.Combine(dataDir, "recent-connections.json");
+            // bookmarks + recent 都在 dataDir 下由 BookmarkStoreJson 管理
             var commandHistoryDir = Path.Combine(logsDir, "commands");
             var dangerousCmdPath = Path.Combine(configDir, "dangerous-commands.json");
             var folderCredPath = Path.Combine(dataDir, "folder-credentials.json");
             var sessionStatePath = Path.Combine(dataDir, "session-state.json");
+            var quickCmdPath = Path.Combine(dataDir, "quick-commands.json");
+            var keybindPath = Path.Combine(configDir, "keybindings.json");
+            var highlightPath = Path.Combine(configDir, "highlights.json");
 
-            Directory.CreateDirectory(commandHistoryDir);
-
-            // ====== 加载主密码配置 ======
             MasterPasswordConfig savedPasswordConfig = null;
             if (File.Exists(passwordConfigPath))
             {
                 try
                 {
-                    var json = File.ReadAllText(passwordConfigPath);
-                    savedPasswordConfig = ParsePasswordConfig(json);
+                    savedPasswordConfig = ParsePasswordConfig(File.ReadAllText(passwordConfigPath));
                 }
-                catch { /* 配置损坏，当作首次使用 */ }
+                catch { }
             }
 
             bool isFirstRun = savedPasswordConfig == null;
-
-            // ====== 初始化安全管理器 ======
             var securityManager = new SecurityManager(
-                idleTimeout: TimeSpan.FromMinutes(10),  // 默认 10 分钟（最大 30 分钟）
+                idleTimeout: TimeSpan.FromMinutes(10),
                 passwordConfig: savedPasswordConfig);
 
-            // ====== 首次使用：强制设置主密码 ======
             if (isFirstRun)
             {
                 using (var wizard = new SetupWizardForm(securityManager))
                 {
                     if (wizard.ShowDialog() != DialogResult.OK)
-                    {
                         return;
-                    }
                 }
-
-                // 保存主密码配置
                 SavePasswordConfig(securityManager.GetPasswordConfig(), passwordConfigPath);
             }
 
-            // ====== 初始化各模块服务 ======
             var connectionStore = new ConnectionStoreJson(connectionsPath);
             var tunnelManager = new TunnelManager();
             var terminalFactory = new TerminalSessionFactory();
@@ -102,8 +92,32 @@ namespace Gdterm.UI
             var dangerousCmdDetector = new DangerousCommandDetector(dangerousCmdPath);
             var folderCredStore = new FolderCredentialStoreJson(folderCredPath);
             var sessionStateStore = new SessionStateStore(sessionStatePath);
+            var bookmarkStore = new BookmarkStoreJson(dataDir);
+            var commandHistoryStore = new CommandHistoryStore(commandHistoryDir);
+            var quickCommandStore = new QuickCommandStore(quickCmdPath);
+            var keyBindingStore = new TerminalKeyBindingStore(keybindPath);
+            var highlightStore = new HighlightStore(highlightPath);
+            var reconnectWatchdog = new AutoReconnectWatchdog { MaxRetries = 5 };
+            var multiChannelManager = new MultiChannelManager();
 
-            // ====== 主窗口 ======
+            // 工具注册（内置，非插件）
+            var toolRegistry = new ToolRegistry();
+            try
+            {
+                toolRegistry.Register(new CertificateInstallerTool());
+                toolRegistry.Register(new TimeSyncTool());
+                toolRegistry.Register(new RepoConfigTool());
+                toolRegistry.Register(new PortScannerTool());
+                toolRegistry.Register(new NetworkScannerTool());
+                toolRegistry.LoadAllConfigs();
+            }
+            catch { }
+
+            // Secret scanner：默认不后台扫
+            var secretConfig = SecretScanConfig.GetDefault();
+            secretConfig.EnableBackgroundScan = false;
+            var secretScanner = new SecretScanner(secretConfig);
+
             var mainForm = new MainForm(
                 connectionStore,
                 tunnelManager,
@@ -115,24 +129,32 @@ namespace Gdterm.UI
                 securityManager,
                 dangerousCmdDetector,
                 folderCredStore,
-                sessionStateStore);
+                sessionStateStore,
+                bookmarkStore,
+                commandHistoryStore,
+                quickCommandStore,
+                keyBindingStore,
+                highlightStore,
+                reconnectWatchdog,
+                multiChannelManager,
+                toolRegistry,
+                secretScanner);
 
-            // 窗口关闭时保存主密码配置
             mainForm.FormClosed += (s, e) =>
             {
                 SavePasswordConfig(securityManager.GetPasswordConfig(), passwordConfigPath);
+                try { toolRegistry.SaveAllConfigs(); } catch { }
+                try { reconnectWatchdog.Dispose(); } catch { }
+                try { secretScanner.Dispose(); } catch { }
+                try { commandHistoryStore.Dispose(); } catch { }
             };
 
             Application.Run(mainForm);
         }
 
-        /// <summary>
-        /// 保存主密码配置到文件（哈希+盐，非明文密码）
-        /// </summary>
         private static void SavePasswordConfig(MasterPasswordConfig config, string path)
         {
             if (config == null) return;
-
             try
             {
                 var json = string.Format(
@@ -142,36 +164,25 @@ namespace Gdterm.UI
                     config.LastChanged);
                 File.WriteAllText(path, json);
             }
-            catch { /* best-effort */ }
+            catch { }
         }
 
-        /// <summary>
-        /// 从文件加载主密码配置
-        /// </summary>
         private static MasterPasswordConfig ParsePasswordConfig(string json)
         {
             var hash = ExtractJsonString(json, "passwordHash");
             var salt = ExtractJsonString(json, "salt");
             var lastChangedStr = ExtractJsonString(json, "lastChanged");
-
             if (string.IsNullOrEmpty(hash) || string.IsNullOrEmpty(salt))
                 return null;
-
-            var config = new MasterPasswordConfig
-            {
-                PasswordHash = hash,
-                Salt = salt
-            };
-
+            var config = new MasterPasswordConfig { PasswordHash = hash, Salt = salt };
             if (DateTime.TryParse(lastChangedStr, out var dt))
                 config.LastChanged = dt;
-
             return config;
         }
 
         private static string ExtractJsonString(string json, string key)
         {
-            var pattern = $"\"{key}\":\"";
+            var pattern = "\"" + key + "\":\"";
             int start = json.IndexOf(pattern, StringComparison.Ordinal);
             if (start < 0) return null;
             start += pattern.Length;

@@ -28,7 +28,7 @@ namespace Gdterm.Tools.Modules
             var ips = ExpandCidr(cidr);
             var results = new ConcurrentBag<HostScanResult>();
             var scanned = 0;
-            var semaphore = new SemaphoreSlim(50);
+            var semaphore = new SemaphoreSlim(30); // 低配默认并发
 
             var tasks = new List<Task>();
             foreach (var ip in ips)
@@ -316,7 +316,51 @@ namespace Gdterm.Tools.Modules
         }
 
         private void OnOutput(string msg) { OutputReceived?.Invoke(this, msg); }
-        public System.Windows.Forms.Control CreatePanel() { return null; }
+
+        public System.Windows.Forms.Control CreatePanel()
+        {
+            return ToolPanelHelper.CreateActionPanel(
+                DisplayName,
+                "子网扫描 例: 192.168.1.0/24  | DNS 例: dns example.com  | 路由跟踪 例: tr 8.8.8.8",
+                null,
+                (inputs, output, status) =>
+                {
+                    var text = (inputs[0].Text ?? "").Trim();
+                    if (string.IsNullOrEmpty(text) || text.StartsWith("目标"))
+                    {
+                        status.Text = "请输入参数";
+                        return;
+                    }
+                    var parts = text.Split(new[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
+                    if (parts[0].Equals("dns", StringComparison.OrdinalIgnoreCase) && parts.Length > 1)
+                    {
+                        var dns = QueryDns(parts[1]);
+                        ToolPanelHelper.AppendLine(output,
+                            (dns.IsSuccess ? "OK" : "FAIL") + " " + dns.HostName +
+                            " v4=" + (dns.IPv4 ?? "-") + " v6=" + (dns.IPv6 ?? "-") +
+                            (string.IsNullOrEmpty(dns.Error) ? "" : " err=" + dns.Error));
+                        status.Text = "DNS 完成";
+                        return;
+                    }
+                    if ((parts[0].Equals("tr", StringComparison.OrdinalIgnoreCase) ||
+                         parts[0].Equals("traceroute", StringComparison.OrdinalIgnoreCase)) && parts.Length > 1)
+                    {
+                        var hops = TracerouteAsync(parts[1]).GetAwaiter().GetResult();
+                        foreach (var h in hops)
+                            ToolPanelHelper.AppendLine(output,
+                                h.Hop + " " + (h.Address ?? "*") + " " + (h.HostName ?? "") + " " + h.LatencyMs + "ms");
+                        status.Text = "traceroute 完成";
+                        return;
+                    }
+                    var cidr = parts[0];
+                    var hosts = ScanSubnetAsync(cidr).GetAwaiter().GetResult();
+                    foreach (var h in hosts)
+                        if (h.IsAlive)
+                            ToolPanelHelper.AppendLine(output, h.IP + " " + (h.HostName ?? "") + " " + h.LatencyMs + "ms");
+                    status.Text = "存活 " + CountAlive(hosts) + " / " + hosts.Count;
+                });
+        }
+
         public void Dispose() { }
     }
 

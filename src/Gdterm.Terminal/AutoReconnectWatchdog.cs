@@ -54,7 +54,12 @@ namespace Gdterm.Terminal
         /// <summary>
         /// 监视一个会话的连接状态
         /// </summary>
-        public void Watch(string sessionId, ITerminalSession session)
+        /// <summary>
+        /// 外部重连委托：返回 true 表示重连成功。由 UI 负责 close+reopen。
+        /// </summary>
+        public Func<string, ITerminalSession, Task<bool>> DefaultReconnectFunc { get; set; }
+
+        public void Watch(string sessionId, ITerminalSession session, Func<string, ITerminalSession, Task<bool>> reconnectFunc = null)
         {
             if (_disposed || string.IsNullOrEmpty(sessionId) || session == null) return;
 
@@ -67,20 +72,11 @@ namespace Gdterm.Terminal
                 {
                     SessionId = sessionId,
                     Session = session,
-                    ManualDisconnect = false
+                    ManualDisconnect = false,
+                    ReconnectFunc = reconnectFunc ?? DefaultReconnectFunc
                 };
 
-                // 订阅断开事件（如果 ITerminalSession 有断开通知）
-                // 由于 ITerminalSession 没有显式断开事件，我们通过 OutputReceived 检测
-                watched.OutputHandler = (s, e) =>
-                {
-                    // 检测连接断开的输出模式
-                    if (IsDisconnectMessage(e))
-                    {
-                        OnConnectionLost(sessionId);
-                    }
-                };
-                // 注意: 实际断开检测需要通过 ConnectionHealthMonitor 或外部通知
+                // 注意: 实际断开检测通过 ConnectionHealthMonitor.NotifyConnectionLost 或外部通知
 
                 _sessions[sessionId] = watched;
             }
@@ -210,19 +206,31 @@ namespace Gdterm.Terminal
 
                 if (ct.IsCancellationRequested) return;
 
-                // 尝试重连
+                // 尝试重连：通过外部委托（UI 层负责真正的 close+reopen）
                 try
                 {
-                    await watched.Session.ConnectAsync();
-                    // 重连成功
-                    watched.IsReconnecting = false;
-                    watched.RetryCount = 0;
-                    Reconnected?.Invoke(this, new ReconnectEventArgs
+                    bool ok = false;
+                    if (watched.ReconnectFunc != null)
                     {
-                        SessionId = watched.SessionId,
-                        RetryCount = watched.RetryCount
-                    });
-                    return;
+                        ok = await watched.ReconnectFunc(watched.SessionId, watched.Session);
+                    }
+                    else if (watched.Session != null && watched.Session.IsConnected)
+                    {
+                        // 会话已恢复
+                        ok = true;
+                    }
+
+                    if (ok)
+                    {
+                        watched.IsReconnecting = false;
+                        watched.RetryCount = 0;
+                        Reconnected?.Invoke(this, new ReconnectEventArgs
+                        {
+                            SessionId = watched.SessionId,
+                            RetryCount = watched.RetryCount
+                        });
+                        return;
+                    }
                 }
                 catch
                 {
@@ -270,7 +278,7 @@ namespace Gdterm.Terminal
             public int RetryCount { get; set; }
             public DateTime NextRetryAt { get; set; }
             public CancellationTokenSource Cts { get; set; }
-            public EventHandler<string> OutputHandler { get; set; }
+            public Func<string, ITerminalSession, Task<bool>> ReconnectFunc { get; set; }
         }
     }
 

@@ -1,63 +1,76 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
+using Gdterm.Core.Models;
+using Gdterm.Terminal.Models;
 
 namespace Gdterm.Terminal
 {
     /// <summary>
     /// 本地终端会话——启动本地 CMD/PowerShell/Bash 进程
     /// </summary>
-    public class LocalTerminalSession : ITerminalSession, IDisposable
+    public class LocalTerminalSession : ITerminalSession
     {
         private Process _process;
         private readonly object _lock = new object();
+        private readonly List<string> _outputBuffer = new List<string>();
         private string _shellPath;
         private string _workingDirectory;
         private bool _disposed;
+        private const int MaxBufferLines = 500;
 
-        public bool IsConnected => _process != null && !_process.HasExited;
-        public OsType OsType { get; private set; }
-        public string HostName => "localhost";
-        public int BufferSize { get; set; } = 1000;
+        public string ConnectionId { get; private set; }
+        public string Hostname { get { return "localhost"; } }
+        public string OsType { get; private set; }
+        public bool IsConnected
+        {
+            get
+            {
+                try { return _process != null && !_process.HasExited; }
+                catch { return false; }
+            }
+        }
 
-        public event Action<string> OutputReceived;
-        public event Action<string> ErrorReceived;
-        public event Action Disconnected;
+        public event EventHandler<TerminalOutputEventArgs> OutputReceived;
 
         public LocalTerminalSession(string shellPath = null, string workingDirectory = null)
         {
             _shellPath = shellPath;
             _workingDirectory = workingDirectory;
+            OsType = Environment.OSVersion.Platform == PlatformID.Win32NT ? "Windows" : "Linux";
         }
 
-        /// <summary>连接（启动本地 shell 进程）</summary>
-        public void Connect(string host, int port, string username, string password)
+        public void Connect(ConnectionConfig config, CredentialPayload credential, int rows = 24, int columns = 80)
         {
-            // 本地终端忽略远程参数
+            ConnectionId = config != null ? config.Id : Guid.NewGuid().ToString("N");
             ConnectLocal();
         }
 
-        /// <summary>启动本地终端</summary>
+        public void ConnectViaTunnel(ConnectionConfig config, CredentialPayload credential, TunnelEndpoint tunnelEndpoint, int rows = 24, int columns = 80)
+        {
+            throw new NotSupportedException("本地终端不支持隧道连接");
+        }
+
+        /// <summary>启动本地 shell</summary>
         public void ConnectLocal()
         {
             lock (_lock)
             {
                 if (IsConnected) return;
 
-                // 自动检测 shell
                 if (string.IsNullOrEmpty(_shellPath))
                 {
                     if (Environment.OSVersion.Platform == PlatformID.Win32NT)
                     {
                         _shellPath = Environment.GetEnvironmentVariable("COMSPEC") ?? "cmd.exe";
-                        OsType = OsType.Windows;
+                        OsType = "Windows";
                     }
                     else
                     {
                         _shellPath = "/bin/bash";
-                        OsType = OsType.Linux;
+                        OsType = "Linux";
                     }
                 }
 
@@ -76,32 +89,17 @@ namespace Gdterm.Terminal
                 if (!string.IsNullOrEmpty(_workingDirectory))
                     startInfo.WorkingDirectory = _workingDirectory;
 
-                // PowerShell 特殊处理
                 if (_shellPath.IndexOf("powershell", StringComparison.OrdinalIgnoreCase) >= 0 ||
                     _shellPath.IndexOf("pwsh", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
-                    OsType = OsType.Windows;
+                    OsType = "Windows";
                     startInfo.Arguments = "-NoLogo -NoProfile";
                 }
 
                 _process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
-
-                _process.OutputDataReceived += (s, e) =>
-                {
-                    if (e.Data != null)
-                        OutputReceived?.Invoke(e.Data);
-                };
-
-                _process.ErrorDataReceived += (s, e) =>
-                {
-                    if (e.Data != null)
-                        ErrorReceived?.Invoke(e.Data);
-                };
-
-                _process.Exited += (s, e) =>
-                {
-                    Disconnected?.Invoke();
-                };
+                _process.OutputDataReceived += OnOutputData;
+                _process.ErrorDataReceived += OnErrorData;
+                _process.Exited += OnProcessExited;
 
                 try
                 {
@@ -111,56 +109,43 @@ namespace Gdterm.Terminal
                 }
                 catch (Exception ex)
                 {
+                    CleanupProcess();
                     throw new InvalidOperationException("无法启动本地终端: " + ex.Message, ex);
                 }
             }
         }
 
-        /// <summary>连接到隧道（本地终端不支持）</summary>
-        public void ConnectViaTunnel(int localPort, string username, string password)
-        {
-            throw new NotSupportedException("本地终端不支持隧道连接");
-        }
-
-        /// <summary>发送输入到本地终端</summary>
-        public void SendInput(string input)
+        public void SendInput(string text)
         {
             lock (_lock)
             {
                 if (!IsConnected || _process == null) return;
                 try
                 {
-                    _process.StandardInput.Write(input);
+                    _process.StandardInput.Write(text);
                     _process.StandardInput.Flush();
                 }
                 catch { }
             }
         }
 
-        /// <summary>发送原始字节</summary>
-        public void SendBytes(byte[] data, int offset, int count)
-        {
-            lock (_lock)
-            {
-                if (!IsConnected || _process == null) return;
-                try
-                {
-                    _process.StandardInput.BaseStream.Write(data, offset, count);
-                    _process.StandardInput.BaseStream.Flush();
-                }
-                catch { }
-            }
-        }
-
-        /// <summary>发送中断信号（Ctrl+C）</summary>
-        public void SendBreak()
+        public void SendBreak(int durationMs = 100)
         {
             SendInput("\x03");
         }
 
-        public string GetRecentOutput(int lineCount = 50)
+        public IList<string> GetRecentOutput(int lineCount)
         {
-            return ""; // 本地终端没有内置缓冲区
+            lock (_lock)
+            {
+                var start = Math.Max(0, _outputBuffer.Count - lineCount);
+                return _outputBuffer.GetRange(start, _outputBuffer.Count - start);
+            }
+        }
+
+        public string GetSelection()
+        {
+            return string.Empty;
         }
 
         public void Disconnect()
@@ -172,36 +157,76 @@ namespace Gdterm.Terminal
                 {
                     if (!_process.HasExited)
                     {
-                        _process.StandardInput.Write("exit\r");
-                        _process.StandardInput.Flush();
+                        try
+                        {
+                            _process.StandardInput.Write("exit\r\n");
+                            _process.StandardInput.Flush();
+                        }
+                        catch { }
+
                         if (!_process.WaitForExit(3000))
-                            _process.Kill();
+                        {
+                            try { _process.Kill(); } catch { }
+                        }
                     }
-                    _process.Close();
                 }
                 catch { }
-                _process = null;
+                CleanupProcess();
             }
         }
 
         public void Dispose()
         {
-            if (!_disposed)
+            if (_disposed) return;
+            _disposed = true;
+            Disconnect();
+        }
+
+        private void OnOutputData(object sender, DataReceivedEventArgs e)
+        {
+            if (e.Data == null) return;
+            AppendAndRaise(e.Data + "\r\n");
+        }
+
+        private void OnErrorData(object sender, DataReceivedEventArgs e)
+        {
+            if (e.Data == null) return;
+            AppendAndRaise(e.Data + "\r\n");
+        }
+
+        private void OnProcessExited(object sender, EventArgs e)
+        {
+            AppendAndRaise("\r\n[本地终端已退出]\r\n");
+        }
+
+        private void AppendAndRaise(string text)
+        {
+            lock (_lock)
             {
-                _disposed = true;
-                Disconnect();
-                lock (_lock)
-                {
-                    if (_process != null)
-                    {
-                        _process.OutputDataReceived -= null;
-                        _process.ErrorDataReceived -= null;
-                        _process.Exited -= null;
-                        try { _process.Dispose(); } catch { }
-                        _process = null;
-                    }
-                }
+                _outputBuffer.Add(text);
+                while (_outputBuffer.Count > MaxBufferLines)
+                    _outputBuffer.RemoveAt(0);
             }
+
+            try
+            {
+                OutputReceived?.Invoke(this, new TerminalOutputEventArgs { Text = text });
+            }
+            catch { }
+        }
+
+        private void CleanupProcess()
+        {
+            if (_process == null) return;
+            try
+            {
+                _process.OutputDataReceived -= OnOutputData;
+                _process.ErrorDataReceived -= OnErrorData;
+                _process.Exited -= OnProcessExited;
+                _process.Dispose();
+            }
+            catch { }
+            _process = null;
         }
     }
 }

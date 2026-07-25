@@ -53,6 +53,7 @@
     <Compile Include="SftpService.cs" />
     <Compile Include="SftpEnhancements.cs" />
     <Compile Include="ISftpServiceFactory.cs" />
+    <Compile Include="SftpServiceFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

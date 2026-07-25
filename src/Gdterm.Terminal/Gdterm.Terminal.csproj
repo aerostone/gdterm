@@ -73,6 +73,7 @@
     <Compile Include="Rendering\TerminalRenderer.cs" />
     <Compile Include="Transfer\ZmodemHandler.cs" />
     <Compile Include="ITerminalSessionFactory.cs" />
+    <Compile Include="TerminalSessionFactory.cs" />
     <Compile Include="Themes\ColorSchemes.cs" />
     <Compile Include="Themes\TerminalTransparency.cs" />
     <Compile Include="TerminalControl.cs" />

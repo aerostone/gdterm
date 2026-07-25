@@ -149,7 +149,39 @@ namespace Gdterm.Tools.Modules
             }
         }
 
-        public System.Windows.Forms.Control CreatePanel() { return null; }
+        public System.Windows.Forms.Control CreatePanel()
+        {
+            return ToolPanelHelper.CreateActionPanel(
+                DisplayName,
+                Description + "  格式: host startPort endPort  例: 192.168.1.1 1 1024",
+                null,
+                (inputs, output, status) =>
+                {
+                    var parts = (inputs[0].Text ?? "").Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length < 1)
+                    {
+                        status.Text = "请输入主机";
+                        return;
+                    }
+                    var host = parts[0];
+                    int start = 1, end = 1024;
+                    List<PortScanResult> results;
+                    if (parts.Length >= 3)
+                    {
+                        int.TryParse(parts[1], out start);
+                        int.TryParse(parts[2], out end);
+                        results = ScanAsync(host, start, end).GetAwaiter().GetResult();
+                    }
+                    else
+                    {
+                        results = ScanCommonPortsAsync(host).GetAwaiter().GetResult();
+                    }
+                    foreach (var r in results)
+                        if (r.IsOpen) ToolPanelHelper.AppendLine(output, r.Host + ":" + r.Port + " open " + r.Service);
+                    status.Text = "完成，开放 " + FindOpenCount(results) + " 个端口";
+                });
+        }
+
         public void Dispose() { _cts?.Cancel(); _cts?.Dispose(); }
     }
 
@@ -162,7 +194,8 @@ namespace Gdterm.Tools.Modules
 
         protected override void ResetDefaults()
         {
-            MaxConcurrency = 100;
+            // 低配默认并发收紧
+            MaxConcurrency = 40;
             TimeoutMs = 3000;
             CommonPorts = new[] { 22, 80, 443, 3306, 3389, 5432, 6379, 8080 };
         }
