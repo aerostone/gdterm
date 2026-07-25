@@ -175,13 +175,13 @@ namespace Gdterm.UI.Controls
                 _session = session;
                 _session.OutputReceived += OnTerminalOutput;
 
-                // 自动运行命令（profile）
+                // 自动运行命令（profile）——走危险命令闸门
                 if (_profile.AutoRunCommands != null)
                 {
                     foreach (var cmd in _profile.AutoRunCommands)
                     {
                         if (!string.IsNullOrWhiteSpace(cmd))
-                            SafeSend(cmd + (_profile.NewLineSequence ?? "\n"));
+                            TrySendInput(cmd + (_profile.NewLineSequence ?? "\n"), isCommandLine: true);
                     }
                 }
 
@@ -240,29 +240,20 @@ namespace Gdterm.UI.Controls
                 Connect();
         }
 
-        /// <summary>向终端发送文本（含危险命令检测）</summary>
+        /// <summary>
+        /// 向终端发送文本。isCommandLine=true 时走危险命令闸门（整行确认后再下发）。
+        /// </summary>
         public bool TrySendInput(string text, bool isCommandLine = false)
         {
             if (string.IsNullOrEmpty(text) || _session == null || !_session.IsConnected)
                 return false;
 
-            if (isCommandLine && _dangerousDetector != null)
-            {
-                var check = _dangerousDetector.Check(text.TrimEnd('\r', '\n'));
-                if (check != null && check.IsDangerous)
-                {
-                    using (var dlg = new DangerousCommandDialog(text.Trim(), check))
-                    {
-                        dlg.ShowDialog(FindForm());
-                        if (!dlg.IsConfirmed)
-                            return false;
-                        if (dlg.RememberChoice)
-                        {
-                            try { _dangerousDetector.AddToWhitelist(text.Trim()); } catch { }
-                        }
-                    }
-                }
-            }
+            if (isCommandLine && !ConfirmIfDangerous(text.TrimEnd('\r', '\n')))
+                return false;
+
+            // 外部整行发送会打乱本地行缓冲
+            if (isCommandLine)
+                ClearLocalLine(eraseDisplay: true);
 
             return SafeSend(text);
         }
@@ -270,6 +261,51 @@ namespace Gdterm.UI.Controls
         public void SendInput(string text)
         {
             TrySendInput(text, isCommandLine: true);
+        }
+
+        /// <summary>是否启用本地行缓冲（有检测器时：确认前不向远端逐字发送）</summary>
+        private bool UseLocalLineBuffer
+        {
+            get { return _dangerousDetector != null; }
+        }
+
+        /// <summary>危险命令确认；安全或用户确认返回 true</summary>
+        private bool ConfirmIfDangerous(string command)
+        {
+            if (string.IsNullOrWhiteSpace(command) || _dangerousDetector == null)
+                return true;
+
+            CommandCheckResult check;
+            try { check = _dangerousDetector.Check(command); }
+            catch { return true; }
+
+            if (check == null || !check.IsDangerous)
+                return true;
+
+            using (var dlg = new DangerousCommandDialog(command, check))
+            {
+                dlg.ShowDialog(FindForm());
+                if (!dlg.IsConfirmed)
+                    return false;
+                if (dlg.RememberChoice)
+                {
+                    try { _dangerousDetector.AddToWhitelist(command); } catch { }
+                }
+            }
+            return true;
+        }
+
+        private void ClearLocalLine(bool eraseDisplay)
+        {
+            if (eraseDisplay && _commandLine.Length > 0 && UseLocalLineBuffer)
+            {
+                // 用退格擦除本地回显（远端尚未收到这些字符）
+                var erase = new StringBuilder();
+                for (int i = 0; i < _commandLine.Length; i++)
+                    erase.Append("\b \b");
+                try { _renderer?.Write(erase.ToString()); } catch { }
+            }
+            _commandLine.Clear();
         }
 
         private bool SafeSend(string text)
@@ -321,11 +357,18 @@ namespace Gdterm.UI.Controls
         {
             if (_session?.IsConnected != true) return;
 
-            // 可打印字符进入命令行缓冲，回车时做危险检测
+            // 可打印字符：有检测器时只进本地缓冲+本地回显，确认前不发远端
             if (!char.IsControl(e.KeyChar))
             {
                 _commandLine.Append(e.KeyChar);
-                SafeSend(e.KeyChar.ToString());
+                if (UseLocalLineBuffer)
+                {
+                    try { _renderer?.Write(e.KeyChar.ToString()); } catch { }
+                }
+                else
+                {
+                    SafeSend(e.KeyChar.ToString());
+                }
                 e.Handled = true;
             }
         }
@@ -356,57 +399,80 @@ namespace Gdterm.UI.Controls
                 switch (e.KeyCode)
                 {
                     case Keys.Enter:
-                        // 命令行确认：危险检测
+                    {
                         var cmd = _commandLine.ToString();
-                        _commandLine.Clear();
-                        if (!string.IsNullOrWhiteSpace(cmd) && _dangerousDetector != null)
+                        if (UseLocalLineBuffer)
                         {
-                            var check = _dangerousDetector.Check(cmd);
-                            if (check != null && check.IsDangerous)
+                            // 确认前命令体从未离开本机
+                            if (!ConfirmIfDangerous(cmd))
                             {
-                                // 已逐字发送过命令体，这里只拦截回车
-                                using (var dlg = new DangerousCommandDialog(cmd, check))
-                                {
-                                    dlg.ShowDialog(FindForm());
-                                    if (!dlg.IsConfirmed)
-                                    {
-                                        // 用 Ctrl+C 取消当前行
-                                        SafeSend("\x03");
-                                        e.Handled = true;
-                                        return;
-                                    }
-                                    if (dlg.RememberChoice)
-                                    {
-                                        try { _dangerousDetector.AddToWhitelist(cmd); } catch { }
-                                    }
-                                }
+                                ClearLocalLine(eraseDisplay: true);
+                                e.Handled = true;
+                                return;
                             }
+                            // 整行下发（远端此前未见字符）
+                            _commandLine.Clear();
+                            if (cmd.Length > 0)
+                                SafeSend(cmd);
+                            SafeSend("\r");
                         }
-                        SafeSend("\r");
+                        else
+                        {
+                            // 无检测器：字符已逐字下发，只补回车（仍尝试闸门，失败则 Ctrl+C）
+                            _commandLine.Clear();
+                            if (!ConfirmIfDangerous(cmd))
+                            {
+                                SafeSend("\x03");
+                                e.Handled = true;
+                                return;
+                            }
+                            SafeSend("\r");
+                        }
                         e.Handled = true;
                         break;
+                    }
                     case Keys.Back:
                         if (_commandLine.Length > 0)
+                        {
                             _commandLine.Length--;
-                        SafeSend("\b");
+                            if (UseLocalLineBuffer)
+                            {
+                                try { _renderer?.Write("\b \b"); } catch { }
+                            }
+                            else
+                            {
+                                SafeSend("\b");
+                            }
+                        }
+                        else if (!UseLocalLineBuffer)
+                        {
+                            SafeSend("\b");
+                        }
                         e.Handled = true;
                         break;
                     case Keys.Tab:
+                        // Tab 补全需要远端：丢弃本地缓冲后直通
+                        if (UseLocalLineBuffer && _commandLine.Length > 0)
+                        {
+                            var partial = _commandLine.ToString();
+                            _commandLine.Clear();
+                            SafeSend(partial);
+                        }
                         SafeSend("\t");
                         e.Handled = true;
                         break;
                     case Keys.Escape:
-                        _commandLine.Clear();
+                        ClearLocalLine(eraseDisplay: UseLocalLineBuffer);
                         SafeSend("\x1b");
                         e.Handled = true;
                         break;
                     case Keys.Up:
-                        _commandLine.Clear();
+                        ClearLocalLine(eraseDisplay: UseLocalLineBuffer);
                         SafeSend("\x1b[A");
                         e.Handled = true;
                         break;
                     case Keys.Down:
-                        _commandLine.Clear();
+                        ClearLocalLine(eraseDisplay: UseLocalLineBuffer);
                         SafeSend("\x1b[B");
                         e.Handled = true;
                         break;
@@ -442,7 +508,7 @@ namespace Gdterm.UI.Controls
 
                 if (e.Control && e.KeyCode == Keys.C && !_keyResolver.HasBinding(e))
                 {
-                    _commandLine.Clear();
+                    ClearLocalLine(eraseDisplay: UseLocalLineBuffer);
                     SafeSend("\x03");
                     e.Handled = true;
                 }

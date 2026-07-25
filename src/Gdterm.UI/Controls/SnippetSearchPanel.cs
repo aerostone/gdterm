@@ -19,6 +19,7 @@ namespace Gdterm.UI.Controls
         private readonly List<QuickCommand> _commands;
         private List<QuickCommand> _filtered;
         private ITerminalSession _activeSession;
+        private TerminalControl _activeTerminal;
 
         /// <summary>当片段被选中并发送时触发</summary>
         public event Action<string, QuickCommand> SnippetSent;
@@ -33,7 +34,17 @@ namespace Gdterm.UI.Controls
             BuildUI();
         }
 
-        public void SetActiveSession(ITerminalSession session) { _activeSession = session; }
+        public void SetActiveTerminal(TerminalControl terminal)
+        {
+            _activeTerminal = terminal;
+            _activeSession = terminal != null ? terminal.Session : null;
+        }
+
+        public void SetActiveSession(ITerminalSession session)
+        {
+            _activeTerminal = null;
+            _activeSession = session;
+        }
 
         private void BuildUI()
         {
@@ -158,21 +169,31 @@ namespace Gdterm.UI.Controls
             var cmd = _lvResults.SelectedItems[0].Tag as QuickCommand;
             if (cmd == null) return;
 
-            // 检查是否有占位符需要填充
-            if (cmd.Command.Contains("{") && _activeSession?.IsConnected == true)
+            var connected = (_activeTerminal != null && _activeTerminal.Session != null && _activeTerminal.Session.IsConnected)
+                || (_activeSession?.IsConnected == true);
+            if (!connected)
             {
-                var resolved = ShowVariableDialog(cmd);
-                if (resolved != null)
+                Visible = false;
+                return;
+            }
+
+            string toSend = null;
+            if (cmd.Command.Contains("{"))
+            {
+                toSend = ShowVariableDialog(cmd);
+                if (toSend == null)
                 {
-                    _activeSession.SendInput(resolved + "\r");
-                    SnippetSent?.Invoke(resolved, cmd);
+                    Visible = false;
+                    return;
                 }
             }
-            else if (_activeSession?.IsConnected == true)
+            else
             {
-                _activeSession.SendInput((cmd.PreCommand != null ? cmd.PreCommand + " && " : "") + cmd.Command + "\r");
-                SnippetSent?.Invoke(cmd.Command, cmd);
+                toSend = (cmd.PreCommand != null ? cmd.PreCommand + " && " : "") + cmd.Command;
             }
+
+            // 不直发 session——由 MainForm 经 TerminalControl 闸门发送
+            SnippetSent?.Invoke(toSend, cmd);
 
             Visible = false;
         }

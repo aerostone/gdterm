@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Gdterm.Security;
 using Gdterm.Terminal;
 
 namespace Gdterm.UI.Controls
@@ -14,6 +15,7 @@ namespace Gdterm.UI.Controls
     public class BatchCommandPanel : UserControl
     {
         private readonly BatchCommandExecutor _executor;
+        private DangerousCommandDetector _dangerousDetector;
         private ListView _lvSessions;
         private TextBox _txtCommand;
         private RichTextBox _rtbResults;
@@ -27,6 +29,11 @@ namespace Gdterm.UI.Controls
             Dock = DockStyle.Fill;
             BackColor = Color.FromArgb(30, 30, 30);
             BuildUI();
+        }
+
+        public void SetDangerousDetector(DangerousCommandDetector detector)
+        {
+            _dangerousDetector = detector;
         }
 
         public void SetSessions(Dictionary<string, ITerminalSession> sessions)
@@ -129,6 +136,33 @@ namespace Gdterm.UI.Controls
                 _lblStatus.Text = "请勾选至少一个会话";
                 _lblStatus.ForeColor = Color.FromArgb(255, 100, 100);
                 return;
+            }
+
+            // 危险命令闸门（批量入口）
+            if (_dangerousDetector != null)
+            {
+                try
+                {
+                    var check = _dangerousDetector.Check(command);
+                    if (check != null && check.IsDangerous)
+                    {
+                        using (var dlg = new DangerousCommandDialog(command, check))
+                        {
+                            dlg.ShowDialog(FindForm());
+                            if (!dlg.IsConfirmed)
+                            {
+                                _lblStatus.Text = "已取消危险命令";
+                                _lblStatus.ForeColor = Color.FromArgb(255, 180, 50);
+                                return;
+                            }
+                            if (dlg.RememberChoice)
+                            {
+                                try { _dangerousDetector.AddToWhitelist(command); } catch { }
+                            }
+                        }
+                    }
+                }
+                catch { }
             }
 
             _btnExecute.Enabled = false;

@@ -21,6 +21,7 @@ namespace Gdterm.UI.Controls
         private Panel _groupPanel;
         private string _activeGroup;
         private ITerminalSession _activeSession;
+        private TerminalControl _activeTerminal;
         private string _hostName;
         private string _userName;
         private Dictionary<string, Button> _groupButtons;
@@ -51,9 +52,19 @@ namespace Gdterm.UI.Controls
 
         // ── 公共方法 ──
 
-        /// <summary>设置当前活动终端会话</summary>
+        /// <summary>绑定活动终端控件（优先，发送走 TerminalControl 危险命令闸门）</summary>
+        public void SetActiveTerminal(TerminalControl terminal, string host = null, string user = null)
+        {
+            _activeTerminal = terminal;
+            _activeSession = terminal != null ? terminal.Session : null;
+            _hostName = host ?? _hostName ?? "";
+            _userName = user ?? _userName ?? "";
+        }
+
+        /// <summary>仅绑定会话（无闸门，兼容旧调用）</summary>
         public void SetActiveSession(ITerminalSession session, string host = null, string user = null)
         {
+            _activeTerminal = null;
             _activeSession = session;
             _hostName = host ?? "";
             _userName = user ?? "";
@@ -305,7 +316,9 @@ namespace Gdterm.UI.Controls
             // 单击发送命令
             btn.Click += (s, e) =>
             {
-                if (_activeSession?.IsConnected != true)
+                var connected = (_activeTerminal != null && _activeTerminal.Session != null && _activeTerminal.Session.IsConnected)
+                    || (_activeSession?.IsConnected == true);
+                if (!connected)
                 {
                     ShowTooltip(btn, "没有活动的终端会话");
                     return;
@@ -314,7 +327,7 @@ namespace Gdterm.UI.Controls
                 var resolved = ResolveCommand(cmd);
                 try
                 {
-                    _activeSession.SendInput(resolved);
+                    // 不直发 ITerminalSession——由 MainForm 经 TerminalControl 闸门发送
                     CommandSent?.Invoke(resolved, cmd.Group);
                     FlashButton(btn, Color.FromArgb(78, 201, 176));
                 }

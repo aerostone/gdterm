@@ -286,10 +286,13 @@ namespace Gdterm.UI.Forms
             _quickBar = new QuickBarPanel(cmds ?? new List<QuickCommand>());
             _quickBar.Dock = DockStyle.Bottom;
             _quickBar.Height = 36;
+            // 统一经 TerminalControl 危险命令闸门，禁止直发 ITerminalSession
             _quickBar.CommandSent += (cmd, group) =>
             {
                 var tc = _tabContainer.GetActiveTerminalControl();
-                if (tc != null) tc.SendInput(cmd + "\r");
+                if (tc == null) return;
+                var line = cmd.EndsWith("\r") || cmd.EndsWith("\n") ? cmd : cmd + "\r";
+                tc.SendInput(line);
             };
 
             _lockOverlay = new LockOverlayControl(_securityManager);
@@ -325,7 +328,11 @@ namespace Gdterm.UI.Forms
             var tc = _tabContainer.GetActiveTerminalControl();
             var host = tc?.Config?.Host;
             var user = tc?.Config?.Username;
-            _quickBar?.SetActiveSession(session, host, user);
+            var activeTc = _tabContainer.GetActiveTerminalControl();
+            if (activeTc != null)
+                _quickBar?.SetActiveTerminal(activeTc, host, user);
+            else
+                _quickBar?.SetActiveSession(session, host, user);
 
             // 同步多通道注册
             try
@@ -764,6 +771,7 @@ namespace Gdterm.UI.Forms
         private Control CreateBatchPanel()
         {
             var panel = new BatchCommandPanel();
+            panel.SetDangerousDetector(_dangerousCmdDetector);
             panel.SetSessions(_tabContainer.GetConnectedSessions());
             return panel;
         }
@@ -851,11 +859,18 @@ namespace Gdterm.UI.Forms
             List<QuickCommand> cmds = null;
             try { cmds = _quickCommandStore?.LoadAll(); } catch { }
             var panel = new SnippetSearchPanel(cmds ?? new List<QuickCommand>());
-            panel.SetActiveSession(_tabContainer.GetActiveSession());
+            var snipTc = _tabContainer.GetActiveTerminalControl();
+            if (snipTc != null)
+                panel.SetActiveTerminal(snipTc);
+            else
+                panel.SetActiveSession(_tabContainer.GetActiveSession());
+            // 统一经 TerminalControl 闸门
             panel.SnippetSent += (cmd, qc) =>
             {
                 var tc = _tabContainer.GetActiveTerminalControl();
-                tc?.SendInput(cmd + "\r");
+                if (tc == null) return;
+                var line = cmd.EndsWith("\r") || cmd.EndsWith("\n") ? cmd : cmd + "\r";
+                tc.SendInput(line);
             };
             ShowSidePanel(panel);
             panel.ShowAndFocus();
