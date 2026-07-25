@@ -243,37 +243,91 @@ namespace Gdterm.Security
             return findings;
         }
 
-        // ── 第1层：敏感文件名检测 ──
+        // ── 第1层：敏感文件名检测（文件名优先策略） ──
 
+        /// <summary>精确文件名匹配（不含扩展名）</summary>
         private static readonly HashSet<string> SensitiveFileNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
+            // 环境变量/配置
             ".env", ".env.local", ".env.production", ".env.staging", ".env.development",
-            "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519",
-            "credentials", "credentials.json", "credentials.xml",
+            "credentials", "credentials.json", "credentials.xml", "credentials.csv",
             "settings.json", "config.json", "secrets.json", "secrets.yml", "secrets.yaml",
             "wp-config.php", "htpasswd", ".htpasswd",
             "pgpass", ".pgpass", "mylogin.cnf", ".mylogin.cnf",
             ".netrc", "netrc", ".npmrc", ".pypirc", ".gem/credentials",
-            "jenkins-credentials.xml", "jenkins.plugins.publish_over_ssh.BapSshPublisherPlugin.xml",
-            "kubeconfig", ".kube/config",
+            "jenkins-credentials.xml", "kubeconfig", ".kube/config",
             "token", ".token", "access_token", "api_key",
             "database.yml", "database.json", "db.json",
             "key.json", "service-account.json", "service_account.json",
-            "oauth.json", "client_secret.json", "client_id.json"
+            "oauth.json", "client_secret.json", "client_id.json",
+            // SSH/密钥
+            "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519",
+            "known_hosts", "authorized_keys",
+            // Windows
+            "unattend.xml", "sysprep.xml", "Autounattend.xml"
         };
 
+        /// <summary>文件名关键词——只要文件名（不含扩展名）包含这些词就告警</summary>
+        private static readonly string[] SensitiveKeywords = new string[]
+        {
+            // 中文关键词
+            "密码", "口令", "账号", "账户", "登录", "凭据", "秘钥",
+            "服务器密码", "数据库密码", "交换机密码", "路由器密码",
+            "密码表", "密码本", "密码单", "密码清单", "密码列表",
+            "账号密码", "用户名密码", "登录密码", "管理密码",
+            "运维密码", "网络密码", "设备密码", "主机密码",
+            "root密码", "管理员密码", "SSH密码", "远程密码",
+            "密码文件", "密码备份", "密码记录", "密码台账",
+            "资产信息", "服务器信息", "网络设备", "IP地址",
+            // 英文关键词
+            "password", "passwd", "credential", "secret",
+            "login", "account", "pwd",
+            "passlist", "passlist", "passw",
+            // 格式组合
+            "账号和密码", "用户名和密码", "user_pass",
+            "user:pass", "user:pwd", "username_password"
+        };
+
+        /// <summary>敏感扩展名（私钥/证书）</summary>
         private static readonly HashSet<string> SensitiveExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             ".pem", ".key", ".p12", ".pfx", ".jks", ".keystore",
-            ".crt", ".cer", ".csr", // 证书本身不敏感，但私钥文件会匹配
+            ".p7b", ".p7c", ".der", ".csr"
         };
+
+        /// <summary>敏感文件名+扩展名组合（文件名本身不敏感，但组合后敏感）</summary>
+        private static readonly string[] SensitiveNamePatterns = new string[]
+        {
+            @"密码.*\.(xlsx?|csv|txt|docx?|md|json)$",
+            @"(password|passwd|pwd|secret|credential).*\.(xlsx?|csv|txt|docx?|md|json)$",
+            @"(账号|账户|登录|口令).*\.(xlsx?|csv|txt|docx?|md)$",
+            @"(server|host|device|switch|router|网络|服务器|交换机|路由器).*(密码|password|pwd|账号).*\.(xlsx?|csv|txt|docx?|md)$",
+            @"(密码|password).*(备份|backup|导出|export|dump).*\.(xlsx?|csv|txt|gz|zip|7z)$",
+            @"(database|数据库|db).*(密码|password|credential).*\.(xlsx?|csv|txt|json|yml)$",
+            @"(密码|password|secret).*\d{4}[-_]?\d{2}.*\.(xlsx?|csv|txt)$",  // 带日期的密码文件
+        };
+
+        private static Regex[] _sensitiveNameRegex;
+
+        private static Regex[] GetSensitiveNameRegex()
+        {
+            if (_sensitiveNameRegex == null)
+            {
+                _sensitiveNameRegex = new Regex[SensitiveNamePatterns.Length];
+                for (int i = 0; i < SensitiveNamePatterns.Length; i++)
+                    _sensitiveNameRegex[i] = new Regex(SensitiveNamePatterns[i], RegexOptions.IgnoreCase | RegexOptions.Compiled);
+            }
+            return _sensitiveNameRegex;
+        }
 
         private SecretFinding CheckSensitiveFileName(string filePath)
         {
             var fileName = Path.GetFileName(filePath);
+            var fileNameNoExt = Path.GetFileNameWithoutExtension(filePath);
             var ext = Path.GetExtension(filePath);
+            var lowerName = fileNameNoExt.ToLower();
 
-            // 检查文件名
+            // 1. 精确文件名匹配
             if (SensitiveFileNames.Contains(fileName))
             {
                 return new SecretFinding
@@ -286,7 +340,48 @@ namespace Gdterm.Security
                 };
             }
 
-            // 检查扩展名
+            // 2. 文件名关键词匹配（只要文件名包含密码相关关键词）
+            foreach (var keyword in SensitiveKeywords)
+            {
+                if (lowerName.Contains(keyword.ToLower()))
+                {
+                    // 密码关键词 + 文档扩展名 = 高风险
+                    var docExts = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                    {
+                        ".xlsx", ".xls", ".csv", ".docx", ".doc", ".txt", ".md", ".json", ".yaml", ".yml"
+                    };
+                    bool isDoc = docExts.Contains(ext);
+
+                    return new SecretFinding
+                    {
+                        Severity = isDoc ? FindingSeverity.Critical : FindingSeverity.Medium,
+                        Category = FindingCategory.Password,
+                        FilePath = filePath,
+                        Description = isDoc
+                            ? string.Format("疑似密码本：文件名含 \"{0}\"，类型 {1}", keyword, ext)
+                            : string.Format("敏感关键词：文件名含 \"{0}\"", keyword),
+                        RuleName = "FileNameKeyword"
+                    };
+                }
+            }
+
+            // 3. 正则模式匹配（组合模式，如 "服务器密码_2024.xlsx"）
+            foreach (var regex in GetSensitiveNameRegex())
+            {
+                if (regex.IsMatch(fileName))
+                {
+                    return new SecretFinding
+                    {
+                        Severity = FindingSeverity.Critical,
+                        Category = FindingCategory.Password,
+                        FilePath = filePath,
+                        Description = string.Format("疑似密码本（模式匹配）: {0}", fileName),
+                        RuleName = "FileNamePattern"
+                    };
+                }
+            }
+
+            // 4. 敏感扩展名（私钥/证书）
             if (SensitiveExtensions.Contains(ext))
             {
                 return new SecretFinding
@@ -299,7 +394,7 @@ namespace Gdterm.Security
                 };
             }
 
-            // 检查路径中的敏感目录
+            // 5. 敏感目录检测
             var lowerPath = filePath.ToLower();
             if (lowerPath.Contains("\\.ssh\\") || lowerPath.Contains("/.ssh/") ||
                 lowerPath.Contains("\\.aws\\") || lowerPath.Contains("/.aws/") ||
