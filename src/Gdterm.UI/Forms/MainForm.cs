@@ -9,6 +9,7 @@ using Gdterm.Sftp;
 using Gdterm.Terminal;
 using Gdterm.Tunnel;
 using Gdterm.UI.Controls;
+using Gdterm.UI.Hotkeys;
 
 namespace Gdterm.UI.Forms
 {
@@ -30,6 +31,8 @@ namespace Gdterm.UI.Forms
         private TabContainerControl _tabContainer;
         private StatusBarControl _statusBar;
         private LockOverlayControl _lockOverlay;
+        private GlobalHotkeyManager _hotkeyManager;
+        private int _toggleHotkeyId;
 
         public MainForm(
             IConnectionStore connectionStore,
@@ -138,8 +141,61 @@ namespace Gdterm.UI.Forms
             KeyDown += (s, e) => _securityManager.ResetIdleTimer();
             Click += (s, e) => _securityManager.ResetIdleTimer();
 
+            // 初始化全局热键
+            InitializeHotkeys();
+
             // 窗口关闭
             FormClosing += OnFormClosing;
+        }
+
+        private void InitializeHotkeys()
+        {
+            try
+            {
+                _hotkeyManager = new GlobalHotkeyManager(this);
+                // Ctrl+` 一键呼出/隐藏（类似 Quake 终端）
+                _toggleHotkeyId = _hotkeyManager.Register(HotkeyModifiers.Control, Keys.Oemtilde);
+                _hotkeyManager.HotkeyPressed += OnGlobalHotkeyPressed;
+            }
+            catch
+            {
+                // 热键注册失败不影响主功能
+            }
+        }
+
+        private void OnGlobalHotkeyPressed(object sender, HotkeyPressedEventArgs e)
+        {
+            if (e.HotkeyId == _toggleHotkeyId)
+            {
+                ToggleWindowVisibility();
+            }
+        }
+
+        private void ToggleWindowVisibility()
+        {
+            if (Visible)
+            {
+                // 如果是当前活动窗口，隐藏
+                if (Form.ActiveForm == this)
+                {
+                    Hide();
+                }
+                else
+                {
+                    // 否则激活并置顶
+                    Show();
+                    WindowState = FormWindowState.Normal;
+                    Activate();
+                    BringToFront();
+                }
+            }
+            else
+            {
+                Show();
+                WindowState = FormWindowState.Normal;
+                Activate();
+                BringToFront();
+            }
         }
 
         private void OnConnectionDoubleClicked(object sender, Core.Models.ConnectionConfig config)
@@ -183,6 +239,9 @@ namespace Gdterm.UI.Forms
 
         private void OnFormClosing(object sender, FormClosingEventArgs e)
         {
+            // 清理热键
+            _hotkeyManager?.Dispose();
+
             // 清理资源
             _tabContainer.CloseAllTabs();
             _tunnelManager.Dispose();
