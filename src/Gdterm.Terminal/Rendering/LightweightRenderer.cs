@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
@@ -9,21 +10,43 @@ using Gdterm.Terminal.Themes;
 namespace Gdterm.Terminal.Rendering
 {
     /// <summary>
-    /// 轻量级 GDI+ 终端渲染器——支持可切换配色方案，大幅降低内存占用
-    /// 每个实例仅 ~0.3MB（vs RichTextBox ~3-5MB）
+    /// 轻量级 GDI+ 终端渲染器——零 GPU 依赖，零内存泄漏设计
+    /// 
+    /// 设计原则：
+    ///   1. 无 GPU 依赖 — 纯 GDI+ 软件渲染，兼容无显卡/旧显卡机器
+    ///   2. 无持续渲染 — 按需重绘，只在有新数据时 Invalidate，空闲时零 CPU
+    ///   3. 无内存泄漏 — Font/Brush/Region 全部缓存复用，Dispose 彻底
+    ///   4. 节流机制 — 高频输出时合并重绘，避免卡顿
+    ///   5. Double Buffer — Panel 双缓冲，消除闪烁
     /// </summary>
     internal class LightweightRenderer : IRenderer
     {
-        private readonly Panel _canvas;
+        private readonly DoubleBufferedPanel _canvas;
         private readonly List<ColoredLine> _lineBuffer = new List<ColoredLine>();
         private readonly StringBuilder _currentLine = new StringBuilder();
         private readonly List<ColorSpan> _currentSpans = new List<ColorSpan>();
         private readonly object _lock = new object();
+
+        // 缓存的 GDI 对象 — 全生命周期复用，Dispose 时统一释放
+        private Font _font;
+        private Font _boldFont;
+        private readonly Dictionary<Color, SolidBrush> _brushCache = new Dictionary<Color, SolidBrush>();
+
+        // ANSI 正则 — 编译一次，全局复用
+        private static readonly Regex AnsiRegex = new Regex(
+            @"\x1b\[([0-9;]*)([A-Za-z])",
+            RegexOptions.Compiled);
+
+        // 重绘节流
         private bool _needsRedraw;
+        private bool _redrawScheduled;
+        private DateTime _lastRedraw = DateTime.MinValue;
+        private const int MinRedrawIntervalMs = 16; // ~60fps 上限，实际按需更低
 
         private Color _currentColor;
         private int _scrollOffset;
         private bool _isPaused;
+        private bool _disposed;
 
         // 配色方案
         private TerminalColorScheme _scheme;
@@ -32,6 +55,10 @@ namespace Gdterm.Terminal.Rendering
         private const int CharWidth = 8;
         private const int LineHeight = 16;
         private const string FontName = "Consolas";
+        private const float FontSize = 10f;
+
+        // 重绘定时器 — 用于合并高频写入
+        private readonly Timer _redrawTimer;
 
         public int Rows { get; private set; }
         public int Columns { get; private set; }
@@ -41,11 +68,15 @@ namespace Gdterm.Terminal.Rendering
             Rows = rows;
             Columns = columns;
 
-            // 应用配色方案
             _scheme = scheme ?? ColorSchemes.Classic;
             _currentColor = _scheme.Foreground;
 
-            _canvas = new Panel
+            // 缓存字体 — 整个生命周期复用，避免 GDI handle 泄漏
+            _font = new Font(FontName, FontSize, FontStyle.Regular, GraphicsUnit.Pixel);
+            _boldFont = new Font(FontName, FontSize, FontStyle.Bold, GraphicsUnit.Pixel);
+
+            // 双缓冲 Panel — 消除闪烁，不触发持续渲染
+            _canvas = new DoubleBufferedPanel
             {
                 Dock = DockStyle.Fill,
                 BackColor = _scheme.Background,
@@ -53,15 +84,18 @@ namespace Gdterm.Terminal.Rendering
             };
 
             _canvas.Paint += OnPaint;
-            _canvas.Resize += (s, e) => _canvas.Invalidate();
+            _canvas.Resize += OnResize;
+            _canvas.Disposed += OnCanvasDisposed;
+
+            // 节流定时器 — 16ms 间隔检查是否需要重绘
+            // 只在 _needsRedraw=true 时触发 Invalidate，空闲时完全静默
+            _redrawTimer = new Timer { Interval = MinRedrawIntervalMs };
+            _redrawTimer.Tick += OnRedrawTimerTick;
         }
 
-        /// <summary>
-        /// 切换配色方案
-        /// </summary>
         public void SetColorScheme(TerminalColorScheme scheme)
         {
-            if (scheme == null) return;
+            if (scheme == null || _disposed) return;
 
             lock (_lock)
             {
@@ -69,17 +103,11 @@ namespace Gdterm.Terminal.Rendering
                 _currentColor = _scheme.Foreground;
                 _canvas.BackColor = _scheme.Background;
                 _canvas.ForeColor = _scheme.Foreground;
-
-                // 更新所有已缓存行的颜色（简单方案：重置为新前景色）
-                // 注意：已解析的 ANSI 颜色会保持不变
                 _needsRedraw = true;
-                RequestRedraw();
+                ScheduleRedraw();
             }
         }
 
-        /// <summary>
-        /// 获取当前配色方案
-        /// </summary>
         public TerminalColorScheme GetColorScheme()
         {
             return _scheme;
@@ -87,7 +115,7 @@ namespace Gdterm.Terminal.Rendering
 
         public void Write(string text)
         {
-            if (string.IsNullOrEmpty(text)) return;
+            if (string.IsNullOrEmpty(text) || _disposed) return;
 
             lock (_lock)
             {
@@ -96,13 +124,15 @@ namespace Gdterm.Terminal.Rendering
 
                 if (!_isPaused)
                 {
-                    RequestRedraw();
+                    ScheduleRedraw();
                 }
             }
         }
 
         public void Clear()
         {
+            if (_disposed) return;
+
             lock (_lock)
             {
                 _lineBuffer.Clear();
@@ -110,7 +140,7 @@ namespace Gdterm.Terminal.Rendering
                 _currentSpans.Clear();
                 _scrollOffset = 0;
                 _needsRedraw = true;
-                RequestRedraw();
+                ScheduleRedraw();
             }
         }
 
@@ -129,8 +159,9 @@ namespace Gdterm.Terminal.Rendering
             lock (_lock)
             {
                 var start = Math.Max(0, _lineBuffer.Count - lineCount);
-                var result = new string[Math.Min(lineCount, _lineBuffer.Count)];
-                for (int i = 0; i < result.Length; i++)
+                var count = Math.Min(lineCount, _lineBuffer.Count);
+                var result = new string[count];
+                for (int i = 0; i < count; i++)
                 {
                     result[i] = _lineBuffer[start + i].Text;
                 }
@@ -141,6 +172,8 @@ namespace Gdterm.Terminal.Rendering
         public void Pause()
         {
             _isPaused = true;
+            // 暂停时停止节流定时器 — 零 CPU
+            _redrawTimer.Stop();
         }
 
         public void Resume()
@@ -148,34 +181,95 @@ namespace Gdterm.Terminal.Rendering
             _isPaused = false;
             if (_needsRedraw)
             {
-                RequestRedraw();
+                ScheduleRedraw();
             }
         }
 
-        private void RequestRedraw()
+        /// <summary>
+        /// 调度重绘 — 节流机制：不直接 Invalidate，而是标记后由定时器统一处理
+        /// 高频写入时（如快速滚动的日志），多次 Write 只触发一次重绘
+        /// </summary>
+        private void ScheduleRedraw()
         {
+            if (_isPaused || _disposed) return;
+
+            // 如果距离上次重绘已经足够久，直接重绘
+            var now = DateTime.UtcNow;
+            if ((now - _lastRedraw).TotalMilliseconds >= MinRedrawIntervalMs && !_redrawScheduled)
+            {
+                _redrawScheduled = true;
+                DoRedraw();
+            }
+            else if (!_redrawTimer.Enabled)
+            {
+                // 启动定时器等待下次机会重绘
+                _redrawTimer.Start();
+            }
+        }
+
+        private void OnRedrawTimerTick(object sender, EventArgs e)
+        {
+            if (_needsRedraw && !_disposed)
+            {
+                DoRedraw();
+            }
+            else
+            {
+                // 没有待重绘内容，停止定时器 — 零 CPU
+                _redrawTimer.Stop();
+            }
+        }
+
+        private void DoRedraw()
+        {
+            _redrawScheduled = false;
+            _lastRedraw = DateTime.UtcNow;
+            _needsRedraw = false;
+
             if (_canvas.IsHandleCreated && !_canvas.IsDisposed)
             {
                 try
                 {
-                    _canvas.BeginInvoke(new Action(() => _canvas.Invalidate()));
+                    _canvas.BeginInvoke(new Action(() =>
+                    {
+                        if (!_canvas.IsDisposed)
+                            _canvas.Invalidate();
+                    }));
                 }
                 catch { }
             }
         }
 
+        private void OnResize(object sender, EventArgs e)
+        {
+            if (!_disposed)
+            {
+                _needsRedraw = true;
+                ScheduleRedraw();
+            }
+        }
+
+        private void OnCanvasDisposed(object sender, EventArgs e)
+        {
+            Dispose();
+        }
+
+        // ===== Paint — 按需触发，不会持续运行 =====
+
         private void OnPaint(object sender, PaintEventArgs e)
         {
+            if (_disposed) return;
+
             lock (_lock)
             {
                 var g = e.Graphics;
                 g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SingleBitPerPixelGridFit;
+                g.SmoothingMode = SmoothingMode.HighSpeed;
+                g.CompositingQuality = CompositingQuality.HighSpeed;
 
                 // 清除背景
-                using (var bgBrush = new SolidBrush(_scheme.Background))
-                {
-                    g.FillRectangle(bgBrush, 0, 0, _canvas.Width, _canvas.Height);
-                }
+                var bgBrush = GetBrush(_scheme.Background);
+                g.FillRectangle(bgBrush, 0, 0, _canvas.Width, _canvas.Height);
 
                 int visibleLines = Math.Max(1, _canvas.Height / LineHeight);
                 int startLine = Math.Max(0, _lineBuffer.Count - visibleLines);
@@ -193,7 +287,7 @@ namespace Gdterm.Terminal.Rendering
                     DrawSpans(g, _currentSpans, _currentLine.ToString(), 0, y);
                 }
 
-                // 绘制光标（简化：闪烁由定时器控制）
+                // 绘制光标
                 DrawCursor(g, y);
             }
         }
@@ -203,30 +297,24 @@ namespace Gdterm.Terminal.Rendering
             if (_isPaused) return;
 
             var cursorX = _currentLine.Length * CharWidth;
-            using (var brush = new SolidBrush(_scheme.CursorColor))
-            {
-                g.FillRectangle(brush, cursorX, y, CharWidth, LineHeight);
-            }
+            var brush = GetBrush(_scheme.CursorColor);
+            g.FillRectangle(brush, cursorX, y, CharWidth, LineHeight);
         }
 
         private void DrawColoredLine(Graphics g, ColoredLine line, int x, int y)
         {
             if (line.Spans == null || line.Spans.Count == 0)
             {
-                using (var brush = new SolidBrush(_scheme.Foreground))
-                {
-                    g.DrawString(line.Text, new Font(FontName, 10f), brush, x, y);
-                }
+                var brush = GetBrush(_scheme.Foreground);
+                g.DrawString(line.Text, _font, brush, x, y);
                 return;
             }
 
             foreach (var span in line.Spans)
             {
-                using (var brush = new SolidBrush(span.Color))
-                {
-                    g.DrawString(span.Text, new Font(FontName, 10f), brush, x, y);
-                    x += (int)(span.Text.Length * CharWidth);
-                }
+                var brush = GetBrush(span.Color);
+                g.DrawString(span.Text, _font, brush, x, y);
+                x += span.Text.Length * CharWidth;
             }
         }
 
@@ -234,29 +322,40 @@ namespace Gdterm.Terminal.Rendering
         {
             if (spans.Count == 0)
             {
-                using (var brush = new SolidBrush(_currentColor))
-                {
-                    g.DrawString(currentText, new Font(FontName, 10f), brush, x, y);
-                }
+                var brush = GetBrush(_currentColor);
+                g.DrawString(currentText, _font, brush, x, y);
                 return;
             }
 
             foreach (var span in spans)
             {
-                using (var brush = new SolidBrush(span.Color))
-                {
-                    g.DrawString(span.Text, new Font(FontName, 10f), brush, x, y);
-                    x += (int)(span.Text.Length * CharWidth);
-                }
+                var brush = GetBrush(span.Color);
+                g.DrawString(span.Text, _font, brush, x, y);
+                x += span.Text.Length * CharWidth;
             }
         }
 
+        /// <summary>
+        /// 获取缓存的 Brush — 避免每次 Paint 创建/销毁
+        /// 颜色数量有限（16 ANSI + 少量 scheme 颜色），缓存不会膨胀
+        /// </summary>
+        private SolidBrush GetBrush(Color color)
+        {
+            if (!_brushCache.TryGetValue(color, out var brush))
+            {
+                brush = new SolidBrush(color);
+                _brushCache[color] = brush;
+            }
+            return brush;
+        }
+
+        // ===== 解析 =====
+
         private void ParseAndAppend(string text)
         {
-            var regex = new Regex(@"\x1b\[([0-9;]*)([A-Za-z])", RegexOptions.Compiled);
             int lastIndex = 0;
 
-            foreach (Match match in regex.Matches(text))
+            foreach (Match match in AnsiRegex.Matches(text))
             {
                 if (match.Index > lastIndex)
                 {
@@ -311,6 +410,49 @@ namespace Gdterm.Terminal.Rendering
                     _currentLine.Append(ch);
                     _currentSpans.Add(new ColorSpan { Text = ch.ToString(), Color = _currentColor });
                 }
+            }
+        }
+
+        // ===== Dispose — 彻底释放所有 GDI 资源 =====
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+            _disposed = true;
+
+            _redrawTimer.Stop();
+            _redrawTimer.Dispose();
+
+            _font?.Dispose();
+            _font = null;
+            _boldFont?.Dispose();
+            _boldFont = null;
+
+            foreach (var brush in _brushCache.Values)
+                brush.Dispose();
+            _brushCache.Clear();
+
+            _lineBuffer.Clear();
+            _currentLine.Clear();
+            _currentSpans.Clear();
+        }
+
+        // ===== 内部类型 =====
+
+        /// <summary>
+        /// 双缓冲 Panel — 消除闪烁，不引入持续渲染
+        /// </summary>
+        private class DoubleBufferedPanel : Panel
+        {
+            public DoubleBufferedPanel()
+            {
+                SetStyle(
+                    ControlStyles.AllPaintingInWmPaint |
+                    ControlStyles.UserPaint |
+                    ControlStyles.OptimizedDoubleBuffer |
+                    ControlStyles.ResizeRedraw,
+                    true);
+                UpdateStyles();
             }
         }
 
