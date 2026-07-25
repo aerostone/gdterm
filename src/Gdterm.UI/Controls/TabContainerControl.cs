@@ -9,12 +9,13 @@ using Gdterm.KeePass.Models;
 using Gdterm.Logging;
 using Gdterm.Sftp;
 using Gdterm.Terminal;
+using Gdterm.Connections;
 using Gdterm.Tunnel;
 
 namespace Gdterm.UI.Controls
 {
     /// <summary>
-    /// 标签页容器——支持 KeePass 自动凭据填充、关闭按钮、懒加载、暂停/恢复渲染
+    /// 标签页容器——支持 KeePass 自动凭据填充（含文件夹级继承）、关闭按钮、懒加载、暂停/恢复渲染
     /// </summary>
     public class TabContainerControl : UserControl
     {
@@ -24,6 +25,7 @@ namespace Gdterm.UI.Controls
         private readonly IAiAssistantService _aiService;
         private readonly IAuditLogger _auditLogger;
         private readonly IKeePassService _keepassService;
+        private readonly IFolderCredentialStore _folderCredStore;
         private readonly Dictionary<TabPage, TabSession> _sessions = new Dictionary<TabPage, TabSession>();
         private TabControl _tabControl;
 
@@ -33,7 +35,8 @@ namespace Gdterm.UI.Controls
             ISftpServiceFactory sftpFactory,
             IAiAssistantService aiService,
             IAuditLogger auditLogger,
-            IKeePassService keepassService)
+            IKeePassService keepassService,
+            IFolderCredentialStore folderCredStore)
         {
             _tunnelManager = tunnelManager;
             _terminalFactory = terminalFactory;
@@ -41,6 +44,7 @@ namespace Gdterm.UI.Controls
             _aiService = aiService;
             _auditLogger = auditLogger;
             _keepassService = keepassService;
+            _folderCredStore = folderCredStore;
             InitializeComponent();
         }
 
@@ -138,7 +142,23 @@ namespace Gdterm.UI.Controls
                     catch { /* 条目不存在或已删除 */ }
                 }
 
-                // 策略2：智能匹配（host:port > 标题 > 用户名）
+                // 策略2：文件夹级凭据继承（沿 GroupPath 向上逐级查找）
+                if (entry == null && _folderCredStore != null && !string.IsNullOrEmpty(config.GroupPath))
+                {
+                    try
+                    {
+                        var inheritedRefId = _folderCredStore.ResolveByInheritance(config.GroupPath);
+                        if (!string.IsNullOrEmpty(inheritedRefId))
+                        {
+                            entry = _keepassService.GetCredential(inheritedRefId) != null
+                                ? GetKeePassEntry(inheritedRefId)
+                                : null;
+                        }
+                    }
+                    catch { /* 继承链查找失败，继续下一策略 */ }
+                }
+
+                // 策略3：智能匹配（host:port > 标题 > 用户名）
                 if (entry == null)
                 {
                     entry = _keepassService.FindEntryByConnection(config);

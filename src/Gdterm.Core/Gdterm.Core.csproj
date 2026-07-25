@@ -39,8 +39,13 @@
     <Compile Include="Enums\TunnelType.cs" />
     <Compile Include="Models\ConnectionConfig.cs" />
     <Compile Include="Models\CredentialPayload.cs" />
+    <Compile Include="Models\CommandHistoryEntry.cs" />
+    <Compile Include="Models\DangerousCommandConfig.cs" />
+    <Compile Include="Models\FolderCredentialEntry.cs" />
     <Compile Include="Models\JumpChainConfig.cs" />
     <Compile Include="Models\JumpHop.cs" />
+    <Compile Include="Models\SerialConfig.cs" />
+    <Compile Include="Models\SessionBookmark.cs" />
     <Compile Include="Models\TunnelConfig.cs" />
     <Compile Include="Models\TunnelEndpoint.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

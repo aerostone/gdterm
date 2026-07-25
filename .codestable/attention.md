@@ -41,3 +41,12 @@
 ### 其他
 
 - brainstorm 已完成，见 `.codestable/brainstorms/gdterm/brainstorm.md`
+- ops-toolbox brainstorm 已完成，见 `.codestable/brainstorms/ops-toolbox/brainstorm.md`
+- post-MVP 增强路线图见 `.codestable/roadmap/post-mvp-enhancements/`
+- 主密码与 KeePass 密码合一，启动时输入一次，自动解锁 KeePass
+- 空闲锁定上限 30 分钟（硬限制），重启应用后重新输入主密码
+- 所有工具支持 config 文件自定义（data/config/tools/*.json）
+- 运维工具采用内置模块而非插件系统（.NET 4.6.2 + Win7 限制）
+- 密码分析器检测弱/重复/过期密码，生成健康报告
+- 凭据继承支持文件夹→子连接传播，连接级覆盖优先
+- 会话持久化保存窗口布局和打开的 tab，重启自动恢复

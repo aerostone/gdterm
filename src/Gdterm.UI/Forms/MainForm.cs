@@ -41,6 +41,7 @@ namespace Gdterm.UI.Forms
         private readonly IAiAssistantService _aiService;
         private readonly ISecurityManager _securityManager;
         private readonly DangerousCommandDetector _dangerousCmdDetector;
+        private readonly IFolderCredentialStore _folderCredStore;
 
         private ConnectionTreeControl _connectionTree;
         private TabContainerControl _tabContainer;
@@ -65,7 +66,8 @@ namespace Gdterm.UI.Forms
             IAuditLogger auditLogger,
             IAiAssistantService aiService,
             ISecurityManager securityManager,
-            DangerousCommandDetector dangerousCmdDetector)
+            DangerousCommandDetector dangerousCmdDetector,
+            IFolderCredentialStore folderCredStore)
         {
             _connectionStore = connectionStore;
             _tunnelManager = tunnelManager;
@@ -76,6 +78,7 @@ namespace Gdterm.UI.Forms
             _aiService = aiService;
             _securityManager = securityManager;
             _dangerousCmdDetector = dangerousCmdDetector;
+            _folderCredStore = folderCredStore;
 
             InitializeComponent();
             SetupEventHandlers();
@@ -179,7 +182,8 @@ namespace Gdterm.UI.Forms
                 _sftpFactory,
                 _aiService,
                 _auditLogger,
-                _keepassService);
+                _keepassService,
+                _folderCredStore);
             _tabContainer.Dock = DockStyle.Fill;
 
             // 底部状态栏

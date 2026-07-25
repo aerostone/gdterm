@@ -1,0 +1,59 @@
+roadmap: ops-toolbox
+created: 2026-07-25
+
+items:
+  - slug: tools-core
+    description: 工具框架——IToolModule/IRemoteToolModule 接口、ToolRegistry 注册表（按分类分组）、ToolConfigBase 配置基类（JSON 文件读写）、RemoteCommandResult/RemoteFileTransfer 模型
+    depends_on: []
+    status: planned
+    feature: null
+    minimal_loop: true
+    notes: Layer 0；做完后 UI 工具菜单能显示空列表，后续每加一个工具自动注册
+
+  - slug: tools-cert-installer
+    description: 证书安装器——本地安装（certutil）+ 远程 SSH 推送+安装（update-ca-certificates），支持 PEM/DER/PFX/P12 格式，可配置证书存储路径和信任链策略，配置文件 data/config/tools/cert-installer.json
+    depends_on: [tools-core]
+    status: planned
+    feature: null
+    minimal_loop: false
+    notes: Layer 1；依赖 terminal-emulator 的 SSH 会话；远程文件传输需要 SftpClient
+
+  - slug: tools-time-sync
+    description: 时间同步——本地 w32tm + 远程 SSH ntpdate/chronyc，可配置 NTP 服务器列表/同步间隔/偏移阈值，支持手动/自动同步，配置文件 data/config/tools/time-sync.json
+    depends_on: [tools-core]
+    status: planned
+    feature: null
+    minimal_loop: false
+    notes: Layer 1；依赖 terminal-emulator 的 SSH 会话
+
+  - slug: tools-repo-config
+    description: 仓库配置——远程 SSH 配置 yum/apt/zypper 源，可配置源 URL/GPG key/目标路径，备份原文件后写入新配置，配置文件 data/config/tools/repo-config.json
+    depends_on: [tools-core]
+    status: planned
+    feature: null
+    minimal_loop: false
+    notes: Layer 1；依赖 terminal-emulator 的 SSH 会话
+
+  - slug: tools-port-scanner
+    description: 端口扫描——TcpClient 异步连接，端口范围（1-65535）/常用端口预设/超时/并发数配置，结果按开放/关闭/过滤分类，配置文件 data/config/tools/port-scanner.json
+    depends_on: [tools-core]
+    status: planned
+    feature: null
+    minimal_loop: false
+    notes: Layer 1；纯本地执行，不依赖 SSH
+
+  - slug: tools-net-scanner
+    description: 网络侦察合集——IP 扫描（ICMP+TCP）、DNS 查询（A/MX/TXT/CNAME/SOA/PTR）、Traceroute（UDP/ICMP）、Ping 监控（持续监控+延迟图表）、子网计算器、WHOIS 查询，配置文件 data/config/tools/net-scanner.json
+    depends_on: [tools-core]
+    status: planned
+    feature: null
+    minimal_loop: false
+    notes: Layer 1；6 个子工具共享一个项目；ICMP 可能需要管理员权限
+
+  - slug: tools-ui
+    description: 工具箱 UI——工具菜单注册（按分类分组展示）、工具列表面板、各工具配置对话框、执行结果展示面板，集成到 MainForm 工具菜单
+    depends_on: [tools-core, tools-cert-installer, tools-time-sync, tools-repo-config, tools-port-scanner, tools-net-scanner]
+    status: planned
+    feature: null
+    minimal_loop: false
+    notes: Layer 2；最后实现，集成所有工具

@@ -45,6 +45,7 @@ namespace Gdterm.UI
             var recentPath = Path.Combine(dataDir, "recent-connections.json");
             var commandHistoryDir = Path.Combine(logsDir, "commands");
             var dangerousCmdPath = Path.Combine(configDir, "dangerous-commands.json");
+            var folderCredPath = Path.Combine(dataDir, "folder-credentials.json");
 
             Directory.CreateDirectory(commandHistoryDir);
 
@@ -98,6 +99,7 @@ namespace Gdterm.UI
             };
             var aiService = new AiAssistantService(aiConfig);
             var dangerousCmdDetector = new DangerousCommandDetector(dangerousCmdPath);
+            var folderCredStore = new FolderCredentialStoreJson(folderCredPath);
 
             // ====== 主窗口 ======
             var mainForm = new MainForm(
@@ -109,7 +111,8 @@ namespace Gdterm.UI
                 auditLogger,
                 aiService,
                 securityManager,
-                dangerousCmdDetector);
+                dangerousCmdDetector,
+                folderCredStore);
 
             // 窗口关闭时保存主密码配置
             mainForm.FormClosed += (s, e) =>

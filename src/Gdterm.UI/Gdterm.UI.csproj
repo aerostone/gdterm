@@ -109,6 +109,9 @@
     <Compile Include="Controls\LockOverlayControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Include="Controls\PasswordHealthPanel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Controls\DangerousCommandDialog.cs">
       <SubType>Form</SubType>
     </Compile>
