@@ -415,6 +415,62 @@ namespace Gdterm.UI.Controls
             }
         }
 
+        // ====== 重连 ======
+
+        /// <summary>
+        /// 关闭当前活跃标签页
+        /// </summary>
+        public void CloseActiveTab()
+        {
+            if (_tabControl.SelectedTab != null)
+                CloseTab(_tabControl.SelectedTab);
+        }
+
+        /// <summary>
+        /// 重连当前活跃标签页（先断开再重新连接）
+        /// </summary>
+        public void ReconnectActiveTab()
+        {
+            if (_tabControl.SelectedTab == null) return;
+            if (!_sessions.TryGetValue(_tabControl.SelectedTab, out var session)) return;
+
+            var config = session.Config;
+            var cred = session.Credential;
+
+            // 关闭当前连接
+            CloseTab(_tabControl.SelectedTab);
+
+            // 重新打开
+            if (config != null)
+            {
+                var newTab = OpenConnection(config);
+                if (newTab != null && cred != null)
+                {
+                    // 重新注入凭证
+                    if (_sessions.TryGetValue(newTab, out var newSession))
+                        newSession.Credential = cred;
+                }
+            }
+        }
+
+        /// <summary>
+        /// 重连指定连接（按 ConnectionId）
+        /// </summary>
+        public void ReconnectById(string connectionId)
+        {
+            foreach (TabPage tab in _tabControl.TabPages)
+            {
+                if (_sessions.TryGetValue(tab, out var session) &&
+                    session.Config?.Id == connectionId)
+                {
+                    CloseTab(tab);
+                    break;
+                }
+            }
+            var config = _connectionStore.GetById(connectionId);
+            if (config != null) OpenConnection(config);
+        }
+
         // ====== 会话状态查询/恢复 ======
 
         /// <summary>

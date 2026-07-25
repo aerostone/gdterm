@@ -607,6 +607,24 @@ namespace Gdterm.UI.Forms
                 _menuStrip.Visible = true;
                 return true;
             }
+            // Ctrl+R 重连当前标签页
+            if (keyData == (Keys.Control | Keys.R))
+            {
+                _tabContainer.ReconnectActiveTab();
+                return true;
+            }
+            // Ctrl+W 关闭当前标签页
+            if (keyData == (Keys.Control | Keys.W))
+            {
+                _tabContainer.CloseActiveTab();
+                return true;
+            }
+            // Ctrl+Shift+L 聚焦命令输入框（如果有多通道面板）
+            if (keyData == (Keys.Control | Keys.Shift | Keys.L))
+            {
+                // 由多通道面板处理
+                return base.ProcessCmdKey(ref msg, keyData);
+            }
             return base.ProcessCmdKey(ref msg, keyData);
         }
     }
