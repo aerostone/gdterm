@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using Gdterm.AI;
 using Gdterm.Connections;
+using Gdterm.Core.Models;
 using Gdterm.KeePass;
 using Gdterm.Logging;
 using Gdterm.Security;
@@ -42,6 +45,7 @@ namespace Gdterm.UI.Forms
         private readonly ISecurityManager _securityManager;
         private readonly DangerousCommandDetector _dangerousCmdDetector;
         private readonly IFolderCredentialStore _folderCredStore;
+        private readonly SessionStateStore _sessionStore;
 
         private ConnectionTreeControl _connectionTree;
         private TabContainerControl _tabContainer;
@@ -67,7 +71,8 @@ namespace Gdterm.UI.Forms
             IAiAssistantService aiService,
             ISecurityManager securityManager,
             DangerousCommandDetector dangerousCmdDetector,
-            IFolderCredentialStore folderCredStore)
+            IFolderCredentialStore folderCredStore,
+            SessionStateStore sessionStore)
         {
             _connectionStore = connectionStore;
             _tunnelManager = tunnelManager;
@@ -79,6 +84,7 @@ namespace Gdterm.UI.Forms
             _securityManager = securityManager;
             _dangerousCmdDetector = dangerousCmdDetector;
             _folderCredStore = folderCredStore;
+            _sessionStore = sessionStore;
 
             InitializeComponent();
             SetupEventHandlers();
@@ -88,6 +94,9 @@ namespace Gdterm.UI.Forms
             {
                 _lockOverlay.Visible = false;
             }
+
+            // 恢复上次会话状态
+            Shown += (s, e) => RestoreSessionState();
         }
 
         private void InitializeComponent()
@@ -507,11 +516,85 @@ namespace Gdterm.UI.Forms
 
         private void OnFormClosing(object sender, FormClosingEventArgs e)
         {
+            // 保存会话状态
+            try { SaveSessionState(); } catch { /* 不影响关闭 */ }
+
             _hotkeyManager?.Dispose();
             _tabContainer.CloseAllTabs();
             _tunnelManager.Dispose();
             _keepassService.Dispose();
             _securityManager.Dispose();
+        }
+
+        /// <summary>
+        /// 保存当前窗口布局和标签页状态
+        /// </summary>
+        private void SaveSessionState()
+        {
+            if (_sessionStore == null) return;
+            var state = new SessionState
+            {
+                WindowX = Left,
+                WindowY = Top,
+                WindowWidth = Width,
+                WindowHeight = Height,
+                WindowState = WindowState.ToString(),
+                ViewMode = _currentViewMode.ToString(),
+                ConnectionPanelWidth = _connectionTree?.Width ?? 250,
+                ActiveTabIndex = _tabContainer.ActiveTabIndex,
+                OpenTabs = _tabContainer.GetOpenTabStates()
+            };
+            _sessionStore.Save(state);
+        }
+
+        /// <summary>
+        /// 恢复上次的窗口布局和标签页
+        /// </summary>
+        private void RestoreSessionState()
+        {
+            if (_sessionStore == null) return;
+            var state = _sessionStore.Load();
+            if (state == null) return;
+
+            try
+            {
+                // 恢复窗口位置和大小
+                if (state.WindowWidth > 200 && state.WindowHeight > 200)
+                {
+                    Width = state.WindowWidth;
+                    Height = state.WindowHeight;
+                    StartPosition = FormStartPosition.Manual;
+                    Left = state.WindowX;
+                    Top = state.WindowY;
+                }
+
+                if (state.WindowState == "Maximized")
+                    WindowState = FormWindowState.Maximized;
+
+                // 恢复视图模式
+                if (Enum.TryParse(state.ViewMode, out ViewMode vm))
+                    SetViewMode(vm);
+
+                // 恢复连接面板宽度
+                if (state.ConnectionPanelWidth > 50 && _connectionTree != null)
+                    _connectionTree.Width = state.ConnectionPanelWidth;
+
+                // 恢复标签页
+                if (state.OpenTabs != null)
+                {
+                    var allConnections = _connectionStore.LoadAll();
+                    foreach (var tab in state.OpenTabs)
+                    {
+                        var config = allConnections.FirstOrDefault(c => c.Id == tab.ConnectionId);
+                        if (config != null)
+                            _tabContainer.OpenConnection(config);
+                    }
+
+                    if (state.ActiveTabIndex >= 0)
+                        _tabContainer.SetActiveTabIndex(state.ActiveTabIndex);
+                }
+            }
+            catch { /* 恢复失败，使用默认布局 */ }
         }
 
         // ====== 重写按键 ======

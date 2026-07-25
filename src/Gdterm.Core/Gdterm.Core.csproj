@@ -46,6 +46,7 @@
     <Compile Include="Models\JumpHop.cs" />
     <Compile Include="Models\SerialConfig.cs" />
     <Compile Include="Models\SessionBookmark.cs" />
+    <Compile Include="Models\SessionState.cs" />
     <Compile Include="Models\TunnelConfig.cs" />
     <Compile Include="Models\TunnelEndpoint.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

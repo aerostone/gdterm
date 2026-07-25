@@ -415,6 +415,48 @@ namespace Gdterm.UI.Controls
             }
         }
 
+        // ====== 会话状态查询/恢复 ======
+
+        /// <summary>
+        /// 当前活跃标签页索引（-1 表示无标签页）
+        /// </summary>
+        public int ActiveTabIndex
+        {
+            get { return _tabControl.SelectedIndex; }
+        }
+
+        /// <summary>
+        /// 获取所有打开标签页的状态信息（用于保存会话）
+        /// </summary>
+        public List<OpenTabState> GetOpenTabStates()
+        {
+            var result = new List<OpenTabState>();
+            foreach (TabPage tab in _tabControl.TabPages)
+            {
+                if (_sessions.TryGetValue(tab, out var session) && session.Config != null)
+                {
+                    result.Add(new OpenTabState
+                    {
+                        ConnectionId = session.Config.Id,
+                        Title = session.Config.Name,
+                        Protocol = session.Protocol.ToString(),
+                        Host = session.Config.Host,
+                        IsActive = (tab == _tabControl.SelectedTab)
+                    });
+                }
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// 设置活跃标签页（恢复会话用，越界忽略）
+        /// </summary>
+        public void SetActiveTabIndex(int index)
+        {
+            if (index >= 0 && index < _tabControl.TabCount)
+                _tabControl.SelectedIndex = index;
+        }
+
         private class TabSession
         {
             public ConnectionConfig Config { get; set; }
