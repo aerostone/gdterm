@@ -178,7 +178,8 @@ namespace Gdterm.Terminal
                     {
                         SessionId = watched.SessionId,
                         RetryCount = watched.RetryCount - 1,
-                        MaxRetries = MaxRetries
+                        MaxRetries = MaxRetries,
+                        ErrorMessage = watched.LastError
                     });
                     return;
                 }
@@ -232,9 +233,17 @@ namespace Gdterm.Terminal
                         return;
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // 重连失败，继续循环
+                    // 记录本轮失败原因，继续退避；达 MaxRetries 时再发 ReconnectFailed
+                    watched.LastError = ex.Message;
+                    Reconnecting?.Invoke(this, new ReconnectEventArgs
+                    {
+                        SessionId = watched.SessionId,
+                        RetryCount = watched.RetryCount,
+                        MaxRetries = MaxRetries,
+                        ErrorMessage = ex.Message
+                    });
                 }
             }
         }
@@ -279,6 +288,7 @@ namespace Gdterm.Terminal
             public DateTime NextRetryAt { get; set; }
             public CancellationTokenSource Cts { get; set; }
             public Func<string, ITerminalSession, Task<bool>> ReconnectFunc { get; set; }
+            public string LastError { get; set; }
         }
     }
 
@@ -291,6 +301,8 @@ namespace Gdterm.Terminal
         public int RetryCount { get; set; }
         public int MaxRetries { get; set; }
         public int NextRetryDelayMs { get; set; }
+        /// <summary>最近一次失败原因（可选）</summary>
+        public string ErrorMessage { get; set; }
     }
 
     /// <summary>

@@ -13,7 +13,10 @@ using Gdterm.Terminal;
 using Gdterm.Tools;
 using Gdterm.Tools.Modules;
 using Gdterm.Tunnel;
+using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Forms;
+using Gdterm.Logging.Models;
+using System.Threading.Tasks;
 
 namespace Gdterm.UI
 {
@@ -37,6 +40,34 @@ namespace Gdterm.UI
             Directory.CreateDirectory(toolsConfigDir);
             Directory.CreateDirectory(Path.Combine(logsDir, "commands"));
             Directory.CreateDirectory(Path.Combine(logsDir, "terminal"));
+
+            // 全局未处理异常：落盘 crash.jsonl + 审计（audit 就绪后补写）
+            CrashLog.Initialize(logsDir);
+            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
+            Application.ThreadException += (s, e) =>
+            {
+                CrashLog.Write("Application.ThreadException", e.Exception, isTerminating: false);
+                try
+                {
+                    MessageBox.Show(
+                        "发生未处理错误，详情已写入 data/logs/crash.jsonl\n\n" +
+                        (e.Exception != null ? e.Exception.Message : ""),
+                        "gdterm",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                }
+                catch { }
+            };
+            AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+            {
+                var ex = e.ExceptionObject as Exception;
+                CrashLog.Write("AppDomain.UnhandledException", ex, isTerminating: e.IsTerminating);
+            };
+            TaskScheduler.UnobservedTaskException += (s, e) =>
+            {
+                CrashLog.Write("TaskScheduler.UnobservedTaskException", e.Exception, isTerminating: false);
+                try { e.SetObserved(); } catch { }
+            };
 
             var connectionsPath = Path.Combine(dataDir, "connections.json");
             var keepassPath = Path.Combine(dataDir, "gdterm.kdbx");
@@ -90,6 +121,7 @@ namespace Gdterm.UI
                 try { keepassService.CleanupAllRdpCredentials(); } catch { }
             };
             var auditLogger = new AuditLogger(logsDir);
+            GlobalExceptionBridge.Attach(auditLogger);
             var aiConfig = new AiConfiguration
             {
                 ApiEndpoint = "https://api.openai.com/v1",
@@ -205,4 +237,54 @@ namespace Gdterm.UI
             return json.Substring(start, end - start);
         }
     }
+
+    /// <summary>
+    /// 把全局异常钩子接到 IAuditLogger（audit 就绪后 Attach）。
+    /// CrashLog 始终先落盘，审计是第二通道。
+    /// </summary>
+    internal static class GlobalExceptionBridge
+    {
+        private static IAuditLogger _audit;
+        private static int _attached;
+
+        public static void Attach(IAuditLogger audit)
+        {
+            _audit = audit;
+            if (System.Threading.Interlocked.Exchange(ref _attached, 1) == 1)
+                return;
+
+            Application.ThreadException += (s, e) =>
+            {
+                try
+                {
+                    _audit?.LogSecurityEvent(
+                        SecurityEvent.UnhandledUiException,
+                        e.Exception != null ? e.Exception.ToString() : "unknown");
+                }
+                catch { }
+            };
+            AppDomain.CurrentDomain.UnhandledException += (s, e) =>
+            {
+                try
+                {
+                    var ex = e.ExceptionObject as Exception;
+                    _audit?.LogSecurityEvent(
+                        SecurityEvent.UnhandledDomainException,
+                        ex != null ? ex.ToString() : (e.ExceptionObject != null ? e.ExceptionObject.ToString() : "unknown"));
+                }
+                catch { }
+            };
+            TaskScheduler.UnobservedTaskException += (s, e) =>
+            {
+                try
+                {
+                    _audit?.LogSecurityEvent(
+                        SecurityEvent.UnobservedTaskException,
+                        e.Exception != null ? e.Exception.ToString() : "unknown");
+                }
+                catch { }
+            };
+        }
+    }
+
 }

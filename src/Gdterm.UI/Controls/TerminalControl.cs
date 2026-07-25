@@ -286,7 +286,16 @@ namespace Gdterm.UI.Controls
             {
                 dlg.ShowDialog(FindForm());
                 if (!dlg.IsConfirmed)
+                {
+                    try
+                    {
+                        _auditLogger?.LogSecurityEvent(
+                            SecurityEvent.DangerousCommandBlocked,
+                            "blocked command on " + (_config?.Host ?? "?") + ": " + command);
+                    }
+                    catch { }
                     return false;
+                }
                 if (dlg.RememberChoice)
                 {
                     try { _dangerousDetector.AddToWhitelist(command); } catch { }

@@ -9,6 +9,7 @@ using Gdterm.Connections;
 using Gdterm.Core.Models;
 using Gdterm.KeePass;
 using Gdterm.Logging;
+using Gdterm.Logging.Models;
 using Gdterm.Security;
 using Gdterm.Sftp;
 using Gdterm.Terminal;
@@ -107,6 +108,21 @@ namespace Gdterm.UI.Forms
             _multiChannelManager = multiChannelManager ?? new MultiChannelManager();
             _toolRegistry = toolRegistry;
             _secretScanner = secretScanner;
+            if (_reconnectWatchdog != null)
+            {
+                _reconnectWatchdog.ReconnectFailed += (s, e) =>
+                {
+                    try
+                    {
+                        _auditLogger?.LogSecurityEvent(
+                            SecurityEvent.ApplicationError,
+                            "reconnect failed session=" + (e.SessionId ?? "") +
+                            " retries=" + e.RetryCount +
+                            " err=" + (e.ErrorMessage ?? ""));
+                    }
+                    catch { }
+                };
+            }
 
             InitializeComponent();
 
@@ -765,7 +781,17 @@ namespace Gdterm.UI.Forms
                         using (var dlg = new DangerousCommandDialog(cmd, check))
                         {
                             dlg.ShowDialog(this);
-                            if (!dlg.IsConfirmed) return;
+                            if (!dlg.IsConfirmed)
+                            {
+                                try
+                                {
+                                    _auditLogger?.LogSecurityEvent(
+                                        SecurityEvent.DangerousCommandBlocked,
+                                        "broadcast blocked: " + cmd);
+                                }
+                                catch { }
+                                return;
+                            }
                             if (dlg.RememberChoice)
                             {
                                 try { _dangerousCmdDetector.AddToWhitelist(cmd); } catch { }
