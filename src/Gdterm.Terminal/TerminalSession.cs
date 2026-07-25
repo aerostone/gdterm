@@ -25,6 +25,13 @@ namespace Gdterm.Terminal
         public string OsType { get; private set; }
         public bool IsConnected => _sshClient?.IsConnected == true && _shellStream != null;
 
+        /// <summary>
+        /// 底层 SSH.NET 客户端（端口转发/远程工具注入用）。
+        /// 仅在已连接时有效；调用方不得 Disconnect/Dispose。
+        /// </summary>
+        public SshClient UnderlyingClient =>
+            _sshClient != null && _sshClient.IsConnected ? _sshClient : null;
+
         public event EventHandler<TerminalOutputEventArgs> OutputReceived;
 
         /// <summary>

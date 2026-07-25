@@ -28,6 +28,9 @@ namespace Gdterm.UI.Controls
 
         public void SetSshClient(SshClient client) { _client = client; }
 
+        /// <summary>当前是否已绑定可用的 SSH 客户端</summary>
+        public bool HasSshClient => _client != null && _client.IsConnected;
+
         private void BuildUI()
         {
             var toolbar = new Panel { Dock = DockStyle.Top, Height = 40, BackColor = Color.FromArgb(37, 37, 38) };
@@ -135,7 +138,13 @@ namespace Gdterm.UI.Controls
 
         private void StartSelected()
         {
-            if (_lvRules.SelectedItems.Count == 0 || _client == null) return;
+            if (_lvRules.SelectedItems.Count == 0) return;
+            if (_client == null || !_client.IsConnected)
+            {
+                MessageBox.Show("请先打开并连接一个 SSH 终端标签，再启动端口转发。", "端口转发",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
             var rule = _lvRules.SelectedItems[0].Tag as PortForwardRule;
             if (rule == null) return;
             bool ok = rule.Type == PortForwardType.Local
@@ -162,6 +171,14 @@ namespace Gdterm.UI.Controls
         private static void Lbl(Form f, string t, int x, int y) { f.Controls.Add(new Label { Text = t, Location = new Point(x, y + 3), AutoSize = true, Font = new Font("Microsoft YaHei", 9f), ForeColor = Color.FromArgb(204, 204, 204) }); }
         private static TextBox Txt(Form f, int x, int y, int w) { var t = new TextBox { Location = new Point(x, y), Size = new Size(w, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle }; f.Controls.Add(t); return t; }
 
-        protected override void Dispose(bool disposing) { base.Dispose(disposing); }
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                try { _manager?.Dispose(); } catch { }
+                _client = null;
+            }
+            base.Dispose(disposing);
+        }
     }
 }

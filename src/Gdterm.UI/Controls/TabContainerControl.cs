@@ -752,6 +752,16 @@ namespace Gdterm.UI.Controls
             return GetActiveTerminalControl()?.Session;
         }
 
+        /// <summary>
+        /// 当前活动 SSH 会话的底层 SshClient（端口转发 / 远程工具用）。
+        /// 非 TerminalSession 或未连接时返回 null。
+        /// </summary>
+        public Renci.SshNet.SshClient GetActiveSshClient()
+        {
+            var session = GetActiveSession() as Gdterm.Terminal.TerminalSession;
+            return session != null ? session.UnderlyingClient : null;
+        }
+
         /// <summary>所有已连接终端会话（多通道/批量命令）</summary>
         public Dictionary<string, ITerminalSession> GetConnectedSessions()
         {

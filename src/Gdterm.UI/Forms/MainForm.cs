@@ -748,7 +748,10 @@ namespace Gdterm.UI.Forms
         {
             if (_toolRegistry == null)
                 return new Label { Text = "工具箱未初始化", ForeColor = Color.White, Dock = DockStyle.Fill };
-            return new ToolboxPanel(_toolRegistry);
+            var panel = new ToolboxPanel(_toolRegistry);
+            // 注入当前活动 SSH 会话，使 IRemoteToolModule 可执行远程命令
+            try { panel.SetSshClient(_tabContainer.GetActiveSshClient()); } catch { }
+            return panel;
         }
 
         private Control CreateSecretScanPanel()
@@ -843,7 +846,11 @@ namespace Gdterm.UI.Forms
             try
             {
                 var mgr = new Gdterm.Tunnel.PortForwardManager();
-                return new PortForwardPanel(mgr);
+                var panel = new PortForwardPanel(mgr);
+                var client = _tabContainer.GetActiveSshClient();
+                if (client != null)
+                    panel.SetSshClient(client);
+                return panel;
             }
             catch (Exception ex)
             {
