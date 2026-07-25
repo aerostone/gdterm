@@ -10,7 +10,7 @@ using Gdterm.Tunnel.Models;
 namespace Gdterm.UI.Controls
 {
     /// <summary>
-    /// SSH 终端标签页控件——支持暂停/恢复渲染
+    /// SSH 终端标签页控件——支持暂停/恢复渲染、KeePass 凭据自动填充
     /// </summary>
     public class TerminalControl : UserControl, IDisposable
     {
@@ -23,6 +23,11 @@ namespace Gdterm.UI.Controls
         private LightweightRenderer _renderer;
         private bool _isPaused;
         private bool _disposed;
+
+        /// <summary>
+        /// 连接凭据（由 TabContainerControl 从 KeePass 获取后注入）
+        /// </summary>
+        public CredentialPayload Credentials { get; set; }
 
         public TerminalControl(
             ConnectionConfig config,
@@ -39,30 +44,30 @@ namespace Gdterm.UI.Controls
 
         private void InitializeComponent()
         {
-            // 创建轻量级渲染器
             _renderer = new LightweightRenderer();
             Controls.Add(_renderer.GetControl());
-
-            // 延迟连接：标签页创建后不立即连接，等标签页被选中时再连接
-            // 这样可以避免一次性打开15个连接
         }
 
         /// <summary>
-        /// 建立连接（延迟调用）
+        /// 建立连接（延迟调用，由 ResumeRendering 触发）
         /// </summary>
         public async void Connect()
         {
-            if (_session != null) return; // 已连接
+            if (_session != null) return;
 
             try
             {
+                // 使用注入的凭据，或回退到配置中的用户名
+                var credential = Credentials ?? new CredentialPayload
+                {
+                    Username = _config.Username
+                };
+
                 // 如果需要隧道
                 if (_config.Tunnel != null)
                 {
                     var tunnelEndpoint = await _tunnelManager.EstablishAsync(
-                        _config,
-                        new CredentialPayload { Username = _config.Username },
-                        System.Threading.CancellationToken.None);
+                        _config, credential, System.Threading.CancellationToken.None);
 
                     _endpoint = new TerminalEndpoint
                     {
@@ -79,14 +84,11 @@ namespace Gdterm.UI.Controls
                     };
                 }
 
-                // 创建终端会话
                 _session = _terminalFactory.Create(_endpoint);
                 _session.OutputReceived += OnTerminalOutput;
 
-                // 连接
-                await _session.ConnectAsync(
-                    new CredentialPayload { Username = _config.Username },
-                    System.Threading.CancellationToken.None);
+                // 用凭据连接（密码 + SSH 密钥）
+                await _session.ConnectAsync(credential, System.Threading.CancellationToken.None);
 
                 _auditLogger.LogConnection(_config.Id, _config.Name, _config.Host, true);
             }
@@ -97,9 +99,6 @@ namespace Gdterm.UI.Controls
             }
         }
 
-        /// <summary>
-        /// 暂停渲染（非活动标签调用）
-        /// </summary>
         public void PauseRendering()
         {
             if (!_isPaused)
@@ -109,9 +108,6 @@ namespace Gdterm.UI.Controls
             }
         }
 
-        /// <summary>
-        /// 恢复渲染（活动标签调用）
-        /// </summary>
         public void ResumeRendering()
         {
             if (_isPaused)
@@ -119,7 +115,6 @@ namespace Gdterm.UI.Controls
                 _isPaused = false;
                 _renderer?.Resume();
 
-                // 如果还没连接，现在连接
                 if (_session == null)
                 {
                     Connect();
@@ -129,15 +124,12 @@ namespace Gdterm.UI.Controls
 
         private void OnTerminalOutput(object sender, TerminalOutputEventArgs e)
         {
-            if (_isPaused) return; // 暂停时不处理输出
+            if (_isPaused) return;
 
             if (InvokeRequired)
             {
-                try
-                {
-                    BeginInvoke(new Action(() => OnTerminalOutput(sender, e)));
-                }
-                catch { /* 控件已销毁 */ }
+                try { BeginInvoke(new Action(() => OnTerminalOutput(sender, e))); }
+                catch { }
                 return;
             }
 

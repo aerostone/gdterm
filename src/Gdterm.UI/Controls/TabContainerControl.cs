@@ -4,15 +4,18 @@ using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.AI;
 using Gdterm.Core.Models;
+using Gdterm.KeePass;
+using Gdterm.KeePass.Models;
 using Gdterm.Logging;
 using Gdterm.Sftp;
 using Gdterm.Terminal;
 using Gdterm.Tunnel;
+using Gdterm.UI.Forms;
 
 namespace Gdterm.UI.Controls
 {
     /// <summary>
-    /// 标签页容器——支持关闭按钮、懒加载、非活动标签暂停渲染
+    /// 标签页容器——支持 KeePass 自动凭据填充、关闭按钮、懒加载、暂停/恢复渲染
     /// </summary>
     public class TabContainerControl : UserControl
     {
@@ -21,6 +24,7 @@ namespace Gdterm.UI.Controls
         private readonly ISftpServiceFactory _sftpFactory;
         private readonly IAiAssistantService _aiService;
         private readonly IAuditLogger _auditLogger;
+        private readonly IKeePassService _keepassService;
         private readonly Dictionary<TabPage, TabSession> _sessions = new Dictionary<TabPage, TabSession>();
         private TabControl _tabControl;
 
@@ -29,13 +33,15 @@ namespace Gdterm.UI.Controls
             ITerminalSessionFactory terminalFactory,
             ISftpServiceFactory sftpFactory,
             IAiAssistantService aiService,
-            IAuditLogger auditLogger)
+            IAuditLogger auditLogger,
+            IKeePassService keepassService)
         {
             _tunnelManager = tunnelManager;
             _terminalFactory = terminalFactory;
             _sftpFactory = sftpFactory;
             _aiService = aiService;
             _auditLogger = auditLogger;
+            _keepassService = keepassService;
             InitializeComponent();
         }
 
@@ -56,7 +62,7 @@ namespace Gdterm.UI.Controls
         }
 
         /// <summary>
-        /// 打开连接标签页
+        /// 打开连接标签页（自动从 KeePass 获取凭据）
         /// </summary>
         public void OpenConnection(ConnectionConfig config)
         {
@@ -73,113 +79,153 @@ namespace Gdterm.UI.Controls
                 }
             }
 
+            // 自动从 KeePass 获取凭据
+            CredentialPayload credential = null;
+            if (config.Protocol == ProtocolType.SSH || config.Protocol == ProtocolType.RDP)
+            {
+                credential = ResolveCredential(config);
+            }
+
             TabPage tab;
 
             switch (config.Protocol)
             {
                 case ProtocolType.SSH:
-                    tab = CreateSshTerminalTab(config);
+                    tab = CreateSshTerminalTab(config, credential);
                     break;
                 case ProtocolType.RDP:
-                    tab = CreateRdpTab(config);
+                    tab = CreateRdpTab(config, credential);
                     break;
                 case ProtocolType.Serial:
                     tab = CreateSerialTab(config);
                     break;
                 default:
-                    MessageBox.Show($"不支持的协议: {config.Protocol}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show($"不支持的协议: {config.Protocol}", "错误",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
             }
 
             _tabControl.TabPages.Add(tab);
             _tabControl.SelectedTab = tab;
 
-            // 记录日志
             _auditLogger.LogConnection(config.Id, config.Name, config.Host, true);
         }
 
         /// <summary>
-        /// 水平分割当前标签页（左右）
+        /// 从 KeePass 解析连接凭据
+        /// 流程：CredentialRefId 精确查找 → FindEntryByConnection 智能匹配
+        /// 如果密码库未锁定，自动获取；已锁定则跳过（用户手动输入）
         /// </summary>
-        public void SplitHorizontal()
+        private CredentialPayload ResolveCredential(ConnectionConfig config)
         {
-            var selectedTab = _tabControl.SelectedTab;
-            if (selectedTab == null || !_sessions.ContainsKey(selectedTab))
+            try
             {
-                MessageBox.Show("请先打开一个连接", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
+                // 如果密码库未解锁，尝试自动解锁
+                if (!_keepassService.IsUnlocked)
+                {
+                    var unlocked = TryUnlockKeepass();
+                    if (!unlocked) return null; // 用户取消解锁，返回空凭据
+                }
+
+                KeePassEntry entry = null;
+
+                // 策略1：通过 CredentialRefId 精确查找
+                if (!string.IsNullOrEmpty(config.CredentialRefId))
+                {
+                    try
+                    {
+                        entry = _keepassService.GetCredential(config.CredentialRefId) != null
+                            ? GetKeePassEntry(config.CredentialRefId)
+                            : null;
+                    }
+                    catch { /* 条目不存在或已删除 */ }
+                }
+
+                // 策略2：智能匹配（host:port > 标题 > 用户名）
+                if (entry == null)
+                {
+                    entry = _keepassService.FindEntryByConnection(config);
+                }
+
+                if (entry == null) return null;
+
+                // 构建凭据
+                var credential = new CredentialPayload
+                {
+                    Username = !string.IsNullOrEmpty(entry.Username) ? entry.Username : config.Username,
+                    Password = entry.Password ?? ""
+                };
+
+                // SSH 密钥认证
+                if (config.Protocol == ProtocolType.SSH && entry.SshPrivateKeyData != null)
+                {
+                    credential.SshPrivateKey = entry.SshPrivateKeyData;
+                    credential.SshPrivateKeyPassphrase = entry.SshPrivateKeyPassphrase;
+                }
+
+                return credential;
             }
-
-            var session = _sessions[selectedTab];
-            var currentControl = session.Control;
-
-            // 创建新的终端控件
-            var newTerminal = new TerminalControl(session.Config, _terminalFactory, _tunnelManager, _auditLogger);
-            newTerminal.Dock = DockStyle.Fill;
-
-            // 创建水平分割
-            var splitPane = SplitPaneControl.CreateHorizontal(currentControl, newTerminal, 0.5);
-            splitPane.Dock = DockStyle.Fill;
-
-            // 替换标签页内容
-            selectedTab.Controls.Clear();
-            selectedTab.Controls.Add(splitPane);
+            catch
+            {
+                return null; // 任何错误都回退到手动输入
+            }
         }
 
         /// <summary>
-        /// 垂直分割当前标签页（上下）
+        /// 尝试解锁 KeePass 密码库（弹出解锁对话框）
         /// </summary>
-        public void SplitVertical()
+        private bool TryUnlockKeepass()
         {
-            var selectedTab = _tabControl.SelectedTab;
-            if (selectedTab == null || !_sessions.ContainsKey(selectedTab))
+            if (_keepassService.IsUnlocked) return true;
+
+            using (var unlockForm = new KeePassUnlockForm(_keepassService))
             {
-                MessageBox.Show("请先打开一个连接", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
+                return unlockForm.ShowDialog(FindForm()) == DialogResult.OK;
             }
-
-            var session = _sessions[selectedTab];
-            var currentControl = session.Control;
-
-            // 创建新的终端控件
-            var newTerminal = new TerminalControl(session.Config, _terminalFactory, _tunnelManager, _auditLogger);
-            newTerminal.Dock = DockStyle.Fill;
-
-            // 创建垂直分割
-            var splitPane = SplitPaneControl.CreateVertical(currentControl, newTerminal, 0.5);
-            splitPane.Dock = DockStyle.Fill;
-
-            // 替换标签页内容
-            selectedTab.Controls.Clear();
-            selectedTab.Controls.Add(splitPane);
         }
 
         /// <summary>
-        /// 关闭所有标签页
+        /// 通过 ID 获取完整 KeePass 条目
         /// </summary>
-        public void CloseAllTabs()
+        private KeePassEntry GetKeePassEntry(string entryId)
         {
-            foreach (TabPage tab in _tabControl.TabPages)
+            // KeePassService.GetCredential 只返回 CredentialPayload，
+            // 我们需要完整条目来获取 SSH 密钥等。
+            // 通过 ListEntries 遍历找到条目（已有性能优化：单次加载）
+            var entries = _keepassService.ListEntries();
+            foreach (var summary in entries)
             {
-                CloseTab(tab);
+                if (summary.Id == entryId)
+                {
+                    // 获取完整凭据
+                    var cred = _keepassService.GetCredential(entryId);
+                    return new KeePassEntry
+                    {
+                        Id = summary.Id,
+                        Title = summary.Title,
+                        Username = cred.Username,
+                        Password = cred.Password,
+                        SshPrivateKeyData = _keepassService.GetSshPrivateKey(entryId),
+                        SshPrivateKeyPassphrase = _keepassService.GetSshPrivateKeyPassphrase(entryId)
+                    };
+                }
             }
-            _tabControl.TabPages.Clear();
-            _sessions.Clear();
+            return null;
         }
 
-        private TabPage CreateSshTerminalTab(ConnectionConfig config)
+        private TabPage CreateSshTerminalTab(ConnectionConfig config, CredentialPayload credential)
         {
             var tab = new TabPage(config.Name)
             {
                 ToolTipText = $"{config.Username}@{config.Host}:{config.Port}"
             };
 
-            // 创建终端控件（延迟连接：只创建控件，不立即连接）
             var terminalControl = new TerminalControl(config, _terminalFactory, _tunnelManager, _auditLogger);
             terminalControl.Dock = DockStyle.Fill;
+            // 注入 KeePass 凭据
+            terminalControl.Credentials = credential;
             tab.Controls.Add(terminalControl);
 
-            // 记录会话信息
             _sessions[tab] = new TabSession
             {
                 Config = config,
@@ -191,16 +237,29 @@ namespace Gdterm.UI.Controls
             return tab;
         }
 
-        private TabPage CreateRdpTab(ConnectionConfig config)
+        private TabPage CreateRdpTab(ConnectionConfig config, CredentialPayload credential)
         {
             var tab = new TabPage(config.Name)
             {
                 ToolTipText = $"RDP: {config.Host}:{config.Port}"
             };
 
+            // 如果有凭据，注入 RDP 凭据到 Windows 凭据管理器
+            if (credential != null && !string.IsNullOrEmpty(credential.Password))
+            {
+                try
+                {
+                    _keepassService.InjectRdpCredential(
+                        config.Host, credential.Username, credential.Password);
+                }
+                catch { /* best-effort */ }
+            }
+
             var label = new Label
             {
-                Text = $"RDP 连接: {config.Host}\n\n（RDP 标签页待实现）",
+                Text = $"RDP 连接: {config.Host}\n" +
+                       (credential != null ? "(凭据已自动填充)" : "(无关联密码条目)") +
+                       "\n\n（RDP 标签页待实现）",
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleCenter
             };
@@ -211,7 +270,8 @@ namespace Gdterm.UI.Controls
                 Config = config,
                 Control = label,
                 Protocol = ProtocolType.RDP,
-                IsConnected = false
+                IsConnected = false,
+                Credential = credential
             };
 
             return tab;
@@ -243,40 +303,86 @@ namespace Gdterm.UI.Controls
             return tab;
         }
 
+        // ===== 分屏 =====
+
+        public void SplitHorizontal() => SplitCurrentTab("horizontal");
+        public void SplitVertical() => SplitCurrentTab("vertical");
+
+        private void SplitCurrentTab(string direction)
+        {
+            var selectedTab = _tabControl.SelectedTab;
+            if (selectedTab == null || !_sessions.ContainsKey(selectedTab))
+            {
+                MessageBox.Show("请先打开一个连接", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var session = _sessions[selectedTab];
+            var currentControl = session.Control;
+
+            var newTerminal = new TerminalControl(session.Config, _terminalFactory, _tunnelManager, _auditLogger);
+            newTerminal.Dock = DockStyle.Fill;
+
+            var splitPane = direction == "horizontal"
+                ? SplitPaneControl.CreateHorizontal(currentControl, newTerminal, 0.5)
+                : SplitPaneControl.CreateVertical(currentControl, newTerminal, 0.5);
+            splitPane.Dock = DockStyle.Fill;
+
+            selectedTab.Controls.Clear();
+            selectedTab.Controls.Add(splitPane);
+        }
+
+        // ===== 标签管理 =====
+
+        public void CloseAllTabs()
+        {
+            foreach (TabPage tab in _tabControl.TabPages)
+                CloseTab(tab);
+            _tabControl.TabPages.Clear();
+            _sessions.Clear();
+        }
+
+        private void CloseTab(TabPage tab)
+        {
+            if (_sessions.TryGetValue(tab, out var session))
+            {
+                // RDP 连接关闭时清理凭据
+                if (session.Protocol == ProtocolType.RDP)
+                {
+                    try { _keepassService.CleanupRdpCredential(session.Config.Host); }
+                    catch { }
+                }
+
+                if (session.Control is IDisposable disposable)
+                    disposable.Dispose();
+
+                _sessions.Remove(tab);
+            }
+        }
+
         private void OnDrawTab(object sender, DrawItemEventArgs e)
         {
             var tab = _tabControl.TabPages[e.Index];
             var rect = e.Bounds;
 
-            // 绘制标签背景
             bool isSelected = (e.Index == _tabControl.SelectedIndex);
             using (var brush = new SolidBrush(isSelected ? SystemColors.ControlLight : SystemColors.Control))
-            {
                 e.Graphics.FillRectangle(brush, rect);
-            }
 
-            // 绘制标签文本
             var textRect = new Rectangle(rect.X + 4, rect.Y + 2, rect.Width - 24, rect.Height - 4);
             TextRenderer.DrawText(e.Graphics, tab.Text, e.Font, textRect, SystemColors.ControlText,
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
 
-            // 绘制关闭按钮 "×"
             var closeRect = new Rectangle(rect.Right - 18, rect.Y + 4, 14, 16);
             using (var brush = new SolidBrush(Color.DarkGray))
-            {
                 e.Graphics.DrawString("×", e.Font, brush, closeRect);
-            }
 
-            // 绘制边框
             using (var pen = new Pen(SystemColors.ControlDark))
-            {
                 e.Graphics.DrawRectangle(pen, rect);
-            }
         }
 
         private void OnTabMouseDown(object sender, MouseEventArgs e)
         {
-            // 检测点击关闭按钮
             for (int i = 0; i < _tabControl.TabPages.Count; i++)
             {
                 var rect = _tabControl.GetTabRect(i);
@@ -293,52 +399,30 @@ namespace Gdterm.UI.Controls
 
         private void OnTabSelectedIndexChanged(object sender, EventArgs e)
         {
-            // 暂停所有非活动标签，恢复活动标签
             foreach (var kvp in _sessions)
             {
                 if (kvp.Value.Control is TerminalControl tc)
                 {
                     if (kvp.Key == _tabControl.SelectedTab)
-                    {
                         tc.ResumeRendering();
-                    }
                     else
-                    {
                         tc.PauseRendering();
-                    }
                 }
             }
         }
 
-        private void CloseTab(TabPage tab)
-        {
-            if (_sessions.TryGetValue(tab, out var session))
-            {
-                if (session.Control is IDisposable disposable)
-                {
-                    disposable.Dispose();
-                }
-                _sessions.Remove(tab);
-            }
-        }
-
-        /// <summary>
-        /// 标签页会话信息
-        /// </summary>
         private class TabSession
         {
             public ConnectionConfig Config { get; set; }
             public Control Control { get; set; }
             public ProtocolType Protocol { get; set; }
             public bool IsConnected { get; set; }
+            public CredentialPayload Credential { get; set; }
         }
 
         protected override void Dispose(bool disposing)
         {
-            if (disposing)
-            {
-                CloseAllTabs();
-            }
+            if (disposing) CloseAllTabs();
             base.Dispose(disposing);
         }
     }

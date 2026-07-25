@@ -139,6 +139,9 @@ namespace Gdterm.UI.Forms
             // 工具菜单
             var toolsMenu = new ToolStripMenuItem("工具(&T)");
             toolsMenu.DropDownItems.Add("密码库管理(&K)", null, OnKeePassManager);
+            toolsMenu.DropDownItems.Add(new ToolStripSeparator());
+            toolsMenu.DropDownItems.Add("🔑 密码生成器(&G)", null, OnPasswordGenerator);
+            toolsMenu.DropDownItems.Add(new ToolStripSeparator());
             toolsMenu.DropDownItems.Add("AI 助手设置(&A)", null, OnAiSettings);
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
             toolsMenu.DropDownItems.Add("危险命令规则(&D)", null, OnDangerousCmdSettings);
@@ -174,7 +177,8 @@ namespace Gdterm.UI.Forms
                 _terminalFactory,
                 _sftpFactory,
                 _aiService,
-                _auditLogger);
+                _auditLogger,
+                _keepassService);
             _tabContainer.Dock = DockStyle.Fill;
 
             // 底部状态栏
@@ -330,6 +334,14 @@ namespace Gdterm.UI.Forms
         {
             // TODO: 打开 AI 设置对话框
             MessageBox.Show("AI 设置功能待实现", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void OnPasswordGenerator(object sender, EventArgs e)
+        {
+            using (var form = new PasswordGeneratorForm())
+            {
+                form.ShowDialog(this);
+            }
         }
 
         private void OnDangerousCmdSettings(object sender, EventArgs e)
