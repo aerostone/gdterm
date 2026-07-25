@@ -12,7 +12,7 @@ namespace Gdterm.Tunnel
     /// <summary>
     /// 隧道管理器——管理 SSH 隧道的建立、查询和关闭
     /// </summary>
-    public class TunnelManager : IDisposable
+    public class TunnelManager : ITunnelManager
     {
         private readonly ConcurrentDictionary<string, TunnelSession> _sessions
             = new ConcurrentDictionary<string, TunnelSession>();

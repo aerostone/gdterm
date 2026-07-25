@@ -19,7 +19,7 @@ namespace Gdterm.UI.Controls
         private readonly ConnectionConfig _config;
         private readonly CredentialPayload _credential;
         private readonly ISftpServiceFactory _factory;
-        private readonly TunnelManager _tunnelManager;
+        private readonly ITunnelManager _tunnelManager;
         private ISftpService _sftp;
         private ListView _list;
         private TextBox _pathBox;
@@ -31,7 +31,7 @@ namespace Gdterm.UI.Controls
             ConnectionConfig config,
             CredentialPayload credential,
             ISftpServiceFactory factory,
-            TunnelManager tunnelManager)
+            ITunnelManager tunnelManager)
         {
             _config = config;
             _credential = credential;

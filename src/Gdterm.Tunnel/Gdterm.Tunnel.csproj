@@ -48,6 +48,7 @@
     <Compile Include="Exceptions\TunnelException.cs" />
     <Compile Include="Models\TunnelSession.cs" />
     <Compile Include="Models\TunnelStatus.cs" />
+    <Compile Include="ITunnelManager.cs" />
     <Compile Include="TunnelManager.cs" />
     <Compile Include="PortForwardManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

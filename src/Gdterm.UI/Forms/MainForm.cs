@@ -30,7 +30,7 @@ namespace Gdterm.UI.Forms
     public partial class MainForm : Form
     {
         private readonly IConnectionStore _connectionStore;
-        private readonly TunnelManager _tunnelManager;
+        private readonly ITunnelManager _tunnelManager;
         private readonly ITerminalSessionFactory _terminalFactory;
         private readonly ISftpServiceFactory _sftpFactory;
         private readonly IKeePassService _keepassService;
@@ -68,7 +68,7 @@ namespace Gdterm.UI.Forms
 
         public MainForm(
             IConnectionStore connectionStore,
-            TunnelManager tunnelManager,
+            ITunnelManager tunnelManager,
             ITerminalSessionFactory terminalFactory,
             ISftpServiceFactory sftpFactory,
             IKeePassService keepassService,

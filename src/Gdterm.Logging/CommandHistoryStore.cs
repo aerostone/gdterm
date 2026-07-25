@@ -36,6 +36,8 @@ namespace Gdterm.Logging
         /// <summary>
         /// 记录命令执行
         /// </summary>
+        private static readonly LogSanitizer Sanitizer = new LogSanitizer("***");
+
         public void RecordCommand(CommandHistoryEntry entry)
         {
             if (entry == null) return;
@@ -44,9 +46,14 @@ namespace Gdterm.Logging
             if (entry.ExecutedAt == default)
                 entry.ExecutedAt = DateTime.UtcNow;
 
+            // 落盘前脱敏：CLI 位置参数 / token / 连接串等
+            if (!string.IsNullOrEmpty(entry.Command))
+                entry.Command = Sanitizer.Sanitize(entry.Command);
+
             // 截断过长输出
             if (!string.IsNullOrEmpty(entry.Output))
             {
+                entry.Output = Sanitizer.Sanitize(entry.Output);
                 var lines = entry.Output.Split('\n');
                 if (lines.Length > MaxOutputLines)
                 {

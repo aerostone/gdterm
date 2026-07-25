@@ -22,7 +22,7 @@ namespace Gdterm.UI.Controls
     {
         private readonly ConnectionConfig _config;
         private readonly ITerminalSessionFactory _terminalFactory;
-        private readonly TunnelManager _tunnelManager;
+        private readonly ITunnelManager _tunnelManager;
         private readonly IAuditLogger _auditLogger;
         private readonly DangerousCommandDetector _dangerousDetector;
         private readonly TerminalKeyBindingResolver _keyResolver = new TerminalKeyBindingResolver();
@@ -63,7 +63,7 @@ namespace Gdterm.UI.Controls
         public TerminalControl(
             ConnectionConfig config,
             ITerminalSessionFactory terminalFactory,
-            TunnelManager tunnelManager,
+            ITunnelManager tunnelManager,
             IAuditLogger auditLogger,
             DangerousCommandDetector dangerousDetector = null)
         {
@@ -248,14 +248,27 @@ namespace Gdterm.UI.Controls
             if (string.IsNullOrEmpty(text) || _session == null || !_session.IsConnected)
                 return false;
 
-            if (isCommandLine && !ConfirmIfDangerous(text.TrimEnd('\r', '\n')))
+            var trimmed = isCommandLine ? text.TrimEnd('\r', '\n') : text;
+            if (isCommandLine && !ConfirmIfDangerous(trimmed))
                 return false;
 
             // 外部整行发送会打乱本地行缓冲
             if (isCommandLine)
                 ClearLocalLine(eraseDisplay: true);
 
-            return SafeSend(text);
+            if (!SafeSend(text))
+                return false;
+
+            if (isCommandLine && !string.IsNullOrWhiteSpace(trimmed))
+            {
+                try
+                {
+                    _auditLogger?.LogCommand(_config?.Id ?? "", trimmed);
+                }
+                catch { }
+            }
+
+            return true;
         }
 
         public void SendInput(string text)
@@ -442,6 +455,11 @@ namespace Gdterm.UI.Controls
                                 return;
                             }
                             SafeSend("\r");
+                        }
+                        if (!string.IsNullOrWhiteSpace(cmd))
+                        {
+                            try { _auditLogger?.LogCommand(_config?.Id ?? "", cmd); }
+                            catch { }
                         }
                         e.Handled = true;
                         break;

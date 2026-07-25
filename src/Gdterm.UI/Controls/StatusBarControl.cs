@@ -12,7 +12,7 @@ namespace Gdterm.UI.Controls
     /// </summary>
     public class StatusBarControl : UserControl
     {
-        private readonly TunnelManager _tunnelManager;
+        private readonly ITunnelManager _tunnelManager;
         private readonly IKeePassService _keepassService;
         private readonly IAiAssistantService _aiService;
         private readonly ISecurityManager _securityManager;
@@ -25,7 +25,7 @@ namespace Gdterm.UI.Controls
         private ToolStripStatusLabel _securityStatus;
 
         public StatusBarControl(
-            TunnelManager tunnelManager,
+            ITunnelManager tunnelManager,
             IKeePassService keepassService,
             IAiAssistantService aiService,
             ISecurityManager securityManager)

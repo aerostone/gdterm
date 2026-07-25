@@ -25,7 +25,7 @@ namespace Gdterm.UI.Controls
     /// </summary>
     public class TabContainerControl : UserControl
     {
-        private readonly TunnelManager _tunnelManager;
+        private readonly ITunnelManager _tunnelManager;
         private readonly ITerminalSessionFactory _terminalFactory;
         private readonly ISftpServiceFactory _sftpFactory;
         private readonly IAiAssistantService _aiService;
@@ -35,6 +35,7 @@ namespace Gdterm.UI.Controls
         private readonly DangerousCommandDetector _dangerousDetector;
         private readonly AutoReconnectWatchdog _reconnectWatchdog;
         private readonly IConnectionStore _connectionStore;
+        private LogonScriptStore _logonScriptStore;
         private readonly Dictionary<TabPage, TabSession> _sessions = new Dictionary<TabPage, TabSession>();
         private TabControl _tabControl;
 
@@ -45,7 +46,7 @@ namespace Gdterm.UI.Controls
         public event EventHandler<string> SessionClosed;
 
         public TabContainerControl(
-            TunnelManager tunnelManager,
+            ITunnelManager tunnelManager,
             ITerminalSessionFactory terminalFactory,
             ISftpServiceFactory sftpFactory,
             IAiAssistantService aiService,
@@ -300,6 +301,7 @@ namespace Gdterm.UI.Controls
                     ts.IsConnected = true;
                     WireHealthAndReconnect(ts, terminalControl.Session);
                 }
+                TryRunLogonScript(terminalControl, config);
             };
             tab.Controls.Add(terminalControl);
 
@@ -423,6 +425,7 @@ namespace Gdterm.UI.Controls
             {
                 if (_sessions.TryGetValue(tab, out var ts))
                     ts.IsConnected = true;
+                TryRunLogonScript(terminalControl, config);
             };
             tab.Controls.Add(terminalControl);
 
@@ -436,6 +439,60 @@ namespace Gdterm.UI.Controls
             };
 
             return tab;
+        }
+
+
+        private void TryRunLogonScript(TerminalControl terminal, ConnectionConfig config)
+        {
+            if (terminal == null || config == null || string.IsNullOrEmpty(config.Id)) return;
+            try
+            {
+                if (_logonScriptStore == null)
+                {
+                    var path = System.IO.Path.Combine(
+                        AppDomain.CurrentDomain.BaseDirectory, "data", "config", "logon-scripts.json");
+                    _logonScriptStore = new LogonScriptStore(path);
+                }
+                var scripts = _logonScriptStore.Load();
+                if (scripts == null || scripts.Count == 0) return;
+                LogonScript match = null;
+                foreach (var s in scripts)
+                {
+                    if (s == null || !s.Enabled) continue;
+                    if (string.Equals(s.AssociatedConnectionId, config.Id, StringComparison.OrdinalIgnoreCase))
+                    {
+                        match = s;
+                        break;
+                    }
+                }
+                if (match == null || match.Steps == null || match.Steps.Count == 0) return;
+                var session = terminal.Session;
+                if (session == null || !session.IsConnected) return;
+                var engine = new LogonScriptEngine();
+                // fire-and-forget on threadpool; engine disposes after complete
+                System.Threading.Tasks.Task.Run(async () =>
+                {
+                    try
+                    {
+                        await engine.ExecuteAsync(match, session).ConfigureAwait(false);
+                    }
+                    catch (Exception ex)
+                    {
+                        try
+                        {
+                            _auditLogger?.LogSecurityEvent(
+                                SecurityEvent.ApplicationError,
+                                "logon script failed on " + config.Host + ": " + ex.Message);
+                        }
+                        catch { }
+                    }
+                    finally
+                    {
+                        try { engine.Dispose(); } catch { }
+                    }
+                });
+            }
+            catch { }
         }
 
         private void WireHealthAndReconnect(TabSession ts, ITerminalSession session)

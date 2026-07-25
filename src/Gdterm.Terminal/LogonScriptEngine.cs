@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Gdterm.Core.Models;
+using Gdterm.Terminal.Models;
 
 namespace Gdterm.Terminal
 {
@@ -13,6 +14,7 @@ namespace Gdterm.Terminal
     {
         private CancellationTokenSource _cts;
         private bool _running;
+        private EventHandler<TerminalOutputEventArgs> _waitHandler;
 
         public bool IsRunning => _running;
 
@@ -35,15 +37,6 @@ namespace Gdterm.Terminal
             try
             {
                 var steps = script.Steps ?? new List<LogonStep>();
-                string outputBuffer = "";
-
-                // 订阅输出用于 Wait 匹配
-                Action<string> outputHandler = null;
-                if (steps.Exists(s => s.Type == LogonStepType.Wait))
-                {
-                    outputHandler = line => { lock (this) { outputBuffer += line + "\n"; } };
-                    session.OutputReceived += outputHandler;
-                }
 
                 for (int i = 0; i < steps.Count; i++)
                 {
@@ -55,13 +48,12 @@ namespace Gdterm.Terminal
                     switch (step.Type)
                     {
                         case LogonStepType.Send:
-                            session.SendInput(step.Value + "\r");
-                            await Task.Delay(500, token); // 发送后短暂等待
+                            session.SendInput((step.Value ?? "") + "\r");
+                            await Task.Delay(500, token);
                             break;
 
                         case LogonStepType.Wait:
-                            await WaitForPattern(session, step.Value, step.TimeoutMs, token);
-                            lock (this) { outputBuffer = ""; } // 清空缓冲
+                            await WaitForPattern(session, step.Value, step.TimeoutMs > 0 ? step.TimeoutMs : 15000, token);
                             break;
 
                         case LogonStepType.Delay:
@@ -70,11 +62,7 @@ namespace Gdterm.Terminal
                     }
                 }
 
-                // 取消订阅
-                if (outputHandler != null)
-                    session.OutputReceived -= outputHandler;
-
-                Completed?.Invoke(true, "登录脚本执行完成");
+                Completed?.Invoke(!token.IsCancellationRequested, token.IsCancellationRequested ? "脚本已取消" : "登录脚本执行完成");
             }
             catch (OperationCanceledException)
             {
@@ -86,47 +74,57 @@ namespace Gdterm.Terminal
             }
             finally
             {
+                if (_waitHandler != null && session != null)
+                {
+                    try { session.OutputReceived -= _waitHandler; } catch { }
+                    _waitHandler = null;
+                }
                 _running = false;
             }
         }
 
         private async Task WaitForPattern(ITerminalSession session, string pattern, int timeoutMs, CancellationToken token)
         {
-            var deadline = DateTime.UtcNow.AddMilliseconds(timeoutMs);
-            var tcs = new TaskCompletionSource<bool>();
-
-            Action<string> handler = null;
-            handler = line =>
+            if (string.IsNullOrEmpty(pattern))
             {
+                await Task.Delay(100, token);
+                return;
+            }
+
+            var tcs = new TaskCompletionSource<bool>();
+            EventHandler<TerminalOutputEventArgs> handler = null;
+            handler = (s, e) =>
+            {
+                var line = e != null ? e.Text : null;
                 if (line != null && line.IndexOf(pattern, StringComparison.OrdinalIgnoreCase) >= 0)
                     tcs.TrySetResult(true);
             };
 
+            _waitHandler = handler;
             session.OutputReceived += handler;
             try
             {
-                var timeoutTask = Task.Delay(timeoutMs, token);
-                var completed = await Task.WhenAny(tcs.Task, timeoutTask);
-                if (completed != tcs.Task)
-                {
-                    // 超时，继续执行（不阻塞）
-                }
+                var timeoutTask = Task.Delay(Math.Max(100, timeoutMs), token);
+                await Task.WhenAny(tcs.Task, timeoutTask);
             }
             finally
             {
                 session.OutputReceived -= handler;
+                if (ReferenceEquals(_waitHandler, handler))
+                    _waitHandler = null;
             }
         }
 
         public void Cancel()
         {
-            _cts?.Cancel();
+            try { _cts?.Cancel(); } catch { }
         }
 
         public void Dispose()
         {
-            _cts?.Cancel();
-            _cts?.Dispose();
+            Cancel();
+            try { _cts?.Dispose(); } catch { }
+            _cts = null;
         }
     }
 }
