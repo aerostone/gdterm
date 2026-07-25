@@ -87,8 +87,8 @@ namespace Gdterm.KeePass
         // ===== RDP 凭据注入 =====
 
         /// <summary>
-        /// 将 RDP 凭据注入 Windows 凭据管理器（cmdkey）
-        /// 连接成功后自动清理
+        /// 将 RDP 凭据注入 Windows 凭据管理器（CredWrite，不经 cmdkey 命令行）。
+        /// 目标名 TERMSRV/{host}；连接结束后应调用 Cleanup。
         /// </summary>
         /// <param name="host">目标主机</param>
         /// <param name="username">用户名</param>
@@ -100,6 +100,11 @@ namespace Gdterm.KeePass
         /// 清理 RDP 凭据（从 Windows 凭据管理器删除）
         /// </summary>
         void CleanupRdpCredential(string host);
+
+        /// <summary>
+        /// 清理本进程注入的全部 RDP 凭据（异常退出前的 best-effort 收尾）
+        /// </summary>
+        void CleanupAllRdpCredentials();
 
         /// <summary>
         /// 分析密码库健康状况

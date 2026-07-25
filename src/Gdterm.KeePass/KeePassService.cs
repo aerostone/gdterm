@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Gdterm.Core.Models;
@@ -24,6 +25,8 @@ namespace Gdterm.KeePass
         private readonly PasswordStrengthValidator _validator;
         private PwDatabase _database;
         private bool _disposed;
+        private readonly HashSet<string> _injectedRdpHosts = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        private readonly object _rdpCredLock = new object();
 
         // KeePass 自定义字段名
         private const string SshKeyFieldName = "SSH Private Key";
@@ -369,62 +372,124 @@ namespace Gdterm.KeePass
             return "{USERNAME}{ENTER}{PASSWORD}{ENTER}";
         }
 
-        // ===== RDP 凭据注入 =====
+        // ===== RDP 凭据注入（CredWrite，避免 cmdkey 命令行明文密码） =====
+
+        private const int CRED_TYPE_GENERIC = 1;
+        private const int CRED_PERSIST_LOCAL_MACHINE = 2;
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+        private struct CREDENTIAL
+        {
+            public int Flags;
+            public int Type;
+            public string TargetName;
+            public string Comment;
+            public System.Runtime.InteropServices.ComTypes.FILETIME LastWritten;
+            public int CredentialBlobSize;
+            public IntPtr CredentialBlob;
+            public int Persist;
+            public int AttributeCount;
+            public IntPtr Attributes;
+            public string TargetAlias;
+            public string UserName;
+        }
+
+        [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern bool CredWrite(ref CREDENTIAL userCredential, uint flags);
+
+        [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        private static extern bool CredDelete(string target, int type, int flags);
+
+        private static string BuildRdpTarget(string host)
+        {
+            if (string.IsNullOrWhiteSpace(host))
+                throw new ArgumentException("host required", nameof(host));
+            // 去掉可能被注入的空白与控制字符
+            var h = host.Trim();
+            if (h.IndexOfAny(new[] { '\r', '\n', '\0' }) >= 0)
+                throw new ArgumentException("invalid host", nameof(host));
+            return "TERMSRV/" + h;
+        }
 
         public bool InjectRdpCredential(string host, string username, string password)
         {
+            if (string.IsNullOrWhiteSpace(host) || string.IsNullOrEmpty(username))
+                return false;
+
+            // 首选：CredWrite API，密码不进进程命令行，不会出现在任务管理器参数里
+            IntPtr blob = IntPtr.Zero;
             try
             {
-                using (var process = new Process
+                var target = BuildRdpTarget(host);
+                var secret = password ?? string.Empty;
+                // Windows 凭据 API 期望 Unicode 字节（含结尾 null 可选）
+                var bytes = System.Text.Encoding.Unicode.GetBytes(secret);
+                blob = Marshal.AllocHGlobal(bytes.Length);
+                if (bytes.Length > 0)
+                    Marshal.Copy(bytes, 0, blob, bytes.Length);
+
+                var cred = new CREDENTIAL
                 {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "cmdkey",
-                        Arguments = $"/generic:TERMSRV/{host} /user:{username} /pass:{password}",
-                        UseShellExecute = false,
-                        CreateNoWindow = true,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true
-                    }
-                })
-                {
-                    process.Start();
-                    process.WaitForExit(5000);
-                    return process.ExitCode == 0;
-                }
+                    Type = CRED_TYPE_GENERIC,
+                    TargetName = target,
+                    UserName = username,
+                    CredentialBlobSize = bytes.Length,
+                    CredentialBlob = blob,
+                    Persist = CRED_PERSIST_LOCAL_MACHINE,
+                    AttributeCount = 0,
+                    Attributes = IntPtr.Zero,
+                    Comment = "gdterm RDP",
+                    TargetAlias = null
+                };
+
+                if (!CredWrite(ref cred, 0))
+                    return false;
+
+                lock (_rdpCredLock)
+                    _injectedRdpHosts.Add(host.Trim());
+                return true;
             }
             catch
             {
                 return false;
             }
+            finally
+            {
+                if (blob != IntPtr.Zero)
+                    Marshal.FreeHGlobal(blob);
+            }
         }
 
         public void CleanupRdpCredential(string host)
         {
+            if (string.IsNullOrWhiteSpace(host)) return;
             try
             {
-                using (var process = new Process
-                {
-                    StartInfo = new ProcessStartInfo
-                    {
-                        FileName = "cmdkey",
-                        Arguments = $"/delete:TERMSRV/{host}",
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    }
-                })
-                {
-                    process.Start();
-                    process.WaitForExit(5000);
-                }
+                var target = BuildRdpTarget(host);
+                CredDelete(target, CRED_TYPE_GENERIC, 0);
             }
             catch { }
+            finally
+            {
+                lock (_rdpCredLock)
+                    _injectedRdpHosts.Remove(host.Trim());
+            }
+        }
+
+        public void CleanupAllRdpCredentials()
+        {
+            string[] hosts;
+            lock (_rdpCredLock)
+                hosts = _injectedRdpHosts.ToArray();
+            foreach (var h in hosts)
+                CleanupRdpCredential(h);
         }
 
         public void Dispose()
         {
             if (_disposed) return;
             _disposed = true;
+            try { CleanupAllRdpCredentials(); } catch { }
             Lock();
         }
 

@@ -80,6 +80,15 @@ namespace Gdterm.UI
             var terminalFactory = new TerminalSessionFactory();
             var sftpFactory = new SftpServiceFactory();
             var keepassService = new KeePassService(keepassPath);
+            // 异常退出时尽量清掉本进程注入的 TERMSRV 凭据
+            AppDomain.CurrentDomain.ProcessExit += (s, e) =>
+            {
+                try { keepassService.CleanupAllRdpCredentials(); } catch { }
+            };
+            AppDomain.CurrentDomain.DomainUnload += (s, e) =>
+            {
+                try { keepassService.CleanupAllRdpCredentials(); } catch { }
+            };
             var auditLogger = new AuditLogger(logsDir);
             var aiConfig = new AiConfiguration
             {
