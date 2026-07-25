@@ -64,7 +64,7 @@ namespace Gdterm.UI
 
             // ====== 初始化安全管理器 ======
             var securityManager = new SecurityManager(
-                idleTimeout: TimeSpan.FromMinutes(5),
+                idleTimeout: TimeSpan.FromMinutes(10),  // 默认 10 分钟（最大 30 分钟）
                 passwordConfig: savedPasswordConfig);
 
             // ====== 首次使用：强制设置主密码 ======

@@ -10,7 +10,6 @@ using Gdterm.Logging;
 using Gdterm.Sftp;
 using Gdterm.Terminal;
 using Gdterm.Tunnel;
-using Gdterm.UI.Forms;
 
 namespace Gdterm.UI.Controls
 {
@@ -113,19 +112,17 @@ namespace Gdterm.UI.Controls
 
         /// <summary>
         /// 从 KeePass 解析连接凭据
-        /// 流程：CredentialRefId 精确查找 → FindEntryByConnection 智能匹配
-        /// 如果密码库未锁定，自动获取；已锁定则跳过（用户手动输入）
+        /// 前提：SecurityManager 已解锁 → KeePass 已同步解锁
+        /// 流程：CredentialRefId 精确查找 > FindEntryByConnection 智能匹配
+        /// 如果 KeePass 未解锁（异常情况），返回 null 回退到手动输入
         /// </summary>
         private CredentialPayload ResolveCredential(ConnectionConfig config)
         {
             try
             {
-                // 如果密码库未解锁，尝试自动解锁
+                // KeePass 应该已通过主密码解锁，如果未解锁则跳过
                 if (!_keepassService.IsUnlocked)
-                {
-                    var unlocked = TryUnlockKeepass();
-                    if (!unlocked) return null; // 用户取消解锁，返回空凭据
-                }
+                    return null;
 
                 KeePassEntry entry = null;
 
@@ -167,20 +164,7 @@ namespace Gdterm.UI.Controls
             }
             catch
             {
-                return null; // 任何错误都回退到手动输入
-            }
-        }
-
-        /// <summary>
-        /// 尝试解锁 KeePass 密码库（弹出解锁对话框）
-        /// </summary>
-        private bool TryUnlockKeepass()
-        {
-            if (_keepassService.IsUnlocked) return true;
-
-            using (var unlockForm = new KeePassUnlockForm(_keepassService))
-            {
-                return unlockForm.ShowDialog(FindForm()) == DialogResult.OK;
+                return null;
             }
         }
 

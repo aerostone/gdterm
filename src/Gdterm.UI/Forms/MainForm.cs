@@ -314,8 +314,23 @@ namespace Gdterm.UI.Forms
                 return;
             }
 
-            _lockOverlay.Visible = e.IsLocked;
-            if (e.IsLocked) _lockOverlay.BringToFront();
+            if (e.IsLocked)
+            {
+                // 锁定：同时锁定 KeePass 密码库
+                try { _keepassService.Lock(); } catch { }
+                _lockOverlay.Visible = true;
+                _lockOverlay.BringToFront();
+            }
+            else
+            {
+                // 解锁：同步解锁 KeePass 密码库（同一个主密码）
+                var masterPassword = _securityManager.GetMasterPassword();
+                if (!string.IsNullOrEmpty(masterPassword))
+                {
+                    try { _keepassService.UnlockAsync(masterPassword); } catch { }
+                }
+                _lockOverlay.Visible = false;
+            }
         }
 
         private void OnNewConnection(object sender, EventArgs e)

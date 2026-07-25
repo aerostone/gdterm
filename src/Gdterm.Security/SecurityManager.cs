@@ -9,25 +9,39 @@ namespace Gdterm.Security
 {
     /// <summary>
     /// 安全管理器实现——闲时锁定、手动锁定/解锁、主密码哈希存储
+    /// 主密码在解锁期间保留在内存中，用于传递给 KeePass 解锁
+    /// 锁定时立即清除明文
     /// </summary>
     public class SecurityManager : ISecurityManager
     {
+        private static readonly TimeSpan MaxIdleTimeout = TimeSpan.FromMinutes(30);
+
         private readonly Timer _idleTimer;
         private DateTime _lastActivity;
         private MasterPasswordConfig _passwordConfig;
+        private string _masterPassword; // 解锁时保留在内存，锁定时清除
         private bool _disposed;
 
-        public bool IsLocked { get; private set; } = true; // 默认锁定
+        public bool IsLocked { get; private set; } = true;
 
+        /// <summary>
+        /// 闲时超时时间，硬上限 30 分钟
+        /// </summary>
         public TimeSpan IdleTimeout
         {
             get => TimeSpan.FromMilliseconds(_idleTimer.Interval);
-            set => _idleTimer.Interval = value.TotalMilliseconds;
+            set
+            {
+                // 硬上限 30 分钟
+                if (value > MaxIdleTimeout) value = MaxIdleTimeout;
+                if (value < TimeSpan.FromSeconds(30)) value = TimeSpan.FromSeconds(30);
+                _idleTimer.Interval = value.TotalMilliseconds;
+            }
         }
 
         public event EventHandler<LockStateChangedEventArgs> LockStateChanged;
 
-        /// <param name="idleTimeout">闲时超时时间（默认 5 分钟）</param>
+        /// <param name="idleTimeout">闲时超时时间（默认 5 分钟，最大 30 分钟）</param>
         /// <param name="passwordConfig">已保存的主密码配置（null 表示首次使用）</param>
         public SecurityManager(TimeSpan? idleTimeout = null, MasterPasswordConfig passwordConfig = null)
         {
@@ -35,7 +49,10 @@ namespace Gdterm.Security
             _lastActivity = DateTime.UtcNow;
 
             _idleTimer = new Timer();
-            _idleTimer.Interval = (idleTimeout ?? TimeSpan.FromMinutes(5)).TotalMilliseconds;
+            // 应用硬上限
+            var timeout = idleTimeout ?? TimeSpan.FromMinutes(5);
+            if (timeout > MaxIdleTimeout) timeout = MaxIdleTimeout;
+            _idleTimer.Interval = timeout.TotalMilliseconds;
             _idleTimer.AutoReset = true;
             _idleTimer.Elapsed += OnIdleTimerElapsed;
             _idleTimer.Start();
@@ -51,6 +68,7 @@ namespace Gdterm.Security
             if (!IsLocked)
             {
                 IsLocked = true;
+                _masterPassword = null; // 锁定时清除明文
                 OnLockStateChanged(new LockStateChangedEventArgs(true, "manual"));
             }
         }
@@ -64,6 +82,7 @@ namespace Gdterm.Security
             if (_passwordConfig == null)
             {
                 SetMasterPassword(null, masterPassword);
+                _masterPassword = masterPassword;
                 IsLocked = false;
                 OnLockStateChanged(new LockStateChangedEventArgs(false, "unlock"));
                 return true;
@@ -72,6 +91,7 @@ namespace Gdterm.Security
             // 验证密码
             if (VerifyPassword(masterPassword, _passwordConfig))
             {
+                _masterPassword = masterPassword;
                 IsLocked = false;
                 OnLockStateChanged(new LockStateChangedEventArgs(false, "unlock"));
                 return true;
@@ -110,7 +130,16 @@ namespace Gdterm.Security
         }
 
         /// <summary>
-        /// 获取当前主密码配置（用于持久化保存）
+        /// 获取主密码明文（仅用于传递给 KeePass 解锁）
+        /// 已锁定时返回 null
+        /// </summary>
+        public string GetMasterPassword()
+        {
+            return IsLocked ? null : _masterPassword;
+        }
+
+        /// <summary>
+        /// 获取当前主密码配置（用于持久化保存哈希+盐）
         /// </summary>
         public MasterPasswordConfig GetPasswordConfig()
         {
@@ -122,6 +151,7 @@ namespace Gdterm.Security
             if (_disposed) return;
             _disposed = true;
 
+            _masterPassword = null; // 销毁时清除
             _idleTimer?.Stop();
             _idleTimer?.Dispose();
         }
@@ -134,6 +164,7 @@ namespace Gdterm.Security
             if (idleTime >= IdleTimeout)
             {
                 IsLocked = true;
+                _masterPassword = null; // 闲时锁定清除明文
                 OnLockStateChanged(new LockStateChangedEventArgs(true, "idle"));
             }
         }

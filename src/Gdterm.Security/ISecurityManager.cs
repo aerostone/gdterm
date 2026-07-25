@@ -44,8 +44,14 @@ namespace Gdterm.Security
         bool IsLocked { get; }
 
         /// <summary>
-        /// 闲时超时时间
+        /// 闲时超时时间（硬上限 30 分钟）
         /// </summary>
         TimeSpan IdleTimeout { get; set; }
+
+        /// <summary>
+        /// 获取主密码明文（仅用于传递给 KeePass 解锁，不持久化）
+        /// 已锁定时返回 null
+        /// </summary>
+        string GetMasterPassword();
     }
 }
