@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<title>gdterm — Architecture Overview</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: #0c0c0c; color: #cccccc; font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace; padding: 40px; min-height: 100vh; }
+  
+  /* ── Header ── */
+  .header { text-align: center; margin-bottom: 40px; }
+  .header h1 { font-size: 28px; color: #569cd6; font-weight: 600; letter-spacing: 2px; }
+  .header .subtitle { color: #6a9955; font-size: 13px; margin-top: 6px; }
+  .header .stats { color: #808080; font-size: 12px; margin-top: 12px; }
+  .header .stats span { color: #4ec9b0; }
+  
+  /* ── Architecture Diagram ── */
+  .arch { max-width: 1200px; margin: 0 auto; }
+  
+  .layer { 
+    border: 1px solid #333; 
+    border-radius: 6px; 
+    margin-bottom: 16px; 
+    padding: 16px; 
+    position: relative;
+    background: #1a1a1a;
+  }
+  .layer-label {
+    position: absolute; top: -10px; left: 16px;
+    background: #0c0c0c; padding: 0 8px;
+    font-size: 11px; color: #808080; text-transform: uppercase; letter-spacing: 1px;
+  }
+  .layer-label.l3 { color: #dcdcaa; }
+  .layer-label.l2 { color: #9cdcfe; }
+  .layer-label.l1 { color: #4ec9b0; }
+  .layer-label.l0 { color: #569cd6; }
+  
+  .modules { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+  
+  .mod {
+    padding: 10px 14px;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1.4;
+    min-width: 140px;
+    flex: 1;
+    max-width: 200px;
+    border: 1px solid #333;
+    background: #1e1e1e;
+    transition: all 0.2s;
+  }
+  .mod:hover { border-color: #569cd6; background: #252525; }
+  .mod .name { color: #dcdcaa; font-weight: 600; font-size: 13px; }
+  .mod .files { color: #6a9955; font-size: 10px; margin-top: 4px; }
+  .mod .desc { color: #808080; font-size: 10px; margin-top: 4px; }
+  
+  /* Module type colors */
+  .mod.core { border-left: 3px solid #569cd6; }
+  .mod.conn { border-left: 3px solid #4ec9b0; }
+  .mod.term { border-left: 3px solid #dcdcaa; }
+  .mod.sec  { border-left: 3px solid #f44747; }
+  .mod.net  { border-left: 3px solid #9cdcfe; }
+  .mod.ui   { border-left: 3px solid #c586c0; }
+  .mod.tool { border-left: 3px solid #ce9178; }
+  .mod.ai   { border-left: 3px solid #b5cea8; }
+  
+  /* ── Dependency Arrows (ASCII style) ── */
+  .deps { 
+    text-align: center; 
+    color: #333; 
+    font-size: 10px; 
+    padding: 4px 0; 
+    letter-spacing: 0;
+  }
+  .deps .arrow { color: #444; }
+  
+  /* ── Project Table ── */
+  .table-section { max-width: 1200px; margin: 30px auto 0; }
+  .table-section h2 { color: #569cd6; font-size: 16px; margin-bottom: 12px; border-bottom: 1px solid #333; padding-bottom: 6px; }
+  
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { color: #569cd6; text-align: left; padding: 8px 10px; border-bottom: 1px solid #333; font-weight: 600; }
+  td { padding: 6px 10px; border-bottom: 1px solid #1e1e1e; }
+  tr:hover { background: #1a1a1a; }
+  .num { color: #b5cea8; text-align: right; font-family: monospace; }
+  .proj-name { color: #dcdcaa; }
+  .proj-desc { color: #808080; }
+  .highlight { color: #4ec9b0; }
+  
+  /* ── Terminal Decoration ── */
+  .term-header {
+    background: #1e1e1e;
+    border-radius: 6px 6px 0 0;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    max-width: 1200px;
+    margin: 0 auto 2px;
+  }
+  .term-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .term-dot.r { background: #ff5f57; }
+  .term-dot.y { background: #febc2e; }
+  .term-dot.g { background: #28c840; }
+  .term-title { color: #808080; font-size: 11px; margin-left: 8px; }
+  
+  .term-body {
+    background: #0c0c0c;
+    border: 1px solid #333;
+    border-radius: 0 0 6px 6px;
+    padding: 16px 20px;
+    max-width: 1200px;
+    margin: 0 auto 20px;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .term-body .prompt { color: #4ec9b0; }
+  .term-body .cmd { color: #dcdcaa; }
+  .term-body .comment { color: #6a9955; }
+  .term-body .output { color: #808080; }
+  .term-body .success { color: #4ec9b0; }
+  .term-body .warn { color: #dcdcaa; }
+  .term-body .val { color: #b5cea8; }
+  
+  /* ── Stats Bar ── */
+  .stats-bar {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin: 20px 0;
+    flex-wrap: wrap;
+  }
+  .stat-item {
+    background: #1a1a1a;
+    border: 1px solid #333;
+    border-radius: 4px;
+    padding: 12px 20px;
+    text-align: center;
+    min-width: 120px;
+  }
+  .stat-item .val { font-size: 24px; color: #4ec9b0; font-weight: 700; }
+  .stat-item .label { font-size: 10px; color: #808080; margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<!-- ── Terminal Header ── -->
+<div class="term-header">
+  <div class="term-dot r"></div>
+  <div class="term-dot y"></div>
+  <div class="term-dot g"></div>
+  <span class="term-title">zgc@gdterm:~/gdterm$</span>
+</div>
+<div class="term-body" style="margin-bottom: 30px;">
+  <span class="prompt">PS C:\gdterm&gt;</span> <span class="cmd">tree /F src\</span><br>
+  <span class="comment">── gdterm: Portable SSH/RDP/Terminal Client for Windows 7+ ──</span><br>
+  <span class="output">├── 12 projects, 170+ C# files, 22,000+ lines</span><br>
+  <span class="output">├── .NET Framework 4.6.2 | WinForms | Zero NuGet runtime deps</span><br>
+  <span class="output">├── Portable single-folder deployment | 30-80MB memory footprint</span><br>
+  <span class="output">└── Win7 / Server 2008 compatible | No GPU required</span>
+</div>
+
+<!-- ── Header ── -->
+<div class="header">
+  <h1> gdterm</h1>
+  <div class="subtitle">Portable SSH · RDP · Serial · Local Terminal Client</div>
+</div>
+
+<!-- ── Stats ── -->
+<div class="stats-bar">
+  <div class="stat-item"><div class="val">12</div><div class="label">Projects</div></div>
+  <div class="stat-item"><div class="val">170+</div><div class="label">Source Files</div></div>
+  <div class="stat-item"><div class="val">22K+</div><div class="label">Lines of Code</div></div>
+  <div class="stat-item"><div class="val">53</div><div class="label">Features</div></div>
+  <div class="stat-item"><div class="val">40+</div><div class="label">Git Commits</div></div>
+  <div class="stat-item"><div class="val">0</div><div class="label">Runtime NuGet</div></div>
+</div>
+
+<!-- ── Architecture Diagram ── -->
+<div class="arch">
+  
+  <!-- Layer 3: UI Shell -->
+  <div class="layer">
+    <span class="layer-label l3">Layer 3 — UI Shell (WinForms)</span>
+    <div class="modules">
+      <div class="mod ui">
+        <div class="name">Gdterm.UI</div>
+        <div class="files">40+ files · MainForm · TabContainer</div>
+        <div class="desc">5-menus · 3-view-modes · lock overlay · setup wizard · 15+ panels</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="deps">│<br>├─── references ──▶ all Layer 0-2 projects<br>│</div>
+
+  <!-- Layer 2: Features -->
+  <div class="layer">
+    <span class="layer-label l2">Layer 2 — Feature Modules</span>
+    <div class="modules">
+      <div class="mod term">
+        <div class="name">Gdterm.Terminal</div>
+        <div class="files">18 files · SSH + Serial + Local</div>
+        <div class="desc">Renderer v1/v2 · ANSI xterm-256 · keybindings · search · highlight · auto-log · macro · batch · health</div>
+      </div>
+      <div class="mod sec">
+        <div class="name">Gdterm.Security</div>
+        <div class="files">4 files · Master Password</div>
+        <div class="desc">SHA256+salt · idle lock 30min · dangerous cmd detection · secret scanner (entropy+regex+filename)</div>
+      </div>
+      <div class="mod ai">
+        <div class="name">Gdterm.AI</div>
+        <div class="files">8 files · OpenAI Compatible</div>
+        <div class="desc">multi-model · streaming SSE · connection-aware context · static HttpClient</div>
+      </div>
+      <div class="mod net">
+        <div class="name">Gdterm.Rdp</div>
+        <div class="files">4 files · AxMsRdpClient8</div>
+        <div class="desc">drive/clipboard/printer redirect · NLA/CredSSP · multi-monitor · cmdkey inject</div>
+      </div>
+      <div class="mod net">
+        <div class="name">Gdterm.Sftp</div>
+        <div class="files">4 files · SSH.NET SftpClient</div>
+        <div class="desc">upload/download · preview text/img · chmod/chown · permission utils</div>
+      </div>
+      <div class="mod tool">
+        <div class="name">Gdterm.Tools</div>
+        <div class="files">12 files · 5 Tool Modules</div>
+        <div class="desc">cert-installer · time-sync · repo-config · port-scanner · net-scanner (DNS/traceroute/ping/WHOIS/subnet)</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="deps">│<br>├─── references ──▶ Layer 0 + Layer 1 projects<br>│</div>
+
+  <!-- Layer 1: Infrastructure -->
+  <div class="layer">
+    <span class="layer-label l1">Layer 1 — Infrastructure</span>
+    <div class="modules">
+      <div class="mod conn">
+        <div class="name">Gdterm.Connections</div>
+        <div class="files">10 files · JSON Storage</div>
+        <div class="desc">connection CRUD · bookmarks · recent · quick-cmds · templates · highlight store · keybinding store · folder-cred · session-state</div>
+      </div>
+      <div class="mod net">
+        <div class="name">Gdterm.Tunnel</div>
+        <div class="files">5 files · SSH.NET</div>
+        <div class="desc">multi-hop chain · auto port selection · port-forward (local/remote/dynamic) · SOCKS5</div>
+      </div>
+      <div class="mod conn">
+        <div class="name">Gdterm.KeePass</div>
+        <div class="files">6 files · KeePassLib</div>
+        <div class="desc">.kdbx read/write · auto-fill · SSH key storage · cmdkey inject · auto-type · password health</div>
+      </div>
+      <div class="mod conn">
+        <div class="name">Gdterm.Logging</div>
+        <div class="files">5 files · JSON Lines</div>
+        <div class="desc">audit log · privacy toggles · sanitizer (13 regex) · XOR encryption · rotation · cmd history</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="deps">│<br>├─── references ──▶ Gdterm.Core only<br>│</div>
+
+  <!-- Layer 0: Core -->
+  <div class="layer">
+    <span class="layer-label l0">Layer 0 — Core Models (zero dependencies)</span>
+    <div class="modules">
+      <div class="mod core">
+        <div class="name">Gdterm.Core</div>
+        <div class="files">22 files · POCOs + Enums</div>
+        <div class="desc">ConnectionConfig · CredentialPayload · JumpChainConfig · TunnelConfig · SerialConfig · 15+ data models · 0 external refs</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Project Table ── -->
+<div class="table-section">
+  <h2>📦 Project Inventory</h2>
+  <table>
+    <tr><th>Project</th><th>Files</th><th>LoC</th><th>Dependencies</th><th>Description</th></tr>
+    <tr><td class="proj-name">Gdterm.Core</td><td class="num">22</td><td class="num">~1,800</td><td class="highlight">none</td><td class="proj-desc">POCOs, enums, constants</td></tr>
+    <tr><td class="proj-name">Gdterm.Connections</td><td class="num">10</td><td class="num">~2,400</td><td class="highlight">Core</td><td class="proj-desc">JSON file storage, bookmarks, templates, stores</td></tr>
+    <tr><td class="proj-name">Gdterm.Tunnel</td><td class="num">5</td><td class="num">~800</td><td class="highlight">Core + SSH.NET</td><td class="proj-desc">SSH tunnel, port forwarding</td></tr>
+    <tr><td class="proj-name">Gdterm.KeePass</td><td class="num">6</td><td class="num">~1,200</td><td class="highlight">Core + KeePassLib</td><td class="proj-desc">Password vault, auto-fill, health analysis</td></tr>
+    <tr><td class="proj-name">Gdterm.Logging</td><td class="num">5</td><td class="num">~900</td><td class="highlight">Core</td><td class="proj-desc">Audit log, command history, sanitizer</td></tr>
+    <tr><td class="proj-name">Gdterm.Terminal</td><td class="num">18</td><td class="num">~3,800</td><td class="highlight">Core + Tunnel + SSH.NET</td><td class="proj-desc">SSH/Serial/Local sessions, renderer, keybindings, tools</td></tr>
+    <tr><td class="proj-name">Gdterm.Security</td><td class="num">4</td><td class="num">~1,400</td><td class="highlight">Core</td><td class="proj-desc">Master password, idle lock, cmd detection, secret scan</td></tr>
+    <tr><td class="proj-name">Gdterm.AI</td><td class="num">8</td><td class="num">~1,100</td><td class="highlight">Core</td><td class="proj-desc">OpenAI-compatible chat, multi-model, streaming</td></tr>
+    <tr><td class="proj-name">Gdterm.Rdp</td><td class="num">4</td><td class="num">~500</td><td class="highlight">Core + AxMsRdpClient8</td><td class="proj-desc">RDP client, device redirection</td></tr>
+    <tr><td class="proj-name">Gdterm.Sftp</td><td class="num">4</td><td class="num">~600</td><td class="highlight">Core + SSH.NET</td><td class="proj-desc">SFTP browser, file transfer, permissions</td></tr>
+    <tr><td class="proj-name">Gdterm.Tools</td><td class="num">12</td><td class="num">~1,800</td><td class="highlight">Core + SSH.NET</td><td class="proj-desc">Ops toolbox: cert, time, repo, port scan, net scan</td></tr>
+    <tr><td class="proj-name">Gdterm.UI</td><td class="num">40+</td><td class="num">~5,800</td><td class="highlight">all above</td><td class="proj-desc">WinForms shell, 15+ panels, forms, controls</td></tr>
+  </table>
+</div>
+
+<!-- ── Memory Profile ── -->
+<div class="table-section">
+  <h2>💾 Memory Profile (15 tabs target: 30-80MB)</h2>
+  <table>
+    <tr><th>Resource</th><th>Per-Instance</th><th>Strategy</th></tr>
+    <tr><td class="proj-name">GDI+ Panel (LightweightRenderer v2)</td><td class="num">~0.3 MB</td><td class="proj-desc">Font/Brush cached static, 16ms throttle, 300-line cap, Pause on tab switch</td></tr>
+    <tr><td class="proj-name">SSH Session (SSH.NET)</td><td class="num">~2-3 MB</td><td class="proj-desc">Lazy connect on tab select, not on create</td></tr>
+    <tr><td class="proj-name">RichTextBox (batch results)</td><td class="num">~3-5 MB</td><td class="proj-desc">1 instance, only when batch panel opened</td></tr>
+    <tr><td class="proj-name">Local Terminal Process</td><td class="num">~5 MB</td><td class="proj-desc">1 instance, only when local terminal opened</td></tr>
+    <tr><td class="proj-name">Static HttpClient (AI)</td><td class="num">~0.5 MB</td><td class="proj-desc">Shared across instances, no socket exhaustion</td></tr>
+    <tr><td class="proj-name">Config/Store objects</td><td class="num">~0.5 MB</td><td class="proj-desc">Hand-rolled JSON, no external parser</td></tr>
+  </table>
+</div>
+
+<!-- ── Security Model ── -->
+<div class="table-section">
+  <h2>🔐 Security Model</h2>
+  <table>
+    <tr><th>Layer</th><th>Mechanism</th><th>Details</th></tr>
+    <tr><td class="proj-name">Master Password</td><td class="highlight">SHA256 + salt</td><td class="proj-desc">First-launch wizard, 30-min idle hard cap, re-auth for sensitive ops</td></tr>
+    <tr><td class="proj-name">Credential Storage</td><td class="highlight">KeePass .kdbx</td><td class="proj-desc">AES-256 encrypted, SSH keys as binary attachments, 3-tier resolution chain</td></tr>
+    <tr><td class="proj-name">Audit Logging</td><td class="highlight">JSON Lines + sanitizer</td><td class="proj-desc">13 regex masks, XOR encryption option, 5 independent toggles</td></tr>
+    <tr><td class="proj-name">Secret Scanner</td><td class="highlight">3-layer detection</td><td class="proj-desc">Filename (15 root keywords) + Shannon entropy (4.5) + 30+ regex rules + Office/CSV parser</td></tr>
+    <tr><td class="proj-name">Dangerous Commands</td><td class="highlight">40+ rules, 15 categories</td><td class="proj-desc">Configurable JSON, multi-confirm, whitelist, broadcast protection</td></tr>
+  </table>
+</div>
+
+<!-- ── Footer ── -->
+<div style="text-align: center; margin-top: 40px; color: #444; font-size: 11px;">
+  <div class="term-header" style="display: inline-flex; border-radius: 6px; margin-bottom: 0;">
+    <div class="term-dot r"></div>
+    <div class="term-dot y"></div>
+    <div class="term-dot g"></div>
+    <span class="term-title">gdterm v0.1 · .NET Framework 4.6.2 · Win7+ · Portable</span>
+  </div>
+  <div style="margin-top: 10px;">Generated 2026-07-24 · 12 projects · 170+ files · 22,000+ lines · 53 features · 0 runtime NuGet deps</div>
+</div>
+
+</body>
+</html>
