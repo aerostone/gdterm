@@ -118,6 +118,9 @@ ConnectionTree 双击
 | `SessionStateCoordinator` | 窗口几何与打开标签的保存/恢复 |
 | `MainFormMenuBuilder` | 菜单树构建（回调由 MainForm 提供） |
 | `ActiveSessionBridge` | 活动会话 → Toolbox / PortForward 绑定 |
+| `TabReconnectService` | 重连后凭据回填 + 懒连接就绪轮询（避免 Watchdog 假成功） |
+| `MasterPasswordPrompt` | 敏感操作主密码再验证对话框 |
+| `ConnectionImportExportUi` | 连接导入/导出文件对话框与 merge |
 
 **约定**：新业务逻辑优先进 Services；`MainForm` 保留布局与事件，`TabContainerControl` 保留 Tab chrome / 字典 / 关签编排。
 
@@ -190,7 +193,7 @@ ConnectionTree 双击
 | 关标签不关隧道 / 多通道不 Unregister | **已修** | 引用计数式 Close + SessionClosed |
 | 无全局异常钩子 | **已修** | CrashLog + SecurityEvent |
 | ARCHITECTURE 空骨架 | **已修（本文）** | |
-| MainForm / TabContainer 上帝对象 | **部分已修** | Services 抽出（ProtocolTabOpener/SidePanel/Lifecycle/MenuBuilder 等）；MainForm~830、TabContainer~550；完整 SessionOrchestrator 仍 deferred |
+| MainForm / TabContainer 上帝对象 | **部分已修** | Services 抽出（ProtocolTabOpener/SidePanel/Lifecycle/MenuBuilder/Reconnect/ImportExport 等）；MainForm~700、TabContainer~510；完整 SessionOrchestrator 仍 deferred |
 | PortForward / Toolbox 活动会话注入 | **已修** | `ISshPortForwardHost` + `ISshRemoteSession` + ActiveSessionBridge |
 | `IRemoteToolModule` SSH.NET 泄漏 | **已修** | `SetSshSession(ISshRemoteSession)` |
 | AI history 无上限、ApiKey 明文 JSON | **已修** | MaxHistoryMessages=40；ApiKey gdk2 主密码 AES（gdk1 兼容） |

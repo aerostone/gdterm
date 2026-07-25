@@ -543,79 +543,7 @@ namespace Gdterm.UI.Forms
 
         private bool ReAuthenticate(string action)
         {
-            if (_securityManager.IsLocked)
-            {
-                MessageBox.Show("应用已锁定，请先解锁", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return false;
-            }
-
-            using (var dialog = new Form())
-            {
-                dialog.Text = "安全验证";
-                dialog.Size = new Size(380, 180);
-                dialog.StartPosition = FormStartPosition.CenterParent;
-                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
-                dialog.MaximizeBox = false;
-                dialog.MinimizeBox = false;
-                dialog.BackColor = Color.FromArgb(35, 35, 35);
-
-                var label = new Label
-                {
-                    Text = action + "需要验证主密码：",
-                    Font = new Font("Microsoft YaHei", 10f),
-                    ForeColor = Color.FromArgb(200, 200, 200),
-                    Location = new Point(15, 15),
-                    Size = new Size(340, 25)
-                };
-                var pwdBox = new TextBox
-                {
-                    Location = new Point(15, 45),
-                    Size = new Size(335, 28),
-                    Font = new Font("Consolas", 11f),
-                    UseSystemPasswordChar = true,
-                    BackColor = Color.FromArgb(50, 50, 50),
-                    ForeColor = Color.White,
-                    BorderStyle = BorderStyle.FixedSingle
-                };
-                var errorLabel = new Label
-                {
-                    Text = "",
-                    Font = new Font("Microsoft YaHei", 9f),
-                    ForeColor = Color.FromArgb(255, 100, 100),
-                    Location = new Point(15, 78),
-                    Size = new Size(335, 20)
-                };
-                var okBtn = new Button
-                {
-                    Text = "验证",
-                    Size = new Size(80, 32),
-                    Location = new Point(270, 105),
-                    FlatStyle = FlatStyle.Flat,
-                    BackColor = Color.FromArgb(0, 122, 204),
-                    ForeColor = Color.White
-                };
-                okBtn.Click += (s, ev) =>
-                {
-                    if (_securityManager.VerifyMasterPassword(pwdBox.Text))
-                    {
-                        dialog.DialogResult = DialogResult.OK;
-                        dialog.Close();
-                    }
-                    else
-                    {
-                        errorLabel.Text = "密码不正确";
-                        pwdBox.SelectAll();
-                        pwdBox.Focus();
-                    }
-                };
-                pwdBox.KeyDown += (s, ev) =>
-                {
-                    if (ev.KeyCode == Keys.Enter) okBtn.PerformClick();
-                };
-                dialog.Controls.AddRange(new Control[] { label, pwdBox, errorLabel, okBtn });
-                dialog.AcceptButton = okBtn;
-                return dialog.ShowDialog(this) == DialogResult.OK;
-            }
+            return MasterPasswordPrompt.Confirm(this, _securityManager, action);
         }
 
         private void OnAiSettings(object sender, EventArgs e)
@@ -667,67 +595,12 @@ namespace Gdterm.UI.Forms
 
         private void OnImportConnections(object sender, EventArgs e)
         {
-            using (var dlg = new OpenFileDialog
-            {
-                Title = "导入连接",
-                Filter = "所有支持格式|*.json;*.csv;*.xml|JSON|*.json|CSV|*.csv|mRemoteNG XML|*.xml"
-            })
-            {
-                if (dlg.ShowDialog(this) != DialogResult.OK) return;
-                try
-                {
-                    var imported = ImportExport.ConnectionImporterExporter.ImportFromFile(dlg.FileName);
-                    if (imported.Count == 0)
-                    {
-                        MessageBox.Show("未找到可导入的连接", "导入", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        return;
-                    }
-                    var existing = _connectionStore.LoadAll();
-                    var merge = ImportExport.ConnectionImporterExporter.MergeConnections(existing, imported);
-                    foreach (var conn in merge.NewConnections)
-                        _connectionStore.Add(conn);
-                    _connectionTree.LoadConnections();
-                    MessageBox.Show(
-                        "导入完成：\n新增 " + merge.NewConnections.Count + "\n跳过 " + merge.Duplicates.Count,
-                        "导入成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("导入失败：" + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
+            ConnectionImportExportUi.Import(this, _connectionStore, () => _connectionTree.LoadConnections());
         }
 
         private void OnExportConnections(object sender, EventArgs e)
         {
-            var connections = _connectionStore.LoadAll();
-            if (connections.Count == 0)
-            {
-                MessageBox.Show("没有可导出的连接", "导出", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-            using (var dlg = new SaveFileDialog
-            {
-                Title = "导出连接",
-                Filter = "JSON|*.json|CSV|*.csv",
-                FileName = "gdterm-connections"
-            })
-            {
-                if (dlg.ShowDialog(this) != DialogResult.OK) return;
-                try
-                {
-                    if (dlg.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
-                        ImportExport.ConnectionImporterExporter.ExportAsCsv(connections, dlg.FileName);
-                    else
-                        ImportExport.ConnectionImporterExporter.ExportAsJson(connections, dlg.FileName);
-                    MessageBox.Show("已导出 " + connections.Count + " 个连接", "导出成功",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("导出失败：" + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
+            ConnectionImportExportUi.Export(this, _connectionStore);
         }
 
         // ====== 侧边面板（工厂在 SidePanelFactory） ======

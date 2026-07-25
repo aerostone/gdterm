@@ -39,7 +39,9 @@ status: partial
 - **done**:
   - `ActiveSessionBridge` / `CredentialResolver` / `RdpOptionsBuilder`
   - `SidePanelFactory` / `SessionStateCoordinator` / `TabSessionLifecycle`
-  - `ProtocolTabOpener` + `TabSessionState`/`OpenedTab`（SSH/RDP/Serial/Local/SFTP/分屏）
-  - `MainFormMenuBuilder`（菜单树回调式构建）
-- **metrics**: MainForm 1072→~831；TabContainer 836→~550
-- **remaining**: MainForm 仍持有大量事件处理与布局；TabContainer 仍负责字典/关签/重连/绘制 chrome；完整 SessionOrchestrator 非必要可不做
+  - `ProtocolTabOpener` + `TabSessionState`/`OpenedTab`
+  - `MainFormMenuBuilder`
+  - `TabReconnectService`（重连就绪轮询）
+  - `MasterPasswordPrompt` / `ConnectionImportExportUi`
+- **metrics**: MainForm 1072→~704；TabContainer 836→~513
+- **remaining**: MainForm 仍持有布局/视图模式/热键/部分对话框事件；TabContainer 仍负责字典/关签/绘制 chrome；完整 SessionOrchestrator deferred

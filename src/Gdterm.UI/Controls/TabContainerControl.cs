@@ -31,6 +31,7 @@ namespace Gdterm.UI.Controls
         private readonly IConnectionStore _connectionStore;
         private readonly TabSessionLifecycle _lifecycle;
         private readonly ProtocolTabOpener _opener;
+        private readonly TabReconnectService _reconnectService;
         private readonly Dictionary<TabPage, TabSessionState> _sessions = new Dictionary<TabPage, TabSessionState>();
         private TabControl _tabControl;
 
@@ -70,6 +71,7 @@ namespace Gdterm.UI.Controls
                 new CredentialResolver(keepassService, folderCredStore));
             _opener.OnTerminalConnected = HandleTerminalConnected;
             _opener.OnRdpConnected = HandleRdpConnected;
+            _reconnectService = new TabReconnectService();
 
             if (_reconnectWatchdog != null)
             {
@@ -396,49 +398,10 @@ namespace Gdterm.UI.Controls
                 !_sessions.TryGetValue(_tabControl.SelectedTab, out var newSession))
                 return false;
 
-            if (cred != null)
-            {
-                newSession.Credential = cred;
-                if (newSession.Control is TerminalControl tcCred)
-                    tcCred.Credentials = cred;
-            }
-
-            // 懒连接：主动触发并等待，避免 Watchdog 把“仅建标签”当成重连成功
-            try
-            {
-                if (newSession.Control is TerminalControl tc)
-                {
-                    tc.ResumeRendering();
-                    var deadline = DateTime.UtcNow.AddSeconds(20);
-                    while (DateTime.UtcNow < deadline)
-                    {
-                        if (tc.IsConnected)
-                        {
-                            newSession.IsConnected = true;
-                            WireHealthAndReconnect(newSession, tc.Session);
-                            return true;
-                        }
-                        System.Threading.Thread.Sleep(200);
-                        Application.DoEvents();
-                    }
-                    return tc.IsConnected;
-                }
-
-                if (newSession.PendingConnect != null)
-                {
-                    var connect = newSession.PendingConnect;
-                    newSession.PendingConnect = null;
-                    connect();
-                    return newSession.IsConnected;
-                }
-            }
-            catch
-            {
-                return false;
-            }
-
-            // 非终端/非 RDP 延迟连接：仅表示标签已重建，不算连接成功
-            return false;
+            return _reconnectService.CompleteAfterOpen(
+                newSession,
+                cred,
+                WireHealthAndReconnect);
         }
 
         private IEnumerable<TabPage> EnumTabs()
