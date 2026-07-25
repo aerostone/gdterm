@@ -45,6 +45,8 @@
     <Compile Include="Models\LockStateChangedEventArgs.cs" />
     <Compile Include="Models\MasterPasswordConfig.cs" />
     <Compile Include="SecurityManager.cs" />
+    <Compile Include="SecretScanConfig.cs" />
+    <Compile Include="SecretScanner.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

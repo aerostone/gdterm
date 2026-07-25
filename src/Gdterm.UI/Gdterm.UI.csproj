@@ -123,6 +123,7 @@
       <SubType>UserControl</SubType>
     </Compile>
     <Compile Include="Hotkeys\GlobalHotkeyManager.cs" />
+    <Compile Include="Controls\SecretScanPanel.cs" />
     <Compile Include="MultiChannelPanel.cs" />
     <Compile Include="CommandHistoryPanel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
