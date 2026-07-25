@@ -74,6 +74,13 @@ namespace Gdterm.UI.Forms
             connectionMenu.DropDownItems.Add("新建连接", null, OnNewConnection);
             menuStrip.Items.Add(connectionMenu);
 
+            var viewMenu = new ToolStripMenuItem("视图");
+            viewMenu.DropDownItems.Add("水平分割", null, (s, e) => _tabContainer.SplitHorizontal());
+            viewMenu.DropDownItems.Add("垂直分割", null, (s, e) => _tabContainer.SplitVertical());
+            viewMenu.DropDownItems.Add(new ToolStripSeparator());
+            viewMenu.DropDownItems.Add("关闭分屏", null, (s, e) => { /* TODO: 关闭当前分屏 */ });
+            menuStrip.Items.Add(viewMenu);
+
             var toolsMenu = new ToolStripMenuItem("工具");
             toolsMenu.DropDownItems.Add("密码库管理", null, OnKeePassManager);
             toolsMenu.DropDownItems.Add("AI 设置", null, OnAiSettings);

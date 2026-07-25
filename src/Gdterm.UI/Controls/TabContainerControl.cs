@@ -83,6 +83,9 @@ namespace Gdterm.UI.Controls
                 case ProtocolType.RDP:
                     tab = CreateRdpTab(config);
                     break;
+                case ProtocolType.Serial:
+                    tab = CreateSerialTab(config);
+                    break;
                 default:
                     MessageBox.Show($"不支持的协议: {config.Protocol}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
@@ -93,6 +96,62 @@ namespace Gdterm.UI.Controls
 
             // 记录日志
             _auditLogger.LogConnection(config.Id, config.Name, config.Host, true);
+        }
+
+        /// <summary>
+        /// 水平分割当前标签页（左右）
+        /// </summary>
+        public void SplitHorizontal()
+        {
+            var selectedTab = _tabControl.SelectedTab;
+            if (selectedTab == null || !_sessions.ContainsKey(selectedTab))
+            {
+                MessageBox.Show("请先打开一个连接", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var session = _sessions[selectedTab];
+            var currentControl = session.Control;
+
+            // 创建新的终端控件
+            var newTerminal = new TerminalControl(session.Config, _terminalFactory, _tunnelManager, _auditLogger);
+            newTerminal.Dock = DockStyle.Fill;
+
+            // 创建水平分割
+            var splitPane = SplitPaneControl.CreateHorizontal(currentControl, newTerminal, 0.5);
+            splitPane.Dock = DockStyle.Fill;
+
+            // 替换标签页内容
+            selectedTab.Controls.Clear();
+            selectedTab.Controls.Add(splitPane);
+        }
+
+        /// <summary>
+        /// 垂直分割当前标签页（上下）
+        /// </summary>
+        public void SplitVertical()
+        {
+            var selectedTab = _tabControl.SelectedTab;
+            if (selectedTab == null || !_sessions.ContainsKey(selectedTab))
+            {
+                MessageBox.Show("请先打开一个连接", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            var session = _sessions[selectedTab];
+            var currentControl = session.Control;
+
+            // 创建新的终端控件
+            var newTerminal = new TerminalControl(session.Config, _terminalFactory, _tunnelManager, _auditLogger);
+            newTerminal.Dock = DockStyle.Fill;
+
+            // 创建垂直分割
+            var splitPane = SplitPaneControl.CreateVertical(currentControl, newTerminal, 0.5);
+            splitPane.Dock = DockStyle.Fill;
+
+            // 替换标签页内容
+            selectedTab.Controls.Clear();
+            selectedTab.Controls.Add(splitPane);
         }
 
         /// <summary>
@@ -152,6 +211,32 @@ namespace Gdterm.UI.Controls
                 Config = config,
                 Control = label,
                 Protocol = ProtocolType.RDP,
+                IsConnected = false
+            };
+
+            return tab;
+        }
+
+        private TabPage CreateSerialTab(ConnectionConfig config)
+        {
+            var tab = new TabPage(config.Name)
+            {
+                ToolTipText = $"Serial: {config.Serial?.PortName ?? "Unknown"}"
+            };
+
+            var label = new Label
+            {
+                Text = $"串口连接: {config.Serial?.PortName}\n\n（串口标签页待实现）",
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            tab.Controls.Add(label);
+
+            _sessions[tab] = new TabSession
+            {
+                Config = config,
+                Control = label,
+                Protocol = ProtocolType.Serial,
                 IsConnected = false
             };
 
