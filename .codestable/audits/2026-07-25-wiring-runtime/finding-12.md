@@ -6,7 +6,7 @@ nature: arch-drift
 severity: P1
 confidence: high
 suggested_action: cs-refactor
-status: partial
+status: resolved
 ---
 
 # Finding 12：UI/Tools 分层泄漏 SSH.NET 与 new 具体类
@@ -36,5 +36,5 @@ UI 直接 `new RdpClient` / `new SerialSession` / `TerminalSessionFactory.Create
 
 ## 修复状态
 
-- **status**: `partial`
-- **note**: ITunnelManager + ISshRemoteSession + ISshPortForwardHost; UI free of Renci; Rdp/Serial factories still open
+- **status**: `resolved`
+- **note**: ITunnelManager + ISshRemoteSession + ISshPortForwardHost + IRdpClientFactory + ITerminalSessionFactory(Create/CreateSerial/CreateLocal)；UI 无 Renci、无 new RdpClient/TerminalSession/SerialSession；PortForward/Toolbox 走抽象

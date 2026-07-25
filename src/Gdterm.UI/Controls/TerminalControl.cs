@@ -151,14 +151,16 @@ namespace Gdterm.UI.Controls
 
                 if (_config.Protocol == ProtocolType.Serial)
                 {
-                    session = new SerialSession();
+                    if (_terminalFactory == null)
+                        throw new InvalidOperationException("ITerminalSessionFactory 未注入，无法创建串口会话");
+                    session = _terminalFactory.CreateSerial();
                     await Task.Run(() => session.Connect(_config, credential));
                 }
                 else
                 {
-                    session = _terminalFactory != null
-                        ? _terminalFactory.Create(new TerminalEndpoint { Host = _config.Host, Port = _config.Port })
-                        : new TerminalSession();
+                    if (_terminalFactory == null)
+                        throw new InvalidOperationException("ITerminalSessionFactory 未注入，无法创建 SSH 会话");
+                    session = _terminalFactory.Create(new TerminalEndpoint { Host = _config.Host, Port = _config.Port });
 
                     if (_config.Tunnel != null && _tunnelManager != null)
                     {

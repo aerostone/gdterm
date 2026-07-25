@@ -4,7 +4,7 @@ using Gdterm.Core.Models;
 namespace Gdterm.Terminal
 {
     /// <summary>
-    /// 终端会话工厂——按端点创建 SSH TerminalSession
+    /// 终端会话工厂——按协议创建 SSH / Serial / Local 会话。
     /// </summary>
     public class TerminalSessionFactory : ITerminalSessionFactory
     {
@@ -16,18 +16,24 @@ namespace Gdterm.Terminal
             return new TerminalSession();
         }
 
-        /// <summary>
-        /// 创建串口会话
-        /// </summary>
-        public static SerialSession CreateSerial()
+        public ITerminalSession CreateSerial()
         {
             return new SerialSession();
         }
 
-        /// <summary>
-        /// 创建本地终端会话
-        /// </summary>
-        public static LocalTerminalSession CreateLocal(string shellPath = null, string workingDirectory = null)
+        public ITerminalSession CreateLocal(string shellPath = null, string workingDirectory = null)
+        {
+            return new LocalTerminalSession(shellPath, workingDirectory);
+        }
+
+        /// <summary>兼容旧静态调用</summary>
+        public static SerialSession CreateSerialStatic()
+        {
+            return new SerialSession();
+        }
+
+        /// <summary>兼容旧静态调用</summary>
+        public static LocalTerminalSession CreateLocalStatic(string shellPath = null, string workingDirectory = null)
         {
             return new LocalTerminalSession(shellPath, workingDirectory);
         }

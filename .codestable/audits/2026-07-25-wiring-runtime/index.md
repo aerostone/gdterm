@@ -146,9 +146,9 @@ mode: standard-plus
 | 7 | P1 | resolved | `0cc0c8d` 重连等真实连接 |
 | 8 | P1 | resolved | gdk2 主密码 AES + 剪贴板 TTL + CLI 脱敏 |
 | 9 | P0 | resolved | `09a9700` 全局异常钩子 |
-| 10 | P1 | partial | `ActiveSessionBridge` 抽出；MainForm/TabContainer 全量拆分仍待 |
+| 10 | P1 | partial | ActiveSessionBridge + CredentialResolver + RdpOptionsBuilder；全量拆分仍待 |
 | 11 | P0 | resolved | `0ee9b4a` ARCHITECTURE 回填 |
-| 12 | P1 | partial | ITunnelManager + ISshRemoteSession + ISshPortForwardHost；UI 无 Renci；Rdp/Serial 工厂仍待 |
+| 12 | P1 | resolved | ITunnelManager + SSH/RDP 会话工厂与抽象；UI 无 Renci、无 new 具体会话类 |
 | 13 | P1 | resolved | `0355592` PortForward/Toolbox 会话注入 |
 | 14 | P1 | resolved | `08b913d` ProtocolType 命名 |
 

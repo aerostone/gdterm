@@ -53,3 +53,10 @@
 - 密码分析器检测弱/重复/过期密码，生成健康报告
 - 凭据继承支持文件夹→子连接传播，连接级覆盖优先
 - 会话持久化保存窗口布局和打开的 tab，重启自动恢复
+
+## 分层约束
+
+- UI 不直接 `new RdpClient` / `TerminalSession` / `SerialSession`；经 `IRdpClientFactory` / `ITerminalSessionFactory`
+- 运维工具走 `ISshRemoteSession`；端口转发走 `ISshPortForwardHost`；隧道走 `ITunnelManager`
+- 凭据解析走 `CredentialResolver`；活动会话侧栏绑定走 `ActiveSessionBridge`
+

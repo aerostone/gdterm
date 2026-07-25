@@ -141,6 +141,8 @@
     <Compile Include="Controls\TerminalControl.cs" />
     <Compile Include="Diagnostics\CrashLog.cs" />
     <Compile Include="Diagnostics\ClipboardProtector.cs" />
+    <Compile Include="Services\ActiveSessionBridge.cs" />
+    <Compile Include="Services\CredentialResolver.cs" />
     <Compile Include="Controls\SplitPaneControl.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Forms\ConnectionDialog.cs">

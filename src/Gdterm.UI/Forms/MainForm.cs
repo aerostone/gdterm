@@ -13,6 +13,7 @@ using Gdterm.Logging.Models;
 using Gdterm.Security;
 using Gdterm.Sftp;
 using Gdterm.Terminal;
+using Gdterm.Rdp;
 using Gdterm.Tools;
 using Gdterm.Tunnel;
 using Gdterm.UI.Controls;
@@ -33,6 +34,7 @@ namespace Gdterm.UI.Forms
         private readonly IConnectionStore _connectionStore;
         private readonly ITunnelManager _tunnelManager;
         private readonly ITerminalSessionFactory _terminalFactory;
+        private readonly IRdpClientFactory _rdpFactory;
         private readonly ISftpServiceFactory _sftpFactory;
         private readonly IKeePassService _keepassService;
         private readonly IAuditLogger _auditLogger;
@@ -80,6 +82,7 @@ namespace Gdterm.UI.Forms
             DangerousCommandDetector dangerousCmdDetector,
             IFolderCredentialStore folderCredStore,
             SessionStateStore sessionStore,
+            IRdpClientFactory rdpFactory = null,
             IBookmarkStore bookmarkStore = null,
             CommandHistoryStore commandHistoryStore = null,
             QuickCommandStore quickCommandStore = null,
@@ -93,6 +96,7 @@ namespace Gdterm.UI.Forms
             _connectionStore = connectionStore;
             _tunnelManager = tunnelManager;
             _terminalFactory = terminalFactory;
+            _rdpFactory = rdpFactory ?? new RdpClientFactory();
             _sftpFactory = sftpFactory;
             _keepassService = keepassService;
             _auditLogger = auditLogger;
@@ -259,7 +263,8 @@ namespace Gdterm.UI.Forms
                 _folderCredStore,
                 _dangerousCmdDetector,
                 _reconnectWatchdog,
-                _connectionStore);
+                _connectionStore,
+                _rdpFactory);
             _sessionBridge = new ActiveSessionBridge(_tabContainer);
             _tabContainer.Dock = DockStyle.Fill;
             _tabContainer.ActiveSessionChanged += OnActiveSessionChanged;

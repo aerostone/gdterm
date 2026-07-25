@@ -8,16 +8,15 @@ using Gdterm.Connections;
 using Gdterm.Core.Enums;
 using Gdterm.Core.Models;
 using Gdterm.KeePass;
-using Gdterm.KeePass.Models;
 using Gdterm.Logging;
 using Gdterm.Logging.Models;
 using Gdterm.Rdp;
-using Gdterm.Rdp.Models;
 using Gdterm.Security;
 using Gdterm.Sftp;
 using Gdterm.Terminal;
 using Gdterm.Tools;
 using Gdterm.Tunnel;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Controls
 {
@@ -28,11 +27,13 @@ namespace Gdterm.UI.Controls
     {
         private readonly ITunnelManager _tunnelManager;
         private readonly ITerminalSessionFactory _terminalFactory;
+        private readonly IRdpClientFactory _rdpFactory;
         private readonly ISftpServiceFactory _sftpFactory;
         private readonly IAiAssistantService _aiService;
         private readonly IAuditLogger _auditLogger;
         private readonly IKeePassService _keepassService;
         private readonly IFolderCredentialStore _folderCredStore;
+        private readonly CredentialResolver _credentialResolver;
         private readonly DangerousCommandDetector _dangerousDetector;
         private readonly AutoReconnectWatchdog _reconnectWatchdog;
         private readonly IConnectionStore _connectionStore;
@@ -56,15 +57,18 @@ namespace Gdterm.UI.Controls
             IFolderCredentialStore folderCredStore,
             DangerousCommandDetector dangerousDetector = null,
             AutoReconnectWatchdog reconnectWatchdog = null,
-            IConnectionStore connectionStore = null)
+            IConnectionStore connectionStore = null,
+            IRdpClientFactory rdpFactory = null)
         {
             _tunnelManager = tunnelManager;
             _terminalFactory = terminalFactory;
+            _rdpFactory = rdpFactory ?? new RdpClientFactory();
             _sftpFactory = sftpFactory;
             _aiService = aiService;
             _auditLogger = auditLogger;
             _keepassService = keepassService;
             _folderCredStore = folderCredStore;
+            _credentialResolver = new CredentialResolver(keepassService, folderCredStore);
             _dangerousDetector = dangerousDetector;
             _reconnectWatchdog = reconnectWatchdog;
             _connectionStore = connectionStore;
@@ -151,7 +155,9 @@ namespace Gdterm.UI.Controls
         /// <summary>打开本地终端</summary>
         public void OpenLocalTerminal(string shellPath = null)
         {
-            var local = TerminalSessionFactory.CreateLocal(shellPath);
+            if (_terminalFactory == null)
+                throw new InvalidOperationException("ITerminalSessionFactory 未注入，无法创建本地终端");
+            var local = _terminalFactory.CreateLocal(shellPath);
             var tab = new TabPage("本地终端")
             {
                 ToolTipText = "本地 Shell"
@@ -213,75 +219,9 @@ namespace Gdterm.UI.Controls
 
         private CredentialPayload ResolveCredential(ConnectionConfig config)
         {
-            try
-            {
-                if (_keepassService == null || !_keepassService.IsUnlocked)
-                    return null;
-
-                KeePassEntry entry = null;
-
-                if (!string.IsNullOrEmpty(config.CredentialRefId))
-                {
-                    try { entry = GetKeePassEntry(config.CredentialRefId); }
-                    catch { }
-                }
-
-                if (entry == null && _folderCredStore != null && !string.IsNullOrEmpty(config.GroupPath))
-                {
-                    try
-                    {
-                        var inheritedRefId = _folderCredStore.ResolveByInheritance(config.GroupPath);
-                        if (!string.IsNullOrEmpty(inheritedRefId))
-                            entry = GetKeePassEntry(inheritedRefId);
-                    }
-                    catch { }
-                }
-
-                if (entry == null)
-                    entry = _keepassService.FindEntryByConnection(config);
-
-                if (entry == null) return null;
-
-                var credential = new CredentialPayload
-                {
-                    Username = !string.IsNullOrEmpty(entry.Username) ? entry.Username : config.Username,
-                    Password = entry.Password ?? ""
-                };
-
-                if (config.Protocol == ProtocolType.SSH && entry.SshPrivateKeyData != null)
-                {
-                    credential.SshPrivateKey = entry.SshPrivateKeyData;
-                    credential.SshPrivateKeyPassphrase = entry.SshPrivateKeyPassphrase;
-                }
-
-                return credential;
-            }
-            catch
-            {
-                return null;
-            }
-        }
-
-        private KeePassEntry GetKeePassEntry(string entryId)
-        {
-            var entries = _keepassService.ListEntries();
-            foreach (var summary in entries)
-            {
-                if (summary.Id == entryId)
-                {
-                    var cred = _keepassService.GetCredential(entryId);
-                    return new KeePassEntry
-                    {
-                        Id = summary.Id,
-                        Title = summary.Title,
-                        Username = cred.Username,
-                        Password = cred.Password,
-                        SshPrivateKeyData = _keepassService.GetSshPrivateKey(entryId),
-                        SshPrivateKeyPassphrase = _keepassService.GetSshPrivateKeyPassphrase(entryId)
-                    };
-                }
-            }
-            return null;
+            return _credentialResolver != null
+                ? _credentialResolver.Resolve(config)
+                : null;
         }
 
         private TabPage CreateSshTerminalTab(ConnectionConfig config, CredentialPayload credential)
@@ -337,11 +277,11 @@ namespace Gdterm.UI.Controls
                 catch { }
             }
 
-            var rdp = new RdpClient();
+            var rdp = _rdpFactory.Create();
             rdp.Control.Dock = DockStyle.Fill;
             tab.Controls.Add(rdp.Control);
 
-            var options = BuildRdpOptions(config);
+            var options = RdpOptionsBuilder.FromConnection(config);
 
             // 延迟连接：选中标签时再 Connect
             var session = new TabSession
@@ -390,26 +330,6 @@ namespace Gdterm.UI.Controls
 
             _sessions[tab] = session;
             return tab;
-        }
-
-        private static RdpOptions BuildRdpOptions(ConnectionConfig config)
-        {
-            var opts = new RdpOptions();
-            if (config?.Metadata == null) return opts;
-
-            if (config.Metadata.ContainsKey("rdp_drives"))
-                opts.RedirectDrives = config.Metadata["rdp_drives"] == "true";
-            if (config.Metadata.ContainsKey("rdp_clipboard"))
-                opts.RedirectClipboard = config.Metadata["rdp_clipboard"] != "false";
-            if (config.Metadata.ContainsKey("rdp_colordepth") &&
-                int.TryParse(config.Metadata["rdp_colordepth"], out var depth))
-                opts.ColorDepth = depth;
-            if (config.Metadata.ContainsKey("rdp_fullscreen"))
-                opts.FullScreen = config.Metadata["rdp_fullscreen"] == "true";
-            if (config.Metadata.ContainsKey("rdp_nla"))
-                opts.EnableNLA = config.Metadata["rdp_nla"] != "false";
-
-            return opts;
         }
 
         private TabPage CreateSerialTab(ConnectionConfig config)
@@ -902,7 +822,7 @@ namespace Gdterm.UI.Controls
             public bool IsConnected { get; set; }
             public CredentialPayload Credential { get; set; }
             public string SessionId { get; set; }
-            public RdpClient RdpClient { get; set; }
+            public IRdpClient RdpClient { get; set; }
             public ConnectionHealthMonitor HealthMonitor { get; set; }
             public Action PendingConnect { get; set; }
         }

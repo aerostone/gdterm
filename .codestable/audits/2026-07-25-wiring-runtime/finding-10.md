@@ -36,4 +36,4 @@ status: partial
 ## 修复状态
 
 - **status**: `partial`
-- **note**: ActiveSessionBridge extracted; full MainForm/TabContainer split still deferred
+- **note**: ActiveSessionBridge + CredentialResolver + RdpOptionsBuilder 已抽出；MainForm 侧栏绑定经 bridge；全量 SessionOrchestrator/菜单拆分仍 deferred

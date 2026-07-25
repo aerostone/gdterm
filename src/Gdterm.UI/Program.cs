@@ -10,6 +10,7 @@ using Gdterm.Security;
 using Gdterm.Security.Models;
 using Gdterm.Sftp;
 using Gdterm.Terminal;
+using Gdterm.Rdp;
 using Gdterm.Tools;
 using Gdterm.Tools.Modules;
 using Gdterm.Tunnel;
@@ -109,6 +110,7 @@ namespace Gdterm.UI
             var connectionStore = new ConnectionStoreJson(connectionsPath);
             var tunnelManager = new TunnelManager();
             var terminalFactory = new TerminalSessionFactory();
+            var rdpFactory = new RdpClientFactory();
             var sftpFactory = new SftpServiceFactory();
             var keepassService = new KeePassService(keepassPath);
             // 异常退出时尽量清掉本进程注入的 TERMSRV 凭据
@@ -171,6 +173,7 @@ namespace Gdterm.UI
                 dangerousCmdDetector,
                 folderCredStore,
                 sessionStateStore,
+                rdpFactory,
                 bookmarkStore,
                 commandHistoryStore,
                 quickCommandStore,
