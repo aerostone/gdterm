@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -78,6 +79,18 @@ namespace Gdterm.UI.Controls
             if (_profile.ScrollbackLines < 100) _profile.ScrollbackLines = 100;
 
             InitializeComponent();
+
+            // 默认关闭；仅当 Metadata/terminalProfile 显式 autoLog=true 时启用
+            if (_profile != null && _profile.AutoLog)
+            {
+                try
+                {
+                    var logDir = Path.Combine(
+                        AppDomain.CurrentDomain.BaseDirectory, "data", "logs", "terminal");
+                    EnableAutoLog(logDir);
+                }
+                catch { }
+            }
         }
 
         /// <summary>本地终端专用构造</summary>

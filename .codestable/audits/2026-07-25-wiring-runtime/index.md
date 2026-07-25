@@ -90,8 +90,9 @@ mode: standard-plus
 | 文件 | 名称 | 类型 | 说明 |
 |---|---|---|---|
 | `PasswordHealthPanel.cs` | PasswordHealthPanel | 未用控件 | UI 只用 `PasswordHealthForm` |
-| `TerminalControl.EnableAutoLog` | 方法 | 无调用方 | 自动日志功能死入口 |
-| `LogonScriptEngine` | 引擎 | 半接线 | 菜单只 CRUD，连接成功不 Execute |
+| `SessionBookmarksPanel` | 书签侧栏 | **已接线** | 工具菜单「书签 / 最近连接」 |
+| `TerminalControl.EnableAutoLog` | 方法 | **已接线** | Metadata/terminalProfile `autoLog=true` 时启用；默认关 |
+| `LogonScriptEngine` | 引擎 | **已接线** | 连接成功按 AssociatedConnectionId 执行 |
 | `TabContainerControl._aiService` | 字段 | 注入未用 | 仅赋值 |
 | `IAuditLogger.Log*` 四方法 | API | 业务零调用 | 除错误签名的 LogConnection |
 

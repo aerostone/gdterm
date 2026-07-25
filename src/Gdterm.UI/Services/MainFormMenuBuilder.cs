@@ -38,6 +38,7 @@ namespace Gdterm.UI.Services
             public EventHandler ShowPortForward { get; set; }
             public EventHandler ShowToolbox { get; set; }
             public EventHandler ShowSecretScan { get; set; }
+            public EventHandler ShowBookmarks { get; set; }
             public EventHandler KeePassManager { get; set; }
             public EventHandler PasswordHealth { get; set; }
             public EventHandler PasswordGenerator { get; set; }
@@ -120,6 +121,7 @@ namespace Gdterm.UI.Services
             var toolsMenu = new ToolStripMenuItem("工具(&T)");
             toolsMenu.DropDownItems.Add("运维工具箱", null, cb.ShowToolbox);
             toolsMenu.DropDownItems.Add("敏感信息扫描", null, cb.ShowSecretScan);
+            toolsMenu.DropDownItems.Add("书签 / 最近连接", null, cb.ShowBookmarks);
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
             toolsMenu.DropDownItems.Add("密码库管理(&K)", null, cb.KeePassManager);
             toolsMenu.DropDownItems.Add("密码健康报告(&H)", null, cb.PasswordHealth);

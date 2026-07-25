@@ -1,4 +1,6 @@
 using System;
+using Gdterm.Connections;
+using Gdterm.Core.Models;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -30,6 +32,8 @@ namespace Gdterm.UI.Services
         private readonly HighlightStore _highlightStore;
         private readonly TerminalKeyBindingStore _keyBindingStore;
         private readonly QuickCommandStore _quickCommandStore;
+        private readonly IBookmarkStore _bookmarkStore;
+        private readonly IConnectionStore _connectionStore;
         private readonly IWin32Window _dialogOwner;
 
         public SidePanelFactory(
@@ -44,6 +48,8 @@ namespace Gdterm.UI.Services
             HighlightStore highlightStore,
             TerminalKeyBindingStore keyBindingStore,
             QuickCommandStore quickCommandStore,
+            IBookmarkStore bookmarkStore,
+            IConnectionStore connectionStore,
             IWin32Window dialogOwner)
         {
             _tabs = tabs;
@@ -57,6 +63,8 @@ namespace Gdterm.UI.Services
             _highlightStore = highlightStore;
             _keyBindingStore = keyBindingStore;
             _quickCommandStore = quickCommandStore;
+            _bookmarkStore = bookmarkStore;
+            _connectionStore = connectionStore;
             _dialogOwner = dialogOwner;
         }
 
@@ -263,6 +271,16 @@ namespace Gdterm.UI.Services
                 });
             }
             catch { }
+        }
+
+        public Control CreateBookmarksPanel(Action<ConnectionConfig> onOpen)
+        {
+            if (_bookmarkStore == null)
+                return Unavailable("书签存储未初始化");
+            var panel = new SessionBookmarksPanel(_bookmarkStore, _connectionStore);
+            if (onOpen != null)
+                panel.OpenConnectionRequested += onOpen;
+            return panel;
         }
 
         private static Control Unavailable(string text)

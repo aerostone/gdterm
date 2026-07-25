@@ -191,6 +191,10 @@ namespace Gdterm.UI.Forms
                 ShowPortForward = (s, e) => ShowSidePanel(_sidePanels.CreatePortForwardPanel()),
                 ShowToolbox = (s, e) => ShowSidePanel(_sidePanels.CreateToolboxPanel()),
                 ShowSecretScan = (s, e) => ShowSidePanel(_sidePanels.CreateSecretScanPanel()),
+                ShowBookmarks = (s, e) => ShowSidePanel(_sidePanels.CreateBookmarksPanel(cfg =>
+                {
+                    if (cfg != null) OnConnectionDoubleClicked(null, cfg);
+                })),
                 KeePassManager = OnKeePassManager,
                 PasswordHealth = OnPasswordHealth,
                 PasswordGenerator = OnPasswordGenerator,
@@ -243,6 +247,8 @@ namespace Gdterm.UI.Forms
                 _highlightStore,
                 _keyBindingStore,
                 _quickCommandStore,
+                _bookmarkStore,
+                _connectionStore,
                 this);
             _tabContainer.Dock = DockStyle.Fill;
             _tabContainer.ActiveSessionChanged += OnActiveSessionChanged;

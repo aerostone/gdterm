@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace Gdterm.Core.Models
@@ -74,6 +75,11 @@ namespace Gdterm.Core.Models
         public List<string> AutoRunCommands { get; set; } = new List<string>();
 
         /// <summary>
+        /// 是否启用会话自动日志（默认 false，省磁盘/内存）
+        /// </summary>
+        public bool AutoLog { get; set; } = false;
+
+        /// <summary>
         /// 环境变量（连接后 export 到终端）
         /// </summary>
         public Dictionary<string, string> EnvironmentVariables { get; set; } = new Dictionary<string, string>();
@@ -83,25 +89,46 @@ namespace Gdterm.Core.Models
         /// </summary>
         public static TerminalProfile FromMetadata(Dictionary<string, string> metadata)
         {
-            if (metadata == null || !metadata.ContainsKey("terminalProfile"))
+            TerminalProfile profile;
+            if (metadata == null)
                 return new TerminalProfile();
 
-            var json = metadata["terminalProfile"];
-            return new TerminalProfile
+            if (metadata.ContainsKey("terminalProfile"))
             {
-                Encoding = ExtractValue(json, "encoding", "UTF-8"),
-                TerminalType = ExtractValue(json, "terminalType", "xterm-256color"),
-                ColorScheme = ExtractValue(json, "colorScheme", "Classic"),
-                ScrollbackLines = ExtractInt(json, "scrollbackLines", 300),
-                FontName = ExtractValue(json, "fontName", "Consolas"),
-                FontSize = ExtractInt(json, "fontSize", 12),
-                NewLineSequence = ExtractValue(json, "newLineSequence", "\n"),
-                CursorStyle = ExtractValue(json, "cursorStyle", "Block"),
-                CursorBlink = ExtractBool(json, "cursorBlink", true),
-                TrimTrailingWhitespace = ExtractBool(json, "trimTrailingWhitespace", true),
-                CopyOnSelect = ExtractBool(json, "copyOnSelect", false),
-                Opacity = ExtractDouble(json, "opacity", 1.0)
-            };
+                var json = metadata["terminalProfile"];
+                profile = new TerminalProfile
+                {
+                    Encoding = ExtractValue(json, "encoding", "UTF-8"),
+                    TerminalType = ExtractValue(json, "terminalType", "xterm-256color"),
+                    ColorScheme = ExtractValue(json, "colorScheme", "Classic"),
+                    ScrollbackLines = ExtractInt(json, "scrollbackLines", 300),
+                    FontName = ExtractValue(json, "fontName", "Consolas"),
+                    FontSize = ExtractInt(json, "fontSize", 12),
+                    NewLineSequence = ExtractValue(json, "newLineSequence", "\n"),
+                    CursorStyle = ExtractValue(json, "cursorStyle", "Block"),
+                    CursorBlink = ExtractBool(json, "cursorBlink", true),
+                    TrimTrailingWhitespace = ExtractBool(json, "trimTrailingWhitespace", true),
+                    CopyOnSelect = ExtractBool(json, "copyOnSelect", false),
+                    Opacity = ExtractDouble(json, "opacity", 1.0),
+                    AutoLog = ExtractBool(json, "autoLog", false)
+                };
+            }
+            else
+            {
+                profile = new TerminalProfile();
+            }
+
+            // 简易开关：Metadata["autoLog"]=true 也可打开（无需完整 terminalProfile JSON）
+            if (metadata.ContainsKey("autoLog"))
+            {
+                var v = metadata["autoLog"];
+                if (string.Equals(v, "true", StringComparison.OrdinalIgnoreCase) || v == "1")
+                    profile.AutoLog = true;
+                else if (string.Equals(v, "false", StringComparison.OrdinalIgnoreCase) || v == "0")
+                    profile.AutoLog = false;
+            }
+
+            return profile;
         }
 
         /// <summary>
@@ -121,7 +148,8 @@ namespace Gdterm.Core.Models
                 $"\"cursorBlink\":{(CursorBlink ? "true" : "false")}," +
                 $"\"trimTrailingWhitespace\":{(TrimTrailingWhitespace ? "true" : "false")}," +
                 $"\"copyOnSelect\":{(CopyOnSelect ? "true" : "false")}," +
-                $"\"opacity\":{Opacity:F2}" +
+                $"\"opacity\":{Opacity:F2}," +
+                $"\"autoLog\":{(AutoLog ? "true" : "false")}" +
                 "}";
         }
 
