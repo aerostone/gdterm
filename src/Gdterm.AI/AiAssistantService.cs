@@ -107,12 +107,29 @@ namespace Gdterm.AI
             return commands;
         }
 
+        /// <summary>
+        /// 可选危险命令闸：返回 false 则拒绝下发。
+        /// UI 应注入经 TerminalControl 确认的路径；未注入时仍直接 SendInput（兼容旧调用）。
+        /// </summary>
+        public Func<string, bool> CommandGate { get; set; }
+
         public void ExecuteCommand(ITerminalSession session, string command)
         {
             if (session == null) throw new ArgumentNullException(nameof(session));
             if (string.IsNullOrEmpty(command)) throw new ArgumentNullException(nameof(command));
 
-            session.SendInput(command + "\n");
+            var line = command.EndsWith("\n") || command.EndsWith("\r")
+                ? command
+                : command + "\n";
+
+            if (CommandGate != null)
+            {
+                var bare = command.TrimEnd('\r', '\n');
+                if (!CommandGate(bare))
+                    return;
+            }
+
+            session.SendInput(line);
         }
 
         public void ClearHistory()

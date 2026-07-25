@@ -262,6 +262,34 @@ namespace Gdterm.UI.Forms
             _tabContainer.ActiveSessionChanged += OnActiveSessionChanged;
             _tabContainer.SessionClosed += OnSessionClosed;
 
+            // AI “Run this” 经活动终端危险命令闸；无终端时用 detector 对话框
+            if (_aiService is Gdterm.AI.AiAssistantService aiSvc)
+            {
+                aiSvc.CommandGate = cmd =>
+                {
+                    var tc = _tabContainer.GetActiveTerminalControl();
+                    if (tc != null)
+                        return tc.ConfirmDangerousCommand(cmd);
+                    if (_dangerousCmdDetector == null) return true;
+                    try
+                    {
+                        var check = _dangerousCmdDetector.Check(cmd);
+                        if (check == null || !check.IsDangerous) return true;
+                        using (var dlg = new DangerousCommandDialog(cmd, check))
+                        {
+                            dlg.ShowDialog(this);
+                            if (!dlg.IsConfirmed) return false;
+                            if (dlg.RememberChoice)
+                            {
+                                try { _dangerousCmdDetector.AddToWhitelist(cmd); } catch { }
+                            }
+                            return true;
+                        }
+                    }
+                    catch { return true; }
+                };
+            }
+
             // 右侧工具宿主（默认隐藏）
             _sideToolHost = new Panel
             {

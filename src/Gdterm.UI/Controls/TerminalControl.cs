@@ -269,6 +269,12 @@ namespace Gdterm.UI.Controls
             get { return _dangerousDetector != null; }
         }
 
+        /// <summary>供 AI/外部调用的危险命令确认入口</summary>
+        public bool ConfirmDangerousCommand(string command)
+        {
+            return ConfirmIfDangerous(command);
+        }
+
         /// <summary>危险命令确认；安全或用户确认返回 true</summary>
         private bool ConfirmIfDangerous(string command)
         {

@@ -687,17 +687,52 @@ namespace Gdterm.UI.Controls
             if (config == null) return false;
 
             OpenConnection(config);
-            if (_tabControl.SelectedTab != null &&
-                _sessions.TryGetValue(_tabControl.SelectedTab, out var newSession))
+            if (_tabControl.SelectedTab == null ||
+                !_sessions.TryGetValue(_tabControl.SelectedTab, out var newSession))
+                return false;
+
+            if (cred != null)
             {
-                if (cred != null)
-                {
-                    newSession.Credential = cred;
-                    if (newSession.Control is TerminalControl tc)
-                        tc.Credentials = cred;
-                }
-                return true;
+                newSession.Credential = cred;
+                if (newSession.Control is TerminalControl tcCred)
+                    tcCred.Credentials = cred;
             }
+
+            // 懒连接：主动触发并等待，避免 Watchdog 把“仅建标签”当成重连成功
+            try
+            {
+                if (newSession.Control is TerminalControl tc)
+                {
+                    tc.ResumeRendering();
+                    var deadline = DateTime.UtcNow.AddSeconds(20);
+                    while (DateTime.UtcNow < deadline)
+                    {
+                        if (tc.IsConnected)
+                        {
+                            newSession.IsConnected = true;
+                            WireHealthAndReconnect(newSession, tc.Session);
+                            return true;
+                        }
+                        System.Threading.Thread.Sleep(200);
+                        Application.DoEvents();
+                    }
+                    return tc.IsConnected;
+                }
+
+                if (newSession.PendingConnect != null)
+                {
+                    var connect = newSession.PendingConnect;
+                    newSession.PendingConnect = null;
+                    connect();
+                    return newSession.IsConnected;
+                }
+            }
+            catch
+            {
+                return false;
+            }
+
+            // 非终端/非 RDP 延迟连接：仅表示标签已重建，不算连接成功
             return false;
         }
 

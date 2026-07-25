@@ -67,12 +67,27 @@ namespace Gdterm.Security
         public static SecretScanConfig GetDefault()
         {
             var config = new SecretScanConfig();
-            // 默认扫描常见敏感路径
+            // 默认只扫高价值敏感目录，禁止默认整盘/整个用户主目录（隐私+低配机磁盘）
             var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             if (!string.IsNullOrEmpty(userProfile))
             {
-                config.ScanPaths.Add(userProfile);
+                config.ScanPaths.Add(System.IO.Path.Combine(userProfile, ".ssh"));
+                config.ScanPaths.Add(System.IO.Path.Combine(userProfile, ".aws"));
+                config.ScanPaths.Add(System.IO.Path.Combine(userProfile, ".azure"));
+                config.ScanPaths.Add(System.IO.Path.Combine(userProfile, ".kube"));
+                config.ScanPaths.Add(System.IO.Path.Combine(userProfile, ".gnupg"));
+                config.ScanPaths.Add(System.IO.Path.Combine(userProfile, "Documents"));
+                config.ScanPaths.Add(System.IO.Path.Combine(userProfile, "Desktop"));
             }
+            // 应用便携 data/ 目录（若与用户配置同机）
+            try
+            {
+                var appData = System.IO.Path.Combine(
+                    AppDomain.CurrentDomain.BaseDirectory, "data");
+                if (System.IO.Directory.Exists(appData))
+                    config.ScanPaths.Add(appData);
+            }
+            catch { }
             return config;
         }
     }
