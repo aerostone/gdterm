@@ -5,10 +5,12 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Gdterm.AI;
 using Gdterm.Connections;
+using Gdterm.Core.Enums;
 using Gdterm.Core.Models;
 using Gdterm.KeePass;
 using Gdterm.KeePass.Models;
 using Gdterm.Logging;
+using Gdterm.Logging.Models;
 using Gdterm.Rdp;
 using Gdterm.Rdp.Models;
 using Gdterm.Security;
@@ -137,7 +139,7 @@ namespace Gdterm.UI.Controls
 
             _tabControl.TabPages.Add(tab);
             _tabControl.SelectedTab = tab;
-            _auditLogger?.LogConnection(config.Id, config.Name, config.Host, true);
+            // 懒连接：真实 Open/Error 由 TerminalControl 或 RDP PendingConnect 记录
             ActiveSessionChanged?.Invoke(this, EventArgs.Empty);
         }
 
@@ -361,9 +363,19 @@ namespace Gdterm.UI.Controls
                         }
                         if (_sessions.TryGetValue(tab, out var ts))
                             ts.IsConnected = true;
+                        _auditLogger?.LogConnection(
+                            config.Id,
+                            config.Host ?? config.Name,
+                            ProtocolType.RDP.ToString(),
+                            ConnectionAction.Open);
                     }
                     catch (Exception ex)
                     {
+                        _auditLogger?.LogConnection(
+                            config.Id,
+                            config.Host ?? config.Name,
+                            ProtocolType.RDP.ToString(),
+                            ConnectionAction.Error);
                         MessageBox.Show("RDP 连接失败: " + ex.Message, "错误",
                             MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
@@ -505,6 +517,16 @@ namespace Gdterm.UI.Controls
             {
                 try { disposable.Dispose(); } catch { }
             }
+
+            try
+            {
+                _auditLogger?.LogConnection(
+                    session.Config?.Id,
+                    session.Config?.Host ?? session.Config?.Name,
+                    (session.Protocol).ToString(),
+                    ConnectionAction.Close);
+            }
+            catch { }
 
             _sessions.Remove(tab);
             try { _tabControl.TabPages.Remove(tab); } catch { }

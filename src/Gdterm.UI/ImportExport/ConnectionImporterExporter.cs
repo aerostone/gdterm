@@ -177,7 +177,7 @@ namespace Gdterm.UI.ImportExport
                     Domain = ExtractXmlAttribute(nodeXml, "Domain")
                 };
                 var portStr = ExtractXmlAttribute(nodeXml, "Port");
-                config.Port = string.IsNullOrEmpty(portStr) ? (config.Protocol == ProtocolType.Rdp ? 3389 : 22) : int.Parse(portStr);
+                config.Port = string.IsNullOrEmpty(portStr) ? (config.Protocol == ProtocolType.RDP ? 3389 : 22) : int.Parse(portStr);
                 var folder = ExtractXmlAttribute(nodeXml, "Folder");
                 config.GroupPath = folder ?? "";
 
@@ -235,23 +235,23 @@ namespace Gdterm.UI.ImportExport
             var protoStr = ExtractJsonString(obj, "protocol");
             config.Protocol = ParseProtocol(protoStr);
             var portStr = ExtractJsonString(obj, "port");
-            config.Port = string.IsNullOrEmpty(portStr) ? (config.Protocol == ProtocolType.Rdp ? 3389 : 22) : int.Parse(portStr);
+            config.Port = string.IsNullOrEmpty(portStr) ? (config.Protocol == ProtocolType.RDP ? 3389 : 22) : int.Parse(portStr);
             return config;
         }
 
         private static ProtocolType ParseProtocol(string s)
         {
-            if (string.IsNullOrEmpty(s)) return ProtocolType.Ssh;
+            if (string.IsNullOrEmpty(s)) return ProtocolType.SSH;
             s = s.Trim().ToUpperInvariant();
-            if (s.Contains("RDP") || s.Contains("RDP")) return ProtocolType.Rdp;
+            if (s.Contains("RDP")) return ProtocolType.RDP;
             if (s.Contains("SERIAL") || s.Contains("COM")) return ProtocolType.Serial;
-            return ProtocolType.Ssh;
+            return ProtocolType.SSH;
         }
 
         private static int ParsePort(string s, ProtocolType proto)
         {
             if (int.TryParse(s, out int port)) return port;
-            return proto == ProtocolType.Rdp ? 3389 : proto == ProtocolType.Ssh ? 22 : 9600;
+            return proto == ProtocolType.RDP ? 3389 : proto == ProtocolType.SSH ? 22 : 9600;
         }
 
         private static string ExtractJsonString(string json, string key)

@@ -161,8 +161,8 @@ namespace Gdterm.UI.Controls
         {
             switch (config.Protocol)
             {
-                case ProtocolType.Ssh: return "ssh";
-                case ProtocolType.Rdp: return "rdp";
+                case ProtocolType.SSH: return "ssh";
+                case ProtocolType.RDP: return "rdp";
                 case ProtocolType.Serial: return "serial";
                 default: return "server";
             }

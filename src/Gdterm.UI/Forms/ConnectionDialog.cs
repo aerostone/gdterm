@@ -240,7 +240,7 @@ namespace Gdterm.UI.Forms
         private void LoadFromConfig()
         {
             _nameBox.Text = _config.Name ?? "";
-            _protocolCombo.SelectedItem = _config.Protocol == ProtocolType.Rdp ? "RDP" :
+            _protocolCombo.SelectedItem = _config.Protocol == ProtocolType.RDP ? "RDP" :
                                           _config.Protocol == ProtocolType.Serial ? "Serial" : "SSH";
             _hostBox.Text = _config.Host ?? "";
             _portBox.Value = _config.Port > 0 ? _config.Port : 22;
@@ -287,7 +287,7 @@ namespace Gdterm.UI.Forms
         {
             _config.Name = _nameBox.Text.Trim();
             var proto = (string)_protocolCombo.SelectedItem;
-            _config.Protocol = proto == "RDP" ? ProtocolType.Rdp : proto == "Serial" ? ProtocolType.Serial : ProtocolType.Ssh;
+            _config.Protocol = proto == "RDP" ? ProtocolType.RDP : proto == "Serial" ? ProtocolType.Serial : ProtocolType.SSH;
             _config.Host = _hostBox.Text.Trim();
             _config.Port = (int)_portBox.Value;
             _config.Username = _usernameBox.Text.Trim();

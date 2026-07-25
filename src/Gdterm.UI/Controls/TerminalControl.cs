@@ -2,8 +2,10 @@ using System;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Gdterm.Core.Enums;
 using Gdterm.Core.Models;
 using Gdterm.Logging;
+using Gdterm.Logging.Models;
 using Gdterm.Security;
 using Gdterm.Terminal;
 using Gdterm.Terminal.Models;
@@ -183,13 +185,21 @@ namespace Gdterm.UI.Controls
                     }
                 }
 
-                _auditLogger?.LogConnection(_config.Id, _config.Name, _config.Host, true);
+                _auditLogger?.LogConnection(
+                    _config.Id,
+                    _config.Host ?? _config.Name,
+                    (_config.Protocol).ToString(),
+                    ConnectionAction.Open);
                 SessionConnected?.Invoke(this, EventArgs.Empty);
             }
             catch (Exception ex)
             {
                 _renderer?.Write("\r\n\x1b[31m连接失败: " + ex.Message + "\x1b[0m\r\n");
-                _auditLogger?.LogConnection(_config.Id, _config.Name, _config.Host, false);
+                _auditLogger?.LogConnection(
+                    _config.Id,
+                    _config.Host ?? _config.Name,
+                    (_config.Protocol).ToString(),
+                    ConnectionAction.Error);
             }
             finally
             {
