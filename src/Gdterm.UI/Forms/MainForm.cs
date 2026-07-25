@@ -363,8 +363,14 @@ namespace Gdterm.UI.Forms
 
         private void OnNewConnection(object sender, EventArgs e)
         {
-            // TODO: 打开新建连接对话框
-            MessageBox.Show("新建连接功能待实现", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            using (var dlg = new ConnectionDialog())
+            {
+                if (dlg.ShowDialog(this) == DialogResult.OK && dlg.Result != null)
+                {
+                    _connectionStore.Add(dlg.Result);
+                    _connectionTree.LoadConnections();
+                }
+            }
         }
 
         private void OnKeePassManager(object sender, EventArgs e)
@@ -373,8 +379,16 @@ namespace Gdterm.UI.Forms
             if (!ReAuthenticate("访问密码库管理"))
                 return;
 
-            // TODO: 打开密码库管理对话框
-            MessageBox.Show("密码库管理功能待实现", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            if (!_keepassService.IsUnlocked)
+            {
+                MessageBox.Show("密码库未解锁", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (var form = new KeePassManagerForm(_keepassService))
+            {
+                form.ShowDialog(this);
+            }
         }
 
         private void OnPasswordHealth(object sender, EventArgs e)
@@ -488,8 +502,12 @@ namespace Gdterm.UI.Forms
 
         private void OnAiSettings(object sender, EventArgs e)
         {
-            // TODO: 打开 AI 设置对话框
-            MessageBox.Show("AI 设置功能待实现", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            var aiModelStore = new Gdterm.AI.AiModelStore(
+                System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "config", "ai-models.json"));
+            using (var form = new AiSettingsForm(aiModelStore, _aiService))
+            {
+                form.ShowDialog(this);
+            }
         }
 
         private void OnPasswordGenerator(object sender, EventArgs e)
@@ -502,8 +520,10 @@ namespace Gdterm.UI.Forms
 
         private void OnDangerousCmdSettings(object sender, EventArgs e)
         {
-            // TODO: 打开危险命令规则配置对话框
-            MessageBox.Show("危险命令规则配置待实现", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            using (var form = new DangerousCommandConfigForm(_dangerousCmdDetector))
+            {
+                form.ShowDialog(this);
+            }
         }
 
         private void OnShowHotkeys(object sender, EventArgs e)
