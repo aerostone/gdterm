@@ -38,5 +38,10 @@ namespace Gdterm.AI
         /// AI 服务配置
         /// </summary>
         AiConfiguration Configuration { get; set; }
+
+        /// <summary>
+        /// 流式发送消息（逐 token 回调）
+        /// </summary>
+        Task<AiResponse> SendMessageStreamingAsync(string message, ITerminalSession session, CancellationToken ct, Action<string> onToken);
     }
 }

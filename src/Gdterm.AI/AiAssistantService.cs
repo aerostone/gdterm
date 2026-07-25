@@ -327,5 +327,116 @@ namespace Gdterm.AI
             _history.Clear();
             // HttpClient is static — do NOT dispose here
         }
+
+        public async Task<AiResponse> SendMessageStreamingAsync(string message, ITerminalSession session, CancellationToken ct, Action<string> onToken)
+        {
+            if (string.IsNullOrEmpty(message))
+                return new AiResponse { IsSuccess = false, ErrorMessage = "消息不能为空" };
+            if (Configuration == null || string.IsNullOrEmpty(Configuration.ApiEndpoint))
+                return new AiResponse { IsSuccess = false, ErrorMessage = "AI 服务未配置" };
+
+            try
+            {
+                var systemPrompt = BuildSystemPrompt(session);
+                var messages = new List<ChatMessage>();
+                messages.Add(new ChatMessage("system", systemPrompt));
+                messages.AddRange(_history);
+                messages.Add(new ChatMessage("user", message));
+
+                var endpoint = Configuration.ApiEndpoint.TrimEnd('/');
+                if (!endpoint.EndsWith("/chat/completions"))
+                    endpoint += "/chat/completions";
+
+                var requestBody = SerializeStreamingRequest(messages);
+                var content = new StringContent(requestBody, Encoding.UTF8, "application/json");
+                var request = new HttpRequestMessage(HttpMethod.Post, endpoint);
+                request.Content = content;
+                if (!string.IsNullOrEmpty(Configuration.ApiKey))
+                    request.Headers.Add("Authorization", $"Bearer {Configuration.ApiKey}");
+
+                var httpResponse = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, ct);
+                if (!httpResponse.IsSuccessStatusCode)
+                {
+                    var err = await httpResponse.Content.ReadAsStringAsync();
+                    return new AiResponse { IsSuccess = false, ErrorMessage = $"API 错误 ({(int)httpResponse.StatusCode}): {err}" };
+                }
+
+                var fullContent = new StringBuilder();
+                var totalTokens = 0;
+                using (var stream = await httpResponse.Content.ReadAsStreamAsync())
+                using (var reader = new StreamReader(stream, Encoding.UTF8))
+                {
+                    while (!reader.EndOfStream)
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        var line = await reader.ReadLineAsync();
+                        if (string.IsNullOrEmpty(line)) continue;
+                        if (!line.StartsWith("data: ")) continue;
+                        var data = line.Substring(6).Trim();
+                        if (data == "[DONE]") break;
+
+                        var token = ExtractStreamToken(data);
+                        if (!string.IsNullOrEmpty(token))
+                        {
+                            fullContent.Append(token);
+                            try { onToken?.Invoke(token); } catch { }
+                        }
+                    }
+                }
+
+                _history.Add(new ChatMessage("user", message));
+                var result = fullContent.ToString();
+                _history.Add(new ChatMessage("assistant", result));
+
+                return new AiResponse
+                {
+                    IsSuccess = true,
+                    Content = result,
+                    SuggestedCommands = ExtractCommands(result),
+                    TokensUsed = totalTokens
+                };
+            }
+            catch (OperationCanceledException)
+            {
+                return new AiResponse { IsSuccess = false, ErrorMessage = "请求已取消" };
+            }
+            catch (Exception ex)
+            {
+                return new AiResponse { IsSuccess = false, ErrorMessage = $"流式调用失败: {ex.Message}" };
+            }
+        }
+
+        private string SerializeStreamingRequest(List<ChatMessage> messages)
+        {
+            var sb = new StringBuilder();
+            sb.Append('{');
+            sb.Append($"\"model\":\"{EscapeJson(Configuration.Model)}\"");
+            sb.Append($",\"max_tokens\":{Configuration.MaxTokens}");
+            sb.Append($",\"temperature\":{Configuration.Temperature:F1}");
+            sb.Append(",\"stream\":true");
+            sb.Append(",\"messages\":[");
+            for (int i = 0; i < messages.Count; i++)
+            {
+                if (i > 0) sb.Append(',');
+                sb.Append('{');
+                sb.Append($"\"role\":\"{EscapeJson(messages[i].Role)}\"");
+                sb.Append($",\"content\":\"{EscapeJson(messages[i].Content)}\"");
+                sb.Append('}');
+            }
+            sb.Append("]}");
+            return sb.ToString();
+        }
+
+        private string ExtractStreamToken(string json)
+        {
+            // SSE delta.content
+            var deltaIdx = json.IndexOf("\"delta\"");
+            if (deltaIdx < 0) return null;
+            var contentIdx = json.IndexOf("\"content\":\"", deltaIdx);
+            if (contentIdx < 0) return null;
+            contentIdx += 11;
+            var endIdx = FindStringEnd(json, contentIdx);
+            return UnescapeJson(json.Substring(contentIdx, endIdx - contentIdx));
+        }
     }
 }
