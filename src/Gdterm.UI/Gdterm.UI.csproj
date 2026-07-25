@@ -124,6 +124,7 @@
     </Compile>
     <Compile Include="Hotkeys\GlobalHotkeyManager.cs" />
     <Compile Include="Controls\SecretScanPanel.cs" />
+    <Compile Include="Controls\KeyBindingPanel.cs" />
     <Compile Include="MultiChannelPanel.cs" />
     <Compile Include="CommandHistoryPanel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

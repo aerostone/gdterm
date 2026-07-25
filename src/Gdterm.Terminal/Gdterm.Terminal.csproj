@@ -55,6 +55,7 @@
     <Compile Include="TerminalSession.cs" />
     <Compile Include="SerialSession.cs" />
     <Compile Include="TerminalEndpoint.cs" />
+    <Compile Include="TerminalKeyBindingResolver.cs" />
     <Compile Include="TerminalReadyDetector.cs" />
     <Compile Include="MultiChannelManager.cs" />
     <Compile Include="MacroRecorder.cs" />

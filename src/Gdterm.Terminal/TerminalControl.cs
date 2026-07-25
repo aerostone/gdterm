@@ -1,5 +1,6 @@
 using System;
 using System.Windows.Forms;
+using Gdterm.Core.Models;
 using Gdterm.Terminal.Models;
 using Gdterm.Terminal.Rendering;
 
@@ -7,11 +8,13 @@ namespace Gdterm.Terminal
 {
     /// <summary>
     /// 终端控件——WinForms UserControl，承载终端渲染器并管理会话生命周期
+    /// 支持自定义快捷键绑定
     /// </summary>
     public class TerminalControl : UserControl
     {
         private ITerminalSession _session;
         private readonly IRenderer _renderer;
+        private readonly TerminalKeyBindingResolver _keyResolver;
         private bool _sessionAttached;
 
         /// <summary>
@@ -19,15 +22,27 @@ namespace Gdterm.Terminal
         /// </summary>
         public ITerminalSession Session => _session;
 
+        /// <summary>
+        /// 快捷键解析器——可用于外部设置绑定
+        /// </summary>
+        public TerminalKeyBindingResolver KeyResolver => _keyResolver;
+
+        /// <summary>
+        /// 当快捷键动作触发时（复制/粘贴/清除等）
+        /// </summary>
+        public event EventHandler<KeyBindingActionEventArgs> ActionRequested;
+
         public TerminalControl()
         {
             _renderer = new TerminalRenderer();
+            _keyResolver = new TerminalKeyBindingResolver();
             InitializeControl();
         }
 
         public TerminalControl(IRenderer renderer)
         {
             _renderer = renderer ?? throw new ArgumentNullException(nameof(renderer));
+            _keyResolver = new TerminalKeyBindingResolver();
             InitializeControl();
         }
 
@@ -144,9 +159,32 @@ namespace Gdterm.Terminal
         {
             if (_session?.IsConnected != true) return;
 
+            // ── 1. 先检查快捷键绑定 ──
+            var result = _keyResolver.Resolve(e);
+            if (result != null)
+            {
+                e.Handled = true;
+                switch (result.Type)
+                {
+                    case SendType.Sequence:
+                        // 转义序列 → 直接发送到终端
+                        try { _session.SendInput(result.Value); } catch { }
+                        break;
+                    case SendType.Text:
+                        // 字面文本 → 发送到终端
+                        try { _session.SendInput(result.Value); } catch { }
+                        break;
+                    case SendType.Action:
+                        // 内置动作 → 通知外部处理
+                        ActionRequested?.Invoke(this, new KeyBindingActionEventArgs(result.Value, result.Binding));
+                        break;
+                }
+                return;
+            }
+
+            // ── 2. 没有匹配的绑定 → 默认终端按键处理 ──
             try
             {
-                // 处理特殊键
                 switch (e.KeyCode)
                 {
                     case Keys.Enter:
@@ -203,8 +241,8 @@ namespace Gdterm.Terminal
                         break;
                 }
 
-                // Ctrl+C
-                if (e.Control && e.KeyCode == Keys.C)
+                // Ctrl+C — 仅在没有其他 Ctrl 绑定时作为默认中断
+                if (e.Control && e.KeyCode == Keys.C && !_keyResolver.HasBinding(e))
                 {
                     _session.SendInput("\x03");
                     e.Handled = true;
@@ -214,6 +252,21 @@ namespace Gdterm.Terminal
             {
                 // 发送失败，不中断 UI
             }
+        }
+    }
+
+    /// <summary>
+    /// 快捷键动作事件参数
+    /// </summary>
+    public class KeyBindingActionEventArgs : EventArgs
+    {
+        public string Action { get; private set; }
+        public TerminalKeyBinding Binding { get; private set; }
+
+        public KeyBindingActionEventArgs(string action, TerminalKeyBinding binding)
+        {
+            Action = action;
+            Binding = binding;
         }
     }
 }

@@ -51,6 +51,7 @@
     <Compile Include="Models\ConnectionTemplate.cs" />
     <Compile Include="Models\TunnelConfig.cs" />
     <Compile Include="Models\TunnelEndpoint.cs" />
+    <Compile Include="Models\TerminalKeyBinding.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
