@@ -1,0 +1,21 @@
+{
+  "enabled": true,
+  "applyToBroadcast": true,
+  "whitelist": [
+    "rm -rf /tmp/cache",
+    "git reset --hard HEAD"
+  ],
+  "rules": [
+    {
+      "id": "custom-example",
+      "name": "自定义规则示例",
+      "pattern": "your-dangerous-command",
+      "patternType": "Contains",
+      "level": "Medium",
+      "confirmCount": 1,
+      "description": "这是一个自定义规则示例，请根据需要修改",
+      "category": "custom",
+      "enabled": true
+    }
+  ]
+}

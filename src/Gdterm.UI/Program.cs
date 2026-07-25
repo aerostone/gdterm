@@ -44,6 +44,8 @@ namespace Gdterm.UI
             };
             var aiService = new AiAssistantService(aiConfig);
             var securityManager = new SecurityManager(TimeSpan.FromMinutes(5));
+            var dangerousCmdDetector = new DangerousCommandDetector(
+                Path.Combine(appDir, "config", "dangerous-commands.json"));
 
             // 创建主窗口
             var mainForm = new MainForm(
@@ -54,7 +56,8 @@ namespace Gdterm.UI
                 keepassService,
                 auditLogger,
                 aiService,
-                securityManager);
+                securityManager,
+                dangerousCmdDetector);
 
             Application.Run(mainForm);
         }

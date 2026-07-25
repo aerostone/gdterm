@@ -26,6 +26,7 @@ namespace Gdterm.UI.Forms
         private readonly IAuditLogger _auditLogger;
         private readonly IAiAssistantService _aiService;
         private readonly ISecurityManager _securityManager;
+        private readonly DangerousCommandDetector _dangerousCmdDetector;
 
         private ConnectionTreeControl _connectionTree;
         private TabContainerControl _tabContainer;
@@ -42,7 +43,8 @@ namespace Gdterm.UI.Forms
             IKeePassService keepassService,
             IAuditLogger auditLogger,
             IAiAssistantService aiService,
-            ISecurityManager securityManager)
+            ISecurityManager securityManager,
+            DangerousCommandDetector dangerousCmdDetector)
         {
             _connectionStore = connectionStore;
             _tunnelManager = tunnelManager;
@@ -52,6 +54,7 @@ namespace Gdterm.UI.Forms
             _auditLogger = auditLogger;
             _aiService = aiService;
             _securityManager = securityManager;
+            _dangerousCmdDetector = dangerousCmdDetector;
 
             InitializeComponent();
             SetupEventHandlers();
