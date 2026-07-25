@@ -38,13 +38,11 @@ namespace Gdterm.Terminal
             ConnectionId = config.Id;
             Hostname = config.Host;
 
-            var connInfo = new PasswordConnectionInfo(
+            var connInfo = SshConnectionInfoFactory.Create(
                 config.Host,
                 config.Port,
-                credential.Username ?? config.Username ?? "root",
-                credential.Password ?? "");
-
-            connInfo.Timeout = TimeSpan.FromSeconds(30);
+                credential.Username ?? config.Username,
+                credential);
 
             _sshClient = new SshClient(connInfo);
             _sshClient.Connect();
@@ -64,14 +62,12 @@ namespace Gdterm.Terminal
             ConnectionId = config.Id;
             Hostname = config.Host;
 
-            // 通过隧道的本地端口连接
-            var connInfo = new PasswordConnectionInfo(
+            // 通过隧道的本地端口连接（目标主机认证仍用 credential，含私钥）
+            var connInfo = SshConnectionInfoFactory.Create(
                 tunnelEndpoint.LocalHost,
                 tunnelEndpoint.LocalPort,
-                credential.Username ?? config.Username ?? "root",
-                credential.Password ?? "");
-
-            connInfo.Timeout = TimeSpan.FromSeconds(30);
+                credential.Username ?? config.Username,
+                credential);
 
             _sshClient = new SshClient(connInfo);
             _sshClient.Connect();

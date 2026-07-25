@@ -29,13 +29,11 @@ namespace Gdterm.Sftp
             if (config == null) throw new ArgumentNullException(nameof(config));
             if (credential == null) throw new ArgumentNullException(nameof(credential));
 
-            var connInfo = new PasswordConnectionInfo(
+            var connInfo = SshConnectionInfoFactory.Create(
                 config.Host,
                 config.Port,
-                credential.Username ?? config.Username ?? "root",
-                credential.Password ?? "");
-
-            connInfo.Timeout = TimeSpan.FromSeconds(30);
+                credential.Username ?? config.Username,
+                credential);
 
             _client = new SftpClient(connInfo);
             _client.Connect();
@@ -52,13 +50,11 @@ namespace Gdterm.Sftp
             if (credential == null) throw new ArgumentNullException(nameof(credential));
             if (tunnelEndpoint == null) throw new ArgumentNullException(nameof(tunnelEndpoint));
 
-            var connInfo = new PasswordConnectionInfo(
+            var connInfo = SshConnectionInfoFactory.Create(
                 tunnelEndpoint.LocalHost,
                 tunnelEndpoint.LocalPort,
-                credential.Username ?? config.Username ?? "root",
-                credential.Password ?? "");
-
-            connInfo.Timeout = TimeSpan.FromSeconds(30);
+                credential.Username ?? config.Username,
+                credential);
 
             _client = new SftpClient(connInfo);
             _client.Connect();

@@ -155,7 +155,7 @@ namespace Gdterm.Tunnel
 
             try
             {
-                session.ConnectDirect(config, credential?.Password);
+                session.ConnectDirect(config, credential);
             }
             catch (Exception ex)
             {

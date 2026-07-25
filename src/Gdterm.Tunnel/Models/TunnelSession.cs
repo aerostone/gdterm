@@ -68,11 +68,35 @@ namespace Gdterm.Tunnel.Models
         }
 
         /// <summary>
-        /// 直连模式：连接到目标主机（无跳板链）
+        /// 直连模式：连接到目标主机（无跳板链）；私钥优先
         /// </summary>
-        public void ConnectDirect(ConnectionConfig config, string password)
+        public void ConnectDirect(ConnectionConfig config, CredentialPayload credential)
         {
-            var connInfo = new PasswordConnectionInfo(config.Host, config.Port, config.Username ?? "root", password ?? "");
+            var user = credential?.Username ?? config.Username ?? "root";
+            ConnectionInfo connInfo;
+
+            if (credential?.SshPrivateKey != null && credential.SshPrivateKey.Length > 0)
+            {
+                var ms = new System.IO.MemoryStream(credential.SshPrivateKey, writable: false);
+                PrivateKeyFile keyFile;
+                try
+                {
+                    keyFile = string.IsNullOrEmpty(credential.SshPrivateKeyPassphrase)
+                        ? new PrivateKeyFile(ms)
+                        : new PrivateKeyFile(ms, credential.SshPrivateKeyPassphrase);
+                }
+                finally
+                {
+                    ms.Dispose();
+                }
+                connInfo = new PrivateKeyConnectionInfo(config.Host, config.Port, user, keyFile);
+            }
+            else
+            {
+                connInfo = new PasswordConnectionInfo(
+                    config.Host, config.Port, user, credential?.Password ?? "");
+            }
+
             connInfo.Timeout = TimeSpan.FromSeconds(30);
             var client = new SshClient(connInfo);
             client.Connect();

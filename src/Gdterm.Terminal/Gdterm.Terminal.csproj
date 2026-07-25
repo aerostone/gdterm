@@ -53,6 +53,7 @@
     <Compile Include="Models\TerminalOutputEventArgs.cs" />
     <Compile Include="Rendering\IRenderer.cs" />
     <Compile Include="TerminalSession.cs" />
+    <Compile Include="SshConnectionInfoFactory.cs" />
     <Compile Include="SerialSession.cs" />
     <Compile Include="TerminalEndpoint.cs" />
     <Compile Include="TerminalKeyBindingResolver.cs" />
