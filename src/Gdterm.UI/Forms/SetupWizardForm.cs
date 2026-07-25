@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using Gdterm.Security;
@@ -36,6 +37,19 @@ namespace Gdterm.UI.Forms
         {
             _securityManager = securityManager;
             InitializeComponent();
+
+            // 加载应用图标
+            try
+            {
+                var iconStream = typeof(SetupWizardForm).Assembly.GetManifestResourceStream("Gdterm.UI.Resources.gdterm.ico");
+                if (iconStream != null)
+                {
+                    this.Icon = new Icon(iconStream);
+                    iconStream.Dispose();
+                }
+            }
+            catch { }
+
             ShowStep(0);
         }
 

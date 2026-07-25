@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using Gdterm.AI;
@@ -87,6 +88,19 @@ namespace Gdterm.UI.Forms
             _sessionStore = sessionStore;
 
             InitializeComponent();
+
+            // 加载应用图标
+            try
+            {
+                var iconStream = typeof(MainForm).Assembly.GetManifestResourceStream("Gdterm.UI.Resources.gdterm.ico");
+                if (iconStream != null)
+                {
+                    this.Icon = new Icon(iconStream);
+                    iconStream.Dispose();
+                }
+            }
+            catch { }
+
             SetupEventHandlers();
 
             // 首次启动后解锁（向导已完成）

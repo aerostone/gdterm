@@ -9,6 +9,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Gdterm.UI</RootNamespace>
     <AssemblyName>gdterm</AssemblyName>
+    <ApplicationIcon>Resources\gdterm.ico</ApplicationIcon>
     <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -137,6 +138,12 @@
     <Compile Include="MultiChannelPanel.cs" />
     <Compile Include="CommandHistoryPanel.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\gdterm.ico" />
+    <Content Include="Resources\gdterm.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
