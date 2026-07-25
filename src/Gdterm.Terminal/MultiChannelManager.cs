@@ -69,8 +69,15 @@ namespace Gdterm.Terminal
 
             lock (_lock)
             {
-                if (_sessions.ContainsKey(sessionId))
-                    throw new InvalidOperationException($"会话 {sessionId} 已注册");
+                // 幂等：重连/刷新时更新会话引用，避免 InvalidOperationException
+                if (_sessions.TryGetValue(sessionId, out var existing))
+                {
+                    existing.Session = session;
+                    existing.DisplayName = displayName ?? existing.DisplayName ?? sessionId;
+                    if (!string.IsNullOrEmpty(group))
+                        existing.Group = group;
+                    return;
+                }
 
                 _sessions[sessionId] = new ChannelSession
                 {

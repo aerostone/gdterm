@@ -30,10 +30,25 @@ namespace Gdterm.Tunnel
 
             var connectionId = config.Id;
 
-            // 同一 connectionId 只允许一个活跃隧道，重复调用先关闭旧的
-            if (_sessions.TryRemove(connectionId, out var oldSession))
+            // 同一 connectionId 复用活跃隧道（SSH 终端 + SFTP 共享跳板，避免互相拆掉）
+            if (!string.IsNullOrEmpty(connectionId)
+                && _sessions.TryGetValue(connectionId, out var existing)
+                && existing != null
+                && existing.IsActive)
             {
-                oldSession.Dispose();
+                return new TunnelEndpoint
+                {
+                    LocalHost = existing.LocalHost,
+                    LocalPort = existing.LocalPort,
+                    ConnectionId = connectionId
+                };
+            }
+
+            // 旧隧道已失效：清理后重建
+            if (!string.IsNullOrEmpty(connectionId)
+                && _sessions.TryRemove(connectionId, out var oldSession))
+            {
+                try { oldSession.Dispose(); } catch { /* best-effort */ }
             }
 
             var session = new TunnelSession(connectionId);

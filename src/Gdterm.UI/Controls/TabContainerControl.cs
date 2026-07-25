@@ -41,6 +41,9 @@ namespace Gdterm.UI.Controls
         /// <summary>活动标签变化</summary>
         public event EventHandler ActiveSessionChanged;
 
+        /// <summary>标签关闭时触发（参数为 SessionId，供多通道注销等）</summary>
+        public event EventHandler<string> SessionClosed;
+
         public TabContainerControl(
             TunnelManager tunnelManager,
             ITerminalSessionFactory terminalFactory,
@@ -502,8 +505,11 @@ namespace Gdterm.UI.Controls
         {
             if (!_sessions.TryGetValue(tab, out var session)) return;
 
-            if (!string.IsNullOrEmpty(session.SessionId))
-                _reconnectWatchdog?.Unwatch(session.SessionId);
+            var sessionId = session.SessionId;
+            var connectionId = session.Config?.Id;
+
+            if (!string.IsNullOrEmpty(sessionId))
+                _reconnectWatchdog?.Unwatch(sessionId);
 
             try { session.HealthMonitor?.Dispose(); } catch { }
 
@@ -518,18 +524,48 @@ namespace Gdterm.UI.Controls
                 try { disposable.Dispose(); } catch { }
             }
 
+            // 先从字典移除，再判断同 connectionId 是否还有其他标签共享隧道
+            _sessions.Remove(tab);
+
+            if (!string.IsNullOrEmpty(connectionId) && _tunnelManager != null)
+            {
+                var stillUsingTunnel = false;
+                foreach (var other in _sessions.Values)
+                {
+                    if (other?.Config?.Id == connectionId)
+                    {
+                        stillUsingTunnel = true;
+                        break;
+                    }
+                }
+
+                if (!stillUsingTunnel)
+                {
+                    try
+                    {
+                        _tunnelManager.CloseAsync(connectionId).GetAwaiter().GetResult();
+                    }
+                    catch { /* best-effort */ }
+                }
+            }
+
             try
             {
                 _auditLogger?.LogConnection(
-                    session.Config?.Id,
+                    connectionId,
                     session.Config?.Host ?? session.Config?.Name,
                     (session.Protocol).ToString(),
                     ConnectionAction.Close);
             }
             catch { }
 
-            _sessions.Remove(tab);
             try { _tabControl.TabPages.Remove(tab); } catch { }
+
+            if (!string.IsNullOrEmpty(sessionId))
+            {
+                try { SessionClosed?.Invoke(this, sessionId); } catch { }
+            }
+
             ActiveSessionChanged?.Invoke(this, EventArgs.Empty);
         }
 

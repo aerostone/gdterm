@@ -244,6 +244,7 @@ namespace Gdterm.UI.Forms
                 _connectionStore);
             _tabContainer.Dock = DockStyle.Fill;
             _tabContainer.ActiveSessionChanged += OnActiveSessionChanged;
+            _tabContainer.SessionClosed += OnSessionClosed;
 
             // 右侧工具宿主（默认隐藏）
             _sideToolHost = new Panel
@@ -322,6 +323,12 @@ namespace Gdterm.UI.Forms
             FormClosing += OnFormClosing;
         }
 
+        private void OnSessionClosed(object sender, string sessionId)
+        {
+            if (string.IsNullOrEmpty(sessionId) || _multiChannelManager == null) return;
+            try { _multiChannelManager.Unregister(sessionId); } catch { }
+        }
+
         private void OnActiveSessionChanged(object sender, EventArgs e)
         {
             var session = _tabContainer.GetActiveSession();
@@ -334,14 +341,21 @@ namespace Gdterm.UI.Forms
             else
                 _quickBar?.SetActiveSession(session, host, user);
 
-            // 同步多通道注册
+            // 同步多通道：注册在线会话，注销已不存在的会话
             try
             {
+                if (_multiChannelManager == null) return;
                 var all = _tabContainer.GetConnectedSessions();
-                foreach (var kv in all)
+                var liveIds = new System.Collections.Generic.HashSet<string>(all.Keys);
+
+                foreach (var info in _multiChannelManager.GetAllSessions())
                 {
-                    _multiChannelManager.Register(kv.Key, kv.Value, kv.Key, null);
+                    if (info != null && !liveIds.Contains(info.SessionId))
+                        _multiChannelManager.Unregister(info.SessionId);
                 }
+
+                foreach (var kv in all)
+                    _multiChannelManager.Register(kv.Key, kv.Value, kv.Key, null);
             }
             catch { }
         }
@@ -730,8 +744,15 @@ namespace Gdterm.UI.Forms
 
         private Control CreateMultiChannelPanel()
         {
-            // 刷新注册
-            foreach (var kv in _tabContainer.GetConnectedSessions())
+            // 刷新注册：只保留当前在线会话
+            var all = _tabContainer.GetConnectedSessions();
+            var liveIds = new System.Collections.Generic.HashSet<string>(all.Keys);
+            foreach (var info in _multiChannelManager.GetAllSessions())
+            {
+                if (info != null && !liveIds.Contains(info.SessionId))
+                    _multiChannelManager.Unregister(info.SessionId);
+            }
+            foreach (var kv in all)
                 _multiChannelManager.Register(kv.Key, kv.Value, kv.Key, null);
             var panel = new MultiChannelPanel(_multiChannelManager);
             panel.BroadcastCommandRequested += (s, cmd) =>
