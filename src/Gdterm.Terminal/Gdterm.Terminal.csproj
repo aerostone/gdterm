@@ -63,6 +63,7 @@
     <Compile Include="TerminalBufferExport.cs" />
     <Compile Include="ConnectionHealthMonitor.cs" />
     <Compile Include="BatchCommandExecutor.cs" />
+    <Compile Include="AutoReconnectWatchdog.cs" />
     <Compile Include="LocalTerminalSession.cs" />
     <Compile Include="TerminalReadyDetector.cs" />
     <Compile Include="MultiChannelManager.cs" />

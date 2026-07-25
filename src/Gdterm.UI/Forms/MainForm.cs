@@ -127,6 +127,9 @@ namespace Gdterm.UI.Forms
             var fileMenu = new ToolStripMenuItem("文件(&F)");
             fileMenu.DropDownItems.Add("新建连接(&N)", null, OnNewConnection);
             fileMenu.DropDownItems.Add(new ToolStripSeparator());
+            fileMenu.DropDownItems.Add("导入连接(&I)...", null, OnImportConnections);
+            fileMenu.DropDownItems.Add("导出连接(&E)...", null, OnExportConnections);
+            fileMenu.DropDownItems.Add(new ToolStripSeparator());
             fileMenu.DropDownItems.Add("退出(&X)", null, (s, e) => Close());
             _menuStrip.Items.Add(fileMenu);
 
@@ -504,7 +507,7 @@ namespace Gdterm.UI.Forms
         {
             var aiModelStore = new Gdterm.AI.AiModelStore(
                 System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "config", "ai-models.json"));
-            using (var form = new AiSettingsForm(aiModelStore, _aiService))
+            using (var form = new AiSettingsForm(aiModelStore))
             {
                 form.ShowDialog(this);
             }
@@ -546,6 +549,80 @@ namespace Gdterm.UI.Forms
                 "轻量级便携运维工具\n" +
                 "SSH / RDP / SFTP / 串口 / AI 助手",
                 "关于", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void OnImportConnections(object sender, EventArgs e)
+        {
+            using (var dlg = new OpenFileDialog
+            {
+                Title = "导入连接",
+                Filter = "所有支持格式|*.json;*.csv;*.xml|JSON 文件|*.json|CSV 文件|*.csv|mRemoteNG XML|*.xml",
+                Multiselect = false
+            })
+            {
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
+                    try
+                    {
+                        var imported = Gdterm.UI.ImportExport.ConnectionImporterExporter.ImportFromFile(dlg.FileName);
+                        if (imported.Count == 0)
+                        {
+                            MessageBox.Show("未找到可导入的连接", "导入", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            return;
+                        }
+
+                        var existing = _connectionStore.LoadAll();
+                        var merge = Gdterm.UI.ImportExport.ConnectionImporterExporter.MergeConnections(existing, imported);
+
+                        foreach (var conn in merge.NewConnections)
+                            _connectionStore.Add(conn);
+
+                        _connectionTree.LoadConnections();
+                        MessageBox.Show(
+                            $"导入完成：\n新增 {merge.NewConnections.Count} 个连接\n跳过 {merge.Duplicates.Count} 个重复",
+                            "导入成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"导入失败：{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+
+        private void OnExportConnections(object sender, EventArgs e)
+        {
+            var connections = _connectionStore.LoadAll();
+            if (connections.Count == 0)
+            {
+                MessageBox.Show("没有可导出的连接", "导出", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            using (var dlg = new SaveFileDialog
+            {
+                Title = "导出连接",
+                Filter = "JSON 文件|*.json|CSV 文件|*.csv",
+                FileName = "gdterm-connections"
+            })
+            {
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
+                    try
+                    {
+                        if (dlg.FileName.EndsWith(".csv", StringComparison.OrdinalIgnoreCase))
+                            Gdterm.UI.ImportExport.ConnectionImporterExporter.ExportAsCsv(connections, dlg.FileName);
+                        else
+                            Gdterm.UI.ImportExport.ConnectionImporterExporter.ExportAsJson(connections, dlg.FileName);
+
+                        MessageBox.Show($"已导出 {connections.Count} 个连接到：\n{dlg.FileName}", "导出成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"导出失败：{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
         }
 
         private void OnFormClosing(object sender, FormClosingEventArgs e)

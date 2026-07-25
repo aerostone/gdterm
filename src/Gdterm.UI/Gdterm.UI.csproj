@@ -141,6 +141,7 @@
     <Compile Include="Forms\ConnectionDialog.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="ImportExport\ConnectionImporterExporter.cs" />
     <Compile Include="Forms\KeePassManagerForm.cs" />
     <Compile Include="Forms\AiSettingsForm.cs" />
     <Compile Include="Forms\DangerousCommandConfigForm.cs" />

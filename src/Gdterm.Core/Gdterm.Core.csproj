@@ -41,6 +41,7 @@
     <Compile Include="Models\CredentialPayload.cs" />
     <Compile Include="Models\CommandHistoryEntry.cs" />
     <Compile Include="Models\DangerousCommandConfig.cs" />
+    <Compile Include="Models\TerminalProfile.cs" />
     <Compile Include="Models\FolderCredentialEntry.cs" />
     <Compile Include="Models\JumpChainConfig.cs" />
     <Compile Include="Models\JumpHop.cs" />
