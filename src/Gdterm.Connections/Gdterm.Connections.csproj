@@ -43,6 +43,8 @@
     <Compile Include="GroupNode.cs" />
     <Compile Include="IConnectionStore.cs" />
     <Compile Include="ConnectionStoreJson.cs" />
+    <Compile Include="IBookmarkStore.cs" />
+    <Compile Include="BookmarkStoreJson.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
