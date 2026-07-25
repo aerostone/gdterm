@@ -18,6 +18,9 @@ namespace Gdterm.UI.Controls
         private Button _btnBroadcast;
         private Label _statusLabel;
         private TextBox _commandInput;
+        private EventHandler<ChannelSessionEventArgs> _onSessionRegistered;
+        private EventHandler<ChannelSessionEventArgs> _onSessionUnregistered;
+        private EventHandler<BroadcastStateChangedEventArgs> _onBroadcastStateChanged;
 
         /// <summary>
         /// 广播命令事件（用户在输入框输入命令后触发）
@@ -137,13 +140,31 @@ namespace Gdterm.UI.Controls
                 }
             };
 
-            _manager.SessionRegistered += (s, e) => RefreshList();
-            _manager.SessionUnregistered += (s, e) => RefreshList();
-            _manager.BroadcastStateChanged += (s, e) =>
+            _onSessionRegistered = (s, e) => RefreshList();
+            _onSessionUnregistered = (s, e) => RefreshList();
+            _onBroadcastStateChanged = (s, e) =>
             {
-                _btnBroadcast.Enabled = e.IsBroadcasting;
+                if (_btnBroadcast != null)
+                    _btnBroadcast.Enabled = e.IsBroadcasting;
                 UpdateStatus();
             };
+            _manager.SessionRegistered += _onSessionRegistered;
+            _manager.SessionUnregistered += _onSessionUnregistered;
+            _manager.BroadcastStateChanged += _onBroadcastStateChanged;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && _manager != null)
+            {
+                if (_onSessionRegistered != null)
+                    _manager.SessionRegistered -= _onSessionRegistered;
+                if (_onSessionUnregistered != null)
+                    _manager.SessionUnregistered -= _onSessionUnregistered;
+                if (_onBroadcastStateChanged != null)
+                    _manager.BroadcastStateChanged -= _onBroadcastStateChanged;
+            }
+            base.Dispose(disposing);
         }
 
         private void OnSessionItemCheck(object sender, ItemCheckEventArgs e)
