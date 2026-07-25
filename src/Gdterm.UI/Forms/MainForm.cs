@@ -1,4 +1,5 @@
 using System;
+using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.AI;
 using Gdterm.Connections;
@@ -13,6 +14,19 @@ using Gdterm.UI.Hotkeys;
 
 namespace Gdterm.UI.Forms
 {
+    /// <summary>
+    /// 视图模式（参考 WindTerm）
+    /// </summary>
+    public enum ViewMode
+    {
+        /// <summary>标准视图：左侧连接树 + 右侧标签页 + 底部状态栏</summary>
+        Standard,
+        /// <summary>专注模式：只显示终端标签页，隐藏所有面板</summary>
+        Focus,
+        /// <summary>紧凑模式：隐藏状态栏和菜单栏，最大化终端空间</summary>
+        Compact
+    }
+
     /// <summary>
     /// 主窗口
     /// </summary>
@@ -32,8 +46,15 @@ namespace Gdterm.UI.Forms
         private TabContainerControl _tabContainer;
         private StatusBarControl _statusBar;
         private LockOverlayControl _lockOverlay;
+        private MenuStrip _menuStrip;
         private GlobalHotkeyManager _hotkeyManager;
         private int _toggleHotkeyId;
+
+        // 视图模式
+        private ViewMode _currentViewMode = ViewMode.Standard;
+        private ToolStripMenuItem _viewStandardItem;
+        private ToolStripMenuItem _viewFocusItem;
+        private ToolStripMenuItem _viewCompactItem;
 
         public MainForm(
             IConnectionStore connectionStore,
@@ -58,51 +79,94 @@ namespace Gdterm.UI.Forms
 
             InitializeComponent();
             SetupEventHandlers();
+
+            // 首次启动后解锁（向导已完成）
+            if (!_securityManager.IsLocked)
+            {
+                _lockOverlay.Visible = false;
+            }
         }
 
         private void InitializeComponent()
         {
             Text = "gdterm - 绿色运维客户端";
-            Size = new System.Drawing.Size(1200, 800);
+            Size = new Size(1200, 800);
             StartPosition = FormStartPosition.CenterScreen;
-            MinimumSize = new System.Drawing.Size(800, 600);
+            MinimumSize = new Size(800, 600);
 
-            // 创建菜单栏
-            var menuStrip = new MenuStrip();
-            var fileMenu = new ToolStripMenuItem("文件");
-            fileMenu.DropDownItems.Add("退出", null, (s, e) => Close());
-            menuStrip.Items.Add(fileMenu);
+            // ====== 菜单栏 ======
+            _menuStrip = new MenuStrip();
 
-            var connectionMenu = new ToolStripMenuItem("连接");
+            // 文件菜单
+            var fileMenu = new ToolStripMenuItem("文件(&F)");
+            fileMenu.DropDownItems.Add("新建连接(&N)", null, OnNewConnection);
+            fileMenu.DropDownItems.Add(new ToolStripSeparator());
+            fileMenu.DropDownItems.Add("退出(&X)", null, (s, e) => Close());
+            _menuStrip.Items.Add(fileMenu);
+
+            // 连接菜单
+            var connectionMenu = new ToolStripMenuItem("连接(&C)");
             connectionMenu.DropDownItems.Add("新建连接", null, OnNewConnection);
-            menuStrip.Items.Add(connectionMenu);
+            _menuStrip.Items.Add(connectionMenu);
 
-            var viewMenu = new ToolStripMenuItem("视图");
+            // 视图菜单
+            var viewMenu = new ToolStripMenuItem("视图(&V)");
+
+            _viewStandardItem = new ToolStripMenuItem("标准视图(&S)") { Checked = true, CheckOnClick = false };
+            _viewStandardItem.Click += (s, e) => SetViewMode(ViewMode.Standard);
+
+            _viewFocusItem = new ToolStripMenuItem("专注模式(&F)") { CheckOnClick = false };
+            _viewFocusItem.Click += (s, e) => SetViewMode(ViewMode.Focus);
+
+            _viewCompactItem = new ToolStripMenuItem("紧凑模式(&C)") { CheckOnClick = false };
+            _viewCompactItem.Click += (s, e) => SetViewMode(ViewMode.Compact);
+
+            viewMenu.DropDownItems.Add(_viewStandardItem);
+            viewMenu.DropDownItems.Add(_viewFocusItem);
+            viewMenu.DropDownItems.Add(_viewCompactItem);
+            viewMenu.DropDownItems.Add(new ToolStripSeparator());
+
+            var toggleTreeItem = new ToolStripMenuItem("切换连接面板(&T)");
+            toggleTreeItem.ShortcutKeys = Keys.Control | Keys.L;
+            toggleTreeItem.Click += (s, e) => ToggleConnectionTree();
+            viewMenu.DropDownItems.Add(toggleTreeItem);
+
+            viewMenu.DropDownItems.Add(new ToolStripSeparator());
             viewMenu.DropDownItems.Add("水平分割", null, (s, e) => _tabContainer.SplitHorizontal());
             viewMenu.DropDownItems.Add("垂直分割", null, (s, e) => _tabContainer.SplitVertical());
-            viewMenu.DropDownItems.Add(new ToolStripSeparator());
-            viewMenu.DropDownItems.Add("关闭分屏", null, (s, e) => { /* TODO: 关闭当前分屏 */ });
-            menuStrip.Items.Add(viewMenu);
+            _menuStrip.Items.Add(viewMenu);
 
-            var toolsMenu = new ToolStripMenuItem("工具");
-            toolsMenu.DropDownItems.Add("密码库管理", null, OnKeePassManager);
-            toolsMenu.DropDownItems.Add("AI 设置", null, OnAiSettings);
-            menuStrip.Items.Add(toolsMenu);
+            // 工具菜单
+            var toolsMenu = new ToolStripMenuItem("工具(&T)");
+            toolsMenu.DropDownItems.Add("密码库管理(&K)", null, OnKeePassManager);
+            toolsMenu.DropDownItems.Add("AI 助手设置(&A)", null, OnAiSettings);
+            toolsMenu.DropDownItems.Add(new ToolStripSeparator());
+            toolsMenu.DropDownItems.Add("危险命令规则(&D)", null, OnDangerousCmdSettings);
+            _menuStrip.Items.Add(toolsMenu);
 
-            MainMenuStrip = menuStrip;
-            Controls.Add(menuStrip);
+            // 帮助菜单
+            var helpMenu = new ToolStripMenuItem("帮助(&H)");
+            helpMenu.DropDownItems.Add("快捷键列表", null, OnShowHotkeys);
+            helpMenu.DropDownItems.Add("关于 gdterm", null, OnAbout);
+            _menuStrip.Items.Add(helpMenu);
 
-            // 创建主布局
-            var mainSplitter = new Splitter
-            {
-                Dock = DockStyle.Left,
-                Width = 5
-            };
+            MainMenuStrip = _menuStrip;
+            Controls.Add(_menuStrip);
+
+            // ====== 主布局 ======
 
             // 左侧连接面板
             _connectionTree = new ConnectionTreeControl(_connectionStore);
             _connectionTree.Dock = DockStyle.Left;
             _connectionTree.Width = 250;
+
+            // 分割条
+            var mainSplitter = new Splitter
+            {
+                Dock = DockStyle.Left,
+                Width = 4,
+                BackColor = Color.FromArgb(60, 60, 60)
+            };
 
             // 右侧标签页容器
             _tabContainer = new TabContainerControl(
@@ -125,52 +189,87 @@ namespace Gdterm.UI.Forms
             // 锁定遮罩
             _lockOverlay = new LockOverlayControl(_securityManager);
             _lockOverlay.Dock = DockStyle.Fill;
-            _lockOverlay.Visible = false;
+            _lockOverlay.Visible = _securityManager.IsLocked;
 
-            // 添加控件
+            // 添加控件（顺序影响 Dock 布局）
             Controls.Add(_tabContainer);
             Controls.Add(mainSplitter);
             Controls.Add(_connectionTree);
             Controls.Add(_statusBar);
             Controls.Add(_lockOverlay);
+            // 菜单栏最后添加确保在最顶层
+            Controls.Add(_menuStrip);
 
-            // 锁定遮罩在最上层
             _lockOverlay.BringToFront();
         }
 
         private void SetupEventHandlers()
         {
-            // 连接面板双击 → 打开连接
             _connectionTree.ConnectionDoubleClicked += OnConnectionDoubleClicked;
-
-            // 安全锁定状态变化
             _securityManager.LockStateChanged += OnLockStateChanged;
 
-            // 窗口用户操作 → 重置空闲计时器
+            // 用户操作 → 重置空闲计时器
             MouseMove += (s, e) => _securityManager.ResetIdleTimer();
             KeyDown += (s, e) => _securityManager.ResetIdleTimer();
             Click += (s, e) => _securityManager.ResetIdleTimer();
 
-            // 初始化全局热键
             InitializeHotkeys();
-
-            // 窗口关闭
             FormClosing += OnFormClosing;
         }
+
+        // ====== 视图模式 ======
+
+        private void SetViewMode(ViewMode mode)
+        {
+            _currentViewMode = mode;
+
+            // 更新菜单勾选状态
+            _viewStandardItem.Checked = (mode == ViewMode.Standard);
+            _viewFocusItem.Checked = (mode == ViewMode.Focus);
+            _viewCompactItem.Checked = (mode == ViewMode.Compact);
+
+            switch (mode)
+            {
+                case ViewMode.Standard:
+                    _connectionTree.Visible = true;
+                    _connectionTree.Width = 250;
+                    _statusBar.Visible = true;
+                    _menuStrip.Visible = true;
+                    break;
+
+                case ViewMode.Focus:
+                    // 专注模式：只保留终端标签页
+                    _connectionTree.Visible = false;
+                    _statusBar.Visible = false;
+                    _menuStrip.Visible = false;
+                    break;
+
+                case ViewMode.Compact:
+                    // 紧凑模式：保留连接树和标签页，隐藏状态栏和菜单
+                    _connectionTree.Visible = true;
+                    _connectionTree.Width = 200;
+                    _statusBar.Visible = false;
+                    _menuStrip.Visible = false;
+                    break;
+            }
+        }
+
+        private void ToggleConnectionTree()
+        {
+            _connectionTree.Visible = !_connectionTree.Visible;
+        }
+
+        // ====== 热键 ======
 
         private void InitializeHotkeys()
         {
             try
             {
                 _hotkeyManager = new GlobalHotkeyManager(this);
-                // Ctrl+` 一键呼出/隐藏（类似 Quake 终端）
                 _toggleHotkeyId = _hotkeyManager.Register(HotkeyModifiers.Control, Keys.Oemtilde);
                 _hotkeyManager.HotkeyPressed += OnGlobalHotkeyPressed;
             }
-            catch
-            {
-                // 热键注册失败不影响主功能
-            }
+            catch { }
         }
 
         private void OnGlobalHotkeyPressed(object sender, HotkeyPressedEventArgs e)
@@ -183,21 +282,9 @@ namespace Gdterm.UI.Forms
 
         private void ToggleWindowVisibility()
         {
-            if (Visible)
+            if (Visible && Form.ActiveForm == this)
             {
-                // 如果是当前活动窗口，隐藏
-                if (Form.ActiveForm == this)
-                {
-                    Hide();
-                }
-                else
-                {
-                    // 否则激活并置顶
-                    Show();
-                    WindowState = FormWindowState.Normal;
-                    Activate();
-                    BringToFront();
-                }
+                Hide();
             }
             else
             {
@@ -207,6 +294,8 @@ namespace Gdterm.UI.Forms
                 BringToFront();
             }
         }
+
+        // ====== 事件处理 ======
 
         private void OnConnectionDoubleClicked(object sender, Core.Models.ConnectionConfig config)
         {
@@ -222,11 +311,7 @@ namespace Gdterm.UI.Forms
             }
 
             _lockOverlay.Visible = e.IsLocked;
-
-            if (e.IsLocked)
-            {
-                _lockOverlay.BringToFront();
-            }
+            if (e.IsLocked) _lockOverlay.BringToFront();
         }
 
         private void OnNewConnection(object sender, EventArgs e)
@@ -247,16 +332,54 @@ namespace Gdterm.UI.Forms
             MessageBox.Show("AI 设置功能待实现", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
+        private void OnDangerousCmdSettings(object sender, EventArgs e)
+        {
+            // TODO: 打开危险命令规则配置对话框
+            MessageBox.Show("危险命令规则配置待实现", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void OnShowHotkeys(object sender, EventArgs e)
+        {
+            MessageBox.Show(
+                "快捷键列表：\n\n" +
+                "Ctrl + `          呼出/隐藏窗口（全局）\n" +
+                "Ctrl + L           切换连接面板\n" +
+                "Ctrl + Shift + T  水平分屏\n" +
+                "Ctrl + Shift + O  垂直分屏\n\n" +
+                "在专注模式下，按 Esc 可恢复菜单栏",
+                "快捷键", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void OnAbout(object sender, EventArgs e)
+        {
+            MessageBox.Show(
+                "gdterm - 绿色运维客户端\n" +
+                "版本 1.0.0\n\n" +
+                "轻量级便携运维工具\n" +
+                "SSH / RDP / SFTP / 串口 / AI 助手",
+                "关于", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
         private void OnFormClosing(object sender, FormClosingEventArgs e)
         {
-            // 清理热键
             _hotkeyManager?.Dispose();
-
-            // 清理资源
             _tabContainer.CloseAllTabs();
             _tunnelManager.Dispose();
             _keepassService.Dispose();
             _securityManager.Dispose();
+        }
+
+        // ====== 重写按键 ======
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            // 专注模式下按 Esc 恢复菜单栏
+            if (keyData == Keys.Escape && _currentViewMode == ViewMode.Focus)
+            {
+                _menuStrip.Visible = true;
+                return true;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
         }
     }
 }
