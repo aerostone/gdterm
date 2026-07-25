@@ -106,9 +106,20 @@ namespace Gdterm.Terminal
         public void SendBreak(int durationMs = 100)
         {
             if (!IsConnected) throw new InvalidOperationException("串口未连接");
+
+            // 在后台线程执行，避免阻塞 UI
             _port.BreakState = true;
-            Thread.Sleep(durationMs);
-            _port.BreakState = false;
+            var port = _port;
+            ThreadPool.QueueUserWorkItem(_ =>
+            {
+                try
+                {
+                    Thread.Sleep(durationMs);
+                    if (port.IsOpen)
+                        port.BreakState = false;
+                }
+                catch { }
+            });
         }
 
         public IList<string> GetRecentOutput(int lineCount)
