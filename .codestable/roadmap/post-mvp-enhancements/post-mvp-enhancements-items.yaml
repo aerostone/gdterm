@@ -36,8 +36,9 @@ sub_features:
   - id: password-analyzer
     layer: 0
     priority: P0
-    status: planned
+    status: done
     title: "密码健康分析器"
+    feature_dir: "2026-07-25-password-analyzer"
     description: "检测弱/重复/过期密码，生成健康报告"
     depends_on: []
     scope: "弱密码检测、重复密码hash分组、过期策略可配置、总体评分0-100"
@@ -48,8 +49,9 @@ sub_features:
   - id: credential-inheritance
     layer: 1
     priority: P0
-    status: planned
+    status: done
     title: "凭据继承"
+    feature_dir: "2026-07-25-credential-inheritance"
     description: "连接从文件夹/父级继承凭据和配置"
     depends_on: ["password-analyzer"]
     scope: "文件夹级凭据传播、连接级覆盖优先、UI继承选项配置、无限深度继承链"
@@ -59,8 +61,9 @@ sub_features:
   - id: session-persistence
     layer: 1
     priority: P1
-    status: planned
+    status: done
     title: "会话状态保存/恢复"
+    feature_dir: "2026-07-25-session-persistence"
     description: "关闭时保存窗口布局和打开的会话，重启恢复"
     depends_on: []
     scope: "窗口位置大小、分割条、视图模式、所有tab连接ID、活跃状态"
@@ -70,8 +73,9 @@ sub_features:
   - id: quick-commands
     layer: 1
     priority: P1
-    status: planned
+    status: done
     title: "快捷命令面板"
+    feature_dir: "2026-07-25-quick-commands"
     description: "可自定义的快捷命令面板"
     depends_on: []
     scope: "分类管理、快捷键绑定、变量替换{host}{user}{date}、发送到终端或多通道"
@@ -81,8 +85,9 @@ sub_features:
   - id: tools-core
     layer: 1
     priority: P0
-    status: planned
+    status: done
     title: "运维工具基础框架"
+    feature_dir: "2026-07-25-tools-core"
     description: "IToolModule接口、ToolRegistry、ToolConfigBase"
     depends_on: []
     scope: "IToolModule/IRemoteToolModule接口、ToolRegistry注册查询、ToolConfigBase JSON读写、RemoteCommandResult"
@@ -93,8 +98,9 @@ sub_features:
   - id: reconnect-button
     layer: 2
     priority: P1
-    status: planned
+    status: done
     title: "断线重连按钮"
+    feature_dir: "2026-07-25-reconnect-button"
     description: "断线后一键重连，tab标题变红"
     depends_on: ["session-persistence"]
     scope: "断线检测、重连按钮、原有配置凭据复用、失败错误提示"
@@ -104,8 +110,9 @@ sub_features:
   - id: reauth-sensitive-ops
     layer: 2
     priority: P0
-    status: planned
+    status: done
     title: "敏感操作二次验证"
+    feature_dir: "2026-07-25-reauth-sensitive-ops"
     description: "删除连接/导出配置/查看密码等操作需二次密码确认"
     depends_on: ["password-analyzer"]
     scope: "密码确认弹窗、5分钟免重复验证、失败3次锁定5分钟、审计日志"
@@ -115,8 +122,9 @@ sub_features:
   - id: connection-templates
     layer: 2
     priority: P1
-    status: planned
+    status: done
     title: "连接模板"
+    feature_dir: "2026-07-25-connection-templates"
     description: "预置连接模板，快速创建标准化连接"
     depends_on: []
     scope: "内置5+模板（CentOS/Ubuntu RDP/Cisco串口等）、用户自定义模板、导入导出"
@@ -126,8 +134,9 @@ sub_features:
   - id: ai-multi-model
     layer: 2
     priority: P1
-    status: planned
+    status: done
     title: "AI 多模型支持"
+    feature_dir: "2026-07-25-ai-multi-model"
     description: "支持多个AI模型提供商切换（OpenAI/DeepSeek/Ollama）"
     depends_on: []
     scope: "3+提供商、独立API Key配置、运行时切换、本地Ollama免Key"
@@ -137,8 +146,9 @@ sub_features:
   - id: tools-cert-installer
     layer: 2
     priority: P1
-    status: planned
+    status: done
     title: "证书安装工具"
+    feature_dir: "2026-07-25-tools-cert-installer"
     description: "本地+远程证书安装（PEM/DER/PFX/P12）"
     depends_on: ["tools-core"]
     scope: "本地certutil导入、远程SCP+update-ca-certificates、自动检测系统类型、证书链验证"
@@ -148,8 +158,9 @@ sub_features:
   - id: tools-time-sync
     layer: 2
     priority: P1
-    status: planned
+    status: done
     title: "时间同步工具"
+    feature_dir: "2026-07-25-tools-time-sync"
     description: "本地+远程NTP时间同步"
     depends_on: ["tools-core"]
     scope: "本地w32tm、远程ntpd/chrony/timedatectl自动检测、可配置NTP服务器列表、同步前后时间差"
@@ -159,8 +170,9 @@ sub_features:
   - id: tools-repo-config
     layer: 2
     priority: P1
-    status: planned
+    status: done
     title: "软件仓库配置工具"
+    feature_dir: "2026-07-25-tools-repo-config"
     description: "远程yum/apt/zypper仓库配置"
     depends_on: ["tools-core"]
     scope: "yum/dnf+apt+zypper、自动备份原配置、添加/删除/列出仓库、自动refresh"
@@ -170,8 +182,9 @@ sub_features:
   - id: tools-port-scanner
     layer: 2
     priority: P2
-    status: planned
+    status: done
     title: "端口扫描器"
+    feature_dir: "2026-07-25-tools-port-scanner"
     description: "异步TCP端口扫描"
     depends_on: ["tools-core"]
     scope: "异步TcpClient Connect、可配置超时并发、常用端口预设、结果实时流式更新"
@@ -181,8 +194,9 @@ sub_features:
   - id: tools-net-scanner
     layer: 2
     priority: P2
-    status: planned
+    status: done
     title: "网络扫描套件"
+    feature_dir: "2026-07-25-tools-net-scanner"
     description: "IP扫描+DNS+Traceroute+Ping监控+子网计算+WHOIS"
     depends_on: ["tools-core"]
     scope: "6个子工具：IP扫描(Ping+端口+主机名)、DNS多记录、Traceroute逐跳、Ping实时图表、子网CIDR计算、WHOIS查询"
@@ -193,8 +207,9 @@ sub_features:
   - id: sftp-enhancements
     layer: 3
     priority: P1
-    status: planned
+    status: done
     title: "SFTP 文件预览与权限编辑"
+    feature_dir: "2026-07-25-sftp-enhancements"
     description: "文件预览、权限编辑器"
     depends_on: []
     scope: "文本文件前100行预览、图片缩略图、rwxrwxrwx+八进制双格式、符号模式修改"
@@ -204,8 +219,9 @@ sub_features:
   - id: macro-recording
     layer: 3
     priority: P2
-    status: planned
+    status: done
     title: "终端宏录制"
+    feature_dir: "2026-07-25-macro-recording"
     description: "录制键盘输入和延迟，可变速回放"
     depends_on: []
     scope: "录制输入+延迟、0.5x/1x/2x/5x回放、持久化到macros/目录、可绑定快捷键"
@@ -215,8 +231,9 @@ sub_features:
   - id: ai-streaming
     layer: 3
     priority: P1
-    status: planned
+    status: done
     title: "AI 流式响应"
+    feature_dir: "2026-07-25-ai-streaming"
     description: "AI响应逐token流式显示"
     depends_on: ["ai-multi-model"]
     scope: "IAsyncEnumerable逐token、Stop中断、命令实时高亮、同步回退"
@@ -226,8 +243,9 @@ sub_features:
   - id: command-templates
     layer: 3
     priority: P1
-    status: planned
+    status: done
     title: "命令模板库"
+    feature_dir: "2026-07-25-command-templates"
     description: "跨会话命令模板库，支持变量替换"
     depends_on: ["quick-commands"]
     scope: "CRUD+标签分类、变量替换{host}{user}{date}{prompt}{env:VAR}、从历史创建、导入导出"
@@ -238,8 +256,9 @@ sub_features:
   - id: terminal-enhancements
     layer: 4
     priority: P2
-    status: planned
+    status: done
     title: "终端透明窗口"
+    feature_dir: "2026-07-25-terminal-enhancements"
     description: "窗口透明度可调"
     depends_on: []
     scope: "透明度30%-100%、实时生效、快捷键切换"
@@ -249,8 +268,9 @@ sub_features:
   - id: multi-channel-enhancements
     layer: 4
     priority: P2
-    status: planned
+    status: done
     title: "多通道增强"
+    feature_dir: "2026-07-25-multi-channel-enhancements"
     description: "多通道同步录制和时间线回放"
     depends_on: ["macro-recording"]
     scope: "同步录制多会话输入输出、时间线回放、导出文本/HTML报告"
@@ -260,8 +280,9 @@ sub_features:
   - id: tools-ui
     layer: 4
     priority: P1
-    status: planned
+    status: done
     title: "运维工具UI集成"
+    feature_dir: "2026-07-25-tools-ui"
     description: "运维工具箱菜单、配置对话框、执行结果面板"
     depends_on: ["tools-core", "tools-cert-installer", "tools-time-sync", "tools-repo-config", "tools-port-scanner", "tools-net-scanner"]
     scope: "工具箱分类菜单、独立tab、配置对话框、结果复制"
