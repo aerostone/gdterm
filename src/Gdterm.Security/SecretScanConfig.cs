@@ -52,8 +52,7 @@ namespace Gdterm.Security
                 ".exe", ".dll", ".so", ".dylib", ".bin", ".dat", ".db",
                 ".sqlite", ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".ico",
                 ".mp3", ".mp4", ".avi", ".mov", ".zip", ".tar", ".gz",
-                ".7z", ".rar", ".pdf", ".doc", ".docx", ".xls", ".xlsx",
-                ".ttf", ".otf", ".woff", ".woff2", ".eot"
+                ".7z", ".rar", ".pdf", ".ttf", ".otf", ".woff", ".woff2", ".eot"
             };
             MaxFileSizeBytes = 10 * 1024 * 1024; // 10MB
             EntropyThreshold = 4.5;

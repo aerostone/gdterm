@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Xml.Linq;
 
 namespace Gdterm.Security
 {
@@ -160,26 +163,81 @@ namespace Gdterm.Security
             var fileFinding = CheckSensitiveFileName(filePath);
             if (fileFinding != null) findings.Add(fileFinding);
 
-            // 第2层+第3层：内容扫描（仅文本文件）
-            if (IsTextFile(filePath) && new FileInfo(filePath).Length <= _config.MaxFileSizeBytes)
+            var ext = Path.GetExtension(filePath).ToLower();
+            var fileSize = new FileInfo(filePath).Length;
+
+            if (fileSize > _config.MaxFileSizeBytes) return findings;
+
+            // CSV 文件 — 直接按行读取
+            if (ext == ".csv")
             {
                 try
                 {
                     var lines = File.ReadAllLines(filePath, Encoding.UTF8);
-                    for (int lineNum = 0; lineNum < lines.Length; lineNum++)
+                    for (int i = 0; i < lines.Length; i++)
                     {
-                        var line = lines[lineNum];
+                        findings.AddRange(CheckHighEntropyStrings(filePath, i + 1, lines[i]));
+                        findings.AddRange(CheckPatterns(filePath, i + 1, lines[i]));
+                    }
+                    // CSV 密码表特征：如果某列全是高熵短字符串，标记为疑似密码表
+                    findings.AddRange(CheckPasswordSpreadsheet(filePath, lines));
+                }
+                catch { }
+                return findings;
+            }
 
-                        // 第2层：高熵字符串检测
-                        var entropyFindings = CheckHighEntropyStrings(filePath, lineNum + 1, line);
-                        findings.AddRange(entropyFindings);
+            // Excel .xlsx — 解压解析 XML
+            if (ext == ".xlsx")
+            {
+                try
+                {
+                    var cellTexts = ExtractXlsxText(filePath);
+                    findings.AddRange(ScanExtractedTexts(filePath, cellTexts));
+                    findings.AddRange(CheckPasswordSpreadsheetFromCells(filePath, cellTexts));
+                }
+                catch { }
+                return findings;
+            }
 
-                        // 第3层：正则模式匹配
-                        var patternFindings = CheckPatterns(filePath, lineNum + 1, line);
-                        findings.AddRange(patternFindings);
+            // Excel .xls (旧格式) — 无法无依赖解析，用文件名+大小启发式
+            if (ext == ".xls")
+            {
+                findings.Add(new SecretFinding
+                {
+                    Severity = FindingSeverity.Medium,
+                    Category = FindingCategory.SensitiveFile,
+                    FilePath = filePath,
+                    Description = string.Format("旧格式 Excel 文件（{0}KB，建议手动检查是否含密码）", fileSize / 1024),
+                    RuleName = "XlsPasswordCandidate"
+                });
+                return findings;
+            }
+
+            // Word .docx — 解压解析 XML
+            if (ext == ".docx")
+            {
+                try
+                {
+                    var texts = ExtractDocxText(filePath);
+                    findings.AddRange(ScanExtractedTexts(filePath, texts));
+                }
+                catch { }
+                return findings;
+            }
+
+            // 纯文本文件
+            if (IsTextFile(filePath))
+            {
+                try
+                {
+                    var lines = File.ReadAllLines(filePath, Encoding.UTF8);
+                    for (int i = 0; i < lines.Length; i++)
+                    {
+                        findings.AddRange(CheckHighEntropyStrings(filePath, i + 1, lines[i]));
+                        findings.AddRange(CheckPatterns(filePath, i + 1, lines[i]));
                     }
                 }
-                catch { /* 读取失败静默跳过 */ }
+                catch { }
             }
 
             return findings;
@@ -497,7 +555,7 @@ namespace Gdterm.Security
                 ".txt", ".log", ".conf", ".cfg", ".ini", ".xml", ".json", ".yaml", ".yml",
                 ".sh", ".bash", ".bat", ".cmd", ".ps1", ".py", ".rb", ".pl", ".js", ".ts",
                 ".java", ".c", ".cpp", ".h", ".cs", ".go", ".rs", ".php", ".html", ".css",
-                ".sql", ".properties", ".env", ".toml", ".md", ".csv", ".service", ".nginx",
+                ".sql", ".properties", ".env", ".toml", ".md", ".service", ".nginx",
                 ".htaccess", ".gitignore", ".dockerfile", ".makefile", ".config"
             };
             return Array.Exists(textExts, e => e == ext) || string.IsNullOrEmpty(ext);
@@ -531,6 +589,273 @@ namespace Gdterm.Security
         private string GetWhitelistPath()
         {
             return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "config", "secret-scan-whitelist.txt");
+        }
+
+        // ── Office 文档解析（无需外部依赖） ──
+
+        /// <summary>从 .xlsx 提取所有单元格文本（解压 zip → 解析 sheet*.xml）</summary>
+        private static List<string> ExtractXlsxText(string filePath)
+        {
+            var texts = new List<string>();
+            using (var zip = ZipFile.OpenRead(filePath))
+            {
+                // 解析 sharedStrings.xml（共享字符串表）
+                var sharedStringsEntry = zip.GetEntry("xl/sharedStrings.xml");
+                var sharedStrings = new List<string>();
+                if (sharedStringsEntry != null)
+                {
+                    using (var stream = sharedStringsEntry.Open())
+                    {
+                        var doc = XDocument.Load(stream);
+                        var ns = doc.Root.GetDefaultNamespace();
+                        foreach (var si in doc.Descendants(ns + "si"))
+                        {
+                            // <si><t>text</t></si> 或 <si><r><t>text</t></r>...</si>
+                            var tElements = si.Descendants(ns + "t");
+                            var sb = new StringBuilder();
+                            foreach (var t in tElements) sb.Append(t.Value);
+                            sharedStrings.Add(sb.ToString());
+                        }
+                    }
+                }
+
+                // 解析每个 sheet
+                foreach (var entry in zip.Entries)
+                {
+                    if (!entry.FullName.StartsWith("xl/worksheets/sheet") || !entry.FullName.EndsWith(".xml"))
+                        continue;
+
+                    using (var stream = entry.Open())
+                    {
+                        var doc = XDocument.Load(stream);
+                        var ns = doc.Root.GetDefaultNamespace();
+
+                        foreach (var row in doc.Descendants(ns + "row"))
+                        {
+                            foreach (var cell in row.Descendants(ns + "c"))
+                            {
+                                var value = cell.Element(ns + "v");
+                                if (value == null || string.IsNullOrEmpty(value.Value)) continue;
+
+                                var cellRef = cell.Attribute("t");
+                                if (cellRef != null && cellRef.Value == "s")
+                                {
+                                    // 共享字符串引用
+                                    int idx;
+                                    if (int.TryParse(value.Value, out idx) && idx < sharedStrings.Count)
+                                        texts.Add(sharedStrings[idx]);
+                                }
+                                else
+                                {
+                                    // 直接值（数字、布尔、日期等）
+                                    texts.Add(value.Value);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            return texts;
+        }
+
+        /// <summary>从 .docx 提取所有段落文本（解压 zip → 解析 document.xml）</summary>
+        private static List<string> ExtractDocxText(string filePath)
+        {
+            var texts = new List<string>();
+            using (var zip = ZipFile.OpenRead(filePath))
+            {
+                var docEntry = zip.GetEntry("word/document.xml");
+                if (docEntry == null) return texts;
+
+                using (var stream = docEntry.Open())
+                {
+                    var doc = XDocument.Load(stream);
+                    var ns = doc.Root.GetDefaultNamespace();
+
+                    // 提取所有 <w:t> 文本节点
+                    foreach (var t in doc.Descendants(ns + "t"))
+                    {
+                        if (!string.IsNullOrEmpty(t.Value))
+                            texts.Add(t.Value);
+                    }
+                }
+
+                // 也解析 .docx 中的表格
+                using (var stream = docEntry.Open())
+                {
+                    var doc = XDocument.Load(stream);
+                    var ns = doc.Root.GetDefaultNamespace();
+
+                    foreach (var tc in doc.Descendants(ns + "tc"))
+                    {
+                        var sb = new StringBuilder();
+                        foreach (var t in tc.Descendants(ns + "t")) sb.Append(t.Value);
+                        if (sb.Length > 0) texts.Add(sb.ToString());
+                    }
+                }
+            }
+            return texts;
+        }
+
+        /// <summary>扫描提取出的文本列表（用于 Excel/Word）</summary>
+        private List<SecretFinding> ScanExtractedTexts(string filePath, List<string> texts)
+        {
+            var findings = new List<SecretFinding>();
+            for (int i = 0; i < texts.Count; i++)
+            {
+                var text = texts[i];
+                if (string.IsNullOrEmpty(text) || text.Length < 4) continue;
+
+                // 高熵检测
+                double entropy = CalculateShannonEntropy(text);
+                if (text.Length >= _config.MinEntropyStringLength &&
+                    text.Length <= _config.MaxEntropyStringLength &&
+                    !IsCommonNonSecret(text) &&
+                    entropy >= _config.EntropyThreshold)
+                {
+                    findings.Add(new SecretFinding
+                    {
+                        Severity = entropy >= 5.0 ? FindingSeverity.High : FindingSeverity.Medium,
+                        Category = FindingCategory.HighEntropyString,
+                        FilePath = filePath,
+                        LineNumber = i + 1,
+                        MatchedContent = text,
+                        Entropy = entropy,
+                        Description = string.Format("Office 文档中的高熵字符串 (熵={0:F2})", entropy),
+                        RuleName = "OfficeShannonEntropy"
+                    });
+                }
+
+                // 正则模式检测
+                findings.AddRange(CheckPatterns(filePath, i + 1, text));
+            }
+            return findings;
+        }
+
+        /// <summary>CSV 密码表特征检测——如果某列全是高熵短字符串，标记为疑似密码表</summary>
+        private List<SecretFinding> CheckPasswordSpreadsheet(string filePath, string[] lines)
+        {
+            var findings = new List<SecretFinding>();
+            if (lines.Length < 2) return findings;
+
+            // 解析 CSV 列
+            var headers = ParseCsvLine(lines[0]);
+            int colCount = headers.Count;
+            if (colCount < 2) return findings;
+
+            // 检查每列
+            for (int col = 0; col < colCount; col++)
+            {
+                var header = col < headers.Count ? headers[col].ToLower() : "";
+                bool isPasswordCol = header.Contains("密码") || header.Contains("password") ||
+                                     header.Contains("passwd") || header.Contains("pwd") ||
+                                     header.Contains("pass") || header.Contains("secret") ||
+                                     header.Contains("key") || header.Contains("token");
+
+                int highEntropyCount = 0;
+                int totalRows = 0;
+
+                for (int row = 1; row < lines.Length && row < 500; row++) // 最多检查500行
+                {
+                    var cols = ParseCsvLine(lines[row]);
+                    if (col >= cols.Count) continue;
+                    var cell = cols[col];
+                    if (string.IsNullOrEmpty(cell) || cell.Length < 4) continue;
+
+                    totalRows++;
+                    double entropy = CalculateShannonEntropy(cell);
+                    if (entropy >= 3.5 && cell.Length >= 6) // 比正文阈值稍低，因为密码可能不长
+                        highEntropyCount++;
+                }
+
+                // 如果列名含密码关键词，或该列超过 60% 是高熵字符串
+                if (isPasswordCol && totalRows > 0)
+                {
+                    findings.Add(new SecretFinding
+                    {
+                        Severity = FindingSeverity.Critical,
+                        Category = FindingCategory.Password,
+                        FilePath = filePath,
+                        Description = string.Format("疑似密码表：列 "{0}" 标题含密码关键词（{1}行数据）", header, totalRows),
+                        RuleName = "PasswordColumnHeader"
+                    });
+                }
+                else if (highEntropyCount > 3 && (double)highEntropyCount / totalRows > 0.6)
+                {
+                    findings.Add(new SecretFinding
+                    {
+                        Severity = FindingSeverity.High,
+                        Category = FindingCategory.Password,
+                        FilePath = filePath,
+                        Description = string.Format("疑似密码表：列 {0} 有 {1}/{2} 行为高熵字符串", col + 1, highEntropyCount, totalRows),
+                        RuleName = "PasswordColumnEntropy"
+                    });
+                }
+            }
+
+            return findings;
+        }
+
+        /// <summary>Excel 密码表特征检测（基于单元格列表）</summary>
+        private List<SecretFinding> CheckPasswordSpreadsheetFromCells(string filePath, List<string> cells)
+        {
+            // 统计高熵短字符串比例
+            int highEntropy = 0;
+            int total = 0;
+            foreach (var cell in cells)
+            {
+                if (string.IsNullOrEmpty(cell) || cell.Length < 4 || cell.Length > 64) continue;
+                total++;
+                double entropy = CalculateShannonEntropy(cell);
+                if (entropy >= 3.5 && cell.Length >= 6) highEntropy++;
+            }
+
+            if (total > 5 && (double)highEntropy / total > 0.3)
+            {
+                return new List<SecretFinding>
+                {
+                    new SecretFinding
+                    {
+                        Severity = FindingSeverity.High,
+                        Category = FindingCategory.Password,
+                        FilePath = filePath,
+                        Description = string.Format("疑似密码表：{0} 个单元格中有 {1} 个高熵字符串 ({2:F0}%)",
+                            total, highEntropy, (double)highEntropy / total * 100),
+                        RuleName = "ExcelPasswordSheet"
+                    }
+                };
+            }
+            return new List<SecretFinding>();
+        }
+
+        /// <summary>简单 CSV 行解析（支持引号内逗号）</summary>
+        private static List<string> ParseCsvLine(string line)
+        {
+            var result = new List<string>();
+            if (string.IsNullOrEmpty(line)) return result;
+
+            var sb = new StringBuilder();
+            bool inQuotes = false;
+
+            for (int i = 0; i < line.Length; i++)
+            {
+                char c = line[i];
+                if (c == '"')
+                {
+                    inQuotes = !inQuotes;
+                }
+                else if (c == ',' && !inQuotes)
+                {
+                    result.Add(sb.ToString().Trim());
+                    sb.Clear();
+                }
+                else
+                {
+                    sb.Append(c);
+                }
+            }
+            result.Add(sb.ToString().Trim());
+            return result;
         }
 
         public void Dispose()
