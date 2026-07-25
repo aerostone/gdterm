@@ -144,6 +144,9 @@
     <Compile Include="Services\ActiveSessionBridge.cs" />
     <Compile Include="Services\CredentialResolver.cs" />
     <Compile Include="Services\TabSessionLifecycle.cs" />
+    <Compile Include="Services\MainFormMenuBuilder.cs" />
+    <Compile Include="Services\ProtocolTabOpener.cs" />
+    <Compile Include="Services\TabSessionState.cs" />
     <Compile Include="Services\SessionStateCoordinator.cs" />
     <Compile Include="Services\SidePanelFactory.cs" />
     <Compile Include="Controls\SplitPaneControl.cs" />

@@ -159,87 +159,50 @@ namespace Gdterm.UI.Forms
             StartPosition = FormStartPosition.CenterScreen;
             MinimumSize = new Size(800, 600);
 
-            _menuStrip = new MenuStrip();
-
-            // 文件
-            var fileMenu = new ToolStripMenuItem("文件(&F)");
-            fileMenu.DropDownItems.Add("新建连接(&N)", null, OnNewConnection);
-            fileMenu.DropDownItems.Add(new ToolStripSeparator());
-            fileMenu.DropDownItems.Add("导入连接(&I)...", null, OnImportConnections);
-            fileMenu.DropDownItems.Add("导出连接(&E)...", null, OnExportConnections);
-            fileMenu.DropDownItems.Add(new ToolStripSeparator());
-            fileMenu.DropDownItems.Add("退出(&X)", null, (s, e) => Close());
-            _menuStrip.Items.Add(fileMenu);
-
-            // 连接
-            var connectionMenu = new ToolStripMenuItem("连接(&C)");
-            connectionMenu.DropDownItems.Add("新建连接", null, OnNewConnection);
-            connectionMenu.DropDownItems.Add("本地终端(&L)", null, (s, e) => _tabContainer.OpenLocalTerminal());
-            connectionMenu.DropDownItems.Add("SFTP 浏览器", null, OnOpenSftp);
-            connectionMenu.DropDownItems.Add(new ToolStripSeparator());
-            connectionMenu.DropDownItems.Add("重连当前标签 Ctrl+R", null, (s, e) => _tabContainer.ReconnectActiveTab());
-            connectionMenu.DropDownItems.Add("关闭当前标签 Ctrl+W", null, (s, e) => _tabContainer.CloseActiveTab());
-            _menuStrip.Items.Add(connectionMenu);
-
-            // 视图
-            var viewMenu = new ToolStripMenuItem("视图(&V)");
-            _viewStandardItem = new ToolStripMenuItem("标准视图(&S)") { Checked = true };
-            _viewStandardItem.Click += (s, e) => SetViewMode(ViewMode.Standard);
-            _viewFocusItem = new ToolStripMenuItem("专注模式(&F)");
-            _viewFocusItem.Click += (s, e) => SetViewMode(ViewMode.Focus);
-            _viewCompactItem = new ToolStripMenuItem("紧凑模式(&C)");
-            _viewCompactItem.Click += (s, e) => SetViewMode(ViewMode.Compact);
-            viewMenu.DropDownItems.Add(_viewStandardItem);
-            viewMenu.DropDownItems.Add(_viewFocusItem);
-            viewMenu.DropDownItems.Add(_viewCompactItem);
-            viewMenu.DropDownItems.Add(new ToolStripSeparator());
-            var toggleTreeItem = new ToolStripMenuItem("切换连接面板(&T)") { ShortcutKeys = Keys.Control | Keys.L };
-            toggleTreeItem.Click += (s, e) => ToggleConnectionTree();
-            viewMenu.DropDownItems.Add(toggleTreeItem);
-            viewMenu.DropDownItems.Add(new ToolStripSeparator());
-            viewMenu.DropDownItems.Add("水平分割", null, (s, e) => _tabContainer.SplitHorizontal());
-            viewMenu.DropDownItems.Add("垂直分割", null, (s, e) => _tabContainer.SplitVertical());
-            viewMenu.DropDownItems.Add(new ToolStripSeparator());
-            viewMenu.DropDownItems.Add("快捷命令栏", null, (s, e) =>
+            var menuBuilt = new MainFormMenuBuilder().Build(new MainFormMenuBuilder.Callbacks
             {
-                if (_quickBar != null) _quickBar.Visible = !_quickBar.Visible;
+                NewConnection = OnNewConnection,
+                ImportConnections = OnImportConnections,
+                ExportConnections = OnExportConnections,
+                Exit = (s, e) => Close(),
+                OpenLocalTerminal = (s, e) => _tabContainer.OpenLocalTerminal(),
+                OpenSftp = OnOpenSftp,
+                ReconnectActive = (s, e) => _tabContainer.ReconnectActiveTab(),
+                CloseActive = (s, e) => _tabContainer.CloseActiveTab(),
+                ViewStandard = (s, e) => SetViewMode(ViewMode.Standard),
+                ViewFocus = (s, e) => SetViewMode(ViewMode.Focus),
+                ViewCompact = (s, e) => SetViewMode(ViewMode.Compact),
+                ToggleTree = (s, e) => ToggleConnectionTree(),
+                SplitHorizontal = (s, e) => _tabContainer.SplitHorizontal(),
+                SplitVertical = (s, e) => _tabContainer.SplitVertical(),
+                ToggleQuickBar = (s, e) =>
+                {
+                    if (_quickBar != null) _quickBar.Visible = !_quickBar.Visible;
+                },
+                ShowSearch = (s, e) => ShowSearchBar(),
+                ShowSnippet = (s, e) => ShowSnippetSearch(),
+                ShowHighlight = (s, e) => ShowSidePanel(_sidePanels.CreateHighlightPanel()),
+                ShowKeyBinding = (s, e) => ShowSidePanel(_sidePanels.CreateKeyBindingPanel()),
+                ShowLogonScript = (s, e) => ShowSidePanel(_sidePanels.CreateLogonScriptPanel()),
+                ShowMultiChannel = (s, e) => ShowSidePanel(_sidePanels.CreateMultiChannelPanel()),
+                ShowBatch = (s, e) => ShowSidePanel(_sidePanels.CreateBatchPanel()),
+                ShowHistory = (s, e) => ShowSidePanel(_sidePanels.CreateHistoryPanel()),
+                ShowHealth = (s, e) => ShowSidePanel(_sidePanels.CreateHealthPanel()),
+                ShowPortForward = (s, e) => ShowSidePanel(_sidePanels.CreatePortForwardPanel()),
+                ShowToolbox = (s, e) => ShowSidePanel(_sidePanels.CreateToolboxPanel()),
+                ShowSecretScan = (s, e) => ShowSidePanel(_sidePanels.CreateSecretScanPanel()),
+                KeePassManager = OnKeePassManager,
+                PasswordHealth = OnPasswordHealth,
+                PasswordGenerator = OnPasswordGenerator,
+                AiSettings = OnAiSettings,
+                DangerousCmdSettings = OnDangerousCmdSettings,
+                ShowHotkeys = OnShowHotkeys,
+                About = OnAbout
             });
-            _menuStrip.Items.Add(viewMenu);
-
-            // 终端
-            var termMenu = new ToolStripMenuItem("终端(&E)");
-            termMenu.DropDownItems.Add("查找 Ctrl+F", null, (s, e) => ShowSearchBar());
-            termMenu.DropDownItems.Add("片段搜索 Ctrl+P", null, (s, e) => ShowSnippetSearch());
-            termMenu.DropDownItems.Add("高亮规则", null, (s, e) => ShowSidePanel(_sidePanels.CreateHighlightPanel()));
-            termMenu.DropDownItems.Add("快捷键绑定", null, (s, e) => ShowSidePanel(_sidePanels.CreateKeyBindingPanel()));
-            termMenu.DropDownItems.Add("登录脚本", null, (s, e) => ShowSidePanel(_sidePanels.CreateLogonScriptPanel()));
-            termMenu.DropDownItems.Add(new ToolStripSeparator());
-            termMenu.DropDownItems.Add("多通道广播", null, (s, e) => ShowSidePanel(_sidePanels.CreateMultiChannelPanel()));
-            termMenu.DropDownItems.Add("批量命令", null, (s, e) => ShowSidePanel(_sidePanels.CreateBatchPanel()));
-            termMenu.DropDownItems.Add("命令历史", null, (s, e) => ShowSidePanel(_sidePanels.CreateHistoryPanel()));
-            termMenu.DropDownItems.Add("健康监控", null, (s, e) => ShowSidePanel(_sidePanels.CreateHealthPanel()));
-            termMenu.DropDownItems.Add("端口转发", null, (s, e) => ShowSidePanel(_sidePanels.CreatePortForwardPanel()));
-            _menuStrip.Items.Add(termMenu);
-
-            // 工具
-            var toolsMenu = new ToolStripMenuItem("工具(&T)");
-            toolsMenu.DropDownItems.Add("运维工具箱", null, (s, e) => ShowSidePanel(_sidePanels.CreateToolboxPanel()));
-            toolsMenu.DropDownItems.Add("敏感信息扫描", null, (s, e) => ShowSidePanel(_sidePanels.CreateSecretScanPanel()));
-            toolsMenu.DropDownItems.Add(new ToolStripSeparator());
-            toolsMenu.DropDownItems.Add("密码库管理(&K)", null, OnKeePassManager);
-            toolsMenu.DropDownItems.Add("密码健康报告(&H)", null, OnPasswordHealth);
-            toolsMenu.DropDownItems.Add("🔑 密码生成器(&G)", null, OnPasswordGenerator);
-            toolsMenu.DropDownItems.Add(new ToolStripSeparator());
-            toolsMenu.DropDownItems.Add("AI 助手设置(&A)", null, OnAiSettings);
-            toolsMenu.DropDownItems.Add(new ToolStripSeparator());
-            toolsMenu.DropDownItems.Add("危险命令规则(&D)", null, OnDangerousCmdSettings);
-            _menuStrip.Items.Add(toolsMenu);
-
-            // 帮助
-            var helpMenu = new ToolStripMenuItem("帮助(&H)");
-            helpMenu.DropDownItems.Add("快捷键列表", null, OnShowHotkeys);
-            helpMenu.DropDownItems.Add("关于 gdterm", null, OnAbout);
-            _menuStrip.Items.Add(helpMenu);
+            _menuStrip = menuBuilt.Menu;
+            _viewStandardItem = menuBuilt.ViewStandardItem;
+            _viewFocusItem = menuBuilt.ViewFocusItem;
+            _viewCompactItem = menuBuilt.ViewCompactItem;
 
             MainMenuStrip = _menuStrip;
             Controls.Add(_menuStrip);

@@ -60,3 +60,4 @@
 - 运维工具走 `ISshRemoteSession`；端口转发走 `ISshPortForwardHost`；隧道走 `ITunnelManager`
 - 凭据解析走 `CredentialResolver`；活动会话侧栏绑定走 `ActiveSessionBridge`
 - finding-10 拆分进度：SidePanelFactory / SessionStateCoordinator / TabSessionLifecycle / ActiveSessionBridge / CredentialResolver；MainForm 与 TabContainer 仍是布局+建签枢纽，禁止再堆业务到这两类
+- UI Services：协议建签用 ProtocolTabOpener；菜单用 MainFormMenuBuilder；侧栏用 SidePanelFactory；关签/健康/登录脚本用 TabSessionLifecycle；禁止再把协议 Create* 写回 TabContainer
