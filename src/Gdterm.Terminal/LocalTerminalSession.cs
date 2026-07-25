@@ -190,6 +190,17 @@ namespace Gdterm.Terminal
             {
                 _disposed = true;
                 Disconnect();
+                lock (_lock)
+                {
+                    if (_process != null)
+                    {
+                        _process.OutputDataReceived -= null;
+                        _process.ErrorDataReceived -= null;
+                        _process.Exited -= null;
+                        try { _process.Dispose(); } catch { }
+                        _process = null;
+                    }
+                }
             }
         }
     }

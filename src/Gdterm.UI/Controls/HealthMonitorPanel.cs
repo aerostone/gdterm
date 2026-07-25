@@ -16,6 +16,8 @@ namespace Gdterm.UI.Controls
         private Panel _graphPanel;
         private readonly List<HealthSnapshot> _recent = new List<HealthSnapshot>();
         private System.Windows.Forms.Timer _refreshTimer;
+        private static readonly Font _titleFont = new Font("Microsoft YaHei", 10f);
+        private static readonly Font _labelFont = new Font("Microsoft YaHei", 8f);
 
         public HealthMonitorPanel()
         {
@@ -36,10 +38,6 @@ namespace Gdterm.UI.Controls
 
         private void BuildUI()
         {
-            var headerFont = new Font("Microsoft YaHei", 10f, FontStyle.Bold);
-            var font = new Font("Consolas", 10f);
-            var smallFont = new Font("Microsoft YaHei", 8f);
-
             // ── 状态卡片 ──
             var cards = new Panel { Dock = DockStyle.Top, Height = 80, BackColor = Color.FromArgb(37, 37, 38), Padding = new Padding(12, 10, 12, 10) };
 
@@ -119,7 +117,7 @@ namespace Gdterm.UI.Controls
             var chartRect = new Rectangle(rect.Left + left, rect.Top + top, rect.Width - left - right, rect.Height - top - bottom);
 
             // 标题
-            g.DrawString("连接状态", new Font("Microsoft YaHei", 10f), Brushes.Gray, rect.Left + left, 8);
+            g.DrawString("连接状态", _titleFont, Brushes.Gray, rect.Left + left, 8);
 
             // 网格线
             using (var pen = new Pen(Color.FromArgb(40, 40, 40), 1))
@@ -150,8 +148,8 @@ namespace Gdterm.UI.Controls
             }
 
             // 左侧标签
-            g.DrawString("在线", new Font("Microsoft YaHei", 8f), Brushes.Gray, 8, chartRect.Top + chartRect.Height * 0.15f);
-            g.DrawString("离线", new Font("Microsoft YaHei", 8f), Brushes.Gray, 8, chartRect.Top + chartRect.Height * 0.75f);
+            g.DrawString("在线", _labelFont, Brushes.Gray, 8, chartRect.Top + chartRect.Height * 0.15f);
+            g.DrawString("离线", _labelFont, Brushes.Gray, 8, chartRect.Top + chartRect.Height * 0.75f);
         }
 
         private static string FormatTimeSpan(TimeSpan ts)
