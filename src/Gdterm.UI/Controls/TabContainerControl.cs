@@ -332,5 +332,14 @@ namespace Gdterm.UI.Controls
             public ProtocolType Protocol { get; set; }
             public bool IsConnected { get; set; }
         }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                CloseAllTabs();
+            }
+            base.Dispose(disposing);
+        }
     }
 }

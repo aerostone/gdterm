@@ -15,10 +15,13 @@ namespace Gdterm.AI
     /// <summary>
     /// AI 对话服务实现——OpenAI-compatible API 调用、连接上下文注入、命令提取
     /// </summary>
-    public class AiAssistantService : IAiAssistantService
+    public class AiAssistantService : IAiAssistantService, IDisposable
     {
         private readonly List<ChatMessage> _history = new List<ChatMessage>();
-        private readonly HttpClient _httpClient;
+        private static readonly HttpClient _httpClient = new HttpClient
+        {
+            Timeout = TimeSpan.FromSeconds(120)
+        };
         private static readonly Regex CommandBlockRegex = new Regex(
             @"```(?:bash|sh|shell|zsh|powershell|cmd)\s*\r?\n(.*?)```",
             RegexOptions.Singleline | RegexOptions.Compiled);
@@ -28,8 +31,6 @@ namespace Gdterm.AI
         public AiAssistantService(AiConfiguration configuration)
         {
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-            _httpClient = new HttpClient();
-            _httpClient.Timeout = TimeSpan.FromSeconds(120);
         }
 
         public async Task<AiResponse> SendMessageAsync(string message, ITerminalSession session, CancellationToken ct)
@@ -323,7 +324,8 @@ namespace Gdterm.AI
 
         public void Dispose()
         {
-            _httpClient?.Dispose();
+            _history.Clear();
+            // HttpClient is static — do NOT dispose here
         }
     }
 }

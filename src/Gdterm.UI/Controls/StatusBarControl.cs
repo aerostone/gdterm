@@ -16,6 +16,7 @@ namespace Gdterm.UI.Controls
         private readonly IKeePassService _keepassService;
         private readonly IAiAssistantService _aiService;
         private readonly ISecurityManager _securityManager;
+        private EventHandler<LockStateChangedEventArgs> _lockChangedHandler;
 
         private ToolStripStatusLabel _connectionStatus;
         private ToolStripStatusLabel _tunnelStatus;
@@ -59,8 +60,22 @@ namespace Gdterm.UI.Controls
 
             Controls.Add(statusStrip);
 
-            // 订阅事件
-            _securityManager.LockStateChanged += (s, e) => UpdateSecurityStatus();
+            // 订阅事件（存储引用以便 Dispose 时取消订阅）
+            _lockChangedHandler = (s, e) => UpdateSecurityStatus();
+            _securityManager.LockStateChanged += _lockChangedHandler;
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (_lockChangedHandler != null)
+                {
+                    _securityManager.LockStateChanged -= _lockChangedHandler;
+                    _lockChangedHandler = null;
+                }
+            }
+            base.Dispose(disposing);
         }
 
         private void UpdateStatus()
