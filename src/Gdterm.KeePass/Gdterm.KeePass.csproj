@@ -47,6 +47,7 @@
     <Compile Include="IKeePassService.cs" />
     <Compile Include="Models\KeePassEntry.cs" />
     <Compile Include="Models\KeePassEntrySummary.cs" />
+    <Compile Include="Models\PasswordHealthReport.cs" />
     <Compile Include="Models\WeakPasswordException.cs" />
     <Compile Include="PasswordStrengthValidator.cs" />
     <Compile Include="KeePassService.cs" />

@@ -146,6 +146,18 @@ namespace Gdterm.Security
             return _passwordConfig;
         }
 
+        /// <summary>
+        /// 验证主密码是否正确（不改变锁定状态）
+        /// 用于凭据管理等敏感操作的二次验证
+        /// </summary>
+        public bool VerifyMasterPassword(string password)
+        {
+            if (string.IsNullOrEmpty(password) || _passwordConfig == null)
+                return false;
+
+            return VerifyPassword(password, _passwordConfig);
+        }
+
         public void Dispose()
         {
             if (_disposed) return;

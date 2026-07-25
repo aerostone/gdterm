@@ -139,6 +139,7 @@ namespace Gdterm.UI.Forms
             // 工具菜单
             var toolsMenu = new ToolStripMenuItem("工具(&T)");
             toolsMenu.DropDownItems.Add("密码库管理(&K)", null, OnKeePassManager);
+            toolsMenu.DropDownItems.Add("密码健康报告(&H)", null, OnPasswordHealth);
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
             toolsMenu.DropDownItems.Add("🔑 密码生成器(&G)", null, OnPasswordGenerator);
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
@@ -341,8 +342,121 @@ namespace Gdterm.UI.Forms
 
         private void OnKeePassManager(object sender, EventArgs e)
         {
+            // 敏感操作：二次验证主密码
+            if (!ReAuthenticate("访问密码库管理"))
+                return;
+
             // TODO: 打开密码库管理对话框
             MessageBox.Show("密码库管理功能待实现", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        private void OnPasswordHealth(object sender, EventArgs e)
+        {
+            // 敏感操作：二次验证主密码
+            if (!ReAuthenticate("查看密码健康报告"))
+                return;
+
+            if (!_keepassService.IsUnlocked)
+            {
+                MessageBox.Show("密码库未解锁", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            using (var form = new PasswordHealthForm(_keepassService))
+            {
+                form.ShowDialog(this);
+            }
+        }
+
+        /// <summary>
+        /// 敏感操作二次验证——弹出密码输入框验证主密码
+        /// 防止离开电脑时他人操作密码库
+        /// </summary>
+        private bool ReAuthenticate(string action)
+        {
+            // 如果已锁定，需要先解锁
+            if (_securityManager.IsLocked)
+            {
+                MessageBox.Show("应用已锁定，请先解锁", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+
+            // 弹出密码验证
+            using (var dialog = new Form())
+            {
+                dialog.Text = "安全验证";
+                dialog.Size = new Size(380, 180);
+                dialog.StartPosition = FormStartPosition.CenterParent;
+                dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
+                dialog.MaximizeBox = false;
+                dialog.MinimizeBox = false;
+                dialog.BackColor = Color.FromArgb(35, 35, 35);
+
+                var label = new Label
+                {
+                    Text = $"{action}需要验证主密码：",
+                    Font = new Font("Microsoft YaHei", 10f),
+                    ForeColor = Color.FromArgb(200, 200, 200),
+                    Location = new Point(15, 15),
+                    Size = new Size(340, 25)
+                };
+
+                var pwdBox = new TextBox
+                {
+                    Location = new Point(15, 45),
+                    Size = new Size(335, 28),
+                    Font = new Font("Consolas", 11f),
+                    UseSystemPasswordChar = true,
+                    BackColor = Color.FromArgb(50, 50, 50),
+                    ForeColor = Color.White,
+                    BorderStyle = BorderStyle.FixedSingle
+                };
+
+                var errorLabel = new Label
+                {
+                    Text = "",
+                    Font = new Font("Microsoft YaHei", 9f),
+                    ForeColor = Color.FromArgb(255, 100, 100),
+                    Location = new Point(15, 78),
+                    Size = new Size(335, 20)
+                };
+
+                var okBtn = new Button
+                {
+                    Text = "验证",
+                    Size = new Size(80, 32),
+                    Location = new Point(270, 105),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = Color.FromArgb(0, 122, 204),
+                    ForeColor = Color.White,
+                    DialogResult = DialogResult.None
+                };
+
+                okBtn.Click += (s, ev) =>
+                {
+                    if (_securityManager.VerifyMasterPassword(pwdBox.Text))
+                    {
+                        dialog.DialogResult = DialogResult.OK;
+                        dialog.Close();
+                    }
+                    else
+                    {
+                        errorLabel.Text = "密码不正确";
+                        pwdBox.SelectAll();
+                        pwdBox.Focus();
+                    }
+                };
+
+                pwdBox.KeyDown += (s, ev) =>
+                {
+                    if (ev.KeyCode == Keys.Enter) okBtn.PerformClick();
+                };
+
+                dialog.Controls.AddRange(new Control[] { label, pwdBox, errorLabel, okBtn });
+                dialog.AcceptButton = okBtn;
+
+                return dialog.ShowDialog(this) == DialogResult.OK;
+            }
         }
 
         private void OnAiSettings(object sender, EventArgs e)

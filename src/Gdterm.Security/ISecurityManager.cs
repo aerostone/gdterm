@@ -53,5 +53,11 @@ namespace Gdterm.Security
         /// 已锁定时返回 null
         /// </summary>
         string GetMasterPassword();
+
+        /// <summary>
+        /// 验证主密码是否正确（不改变锁定状态）
+        /// 用于凭据管理等敏感操作的二次验证
+        /// </summary>
+        bool VerifyMasterPassword(string password);
     }
 }

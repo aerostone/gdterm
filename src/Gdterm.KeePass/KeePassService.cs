@@ -427,6 +427,178 @@ namespace Gdterm.KeePass
             Lock();
         }
 
+        // ===== 健康分析 =====
+
+        public PasswordHealthReport AnalyzeHealth()
+        {
+            EnsureUnlocked();
+
+            var report = new PasswordHealthReport();
+            var allEntries = new List<PwEntry>();
+            CollectPwEntries(_database.RootGroup, allEntries);
+
+            report.TotalEntries = allEntries.Count;
+
+            // 按密码哈希分组用于检测重复
+            var passwordGroups = new Dictionary<string, List<PwEntry>>();
+            var now = DateTime.UtcNow;
+
+            foreach (var entry in allEntries)
+            {
+                var password = entry.Strings.ReadSafe(PwDefs.PasswordField);
+                var title = entry.Strings.ReadSafe(PwDefs.TitleField);
+                var username = entry.Strings.ReadSafe(PwDefs.UserNameField);
+                var groupPath = GetGroupPath(entry.ParentGroup);
+
+                var issue = new PasswordIssue
+                {
+                    EntryId = entry.Uuid.ToHexString(),
+                    Title = title,
+                    Username = username,
+                    GroupPath = groupPath
+                };
+
+                // 检测空密码
+                if (string.IsNullOrEmpty(password))
+                {
+                    issue.Issue = "密码为空";
+                    issue.StrengthScore = 0;
+                    report.EmptyPasswords.Add(issue);
+                    continue;
+                }
+
+                // 计算密码强度
+                int score = CalculatePasswordScore(password);
+                issue.StrengthScore = score;
+
+                // 检测弱密码
+                if (score <= 40)
+                {
+                    issue.Issue = score <= 20 ? "极弱密码" : "弱密码";
+                    report.WeakPasswords.Add(issue);
+                }
+
+                // 检测过期密码（超过 90 天）
+                var lastMod = entry.LastModificationTime;
+                if ((now - lastMod).TotalDays > 90)
+                {
+                    var expiredIssue = new PasswordIssue
+                    {
+                        EntryId = issue.EntryId,
+                        Title = title,
+                        Username = username,
+                        GroupPath = groupPath,
+                        Issue = $"密码已 {(int)(now - lastMod).TotalDays} 天未更新",
+                        StrengthScore = score
+                    };
+                    report.ExpiredPasswords.Add(expiredIssue);
+                }
+
+                // 按密码哈希分组
+                var hash = ComputePasswordHash(password);
+                if (!passwordGroups.ContainsKey(hash))
+                    passwordGroups[hash] = new List<PwEntry>();
+                passwordGroups[hash].Add(entry);
+            }
+
+            // 检测重复密码
+            foreach (var group in passwordGroups)
+            {
+                if (group.Value.Count > 1)
+                {
+                    var dupGroup = new DuplicatePasswordGroup
+                    {
+                        PasswordHash = group.Key.Substring(0, 8) + "..." // 只显示前 8 位
+                    };
+
+                    foreach (var entry in group.Value)
+                    {
+                        dupGroup.Entries.Add(new PasswordIssue
+                        {
+                            EntryId = entry.Uuid.ToHexString(),
+                            Title = entry.Strings.ReadSafe(PwDefs.TitleField),
+                            Username = entry.Strings.ReadSafe(PwDefs.UserNameField),
+                            GroupPath = GetGroupPath(entry.ParentGroup),
+                            Issue = $"与其他 {group.Value.Count - 1} 个条目共用密码"
+                        });
+                    }
+
+                    report.DuplicatePasswords.Add(dupGroup);
+                }
+            }
+
+            // 计算总分
+            int deductions = 0;
+            deductions += report.EmptyPasswords.Count * 15;
+            deductions += report.WeakPasswords.Count * 10;
+            deductions += report.DuplicatePasswords.Count * 8;
+            deductions += report.ExpiredPasswords.Count * 3;
+            report.HealthScore = Math.Max(0, 100 - deductions);
+
+            if (report.HealthScore >= 90)
+                report.Summary = "密码库健康状况良好";
+            else if (report.HealthScore >= 70)
+                report.Summary = "密码库存在一些需要关注的问题";
+            else if (report.HealthScore >= 50)
+                report.Summary = "密码库有较多安全隐患，建议尽快处理";
+            else
+                report.Summary = "密码库安全状况较差，请立即处理";
+
+            return report;
+        }
+
+        private void CollectPwEntries(PwGroup group, List<PwEntry> result)
+        {
+            foreach (var entry in group.Entries)
+                result.Add(entry);
+
+            foreach (var childGroup in group.Groups)
+                CollectPwEntries(childGroup, result);
+        }
+
+        private static int CalculatePasswordScore(string password)
+        {
+            if (string.IsNullOrEmpty(password)) return 0;
+
+            int score = 0;
+            score += Math.Min(password.Length * 3, 30); // 长度分（最多 30）
+
+            bool hasUpper = false, hasLower = false, hasDigit = false, hasSpecial = false;
+            foreach (var ch in password)
+            {
+                if (char.IsUpper(ch)) hasUpper = true;
+                else if (char.IsLower(ch)) hasLower = true;
+                else if (char.IsDigit(ch)) hasDigit = true;
+                else hasSpecial = true;
+            }
+
+            if (hasUpper) score += 15;
+            if (hasLower) score += 15;
+            if (hasDigit) score += 15;
+            if (hasSpecial) score += 25;
+
+            // 连续字符扣分
+            int consecutive = 0;
+            for (int i = 1; i < password.Length; i++)
+            {
+                if (password[i] == password[i - 1] + 1 || password[i] == password[i - 1])
+                    consecutive++;
+            }
+            score -= consecutive * 2;
+
+            return Math.Max(0, Math.Min(100, score));
+        }
+
+        private static string ComputePasswordHash(string password)
+        {
+            using (var sha256 = System.Security.Cryptography.SHA256.Create())
+            {
+                var bytes = System.Text.Encoding.UTF8.GetBytes(password);
+                var hash = sha256.ComputeHash(bytes);
+                return BitConverter.ToString(hash).Replace("-", "");
+            }
+        }
+
         // ===== 内部方法 =====
 
         private void EnsureUnlocked()

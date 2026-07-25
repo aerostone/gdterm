@@ -100,5 +100,11 @@ namespace Gdterm.KeePass
         /// 清理 RDP 凭据（从 Windows 凭据管理器删除）
         /// </summary>
         void CleanupRdpCredential(string host);
+
+        /// <summary>
+        /// 分析密码库健康状况
+        /// 检测：弱密码、重复密码、空密码、过期密码
+        /// </summary>
+        PasswordHealthReport AnalyzeHealth();
     }
 }
