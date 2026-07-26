@@ -138,6 +138,7 @@
     <Compile Include="Controls\SessionBookmarksPanel.cs" />
     <Compile Include="Controls\TerminalControl.cs" />
     <Compile Include="Diagnostics\CrashLog.cs" />
+    <Compile Include="Diagnostics\DiagLog.cs" />
     <Compile Include="Diagnostics\ClipboardProtector.cs" />
     <Compile Include="Services\ActiveSessionBridge.cs" />
     <Compile Include="Services\CredentialResolver.cs" />

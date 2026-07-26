@@ -4,11 +4,13 @@ using Gdterm.KeePass;
 using Gdterm.Security;
 using Gdterm.Tunnel;
 using Gdterm.UI.Controls;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Services
 {
     /// <summary>
     /// 窗体关闭时的有序释放：会话状态 → 热键 → 标签 → 隧道/KeePass/安全（finding-10）。
+    /// 各步独立 try/DiagLog，一步失败不阻断后续清理。
     /// </summary>
     public sealed class AppShutdownCoordinator
     {
@@ -37,12 +39,12 @@ namespace Gdterm.UI.Services
 
         public void OnFormClosing(object sender, FormClosingEventArgs e)
         {
-            try { _sessionState?.Save(); } catch { }
-            try { _hotkeys?.Dispose(); } catch { }
-            try { _tabs?.CloseAllTabs(); } catch { }
-            try { _tunnels?.Dispose(); } catch { }
-            try { _keepass?.Dispose(); } catch { }
-            try { _security?.Dispose(); } catch { }
+            DiagLog.Try("AppShutdown.SaveSession", () => _sessionState?.Save());
+            DiagLog.Try("AppShutdown.Hotkeys", () => _hotkeys?.Dispose());
+            DiagLog.Try("AppShutdown.CloseTabs", () => _tabs?.CloseAllTabs());
+            DiagLog.Try("AppShutdown.Tunnels", () => _tunnels?.Dispose());
+            DiagLog.Try("AppShutdown.KeePass", () => _keepass?.Dispose());
+            DiagLog.Try("AppShutdown.Security", () => _security?.Dispose());
         }
     }
 }

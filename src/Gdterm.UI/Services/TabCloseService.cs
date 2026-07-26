@@ -5,6 +5,7 @@ using Gdterm.Core.Enums;
 using Gdterm.KeePass;
 using Gdterm.Terminal;
 using Gdterm.Tunnel;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Services
 {
@@ -48,26 +49,25 @@ namespace Gdterm.UI.Services
 
             if (!string.IsNullOrEmpty(sessionId))
             {
-                try { _reconnectWatchdog?.Unwatch(sessionId); } catch { }
+                DiagLog.Try("TabClose.Unwatch", () => _reconnectWatchdog?.Unwatch(sessionId));
             }
 
-            try { session.HealthMonitor?.Dispose(); } catch { }
+            DiagLog.Try("TabClose.HealthMonitor", () => session.HealthMonitor?.Dispose());
 
             if (session.Protocol == ProtocolType.RDP)
             {
-                try { session.RdpClient?.Dispose(); } catch { }
-                try
+                DiagLog.Try("TabClose.RdpDispose", () => session.RdpClient?.Dispose());
+                DiagLog.Try("TabClose.CleanupRdpCredential", () =>
                 {
                     var host = session.Config != null ? session.Config.Host : null;
                     _keepassService?.CleanupRdpCredential(host);
-                }
-                catch { }
+                });
             }
 
             var disposable = session.Control as IDisposable;
             if (disposable != null)
             {
-                try { disposable.Dispose(); } catch { }
+                DiagLog.Try("TabClose.ControlDispose", () => disposable.Dispose());
             }
 
             // 先从字典移除，再判断同 connectionId 是否还有其他标签共享隧道
@@ -97,7 +97,7 @@ namespace Gdterm.UI.Services
 
             if (tabControl != null)
             {
-                try { tabControl.TabPages.Remove(tab); } catch { }
+                DiagLog.Try("TabClose.RemovePage", () => tabControl.TabPages.Remove(tab));
             }
 
             return sessionId;
@@ -117,7 +117,7 @@ namespace Gdterm.UI.Services
             foreach (var tab in pages)
                 CloseTab(tab, sessions, tabControl);
 
-            try { tabControl.TabPages.Clear(); } catch { }
+            DiagLog.Try("TabClose.ClearPages", () => tabControl.TabPages.Clear());
             sessions.Clear();
         }
     }

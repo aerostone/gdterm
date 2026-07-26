@@ -1,0 +1,64 @@
+# gdterm 编译与发布
+
+目标：**.NET Framework 4.6.2** 单文件夹绿色版，Win7 / Server 2008+。
+
+## 前置
+
+- Windows + Visual Studio 2017+ 或 Build Tools
+- .NET Framework 4.6.2 Developer Pack
+- NuGet CLI（还原 SSH.NET / KeePassLib 等 packages.config）
+
+Linux 开发机**不能**编译；只改源码与 `.csproj`，在 Windows 上 MSBuild。
+
+## 编译
+
+```bat
+cd /d C:\path\to\gdterm
+nuget restore gdterm.sln -PackagesDirectory packages
+msbuild gdterm.sln /p:Configuration=Release /m
+```
+
+输出：
+
+| 项目 | 路径 |
+|------|------|
+| 主程序 | `src\Gdterm.UI\bin\Release\Gdterm.UI.exe` |
+| 单元测试 | `src\Gdterm.Tests\bin\Release\Gdterm.Tests.exe` |
+
+## 测试
+
+零 NuGet 控制台 runner（不依赖 NUnit）：
+
+```bat
+src\Gdterm.Tests\bin\Release\Gdterm.Tests.exe
+```
+
+当前覆盖：`DefaultPorts`、`LogSanitizer` CLI 脱敏、`ConnectionStoreJson` 往返（且断言无 password 字段）。
+
+## 打包绿色版
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\pack-release.ps1
+```
+
+产物：`dist\gdterm\`（exe + 依赖 + 空 `data\` 骨架 + `README-PORTABLE.txt`）。
+
+跳过测试：
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\pack-release.ps1 -SkipTests
+```
+
+## 常见坑
+
+1. **手写 csproj 漏 `Compile Include`** —— 新 `.cs` 必须进对应 csproj，否则 Windows 编译缺类型。
+2. **ProjectGuid 必须是合法十六进制** —— 非法字符会导致 sln 加载失败。
+3. **`gdterm.sln` 每个项目都要有 `Build.0`** —— 否则 “生成解决方案” 只编到部分工程。
+4. **SSH.NET / KeePassLib** 需在 Windows 上 `nuget restore`；packages 目录勿提交密钥。
+5. **便携数据** 全在 exe 旁 `data\`；发布包不要带真实 `gdterm.kdbx` / 主密码 hash。
+
+## 诊断日志
+
+- 未处理异常：`data/logs/crash.jsonl`
+- 被吞异常（dispose/关签/关闭）：`swallowed:*` 源写入同一 `crash.jsonl`（`DiagLog`）
+- 业务审计：`data/logs/audit-*.jsonl`

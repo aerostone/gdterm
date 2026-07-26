@@ -13,6 +13,7 @@ using Gdterm.Terminal.Models;
 using Gdterm.Terminal.Rendering;
 using Gdterm.Terminal.Themes;
 using Gdterm.Tunnel;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Controls
 {
@@ -573,13 +574,13 @@ namespace Gdterm.UI.Controls
                 {
                     if (_session != null)
                     {
-                        try { _session.OutputReceived -= OnTerminalOutput; } catch { }
-                        try { _session.Dispose(); } catch { }
+                        DiagLog.Try("TerminalControl.Dispose.Unsub", () => _session.OutputReceived -= OnTerminalOutput);
+                        DiagLog.Try("TerminalControl.Dispose.Session", () => _session.Dispose());
                         _session = null;
-                        SessionDisconnected?.Invoke(this, EventArgs.Empty);
+                        try { SessionDisconnected?.Invoke(this, EventArgs.Empty); } catch { }
                     }
-                    try { _autoLogger?.Dispose(); } catch { }
-                    try
+                    DiagLog.Try("TerminalControl.Dispose.AutoLog", () => _autoLogger?.Dispose());
+                    DiagLog.Try("TerminalControl.Dispose.Renderer", () =>
                     {
                         if (_renderer != null)
                         {
@@ -587,8 +588,7 @@ namespace Gdterm.UI.Controls
                             Controls.Remove(canvas);
                             _renderer.Dispose();
                         }
-                    }
-                    catch { }
+                    });
                 }
             }
             base.Dispose(disposing);

@@ -21,6 +21,11 @@
 - 目标：.NET Framework 4.6.2，绿色版免安装
 - 产出：单文件夹，U盘便携
 - 当前环境无 .NET SDK，需在 Windows 上用 Visual Studio/MSBuild 编译
+- `gdterm.sln` 已含全部 13 个项目的 Build.0（含 Gdterm.Tests）
+- Terminal ProjectGuid 已修正为合法 hex（DEFA，非 DEFG）
+- CommandHistoryStore 已列入 Logging.csproj Compile
+- 非致命吞异常经 `DiagLog` 写入 data/logs/crash.jsonl（source 前缀 swallowed:）
+
 
 ### 安全约束
 
@@ -35,7 +40,16 @@
 
 ### 测试
 
+- 零 NuGet 控制台 runner：`src/Gdterm.Tests`（`Gdterm.Tests.exe`）
+- 覆盖：DefaultPorts、LogSanitizer CLI 脱敏、ConnectionStoreJson 往返（无 password 字段）
+- Windows：`msbuild gdterm.sln /p:Configuration=Release` 后运行 Tests.exe
+
 ### 命令与脚本陷阱
+
+- 发布：`tools/pack-release.ps1`（Windows MSBuild）；Linux 仅 `tools/pack-release.sh` 布局检查
+- 构建说明：`docs/BUILD.md`
+- 手写 csproj 必须补 Compile Include；ProjectGuid 必须合法十六进制
+
 
 ### 路径与目录约定
 

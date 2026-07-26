@@ -116,11 +116,11 @@ namespace Gdterm.UI
             // 异常退出时尽量清掉本进程注入的 TERMSRV 凭据
             AppDomain.CurrentDomain.ProcessExit += (s, e) =>
             {
-                try { keepassService.CleanupAllRdpCredentials(); } catch { }
+                DiagLog.Try("Program.ProcessExit.CleanupRdp", () => keepassService.CleanupAllRdpCredentials());
             };
             AppDomain.CurrentDomain.DomainUnload += (s, e) =>
             {
-                try { keepassService.CleanupAllRdpCredentials(); } catch { }
+                DiagLog.Try("Program.DomainUnload.CleanupRdp", () => keepassService.CleanupAllRdpCredentials());
             };
             var auditLogger = new AuditLogger(logsDir);
             GlobalExceptionBridge.Attach(auditLogger);
@@ -154,7 +154,10 @@ namespace Gdterm.UI
                 toolRegistry.Register(new NetworkScannerTool());
                 toolRegistry.LoadAllConfigs();
             }
-            catch { }
+            catch (Exception ex)
+            {
+                DiagLog.Swallowed("Program.ToolRegistryInit", ex);
+            }
 
             // Secret scanner：默认不后台扫
             var secretConfig = SecretScanConfig.GetDefault();
@@ -187,10 +190,10 @@ namespace Gdterm.UI
             mainForm.FormClosed += (s, e) =>
             {
                 SavePasswordConfig(securityManager.GetPasswordConfig(), passwordConfigPath);
-                try { toolRegistry.SaveAllConfigs(); } catch { }
-                try { reconnectWatchdog.Dispose(); } catch { }
-                try { secretScanner.Dispose(); } catch { }
-                try { commandHistoryStore.Dispose(); } catch { }
+                DiagLog.Try("Program.FormClosed.SaveTools", () => toolRegistry.SaveAllConfigs());
+                DiagLog.Try("Program.FormClosed.Watchdog", () => reconnectWatchdog.Dispose());
+                DiagLog.Try("Program.FormClosed.SecretScanner", () => secretScanner.Dispose());
+                DiagLog.Try("Program.FormClosed.CmdHistory", () => commandHistoryStore.Dispose());
             };
 
             Application.Run(mainForm);
@@ -208,7 +211,10 @@ namespace Gdterm.UI
                     config.LastChanged);
                 File.WriteAllText(path, json);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                DiagLog.Swallowed("Program.SavePasswordConfig", ex);
+            }
         }
 
         private static MasterPasswordConfig ParsePasswordConfig(string json)
