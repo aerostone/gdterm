@@ -226,6 +226,26 @@ namespace Gdterm.UI.Controls
                 CloseTab(_tabControl.SelectedTab);
         }
 
+        /// <summary>
+        /// 锁屏时擦除所有标签缓存的明文凭据（finding-04）。
+        /// 已建立的 SSH 会话不受影响，但自动重连无法再用缓存密码。
+        /// </summary>
+        public void ClearCachedCredentials()
+        {
+            foreach (var kvp in _sessions)
+            {
+                var state = kvp.Value;
+                if (state == null) continue;
+                try { state.Credential?.ClearSecrets(); } catch { }
+                state.Credential = null;
+                var tc = state.Control as TerminalControl;
+                if (tc != null)
+                {
+                    try { tc.ClearCachedCredentials(); } catch { }
+                }
+            }
+        }
+
         public void ReconnectActiveTab()
         {
             _reconnectService.ReconnectActive(

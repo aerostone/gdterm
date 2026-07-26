@@ -99,6 +99,33 @@ namespace Gdterm.Terminal
         }
 
         /// <summary>
+        /// 锁屏时暂停全部自动重连（finding-04）：取消进行中的重连并忽略断线通知
+        /// </summary>
+        public void PauseAll()
+        {
+            lock (_lock)
+            {
+                _paused = true;
+                foreach (var kv in _sessions)
+                {
+                    kv.Value.Cts?.Cancel();
+                    kv.Value.IsReconnecting = false;
+                }
+            }
+        }
+
+        /// <summary>解锁后恢复自动重连监视</summary>
+        public void ResumeAll()
+        {
+            lock (_lock)
+            {
+                _paused = false;
+            }
+        }
+
+        private bool _paused;
+
+        /// <summary>
         /// 手动标记连接丢失（由外部调用，如 ConnectionHealthMonitor 检测到断线）
         /// </summary>
         public void NotifyConnectionLost(string sessionId)
@@ -148,6 +175,7 @@ namespace Gdterm.Terminal
             WatchedSession watched;
             lock (_lock)
             {
+                if (_paused) return; // finding-04：锁屏期间不自动重连
                 if (!_sessions.TryGetValue(sessionId, out watched) || watched.ManualDisconnect)
                     return;
 
@@ -168,6 +196,12 @@ namespace Gdterm.Terminal
 
             while (!ct.IsCancellationRequested && !_disposed)
             {
+                if (_paused)
+                {
+                    watched.IsReconnecting = false;
+                    return;
+                }
+
                 watched.RetryCount++;
 
                 if (MaxRetries > 0 && watched.RetryCount > MaxRetries)

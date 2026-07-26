@@ -6,28 +6,12 @@ nature: security
 severity: P0
 confidence: high
 suggested_action: cs-issue
-status: open
+status: resolved
 ---
 
 # Finding 03：主密码仅单次 SHA256
 
-## 速答
+## 修复状态
 
-`SecurityManager.HashPassword` 使用 `SHA256(salt ‖ password)`，无 PBKDF2/scrypt 迭代。便携 `data/master-password.json` 可被离线高速撞库。
-
-## 关键证据
-
-- `src/Gdterm.Security/SecurityManager.cs`：`HashPassword` 单次 `SHA256.Create().ComputeHash`  
-- 主密码解锁后即 KeePass + gdk2 ApiKey 材料  
-
-## 影响
-
-U 盘丢失 / data 目录拷贝后，弱主密码被快速破解 → 全库凭据。
-
-## 修复方向
-
-PBKDF2-HMAC-SHA256 ≥10k（与 AiModelStore gdk2 对齐或更高）+ 版本字段迁移旧 hash。
-
-## 建议动作
-
-`cs-issue`。
+- **status**: `resolved`
+- **fix**: `SecurityManager` 使用 PBKDF2-HMAC-SHA256（100000 次）；`MasterPasswordConfig` 增加 `Algorithm`/`Iterations`；旧版 SHA256 解锁后透明升级并经 `PasswordConfigUpgraded` 落盘 `master-password.json`。

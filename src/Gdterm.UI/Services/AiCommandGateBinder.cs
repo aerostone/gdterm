@@ -45,7 +45,21 @@ namespace Gdterm.UI.Services
                         return true;
                     }
                 }
-                catch { return true; }
+                catch (Exception ex)
+                {
+                    // finding-02：fail-closed
+                    try
+                    {
+                        MessageBox.Show(
+                            owner,
+                            "危险命令检测失败，已阻止 AI 执行该命令。\n" + ex.Message,
+                            "安全拦截",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                    }
+                    catch { }
+                    return false;
+                }
             };
         }
     }

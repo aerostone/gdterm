@@ -188,6 +188,13 @@ namespace Gdterm.UI.Controls
                     }
                 }
 
+                // finding-01：关签与 Connect 完成竞态——控件已 dispose 则立刻丢弃会话
+                if (_disposed)
+                {
+                    try { session.Dispose(); } catch { }
+                    return;
+                }
+
                 _session = session;
                 _session.OutputReceived += OnTerminalOutput;
 
@@ -210,6 +217,7 @@ namespace Gdterm.UI.Controls
             }
             catch (Exception ex)
             {
+                if (_disposed) return;
                 _renderer?.Write("\r\n\x1b[31m连接失败: " + ex.Message + "\x1b[0m\r\n");
                 _auditLogger?.LogConnection(
                     _config.Id,
@@ -311,8 +319,32 @@ namespace Gdterm.UI.Controls
                 return true;
 
             CommandCheckResult check;
-            try { check = _dangerousDetector.Check(command); }
-            catch { return true; }
+            try
+            {
+                check = _dangerousDetector.Check(command);
+            }
+            catch (Exception ex)
+            {
+                // finding-02：fail-closed——检测异常视为拦截
+                try
+                {
+                    _auditLogger?.LogSecurityEvent(
+                        SecurityEvent.DangerousCommandBlocked,
+                        "detector error on " + (_config?.Host ?? "?") + ": " + ex.Message);
+                }
+                catch { }
+                try
+                {
+                    MessageBox.Show(
+                        FindForm(),
+                        "危险命令检测失败，已阻止发送该命令。\n" + ex.Message,
+                        "安全拦截",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Warning);
+                }
+                catch { }
+                return false;
+            }
 
             if (check == null || !check.IsDangerous)
                 return true;
@@ -565,6 +597,12 @@ namespace Gdterm.UI.Controls
             catch { }
         }
 
+        /// <summary>锁屏时擦除内存中的明文凭据（finding-04）</summary>
+        public void ClearCachedCredentials()
+        {
+            Credentials = null;
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (!_disposed)
@@ -572,6 +610,7 @@ namespace Gdterm.UI.Controls
                 _disposed = true;
                 if (disposing)
                 {
+                    Credentials = null;
                     if (_session != null)
                     {
                         DiagLog.Try("TerminalControl.Dispose.Unsub", () => _session.OutputReceived -= OnTerminalOutput);

@@ -18,9 +18,15 @@ namespace Gdterm.Security
 
         private readonly Timer _idleTimer;
         private DateTime _lastActivity;
+        /// <summary>PBKDF2 默认迭代（finding-03；与便携 U 盘弱密码抗撞库对齐）</summary>
+        public const int DefaultPbkdf2Iterations = 100000;
+
         private MasterPasswordConfig _passwordConfig;
         private string _masterPassword; // 解锁时保留在内存，锁定时清除
         private bool _disposed;
+
+        /// <summary>解锁时若从旧 SHA256 升级为 PBKDF2，为 true，组合根应落盘新配置后清零</summary>
+        public bool PasswordConfigUpgraded { get; set; }
 
         public bool IsLocked { get; private set; } = true;
 
@@ -88,9 +94,16 @@ namespace Gdterm.Security
                 return true;
             }
 
-            // 验证密码
+            // 验证密码（含旧版 SHA256 → PBKDF2 透明升级）
             if (VerifyPassword(masterPassword, _passwordConfig))
             {
+                if (_passwordConfig != null && _passwordConfig.IsLegacySha256)
+                {
+                    // finding-03：成功验证旧哈希后立刻升级为 PBKDF2（不重验强度，避免弱密码无法迁移）
+                    ApplyPbkdf2Hash(masterPassword);
+                    PasswordConfigUpgraded = true;
+                }
+
                 _masterPassword = masterPassword;
                 IsLocked = false;
                 OnLockStateChanged(new LockStateChangedEventArgs(false, "unlock"));
@@ -117,14 +130,21 @@ namespace Gdterm.Security
             if (violations.Count > 0)
                 throw new WeakPasswordException(violations);
 
-            // 生成新 salt + 哈希
-            var salt = GenerateSalt();
-            var hash = HashPassword(newPassword, salt);
+            ApplyPbkdf2Hash(newPassword);
+            PasswordConfigUpgraded = false;
+        }
 
+        /// <summary>写入 PBKDF2 哈希（不校验强度；迁移/SetMasterPassword 共用）</summary>
+        private void ApplyPbkdf2Hash(string password)
+        {
+            var salt = GenerateSalt();
+            var hash = HashPasswordPbkdf2(password, salt, DefaultPbkdf2Iterations);
             _passwordConfig = new MasterPasswordConfig
             {
                 PasswordHash = Convert.ToBase64String(hash),
                 Salt = Convert.ToBase64String(salt),
+                Algorithm = "pbkdf2",
+                Iterations = DefaultPbkdf2Iterations,
                 LastChanged = DateTime.UtcNow
             };
         }
@@ -193,12 +213,33 @@ namespace Gdterm.Security
 
             var salt = Convert.FromBase64String(config.Salt);
             var expectedHash = Convert.FromBase64String(config.PasswordHash);
-            var actualHash = HashPassword(password, salt);
+            byte[] actualHash;
+
+            if (config.IsLegacySha256)
+            {
+                // 旧版：单次 SHA256(salt‖password)，仅用于迁移读路径
+                actualHash = HashPasswordLegacySha256(password, salt);
+            }
+            else
+            {
+                var iterations = config.Iterations > 0 ? config.Iterations : DefaultPbkdf2Iterations;
+                actualHash = HashPasswordPbkdf2(password, salt, iterations);
+            }
 
             return ConstantTimeEquals(expectedHash, actualHash);
         }
 
-        private static byte[] HashPassword(string password, byte[] salt)
+        /// <summary>PBKDF2-HMAC-SHA256（finding-03）</summary>
+        private static byte[] HashPasswordPbkdf2(string password, byte[] salt, int iterations)
+        {
+            using (var derive = new Rfc2898DeriveBytes(password, salt, iterations))
+            {
+                return derive.GetBytes(32);
+            }
+        }
+
+        /// <summary>旧版单次 SHA256，仅兼容已有 master-password.json</summary>
+        private static byte[] HashPasswordLegacySha256(string password, byte[] salt)
         {
             using (var sha256 = SHA256.Create())
             {

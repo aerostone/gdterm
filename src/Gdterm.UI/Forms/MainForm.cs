@@ -337,7 +337,8 @@ namespace Gdterm.UI.Forms
                 w => { if (_connectionTree != null) _connectionTree.Width = w; });
 
             _lockCoord = new LockStateCoordinator(
-                this, _securityManager, _keepassService, _lockOverlay);
+                this, _securityManager, _keepassService, _lockOverlay,
+                _tabContainer, _reconnectWatchdog);
         }
 
         private void SetupEventHandlers()

@@ -25,5 +25,20 @@ namespace Gdterm.Core.Models
         /// SSH 私钥密码短语（保护私钥的密码）
         /// </summary>
         public string SshPrivateKeyPassphrase { get; set; }
+
+        /// <summary>
+        /// 清除敏感字段（锁屏/关签；finding-04）
+        /// </summary>
+        public void ClearSecrets()
+        {
+            Password = null;
+            SshPrivateKeyPassphrase = null;
+            if (SshPrivateKey != null)
+            {
+                for (int i = 0; i < SshPrivateKey.Length; i++)
+                    SshPrivateKey[i] = 0;
+                SshPrivateKey = null;
+            }
+        }
     }
 }

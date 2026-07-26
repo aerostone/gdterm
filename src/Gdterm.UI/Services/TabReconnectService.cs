@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Gdterm.Connections;
 using Gdterm.Core.Models;
@@ -9,16 +10,13 @@ using Gdterm.UI.Controls;
 namespace Gdterm.UI.Services
 {
     /// <summary>
-    /// 标签重连协调——关签/开签编排 + 懒连接就绪轮询（finding-07 / finding-10）。
+    /// 标签重连协调——关签/开签编排 + 异步就绪轮询（finding-07：禁止 UI 线程 Sleep+DoEvents）。
     /// </summary>
     public sealed class TabReconnectService
     {
         public const int DefaultTimeoutSeconds = 20;
         public const int PollIntervalMs = 200;
 
-        /// <summary>
-        /// 重连当前选中标签：关闭后按缓存 config/cred 重开，并等待真实连接。
-        /// </summary>
         public bool ReconnectActive(
             TabPage selectedTab,
             IDictionary<TabPage, TabSessionState> sessions,
@@ -48,9 +46,6 @@ namespace Gdterm.UI.Services
             return CompleteAfterOpen(newSession, cred, onTerminalConnected);
         }
 
-        /// <summary>
-        /// 按 connectionId 重连：先关同 Id 标签，必要时从 store 取配置，再等待真实连接。
-        /// </summary>
         public bool ReconnectById(
             string connectionId,
             IDictionary<TabPage, TabSessionState> sessions,
@@ -99,9 +94,6 @@ namespace Gdterm.UI.Services
             return CompleteAfterOpen(newSession, cred, onTerminalConnected);
         }
 
-        /// <summary>
-        /// 在 OpenConnection 之后：回填凭据，强制终端连接并等待就绪。
-        /// </summary>
         public bool CompleteAfterOpen(
             TabSessionState session,
             CredentialPayload credential,
@@ -110,6 +102,7 @@ namespace Gdterm.UI.Services
         {
             if (session == null) return false;
 
+            // finding-04：无缓存凭据时不回填
             if (credential != null)
             {
                 session.Credential = credential;
@@ -122,9 +115,7 @@ namespace Gdterm.UI.Services
             {
                 var tc = session.Control as TerminalControl;
                 if (tc != null)
-                {
                     return WaitForTerminalConnected(session, tc, onTerminalConnected, timeoutSeconds);
-                }
 
                 if (session.PendingConnect != null)
                 {
@@ -139,11 +130,14 @@ namespace Gdterm.UI.Services
                 return false;
             }
 
-            // 非终端/非 RDP 延迟连接：仅表示标签已重建，不算连接成功
             return false;
         }
 
-        /// <summary>强制 ResumeRendering 并轮询 IsConnected。</summary>
+        /// <summary>
+        /// ResumeRendering 后在线程池轮询 IsConnected（finding-07）。
+        /// 无 Thread.Sleep、无 Application.DoEvents，避免消息泵重入。
+        /// UI 线程调用时仍会同步等待（最多 timeout），但不会重入关签逻辑。
+        /// </summary>
         public bool WaitForTerminalConnected(
             TabSessionState session,
             TerminalControl terminal,
@@ -153,28 +147,35 @@ namespace Gdterm.UI.Services
             if (session == null || terminal == null) return false;
 
             terminal.ResumeRendering();
-            var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds > 0 ? timeoutSeconds : DefaultTimeoutSeconds);
-            while (DateTime.UtcNow < deadline)
+            var timeout = timeoutSeconds > 0 ? timeoutSeconds : DefaultTimeoutSeconds;
+
+            bool connected;
+            try
             {
-                if (terminal.IsConnected)
+                connected = Task.Run(async () =>
                 {
-                    session.IsConnected = true;
-                    if (onTerminalConnected != null)
-                        onTerminalConnected(session, terminal.Session);
-                    return true;
-                }
-                System.Threading.Thread.Sleep(PollIntervalMs);
-                Application.DoEvents();
+                    var deadline = DateTime.UtcNow.AddSeconds(timeout);
+                    while (DateTime.UtcNow < deadline)
+                    {
+                        if (terminal.IsConnected)
+                            return true;
+                        await Task.Delay(PollIntervalMs).ConfigureAwait(false);
+                    }
+                    return terminal.IsConnected;
+                }).GetAwaiter().GetResult();
+            }
+            catch
+            {
+                connected = terminal.IsConnected;
             }
 
-            if (terminal.IsConnected)
-            {
-                session.IsConnected = true;
-                if (onTerminalConnected != null)
-                    onTerminalConnected(session, terminal.Session);
-                return true;
-            }
-            return false;
+            if (!connected)
+                return false;
+
+            session.IsConnected = true;
+            if (onTerminalConnected != null)
+                onTerminalConnected(session, terminal.Session);
+            return true;
         }
     }
 }

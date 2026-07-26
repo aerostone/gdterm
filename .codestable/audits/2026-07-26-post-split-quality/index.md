@@ -4,7 +4,7 @@ audit: 2026-07-26-post-split-quality
 mode: standard-plus
 scope: post-finding-10 UI Services + critical session/security/build paths
 date: 2026-07-26
-status: open
+status: partial
 ---
 
 # 审计：post-split 质量轮（2026-07-26）
@@ -107,3 +107,15 @@ finding-10 拆分完成后的关键路径（约 40 文件）：
 ---
 
 **证据来源**：5× Explore agent（bug/security/performance/maintainability/arch）+ 主 agent 读 Program/sln/csproj/Lock/TabReconnect/TabSplit 交叉验证。
+
+## P0 修复进度（本迭代）
+
+| # | 状态 | 说明 |
+|---|------|------|
+| 01 | resolved | Connect await 后 dispose 竞态 |
+| 02 | resolved | 危险命令 fail-closed |
+| 03 | resolved | 主密码 PBKDF2 + 旧哈希迁移 |
+| 04 | resolved | 锁屏擦会话凭据 + Watchdog PauseAll |
+| 07 | resolved | 重连无 Sleep/DoEvents |
+
+P1 仍 open：05 分屏活动终端、06 hop 凭据、08 暂停输出、09 ApiKey 回退、10 SecretScan UI、11 UnderlyingClient、12 测试扩展。

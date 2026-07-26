@@ -187,6 +187,16 @@ namespace Gdterm.UI
                 toolRegistry,
                 secretScanner);
 
+            // finding-03：旧 SHA256 解锁升级为 PBKDF2 后立刻落盘
+            securityManager.LockStateChanged += (s, e) =>
+            {
+                if (e != null && !e.IsLocked && securityManager.PasswordConfigUpgraded)
+                {
+                    SavePasswordConfig(securityManager.GetPasswordConfig(), passwordConfigPath);
+                    securityManager.PasswordConfigUpgraded = false;
+                }
+            };
+
             mainForm.FormClosed += (s, e) =>
             {
                 SavePasswordConfig(securityManager.GetPasswordConfig(), passwordConfigPath);
@@ -204,10 +214,14 @@ namespace Gdterm.UI
             if (config == null) return;
             try
             {
+                var algorithm = string.IsNullOrEmpty(config.Algorithm) ? "pbkdf2" : config.Algorithm;
+                var iterations = config.Iterations > 0 ? config.Iterations : SecurityManager.DefaultPbkdf2Iterations;
                 var json = string.Format(
-                    "{{\"passwordHash\":\"{0}\",\"salt\":\"{1}\",\"lastChanged\":\"{2:O}\"}}",
+                    "{{\"passwordHash\":\"{0}\",\"salt\":\"{1}\",\"algorithm\":\"{2}\",\"iterations\":{3},\"lastChanged\":\"{4:O}\"}}",
                     config.PasswordHash ?? "",
                     config.Salt ?? "",
+                    algorithm,
+                    iterations,
                     config.LastChanged);
                 File.WriteAllText(path, json);
             }
@@ -222,12 +236,34 @@ namespace Gdterm.UI
             var hash = ExtractJsonString(json, "passwordHash");
             var salt = ExtractJsonString(json, "salt");
             var lastChangedStr = ExtractJsonString(json, "lastChanged");
+            var algorithm = ExtractJsonString(json, "algorithm");
             if (string.IsNullOrEmpty(hash) || string.IsNullOrEmpty(salt))
                 return null;
-            var config = new MasterPasswordConfig { PasswordHash = hash, Salt = salt };
+            var config = new MasterPasswordConfig
+            {
+                PasswordHash = hash,
+                Salt = salt,
+                Algorithm = algorithm // null/empty → 旧版 SHA256
+            };
+            var iterStr = ExtractJsonNumber(json, "iterations");
+            if (!string.IsNullOrEmpty(iterStr) && int.TryParse(iterStr, out var iters) && iters > 0)
+                config.Iterations = iters;
             if (DateTime.TryParse(lastChangedStr, out var dt))
                 config.LastChanged = dt;
             return config;
+        }
+
+        private static string ExtractJsonNumber(string json, string key)
+        {
+            var pattern = "\"" + key + "\":";
+            int start = json.IndexOf(pattern, StringComparison.Ordinal);
+            if (start < 0) return null;
+            start += pattern.Length;
+            while (start < json.Length && char.IsWhiteSpace(json[start])) start++;
+            int end = start;
+            while (end < json.Length && (char.IsDigit(json[end]) || json[end] == '-')) end++;
+            if (end <= start) return null;
+            return json.Substring(start, end - start);
         }
 
         private static string ExtractJsonString(string json, string key)
