@@ -81,6 +81,7 @@
     <Compile Include="Rendering\TerminalRenderer.cs" />
     <Compile Include="Rendering\CellGdiRenderer.cs" />
     <Compile Include="Rendering\Vt\VtTerminalEngine.cs" />
+    <Compile Include="Interop\ConPTY.cs" />
     <Compile Include="Transfer\ZmodemHandler.cs" />
     <Compile Include="ITerminalSessionFactory.cs" />
     <Compile Include="TerminalSessionFactory.cs" />

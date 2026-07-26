@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Gdterm.Core.Models;
+using Gdterm.Terminal.Interop;
 using Gdterm.Terminal.Models;
 
 namespace Gdterm.Terminal
@@ -26,6 +27,18 @@ namespace Gdterm.Terminal
         private CancellationTokenSource _readCts;
         private const int MaxBufferLines = 500;
 
+        // ConPTY 模式：Win10 1809+ 可用；其他 OS 走旧重定向回退。
+        private ConPTY _conpty;
+        private bool _usingConPTY;
+        private int _cols = 80, _rows = 24;
+
+        /// <summary>当前是否运行在 ConPTY 模式（VtCell/TUI 真彩可坐）。</summary>
+        public bool IsConPTYMode => _usingConPTY;
+        /// <summary>本会话是否可坐 VT/TUI 渲染：ConPTY 可用且本会话已进入 ConPTY 模式。</summary>
+        public bool IsVtCapable => _usingConPTY;
+        /// <summary>当前 OS 是否支持 ConPTY（静态检查；Win7 false）。</summary>
+        public static bool IsConPTYAvailableOnThisOS() => ConPTY.IsAvailable;
+
         public string ConnectionId { get; private set; }
         public string Hostname { get { return "localhost"; } }
         public string OsType { get; private set; }
@@ -33,7 +46,11 @@ namespace Gdterm.Terminal
         {
             get
             {
-                try { return _process != null && !_process.HasExited; }
+                try
+                {
+                    if (_usingConPTY) return _conpty != null && _conpty.IsRunning;
+                    return _process != null && !_process.HasExited;
+                }
                 catch { return false; }
             }
         }
@@ -69,89 +86,158 @@ namespace Gdterm.Terminal
             {
                 if (IsConnected) return;
 
-                if (string.IsNullOrEmpty(_shellPath))
+                ResolveShell();
+
+                // 优先 ConPTY（Win10 1809+）：真 PTY，交互式 prompt / TUI / 真彩全部可用。
+                if (ConPTY.IsAvailable && TryStartConPTY())
                 {
-                    if (Environment.OSVersion.Platform == PlatformID.Win32NT)
-                    {
-                        _shellPath = Environment.GetEnvironmentVariable("COMSPEC") ?? "cmd.exe";
-                        OsType = "Windows";
-                    }
-                    else
-                    {
-                        _shellPath = "/bin/bash";
-                        OsType = "Linux";
-                    }
+                    _usingConPTY = true;
+                    RaiseOutput("\r\n[gdterm] 本地终端已启动 (ConPTY): " + _shellPath + "\r\n");
+                    return;
                 }
 
-                var startInfo = new ProcessStartInfo
+                // 回退：重定向 Process（Win7/Server2008 或 ConPTY 创建失败）。
+                _usingConPTY = false;
+                StartRedirected();
+            }
+        }
+
+        private void ResolveShell()
+        {
+            if (string.IsNullOrEmpty(_shellPath))
+            {
+                if (Environment.OSVersion.Platform == PlatformID.Win32NT)
                 {
-                    FileName = _shellPath,
-                    UseShellExecute = false,
-                    RedirectStandardInput = true,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true,
-                    StandardOutputEncoding = Encoding.Default,
-                    StandardErrorEncoding = Encoding.Default
-                };
-
-                // 避免 .NET 自己缓冲 stdout
-                startInfo.EnvironmentVariables["TERM"] = "xterm";
-
-                if (!string.IsNullOrEmpty(_workingDirectory))
-                    startInfo.WorkingDirectory = _workingDirectory;
+                    _shellPath = Environment.GetEnvironmentVariable("COMSPEC") ?? "cmd.exe";
+                    OsType = "Windows";
+                }
                 else
-                    startInfo.WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-
-                if (_shellPath.IndexOf("powershell", StringComparison.OrdinalIgnoreCase) >= 0 ||
-                    _shellPath.IndexOf("pwsh", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
-                    OsType = "Windows";
-                    // 避免复杂 -Command 引号；-NoExit 保持交互会话
-                    startInfo.Arguments = "-NoLogo -NoExit";
+                    _shellPath = "/bin/bash";
+                    OsType = "Linux";
                 }
-                else if (_shellPath.IndexOf("cmd", StringComparison.OrdinalIgnoreCase) >= 0
-                      || string.Equals(Path.GetFileName(_shellPath), "cmd.exe", StringComparison.OrdinalIgnoreCase)
-                      || _shellPath.EndsWith("cmd.exe", StringComparison.OrdinalIgnoreCase))
-                {
-                    OsType = "Windows";
-                    // 可见 prompt；不关 echo 以便本地回显（输入仍靠我们 Write 到 stdin，cmd 会回显到 stdout）
-                    startInfo.Arguments = "/K prompt $P$G";
-                }
-                else if (_shellPath.IndexOf("bash", StringComparison.OrdinalIgnoreCase) >= 0)
-                {
-                    startInfo.Arguments = "-i";
-                }
+            }
+        }
 
-                _process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
-                _process.Exited += OnProcessExited;
+        /// <summary>尝试以 ConPTY 启动子进程；成功返回 true。</summary>
+        private bool TryStartConPTY()
+        {
+            try
+            {
+                string commandLine = BuildCommandLineForConPTY(out string _);
+                string cwd = !string.IsNullOrEmpty(_workingDirectory)
+                    ? _workingDirectory
+                    : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
+                _conpty = new ConPTY();
+                _conpty.OnOutput += bytes =>
+                {
+                    if (bytes == null || bytes.Length == 0) return;
+                    string text;
+                    try { text = Encoding.UTF8.GetString(bytes); }
+                    catch { text = Encoding.Default.GetString(bytes); }
+                    RaiseOutput(text);
+                };
+                _conpty.OnExited += (s, e) =>
+                {
+                    RaiseOutput("\r\n[本地终端已退出]\r\n");
+                    RaiseDisconnected();
+                };
+                if (!_conpty.Start(commandLine, cwd, (short)_cols, (short)_rows))
+                    return false;
+                return true;
+            }
+            catch
+            {
+                try { _conpty?.Dispose(); } catch { }
+                _conpty = null;
+                return false;
+            }
+        }
+
+        private string BuildCommandLineForConPTY(out string workingDirectory)
+        {
+            workingDirectory = !string.IsNullOrEmpty(_workingDirectory)
+                ? _workingDirectory
+                : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+            // ConPTY 不需重定向参数；shell 自己启动交互式。
+            if (_shellPath.IndexOf("powershell", StringComparison.OrdinalIgnoreCase) >= 0
+                || _shellPath.IndexOf("pwsh", StringComparison.OrdinalIgnoreCase) >= 0)
+                return "\"" + _shellPath + "\" -NoLogo";
+            if (_shellPath.IndexOf("cmd", StringComparison.OrdinalIgnoreCase) >= 0
+                || _shellPath.EndsWith("cmd.exe", StringComparison.OrdinalIgnoreCase))
+                return "\"" + _shellPath + "\" /K";
+            if (_shellPath.IndexOf("bash", StringComparison.OrdinalIgnoreCase) >= 0)
+                return "\"" + _shellPath + "\" -i";
+            return "\"" + _shellPath + "\"";
+        }
+
+        /// <summary>回退重定向实现（Win7 或 ConPTY 不可用）。</summary>
+        private void StartRedirected()
+        {
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = _shellPath,
+                UseShellExecute = false,
+                RedirectStandardInput = true,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                CreateNoWindow = true,
+                StandardOutputEncoding = Encoding.Default,
+                StandardErrorEncoding = Encoding.Default
+            };
+            startInfo.EnvironmentVariables["TERM"] = "xterm";
+            if (!string.IsNullOrEmpty(_workingDirectory))
+                startInfo.WorkingDirectory = _workingDirectory;
+            else
+                startInfo.WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+            if (_shellPath.IndexOf("powershell", StringComparison.OrdinalIgnoreCase) >= 0
+                || _shellPath.IndexOf("pwsh", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                OsType = "Windows";
+                startInfo.Arguments = "-NoLogo -NoExit";
+            }
+            else if (_shellPath.IndexOf("cmd", StringComparison.OrdinalIgnoreCase) >= 0
+                  || string.Equals(Path.GetFileName(_shellPath), "cmd.exe", StringComparison.OrdinalIgnoreCase)
+                  || _shellPath.EndsWith("cmd.exe", StringComparison.OrdinalIgnoreCase))
+            {
+                OsType = "Windows";
+                startInfo.Arguments = "/K prompt $P$G";
+            }
+            else if (_shellPath.IndexOf("bash", StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                startInfo.Arguments = "-i";
+            }
+
+            _process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
+            _process.Exited += OnProcessExited;
+
+            try
+            {
+                if (!_process.Start())
+                    throw new InvalidOperationException("Process.Start 返回 false");
+
+                _readCts = new CancellationTokenSource();
+                var token = _readCts.Token;
+                var stdout = _process.StandardOutput.BaseStream;
+                var stderr = _process.StandardError.BaseStream;
+                Task.Factory.StartNew(() => ReadLoop(stdout, token), token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+                Task.Factory.StartNew(() => ReadLoop(stderr, token), token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+                RaiseOutput("\r\n[gdterm] 本地终端已启动: " + _shellPath + "\r\n");
                 try
                 {
-                    if (!_process.Start())
-                        throw new InvalidOperationException("Process.Start 返回 false");
-
-                    _readCts = new CancellationTokenSource();
-                    var token = _readCts.Token;
-                    var stdout = _process.StandardOutput.BaseStream;
-                    var stderr = _process.StandardError.BaseStream;
-                    Task.Factory.StartNew(() => ReadLoop(stdout, token), token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-                    Task.Factory.StartNew(() => ReadLoop(stderr, token), token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
-
-                    RaiseOutput("\r\n[gdterm] 本地终端已启动: " + _shellPath + "\r\n");
-                    // 触发一次 prompt（cmd 在 /K 后会先出一行）
-                    try
-                    {
-                        _process.StandardInput.WriteLine();
-                        _process.StandardInput.Flush();
-                    }
-                    catch { }
+                    _process.StandardInput.WriteLine();
+                    _process.StandardInput.Flush();
                 }
-                catch (Exception ex)
-                {
-                    CleanupProcess();
-                    throw new InvalidOperationException("无法启动本地终端: " + ex.Message, ex);
-                }
+                catch { }
+            }
+            catch (Exception ex)
+            {
+                CleanupProcess();
+                throw new InvalidOperationException("无法启动本地终端: " + ex.Message, ex);
             }
         }
 
@@ -180,10 +266,22 @@ namespace Gdterm.Terminal
         {
             lock (_lock)
             {
-                if (!IsConnected || _process == null) return;
+                if (!IsConnected) return;
+                if (_usingConPTY)
+                {
+                    if (_conpty == null) return;
+                    try
+                    {
+                        if (text == "\n") text = "\r\n";
+                        else if (text == "\r") text = "\r\n";
+                        _conpty.Write(Encoding.UTF8.GetBytes(text));
+                    }
+                    catch { }
+                    return;
+                }
+                if (_process == null) return;
                 try
                 {
-                    // Windows cmd 期望 CRLF
                     if (text == "\n") text = "\r\n";
                     else if (text == "\r") text = "\r\n";
                     _process.StandardInput.Write(text);
@@ -196,9 +294,13 @@ namespace Gdterm.Terminal
         public void SendBytes(byte[] data)
         {
             if (data == null || data.Length == 0) return;
+            if (_usingConPTY)
+            {
+                try { _conpty?.Write(data); } catch { }
+                return;
+            }
             try
             {
-                // 本地进程按系统代码页写更稳
                 var text = Encoding.Default.GetString(data);
                 SendInput(text);
             }
@@ -208,7 +310,12 @@ namespace Gdterm.Terminal
             }
         }
 
-        public void Resize(int columns, int rows) { }
+        public void Resize(int columns, int rows)
+        {
+            _cols = Math.Max(1, columns);
+            _rows = Math.Max(1, rows);
+            if (_usingConPTY) { try { _conpty?.Resize((short)_cols, (short)_rows); } catch { } }
+        }
 
         public void SendBreak(int durationMs = 100)
         {
@@ -230,6 +337,13 @@ namespace Gdterm.Terminal
         {
             lock (_lock)
             {
+                if (_usingConPTY)
+                {
+                    try { _conpty?.Stop(); } catch { }
+                    try { _conpty?.Dispose(); } catch { }
+                    _conpty = null;
+                    return;
+                }
                 if (_process == null) return;
                 try
                 {
