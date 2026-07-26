@@ -57,7 +57,16 @@ namespace Gdterm.Security
         /// <summary>
         /// 验证主密码是否正确（不改变锁定状态）
         /// 用于凭据管理等敏感操作的二次验证
+        /// <summary>
+        /// 验证主密码是否正确（不改变锁定状态）
+        /// 用于凭据管理等敏感操作的二次验证
         /// </summary>
         bool VerifyMasterPassword(string password);
+
+        /// <summary>
+        /// 获取当前主密码哈希配置（用于持久化 master-password.ini）。
+        /// 仅返回哈希/salt/算法，不含明文。
+        /// </summary>
+        MasterPasswordConfig GetPasswordConfig();
     }
 }
