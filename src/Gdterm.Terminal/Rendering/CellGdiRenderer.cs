@@ -62,8 +62,7 @@ namespace Gdterm.Terminal.Rendering
                 if (h != null) h(this, data);
             };
 
-            _font = new Font(FontName, FontSize, FontStyle.Regular, GraphicsUnit.Pixel);
-            _boldFont = new Font(FontName, FontSize, FontStyle.Bold, GraphicsUnit.Pixel);
+            ApplyFont(FontName, FontSize);
 
             _canvas = new DoubleBufferedPanel
             {
@@ -74,8 +73,6 @@ namespace Gdterm.Terminal.Rendering
             _canvas.Paint += OnPaint;
             _canvas.Resize += OnResize;
             _canvas.Disposed += OnCanvasDisposed;
-
-            MeasureCell();
 
             _redrawTimer = new Timer { Interval = MinRedrawIntervalMs };
             _redrawTimer.Tick += OnRedrawTimerTick;
@@ -356,15 +353,42 @@ namespace Gdterm.Terminal.Rendering
                 ResizeTerminal(cols, rows);
         }
 
+        public void ApplyFont(string fontName, float fontSizePx)
+        {
+            if (_disposed) return;
+            if (string.IsNullOrWhiteSpace(fontName)) fontName = FontName;
+            if (fontSizePx < 8f) fontSizePx = 8f;
+            if (fontSizePx > 36f) fontSizePx = 36f;
+            lock (_lock)
+            {
+                try { if (_font != null) _font.Dispose(); } catch { }
+                try { if (_boldFont != null) _boldFont.Dispose(); } catch { }
+                try
+                {
+                    _font = new Font(fontName, fontSizePx, FontStyle.Regular, GraphicsUnit.Pixel);
+                }
+                catch
+                {
+                    _font = new Font(FontName, fontSizePx, FontStyle.Regular, GraphicsUnit.Pixel);
+                }
+                try { _boldFont = new Font(_font.FontFamily, fontSizePx, FontStyle.Bold, GraphicsUnit.Pixel); }
+                catch { _boldFont = new Font(_font, FontStyle.Bold); }
+                MeasureCell();
+                _needsRedraw = true;
+                ScheduleRedraw();
+            }
+        }
+
         private void MeasureCell()
         {
-            using (var bmp = new Bitmap(1, 1))
+            if (_font == null) return;
+            using (var bmp = new Bitmap(32, 32))
             using (var g = Graphics.FromImage(bmp))
             {
                 g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
                 var size = g.MeasureString("W", _font, int.MaxValue, StringFormat.GenericTypographic);
-                _charWidth = Math.Max(1f, size.Width);
-                _charHeight = Math.Max(1f, size.Height);
+                _charWidth = Math.Max(6f, (float)Math.Ceiling(size.Width));
+                _charHeight = Math.Max(12f, (float)Math.Ceiling(_font.GetHeight(g)) + 2f);
             }
         }
 

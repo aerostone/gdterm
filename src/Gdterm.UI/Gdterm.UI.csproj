@@ -175,6 +175,7 @@
     <Compile Include="Forms\KeePassManagerForm.cs" />
     <Compile Include="Forms\AiSettingsForm.cs" />
     <Compile Include="Forms\DangerousCommandConfigForm.cs" />
+    <Compile Include="Forms\AppearanceSettingsForm.cs" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Resources\gdterm.ico" />

@@ -51,10 +51,10 @@ namespace Gdterm.Terminal.Rendering
         private TerminalColorScheme _scheme;
 
         private const int MaxBufferLines = 300;
-        private const int CharWidth = 8;
-        private const int LineHeight = 16;
-        private const string FontName = "Consolas";
-        private const float FontSize = 10f;
+        private int _charWidth = 8;
+        private int _lineHeight = 16;
+        private string _fontName = "Consolas";
+        private float _fontSize = 12f;
 
         // 重绘定时器 — 用于合并高频写入
         private readonly Timer _redrawTimer;
@@ -70,9 +70,8 @@ namespace Gdterm.Terminal.Rendering
             _scheme = scheme ?? ColorSchemes.Classic;
             _currentColor = _scheme.Foreground;
 
-            // 缓存字体 — 整个生命周期复用，避免 GDI handle 泄漏
-            _font = new Font(FontName, FontSize, FontStyle.Regular, GraphicsUnit.Pixel);
-            _boldFont = new Font(FontName, FontSize, FontStyle.Bold, GraphicsUnit.Pixel);
+            // 缓存字体 — 用 Point 单位 + 实测字宽，避免固定 8px 导致间距错乱
+            ApplyFont(_fontName, _fontSize);
 
             // 双缓冲 Panel — 消除闪烁，不触发持续渲染
             _canvas = new DoubleBufferedPanel
@@ -90,6 +89,57 @@ namespace Gdterm.Terminal.Rendering
             // 只在 _needsRedraw=true 时触发 Invalidate，空闲时完全静默
             _redrawTimer = new Timer { Interval = MinRedrawIntervalMs };
             _redrawTimer.Tick += OnRedrawTimerTick;
+        }
+
+        /// <summary>运行时改字体；按真实字形测量 cell 宽高。</summary>
+        public void ApplyFont(string fontName, float fontSizePx)
+        {
+            if (_disposed) return;
+            if (string.IsNullOrWhiteSpace(fontName)) fontName = "Consolas";
+            if (fontSizePx < 8f) fontSizePx = 8f;
+            if (fontSizePx > 36f) fontSizePx = 36f;
+            _fontName = fontName;
+            _fontSize = fontSizePx;
+            lock (_lock)
+            {
+                try { if (_font != null) _font.Dispose(); } catch { }
+                try { if (_boldFont != null) _boldFont.Dispose(); } catch { }
+                try
+                {
+                    _font = new Font(_fontName, _fontSize, FontStyle.Regular, GraphicsUnit.Pixel);
+                }
+                catch
+                {
+                    _fontName = "Consolas";
+                    _font = new Font(_fontName, _fontSize, FontStyle.Regular, GraphicsUnit.Pixel);
+                }
+                try
+                {
+                    _boldFont = new Font(_font.FontFamily, _fontSize, FontStyle.Bold, GraphicsUnit.Pixel);
+                }
+                catch
+                {
+                    _boldFont = new Font(_font, FontStyle.Bold);
+                }
+                MeasureCell();
+                _needsRedraw = true;
+                ScheduleRedraw();
+            }
+        }
+
+        private void MeasureCell()
+        {
+            if (_font == null) return;
+            using (var bmp = new Bitmap(32, 32))
+            using (var g = Graphics.FromImage(bmp))
+            {
+                g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+                var size = g.MeasureString("W", _font, int.MaxValue, StringFormat.GenericTypographic);
+                // 等宽字体：用 W 宽度；加 1px 避免裁切
+                _charWidth = Math.Max(6, (int)Math.Ceiling(size.Width));
+                // 行高取字体高度 + 2 行距，避免粘连
+                _lineHeight = Math.Max(12, (int)Math.Ceiling(_font.GetHeight(g)) + 2);
+            }
         }
 
         public void SetColorScheme(TerminalColorScheme scheme)
@@ -261,15 +311,16 @@ namespace Gdterm.Terminal.Rendering
             lock (_lock)
             {
                 var g = e.Graphics;
-                g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SingleBitPerPixelGridFit;
-                g.SmoothingMode = SmoothingMode.HighSpeed;
+                g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
+                g.SmoothingMode = SmoothingMode.None;
                 g.CompositingQuality = CompositingQuality.HighSpeed;
+                g.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
                 // 清除背景
                 var bgBrush = GetBrush(_scheme.Background);
                 g.FillRectangle(bgBrush, 0, 0, _canvas.Width, _canvas.Height);
 
-                int visibleLines = Math.Max(1, _canvas.Height / LineHeight);
+                int visibleLines = Math.Max(1, _canvas.Height / _lineHeight);
                 int startLine = Math.Max(0, _lineBuffer.Count - visibleLines);
                 int y = 0;
 
@@ -277,7 +328,7 @@ namespace Gdterm.Terminal.Rendering
                 {
                     var line = _lineBuffer[i];
                     DrawColoredLine(g, line, 0, y);
-                    y += LineHeight;
+                    y += _lineHeight;
                 }
 
                 if (y < _canvas.Height && _currentLine.Length > 0)
@@ -294,9 +345,9 @@ namespace Gdterm.Terminal.Rendering
         {
             if (_isPaused) return;
 
-            var cursorX = _currentLine.Length * CharWidth;
+            var cursorX = _currentLine.Length * _charWidth;
             var brush = GetBrush(_scheme.CursorColor);
-            g.FillRectangle(brush, cursorX, y, CharWidth, LineHeight);
+            g.FillRectangle(brush, cursorX, y, _charWidth, _lineHeight);
         }
 
         private void DrawColoredLine(Graphics g, ColoredLine line, int x, int y)
@@ -304,15 +355,15 @@ namespace Gdterm.Terminal.Rendering
             if (line.Spans == null || line.Spans.Count == 0)
             {
                 var brush = GetBrush(_scheme.Foreground);
-                g.DrawString(line.Text, _font, brush, x, y);
+                g.DrawString(line.Text, _font, brush, x, y, StringFormat.GenericTypographic);
                 return;
             }
 
             foreach (var span in line.Spans)
             {
                 var brush = GetBrush(span.Color);
-                g.DrawString(span.Text, _font, brush, x, y);
-                x += span.Text.Length * CharWidth;
+                g.DrawString(span.Text, _font, brush, x, y, StringFormat.GenericTypographic);
+                x += span.Text.Length * _charWidth;
             }
         }
 
@@ -321,15 +372,15 @@ namespace Gdterm.Terminal.Rendering
             if (spans.Count == 0)
             {
                 var brush = GetBrush(_currentColor);
-                g.DrawString(currentText, _font, brush, x, y);
+                g.DrawString(currentText, _font, brush, x, y, StringFormat.GenericTypographic);
                 return;
             }
 
             foreach (var span in spans)
             {
                 var brush = GetBrush(span.Color);
-                g.DrawString(span.Text, _font, brush, x, y);
-                x += span.Text.Length * CharWidth;
+                g.DrawString(span.Text, _font, brush, x, y, StringFormat.GenericTypographic);
+                x += span.Text.Length * _charWidth;
             }
         }
 

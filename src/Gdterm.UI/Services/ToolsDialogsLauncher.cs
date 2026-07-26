@@ -59,6 +59,24 @@ namespace Gdterm.UI.Services
                 form.ShowDialog(_owner);
         }
 
+        public void OpenAppearanceSettings()
+        {
+            var configDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "config");
+            using (var form = new AppearanceSettingsForm(configDir))
+            {
+                if (form.ShowDialog(_owner) == DialogResult.OK && form.Result != null)
+                {
+                    Gdterm.UI.Program.GlobalAppearance = form.Result;
+                    MessageBox.Show(
+                        _owner,
+                        "外观已保存。新开终端立即生效；DPI 感知需重启应用。",
+                        "外观设置",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+                }
+            }
+        }
+
         public void OpenAiSettings()
         {
             var aiModelStore = new AiModelStore(
@@ -96,7 +114,8 @@ namespace Gdterm.UI.Services
                 "Ctrl + W          关闭当前标签\n" +
                 "Ctrl + F          终端查找\n" +
                 "Ctrl + P          片段搜索\n" +
-                "Esc               专注模式恢复菜单",
+                "Esc / F11         退出专注模式
+右上角按钮         退出专注（专注模式下可见）",
                 "快捷键", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 

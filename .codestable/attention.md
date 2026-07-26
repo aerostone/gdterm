@@ -98,6 +98,10 @@
 ## 2026-07-26 trial UX fixes
 - 连接首开 ForceActivateSession（单标签 SelectedIndexChanged 不触发）
 - 隧道判断用 JumpChain 而非仅 Tunnel
-- 试运行 AuditLogConfig 全开 + DiagLog.Info → data/logs/crash.jsonl
-- Esc/F11 从专注回标准；connections.json host gdh1: 混淆
+- 试运行 AuditLogConfig 全开 + DiagLog.Info → data/logs/diag.log（人读文本，不再 crash.jsonl）
+- Esc/F11 + 右上角「退出专注」从专注回标准；connections.json host gdh1: 混淆
 - 绿色包补拷 KeePassLib/Renci.SshNet/VtNetCore
+- 本地终端：块读 stdout（非行事件）+ Lightweight 强制 + 本地行缓冲回显
+- 字体：renderer 实测 cell 宽高（GenericTypographic），禁止写死 8x16
+- 外观：工具→外观设置 → data/config/appearance.ini；启动 SetProcessDPIAware 减菜单糊
+- SSH 无密码/无私钥时终端黄字提示；连接前若 KeePass 未解锁弹 KeePassUnlockForm

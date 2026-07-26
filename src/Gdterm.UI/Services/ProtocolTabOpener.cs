@@ -10,6 +10,8 @@ using Gdterm.Sftp;
 using Gdterm.Terminal;
 using Gdterm.Tunnel;
 using Gdterm.UI.Controls;
+using Gdterm.UI.Diagnostics;
+using Gdterm.UI.Forms;
 using TerminalControl = Gdterm.UI.Controls.TerminalControl;
 using Gdterm.Security;
 
@@ -76,7 +78,38 @@ namespace Gdterm.UI.Services
 
             CredentialPayload credential = null;
             if (config.Protocol == ProtocolType.SSH || config.Protocol == ProtocolType.RDP)
+            {
+                // 未解锁时先提示解锁，否则永远 Permission denied (password)
+                if (_keepassService != null && !_keepassService.IsUnlocked)
+                {
+                    try
+                    {
+                        using (var unlock = new KeePassUnlockForm(_keepassService))
+                        {
+                            unlock.ShowDialog();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        DiagLog.Swallowed("ProtocolTabOpener.KeePassUnlock", ex);
+                    }
+                }
                 credential = ResolveCredential(config);
+                try
+                {
+                    var hasPwd = credential != null && !string.IsNullOrEmpty(credential.Password);
+                    var hasKey = credential != null && credential.SshPrivateKey != null && credential.SshPrivateKey.Length > 0;
+                    DiagLog.Info("ProtocolTabOpener.CreateForConnection",
+                        "id=" + (config.Id ?? "") +
+                        " host=" + (config.Host ?? "") +
+                        " keepass=" + (_keepassService != null && _keepassService.IsUnlocked) +
+                        " cred=" + (credential != null) +
+                        " hasPassword=" + hasPwd +
+                        " hasKey=" + hasKey +
+                        " user=" + (credential != null ? credential.Username : config.Username));
+                }
+                catch { }
+            }
 
             switch (config.Protocol)
             {

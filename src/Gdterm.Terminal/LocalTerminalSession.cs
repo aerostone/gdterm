@@ -4,13 +4,16 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Gdterm.Core.Models;
 using Gdterm.Terminal.Models;
 
 namespace Gdterm.Terminal
 {
     /// <summary>
-    /// 本地终端会话——启动本地 CMD/PowerShell/Bash 进程
+    /// 本地终端：重定向 CMD/PowerShell。
+    /// 用后台线程按块读 stdout/stderr（非 OutputDataReceived 行模式），
+    /// 否则交互式 prompt 永远不刷新，界面像“进不去”。
     /// </summary>
     public class LocalTerminalSession : ITerminalSession
     {
@@ -20,6 +23,7 @@ namespace Gdterm.Terminal
         private string _shellPath;
         private string _workingDirectory;
         private bool _disposed;
+        private CancellationTokenSource _readCts;
         private const int MaxBufferLines = 500;
 
         public string ConnectionId { get; private set; }
@@ -35,7 +39,6 @@ namespace Gdterm.Terminal
         }
 
         public event EventHandler<TerminalOutputEventArgs> OutputReceived;
-
         public event EventHandler Disconnected;
 
         private int _disconnectRaised;
@@ -60,7 +63,6 @@ namespace Gdterm.Terminal
             throw new NotSupportedException("本地终端不支持隧道连接");
         }
 
-        /// <summary>启动本地 shell</summary>
         public void ConnectLocal()
         {
             lock (_lock)
@@ -89,22 +91,23 @@ namespace Gdterm.Terminal
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     CreateNoWindow = true,
-                    // Windows 控制台默认代码页；强制 UTF-8 会导致乱码/看似无输出
                     StandardOutputEncoding = Encoding.Default,
                     StandardErrorEncoding = Encoding.Default
                 };
+
+                // 避免 .NET 自己缓冲 stdout
+                startInfo.EnvironmentVariables["TERM"] = "xterm";
 
                 if (!string.IsNullOrEmpty(_workingDirectory))
                     startInfo.WorkingDirectory = _workingDirectory;
                 else
                     startInfo.WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
-                // 重定向模式下给可交互体验：固定提示符
                 if (_shellPath.IndexOf("powershell", StringComparison.OrdinalIgnoreCase) >= 0 ||
                     _shellPath.IndexOf("pwsh", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     OsType = "Windows";
-                    // 简单交互：NoExit 保持会话
+                    // 避免复杂 -Command 引号；-NoExit 保持交互会话
                     startInfo.Arguments = "-NoLogo -NoExit";
                 }
                 else if (_shellPath.IndexOf("cmd", StringComparison.OrdinalIgnoreCase) >= 0
@@ -112,25 +115,35 @@ namespace Gdterm.Terminal
                       || _shellPath.EndsWith("cmd.exe", StringComparison.OrdinalIgnoreCase))
                 {
                     OsType = "Windows";
-                    // /Q 关 echo，/K 保持会话；PROMPT 保证有可见提示符
-                    startInfo.Arguments = "/Q /K prompt $P$G";
+                    // 可见 prompt；不关 echo 以便本地回显（输入仍靠我们 Write 到 stdin，cmd 会回显到 stdout）
+                    startInfo.Arguments = "/K prompt $P$G";
+                }
+                else if (_shellPath.IndexOf("bash", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    startInfo.Arguments = "-i";
                 }
 
                 _process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
-                _process.OutputDataReceived += OnOutputData;
-                _process.ErrorDataReceived += OnErrorData;
                 _process.Exited += OnProcessExited;
 
                 try
                 {
-                    _process.Start();
-                    _process.BeginOutputReadLine();
-                    _process.BeginErrorReadLine();
-                    // 给 UI 一个可见就绪提示（重定向 shell 往往没有交互式 prompt）
+                    if (!_process.Start())
+                        throw new InvalidOperationException("Process.Start 返回 false");
+
+                    _readCts = new CancellationTokenSource();
+                    var token = _readCts.Token;
+                    var stdout = _process.StandardOutput.BaseStream;
+                    var stderr = _process.StandardError.BaseStream;
+                    Task.Factory.StartNew(() => ReadLoop(stdout, token), token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+                    Task.Factory.StartNew(() => ReadLoop(stderr, token), token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+                    RaiseOutput("\r\n[gdterm] 本地终端已启动: " + _shellPath + "\r\n");
+                    // 触发一次 prompt（cmd 在 /K 后会先出一行）
                     try
                     {
-                        var banner = "\r\n[gdterm] 本地终端已启动: " + _shellPath + "\r\n";
-                        RaiseOutput(banner);
+                        _process.StandardInput.WriteLine();
+                        _process.StandardInput.Flush();
                     }
                     catch { }
                 }
@@ -142,6 +155,27 @@ namespace Gdterm.Terminal
             }
         }
 
+        private void ReadLoop(Stream stream, CancellationToken token)
+        {
+            var buf = new byte[1024];
+            try
+            {
+                while (!token.IsCancellationRequested && stream != null)
+                {
+                    int n;
+                    try { n = stream.Read(buf, 0, buf.Length); }
+                    catch { break; }
+                    if (n <= 0) break;
+                    string text;
+                    try { text = Encoding.Default.GetString(buf, 0, n); }
+                    catch { text = Encoding.UTF8.GetString(buf, 0, n); }
+                    if (!string.IsNullOrEmpty(text))
+                        RaiseOutput(text);
+                }
+            }
+            catch { }
+        }
+
         public void SendInput(string text)
         {
             lock (_lock)
@@ -149,6 +183,9 @@ namespace Gdterm.Terminal
                 if (!IsConnected || _process == null) return;
                 try
                 {
+                    // Windows cmd 期望 CRLF
+                    if (text == "\n") text = "\r\n";
+                    else if (text == "\r") text = "\r\n";
                     _process.StandardInput.Write(text);
                     _process.StandardInput.Flush();
                 }
@@ -161,17 +198,17 @@ namespace Gdterm.Terminal
             if (data == null || data.Length == 0) return;
             try
             {
-                var text = Encoding.UTF8.GetString(data);
+                // 本地进程按系统代码页写更稳
+                var text = Encoding.Default.GetString(data);
                 SendInput(text);
             }
-            catch { }
+            catch
+            {
+                try { SendInput(Encoding.UTF8.GetString(data)); } catch { }
+            }
         }
 
-        /// <summary>本地进程无 PTY window-change。</summary>
-        public void Resize(int columns, int rows)
-        {
-            // no-op
-        }
+        public void Resize(int columns, int rows) { }
 
         public void SendBreak(int durationMs = 100)
         {
@@ -187,10 +224,7 @@ namespace Gdterm.Terminal
             }
         }
 
-        public string GetSelection()
-        {
-            return string.Empty;
-        }
+        public string GetSelection() { return string.Empty; }
 
         public void Disconnect()
         {
@@ -207,8 +241,7 @@ namespace Gdterm.Terminal
                             _process.StandardInput.Flush();
                         }
                         catch { }
-
-                        if (!_process.WaitForExit(3000))
+                        if (!_process.WaitForExit(2000))
                         {
                             try { _process.Kill(); } catch { }
                         }
@@ -239,55 +272,27 @@ namespace Gdterm.Terminal
             try { OutputReceived?.Invoke(this, new TerminalOutputEventArgs { Text = text }); } catch { }
         }
 
-        private void OnOutputData(object sender, DataReceivedEventArgs e)
-        {
-            if (e.Data == null) return;
-            AppendAndRaise(e.Data + "\r\n");
-        }
-
-        private void OnErrorData(object sender, DataReceivedEventArgs e)
-        {
-            if (e.Data == null) return;
-            AppendAndRaise(e.Data + "\r\n");
-        }
-
         private void OnProcessExited(object sender, EventArgs e)
         {
-            AppendAndRaise("\r\n[本地终端已退出]\r\n");
+            RaiseOutput("\r\n[本地终端已退出]\r\n");
             RaiseDisconnected();
         }
 
         private void RaiseDisconnected()
         {
-            if (System.Threading.Interlocked.Exchange(ref _disconnectRaised, 1) != 0)
+            if (Interlocked.Exchange(ref _disconnectRaised, 1) != 0)
                 return;
-            try { Disconnected?.Invoke(this, EventArgs.Empty); }
-            catch { }
-        }
-
-        private void AppendAndRaise(string text)
-        {
-            lock (_lock)
-            {
-                _outputBuffer.Add(text);
-                while (_outputBuffer.Count > MaxBufferLines)
-                    _outputBuffer.RemoveAt(0);
-            }
-
-            try
-            {
-                OutputReceived?.Invoke(this, new TerminalOutputEventArgs { Text = text });
-            }
-            catch { }
+            try { Disconnected?.Invoke(this, EventArgs.Empty); } catch { }
         }
 
         private void CleanupProcess()
         {
+            try { if (_readCts != null) _readCts.Cancel(); } catch { }
+            try { if (_readCts != null) _readCts.Dispose(); } catch { }
+            _readCts = null;
             if (_process == null) return;
             try
             {
-                _process.OutputDataReceived -= OnOutputData;
-                _process.ErrorDataReceived -= OnErrorData;
                 _process.Exited -= OnProcessExited;
                 _process.Dispose();
             }

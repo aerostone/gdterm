@@ -128,7 +128,22 @@ namespace Gdterm.UI.Controls
 
         private void InitializeComponent()
         {
-            var scheme = ColorSchemes.GetByName(_profile?.ColorScheme) ?? ColorSchemes.Classic;
+            // 全局外观优先于默认 Classic/Consolas/12；连接级 profile 非默认时覆盖
+            var ga = Gdterm.UI.Program.GlobalAppearance;
+            string schemeName = _profile != null && !string.IsNullOrWhiteSpace(_profile.ColorScheme)
+                && !string.Equals(_profile.ColorScheme, "Classic", StringComparison.OrdinalIgnoreCase)
+                    ? _profile.ColorScheme
+                    : (ga != null && !string.IsNullOrWhiteSpace(ga.ColorScheme) ? ga.ColorScheme : "Classic");
+            var scheme = ColorSchemes.GetByName(schemeName) ?? ColorSchemes.Classic;
+
+            string fontName = _profile != null && !string.IsNullOrWhiteSpace(_profile.FontName)
+                && !string.Equals(_profile.FontName, "Consolas", StringComparison.OrdinalIgnoreCase)
+                    ? _profile.FontName
+                    : (ga != null && !string.IsNullOrWhiteSpace(ga.FontName) ? ga.FontName : "Consolas");
+            float fontSize = _profile != null && _profile.FontSize > 0 && _profile.FontSize != 12
+                ? _profile.FontSize
+                : (ga != null && ga.FontSize > 0 ? ga.FontSize : 12f);
+
             int rows = 24;
             int cols = 80;
             // 与 TerminalProfile 默认 300 对齐，低配多标签更省
@@ -140,11 +155,18 @@ namespace Gdterm.UI.Controls
                 _cellRenderer.SendToHost += OnCellSendToHost;
                 _cellRenderer.TerminalResized += OnCellTerminalResized;
                 _renderer = _cellRenderer;
+                try { _cellRenderer.ApplyFont(fontName, fontSize); } catch { }
             }
             else
             {
                 _cellRenderer = null;
                 _renderer = new LightweightRenderer(rows, cols, scheme);
+                try
+                {
+                    var light = _renderer as LightweightRenderer;
+                    if (light != null) light.ApplyFont(fontName, fontSize);
+                }
+                catch { }
             }
 
             var canvas = _renderer.GetControl();
@@ -314,6 +336,28 @@ public async void Connect()
             try
             {
                 var credential = Credentials ?? new CredentialPayload { Username = _config.Username };
+                try
+                {
+                    var hasPwd = !string.IsNullOrEmpty(credential.Password);
+                    var hasKey = credential.SshPrivateKey != null && credential.SshPrivateKey.Length > 0;
+                    DiagLog.Info("TerminalControl.ConnectAsyncCore",
+                        "auth user=" + (credential.Username ?? "") +
+                        " hasPassword=" + hasPwd +
+                        " hasPrivateKey=" + hasKey +
+                        " keepassCredInjected=" + (Credentials != null));
+                    if (!hasPwd && !hasKey && _config.Protocol == ProtocolType.SSH)
+                    {
+                        void WarnNoCred()
+                        {
+                            _renderer?.Write(
+                                "\r\n\x1b[33m[认证] 未注入密码/私钥。请先解锁 KeePass，并在连接上关联凭据，" +
+                                "或在密码库中为该主机建立条目。\x1b[0m\r\n");
+                        }
+                        if (InvokeRequired) BeginInvoke(new Action(WarnNoCred));
+                        else WarnNoCred();
+                    }
+                }
+                catch { }
                 ITerminalSession session;
 
                 int rows = _renderer != null ? Math.Max(1, _renderer.Rows) : 24;
@@ -519,8 +563,9 @@ public async void Connect()
         {
             get
             {
-                // cell/TUI 路径：危险命令仍可拦截整行发送；本地缓冲仅对 Lightweight 友好
-                // VtCell 下本地回显会破坏远端光标，故仅在有检测器且非 cell 时缓冲
+                // 本地 shell：始终本地回显（重定向进程 echo 不可靠）
+                if (_session is LocalTerminalSession) return true;
+                // cell/TUI：危险命令整行拦截；本地缓冲仅 Lightweight
                 return _dangerousDetector != null && _cellRenderer == null;
             }
         }

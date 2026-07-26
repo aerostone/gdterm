@@ -46,6 +46,7 @@ namespace Gdterm.UI.Services
             public EventHandler DangerousCmdSettings { get; set; }
             public EventHandler ShowHotkeys { get; set; }
             public EventHandler About { get; set; }
+            public EventHandler AppearanceSettings { get; set; }
         }
 
         public sealed class Result
@@ -127,7 +128,8 @@ namespace Gdterm.UI.Services
             toolsMenu.DropDownItems.Add("密码健康报告(&H)", null, cb.PasswordHealth);
             toolsMenu.DropDownItems.Add("🔑 密码生成器(&G)", null, cb.PasswordGenerator);
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
-            toolsMenu.DropDownItems.Add("AI 助手设置(&A)", null, cb.AiSettings);
+            toolsMenu.DropDownItems.Add("外观设置(&R)...", null, cb.AppearanceSettings);
+            toolsMenu.DropDownItems.Add("AI 助手设置(&I)", null, cb.AiSettings);
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
             toolsMenu.DropDownItems.Add("危险命令规则(&D)", null, cb.DangerousCmdSettings);
             menu.Items.Add(toolsMenu);

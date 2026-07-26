@@ -26,6 +26,15 @@ namespace Gdterm.UI
         [STAThread]
         static void Main()
         {
+            try
+            {
+                var appIniEarly = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "config", "appearance.ini");
+                var early = Gdterm.UI.Forms.AppearanceSettings.Load(appIniEarly);
+                if (early == null || early.DpiAware)
+                    TrySetDpiAware();
+            }
+            catch { TrySetDpiAware(); }
+
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
@@ -41,6 +50,14 @@ namespace Gdterm.UI
             Directory.CreateDirectory(toolsConfigDir);
             Directory.CreateDirectory(Path.Combine(logsDir, "commands"));
             Directory.CreateDirectory(Path.Combine(logsDir, "terminal"));
+
+            try
+            {
+                GlobalAppearance = Gdterm.UI.Forms.AppearanceSettings.Load(
+                    Path.Combine(configDir, "appearance.ini"));
+            }
+            catch { GlobalAppearance = new Gdterm.UI.Forms.AppearanceSettings(); }
+
 
             // 全局未处理异常：落盘 diag.log + 审计（audit 就绪后补写）
             CrashLog.Initialize(logsDir);
@@ -467,6 +484,22 @@ namespace Gdterm.UI
                 }
             }
         }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool SetProcessDPIAware();
+
+        private static void TrySetDpiAware()
+        {
+            try
+            {
+                if (Environment.OSVersion.Version.Major >= 6)
+                    SetProcessDPIAware();
+            }
+            catch { }
+        }
+
+        /// <summary>全局外观，供新开终端读取。</summary>
+        internal static Gdterm.UI.Forms.AppearanceSettings GlobalAppearance { get; set; }
     }
 
     /// <summary>
