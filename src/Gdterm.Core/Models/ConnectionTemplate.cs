@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Gdterm.Core.Enums;
+// OptionMetadata: Dictionary<string,string> for RDP/terminal flags without referencing Gdterm.Rdp
 
 namespace Gdterm.Core.Models
 {
@@ -36,8 +37,11 @@ namespace Gdterm.Core.Models
         /// <summary>隧道配置模板</summary>
         public TunnelConfig TunnelTemplate { get; set; }
 
-        /// <summary>RDP 选项模板</summary>
-        public RdpOptions RdpOptions { get; set; }
+        /// <summary>
+        /// RDP/终端扩展选项（Metadata 键，如 rdp_drives/rdp_clipboard）。
+        /// 不引用 Gdterm.Rdp，避免 Core 反向依赖 RDP 层。
+        /// </summary>
+        public Dictionary<string, string> OptionMetadata { get; set; }
 
         /// <summary>SSH 高级选项</summary>
         public SshAdvancedOptions SshOptions { get; set; }

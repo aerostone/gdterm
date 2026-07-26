@@ -6,7 +6,7 @@
 
 - Windows + Visual Studio 2017+ 或 Build Tools
 - .NET Framework 4.6.2 Developer Pack
-- NuGet CLI（还原 SSH.NET / KeePassLib 等 packages.config）
+- NuGet CLI（还原 SSH.NET / KeePassLib；项目使用 PackageReference + `RestoreProjectStyle`）
 
 Linux 开发机**不能**编译；只改源码与 `.csproj`，在 Windows 上 MSBuild。
 
@@ -14,9 +14,16 @@ Linux 开发机**不能**编译；只改源码与 `.csproj`，在 Windows 上 MS
 
 ```bat
 cd /d C:\path\to\gdterm
-nuget restore gdterm.sln -PackagesDirectory packages
-msbuild gdterm.sln /p:Configuration=Release /m
+nuget restore gdterm.sln
+msbuild gdterm.sln /t:Restore /p:Configuration=Release /p:Platform="Any CPU"
+msbuild gdterm.sln /p:Configuration=Release /p:Platform="Any CPU" /m
 ```
+
+依赖：
+- SSH.NET 2024.1.0（Tunnel / Terminal / Sftp / Tools）
+- KeePassLib **2.30.0**（官方 NuGet 最新可用版；代码已按 2.30 API）
+- VtNetCore.dll 在仓库 `lib\`（无 NuGet）
+- RDP ActiveX **不参与编译**（`RdpClient` 运行时反射加载 `AxMsRdpClient8`）
 
 输出：
 
@@ -60,7 +67,9 @@ powershell -ExecutionPolicy Bypass -File tools\pack-release.ps1 -SkipTests
 1. **手写 csproj 漏 `Compile Include`** —— 新 `.cs` 必须进对应 csproj，否则 Windows 编译缺类型。
 2. **ProjectGuid 必须是合法十六进制** —— 非法字符会导致 sln 加载失败。
 3. **`gdterm.sln` 每个项目都要有 `Build.0`** —— 否则 “生成解决方案” 只编到部分工程。
-4. **SSH.NET / KeePassLib** 需在 Windows 上 `nuget restore`；packages 目录勿提交密钥。
+4. **SSH.NET / KeePassLib** 需在 Windows 上 `nuget restore` + `msbuild /t:Restore`；勿提交 packages。
+4b. **Gdterm.Tools.csproj** 必须用标准 `Microsoft.Common.props` + 末尾 `Microsoft.CSharp.targets`，禁止 `$(MSBuildExtensionsPath)\$(MSBuildToolsPath)\...` 拼接（会炸 MSBuild）。
+4c. **Core 不得引用 `RdpOptions`**（在 `Gdterm.Rdp.Models`）；模板扩展用 `OptionMetadata`。
 5. **便携数据** 全在 exe 旁 `data\`；发布包不要带真实 `gdterm.kdbx` / 主密码 hash。
 6. **VtNetCore.dll** 必须在 `lib\` 且随 UI 输出/pack 拷贝；缺 DLL 则 cell 终端无法加载。
 7. **默认渲染器 VtCell**；极低内存可 Metadata `renderer=lightweight`。

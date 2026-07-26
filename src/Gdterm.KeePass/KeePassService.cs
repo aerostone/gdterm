@@ -9,6 +9,7 @@ using System.Windows.Forms;
 using Gdterm.Core.Models;
 using Gdterm.KeePass.Models;
 using KeePassLib;
+using KeePassLib.Interfaces;
 using KeePassLib.Keys;
 using KeePassLib.Serialization;
 using KeePassLib.Security;
@@ -61,7 +62,7 @@ namespace Gdterm.KeePass
                 var compositeKey = new CompositeKey();
                 compositeKey.AddUserKey(new KcpPassword(masterPassword));
 
-                var logger = new KeePassLib.Logging.NullStatusLogger();
+                var logger = new NullStatusLogger();
                 _database.Open(ioConnInfo, compositeKey, logger);
 
                 return Task.FromResult(true);
@@ -139,12 +140,10 @@ namespace Gdterm.KeePass
             if (!string.IsNullOrEmpty(entry.AutoTypeSequence))
                 pwEntry.Strings.Set(AutoTypeFieldName, new ProtectedString(false, entry.AutoTypeSequence));
 
-            // SSH 密钥
+            // SSH 密钥（KeePassLib 2.30: ProtectedBinary + Binaries.Set）
             if (entry.SshPrivateKeyData != null && entry.SshPrivateKeyData.Length > 0)
             {
-                // 存储为附件
-                var attachment = new PwBinaryEntry(entry.SshPrivateKeyData, true, "id_rsa");
-                pwEntry.Binaries.Add(attachment);
+                pwEntry.Binaries.Set("id_rsa", new ProtectedBinary(true, entry.SshPrivateKeyData));
 
                 // 存储密码短语
                 if (!string.IsNullOrEmpty(entry.SshPrivateKeyPassphrase))
@@ -192,9 +191,7 @@ namespace Gdterm.KeePass
             // 更新 SSH 密钥
             if (entry.SshPrivateKeyData != null && entry.SshPrivateKeyData.Length > 0)
             {
-                pwEntry.Binaries.Clear();
-                var attachment = new PwBinaryEntry(entry.SshPrivateKeyData, true, "id_rsa");
-                pwEntry.Binaries.Add(attachment);
+                pwEntry.Binaries.Set("id_rsa", new ProtectedBinary(true, entry.SshPrivateKeyData));
             }
             if (entry.SshPrivateKeyPassphrase != null)
                 pwEntry.Strings.Set(SshKeyPassFieldName, new ProtectedString(true, entry.SshPrivateKeyPassphrase));
@@ -774,17 +771,18 @@ namespace Gdterm.KeePass
 
         private void SaveDatabase()
         {
-            var logger = new KeePassLib.Logging.NullStatusLogger();
+            var logger = new NullStatusLogger();
             _database.Save(logger);
         }
 
-        private class NullStatusLogger : KeePassLib.Logging.IStatusLogger
+        /// <summary>KeePassLib 2.30 兼容的空日志（Interfaces.IStatusLogger）。</summary>
+        private sealed class NullStatusLogger : IStatusLogger
         {
             public void StartLogging(string strOperation, bool bWriteOperationToLog) { }
             public void EndLogging() { }
-            public bool SetProgress(uint uPercent) => true;
-            public bool SetText(string strNewText, KeePassLib.Logging.LogStatusType lsType) => true;
-            public bool ContinueWork() => true;
+            public bool SetProgress(uint uPercent) { return true; }
+            public bool SetText(string strNewText, LogStatusType lsType) { return true; }
+            public bool ContinueWork() { return true; }
         }
     }
 }

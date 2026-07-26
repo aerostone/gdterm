@@ -8,29 +8,26 @@ configuration:
 
 platform: Any CPU
 
-# SSH.NET 等 NuGet 包
+# classic csproj + PackageReference：先 nuget restore，再 MSBuild Restore
 before_build:
   - ps: |
-      if (Get-Command nuget -ErrorAction SilentlyContinue) {
-        Get-ChildItem -Path src -Recurse -Filter packages.config | ForEach-Object {
-          nuget restore $_.FullName -PackagesDirectory packages -NonInteractive
-        }
+      Write-Host "Restoring NuGet packages..."
+      nuget restore gdterm.sln -NonInteractive
+      if (-not $?) {
+        Write-Host "nuget restore soft-fail; trying msbuild /t:Restore"
       }
-      # PackageReference 项目（Terminal/Tunnel/Sftp）
-      nuget restore gdterm.sln -PackagesDirectory packages -NonInteractive 2>$null
-      if (-not $?) { Write-Host "nuget restore sln soft-fail — MSBuild may restore PackageReference" }
+      msbuild gdterm.sln /t:Restore /p:Configuration=$env:CONFIGURATION /p:Platform="Any CPU" /v:m
+      if (-not $?) { throw "Package restore failed" }
 
 build:
   project: gdterm.sln
   verbosity: minimal
   parallel: true
 
-# 零 NuGet 测试 + Phase0 VT 引擎 + Profile 双轨
 test_script:
   - ps: |
       $testExe = "src\Gdterm.Tests\bin\$env:CONFIGURATION\Gdterm.Tests.exe"
       if (-not (Test-Path $testExe)) {
-        # 有的 SDK 风格输出路径
         $alt = Get-ChildItem -Path src\Gdterm.Tests -Recurse -Filter Gdterm.Tests.exe -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($alt) { $testExe = $alt.FullName }
       }
@@ -39,7 +36,6 @@ test_script:
       & $testExe
       if ($LASTEXITCODE -ne 0) { throw "Tests failed exit=$LASTEXITCODE" }
 
-# 可选：打绿色包（artifact）
 after_test:
   - ps: |
       $ui = "src\Gdterm.UI\bin\$env:CONFIGURATION"
@@ -64,12 +60,10 @@ artifacts:
     name: gdterm-portable
     type: zip
 
-# 仅 master / PR
 branches:
   only:
     - master
     - main
 
-# 不跑在 Linux 镜像
 matrix:
   fast_finish: true

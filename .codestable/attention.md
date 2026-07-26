@@ -92,4 +92,5 @@
 - SSH TERM 来自 `TerminalProfile.TerminalType`（默认 xterm-256color）；连接后不自动 uname
 - `ITerminalSession.SendBytes`/`Resize`；SSH window-change 经反射 SendWindowChangeRequest
 - 绿色分发必须带 `VtNetCore.dll` + `LICENSE.VtNetCore.txt`；CI 见根目录 `appveyor.yml`（VS2022 / net462）
+- AppVeyor 坑（2026-07-26）：`Gdterm.Tools` 禁止错误 Import 路径拼接；Core 禁止 `RdpOptions`；KeePassLib 用 **2.30.0** + `ProtectedBinary`/`Binaries.Set`；RDP 反射加载、编译不依赖 AxMsTscLib.dll；PackageReference 项目需 `RestoreProjectStyle=PackageReference`
 - 真彩/TUI 自动化：`VtTerminalEngineTests` + `TerminalProfileTests`；手工 vim/tmux/codex 由 Windows 验收

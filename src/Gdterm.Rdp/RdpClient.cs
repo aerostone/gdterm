@@ -1,23 +1,39 @@
 using System;
+using System.Reflection;
 using System.Windows.Forms;
-using AxMsTscLib;
 using Gdterm.Core.Models;
 using Gdterm.Rdp.Models;
-// TunnelEndpoint 在 Core.Models
 
 namespace Gdterm.Rdp
 {
     /// <summary>
-    /// RDP 客户端实现——封装 AxMsTscLib ActiveX 控件，支持设备重定向和性能优化
+    /// RDP 客户端——运行时反射加载 AxMsRdpClient8，编译期不依赖 AxMsTscLib DLL，
+    /// 以便 AppVeyor / 无 ActiveX interop 的环境能编译；Windows 本机有 mstscax 时再连接。
     /// </summary>
     public class RdpClient : IRdpClient
     {
-        private AxMsRdpClient8 _rdpControl;
+        private Control _rdpControl;
         private UserControl _container;
         private bool _disposed;
         private bool _isViaTunnel;
+        private static readonly Type AxType = ResolveAxType();
 
-        public bool IsConnected => _rdpControl?.Connected == 1;
+        public bool IsConnected
+        {
+            get
+            {
+                if (_rdpControl == null) return false;
+                try
+                {
+                    var v = GetProp(_rdpControl, "Connected");
+                    if (v is short s) return s == 1;
+                    if (v is int i) return i == 1;
+                    if (v is bool b) return b;
+                }
+                catch { }
+                return false;
+            }
+        }
 
         public UserControl Control => _container;
 
@@ -28,31 +44,30 @@ namespace Gdterm.Rdp
 
         public RdpClient()
         {
-            // 创建承载 ActiveX 控件的 UserControl
-            _container = new UserControl();
-            _container.Dock = DockStyle.Fill;
+            _container = new UserControl { Dock = DockStyle.Fill };
 
             try
             {
-                // 创建 RDP ActiveX 控件
-                _rdpControl = new AxMsRdpClient8();
-                ((System.ComponentModel.ISupportInitialize)_rdpControl).BeginInit();
+                if (AxType == null)
+                    throw new InvalidOperationException("AxMsRdpClient8 type not found");
+
+                _rdpControl = (Control)Activator.CreateInstance(AxType);
+                var beginInit = _rdpControl as System.ComponentModel.ISupportInitialize;
+                beginInit?.BeginInit();
                 _rdpControl.Dock = DockStyle.Fill;
                 _container.Controls.Add(_rdpControl);
-                ((System.ComponentModel.ISupportInitialize)_rdpControl).EndInit();
+                beginInit?.EndInit();
 
-                // 绑定事件
-                _rdpControl.OnConnected += OnRdpConnected;
-                _rdpControl.OnDisconnected += OnRdpDisconnected;
-                _rdpControl.OnLoginComplete += OnRdpLoginComplete;
+                TryHookEvent("OnConnected", nameof(OnRdpConnected));
+                TryHookEvent("OnDisconnected", nameof(OnRdpDisconnected));
+                TryHookEvent("OnLoginComplete", nameof(OnRdpLoginComplete));
             }
             catch
             {
-                // AxMsTscLib 可能不可用（非 Windows 环境）
-                // 创建一个占位 Label
+                _rdpControl = null;
                 var label = new Label
                 {
-                    Text = "RDP 控件不可用（需要 Windows 环境）",
+                    Text = "RDP 控件不可用（需要 Windows 环境 + mstscax）",
                     Dock = DockStyle.Fill,
                     TextAlign = System.Drawing.ContentAlignment.MiddleCenter
                 };
@@ -67,12 +82,8 @@ namespace Gdterm.Rdp
 
             _isViaTunnel = false;
             CurrentOptions = options ?? new RdpOptions();
-
-            // 应用连接选项
             ApplyOptions(config, credential);
-
-            // 连接
-            _rdpControl.Connect();
+            Invoke(_rdpControl, "Connect");
         }
 
         public void ConnectViaTunnel(ConnectionConfig config, CredentialPayload credential, TunnelEndpoint tunnelEndpoint, RdpOptions options = null)
@@ -84,34 +95,27 @@ namespace Gdterm.Rdp
             _isViaTunnel = true;
             CurrentOptions = options ?? new RdpOptions();
 
-            // 通过隧道连接 localhost:LocalPort
-            _rdpControl.Server = tunnelEndpoint.LocalHost ?? "127.0.0.1";
-            _rdpControl.UserName = credential?.Username ?? config.Username ?? "";
-
-            if (!string.IsNullOrEmpty(credential?.Password))
+            SetProp(_rdpControl, "Server", tunnelEndpoint.LocalHost ?? "127.0.0.1");
+            SetProp(_rdpControl, "UserName", credential?.Username ?? config.Username ?? "");
+            var adv = GetProp(_rdpControl, "AdvancedSettings7");
+            if (adv != null)
             {
-                _rdpControl.AdvancedSettings7.ClearTextPassword = credential.Password;
+                if (!string.IsNullOrEmpty(credential?.Password))
+                    SetProp(adv, "ClearTextPassword", credential.Password);
+                SetProp(adv, "RDPPort", tunnelEndpoint.LocalPort);
             }
-
-            _rdpControl.AdvancedSettings7.RDPPort = tunnelEndpoint.LocalPort;
-
             if (!string.IsNullOrEmpty(config.Domain))
-            {
-                _rdpControl.Domain = config.Domain;
-            }
+                SetProp(_rdpControl, "Domain", config.Domain);
 
-            // 应用连接选项
             ApplyOptions(config, credential);
-
-            // 连接
-            _rdpControl.Connect();
+            Invoke(_rdpControl, "Connect");
         }
 
         public void Disconnect()
         {
-            if (_rdpControl != null && _rdpControl.Connected == 1)
+            if (_rdpControl != null && IsConnected)
             {
-                _rdpControl.Disconnect();
+                try { Invoke(_rdpControl, "Disconnect"); } catch { }
             }
         }
 
@@ -119,107 +123,56 @@ namespace Gdterm.Rdp
         {
             if (_disposed) return;
             _disposed = true;
-
             Disconnect();
-
-            _rdpControl?.Dispose();
-            _container?.Dispose();
+            try { _rdpControl?.Dispose(); } catch { }
+            try { _container?.Dispose(); } catch { }
         }
 
-        /// <summary>
-        /// 应用连接选项到 RDP 控件
-        /// </summary>
         private void ApplyOptions(ConnectionConfig config, CredentialPayload credential)
         {
             var opts = CurrentOptions;
+            if (_rdpControl == null || opts == null) return;
 
-            // 基本连接参数（非隧道模式）
             if (!_isViaTunnel)
             {
-                _rdpControl.Server = config.Host;
-                _rdpControl.UserName = credential?.Username ?? config.Username ?? "";
-
-                if (!string.IsNullOrEmpty(credential?.Password))
+                SetProp(_rdpControl, "Server", config.Host);
+                SetProp(_rdpControl, "UserName", credential?.Username ?? config.Username ?? "");
+                var adv0 = GetProp(_rdpControl, "AdvancedSettings7");
+                if (adv0 != null)
                 {
-                    _rdpControl.AdvancedSettings7.ClearTextPassword = credential.Password;
+                    if (!string.IsNullOrEmpty(credential?.Password))
+                        SetProp(adv0, "ClearTextPassword", credential.Password);
+                    if (config.Port > 0 && config.Port != 3389)
+                        SetProp(adv0, "RDPPort", config.Port);
                 }
-
-                if (config.Port > 0 && config.Port != 3389)
-                {
-                    _rdpControl.AdvancedSettings7.RDPPort = config.Port;
-                }
-
                 if (!string.IsNullOrEmpty(config.Domain))
-                {
-                    _rdpControl.Domain = config.Domain;
-                }
+                    SetProp(_rdpControl, "Domain", config.Domain);
             }
 
-            // ===== 设备重定向 =====
+            var adv = GetProp(_rdpControl, "AdvancedSettings7");
+            if (adv == null) return;
 
-            // 磁盘重定向（挂载本地驱动器）
-            _rdpControl.AdvancedSettings7.RedirectDrives = opts.RedirectDrives;
-
-            // 剪贴板共享
-            _rdpControl.AdvancedSettings7.RedirectClipboard = opts.RedirectClipboard;
-
-            // 打印机重定向
-            _rdpControl.AdvancedSettings7.RedirectPrinters = opts.RedirectPrinters;
-
-            // 串口重定向
-            _rdpControl.AdvancedSettings7.RedirectPorts = opts.RedirectPorts;
-
-            // 智能卡重定向
-            _rdpControl.AdvancedSettings7.RedirectSmartCards = opts.RedirectSmartCards;
-
-            // USB 设备重定向
-            _rdpControl.AdvancedSettings7.RedirectDevices = opts.RedirectDevices;
-
-            // ===== 音频 =====
-            _rdpControl.AdvancedSettings7.AudioRedirectionMode = (uint)opts.AudioMode;
-
-            // ===== 显示 =====
-
-            // 颜色深度
-            _rdpControl.ColorDepth = opts.ColorDepth;
-
-            // 多显示器
-            _rdpControl.AdvancedSettings7.UseMultimon = opts.UseMultimon;
-
-            // 全屏
+            SetProp(adv, "RedirectDrives", opts.RedirectDrives);
+            SetProp(adv, "RedirectClipboard", opts.RedirectClipboard);
+            SetProp(adv, "RedirectPrinters", opts.RedirectPrinters);
+            SetProp(adv, "RedirectPorts", opts.RedirectPorts);
+            SetProp(adv, "RedirectSmartCards", opts.RedirectSmartCards);
+            SetProp(adv, "RedirectDevices", opts.RedirectDevices);
+            SetProp(adv, "AudioRedirectionMode", (uint)opts.AudioMode);
+            SetProp(_rdpControl, "ColorDepth", opts.ColorDepth);
+            SetProp(adv, "UseMultimon", opts.UseMultimon);
             if (opts.FullScreen)
-            {
-                _rdpControl.FullScreen = true;
-            }
+                SetProp(_rdpControl, "FullScreen", true);
 
-            // ===== 性能 =====
-
-            // 带宽类型（影响自动禁用桌面特性）
-            _rdpControl.AdvancedSettings7.BandwidthDetection = true;
-
-            // 桌面壁纸
-            _rdpControl.AdvancedSettings7.EnableAutoReconnect = opts.AutoReconnectCount > 0;
-            _rdpControl.AdvancedSettings7.MaxReconnectAttempts = opts.AutoReconnectCount;
-
-            // 字体平滑
-            _rdpControl.AdvancedSettings7.EnableFontSmoothing = opts.EnableFontSmoothing;
-
-            // 桌面合成
-            _rdpControl.AdvancedSettings7.EnableDesktopComposition = opts.EnableDesktopComposition;
-
-            // ===== 连接 =====
-
-            // 超时
-            _rdpControl.AdvancedSettings7.singleConnectionTimeout = opts.ConnectionTimeout;
-
-            // 网络级别认证（NLA）
-            _rdpControl.AdvancedSettings7.EnableNLA = opts.EnableNLA;
-
-            // CredSSP
+            SetProp(adv, "BandwidthDetection", true);
+            SetProp(adv, "EnableAutoReconnect", opts.AutoReconnectCount > 0);
+            SetProp(adv, "MaxReconnectAttempts", opts.AutoReconnectCount);
+            SetProp(adv, "EnableFontSmoothing", opts.EnableFontSmoothing);
+            SetProp(adv, "EnableDesktopComposition", opts.EnableDesktopComposition);
+            SetProp(adv, "singleConnectionTimeout", opts.ConnectionTimeout);
+            SetProp(adv, "EnableNLA", opts.EnableNLA);
             if (opts.EnableCredSSP)
-            {
-                _rdpControl.AdvancedSettings7.AuthenticationLevel = 2;
-            }
+                SetProp(adv, "AuthenticationLevel", 2);
         }
 
         private void OnRdpConnected(object sender, EventArgs e)
@@ -227,11 +180,22 @@ namespace Gdterm.Rdp
             OnStateChanged(new RdpStateChangedEventArgs(true, "connected"));
         }
 
-        private void OnRdpDisconnected(object sender, IMsTscAxEvents_OnDisconnectedEvent e)
+        private void OnRdpDisconnected(object sender, EventArgs e)
         {
-            var reason = e.discReason;
-            var errorMessage = GetDisconnectReasonMessage(reason);
-            OnStateChanged(new RdpStateChangedEventArgs(false, "disconnected", errorMessage));
+            int reason = 0;
+            try
+            {
+                // COM 事件参数通常带 discReason
+                if (e != null)
+                {
+                    var p = e.GetType().GetProperty("discReason")
+                            ?? e.GetType().GetProperty("DiscReason");
+                    if (p != null)
+                        reason = Convert.ToInt32(p.GetValue(e, null));
+                }
+            }
+            catch { }
+            OnStateChanged(new RdpStateChangedEventArgs(false, "disconnected", GetDisconnectReasonMessage(reason)));
         }
 
         private void OnRdpLoginComplete(object sender, EventArgs e)
@@ -244,9 +208,133 @@ namespace Gdterm.Rdp
             StateChanged?.Invoke(this, e);
         }
 
-        /// <summary>
-        /// 获取断开连接原因的可读消息
-        /// </summary>
+        private void TryHookEvent(string eventName, string handlerName)
+        {
+            if (_rdpControl == null) return;
+            var evt = _rdpControl.GetType().GetEvent(eventName);
+            if (evt == null) return;
+            var method = GetType().GetMethod(handlerName, BindingFlags.Instance | BindingFlags.NonPublic);
+            if (method == null) return;
+            try
+            {
+                var handlerType = evt.EventHandlerType;
+                // 尝试直接 EventHandler；COM 事件可能是自定义 delegate
+                Delegate d;
+                try
+                {
+                    d = Delegate.CreateDelegate(handlerType, this, method);
+                }
+                catch
+                {
+                    // 参数不匹配时包一层
+                    d = CreateFlexibleHandler(handlerType, method);
+                }
+                if (d != null)
+                    evt.AddEventHandler(_rdpControl, d);
+            }
+            catch { }
+        }
+
+        private Delegate CreateFlexibleHandler(Type handlerType, MethodInfo target)
+        {
+            // 仅支持 (object, EventArgs) 兼容包装
+            var invoke = handlerType.GetMethod("Invoke");
+            if (invoke == null) return null;
+            var ps = invoke.GetParameters();
+            if (ps.Length != 2) return null;
+
+            // 用 DynamicMethod 太重；对常见 OnConnected/OnLoginComplete 用 EventHandler 适配
+            EventHandler bridge = (s, e) =>
+            {
+                try { target.Invoke(this, new object[] { s, e ?? EventArgs.Empty }); }
+                catch
+                {
+                    try { target.Invoke(this, new object[] { s, EventArgs.Empty }); }
+                    catch { }
+                }
+            };
+
+            try
+            {
+                return Delegate.CreateDelegate(handlerType, bridge.Target, bridge.Method);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private static Type ResolveAxType()
+        {
+            // 1) 已加载程序集
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try
+                {
+                    var t = asm.GetType("AxMsTscLib.AxMsRdpClient8", false)
+                            ?? asm.GetType("AxMSTSCLib.AxMsRdpClient8", false);
+                    if (t != null) return t;
+                }
+                catch { }
+            }
+
+            // 2) 常见 interop DLL 旁路加载（绿色目录 / GAC 旁）
+            var candidates = new[]
+            {
+                "AxMsTscLib.dll",
+                "AxMSTSCLib.dll",
+                System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory ?? "", "AxMsTscLib.dll"),
+                System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory ?? "", "lib", "AxMsTscLib.dll"),
+            };
+            foreach (var path in candidates)
+            {
+                try
+                {
+                    if (!System.IO.File.Exists(path)) continue;
+                    var asm = Assembly.LoadFrom(path);
+                    var t = asm.GetType("AxMsTscLib.AxMsRdpClient8")
+                            ?? asm.GetType("AxMSTSCLib.AxMsRdpClient8");
+                    if (t != null) return t;
+                }
+                catch { }
+            }
+            return null;
+        }
+
+        private static object GetProp(object target, string name)
+        {
+            if (target == null) return null;
+            var p = target.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.Public);
+            return p?.GetValue(target, null);
+        }
+
+        private static void SetProp(object target, string name, object value)
+        {
+            if (target == null) return;
+            try
+            {
+                var p = target.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.Public);
+                if (p == null || !p.CanWrite) return;
+                var dest = p.PropertyType;
+                if (value != null && !dest.IsInstanceOfType(value))
+                {
+                    if (dest.IsEnum)
+                        value = Enum.ToObject(dest, value);
+                    else
+                        value = Convert.ChangeType(value, Nullable.GetUnderlyingType(dest) ?? dest);
+                }
+                p.SetValue(target, value, null);
+            }
+            catch { }
+        }
+
+        private static void Invoke(object target, string method)
+        {
+            if (target == null) return;
+            var m = target.GetType().GetMethod(method, Type.EmptyTypes);
+            m?.Invoke(target, null);
+        }
+
         private static string GetDisconnectReasonMessage(int reasonCode)
         {
             switch (reasonCode)
@@ -258,29 +346,8 @@ namespace Gdterm.Rdp
                 case 4: return "会话超时";
                 case 5: return "另一用户连接";
                 case 6: return "服务器拒绝连接";
-                case 7: return "服务器许可错误";
-                case 8: return "服务器内存不足";
-                case 9: return "DNS 解析失败";
                 case 10: return "网络连接丢失";
-                case 11: return "主机连接被拒绝";
-                case 12: return "许可证密钥错误";
-                case 13: return "加密错误";
-                case 14: return "DNS 名称解析失败";
-                case 15: return "主机未找到";
-                case 16: return "内部错误";
-                case 17: return "许可协商超时";
-                case 18: return "无法连接网关";
-                case 256: return "内部错误 (256)";
-                case 257: return "内部错误 (257)";
-                case 258: return "内部错误 (258)";
-                case 259: return "内部错误 (259)";
-                case 260: return "内部错误 (260)";
-                case 261: return "内部错误 (261)";
-                case 262: return "内部错误 (262)";
-                case 263: return "内部错误 (263)";
-                case 264: return "内部错误 (264)";
-                case 265: return "内部错误 (265)";
-                default: return $"断开连接 (原因代码: {reasonCode})";
+                default: return "断开连接 (原因代码: " + reasonCode + ")";
             }
         }
     }

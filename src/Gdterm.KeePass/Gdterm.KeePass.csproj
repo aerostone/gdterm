@@ -11,6 +11,7 @@
     <AssemblyName>Gdterm.KeePass</AssemblyName>
     <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <RestoreProjectStyle>PackageReference</RestoreProjectStyle>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -35,7 +36,8 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="KeePassLib" Version="2.53.1" />
+    <!-- 官方 NuGet 仅到 2.30.0；API 与当前 KeePassService 兼容 -->
+    <PackageReference Include="KeePassLib" Version="2.30.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Gdterm.Core\Gdterm.Core.csproj">
