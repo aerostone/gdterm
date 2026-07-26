@@ -1,0 +1,743 @@
+# gdterm — AI Context Map
+
+> **Stack:** aspnet | none | unknown | csharp
+
+> 0 routes | 0 models | 0 components | 183 lib files | 0 env vars | 0 middleware
+> **Token savings:** this file is ~0 tokens. Without it, AI exploration would cost ~0 tokens. **Saves ~0 tokens per conversation.**
+> **Last scanned:** 2026-07-26 03:02 — re-run after significant changes
+
+---
+
+# Libraries
+
+- `src/Gdterm.AI/AiAssistantService.cs`
+  - class AiAssistantService
+  - function SendMessageAsync
+  - function ExtractCommands
+  - function ExecuteCommand
+  - function ClearHistory
+  - function Dispose
+  - _...1 more_
+- `src/Gdterm.AI/AiModelStore.cs`
+  - class AiModelStore
+  - function SetMasterPasswordProvider
+  - function GetDefault
+  - function GetById
+  - function SetDefault
+  - function Add
+  - _...4 more_
+- `src/Gdterm.AI/Models/AiConfiguration.cs` — class AiConfiguration
+- `src/Gdterm.AI/Models/AiModelConfig.cs` — class AiModelConfig
+- `src/Gdterm.AI/Models/AiResponse.cs` — class AiResponse
+- `src/Gdterm.AI/Models/ChatMessage.cs` — class ChatMessage
+- `src/Gdterm.Connections/BookmarkStoreJson.cs`
+  - class BookmarkStoreJson
+  - function LoadAll
+  - function SaveAll
+  - function Add
+  - function Delete
+  - function Update
+  - _...2 more_
+- `src/Gdterm.Connections/CommandTemplateStore.cs`
+  - class CommandTemplate
+  - class CommandTemplateContext
+  - class CommandTemplateStore
+  - function ResolveCommand
+  - function Load
+  - function Save
+  - _...9 more_
+- `src/Gdterm.Connections/ConnectionStoreJson.cs`
+  - class ConnectionStoreJson
+  - function LoadAll
+  - function SaveAll
+  - function Add
+  - function Update
+  - function Delete
+  - _...2 more_
+- `src/Gdterm.Connections/FolderCredentialStoreJson.cs`
+  - class FolderCredentialStoreJson
+  - function LoadAll
+  - function SaveAll
+  - function SetCredential
+  - function RemoveCredential
+  - function ResolveByInheritance
+- `src/Gdterm.Connections/GroupNode.cs` — class GroupNode
+- `src/Gdterm.Connections/HighlightStore.cs`
+  - class HighlightStore
+  - function Load
+  - function Save
+- `src/Gdterm.Connections/LogonScriptStore.cs`
+  - class LogonScriptStore
+  - function Load
+  - function Save
+  - function Add
+  - function Remove
+- `src/Gdterm.Connections/QuickCommandStore.cs`
+  - class QuickCommandStore
+  - function LoadAll
+  - function SaveAll
+  - function Add
+  - function Delete
+  - function Update
+- `src/Gdterm.Connections/SessionStateStore.cs`
+  - class SessionStateStore
+  - function Load
+  - function Save
+  - function Clear
+- `src/Gdterm.Connections/TemplateStore.cs`
+  - class TemplateStore
+  - function LoadAll
+  - function SaveAll
+  - function Add
+  - function Delete
+  - function Update
+  - _...1 more_
+- `src/Gdterm.Connections/TerminalKeyBindingStore.cs`
+  - class TerminalKeyBindingStore
+  - function Load
+  - function Save
+  - function Reload
+  - function GetActiveBindings
+  - function AddCustomBinding
+  - _...2 more_
+- `src/Gdterm.Core/Constants/DefaultPorts.cs` — class DefaultPorts
+- `src/Gdterm.Core/Models/CommandHistoryEntry.cs` — class CommandHistoryEntry, class CommandHistoryQuery
+- `src/Gdterm.Core/Models/ConnectionConfig.cs` — class ConnectionConfig
+- `src/Gdterm.Core/Models/ConnectionTemplate.cs`
+  - class ConnectionTemplate
+  - class SshAdvancedOptions
+  - class TemplateCategory
+- `src/Gdterm.Core/Models/CredentialPayload.cs`
+  - class CredentialPayload
+  - function ResolveHopPassword
+  - function ClearSecrets
+- `src/Gdterm.Core/Models/DangerousCommandConfig.cs`
+  - class DangerousCommandConfig
+  - class DangerousCommandRule
+  - enum PatternType
+  - enum DangerLevel
+  - function GetDefault
+- `src/Gdterm.Core/Models/FolderCredentialEntry.cs` — class FolderCredentialEntry
+- `src/Gdterm.Core/Models/HighlightRule.cs`
+  - class HighlightRule
+  - class HighlightRuleConfig
+  - function GetDefault
+- `src/Gdterm.Core/Models/JumpChainConfig.cs` — class JumpChainConfig
+- `src/Gdterm.Core/Models/JumpHop.cs` — class JumpHop
+- `src/Gdterm.Core/Models/LogonScript.cs`
+  - enum LogonStepType
+  - class LogonStep
+  - class LogonScript
+- `src/Gdterm.Core/Models/PortForwardRule.cs` — class PortForwardRule, enum PortForwardType
+- `src/Gdterm.Core/Models/QuickCommand.cs` — class QuickCommand
+- `src/Gdterm.Core/Models/SerialConfig.cs` — class SerialConfig
+- `src/Gdterm.Core/Models/SessionBookmark.cs` — class SessionBookmark, class RecentConnection
+- `src/Gdterm.Core/Models/SessionState.cs` — class SessionState, class OpenTabState
+- `src/Gdterm.Core/Models/TerminalKeyBinding.cs`
+  - class TerminalKeyBinding
+  - enum SendType
+  - class TerminalKeyBindingConfig
+  - class KeyBindingPreset
+  - function GetKeyCombo
+- `src/Gdterm.Core/Models/TerminalProfile.cs`
+  - class TerminalProfile
+  - function FromMetadata
+  - function ToJson
+- `src/Gdterm.Core/Models/TunnelConfig.cs` — class TunnelConfig
+- `src/Gdterm.Core/Models/TunnelEndpoint.cs` — class TunnelEndpoint
+- `src/Gdterm.KeePass/KeePassService.cs`
+  - class KeePassService
+  - function UnlockAsync
+  - function Lock
+  - function GetCredential
+  - function CreateEntry
+  - function UpdateEntry
+  - _...16 more_
+- `src/Gdterm.KeePass/Models/KeePassEntry.cs` — class KeePassEntry
+- `src/Gdterm.KeePass/Models/KeePassEntrySummary.cs` — class KeePassEntrySummary
+- `src/Gdterm.KeePass/Models/PasswordHealthReport.cs`
+  - class PasswordHealthReport
+  - class PasswordIssue
+  - class DuplicatePasswordGroup
+- `src/Gdterm.KeePass/Models/WeakPasswordException.cs` — class WeakPasswordException
+- `src/Gdterm.KeePass/PasswordStrengthValidator.cs` — function Validate, function IsCommonWeakPassword
+- `src/Gdterm.Logging/AuditLogger.cs`
+  - class AuditLogger
+  - function LogConnection
+  - function LogCredentialUse
+  - function LogCommand
+  - function LogAiInteraction
+  - function LogSecurityEvent
+  - _...2 more_
+- `src/Gdterm.Logging/CommandHistoryStore.cs`
+  - class CommandHistoryStore
+  - class CommandFrequency
+  - function RecordCommand
+  - function Query
+  - function GetFrequentCommands
+  - function GetRecentCommands
+  - _...1 more_
+- `src/Gdterm.Logging/LogSanitizer.cs`
+  - class LogSanitizer
+  - function Sanitize
+  - function ContainsSensitive
+- `src/Gdterm.Logging/Models/AuditEntry.cs` — class AuditEntry
+- `src/Gdterm.Logging/Models/AuditLogConfig.cs` — class AuditLogConfig
+- `src/Gdterm.Logging/Models/AuditQuery.cs` — class AuditQuery
+- `src/Gdterm.Logging/Models/LogRotationConfig.cs` — class LogRotationConfig
+- `src/Gdterm.Rdp/Models/FileTransferEventArgs.cs` — class FileTransferEventArgs
+- `src/Gdterm.Rdp/Models/RdpOptions.cs`
+  - class RdpOptions
+  - enum AudioRedirectionMode
+  - enum BandwidthType
+- `src/Gdterm.Rdp/Models/RdpStateChangedEventArgs.cs` — class RdpStateChangedEventArgs
+- `src/Gdterm.Rdp/RdpClient.cs`
+  - class RdpClient
+  - function Connect
+  - function ConnectViaTunnel
+  - function Disconnect
+  - function Dispose
+- `src/Gdterm.Rdp/RdpClientFactory.cs` — class RdpClientFactory, function Create
+- `src/Gdterm.Rdp/RdpOptionsBuilder.cs` — class RdpOptionsBuilder, function FromConnection
+- `src/Gdterm.Security/DangerousCommandDetector.cs`
+  - class DangerousCommandDetector
+  - class CommandCheckResult
+  - class CommandBlockedEventArgs
+  - function Check
+  - function AddToWhitelist
+  - function RemoveFromWhitelist
+  - _...5 more_
+- `src/Gdterm.Security/Models/LockStateChangedEventArgs.cs` — class LockStateChangedEventArgs
+- `src/Gdterm.Security/Models/MasterPasswordConfig.cs` — class MasterPasswordConfig
+- `src/Gdterm.Security/SecretScanConfig.cs`
+  - class SecretScanConfig
+  - class SecretFinding
+  - enum FindingSeverity
+  - enum FindingCategory
+  - class SecretScanReport
+  - function GetDefault
+  - _...1 more_
+- `src/Gdterm.Security/SecretScanner.cs`
+  - class SecretScanner
+  - function StartScanAsync
+  - function StopScan
+  - function Scan
+  - function ScanFile
+  - function CalculateShannonEntropy
+  - _...2 more_
+- `src/Gdterm.Security/SecurityManager.cs`
+  - class SecurityManager
+  - class WeakPasswordException
+  - function ResetIdleTimer
+  - function LockNow
+  - function Unlock
+  - function SetMasterPassword
+  - _...4 more_
+- `src/Gdterm.Sftp/Models/FileTransferProgress.cs` — class FileTransferProgress
+- `src/Gdterm.Sftp/Models/SftpFileInfo.cs` — class SftpFileInfo
+- `src/Gdterm.Sftp/SftpEnhancements.cs`
+  - class SftpEnhancements
+  - class FilePermissionInfo
+  - function PreviewTextFileAsync
+  - function IsImageFile
+  - function IsTextFile
+  - function ParsePermissionToOctal
+  - _...4 more_
+- `src/Gdterm.Sftp/SftpService.cs`
+  - class SftpService
+  - function ConnectAsync
+  - function ConnectViaTunnelAsync
+  - function ListDirectoryAsync
+  - function UploadAsync
+  - function DownloadAsync
+  - _...5 more_
+- `src/Gdterm.Sftp/SftpServiceFactory.cs` — class SftpServiceFactory, function Create
+- `src/Gdterm.Sftp/SshConnectionInfoFactory.cs` — function Create
+- `src/Gdterm.Terminal/AutoReconnectWatchdog.cs`
+  - class AutoReconnectWatchdog
+  - class ReconnectEventArgs
+  - class ReconnectState
+  - function Watch
+  - function Unwatch
+  - function PauseAll
+  - _...5 more_
+- `src/Gdterm.Terminal/BatchCommandExecutor.cs`
+  - class BatchCommandResult
+  - class BatchCommandExecutor
+  - function ExecuteAsync
+- `src/Gdterm.Terminal/ConnectionHealthMonitor.cs`
+  - class HealthSnapshot
+  - class ConnectionHealthMonitor
+  - function Start
+  - function Stop
+  - function GetHistory
+  - function RecordReconnect
+  - _...1 more_
+- `src/Gdterm.Terminal/HighlightEngine.cs`
+  - class HighlightMatch
+  - class HighlightEngine
+  - function LoadRules
+  - function MatchLine
+  - function HasAnyMatch
+  - function Dispose
+- `src/Gdterm.Terminal/LocalTerminalSession.cs`
+  - class LocalTerminalSession
+  - function TryGetSshClient
+  - function Connect
+  - function ConnectViaTunnel
+  - function ConnectLocal
+  - function SendInput
+  - _...5 more_
+- `src/Gdterm.Terminal/LogonScriptEngine.cs`
+  - class LogonScriptEngine
+  - function ExecuteAsync
+  - function Cancel
+  - function Dispose
+- `src/Gdterm.Terminal/MacroRecorder.cs`
+  - class MacroRecorder
+  - enum MacroStepType
+  - class MacroStep
+  - function StartRecording
+  - function RecordInput
+  - function StopRecording
+  - _...5 more_
+- `src/Gdterm.Terminal/Models/TerminalOutputEventArgs.cs` — class TerminalOutputEventArgs
+- `src/Gdterm.Terminal/MultiChannelManager.cs`
+  - class MultiChannelManager
+  - class SelectResult
+  - class BroadcastResult
+  - class ChannelSessionInfo
+  - class ChannelSessionEventArgs
+  - class BroadcastStateChangedEventArgs
+  - _...14 more_
+- `src/Gdterm.Terminal/MultiChannelRecorder.cs`
+  - class MultiChannelRecorder
+  - class RecordingEntry
+  - enum EntryDirection
+  - class ReplayEvent
+  - function StartRecording
+  - function RegisterSession
+  - _...9 more_
+- `src/Gdterm.Terminal/Rendering/LightweightRenderer.cs`
+  - class LightweightRenderer
+  - function SetColorScheme
+  - function GetColorScheme
+  - function Write
+  - function Clear
+  - function GetControl
+  - _...5 more_
+- `src/Gdterm.Terminal/Rendering/TerminalRenderer.cs`
+  - function Write
+  - function Clear
+  - function GetControl
+  - function GetSelection
+  - function GetRecentLines
+  - function Pause
+  - _...1 more_
+- `src/Gdterm.Terminal/SerialSession.cs`
+  - class SerialSession
+  - function TryGetSshClient
+  - function Connect
+  - function ConnectViaTunnel
+  - function SendInput
+  - function SendBytes
+  - _...4 more_
+- `src/Gdterm.Terminal/SshConnectionInfoFactory.cs` — function Create
+- `src/Gdterm.Terminal/SshPortForwardHost.cs`
+  - class SshPortForwardHost
+  - function Wrap
+  - function GetUnderlyingClient
+- `src/Gdterm.Terminal/TerminalAutoLogger.cs`
+  - class TerminalAutoLogger
+  - function StartRecording
+  - function LogOutput
+  - function StopRecording
+  - function Dispose
+- `src/Gdterm.Terminal/TerminalBufferExport.cs`
+  - class TerminalBufferExport
+  - function ExportAsText
+  - function ExportAsHtml
+  - function SaveToFile
+- `src/Gdterm.Terminal/TerminalControl.cs`
+  - class TerminalControl
+  - class KeyBindingActionEventArgs
+  - function AttachSession
+  - function DetachSession
+  - function GetSelection
+  - function ClearTerminal
+- `src/Gdterm.Terminal/TerminalEndpoint.cs` — class TerminalEndpoint
+- `src/Gdterm.Terminal/TerminalKeyBindingResolver.cs`
+  - class TerminalKeyBindingResolver
+  - class KeyResolveResult
+  - function LoadBindings
+  - function Resolve
+  - function HasBinding
+- `src/Gdterm.Terminal/TerminalReadyDetector.cs`
+  - class TerminalReadyDetector
+  - class ReadyState
+  - enum ReadyReason
+  - function Detect
+  - function IsReady
+  - function ToString
+- `src/Gdterm.Terminal/TerminalSearchEngine.cs`
+  - class SearchResult
+  - class TerminalSearchEngine
+  - function Search
+  - function Next
+  - function Previous
+  - function GoTo
+  - _...1 more_
+- `src/Gdterm.Terminal/TerminalSession.cs`
+  - class TerminalSession
+  - function TryGetSshClient
+  - function Connect
+  - function ConnectViaTunnel
+  - function GetRecentOutput
+  - function GetSelection
+  - _...2 more_
+- `src/Gdterm.Terminal/TerminalSessionFactory.cs`
+  - class TerminalSessionFactory
+  - function Create
+  - function CreateSerial
+  - function CreateLocal
+  - function CreateSerialStatic
+  - function CreateLocalStatic
+- `src/Gdterm.Terminal/Themes/ColorSchemes.cs`
+  - class TerminalColorScheme
+  - class ColorSchemes
+  - function GetAll
+  - function GetByName
+- `src/Gdterm.Terminal/Themes/TerminalTransparency.cs`
+  - class TerminalTransparency
+  - function ApplyToForm
+  - function ApplyToControl
+  - function DecreaseOpacity
+  - function IncreaseOpacity
+  - function ToggleTransparency
+  - _...1 more_
+- `src/Gdterm.Terminal/Transfer/ZmodemHandler.cs`
+  - class ZmodemHandler
+  - class ZmodemFileInfo
+  - class ZmodemFileEventArgs
+  - class ZmodemProgressEventArgs
+  - class ZmodemErrorEventArgs
+  - function SetDownloadDirectory
+  - _...8 more_
+- `src/Gdterm.Tests/Assert.cs`
+  - class Assert
+  - function Reset
+  - function True
+  - function Contains
+  - function NotContains
+- `src/Gdterm.Tests/Connections/ConnectionStoreJsonTests.cs` — class ConnectionStoreJsonTests, function Run
+- `src/Gdterm.Tests/Core/CredentialPayloadTests.cs` — class CredentialPayloadTests, function Run
+- `src/Gdterm.Tests/Core/DefaultPortsTests.cs` — class DefaultPortsTests, function Run
+- `src/Gdterm.Tests/Logging/LogSanitizerTests.cs` — class LogSanitizerTests, function Run
+- `src/Gdterm.Tests/Program.cs` — class Program, function Main
+- `src/Gdterm.Tests/Security/SecretFindingTests.cs` — class SecretFindingTests, function Run
+- `src/Gdterm.Tests/Security/SecurityManagerHashTests.cs` — class SecurityManagerHashTests, function Run
+- `src/Gdterm.Tools/Models/RemoteCommandResult.cs` — class RemoteCommandResult, interface IRemoteFileTransfer
+- `src/Gdterm.Tools/Models/SshRemoteFileTransfer.cs`
+  - class SshRemoteFileTransfer
+  - function UploadToTemp
+  - function CleanupTemp
+  - function DownloadToFile
+  - function Dispose
+- `src/Gdterm.Tools/Modules/CertificateInstallerTool.cs`
+  - class CertificateInstallerTool
+  - class CertificateInstallerConfig
+  - function SetSshSession
+  - function ClearSshSession
+  - function LoadConfig
+  - function SaveConfig
+  - _...4 more_
+- `src/Gdterm.Tools/Modules/NetworkScannerTool.cs`
+  - class NetworkScannerTool
+  - class HostScanResult
+  - class DnsResult
+  - class TracerouteHop
+  - class PingMonitorResult
+  - class SubnetInfo
+  - _...7 more_
+- `src/Gdterm.Tools/Modules/PortScannerTool.cs`
+  - class PortScanResult
+  - class PortScannerTool
+  - class PortScannerConfig
+  - function LoadConfig
+  - function SaveConfig
+  - function ScanAsync
+  - _...3 more_
+- `src/Gdterm.Tools/Modules/RepoConfigTool.cs`
+  - class RepoConfigTool
+  - function SetSshSession
+  - function ClearSshSession
+  - function LoadConfig
+  - function SaveConfig
+  - function ListRepos
+  - _...3 more_
+- `src/Gdterm.Tools/Modules/TimeSyncTool.cs`
+  - class TimeSyncTool
+  - class TimeSyncConfig
+  - function SetSshSession
+  - function ClearSshSession
+  - function LoadConfig
+  - function SaveConfig
+  - _...5 more_
+- `src/Gdterm.Tools/SshNetRemoteSession.cs`
+  - class SshNetRemoteSession
+  - function Wrap
+  - function RunCommand
+  - function CreateFileTransfer
+- `src/Gdterm.Tools/ToolConfigBase.cs`
+  - class ToolConfigBase
+  - function SetConfigPath
+  - function LoadFromFile
+  - function SaveToFile
+  - function ResetDefaults
+- `src/Gdterm.Tools/ToolPanelHelper.cs`
+  - class ToolPanelHelper
+  - function CreateActionPanel
+  - function MakeTextBox
+  - function AppendLine
+- `src/Gdterm.Tools/ToolRegistry.cs`
+  - class ToolRegistry
+  - function Register
+  - function GetTool
+  - function GetAllTools
+  - function GetByCategory
+  - function GetCategories
+  - _...3 more_
+- `src/Gdterm.Tunnel/Exceptions/TunnelException.cs` — class TunnelException, function ToString
+- `src/Gdterm.Tunnel/Models/TunnelSession.cs`
+  - function ConnectHop
+  - function ConnectDirect
+  - function StartPortForwarding
+  - function SetError
+  - function GetLastClient
+  - function Dispose
+- `src/Gdterm.Tunnel/Models/TunnelStatus.cs` — class TunnelStatus
+- `src/Gdterm.Tunnel/PortForwardManager.cs`
+  - class PortForwardManager
+  - function Bind
+  - function Unbind
+  - function StartLocal
+  - function StartRemote
+  - function Stop
+  - _...4 more_
+- `src/Gdterm.Tunnel/TunnelManager.cs`
+  - class TunnelManager
+  - function EstablishAsync
+  - function CloseAsync
+  - function GetStatus
+  - function Dispose
+- `src/Gdterm.UI/Controls/BatchCommandPanel.cs`
+  - class BatchCommandPanel
+  - function SetDangerousDetector
+  - function SetSessions
+- `src/Gdterm.UI/Controls/CommandHistoryPanel.cs`
+  - class CommandHistoryPanel
+  - function RefreshHistory
+  - function UpdateHostFilter
+- `src/Gdterm.UI/Controls/ConnectionTreeControl.cs` — class ConnectionTreeControl, function LoadConnections
+- `src/Gdterm.UI/Controls/DangerousCommandDialog.cs` — class DangerousCommandDialog
+- `src/Gdterm.UI/Controls/HealthMonitorPanel.cs` — class HealthMonitorPanel, function SetMonitor
+- `src/Gdterm.UI/Controls/HighlightRulePanel.cs` — class HighlightRulePanel
+- `src/Gdterm.UI/Controls/KeyBindingPanel.cs` — class KeyBindingPanel
+- `src/Gdterm.UI/Controls/LockOverlayControl.cs` — class LockOverlayControl
+- `src/Gdterm.UI/Controls/LogonScriptPanel.cs` — class LogonScriptPanel
+- `src/Gdterm.UI/Controls/MultiChannelPanel.cs` — class MultiChannelPanel, function RefreshList
+- `src/Gdterm.UI/Controls/PortForwardPanel.cs`
+  - class PortForwardPanel
+  - function SetPortForwardHost
+  - function SetSshClient
+- `src/Gdterm.UI/Controls/QuickBarPanel.cs`
+  - class QuickBarPanel
+  - function SetActiveTerminal
+  - function SetActiveSession
+  - function SetCommands
+  - function AddCommand
+  - function RemoveCommand
+- `src/Gdterm.UI/Controls/SecretScanPanel.cs` — class SecretScanPanel
+- `src/Gdterm.UI/Controls/SessionBookmarksPanel.cs`
+  - class SessionBookmarksPanel
+  - function Reload
+  - function ToString
+- `src/Gdterm.UI/Controls/SftpBrowserPanel.cs` — class SftpBrowserPanel
+- `src/Gdterm.UI/Controls/SnippetSearchPanel.cs`
+  - class SnippetSearchPanel
+  - function SetActiveTerminal
+  - function SetActiveSession
+  - function ShowAndFocus
+  - function SetCommands
+- `src/Gdterm.UI/Controls/SplitPaneControl.cs`
+  - class SplitPaneControl
+  - enum SplitOrientation
+  - function FindFirstTerminal
+  - function CollectTerminals
+  - function CreateHorizontal
+  - function CreateVertical
+- `src/Gdterm.UI/Controls/StatusBarControl.cs` — class StatusBarControl
+- `src/Gdterm.UI/Controls/TabContainerControl.cs`
+  - class TabContainerControl
+  - function OpenConnection
+  - function OpenLocalTerminal
+  - function OpenSftpBrowser
+  - function SplitHorizontal
+  - function SplitVertical
+  - _...14 more_
+- `src/Gdterm.UI/Controls/TerminalControl.cs`
+  - class TerminalControl
+  - function Connect
+  - function EnableAutoLog
+  - function PauseRendering
+  - function ResumeRendering
+  - function TrySendInput
+  - _...6 more_
+- `src/Gdterm.UI/Controls/TerminalSearchBar.cs`
+  - class TerminalSearchBar
+  - function ShowAndFocus
+  - function UpdateMatchCount
+- `src/Gdterm.UI/Controls/ToolboxPanel.cs`
+  - class ToolboxPanel
+  - function SetRemoteSession
+  - function SetSshClient
+  - function AppendOutput
+- `src/Gdterm.UI/Diagnostics/ClipboardProtector.cs` — function SetTextWithTtl, function CancelPendingClear
+- `src/Gdterm.UI/Diagnostics/CrashLog.cs` — function Initialize, function Write
+- `src/Gdterm.UI/Diagnostics/DiagLog.cs` — function Swallowed, function Try
+- `src/Gdterm.UI/Forms/AiSettingsForm.cs` — class AiSettingsForm
+- `src/Gdterm.UI/Forms/ConnectionDialog.cs` — class ConnectionDialog
+- `src/Gdterm.UI/Forms/DangerousCommandConfigForm.cs` — class DangerousCommandConfigForm
+- `src/Gdterm.UI/Forms/KeePassManagerForm.cs` — class KeePassManagerForm
+- `src/Gdterm.UI/Forms/KeePassUnlockForm.cs` — class KeePassUnlockForm
+- `src/Gdterm.UI/Forms/MainForm.cs` — enum ViewMode, class MainForm
+- `src/Gdterm.UI/Forms/PasswordGeneratorForm.cs` — class PasswordGeneratorForm
+- `src/Gdterm.UI/Forms/PasswordHealthForm.cs` — class PasswordHealthForm
+- `src/Gdterm.UI/Forms/QuickCommandEditorForm.cs` — class QuickCommandEditorForm
+- `src/Gdterm.UI/Forms/SetupWizardForm.cs` — class SetupWizardForm
+- `src/Gdterm.UI/Hotkeys/GlobalHotkeyManager.cs`
+  - class GlobalHotkeyManager
+  - enum HotkeyModifiers
+  - class HotkeyPressedEventArgs
+  - function Register
+  - function Unregister
+  - function UnregisterAll
+  - _...2 more_
+- `src/Gdterm.UI/ImportExport/ConnectionImporterExporter.cs`
+  - class ConnectionImporterExporter
+  - class MergeResult
+  - function ExportAsJson
+  - function ExportAsCsv
+  - function ImportFromFile
+  - function ImportFromJson
+  - _...3 more_
+- `src/Gdterm.UI/Program.cs` — function Attach
+- `src/Gdterm.UI/Services/ActiveSessionBridge.cs`
+  - class ActiveSessionBridge
+  - function GetRemoteSession
+  - function GetPortForwardHost
+  - function GetTerminalSession
+  - function GetTerminalControl
+  - function GetHealthMonitor
+  - _...2 more_
+- `src/Gdterm.UI/Services/AiCommandGateBinder.cs` — class AiCommandGateBinder, function Bind
+- `src/Gdterm.UI/Services/AppShutdownCoordinator.cs` — class AppShutdownCoordinator, function OnFormClosing
+- `src/Gdterm.UI/Services/ConnectionImportExportUi.cs`
+  - class ConnectionImportExportUi
+  - function Import
+  - function Export
+- `src/Gdterm.UI/Services/ConnectionOpenCoordinator.cs`
+  - class ConnectionOpenCoordinator
+  - function OpenConnection
+  - function NewConnection
+  - function OpenSftpFromActive
+- `src/Gdterm.UI/Services/CredentialResolver.cs` — class CredentialResolver, function Resolve
+- `src/Gdterm.UI/Services/GlobalHotkeyController.cs`
+  - class GlobalHotkeyController
+  - function Initialize
+  - function ToggleWindowVisibility
+  - function Dispose
+- `src/Gdterm.UI/Services/LockStateCoordinator.cs` — class LockStateCoordinator, function Handle
+- `src/Gdterm.UI/Services/MainFormCommandRouter.cs` — class MainFormCommandRouter, function TryHandle
+- `src/Gdterm.UI/Services/MainFormMenuBuilder.cs`
+  - class MainFormMenuBuilder
+  - class Callbacks
+  - class Result
+  - function Build
+- `src/Gdterm.UI/Services/MasterPasswordPrompt.cs` — class MasterPasswordPrompt, function Confirm
+- `src/Gdterm.UI/Services/ProtocolTabOpener.cs`
+  - class ProtocolTabOpener
+  - function ResolveCredential
+  - function CreateForConnection
+  - function CreateSsh
+  - function CreateRdp
+  - function CreateSerial
+  - _...3 more_
+- `src/Gdterm.UI/Services/SessionStateCoordinator.cs`
+  - class SessionStateCoordinator
+  - function Save
+  - function Restore
+- `src/Gdterm.UI/Services/SidePanelFactory.cs`
+  - class SidePanelFactory
+  - function CreateToolboxPanel
+  - function CreateSecretScanPanel
+  - function CreateMultiChannelPanel
+  - function CreateBatchPanel
+  - function CreateHistoryPanel
+  - _...9 more_
+- `src/Gdterm.UI/Services/SidePanelHost.cs`
+  - class SidePanelHost
+  - function CreateHost
+  - function Show
+  - function Hide
+  - function ShowSnippetSearch
+- `src/Gdterm.UI/Services/TabActiveSessionQuery.cs`
+  - class TabActiveSessionQuery
+  - function GetActiveTerminalControl
+  - function GetActiveSession
+  - function GetActivePortForwardHost
+  - function GetActiveRemoteSession
+  - function GetConnectedSessions
+  - _...1 more_
+- `src/Gdterm.UI/Services/TabChromePainter.cs`
+  - class TabChromePainter
+  - function DrawTab
+  - function HitTestClose
+  - function GetCloseRect
+- `src/Gdterm.UI/Services/TabCloseService.cs`
+  - class TabCloseService
+  - function CloseTab
+  - function CloseAllTabs
+- `src/Gdterm.UI/Services/TabReconnectService.cs`
+  - class TabReconnectService
+  - function ReconnectActive
+  - function ReconnectById
+  - function CompleteAfterOpen
+  - function WaitForTerminalConnected
+- `src/Gdterm.UI/Services/TabSelectionCoordinator.cs` — class TabSelectionCoordinator, function OnSelectedChanged
+- `src/Gdterm.UI/Services/TabSessionLifecycle.cs`
+  - class TabSessionLifecycle
+  - function TryRunLogonScript
+  - function WireHealthAndReconnect
+  - function CloseTunnelIfLastUser
+  - function LogConnectionClose
+- `src/Gdterm.UI/Services/TabSessionState.cs` — class TabSessionState, class OpenedTab
+- `src/Gdterm.UI/Services/TabSplitService.cs` — class TabSplitService, function TrySplit
+- `src/Gdterm.UI/Services/ToolsDialogsLauncher.cs`
+  - class ToolsDialogsLauncher
+  - function ReAuthenticate
+  - function OpenKeePassManager
+  - function OpenPasswordHealth
+  - function OpenAiSettings
+  - function OpenPasswordGenerator
+  - _...3 more_
+- `src/Gdterm.UI/Services/ViewModeController.cs`
+  - class ViewModeController
+  - function SetViewMode
+  - function ToggleConnectionTree
+  - function TryHandleEscape
+- `tools/gen_icon.py` — function draw_icon: (size), function save_as_ico: (images, sizes, output_path)
+
+---
+
+_Generated by [codesight](https://github.com/Houseofmvps/codesight) — see your codebase clearly_

@@ -881,7 +881,7 @@ namespace Gdterm.Security
                         Severity = FindingSeverity.Critical,
                         Category = FindingCategory.Password,
                         FilePath = filePath,
-                        Description = string.Format("疑似密码表：列 "{0}" 标题含密码关键词（{1}行数据）", header, totalRows),
+                        Description = string.Format("疑似密码表：列 '{0}' 标题含密码关键词（{1}行数据）", header, totalRows),
                         RuleName = "PasswordColumnHeader"
                     });
                 }

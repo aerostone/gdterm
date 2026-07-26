@@ -14,6 +14,7 @@ namespace Gdterm.Tunnel.Models
     {
         private readonly List<SshClient> _hopClients = new List<SshClient>();
         private ForwardedPortLocal _forwardedPort;
+        private SshClient _forwardOwner; // SSH.NET 2024：ForwardedPortLocal 无 Session 属性
         private bool _disposed;
 
         public string ConnectionId { get; }
@@ -172,6 +173,7 @@ namespace Gdterm.Tunnel.Models
 
             var forwardedPort = new ForwardedPortLocal("127.0.0.1", (uint)localPort, remoteHost, (uint)remotePort);
             lastClient.AddForwardedPort(forwardedPort);
+            _forwardOwner = lastClient;
             forwardedPort.Start();
 
             _forwardedPort = forwardedPort;
@@ -205,10 +207,11 @@ namespace Gdterm.Tunnel.Models
             {
                 if (_forwardedPort != null)
                 {
-                    _forwardedPort.Stop();
-                    var client = _forwardedPort.Session as SshClient;
-                    client?.RemoveForwardedPort(_forwardedPort);
-                    _forwardedPort.Dispose();
+                    try { _forwardedPort.Stop(); } catch { }
+                    try { _forwardOwner?.RemoveForwardedPort(_forwardedPort); } catch { }
+                    try { _forwardedPort.Dispose(); } catch { }
+                    _forwardedPort = null;
+                    _forwardOwner = null;
                 }
             }
             catch { /* best-effort cleanup */ }

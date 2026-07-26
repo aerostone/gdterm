@@ -85,14 +85,13 @@ namespace Gdterm.Connections
                 Protocol = template.Protocol,
                 Username = template.DefaultUsername,
                 GroupPath = template.DefaultGroupPath,
+                // 跳板链在 ConnectionConfig.JumpChain；TunnelConfig 仅端口转发参数
                 Tunnel = template.TunnelTemplate != null ? new TunnelConfig
                 {
-                    JumpChain = template.TunnelTemplate.JumpChain?.Select(h => new JumpHop
-                    {
-                        Host = h.Host,
-                        Port = h.Port,
-                        Username = h.Username
-                    }).ToList()
+                    Type = template.TunnelTemplate.Type,
+                    LocalPort = template.TunnelTemplate.LocalPort,
+                    RemoteHost = template.TunnelTemplate.RemoteHost,
+                    RemotePort = template.TunnelTemplate.RemotePort
                 } : null
             };
         }

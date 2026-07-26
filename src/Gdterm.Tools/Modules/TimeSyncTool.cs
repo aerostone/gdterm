@@ -158,7 +158,7 @@ namespace Gdterm.Tools.Modules
     {
         public string[] NtpServers { get; set; }
 
-        protected override void ResetDefaults()
+        public override void ResetDefaults()
         {
             NtpServers = new[] { "ntp.aliyun.com", "cn.pool.ntp.org", "time.windows.com" };
         }

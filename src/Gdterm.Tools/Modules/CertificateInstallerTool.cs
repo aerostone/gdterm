@@ -200,7 +200,7 @@ namespace Gdterm.Tools.Modules
         public List<string> TrustedCertPaths { get; set; }
         public bool AutoVerifyChain { get; set; }
 
-        protected override void ResetDefaults()
+        public override void ResetDefaults()
         {
             TrustedCertPaths = new List<string>();
             AutoVerifyChain = true;

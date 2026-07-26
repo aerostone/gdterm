@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
@@ -360,6 +361,10 @@ namespace Gdterm.Tools.Modules
                     status.Text = "存活 " + CountAlive(hosts) + " / " + hosts.Count;
                 });
         }
+
+        public void LoadConfig() { }
+
+        public void SaveConfig() { }
 
         public void Dispose() { }
     }

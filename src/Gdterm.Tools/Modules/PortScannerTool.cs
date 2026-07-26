@@ -192,7 +192,7 @@ namespace Gdterm.Tools.Modules
         public int TimeoutMs { get; set; }
         public int[] CommonPorts { get; set; }
 
-        protected override void ResetDefaults()
+        public override void ResetDefaults()
         {
             // 低配默认并发收紧
             MaxConcurrency = 40;

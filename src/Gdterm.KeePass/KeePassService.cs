@@ -674,23 +674,8 @@ namespace Gdterm.KeePass
 
         private PwEntry FindEntryByUuid(string uuidHex)
         {
-            PwEntry found = null;
-
-            _database.RootGroup.SearchEntries(
-                new SearchParameters()
-                {
-                    SearchInUuids = true,
-                    SearchString = uuidHex,
-                    ComparisonMode = StringComparison.OrdinalIgnoreCase
-                },
-                new List<PwEntry>(),
-                ref found
-            );
-
-            if (found == null)
-                found = FindEntryRecursive(_database.RootGroup, uuidHex);
-
-            return found;
+            // KeePassLib 2.30：直接递归匹配 UUID，避免 SearchEntries 签名差异
+            return FindEntryRecursive(_database.RootGroup, uuidHex);
         }
 
         private PwEntry FindEntryRecursive(PwGroup group, string uuidHex)
