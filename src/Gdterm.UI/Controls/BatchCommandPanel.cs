@@ -20,6 +20,7 @@ namespace Gdterm.UI.Controls
         private TextBox _txtCommand;
         private RichTextBox _rtbResults;
         private Button _btnExecute;
+        private Button _btnSelectAll;
         private Label _lblStatus;
         private Dictionary<string, ITerminalSession> _sessions = new Dictionary<string, ITerminalSession>();
 
