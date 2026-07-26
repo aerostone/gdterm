@@ -64,6 +64,18 @@ namespace Gdterm.UI.Forms
             LoadFromConfig();
         }
 
+        /// <summary>
+        /// 新建连接，预填分组路径（供右键分组节点 “新建连接到本分组” 使用）。
+        /// 永远作为新建模式，不进入编辑分支。
+        /// </summary>
+        public ConnectionDialog(string defaultGroupPath)
+        {
+            _config = new ConnectionConfig { GroupPath = defaultGroupPath ?? string.Empty };
+            _isNew = true;
+            InitializeComponent();
+            LoadFromConfig();
+        }
+
         private void InitializeComponent()
         {
             Text = _isNew ? "新建连接" : $"编辑连接 — {_config.Name}";

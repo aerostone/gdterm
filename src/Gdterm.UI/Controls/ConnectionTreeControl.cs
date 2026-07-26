@@ -19,6 +19,8 @@ namespace Gdterm.UI.Controls
         private TreeView _treeView;
         private ContextMenuStrip _contextMenu;
         private ImageList _imageList;
+        // 右键点中的节点（ContextMenuStrip.Opening 读的），后后菜单设置选中
+        private TreeNode _rightClickedNode;
 
         public event EventHandler<ConnectionConfig> ConnectionDoubleClicked;
         public event EventHandler ConnectionListChanged;
@@ -49,9 +51,11 @@ namespace Gdterm.UI.Controls
                 FullRowSelect = true
             };
             _treeView.NodeMouseDoubleClick += OnNodeMouseDoubleClick;
+            _treeView.NodeMouseClick += OnNodeMouseClick;
+            _treeView.MouseDown += OnMouseDownSelectRightClick;
             Controls.Add(_treeView);
 
-            // 右键菜单
+            // 右键菜单——在 Opening 中按右键节点动态调整项，避免“主机上右键也弹新建”
             _contextMenu = new ContextMenuStrip();
             _contextMenu.Items.Add("新建连接(&N)", null, OnNewConnection);
             _contextMenu.Items.Add("编辑(&E)", null, OnEditConnection);
@@ -59,6 +63,7 @@ namespace Gdterm.UI.Controls
             _contextMenu.Items.Add("删除(&D)", null, OnDeleteConnection);
             _contextMenu.Items.Add("-");
             _contextMenu.Items.Add("连接(&C)", null, OnConnect);
+            _contextMenu.Opening += OnContextMenuOpening;
             _treeView.ContextMenuStrip = _contextMenu;
         }
 
@@ -242,22 +247,130 @@ namespace Gdterm.UI.Controls
             }
         }
 
+        /// <summary>右键选中节点——确保右键点中的节点成为选中节点，以便后续菜单项处理。</summary>
+        private void OnMouseDownSelectRightClick(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Right)
+            {
+                var hit = _treeView.GetNodeAt(e.Location);
+                _rightClickedNode = hit;
+                if (hit != null)
+                    _treeView.SelectedNode = hit;
+            }
+        }
+
+        // 右键 BaseNode 检测。
+        private bool IsConnectionNode(TreeNode n) => n != null && (n.Tag is ConnectionConfig);
+        private bool IsGroupNode(TreeNode n) => n != null && (n.Tag is string) && !string.IsNullOrEmpty((string)n.Tag);
+        private bool IsRootNode(TreeNode n) => n != null && (n.Tag == null) && (n.Nodes.Count > 0) && ReferenceEquals(n, _treeView.Nodes[0]);
+
+        /// <summary>
+        /// 动态调整右键菜单——区分连接/分组/根节点。
+        /// 旧实现问题：右键弹的是同一组项，在主机节点上也出现“新建连接”，反直觉。
+        /// </summary>
+        private void OnContextMenuOpening(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            var node = _rightClickedNode;
+            var itemNew = _contextMenu.Items[0] as ToolStripMenuItem; // 新建连接
+            var sep1 = _contextMenu.Items[1] as ToolStripSeparator;
+            var itemEdit = _contextMenu.Items[2] as ToolStripMenuItem; // 编辑
+            var sep2 = _contextMenu.Items[3] as ToolStripSeparator;
+            var itemDel = _contextMenu.Items[4] as ToolStripMenuItem; // 删除
+            var sep3 = _contextMenu.Items[5] as ToolStripSeparator;
+            var itemConn = _contextMenu.Items[6] as ToolStripMenuItem; // 连接
+
+            if (itemNew == null || itemEdit == null || sep1 == null || sep2 == null || itemDel == null || sep3 == null || itemConn == null)
+                return;
+
+            if (IsConnectionNode(node))
+            {
+                // 连接节点：编辑/删除/连接 为主，新建也保留（建到该连接所在分组）
+                var cfg = (ConnectionConfig)node.Tag;
+                var grp = cfg.GroupPath ?? "";
+                itemNew.Text = string.IsNullOrEmpty(grp) ? "新建连接(&N)" : $"新建连接到本分组(&N)";
+                itemEdit.Enabled = true;
+                itemDel.Enabled = true;
+                itemConn.Enabled = true;
+                sep1.Visible = sep2.Visible = sep3.Visible = true;
+            }
+            else if (IsGroupNode(node))
+            {
+                // 分组节点：新建连接到本分组；编辑/删除分组在本意上可提（本版本暂禁到提）
+                var grp = (string)node.Tag;
+                itemNew.Text = $"新建连接到本分组(&N)";
+                itemEdit.Enabled = false; // 未支持编辑分组（实现重构后可动）
+                itemDel.Enabled = false;  // 未支持删分组（避免误删连接）
+                itemConn.Enabled = false;
+                sep2.Visible = false;
+                sep3.Visible = false;
+            }
+            else
+            {
+                // 根节点 / 空白：只允许顶层新建连接，编辑/删除/连接禁用
+                itemNew.Text = "新建连接(&N)";
+                itemEdit.Enabled = false;
+                sep2.Visible = false;
+                itemDel.Enabled = false;
+                itemConn.Enabled = false;
+                sep3.Visible = false;
+            }
+        }
+
+        private void OnNodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
+        {
+            if (e.Button == MouseButtons.Right)
+            {
+                _rightClickedNode = e.Node;
+                _treeView.SelectedNode = e.Node;
+            }
+        }
+
+        private string ResolveDefaultGroupFromRightClick()
+        {
+            var node = _rightClickedNode;
+            if (node == null) return string.Empty;
+            if (IsGroupNode(node)) return (string)node.Tag;
+            if (IsConnectionNode(node))
+            {
+                var cfg = (ConnectionConfig)node.Tag;
+                return cfg.GroupPath ?? string.Empty;
+            }
+            return string.Empty;
+        }
+
         private void OnNewConnection(object sender, EventArgs e)
         {
-            using (var dlg = new ConnectionDialog())
+            var defaultGroup = ResolveDefaultGroupFromRightClick();
+            if (string.IsNullOrEmpty(defaultGroup))
             {
-                if (dlg.ShowDialog(this) == DialogResult.OK && dlg.Result != null)
+                using (var dlg = new ConnectionDialog())
                 {
-                    _connectionStore.Add(dlg.Result);
-                    LoadConnections();
-                    ConnectionListChanged?.Invoke(this, EventArgs.Empty);
+                    if (dlg.ShowDialog(this) == DialogResult.OK && dlg.Result != null)
+                    {
+                        _connectionStore.Add(dlg.Result);
+                        LoadConnections();
+                        ConnectionListChanged?.Invoke(this, EventArgs.Empty);
+                    }
+                }
+            }
+            else
+            {
+                using (var dlg = new ConnectionDialog(defaultGroup))
+                {
+                    if (dlg.ShowDialog(this) == DialogResult.OK && dlg.Result != null)
+                    {
+                        _connectionStore.Add(dlg.Result);
+                        LoadConnections();
+                        ConnectionListChanged?.Invoke(this, EventArgs.Empty);
+                    }
                 }
             }
         }
 
         private void OnEditConnection(object sender, EventArgs e)
         {
-            if (_treeView.SelectedNode?.Tag is ConnectionConfig config)
+            var node = _rightClickedNode ?? _treeView.SelectedNode;
+            if (node?.Tag is ConnectionConfig config)
             {
                 using (var dlg = new ConnectionDialog(config))
                 {
@@ -273,7 +386,8 @@ namespace Gdterm.UI.Controls
 
         private void OnDeleteConnection(object sender, EventArgs e)
         {
-            if (_treeView.SelectedNode?.Tag is ConnectionConfig config)
+            var node = _rightClickedNode ?? _treeView.SelectedNode;
+            if (node?.Tag is ConnectionConfig config)
             {
                 var result = MessageBox.Show(
                     $"确定删除连接 '{config.Name}'？\n\n此操作不可撤销。",
@@ -292,7 +406,8 @@ namespace Gdterm.UI.Controls
 
         private void OnConnect(object sender, EventArgs e)
         {
-            if (_treeView.SelectedNode?.Tag is ConnectionConfig config)
+            var node = _rightClickedNode ?? _treeView.SelectedNode;
+            if (node?.Tag is ConnectionConfig config)
             {
                 ConnectionDoubleClicked?.Invoke(this, config);
             }
