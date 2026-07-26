@@ -15,7 +15,6 @@ namespace Gdterm.UI.Forms
     public class PasswordHealthForm : Form
     {
         private readonly IKeePassService _keepassService;
-        private ListView _issueList;
         private Label _scoreLabel;
         private Label _summaryLabel;
         private TabControl _tabControl;

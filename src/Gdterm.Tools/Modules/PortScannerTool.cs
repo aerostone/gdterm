@@ -36,7 +36,6 @@ namespace Gdterm.Tools.Modules
 
         public event EventHandler<PortScanResult> PortScanned;
         public event EventHandler<string> ScanCompleted;
-        public event EventHandler<string> OutputReceived;
 
         public PortScannerTool()
         {

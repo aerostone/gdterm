@@ -40,7 +40,12 @@ namespace Gdterm.Rdp
         public RdpOptions CurrentOptions { get; private set; }
 
         public event EventHandler<RdpStateChangedEventArgs> StateChanged;
-        public event EventHandler<FileTransferEventArgs> FileTransferred;
+        // 文件传输事件预留：反射 ActiveX 暂未挂钩，用显式 add/remove 避免 CS0067
+        public event EventHandler<FileTransferEventArgs> FileTransferred
+        {
+            add { }
+            remove { }
+        }
 
         public RdpClient()
         {

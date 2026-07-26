@@ -19,7 +19,7 @@ namespace Gdterm.UI.Controls
         private ListView _lvSessions;
         private TextBox _txtCommand;
         private RichTextBox _rtbResults;
-        private Button _btnExecute, _btnSelectAll, _btnClear;
+        private Button _btnExecute;
         private Label _lblStatus;
         private Dictionary<string, ITerminalSession> _sessions = new Dictionary<string, ITerminalSession>();
 

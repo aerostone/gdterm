@@ -104,28 +104,28 @@ namespace Gdterm.Sftp
         }
 
         /// <summary>chmod 修改远程文件权限（符号模式）</summary>
-        public static async Task<bool> ChmodAsync(SshClient ssh, string remotePath, string permission)
+        public static Task<bool> ChmodAsync(SshClient ssh, string remotePath, string permission)
         {
-            if (ssh == null || !ssh.IsConnected) return false;
+            if (ssh == null || !ssh.IsConnected) return Task.FromResult(false);
             try
             {
                 var cmd = ssh.RunCommand(string.Format("chmod {0} {1}", permission, remotePath));
-                return cmd.ExitStatus.GetValueOrDefault(-1) == 0;
+                return Task.FromResult(cmd.ExitStatus.GetValueOrDefault(-1) == 0);
             }
-            catch { return false; }
+            catch { return Task.FromResult(false); }
         }
 
         /// <summary>chown 修改远程文件所有者</summary>
-        public static async Task<bool> ChownAsync(SshClient ssh, string remotePath, string owner, string group = null)
+        public static Task<bool> ChownAsync(SshClient ssh, string remotePath, string owner, string group = null)
         {
-            if (ssh == null || !ssh.IsConnected) return false;
+            if (ssh == null || !ssh.IsConnected) return Task.FromResult(false);
             try
             {
                 var target = group != null ? owner + ":" + group : owner;
                 var cmd = ssh.RunCommand(string.Format("chown {0} {1}", target, remotePath));
-                return cmd.ExitStatus.GetValueOrDefault(-1) == 0;
+                return Task.FromResult(cmd.ExitStatus.GetValueOrDefault(-1) == 0);
             }
-            catch { return false; }
+            catch { return Task.FromResult(false); }
         }
 
         /// <summary>获取文件权限详情（stat）</summary>

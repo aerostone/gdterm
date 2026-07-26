@@ -44,7 +44,6 @@ namespace Gdterm.Terminal.Rendering
         private const int MinRedrawIntervalMs = 16; // ~60fps 上限，实际按需更低
 
         private Color _currentColor;
-        private int _scrollOffset;
         private bool _isPaused;
         private bool _disposed;
 
@@ -138,7 +137,6 @@ namespace Gdterm.Terminal.Rendering
                 _lineBuffer.Clear();
                 _currentLine.Clear();
                 _currentSpans.Clear();
-                _scrollOffset = 0;
                 _needsRedraw = true;
                 ScheduleRedraw();
             }

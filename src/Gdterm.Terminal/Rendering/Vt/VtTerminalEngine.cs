@@ -88,6 +88,18 @@ namespace Gdterm.Terminal.Rendering.Vt
             _controller.SendData += OnControllerSendData;
 
             _consumer = new DataConsumer(_controller);
+
+            _controller.WindowTitleChanged += (s, e) =>
+            {
+                try
+                {
+                    var text = e != null ? e.Text : null;
+                    if (!string.IsNullOrEmpty(text))
+                        TitleChanged?.Invoke(this, text);
+                }
+                catch { /* ignore title callbacks */ }
+            };
+
         }
 
         /// <summary>喂入原始 PTY/SSH 字节（UTF-8）。</summary>
