@@ -56,7 +56,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "gdterm - 首次使用设置";
-            Size = new Size(560, 480);
+            Size = new Size(580, 520);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -149,10 +149,11 @@ namespace Gdterm.UI.Forms
             CreatePasswordPanel();
             CreateCompletePanel();
 
-            Controls.Add(_stepPanel);
-            Controls.Add(stepBar);
-            Controls.Add(headerPanel);
+            // Dock 顺序：先 Bottom/Top，最后 Fill，避免欢迎文案被挤没
             Controls.Add(buttonPanel);
+            Controls.Add(headerPanel);
+            Controls.Add(stepBar);
+            Controls.Add(_stepPanel);
 
             // 禁用关闭按钮（必须完成设置）
             FormClosing += (s, e) =>
@@ -172,19 +173,24 @@ namespace Gdterm.UI.Forms
 
             var infoLabel = new Label
             {
-                Text = "为了保护您的连接信息和密码数据，\n" +
-                       "gdterm 使用主密码加密所有敏感信息。\n\n" +
-                       "在开始之前，您需要：\n\n" +
-                       "  ✓  设置一个强主密码（至少 12 位）\n" +
-                       "  ✓  密码需包含大小写字母、数字和特殊字符\n" +
-                       "  ✓  此密码用于锁定/解锁应用和加密配置\n\n" +
-                       "⚠ 请牢记此密码，忘记后无法恢复数据！",
-                Font = new Font("Microsoft YaHei", 10.5f),
+                Text =
+                    "为了保护您的连接信息和密码数据，\r\n" +
+                    "gdterm 使用主密码加密所有敏感信息。\r\n\r\n" +
+                    "在开始之前，您需要：\r\n\r\n" +
+                    "  ✓  设置一个强主密码（至少 12 位）\r\n" +
+                    "  ✓  密码需包含大小写字母、数字和特殊字符\r\n" +
+                    "  ✓  此密码用于锁定/解锁应用和加密配置\r\n\r\n" +
+                    "⚠ 请牢记此密码，忘记后无法恢复数据！",
+                Font = new Font("Microsoft YaHei", 10f),
                 ForeColor = Color.FromArgb(220, 220, 220),
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleLeft
+                AutoSize = false,
+                Location = new Point(0, 0),
+                Size = new Size(480, 280),
+                MaximumSize = new Size(480, 0),
+                TextAlign = ContentAlignment.TopLeft
             };
 
+            _welcomePanel.AutoScroll = true;
             _welcomePanel.Controls.Add(infoLabel);
         }
 

@@ -51,8 +51,28 @@ after_test:
         Copy-Item "lib\VtNetCore.dll" $out -Force
         Copy-Item "lib\LICENSE.VtNetCore.txt" $out -Force -ErrorAction SilentlyContinue
       }
+      # 从各项目 bin 与 NuGet 缓存补齐传递依赖（KeePassLib / SSH.NET）
+      $depNames = @('KeePassLib.dll','Renci.SshNet.dll','VtNetCore.dll')
+      foreach ($name in $depNames) {
+        if (-not (Test-Path (Join-Path $out $name))) {
+          $found = Get-ChildItem -Path src -Recurse -Filter $name -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match 'bin\\' + $env:CONFIGURATION } |
+            Select-Object -First 1
+          if (-not $found) {
+            $found = Get-ChildItem -Path "$env:USERPROFILE\.nuget\packages" -Recurse -Filter $name -ErrorAction SilentlyContinue |
+              Select-Object -First 1
+          }
+          if ($found) {
+            Copy-Item $found.FullName $out -Force
+            Write-Host "Packed dependency: $name from $($found.FullName)"
+          } else {
+            Write-Warning "Missing dependency in portable package: $name"
+          }
+        }
+      }
       New-Item -ItemType Directory -Path (Join-Path $out "data\config\tools") -Force | Out-Null
       New-Item -ItemType Directory -Path (Join-Path $out "data\logs") -Force | Out-Null
+      Write-Host "Portable layout files:" (Get-ChildItem $out -File | Select-Object -ExpandProperty Name) -Separator ', '
       Write-Host "Portable layout ready: $out"
 
 artifacts:

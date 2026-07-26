@@ -244,6 +244,8 @@ namespace Gdterm.UI.Services
 
             var terminal = new TerminalControl(local, _auditLogger);
             terminal.Dock = DockStyle.Fill;
+            // 本地终端构造时已 Attach；再 Resume 确保 canvas 可输入并补启 shell
+            try { terminal.ResumeRendering(); } catch { }
             tab.Controls.Add(terminal);
 
             var session = new TabSessionState
@@ -258,7 +260,7 @@ namespace Gdterm.UI.Services
                 Control = terminal,
                 PrimaryTerminal = terminal,
                 Protocol = ProtocolType.SSH,
-                IsConnected = true,
+                IsConnected = local != null && local.IsConnected,
                 SessionId = Guid.NewGuid().ToString("N")
             };
 

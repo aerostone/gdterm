@@ -16,6 +16,31 @@ namespace Gdterm.Connections
         private static readonly object _fileLock = new object();
 
         /// <summary>
+        /// 可选：主机/用户名落盘保护（主密码派生）。null 时明文（兼容旧文件）。
+        /// protect(plain) / unprotect(stored) 返回处理后的字符串。
+        /// </summary>
+        private static Func<string, string> _protectHost;
+        private static Func<string, string> _unprotectHost;
+
+        public static void SetHostProtector(Func<string, string> protect, Func<string, string> unprotect)
+        {
+            _protectHost = protect;
+            _unprotectHost = unprotect;
+        }
+
+        private static string ProtectField(string value)
+        {
+            if (string.IsNullOrEmpty(value) || _protectHost == null) return value;
+            try { return _protectHost(value); } catch { return value; }
+        }
+
+        private static string UnprotectField(string value)
+        {
+            if (string.IsNullOrEmpty(value) || _unprotectHost == null) return value;
+            try { return _unprotectHost(value); } catch { return value; }
+        }
+
+        /// <summary>
         /// 创建连接存储实例
         /// </summary>
         /// <param name="filePath">connections.json 文件路径</param>
@@ -165,9 +190,9 @@ namespace Gdterm.Connections
                 sb.Append($"\"id\": \"{Escape(c.Id)}\", ");
                 sb.Append($"\"name\": \"{Escape(c.Name)}\", ");
                 sb.Append($"\"protocol\": \"{c.Protocol}\", ");
-                sb.Append($"\"host\": \"{Escape(c.Host)}\", ");
+                sb.Append($"\"host\": \"{Escape(ProtectField(c.Host))}\", ");
                 sb.Append($"\"port\": {c.Port}, ");
-                sb.Append($"\"username\": \"{Escape(c.Username)}\", ");
+                sb.Append($"\"username\": \"{Escape(ProtectField(c.Username))}\", ");
                 sb.Append($"\"domain\": \"{Escape(c.Domain)}\", ");
                 sb.Append($"\"groupPath\": \"{Escape(c.GroupPath)}\", ");
                 sb.Append($"\"credentialRefId\": \"{Escape(c.CredentialRefId)}\"");
@@ -214,7 +239,7 @@ namespace Gdterm.Connections
                 for (int i = 0; i < chain.Hops.Count; i++)
                 {
                     var h = chain.Hops[i];
-                    sb.Append($"{{\"host\": \"{Escape(h.Host)}\", \"port\": {h.Port}, \"username\": \"{Escape(h.Username)}\", \"credentialRefId\": \"{Escape(h.CredentialRefId)}\"}}");
+                    sb.Append($"{{\"host\": \"{Escape(ProtectField(h.Host))}\", \"port\": {h.Port}, \"username\": \"{Escape(ProtectField(h.Username))}\", \"credentialRefId\": \"{Escape(h.CredentialRefId)}\"}}");
                     if (i < chain.Hops.Count - 1) sb.Append(", ");
                 }
             }
@@ -254,9 +279,9 @@ namespace Gdterm.Connections
                     Id = ExtractString(obj, "id"),
                     Name = ExtractString(obj, "name"),
                     Protocol = ParseEnum<Gdterm.Core.Enums.ProtocolType>(ExtractString(obj, "protocol")),
-                    Host = ExtractString(obj, "host"),
+                    Host = UnprotectField(ExtractString(obj, "host")),
                     Port = ExtractInt(obj, "port"),
-                    Username = ExtractString(obj, "username"),
+                    Username = UnprotectField(ExtractString(obj, "username")),
                     Domain = ExtractString(obj, "domain"),
                     GroupPath = ExtractString(obj, "groupPath"),
                     CredentialRefId = ExtractString(obj, "credentialRefId")
@@ -275,9 +300,9 @@ namespace Gdterm.Connections
                         {
                             hops.Add(new JumpHop
                             {
-                                Host = ExtractString(hopObj, "host"),
+                                Host = UnprotectField(ExtractString(hopObj, "host")),
                                 Port = ExtractInt(hopObj, "port"),
-                                Username = ExtractString(hopObj, "username"),
+                                Username = UnprotectField(ExtractString(hopObj, "username")),
                                 CredentialRefId = ExtractString(hopObj, "credentialRefId")
                             });
                         }

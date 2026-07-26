@@ -14,6 +14,7 @@ using Gdterm.Terminal;
 using Gdterm.Tools;
 using Gdterm.Tunnel;
 using Gdterm.UI.Services;
+using Gdterm.UI.Diagnostics;
 using TerminalControl = Gdterm.UI.Controls.TerminalControl;
 using Gdterm.Security;
 
@@ -149,7 +150,16 @@ namespace Gdterm.UI.Controls
             _sessions[opened.Page] = opened.Session;
             _tabControl.TabPages.Add(opened.Page);
             _tabControl.SelectedTab = opened.Page;
+            // 首开标签时 SelectedIndexChanged 可能不触发（Index 已是 0），强制恢复渲染并懒连接
+            ForceActivateSession(opened.Page);
             ActiveSessionChanged?.Invoke(this, EventArgs.Empty);
+            try
+            {
+                DiagLog.Info("TabContainer.OpenConnection",
+                    "id=" + (config.Id ?? "") + " host=" + (config.Host ?? "") +
+                    " proto=" + config.Protocol);
+            }
+            catch { }
         }
 
         public void OpenLocalTerminal(string shellPath = null)
@@ -159,7 +169,9 @@ namespace Gdterm.UI.Controls
             _sessions[opened.Page] = opened.Session;
             _tabControl.TabPages.Add(opened.Page);
             _tabControl.SelectedTab = opened.Page;
+            ForceActivateSession(opened.Page);
             ActiveSessionChanged?.Invoke(this, EventArgs.Empty);
+            try { DiagLog.Info("TabContainer.OpenLocalTerminal", "ok"); } catch { }
         }
 
         public void OpenSftpBrowser(ConnectionConfig config)
@@ -230,6 +242,23 @@ namespace Gdterm.UI.Controls
         {
             _selection.OnSelectedChanged(_tabControl, _sessions);
             ActiveSessionChanged?.Invoke(this, EventArgs.Empty);
+        }
+
+        /// <summary>
+        /// 显式激活标签：ResumeRendering + RDP PendingConnect。
+        /// 解决「只有一个标签时 SelectedIndexChanged 不触发 → 点连接无反应」。
+        /// </summary>
+        private void ForceActivateSession(TabPage page)
+        {
+            if (page == null) return;
+            try
+            {
+                _selection.OnSelectedChanged(_tabControl, _sessions);
+            }
+            catch (Exception ex)
+            {
+                DiagLog.Swallowed("TabContainer.ForceActivateSession", ex);
+            }
         }
 
         public void CloseActiveTab()

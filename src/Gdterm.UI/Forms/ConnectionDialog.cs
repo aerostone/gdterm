@@ -86,18 +86,24 @@ namespace Gdterm.UI.Forms
                 Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 7,
                 AutoSize = true
             };
-            basicLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 80));
+            // 标签列加宽，避免中文「用户名/分组」被裁切错位
+            basicLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 96));
             basicLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            for (int r = 0; r < 7; r++)
+                basicLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
 
-            _nameBox = AddRow(basicLayout, 0, "名称:", new TextBox());
-            _protocolCombo = AddRow(basicLayout, 1, "协议:", new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList });
+            _nameBox = AddRow(basicLayout, 0, "名称", new TextBox());
+            _protocolCombo = AddRow(basicLayout, 1, "协议", new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList });
             _protocolCombo.Items.AddRange(new object[] { "SSH", "RDP", "Serial" });
             _protocolCombo.SelectedIndexChanged += OnProtocolChanged;
-            _hostBox = AddRow(basicLayout, 2, "主机:", new TextBox());
-            _portBox = AddRow(basicLayout, 3, "端口:", new NumericUpDown { Minimum = 1, Maximum = 65535, Value = 22 });
-            _usernameBox = AddRow(basicLayout, 4, "用户名:", new TextBox());
-            _domainBox = AddRow(basicLayout, 5, "域名:", new TextBox());
-            _groupPathBox = AddRow(basicLayout, 6, "分组:", new TextBox());
+            _hostBox = AddRow(basicLayout, 2, "主机", new TextBox());
+            WinFormsCompat.SetCueBanner(_hostBox, "IP 或主机名，如 192.168.1.10");
+            _portBox = AddRow(basicLayout, 3, "端口", new NumericUpDown { Minimum = 1, Maximum = 65535, Value = 22 });
+            _usernameBox = AddRow(basicLayout, 4, "用户名", new TextBox());
+            // 域名仅 RDP 域账户（DOMAIN\user）；SSH 不需要
+            _domainBox = AddRow(basicLayout, 5, "RDP域名", new TextBox());
+            WinFormsCompat.SetCueBanner(_domainBox, "仅 RDP 域账户，如 CONTOSO（SSH 可留空）");
+            _groupPathBox = AddRow(basicLayout, 6, "分组", new TextBox());
             WinFormsCompat.SetCueBanner(_groupPathBox, "如: Web/生产");
             basicTab.Controls.Add(basicLayout);
 
@@ -220,14 +226,21 @@ namespace Gdterm.UI.Forms
 
         private T AddRow<T>(TableLayoutPanel layout, int row, string label, T control) where T : Control
         {
+            // 去掉冒号，统一右对齐，避免中文标签宽窄不一导致错位
+            var text = label ?? "";
+            if (text.EndsWith(":") || text.EndsWith("："))
+                text = text.TrimEnd(':', '：');
             layout.Controls.Add(new Label
             {
-                Text = label,
+                Text = text,
                 ForeColor = Color.FromArgb(204, 204, 204),
-                AutoSize = true,
-                Anchor = AnchorStyles.Left
+                AutoSize = false,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleRight,
+                Padding = new Padding(0, 0, 8, 0)
             }, 0, row);
             control.Dock = DockStyle.Fill;
+            control.Margin = new Padding(0, 4, 0, 4);
             layout.Controls.Add(control, 1, row);
             return control;
         }
@@ -236,7 +249,13 @@ namespace Gdterm.UI.Forms
         {
             var proto = (string)_protocolCombo.SelectedItem;
             _portBox.Value = proto == "SSH" ? 22 : proto == "RDP" ? 3389 : 9600;
-            _domainBox.Enabled = proto == "RDP";
+            // 域名只对 RDP 域账户有意义；SSH/Serial 禁用并提示
+            bool rdp = proto == "RDP";
+            _domainBox.Enabled = rdp;
+            if (!rdp && string.IsNullOrWhiteSpace(_domainBox.Text))
+                _domainBox.BackColor = Color.FromArgb(45, 45, 45);
+            else
+                _domainBox.BackColor = Color.FromArgb(37, 37, 38);
         }
 
         private void LoadFromConfig()

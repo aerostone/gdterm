@@ -88,12 +88,15 @@ namespace Gdterm.Terminal
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     CreateNoWindow = true,
-                    StandardOutputEncoding = Encoding.UTF8,
-                    StandardErrorEncoding = Encoding.UTF8
+                    // Windows 控制台默认代码页；强制 UTF-8 会导致乱码/看似无输出
+                    StandardOutputEncoding = Encoding.Default,
+                    StandardErrorEncoding = Encoding.Default
                 };
 
                 if (!string.IsNullOrEmpty(_workingDirectory))
                     startInfo.WorkingDirectory = _workingDirectory;
+                else
+                    startInfo.WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
                 if (_shellPath.IndexOf("powershell", StringComparison.OrdinalIgnoreCase) >= 0 ||
                     _shellPath.IndexOf("pwsh", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -112,6 +115,13 @@ namespace Gdterm.Terminal
                     _process.Start();
                     _process.BeginOutputReadLine();
                     _process.BeginErrorReadLine();
+                    // 给 UI 一个可见就绪提示（重定向 shell 往往没有交互式 prompt）
+                    try
+                    {
+                        var banner = "\r\n[gdterm] 本地终端已启动: " + _shellPath + "\r\n";
+                        RaiseOutput(banner);
+                    }
+                    catch { }
                 }
                 catch (Exception ex)
                 {
@@ -204,6 +214,18 @@ namespace Gdterm.Terminal
             _disposed = true;
             Disconnect();
             RaiseDisconnected();
+        }
+
+        private void RaiseOutput(string text)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+            lock (_lock)
+            {
+                _outputBuffer.Add(text);
+                while (_outputBuffer.Count > MaxBufferLines)
+                    _outputBuffer.RemoveAt(0);
+            }
+            try { OutputReceived?.Invoke(this, new TerminalOutputEventArgs { Text = text }); } catch { }
         }
 
         private void OnOutputData(object sender, DataReceivedEventArgs e)

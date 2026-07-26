@@ -32,6 +32,13 @@ namespace Gdterm.UI.Services
             if (_viewMode != null && keyData == Keys.Escape && _viewMode.TryHandleEscape())
                 return true;
 
+            // F11：专注模式 ↔ 标准视图
+            if (_viewMode != null && keyData == Keys.F11)
+            {
+                _viewMode.ToggleFocus();
+                return true;
+            }
+
             if (keyData == (Keys.Control | Keys.R))
             {
                 _tabs?.ReconnectActiveTab();

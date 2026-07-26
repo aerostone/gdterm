@@ -71,15 +71,31 @@ if (-not $SkipTests) {
 }
 
 $uiOut = Join-Path $Root "src\Gdterm.UI\bin\$Configuration"
-if (-not (Test-Path (Join-Path $uiOut 'Gdterm.UI.exe'))) {
-    throw "Gdterm.UI.exe not found under $uiOut"
+$entry = $null
+foreach ($cand in @('gdterm.exe','Gdterm.UI.exe')) {
+  if (Test-Path (Join-Path $uiOut $cand)) { $entry = $cand; break }
 }
+if (-not $entry) { throw "gdterm.exe / Gdterm.UI.exe not found under $uiOut" }
+
 
 if (Test-Path $OutDir) { Remove-Item -Recurse -Force $OutDir }
 New-Item -ItemType Directory -Path $OutDir | Out-Null
 
 Write-Host "Copying binaries from $uiOut → $OutDir"
 Copy-Item -Path (Join-Path $uiOut '*') -Destination $OutDir -Recurse -Force
+
+# Ensure critical managed deps ship in portable folder
+$depNames = @('KeePassLib.dll','Renci.SshNet.dll','VtNetCore.dll')
+foreach ($name in $depNames) {
+  $dest = Join-Path $OutDir $name
+  if (-not (Test-Path $dest)) {
+    $found = Get-ChildItem -Path (Join-Path $Root 'src') -Recurse -Filter $name -ErrorAction SilentlyContinue |
+      Where-Object { $_.FullName -match '\\bin\\' } |
+      Select-Object -First 1
+    if ($found) { Copy-Item $found.FullName $dest -Force; Write-Host "Packed $name" }
+    else { Write-Warning "Missing $name in portable output" }
+  }
+}
 
 # Portable data skeleton (empty — no secrets)
 $data = Join-Path $OutDir 'data'
@@ -111,8 +127,8 @@ if ((Test-Path $vtDll) -and -not (Test-Path (Join-Path $OutDir 'VtNetCore.dll'))
 @'
 gdterm portable
 ===============
-1. Run Gdterm.UI.exe
-2. First launch: set master password (also unlocks KeePass)
+1. Run gdterm.exe
+2. First launch: set master password (also unlocks KeePass)\n3. data\\logs\\crash.jsonl + audit-*.jsonl are debug-on by default in trial builds
 3. All portable state lives under data\ next to the exe
 4. Copy the whole folder to migrate machines (keep data\ private)
 
@@ -123,4 +139,4 @@ Do NOT commit data\gdterm.kdbx or data\master-password.json to git.
 
 Write-Host ""
 Write-Host "Portable package ready: $OutDir"
-Write-Host "Entry: $(Join-Path $OutDir 'Gdterm.UI.exe')"
+Write-Host "Entry: $(Join-Path $OutDir $entry)"

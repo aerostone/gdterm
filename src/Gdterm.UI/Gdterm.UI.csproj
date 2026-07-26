@@ -183,4 +183,12 @@
     </Content>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+
+  <!-- 经典 csproj + PackageReference：强制把实现 DLL 拷到输出，绿色包才齐 -->
+  <Target Name="CopyPackageReferencesToOutput" AfterTargets="Build">
+    <ItemGroup>
+      <_PkgDlls Include="@(ReferenceCopyLocalPaths)" Condition="'%(Extension)' == '.dll'" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_PkgDlls)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="'@(_PkgDlls)' != ''" />
+  </Target>
 </Project>

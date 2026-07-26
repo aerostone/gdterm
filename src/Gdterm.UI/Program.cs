@@ -107,6 +107,8 @@ namespace Gdterm.UI
                 SavePasswordConfig(securityManager.GetPasswordConfig(), passwordConfigPath);
             }
 
+            // connections.json 主机/用户名：有主密码时用 gdk2 风格可逆保护（无主密码则明文兼容）
+            WireConnectionHostProtection(securityManager);
             var connectionStore = new ConnectionStoreJson(connectionsPath);
             var tunnelManager = new TunnelManager();
             var terminalFactory = new TerminalSessionFactory();
@@ -122,8 +124,24 @@ namespace Gdterm.UI
             {
                 DiagLog.Try("Program.DomainUnload.CleanupRdp", () => keepassService.CleanupAllRdpCredentials());
             };
-            var auditLogger = new AuditLogger(logsDir);
+            // 试运行默认：连接/命令/安全/凭据使用全开，便于排查「点连接无反应」
+            var auditConfig = new AuditLogConfig
+            {
+                LogConnections = true,
+                LogCommands = true,
+                LogSecurityEvents = true,
+                LogCredentialUsage = true,
+                LogAiInteractions = true,
+                SanitizeCommands = true,
+                SanitizeAiContent = true,
+                EncryptLogs = false,
+                MaxFileCount = 20,
+                MaxFileSizeMB = 10,
+                RetentionDays = 30
+            };
+            var auditLogger = new AuditLogger(logsDir, auditConfig);
             GlobalExceptionBridge.Attach(auditLogger);
+            DiagLog.Info("Program.Main", "audit debug defaults enabled; logsDir=" + logsDir);
             var aiConfig = new AiConfiguration
             {
                 ApiEndpoint = "https://api.openai.com/v1",
@@ -280,6 +298,122 @@ namespace Gdterm.UI
                 end++;
             }
             return json.Substring(start, end - start);
+        }
+
+        /// <summary>
+        /// 试运行加固：connections.json 中 host/username 写 gdh1: 混淆（固定密钥 XOR，可离线读）。
+        /// 旧明文 / gdh2 仍兼容；密码本体只在 kdbx。
+        /// </summary>
+        private static void WireConnectionHostProtection(SecurityManager securityManager)
+        {
+            if (securityManager == null) return;
+            ConnectionStoreJson.SetHostProtector(
+                plain => ProtectHostField(securityManager, plain),
+                stored => UnprotectHostField(securityManager, stored));
+        }
+
+        private const string HostSecretKey = "gdterm-conn-host-key-v1";
+
+        private static string ProtectHostField(SecurityManager security, string plain)
+        {
+            // 试运行：固定密钥 XOR 混淆主机/用户名，启动未解锁也可读写。
+            // 真机密仍只在 kdbx；此举防 connections.json 裸奔主机，非强加密。
+            if (string.IsNullOrEmpty(plain)) return plain;
+            if (plain.StartsWith("gdh1:") || plain.StartsWith("gdh2:")) return plain;
+            try { return "gdh1:" + XorB64(plain, HostSecretKey); }
+            catch { return plain; }
+        }
+
+        private static string UnprotectHostField(SecurityManager security, string stored)
+        {
+            if (string.IsNullOrEmpty(stored)) return stored;
+            try
+            {
+                if (stored.StartsWith("gdh1:"))
+                    return XorB64Decode(stored.Substring(5), HostSecretKey);
+                if (stored.StartsWith("gdh2:"))
+                {
+                    // 兼容曾写入的主密码 AES：解锁后可读
+                    var master = security != null ? security.GetMasterPassword() : null;
+                    if (!string.IsNullOrEmpty(master))
+                        return AesUnprotect(stored.Substring(5), master);
+                    return stored;
+                }
+                return stored; // 旧明文兼容
+            }
+            catch { return stored; }
+        }
+
+        private static string XorB64(string plain, string key)
+        {
+            var data = System.Text.Encoding.UTF8.GetBytes(plain ?? "");
+            var k = System.Text.Encoding.UTF8.GetBytes(key ?? "");
+            for (int i = 0; i < data.Length; i++) data[i] ^= k[i % k.Length];
+            return Convert.ToBase64String(data);
+        }
+
+        private static string XorB64Decode(string b64, string key)
+        {
+            var data = Convert.FromBase64String(b64);
+            var k = System.Text.Encoding.UTF8.GetBytes(key ?? "");
+            for (int i = 0; i < data.Length; i++) data[i] ^= k[i % k.Length];
+            return System.Text.Encoding.UTF8.GetString(data);
+        }
+
+        private static string AesProtect(string plain, string master)
+        {
+            var salt = new byte[16];
+            using (var rng = System.Security.Cryptography.RandomNumberGenerator.Create())
+                rng.GetBytes(salt);
+            byte[] key;
+            using (var derive = new System.Security.Cryptography.Rfc2898DeriveBytes(master, salt, 10000))
+                key = derive.GetBytes(32);
+            using (var aes = System.Security.Cryptography.Aes.Create())
+            {
+                aes.KeySize = 256;
+                aes.Mode = System.Security.Cryptography.CipherMode.CBC;
+                aes.Padding = System.Security.Cryptography.PaddingMode.PKCS7;
+                aes.Key = key;
+                aes.GenerateIV();
+                using (var enc = aes.CreateEncryptor())
+                {
+                    var bytes = System.Text.Encoding.UTF8.GetBytes(plain);
+                    var cipher = enc.TransformFinalBlock(bytes, 0, bytes.Length);
+                    var all = new byte[salt.Length + aes.IV.Length + cipher.Length];
+                    Buffer.BlockCopy(salt, 0, all, 0, salt.Length);
+                    Buffer.BlockCopy(aes.IV, 0, all, salt.Length, aes.IV.Length);
+                    Buffer.BlockCopy(cipher, 0, all, salt.Length + aes.IV.Length, cipher.Length);
+                    return Convert.ToBase64String(all);
+                }
+            }
+        }
+
+        private static string AesUnprotect(string payload, string master)
+        {
+            var all = Convert.FromBase64String(payload);
+            if (all.Length < 33) return payload;
+            var salt = new byte[16];
+            var iv = new byte[16];
+            Buffer.BlockCopy(all, 0, salt, 0, 16);
+            Buffer.BlockCopy(all, 16, iv, 0, 16);
+            var cipher = new byte[all.Length - 32];
+            Buffer.BlockCopy(all, 32, cipher, 0, cipher.Length);
+            byte[] key;
+            using (var derive = new System.Security.Cryptography.Rfc2898DeriveBytes(master, salt, 10000))
+                key = derive.GetBytes(32);
+            using (var aes = System.Security.Cryptography.Aes.Create())
+            {
+                aes.KeySize = 256;
+                aes.Mode = System.Security.Cryptography.CipherMode.CBC;
+                aes.Padding = System.Security.Cryptography.PaddingMode.PKCS7;
+                aes.Key = key;
+                aes.IV = iv;
+                using (var dec = aes.CreateDecryptor())
+                {
+                    var bytes = dec.TransformFinalBlock(cipher, 0, cipher.Length);
+                    return System.Text.Encoding.UTF8.GetString(bytes);
+                }
+            }
         }
     }
 

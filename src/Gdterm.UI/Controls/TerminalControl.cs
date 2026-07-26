@@ -100,6 +100,16 @@ namespace Gdterm.UI.Controls
             InitializeComponent();
             AttachExistingSession(localSession);
             _isPaused = false;
+            try
+            {
+                var c = _renderer != null ? _renderer.GetControl() : null;
+                if (c != null)
+                {
+                    c.TabStop = true;
+                    BeginInvoke(new Action(() => { try { c.Focus(); } catch { } }));
+                }
+            }
+            catch { }
         }
 
         private static void NormalizeProfile(TerminalProfile profile)
@@ -265,6 +275,14 @@ namespace Gdterm.UI.Controls
         {
             if (_session != null || _connecting || _disposed) return;
             _connecting = true;
+            try
+            {
+                DiagLog.Info("TerminalControl.ConnectAsyncCore",
+                    "begin id=" + (_config != null ? _config.Id : "") +
+                    " host=" + (_config != null ? _config.Host : "") +
+                    " proto=" + (_config != null ? _config.Protocol.ToString() : ""));
+            }
+            catch { }
 
             try
             {
@@ -287,8 +305,15 @@ namespace Gdterm.UI.Controls
                         throw new InvalidOperationException("ITerminalSessionFactory 未注入，无法创建 SSH 会话");
                     session = _terminalFactory.Create(new TerminalEndpoint { Host = _config.Host, Port = _config.Port });
 
-                    if (_config.Tunnel != null && _tunnelManager != null)
+                    // 跳板在 JumpChain；Tunnel 仅端口转发参数。任一存在且有隧道管理器则走隧道。
+                    bool needTunnel = _tunnelManager != null && (
+                        (_config.JumpChain != null && _config.JumpChain.Hops != null && _config.JumpChain.Hops.Count > 0)
+                        || _config.Tunnel != null);
+                    if (needTunnel)
                     {
+                        DiagLog.Info("TerminalControl.ConnectAsyncCore", "establish tunnel hops=" +
+                            (_config.JumpChain != null && _config.JumpChain.Hops != null
+                                ? _config.JumpChain.Hops.Count.ToString() : "0"));
                         var tunnelEndpoint = await _tunnelManager.EstablishAsync(
                             _config, credential, System.Threading.CancellationToken.None).ConfigureAwait(false);
                         await Task.Run(() => session.ConnectViaTunnel(_config, credential, tunnelEndpoint, rows, cols))
@@ -349,6 +374,7 @@ namespace Gdterm.UI.Controls
             }
             catch (Exception ex)
             {
+                DiagLog.Swallowed("TerminalControl.ConnectAsyncCore", ex);
                 if (_disposed) return;
                 void WriteFail()
                 {
@@ -412,7 +438,25 @@ namespace Gdterm.UI.Controls
             }
 
             if (_session == null && !_connecting)
+            {
+                try
+                {
+                    DiagLog.Info("TerminalControl.ResumeRendering",
+                        "lazy-connect id=" + (_config != null ? _config.Id : ""));
+                }
+                catch { }
                 ConnectAsyncIfNeeded();
+            }
+            else if (_session != null && !_session.IsConnected && _session is LocalTerminalSession local)
+            {
+                // 本地终端已 Attach 但进程未起
+                try { local.ConnectLocal(); }
+                catch (Exception ex)
+                {
+                    DiagLog.Swallowed("TerminalControl.ResumeRendering.Local", ex);
+                    try { _renderer?.Write("\r\n\x1b[31m本地终端启动失败: " + ex.Message + "\x1b[0m\r\n"); } catch { }
+                }
+            }
         }
 
         public bool TrySendInput(string text, bool isCommandLine = false)

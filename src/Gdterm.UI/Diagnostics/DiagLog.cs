@@ -24,6 +24,21 @@ namespace Gdterm.UI.Diagnostics
         }
 
         /// <summary>
+        /// 试运行阶段信息日志——写入 crash.jsonl（source 前缀 info:），永不抛出。
+        /// </summary>
+        public static void Info(string source, string message)
+        {
+            try
+            {
+                CrashLog.Write(
+                    "info:" + (source ?? "unknown"),
+                    new Exception(message ?? ""),
+                    isTerminating: false);
+            }
+            catch { }
+        }
+
+        /// <summary>
         /// 执行 action；异常写入 DiagLog 后吞掉（best-effort dispose 模式）。
         /// </summary>
         public static void Try(string source, Action action)

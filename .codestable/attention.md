@@ -94,3 +94,10 @@
 - 绿色分发必须带 `VtNetCore.dll` + `LICENSE.VtNetCore.txt`；CI 见根目录 `appveyor.yml`（VS2022 / net462）
 - AppVeyor 坑（2026-07-26）：`Gdterm.Tools` 禁止错误 Import 路径拼接；Core 禁止 `RdpOptions`；KeePassLib 用 **2.30.0** + `ProtectedBinary`/`Binaries.Set`；RDP 反射加载、编译不依赖 AxMsTscLib.dll；PackageReference 项目需 `RestoreProjectStyle=PackageReference`
 - 真彩/TUI 自动化：`VtTerminalEngineTests` + `TerminalProfileTests`；手工 vim/tmux/codex 由 Windows 验收
+
+## 2026-07-26 trial UX fixes
+- 连接首开 ForceActivateSession（单标签 SelectedIndexChanged 不触发）
+- 隧道判断用 JumpChain 而非仅 Tunnel
+- 试运行 AuditLogConfig 全开 + DiagLog.Info → data/logs/crash.jsonl
+- Esc/F11 从专注回标准；connections.json host gdh1: 混淆
+- 绿色包补拷 KeePassLib/Renci.SshNet/VtNetCore

@@ -39,7 +39,9 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="SSH.NET" Version="2024.1.0" />
+    <PackageReference Include="SSH.NET" Version="2024.1.0">
+      <PrivateAssets>none</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Gdterm.Core\Gdterm.Core.csproj">
@@ -64,4 +66,12 @@
     <Compile Include="SshNetRemoteSession.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+
+  <!-- 经典 csproj + PackageReference：强制把实现 DLL 拷到输出，绿色包才齐 -->
+  <Target Name="CopyPackageReferencesToOutput" AfterTargets="Build">
+    <ItemGroup>
+      <_PkgDlls Include="@(ReferenceCopyLocalPaths)" Condition="'%(Extension)' == '.dll'" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_PkgDlls)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="'@(_PkgDlls)' != ''" />
+  </Target>
 </Project>

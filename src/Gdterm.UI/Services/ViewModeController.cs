@@ -92,13 +92,22 @@ namespace Gdterm.UI.Services
         }
 
         /// <summary>
-        /// Focus 模式下 Esc 临时恢复菜单；返回是否已处理。
+        /// Focus/Compact 下 Esc 回到标准视图（菜单+树+状态栏），避免「出不去」。
         /// </summary>
         public bool TryHandleEscape()
         {
-            if (_current != ViewMode.Focus) return false;
-            if (_menuStrip != null) _menuStrip.Visible = true;
+            if (_current == ViewMode.Standard) return false;
+            SetViewMode(ViewMode.Standard);
             return true;
+        }
+
+        /// <summary>在 Standard ↔ Focus 之间切换（F11）。</summary>
+        public void ToggleFocus()
+        {
+            if (_current == ViewMode.Focus)
+                SetViewMode(ViewMode.Standard);
+            else
+                SetViewMode(ViewMode.Focus);
         }
     }
 }
