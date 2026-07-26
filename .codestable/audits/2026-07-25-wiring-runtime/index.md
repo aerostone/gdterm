@@ -147,7 +147,7 @@ mode: standard-plus
 | 7 | P1 | resolved | `0cc0c8d` 重连等真实连接 |
 | 8 | P1 | resolved | gdk2 主密码 AES + 剪贴板 TTL + CLI 脱敏 |
 | 9 | P0 | resolved | `09a9700` 全局异常钩子 |
-| 10 | P1 | partial | ActiveSessionBridge + CredentialResolver + RdpOptionsBuilder；全量拆分仍待 |
+| 10 | P1 | resolved | `7e9ddcd` MainForm~385 / TabContainer~309；业务全在 Services |
 | 11 | P0 | resolved | `0ee9b4a` ARCHITECTURE 回填 |
 | 12 | P1 | resolved | ITunnelManager + SSH/RDP 会话工厂与抽象；UI 无 Renci、无 new 具体会话类 |
 | 13 | P1 | resolved | `0355592` PortForward/Toolbox 会话注入 |
@@ -155,4 +155,4 @@ mode: standard-plus
 
 **剩余主动债**：finding-10 resolved（MainForm~385 组合根，TabContainer~309 chrome 壳，业务全在 Services）。finding-12 resolved。ApiKey gdk2。
 
-**综合观感（修复后预估）**：从 3.3/10 提升到约 **7.0–7.5/10**（P0 闭环，P1 大部分 partial/resolved）。
+**综合观感（修复后预估）**：从 3.3/10 提升到约 **7.5–8.0/10**（P0/P1 14 项全部 resolved）。
