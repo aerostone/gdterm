@@ -153,7 +153,7 @@ namespace Gdterm.UI.Forms
 
             try
             {
-                var result = await _keepassService.UnlockAsync(password);
+                var result = await _keepassService.EnsureDatabaseAsync(password);
                 if (result)
                 {
                     IsUnlocked = true;

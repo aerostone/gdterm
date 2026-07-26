@@ -17,6 +17,12 @@ namespace Gdterm.KeePass
         Task<bool> UnlockAsync(string masterPassword);
 
         /// <summary>
+        /// 确保密码库存在并解锁；不存在时用主密码自动创建。
+        /// 首次使用向导与启动后首次连接都用它初始化 kdbx。
+        /// </summary>
+        Task<bool> EnsureDatabaseAsync(string masterPassword);
+
+        /// <summary>
         /// 锁定密码库，清除内存中的明文
         /// </summary>
         void Lock();

@@ -63,8 +63,16 @@ namespace Gdterm.KeePass
                 compositeKey.AddUserKey(new KcpPassword(masterPassword));
 
                 var logger = new NullStatusLogger();
-                _database.Open(ioConnInfo, compositeKey, logger);
-
+                // 首次运行或 .kdbx 被删除：用同一主密码自动建库，避免“解锁失败 -> SSH 无凭据”
+                try
+                {
+                    _database.Open(ioConnInfo, compositeKey, logger);
+                }
+                catch (Exception) when (!File.Exists(_databasePath))
+                {
+                    _database.New(ioConnInfo, compositeKey);
+                    try { _database.Save(logger); } catch { }
+                }
                 return Task.FromResult(true);
             }
             catch
@@ -72,6 +80,13 @@ namespace Gdterm.KeePass
                 _database = null;
                 return Task.FromResult(false);
             }
+        }
+
+        /// <summary>确保密码库存在并解锁；不存在时用主密码自动创建。</summary>
+        public Task<bool> EnsureDatabaseAsync(string masterPassword)
+        {
+            // 现有文件走正常解锁；不存在时 UnlockAsync 内部会自动 New 出来
+            return UnlockAsync(masterPassword);
         }
 
         public void Lock()

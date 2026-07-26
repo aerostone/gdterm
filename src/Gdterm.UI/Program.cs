@@ -134,6 +134,17 @@ namespace Gdterm.UI
             var rdpFactory = new RdpClientFactory();
             var sftpFactory = new SftpServiceFactory();
             var keepassService = new KeePassService(keepassPath);
+            // 首次运行（或 .kdbx 被删除）时，用主密码初始化 KeePass 密码库；否则尝试解锁，
+            // 这样进入主界面后连接才不会因“密码库未解锁”而拿不到凭据。
+            try
+            {
+                var masterPw = securityManager.GetMasterPassword();
+                if (!string.IsNullOrEmpty(masterPw))
+                {
+                    keepassService.EnsureDatabaseAsync(masterPw).GetAwaiter().GetResult();
+                }
+            }
+            catch (Exception ex) { DiagLog.Swallowed("Program.KeePassInit", ex); }
             // 异常退出时尽量清掉本进程注入的 TERMSRV 凭据
             AppDomain.CurrentDomain.ProcessExit += (s, e) =>
             {
