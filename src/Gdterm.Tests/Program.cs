@@ -3,6 +3,7 @@ using Gdterm.Tests.Connections;
 using Gdterm.Tests.Core;
 using Gdterm.Tests.Logging;
 using Gdterm.Tests.Security;
+using Gdterm.Tests.Terminal;
 
 namespace Gdterm.Tests
 {
@@ -25,6 +26,7 @@ namespace Gdterm.Tests
             CredentialPayloadTests.Run();
             SecretFindingTests.Run();
             SecurityManagerHashTests.Run();
+            VtTerminalEngineTests.Run();
 
             Console.WriteLine();
             Console.WriteLine("Passed: {0}  Failed: {1}", Assert.Passes, Assert.Failures);

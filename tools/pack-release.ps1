@@ -96,6 +96,17 @@ if (Test-Path $sampleDanger) {
     Copy-Item $sampleDanger (Join-Path $data 'config\dangerous-commands.json') -Force
 }
 
+# Third-party licenses (green portable attribution)
+$vtLicense = Join-Path $Root 'lib\LICENSE.VtNetCore.txt'
+if (Test-Path $vtLicense) {
+    Copy-Item $vtLicense (Join-Path $OutDir 'LICENSE.VtNetCore.txt') -Force
+}
+# VtNetCore.dll is copied via UI bin Private=True reference chain when Terminal is linked.
+$vtDll = Join-Path $Root 'lib\VtNetCore.dll'
+if ((Test-Path $vtDll) -and -not (Test-Path (Join-Path $OutDir 'VtNetCore.dll'))) {
+    Copy-Item $vtDll (Join-Path $OutDir 'VtNetCore.dll') -Force
+}
+
 # README
 @'
 gdterm portable
@@ -104,6 +115,8 @@ gdterm portable
 2. First launch: set master password (also unlocks KeePass)
 3. All portable state lives under data\ next to the exe
 4. Copy the whole folder to migrate machines (keep data\ private)
+
+Third-party: VtNetCore (MIT) — see LICENSE.VtNetCore.txt
 
 Do NOT commit data\gdterm.kdbx or data\master-password.json to git.
 '@ | Set-Content -Path (Join-Path $OutDir 'README-PORTABLE.txt') -Encoding UTF8

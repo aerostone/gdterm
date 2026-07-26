@@ -34,6 +34,10 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Drawing" />
+    <Reference Include="VtNetCore">
+      <HintPath>..\..\lib\VtNetCore.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="SSH.NET" Version="2024.1.0" />
@@ -72,6 +76,8 @@
     <Compile Include="MultiChannelRecorder.cs" />
     <Compile Include="Rendering\LightweightRenderer.cs" />
     <Compile Include="Rendering\TerminalRenderer.cs" />
+    <Compile Include="Rendering\CellGdiRenderer.cs" />
+    <Compile Include="Rendering\Vt\VtTerminalEngine.cs" />
     <Compile Include="Transfer\ZmodemHandler.cs" />
     <Compile Include="ITerminalSessionFactory.cs" />
     <Compile Include="TerminalSessionFactory.cs" />

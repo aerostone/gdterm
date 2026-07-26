@@ -32,6 +32,12 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="VtNetCore">
+      <HintPath>..\..\lib\VtNetCore.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Gdterm.Core\Gdterm.Core.csproj">
@@ -50,6 +56,10 @@
       <Project>{C9D0E1F2-A3B4-5678-CDEF-012345678901}</Project>
       <Name>Gdterm.Security</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Gdterm.Terminal\Gdterm.Terminal.csproj">
+      <Project>{D4E5F6A7-B8C9-0123-DEFA-567890123456}</Project>
+      <Name>Gdterm.Terminal</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
@@ -60,6 +70,7 @@
     <Compile Include="Connections\ConnectionStoreJsonTests.cs" />
     <Compile Include="Security\SecretFindingTests.cs" />
     <Compile Include="Security\SecurityManagerHashTests.cs" />
+    <Compile Include="Terminal\VtTerminalEngineTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

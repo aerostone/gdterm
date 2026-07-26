@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2013/05/nuspec.xsd">
+  <metadata>
+    <id>VtNetCore</id>
+    <version>1.0.30</version>
+    <authors>Darren R. Starr</authors>
+    <owners>Darren R. Starr</owners>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <licenseUrl>https://github.com/darrenstarr/VtNetCore/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/darrenstarr/VtNetCore</projectUrl>
+    <description>A VT100/XTerm style terminal emulator library for the .NET Standard 2.0 framework</description>
+    <copyright>2018 Darren R. Starr - Telenor Inpli AS</copyright>
+    <tags>VT-100 VT220 xterm NetCore</tags>
+    <repository type="Github" url="https://github.com/darrenstarr/VtNetCore" />
+    <dependencies>
+      <group targetFramework=".NETFramework4.5">
+        <dependency id="System.Text.Encoding" version="4.3.0" exclude="Build,Analyzers" />
+        <dependency id="System.Text.Encoding.Extensions" version="4.3.0" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETFramework4.6">
+        <dependency id="System.Text.Encoding" version="4.3.0" exclude="Build,Analyzers" />
+        <dependency id="System.Text.Encoding.Extensions" version="4.3.0" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard1.3">
+        <dependency id="NETStandard.Library" version="1.6.1" exclude="Build,Analyzers" />
+        <dependency id="System.Text.Encoding" version="4.3.0" exclude="Build,Analyzers" />
+        <dependency id="System.Text.Encoding.Extensions" version="4.3.0" exclude="Build,Analyzers" />
+      </group>
+      <group targetFramework=".NETStandard2.0">
+        <dependency id="System.Text.Encoding" version="4.3.0" exclude="Build,Analyzers" />
+        <dependency id="System.Text.Encoding.Extensions" version="4.3.0" exclude="Build,Analyzers" />
+      </group>
+    </dependencies>
+  </metadata>
+</package>

@@ -87,3 +87,6 @@
 - TunnelManager 同 connectionId 单飞；跳板 ConnectHop 支持私钥
 - AuditLogger 写盘失败回落 audit-fallback.jsonl；锁屏 IdleLock/Unlock 写审计
 - RDP CredWrite 使用 CRED_PERSIST_SESSION；进程退出清理
+- Phase 0 VT 引擎（2026-07-26）：`lib/VtNetCore.dll`（MIT）+ `VtTerminalEngine` + `CellGdiRenderer`；默认 scrollback 500/硬顶 2000；UI 仍 LightweightRenderer，Phase 1 再接线
+- 真彩/TUI 验收：`src/Gdterm.Tests/Terminal/VtTerminalEngineTests.cs` + `tools/phase0-vt-harness.md`；Windows MSBuild 为权威
+- 绿色分发必须带 `VtNetCore.dll` 与 `LICENSE.VtNetCore.txt`（pack-release 已拷贝）
