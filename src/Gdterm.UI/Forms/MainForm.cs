@@ -1,8 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
-using System.Linq;
 using System.Windows.Forms;
 using Gdterm.AI;
 using Gdterm.Connections;
@@ -17,9 +15,8 @@ using Gdterm.Rdp;
 using Gdterm.Tools;
 using Gdterm.Tunnel;
 using Gdterm.UI.Controls;
-using Gdterm.UI.Hotkeys;
-
 using Gdterm.UI.Services;
+
 namespace Gdterm.UI.Forms
 {
     public enum ViewMode
@@ -57,20 +54,15 @@ namespace Gdterm.UI.Forms
         private TabContainerControl _tabContainer;
         private ActiveSessionBridge _sessionBridge;
         private SidePanelFactory _sidePanels;
+        private SidePanelHost _sidePanelHost;
         private SessionStateCoordinator _sessionState;
+        private ViewModeController _viewMode;
+        private ToolsDialogsLauncher _toolsDialogs;
+        private GlobalHotkeyController _hotkeys;
         private StatusBarControl _statusBar;
         private LockOverlayControl _lockOverlay;
         private MenuStrip _menuStrip;
-        private GlobalHotkeyManager _hotkeyManager;
-        private int _toggleHotkeyId;
         private QuickBarPanel _quickBar;
-        private Panel _sideToolHost;
-        private Control _activeSidePanel;
-
-        private ViewMode _currentViewMode = ViewMode.Standard;
-        private ToolStripMenuItem _viewStandardItem;
-        private ToolStripMenuItem _viewFocusItem;
-        private ToolStripMenuItem _viewCompactItem;
 
         public MainForm(
             IConnectionStore connectionStore,
@@ -116,6 +108,7 @@ namespace Gdterm.UI.Forms
             _multiChannelManager = multiChannelManager ?? new MultiChannelManager();
             _toolRegistry = toolRegistry;
             _secretScanner = secretScanner;
+
             if (_reconnectWatchdog != null)
             {
                 _reconnectWatchdog.ReconnectFailed += (s, e) =>
@@ -149,7 +142,10 @@ namespace Gdterm.UI.Forms
             if (!_securityManager.IsLocked)
                 _lockOverlay.Visible = false;
 
-            Shown += (s, e) => RestoreSessionState();
+            Shown += (s, e) =>
+            {
+                try { _sessionState?.Restore(); } catch { }
+            };
         }
 
         private void InitializeComponent()
@@ -159,58 +155,8 @@ namespace Gdterm.UI.Forms
             StartPosition = FormStartPosition.CenterScreen;
             MinimumSize = new Size(800, 600);
 
-            var menuBuilt = new MainFormMenuBuilder().Build(new MainFormMenuBuilder.Callbacks
-            {
-                NewConnection = OnNewConnection,
-                ImportConnections = OnImportConnections,
-                ExportConnections = OnExportConnections,
-                Exit = (s, e) => Close(),
-                OpenLocalTerminal = (s, e) => _tabContainer.OpenLocalTerminal(),
-                OpenSftp = OnOpenSftp,
-                ReconnectActive = (s, e) => _tabContainer.ReconnectActiveTab(),
-                CloseActive = (s, e) => _tabContainer.CloseActiveTab(),
-                ViewStandard = (s, e) => SetViewMode(ViewMode.Standard),
-                ViewFocus = (s, e) => SetViewMode(ViewMode.Focus),
-                ViewCompact = (s, e) => SetViewMode(ViewMode.Compact),
-                ToggleTree = (s, e) => ToggleConnectionTree(),
-                SplitHorizontal = (s, e) => _tabContainer.SplitHorizontal(),
-                SplitVertical = (s, e) => _tabContainer.SplitVertical(),
-                ToggleQuickBar = (s, e) =>
-                {
-                    if (_quickBar != null) _quickBar.Visible = !_quickBar.Visible;
-                },
-                ShowSearch = (s, e) => ShowSearchBar(),
-                ShowSnippet = (s, e) => ShowSnippetSearch(),
-                ShowHighlight = (s, e) => ShowSidePanel(_sidePanels.CreateHighlightPanel()),
-                ShowKeyBinding = (s, e) => ShowSidePanel(_sidePanels.CreateKeyBindingPanel()),
-                ShowLogonScript = (s, e) => ShowSidePanel(_sidePanels.CreateLogonScriptPanel()),
-                ShowMultiChannel = (s, e) => ShowSidePanel(_sidePanels.CreateMultiChannelPanel()),
-                ShowBatch = (s, e) => ShowSidePanel(_sidePanels.CreateBatchPanel()),
-                ShowHistory = (s, e) => ShowSidePanel(_sidePanels.CreateHistoryPanel()),
-                ShowHealth = (s, e) => ShowSidePanel(_sidePanels.CreateHealthPanel()),
-                ShowPortForward = (s, e) => ShowSidePanel(_sidePanels.CreatePortForwardPanel()),
-                ShowToolbox = (s, e) => ShowSidePanel(_sidePanels.CreateToolboxPanel()),
-                ShowSecretScan = (s, e) => ShowSidePanel(_sidePanels.CreateSecretScanPanel()),
-                ShowBookmarks = (s, e) => ShowSidePanel(_sidePanels.CreateBookmarksPanel(cfg =>
-                {
-                    if (cfg != null) OnConnectionDoubleClicked(null, cfg);
-                })),
-                KeePassManager = OnKeePassManager,
-                PasswordHealth = OnPasswordHealth,
-                PasswordGenerator = OnPasswordGenerator,
-                AiSettings = OnAiSettings,
-                DangerousCmdSettings = OnDangerousCmdSettings,
-                ShowHotkeys = OnShowHotkeys,
-                About = OnAbout
-            });
-            _menuStrip = menuBuilt.Menu;
-            _viewStandardItem = menuBuilt.ViewStandardItem;
-            _viewFocusItem = menuBuilt.ViewFocusItem;
-            _viewCompactItem = menuBuilt.ViewCompactItem;
-
-            MainMenuStrip = _menuStrip;
-            Controls.Add(_menuStrip);
-
+            // 菜单先建，回调在控件创建后再绑定会更复杂；此处先占位，布局后立即 Build
+            // 实际：先建树/标签，再建菜单回调（需 _tabContainer 等）
             _connectionTree = new ConnectionTreeControl(_connectionStore);
             _connectionTree.Dock = DockStyle.Left;
             _connectionTree.Width = 250;
@@ -254,53 +200,10 @@ namespace Gdterm.UI.Forms
             _tabContainer.ActiveSessionChanged += OnActiveSessionChanged;
             _tabContainer.SessionClosed += OnSessionClosed;
 
-            // AI “Run this” 经活动终端危险命令闸；无终端时用 detector 对话框
-            if (_aiService is Gdterm.AI.AiAssistantService aiSvc)
-            {
-                aiSvc.CommandGate = cmd =>
-                {
-                    var tc = _tabContainer.GetActiveTerminalControl();
-                    if (tc != null)
-                        return tc.ConfirmDangerousCommand(cmd);
-                    if (_dangerousCmdDetector == null) return true;
-                    try
-                    {
-                        var check = _dangerousCmdDetector.Check(cmd);
-                        if (check == null || !check.IsDangerous) return true;
-                        using (var dlg = new DangerousCommandDialog(cmd, check))
-                        {
-                            dlg.ShowDialog(this);
-                            if (!dlg.IsConfirmed) return false;
-                            if (dlg.RememberChoice)
-                            {
-                                try { _dangerousCmdDetector.AddToWhitelist(cmd); } catch { }
-                            }
-                            return true;
-                        }
-                    }
-                    catch { return true; }
-                };
-            }
+            WireAiCommandGate();
 
-            // 右侧工具宿主（默认隐藏）
-            _sideToolHost = new Panel
-            {
-                Dock = DockStyle.Right,
-                Width = 360,
-                Visible = false,
-                BackColor = Color.FromArgb(30, 30, 30)
-            };
-            var sideClose = new Button
-            {
-                Text = "✕ 关闭面板",
-                Dock = DockStyle.Top,
-                Height = 28,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(50, 50, 50),
-                ForeColor = Color.White
-            };
-            sideClose.Click += (s, e) => HideSidePanel();
-            _sideToolHost.Controls.Add(sideClose);
+            var sideHostPanel = SidePanelHost.CreateHost((s, e) => _sidePanelHost?.Hide());
+            _sidePanelHost = new SidePanelHost(sideHostPanel);
 
             var sideSplitter = new Splitter
             {
@@ -317,13 +220,11 @@ namespace Gdterm.UI.Forms
             _statusBar.Dock = DockStyle.Bottom;
             _statusBar.Height = 25;
 
-            // QuickBar 底部
             List<QuickCommand> cmds = null;
             try { cmds = _quickCommandStore?.LoadAll(); } catch { }
             _quickBar = new QuickBarPanel(cmds ?? new List<QuickCommand>());
             _quickBar.Dock = DockStyle.Bottom;
             _quickBar.Height = 36;
-            // 统一经 TerminalControl 危险命令闸门，禁止直发 ITerminalSession
             _quickBar.CommandSent += (cmd, group) =>
             {
                 var tc = _tabContainer.GetActiveTerminalControl();
@@ -336,9 +237,69 @@ namespace Gdterm.UI.Forms
             _lockOverlay.Dock = DockStyle.Fill;
             _lockOverlay.Visible = _securityManager.IsLocked;
 
+            _toolsDialogs = new ToolsDialogsLauncher(
+                this, _securityManager, _keepassService, _dangerousCmdDetector);
+
+            var menuBuilt = new MainFormMenuBuilder().Build(new MainFormMenuBuilder.Callbacks
+            {
+                NewConnection = OnNewConnection,
+                ImportConnections = (s, e) => ConnectionImportExportUi.Import(this, _connectionStore, () => _connectionTree.LoadConnections()),
+                ExportConnections = (s, e) => ConnectionImportExportUi.Export(this, _connectionStore),
+                Exit = (s, e) => Close(),
+                OpenLocalTerminal = (s, e) => _tabContainer.OpenLocalTerminal(),
+                OpenSftp = OnOpenSftp,
+                ReconnectActive = (s, e) => _tabContainer.ReconnectActiveTab(),
+                CloseActive = (s, e) => _tabContainer.CloseActiveTab(),
+                ViewStandard = (s, e) => _viewMode?.SetViewMode(ViewMode.Standard),
+                ViewFocus = (s, e) => _viewMode?.SetViewMode(ViewMode.Focus),
+                ViewCompact = (s, e) => _viewMode?.SetViewMode(ViewMode.Compact),
+                ToggleTree = (s, e) => _viewMode?.ToggleConnectionTree(),
+                SplitHorizontal = (s, e) => _tabContainer.SplitHorizontal(),
+                SplitVertical = (s, e) => _tabContainer.SplitVertical(),
+                ToggleQuickBar = (s, e) =>
+                {
+                    if (_quickBar != null) _quickBar.Visible = !_quickBar.Visible;
+                },
+                ShowSearch = (s, e) => _sidePanels?.AttachSearchBar(_tabContainer),
+                ShowSnippet = (s, e) => _sidePanelHost?.ShowSnippetSearch(_sidePanels, _tabContainer),
+                ShowHighlight = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateHighlightPanel()),
+                ShowKeyBinding = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateKeyBindingPanel()),
+                ShowLogonScript = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateLogonScriptPanel()),
+                ShowMultiChannel = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateMultiChannelPanel()),
+                ShowBatch = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateBatchPanel()),
+                ShowHistory = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateHistoryPanel()),
+                ShowHealth = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateHealthPanel()),
+                ShowPortForward = (s, e) => _sidePanelHost?.Show(_sidePanels.CreatePortForwardPanel()),
+                ShowToolbox = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateToolboxPanel()),
+                ShowSecretScan = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateSecretScanPanel()),
+                ShowBookmarks = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateBookmarksPanel(cfg =>
+                {
+                    if (cfg != null) OnConnectionDoubleClicked(null, cfg);
+                })),
+                KeePassManager = (s, e) => _toolsDialogs.OpenKeePassManager(),
+                PasswordHealth = (s, e) => _toolsDialogs.OpenPasswordHealth(),
+                PasswordGenerator = (s, e) => _toolsDialogs.OpenPasswordGenerator(),
+                AiSettings = (s, e) => _toolsDialogs.OpenAiSettings(),
+                DangerousCmdSettings = (s, e) => _toolsDialogs.OpenDangerousCmdSettings(),
+                ShowHotkeys = (s, e) => _toolsDialogs.ShowHotkeysHelp(),
+                About = (s, e) => _toolsDialogs.ShowAbout()
+            });
+            _menuStrip = menuBuilt.Menu;
+            MainMenuStrip = _menuStrip;
+
+            _viewMode = new ViewModeController(
+                _connectionTree,
+                _statusBar,
+                _menuStrip,
+                _quickBar,
+                () => _sidePanelHost?.Hide(),
+                menuBuilt.ViewStandardItem,
+                menuBuilt.ViewFocusItem,
+                menuBuilt.ViewCompactItem);
+
             Controls.Add(_tabContainer);
             Controls.Add(sideSplitter);
-            Controls.Add(_sideToolHost);
+            Controls.Add(sideHostPanel);
             Controls.Add(mainSplitter);
             Controls.Add(_connectionTree);
             Controls.Add(_quickBar);
@@ -352,10 +313,38 @@ namespace Gdterm.UI.Forms
                 _connectionStore,
                 _tabContainer,
                 this,
-                () => _currentViewMode,
-                SetViewMode,
+                () => _viewMode != null ? _viewMode.Current : ViewMode.Standard,
+                mode => _viewMode?.SetViewMode(mode),
                 () => _connectionTree != null ? _connectionTree.Width : 250,
                 w => { if (_connectionTree != null) _connectionTree.Width = w; });
+        }
+
+        private void WireAiCommandGate()
+        {
+            if (!(_aiService is AiAssistantService aiSvc)) return;
+            aiSvc.CommandGate = cmd =>
+            {
+                var tc = _tabContainer.GetActiveTerminalControl();
+                if (tc != null)
+                    return tc.ConfirmDangerousCommand(cmd);
+                if (_dangerousCmdDetector == null) return true;
+                try
+                {
+                    var check = _dangerousCmdDetector.Check(cmd);
+                    if (check == null || !check.IsDangerous) return true;
+                    using (var dlg = new DangerousCommandDialog(cmd, check))
+                    {
+                        dlg.ShowDialog(this);
+                        if (!dlg.IsConfirmed) return false;
+                        if (dlg.RememberChoice)
+                        {
+                            try { _dangerousCmdDetector.AddToWhitelist(cmd); } catch { }
+                        }
+                        return true;
+                    }
+                }
+                catch { return true; }
+            };
         }
 
         private void SetupEventHandlers()
@@ -365,7 +354,8 @@ namespace Gdterm.UI.Forms
             MouseMove += (s, e) => _securityManager.ResetIdleTimer();
             KeyDown += (s, e) => _securityManager.ResetIdleTimer();
             Click += (s, e) => _securityManager.ResetIdleTimer();
-            InitializeHotkeys();
+            _hotkeys = new GlobalHotkeyController(this);
+            _hotkeys.Initialize();
             FormClosing += OnFormClosing;
         }
 
@@ -381,80 +371,12 @@ namespace Gdterm.UI.Forms
             var tc = _tabContainer.GetActiveTerminalControl();
             var host = tc?.Config?.Host;
             var user = tc?.Config?.Username;
-            var activeTc = _tabContainer.GetActiveTerminalControl();
-            if (activeTc != null)
-                _quickBar?.SetActiveTerminal(activeTc, host, user);
+            if (tc != null)
+                _quickBar?.SetActiveTerminal(tc, host, user);
             else
                 _quickBar?.SetActiveSession(session, host, user);
 
-            // 同步多通道：注册在线会话，注销已不存在的会话
             try { _sidePanels?.SyncMultiChannelRegistrations(); } catch { }
-        }
-
-        private void SetViewMode(ViewMode mode)
-        {
-            _currentViewMode = mode;
-            _viewStandardItem.Checked = mode == ViewMode.Standard;
-            _viewFocusItem.Checked = mode == ViewMode.Focus;
-            _viewCompactItem.Checked = mode == ViewMode.Compact;
-
-            switch (mode)
-            {
-                case ViewMode.Standard:
-                    _connectionTree.Visible = true;
-                    _connectionTree.Width = 250;
-                    _statusBar.Visible = true;
-                    _menuStrip.Visible = true;
-                    if (_quickBar != null) _quickBar.Visible = true;
-                    break;
-                case ViewMode.Focus:
-                    _connectionTree.Visible = false;
-                    _statusBar.Visible = false;
-                    _menuStrip.Visible = false;
-                    if (_quickBar != null) _quickBar.Visible = false;
-                    HideSidePanel();
-                    break;
-                case ViewMode.Compact:
-                    _connectionTree.Visible = true;
-                    _connectionTree.Width = 200;
-                    _statusBar.Visible = false;
-                    _menuStrip.Visible = false;
-                    break;
-            }
-        }
-
-        private void ToggleConnectionTree()
-        {
-            _connectionTree.Visible = !_connectionTree.Visible;
-        }
-
-        private void InitializeHotkeys()
-        {
-            try
-            {
-                _hotkeyManager = new GlobalHotkeyManager(this);
-                _toggleHotkeyId = _hotkeyManager.Register(HotkeyModifiers.Control, Keys.Oemtilde);
-                _hotkeyManager.HotkeyPressed += OnGlobalHotkeyPressed;
-            }
-            catch { }
-        }
-
-        private void OnGlobalHotkeyPressed(object sender, HotkeyPressedEventArgs e)
-        {
-            if (e.HotkeyId == _toggleHotkeyId)
-                ToggleWindowVisibility();
-        }
-
-        private void ToggleWindowVisibility()
-        {
-            if (Visible && Form.ActiveForm == this) Hide();
-            else
-            {
-                Show();
-                WindowState = FormWindowState.Normal;
-                Activate();
-                BringToFront();
-            }
         }
 
         private void OnConnectionDoubleClicked(object sender, ConnectionConfig config)
@@ -523,167 +445,20 @@ namespace Gdterm.UI.Forms
             }
         }
 
-        private void OnKeePassManager(object sender, EventArgs e)
-        {
-            if (!ReAuthenticate("访问密码库管理")) return;
-            if (!_keepassService.IsUnlocked)
-            {
-                MessageBox.Show("密码库未解锁", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            using (var form = new KeePassManagerForm(_keepassService))
-                form.ShowDialog(this);
-        }
-
-        private void OnPasswordHealth(object sender, EventArgs e)
-        {
-            if (!ReAuthenticate("查看密码健康报告")) return;
-            if (!_keepassService.IsUnlocked)
-            {
-                MessageBox.Show("密码库未解锁", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-            using (var form = new PasswordHealthForm(_keepassService))
-                form.ShowDialog(this);
-        }
-
-        private bool ReAuthenticate(string action)
-        {
-            return MasterPasswordPrompt.Confirm(this, _securityManager, action);
-        }
-
-        private void OnAiSettings(object sender, EventArgs e)
-        {
-            var aiModelStore = new AiModelStore(
-                Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "config", "ai-models.json"));
-            // ApiKey 用主密码派生 AES（gdk2）；锁定时退回 gdk1
-            aiModelStore.SetMasterPasswordProvider(() =>
-                _securityManager != null && !_securityManager.IsLocked
-                    ? _securityManager.GetMasterPassword()
-                    : null);
-            try { aiModelStore.UpgradeSecretsToMasterKey(); } catch { }
-            using (var form = new AiSettingsForm(aiModelStore))
-                form.ShowDialog(this);
-        }
-
-        private void OnPasswordGenerator(object sender, EventArgs e)
-        {
-            using (var form = new PasswordGeneratorForm())
-                form.ShowDialog(this);
-        }
-
-        private void OnDangerousCmdSettings(object sender, EventArgs e)
-        {
-            using (var form = new DangerousCommandConfigForm(_dangerousCmdDetector))
-                form.ShowDialog(this);
-        }
-
-        private void OnShowHotkeys(object sender, EventArgs e)
-        {
-            MessageBox.Show(
-                "快捷键：\n\n" +
-                "Ctrl + `          呼出/隐藏窗口\n" +
-                "Ctrl + L          切换连接面板\n" +
-                "Ctrl + R          重连当前标签\n" +
-                "Ctrl + W          关闭当前标签\n" +
-                "Ctrl + F          终端查找\n" +
-                "Ctrl + P          片段搜索\n" +
-                "Esc               专注模式恢复菜单",
-                "快捷键", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
-        private void OnAbout(object sender, EventArgs e)
-        {
-            MessageBox.Show(
-                "gdterm - 绿色运维客户端\n版本 1.0.0\n\nSSH / RDP / SFTP / 串口 / 本地终端 / 运维工具箱",
-                "关于", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
-        private void OnImportConnections(object sender, EventArgs e)
-        {
-            ConnectionImportExportUi.Import(this, _connectionStore, () => _connectionTree.LoadConnections());
-        }
-
-        private void OnExportConnections(object sender, EventArgs e)
-        {
-            ConnectionImportExportUi.Export(this, _connectionStore);
-        }
-
-        // ====== 侧边面板（工厂在 SidePanelFactory） ======
-
-        private void ShowSidePanel(Control panel)
-        {
-            if (panel == null) return;
-            if (_activeSidePanel != null)
-            {
-                _sideToolHost.Controls.Remove(_activeSidePanel);
-                try { _activeSidePanel.Dispose(); } catch { }
-            }
-            _activeSidePanel = panel;
-            panel.Dock = DockStyle.Fill;
-            _sideToolHost.Controls.Add(panel);
-            panel.BringToFront();
-            _sideToolHost.Visible = true;
-            _sideToolHost.Width = Math.Max(320, _sideToolHost.Width);
-        }
-
-        private void HideSidePanel()
-        {
-            if (_activeSidePanel != null)
-            {
-                _sideToolHost.Controls.Remove(_activeSidePanel);
-                try { _activeSidePanel.Dispose(); } catch { }
-                _activeSidePanel = null;
-            }
-            _sideToolHost.Visible = false;
-        }
-
-        private void ShowSearchBar()
-        {
-            _sidePanels?.AttachSearchBar(_tabContainer);
-        }
-
-        private void ShowSnippetSearch()
-        {
-            var panel = _sidePanels.CreateSnippetSearchPanel(cmd =>
-            {
-                var tc = _tabContainer.GetActiveTerminalControl();
-                if (tc == null) return;
-                var line = cmd.EndsWith("\r") || cmd.EndsWith("\n") ? cmd : cmd + "\r";
-                tc.SendInput(line);
-            });
-            ShowSidePanel(panel);
-            var snip = panel as SnippetSearchPanel;
-            snip?.ShowAndFocus();
-        }
-
         private void OnFormClosing(object sender, FormClosingEventArgs e)
         {
             try { _sessionState?.Save(); } catch { }
-            _hotkeyManager?.Dispose();
+            try { _hotkeys?.Dispose(); } catch { }
             _tabContainer.CloseAllTabs();
             _tunnelManager.Dispose();
             _keepassService.Dispose();
             _securityManager.Dispose();
         }
 
-        private void SaveSessionState()
-        {
-            try { _sessionState?.Save(); } catch { }
-        }
-
-        private void RestoreSessionState()
-        {
-            try { _sessionState?.Restore(); } catch { }
-        }
-
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
-            if (keyData == Keys.Escape && _currentViewMode == ViewMode.Focus)
-            {
-                _menuStrip.Visible = true;
+            if (keyData == Keys.Escape && _viewMode != null && _viewMode.TryHandleEscape())
                 return true;
-            }
             if (keyData == (Keys.Control | Keys.R))
             {
                 _tabContainer.ReconnectActiveTab();
@@ -696,12 +471,12 @@ namespace Gdterm.UI.Forms
             }
             if (keyData == (Keys.Control | Keys.F))
             {
-                ShowSearchBar();
+                _sidePanels?.AttachSearchBar(_tabContainer);
                 return true;
             }
             if (keyData == (Keys.Control | Keys.P))
             {
-                ShowSnippetSearch();
+                _sidePanelHost?.ShowSnippetSearch(_sidePanels, _tabContainer);
                 return true;
             }
             return base.ProcessCmdKey(ref msg, keyData);

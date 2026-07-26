@@ -145,6 +145,11 @@
     <Compile Include="Services\ActiveSessionBridge.cs" />
     <Compile Include="Services\CredentialResolver.cs" />
     <Compile Include="Services\TabSessionLifecycle.cs" />
+    <Compile Include="Services\TabActiveSessionQuery.cs" />
+    <Compile Include="Services\GlobalHotkeyController.cs" />
+    <Compile Include="Services\ToolsDialogsLauncher.cs" />
+    <Compile Include="Services\SidePanelHost.cs" />
+    <Compile Include="Services\ViewModeController.cs" />
     <Compile Include="Services\MainFormMenuBuilder.cs" />
     <Compile Include="Services\ConnectionImportExportUi.cs" />
     <Compile Include="Services\MasterPasswordPrompt.cs" />

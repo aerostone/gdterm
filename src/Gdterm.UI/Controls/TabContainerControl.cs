@@ -32,6 +32,7 @@ namespace Gdterm.UI.Controls
         private readonly TabSessionLifecycle _lifecycle;
         private readonly ProtocolTabOpener _opener;
         private readonly TabReconnectService _reconnectService;
+        private readonly TabActiveSessionQuery _activeQuery;
         private readonly Dictionary<TabPage, TabSessionState> _sessions = new Dictionary<TabPage, TabSessionState>();
         private TabControl _tabControl;
 
@@ -72,6 +73,9 @@ namespace Gdterm.UI.Controls
             _opener.OnTerminalConnected = HandleTerminalConnected;
             _opener.OnRdpConnected = HandleRdpConnected;
             _reconnectService = new TabReconnectService();
+            _activeQuery = new TabActiveSessionQuery(
+                () => _tabControl != null ? _tabControl.SelectedTab : null,
+                _sessions);
 
             if (_reconnectWatchdog != null)
             {
@@ -444,15 +448,13 @@ namespace Gdterm.UI.Controls
         /// <summary>当前活动终端控件</summary>
         public TerminalControl GetActiveTerminalControl()
         {
-            if (_tabControl.SelectedTab == null) return null;
-            if (!_sessions.TryGetValue(_tabControl.SelectedTab, out var session)) return null;
-            return session.Control as TerminalControl;
+            return _activeQuery.GetActiveTerminalControl();
         }
 
         /// <summary>当前活动终端会话</summary>
         public ITerminalSession GetActiveSession()
         {
-            return GetActiveTerminalControl()?.Session;
+            return _activeQuery.GetActiveSession();
         }
 
         /// <summary>
@@ -460,9 +462,7 @@ namespace Gdterm.UI.Controls
         /// </summary>
         public ISshPortForwardHost GetActivePortForwardHost()
         {
-            var session = GetActiveSession() as TerminalSession;
-            if (session == null || session.UnderlyingClient == null) return null;
-            return SshPortForwardHost.Wrap(session.UnderlyingClient);
+            return _activeQuery.GetActivePortForwardHost();
         }
 
         /// <summary>
@@ -470,9 +470,7 @@ namespace Gdterm.UI.Controls
         /// </summary>
         public ISshRemoteSession GetActiveRemoteSession()
         {
-            var session = GetActiveSession() as TerminalSession;
-            if (session == null || session.UnderlyingClient == null) return null;
-            return SshNetRemoteSession.Wrap(session.UnderlyingClient);
+            return _activeQuery.GetActiveRemoteSession();
         }
 
         /// <summary>兼容旧调用：返回端口转发宿主</summary>
@@ -484,24 +482,13 @@ namespace Gdterm.UI.Controls
         /// <summary>所有已连接终端会话（多通道/批量命令）</summary>
         public Dictionary<string, ITerminalSession> GetConnectedSessions()
         {
-            var map = new Dictionary<string, ITerminalSession>();
-            foreach (var kvp in _sessions)
-            {
-                if (kvp.Value.Control is TerminalControl tc && tc.Session != null && tc.IsConnected)
-                {
-                    var id = kvp.Value.SessionId ?? kvp.Value.Config?.Id ?? Guid.NewGuid().ToString("N");
-                    map[id] = tc.Session;
-                }
-            }
-            return map;
+            return _activeQuery.GetConnectedSessions();
         }
 
         /// <summary>当前活动健康监控</summary>
         public ConnectionHealthMonitor GetActiveHealthMonitor()
         {
-            if (_tabControl.SelectedTab == null) return null;
-            if (!_sessions.TryGetValue(_tabControl.SelectedTab, out var session)) return null;
-            return session.HealthMonitor;
+            return _activeQuery.GetActiveHealthMonitor();
         }
 
         protected override void Dispose(bool disposing)

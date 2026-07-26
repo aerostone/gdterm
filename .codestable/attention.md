@@ -62,3 +62,5 @@
 - finding-10 拆分进度：SidePanelFactory / SessionStateCoordinator / TabSessionLifecycle / ActiveSessionBridge / CredentialResolver；MainForm 与 TabContainer 仍是布局+建签枢纽，禁止再堆业务到这两类
 - UI Services：协议建签用 ProtocolTabOpener；菜单用 MainFormMenuBuilder；侧栏用 SidePanelFactory；关签/健康/登录脚本用 TabSessionLifecycle；禁止再把协议 Create* 写回 TabContainer
 - 终端自动日志默认关；连接 Metadata 设 autoLog=true 或 terminalProfile.autoLog 才启用，日志目录 data/logs/terminal
+- finding-10 继续拆分：ViewModeController / SidePanelHost / ToolsDialogsLauncher / GlobalHotkeyController / TabActiveSessionQuery；MainForm~485、TabContainer~500
+- 禁止把视图模式/侧栏 ShowHide/工具对话框逻辑重新堆回 MainForm；新逻辑进 Services/

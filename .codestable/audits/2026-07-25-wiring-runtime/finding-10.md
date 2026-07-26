@@ -39,9 +39,9 @@ status: partial
 - **done**:
   - `ActiveSessionBridge` / `CredentialResolver` / `RdpOptionsBuilder`
   - `SidePanelFactory` / `SessionStateCoordinator` / `TabSessionLifecycle`
-  - `ProtocolTabOpener` + `TabSessionState`/`OpenedTab`
-  - `MainFormMenuBuilder`
-  - `TabReconnectService`（重连就绪轮询）
-  - `MasterPasswordPrompt` / `ConnectionImportExportUi`
-- **metrics**: MainForm 1072→~704；TabContainer 836→~513
-- **remaining**: MainForm 仍持有布局/视图模式/热键/部分对话框事件；TabContainer 仍负责字典/关签/绘制 chrome；完整 SessionOrchestrator deferred
+  - `ProtocolTabOpener` / `TabSessionState` / `MainFormMenuBuilder`
+  - `TabReconnectService` / `MasterPasswordPrompt` / `ConnectionImportExportUi`
+  - `ViewModeController` / `SidePanelHost` / `ToolsDialogsLauncher` / `GlobalHotkeyController`
+  - `TabActiveSessionQuery`
+- **metrics**: MainForm 1072→~485；TabContainer 836→~500
+- **remaining**: MainForm 仍是组合根（DI 字段 + 布局 + 少量事件）；TabContainer 仍负责字典/关签/绘制 chrome；完整 SessionOrchestrator deferred

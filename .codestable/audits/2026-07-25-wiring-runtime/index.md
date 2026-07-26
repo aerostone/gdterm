@@ -153,6 +153,6 @@ mode: standard-plus
 | 13 | P1 | resolved | `0355592` PortForward/Toolbox 会话注入 |
 | 14 | P1 | resolved | `08b913d` ProtocolType 命名 |
 
-**剩余主动债**：finding-10 仍 partial（Reconnect/ImportExport/Menu/Protocol 已拆，MainForm~704、TabContainer~513；完整 SessionOrchestrator deferred）。finding-12 resolved。ApiKey gdk2。
+**剩余主动债**：finding-10 仍 partial（ViewMode/SidePanelHost/ToolsDialogs/Hotkey/ActiveQuery 已再拆，MainForm~485、TabContainer~500；完整 SessionOrchestrator deferred）。finding-12 resolved。ApiKey gdk2。
 
 **综合观感（修复后预估）**：从 3.3/10 提升到约 **7.0–7.5/10**（P0 闭环，P1 大部分 partial/resolved）。
