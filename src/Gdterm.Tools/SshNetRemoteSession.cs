@@ -56,7 +56,8 @@ namespace Gdterm.Tools
                 return new RemoteCommandResult
                 {
                     Command = command,
-                    ExitCode = cmd.ExitStatus,
+                    // SSH.NET 2024: ExitStatus 为 int?
+                    ExitCode = cmd.ExitStatus.HasValue ? cmd.ExitStatus.Value : -1,
                     Stdout = cmd.Result,
                     Stderr = cmd.Error,
                     Duration = sw.Elapsed

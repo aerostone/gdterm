@@ -110,7 +110,7 @@ namespace Gdterm.Sftp
             try
             {
                 var cmd = ssh.RunCommand(string.Format("chmod {0} {1}", permission, remotePath));
-                return cmd.ExitStatus == 0;
+                return cmd.ExitStatus.GetValueOrDefault(-1) == 0;
             }
             catch { return false; }
         }
@@ -123,7 +123,7 @@ namespace Gdterm.Sftp
             {
                 var target = group != null ? owner + ":" + group : owner;
                 var cmd = ssh.RunCommand(string.Format("chown {0} {1}", target, remotePath));
-                return cmd.ExitStatus == 0;
+                return cmd.ExitStatus.GetValueOrDefault(-1) == 0;
             }
             catch { return false; }
         }
@@ -135,7 +135,7 @@ namespace Gdterm.Sftp
             try
             {
                 var cmd = ssh.RunCommand(string.Format("stat -c '%a %U %G %F' {0}", remotePath));
-                if (cmd.ExitStatus != 0) return null;
+                if (cmd.ExitStatus.GetValueOrDefault(-1) != 0) return null;
 
                 var parts = cmd.Result.Trim().Split(new[] { ' ' }, 4);
                 if (parts.Length < 4) return null;
