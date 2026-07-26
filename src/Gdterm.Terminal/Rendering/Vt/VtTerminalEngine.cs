@@ -236,7 +236,7 @@ namespace Gdterm.Terminal.Rendering.Vt
         }
 
         /// <summary>WebColor 形如 #RRGGBB 或 #AARRGGBB（VtNetCore 用 ARGB 的低 24 位）。</summary>
-        internal static Color ParseWebColor(string web, Color fallback)
+        public static Color ParseWebColor(string web, Color fallback)
         {
             if (string.IsNullOrEmpty(web)) return fallback;
             var s = web.Trim();
