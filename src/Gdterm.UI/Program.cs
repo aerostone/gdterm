@@ -284,6 +284,18 @@ namespace Gdterm.UI
             }
         }
 
+        /// <summary>
+        /// 持久化主密码哈希到 data/master-password.ini。
+        /// 供 修改主密码 流程在 SecurityManager.SetMasterPassword 后调用。
+        /// </summary>
+        public static void PersistMasterPasswordConfig(ISecurityManager securityManager)
+        {
+            if (securityManager == null) return;
+            var dataDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data");
+            var iniPath = Path.Combine(dataDir, "master-password.ini");
+            SavePasswordConfig(securityManager.GetPasswordConfig(), iniPath);
+        }
+
         private static MasterPasswordConfig ParsePasswordConfig(string text)
         {
             if (string.IsNullOrWhiteSpace(text)) return null;

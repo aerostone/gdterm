@@ -297,6 +297,7 @@ namespace Gdterm.UI.Forms
                 KeePassManager = (s, e) => _toolsDialogs.OpenKeePassManager(),
                 PasswordHealth = (s, e) => _toolsDialogs.OpenPasswordHealth(),
                 PasswordGenerator = (s, e) => _toolsDialogs.OpenPasswordGenerator(),
+                ChangeMasterPassword = (s, e) => _toolsDialogs.OpenChangeMasterPassword(),
                 AppearanceSettings = (s, e) => _toolsDialogs.OpenAppearanceSettings(),
                 AiSettings = (s, e) => _toolsDialogs.OpenAiSettings(),
                 DangerousCmdSettings = (s, e) => _toolsDialogs.OpenDangerousCmdSettings(),

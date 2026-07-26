@@ -97,6 +97,43 @@ namespace Gdterm.UI.Services
                 form.ShowDialog(_owner);
         }
 
+        public void OpenChangeMasterPassword()
+        {
+            if (_securityManager == null)
+            {
+                MessageBox.Show(_owner, "安全模块未初始化", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            // 必须先解锁主会话，否则无法拿到旧主密码 / 无法重加密 kdbx
+            if (_securityManager.IsLocked)
+            {
+                if (!MasterPasswordPrompt.Confirm(_owner, _securityManager, "修改主密码"))
+                    return;
+            }
+
+            using (var form = new ChangeMasterPasswordForm(_securityManager))
+            {
+                form.ChangeRequested += (s, args) =>
+                {
+                    // 1) 重加密 kdbx：用旧主密码解锁已存在库，再用新主密码重新加密保存
+                    if (_keepassService != null)
+                    {
+                        var ok = _keepassService.ChangeMasterPasswordAsync(args.OldPassword, args.NewPassword)
+                            .GetAwaiter().GetResult();
+                        if (!ok)
+                            throw new InvalidOperationException("密码库重加密失败：旧密码不正确或文件损坏");
+                    }
+
+                    // 2) 更新 SecurityManager 哈希（同时会重新强度校验）
+                    _securityManager.SetMasterPassword(args.OldPassword, args.NewPassword);
+
+                    // 3) 持久化 master-password.ini
+                    Program.PersistMasterPasswordConfig(_securityManager);
+                };
+                form.ShowDialog(_owner);
+            }
+        }
+
         public void OpenDangerousCmdSettings()
         {
             using (var form = new DangerousCommandConfigForm(_dangerousCmdDetector))

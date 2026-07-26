@@ -42,6 +42,7 @@ namespace Gdterm.UI.Services
             public EventHandler KeePassManager { get; set; }
             public EventHandler PasswordHealth { get; set; }
             public EventHandler PasswordGenerator { get; set; }
+            public EventHandler ChangeMasterPassword { get; set; }
             public EventHandler AiSettings { get; set; }
             public EventHandler DangerousCmdSettings { get; set; }
             public EventHandler ShowHotkeys { get; set; }
@@ -127,6 +128,7 @@ namespace Gdterm.UI.Services
             toolsMenu.DropDownItems.Add("密码库管理(&K)", null, cb.KeePassManager);
             toolsMenu.DropDownItems.Add("密码健康报告(&H)", null, cb.PasswordHealth);
             toolsMenu.DropDownItems.Add("🔑 密码生成器(&G)", null, cb.PasswordGenerator);
+            toolsMenu.DropDownItems.Add("修改主密码(&M)...", null, cb.ChangeMasterPassword);
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
             toolsMenu.DropDownItems.Add("外观设置(&R)...", null, cb.AppearanceSettings);
             toolsMenu.DropDownItems.Add("AI 助手设置(&I)", null, cb.AiSettings);

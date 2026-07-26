@@ -23,6 +23,13 @@ namespace Gdterm.KeePass
         Task<bool> EnsureDatabaseAsync(string masterPassword);
 
         /// <summary>
+        /// 修改密码库主密码：用 oldPw 解锁已存在 kdbx，再用 newPw 重新加密并保存。
+        /// 同步调用方负责更新 SecurityManager 的主密码哈希与 master-password.ini。
+        /// </summary>
+        /// <returns>true 成功（旧密码错误或 kdbx 损坏返回 false）</returns>
+        Task<bool> ChangeMasterPasswordAsync(string oldMasterPassword, string newMasterPassword);
+
+        /// <summary>
         /// 锁定密码库，清除内存中的明文
         /// </summary>
         void Lock();

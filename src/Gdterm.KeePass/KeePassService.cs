@@ -89,6 +89,40 @@ namespace Gdterm.KeePass
             return UnlockAsync(masterPassword);
         }
 
+        /// <summary>
+        /// 修改密码库主密码：用 oldPw 解锁已存在 kdbx，再用 newPw 重加密保存。
+        /// 成功后保持用 newPw 解锁状态。
+        /// </summary>
+        public async Task<bool> ChangeMasterPasswordAsync(string oldMasterPassword, string newMasterPassword)
+        {
+            if (string.IsNullOrEmpty(oldMasterPassword) || string.IsNullOrEmpty(newMasterPassword))
+                return false;
+            if (string.Equals(oldMasterPassword, newMasterPassword, StringComparison.Ordinal))
+                return true;
+
+            // 1) 先用旧主密码解锁（不解锁的状态下无法重加密）
+            var opened = await UnlockAsync(oldMasterPassword).ConfigureAwait(false);
+            if (!opened) return false;
+
+            try
+            {
+                // 2) 替换加密 key 并重新保存，kdbx 文件用新主密码重新加密
+                var newKey = new CompositeKey();
+                newKey.AddUserKey(new KcpPassword(newMasterPassword));
+                _database.MasterKey = newKey;
+
+                var logger = new NullStatusLogger();
+                _database.Save(logger);
+                return true;
+            }
+            catch
+            {
+                // 重加密失败：用旧主密码重新解锁，保持原有状态
+                try { await UnlockAsync(oldMasterPassword).ConfigureAwait(false); } catch { }
+                return false;
+            }
+        }
+
         public void Lock()
         {
             if (_database != null)
