@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace Gdterm.Terminal
 {
@@ -22,19 +21,20 @@ namespace Gdterm.Terminal
     }
 
     /// <summary>
-    /// 连接健康监控器——实时延迟、连接状态、流量统计
+    /// 连接健康监控器——实时延迟、连接状态、流量统计。
+    /// go-live P0-02：ConnectionLost 可重复触发；RecordReconnect 后重新武装。
     /// </summary>
     public class ConnectionHealthMonitor : IDisposable
     {
         private readonly ITerminalSession _session;
         private Timer _timer;
         private readonly Stopwatch _uptime = new Stopwatch();
-        private long _lastBytesRx;
-        private long _lastBytesTx;
         private readonly List<HealthSnapshot> _history = new List<HealthSnapshot>();
         private readonly object _lock = new object();
         private DateTime _connectedAt;
         private int _reconnectCount;
+        private bool _lostRaised;
+        private bool _wasConnected;
 
         public ITerminalSession Session => _session;
         public TimeSpan CurrentUptime => _uptime.Elapsed;
@@ -42,13 +42,14 @@ namespace Gdterm.Terminal
         /// <summary>健康状态快照更新时触发</summary>
         public event Action<HealthSnapshot> SnapshotUpdated;
 
-        /// <summary>连接断开时触发</summary>
+        /// <summary>连接断开时触发（每次从 connected→lost 边沿一次）</summary>
         public event Action<string> ConnectionLost; // hostName
 
         public ConnectionHealthMonitor(ITerminalSession session)
         {
             _session = session;
             _connectedAt = DateTime.Now;
+            _wasConnected = session?.IsConnected == true;
             _uptime.Start();
         }
 
@@ -62,7 +63,6 @@ namespace Gdterm.Terminal
         public void Start(int intervalMs = 5000)
         {
             _timer?.Dispose();
-            // 立即采一次，之后按间隔；非活动标签通过 IsPaused 跳过
             _timer = new Timer(OnTick, null, 0, intervalMs);
         }
 
@@ -84,10 +84,31 @@ namespace Gdterm.Terminal
             }
         }
 
-        /// <summary>记录重连事件</summary>
+        /// <summary>
+        /// 记录重连成功：重置 lost 闩锁，恢复 uptime，允许再次 ConnectionLost。
+        /// </summary>
         public void RecordReconnect()
         {
             _reconnectCount++;
+            _lostRaised = false;
+            _connectedAt = DateTime.Now;
+            _wasConnected = true;
+            if (!_uptime.IsRunning)
+                _uptime.Restart();
+            else
+                _uptime.Restart();
+        }
+
+        /// <summary>强制重新武装（锁屏 Resume 后调用，P1-03）。</summary>
+        public void Rearm()
+        {
+            _lostRaised = false;
+            if (_session?.IsConnected == true)
+            {
+                _wasConnected = true;
+                if (_connectedAt == default)
+                    _connectedAt = DateTime.Now;
+            }
         }
 
         private void OnTick(object state)
@@ -97,7 +118,6 @@ namespace Gdterm.Terminal
             {
                 bool connected = _session?.IsConnected == true;
 
-                // 计算延迟（通过检查连接状态的响应时间）
                 var sw = Stopwatch.StartNew();
                 bool alive = _session?.IsConnected == true;
                 sw.Stop();
@@ -108,7 +128,7 @@ namespace Gdterm.Terminal
                     IsConnected = connected,
                     LatencyMs = sw.Elapsed.TotalMilliseconds,
                     ReconnectCount = _reconnectCount,
-                    Uptime = _uptime.Elapsed,
+                    Uptime = connected ? _uptime.Elapsed : TimeSpan.Zero,
                     StatusText = connected ? "已连接" : "已断开"
                 };
 
@@ -120,15 +140,35 @@ namespace Gdterm.Terminal
                         _history.RemoveRange(0, _history.Count - cap);
                 }
 
-                SnapshotUpdated?.Invoke(snapshot);
+                try { SnapshotUpdated?.Invoke(snapshot); } catch { }
 
-                if (!connected && _connectedAt != default)
+                // 边沿检测：仅在 connected→disconnected 且尚未对本轮 lost 发过事件
+                if (connected)
                 {
-                    ConnectionLost?.Invoke("session");
-                    _connectedAt = default;
+                    if (!_wasConnected)
+                    {
+                        // 外部恢复连接（非 RecordReconnect 路径）
+                        _connectedAt = DateTime.Now;
+                        if (!_uptime.IsRunning) _uptime.Start();
+                    }
+                    _wasConnected = true;
+                    _lostRaised = false;
+                }
+                else
+                {
+                    if (_wasConnected && !_lostRaised)
+                    {
+                        _lostRaised = true;
+                        _wasConnected = false;
+                        try { ConnectionLost?.Invoke(_session?.Hostname ?? "session"); } catch { }
+                        // 注意：不清空 _connectedAt 永久闩；用 _lostRaised 防抖
+                    }
                 }
             }
-            catch { }
+            catch
+            {
+                // 不吞掉后续 tick：空 catch 仅本轮
+            }
         }
 
         public void Dispose()

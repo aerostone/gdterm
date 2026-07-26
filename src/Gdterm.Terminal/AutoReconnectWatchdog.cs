@@ -114,12 +114,34 @@ namespace Gdterm.Terminal
             }
         }
 
-        /// <summary>解锁后恢复自动重连监视</summary>
+        /// <summary>
+        /// 解锁后恢复自动重连监视（P1-03）。
+        /// 若会话已在暂停期间断开，立即重新触发重连环。
+        /// </summary>
         public void ResumeAll()
         {
+            List<string> lostWhilePaused = null;
             lock (_lock)
             {
                 _paused = false;
+                foreach (var kv in _sessions)
+                {
+                    var w = kv.Value;
+                    if (w == null || w.ManualDisconnect) continue;
+                    if (w.Session != null && !w.Session.IsConnected && !w.IsReconnecting)
+                    {
+                        if (lostWhilePaused == null) lostWhilePaused = new List<string>();
+                        lostWhilePaused.Add(w.SessionId);
+                    }
+                }
+            }
+
+            if (lostWhilePaused != null)
+            {
+                foreach (var id in lostWhilePaused)
+                {
+                    try { OnConnectionLost(id); } catch { }
+                }
             }
         }
 

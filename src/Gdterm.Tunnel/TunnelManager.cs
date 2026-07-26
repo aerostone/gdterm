@@ -10,27 +10,60 @@ using Renci.SshNet;
 namespace Gdterm.Tunnel
 {
     /// <summary>
-    /// 隧道管理器——管理 SSH 隧道的建立、查询和关闭
+    /// 隧道管理器——管理 SSH 隧道的建立、查询和关闭。
+    /// go-live P1-04：同一 connectionId 并发 Establish 原子化（单飞）。
     /// </summary>
     public class TunnelManager : ITunnelManager
     {
         private readonly ConcurrentDictionary<string, TunnelSession> _sessions
             = new ConcurrentDictionary<string, TunnelSession>();
 
-        /// <summary>
-        /// 建立隧道
-        /// </summary>
-        /// <param name="config">连接配置（含跳板链和隧道配置）</param>
-        /// <param name="credential">凭据（用户名和密码）</param>
-        /// <param name="ct">取消令牌</param>
-        /// <returns>隧道接入点（LocalHost:LocalPort）</returns>
-        public async Task<TunnelEndpoint> EstablishAsync(ConnectionConfig config, CredentialPayload credential, CancellationToken ct)
+        /// <summary>connectionId → 进行中的建立任务（单飞）。</summary>
+        private readonly ConcurrentDictionary<string, Task<TunnelEndpoint>> _inflight
+            = new ConcurrentDictionary<string, Task<TunnelEndpoint>>();
+
+        public Task<TunnelEndpoint> EstablishAsync(ConnectionConfig config, CredentialPayload credential, CancellationToken ct)
         {
             if (config == null) throw new ArgumentNullException(nameof(config));
 
+            var connectionId = config.Id ?? Guid.NewGuid().ToString("N");
+
+            // 复用活跃隧道
+            if (!string.IsNullOrEmpty(connectionId)
+                && _sessions.TryGetValue(connectionId, out var existing)
+                && existing != null
+                && existing.IsActive)
+            {
+                return Task.FromResult(new TunnelEndpoint
+                {
+                    LocalHost = existing.LocalHost,
+                    LocalPort = existing.LocalPort,
+                    ConnectionId = connectionId
+                });
+            }
+
+            // P1-04：并发同 connectionId 只建一次
+            var task = _inflight.GetOrAdd(connectionId, id =>
+                EstablishCoreAsync(config, credential, ct).ContinueWith(t =>
+                {
+                    Task<TunnelEndpoint> removed;
+                    _inflight.TryRemove(id, out removed);
+                    if (t.IsFaulted && t.Exception != null)
+                        throw t.Exception.GetBaseException();
+                    if (t.IsCanceled)
+                        throw new OperationCanceledException();
+                    return t.Result;
+                }, TaskContinuationOptions.ExecuteSynchronously));
+
+            return task;
+        }
+
+        private async Task<TunnelEndpoint> EstablishCoreAsync(
+            ConnectionConfig config, CredentialPayload credential, CancellationToken ct)
+        {
             var connectionId = config.Id;
 
-            // 同一 connectionId 复用活跃隧道（SSH 终端 + SFTP 共享跳板，避免互相拆掉）
+            // 双检：可能在排队期间已有活跃隧道
             if (!string.IsNullOrEmpty(connectionId)
                 && _sessions.TryGetValue(connectionId, out var existing)
                 && existing != null
@@ -44,7 +77,6 @@ namespace Gdterm.Tunnel
                 };
             }
 
-            // 旧隧道已失效：清理后重建
             if (!string.IsNullOrEmpty(connectionId)
                 && _sessions.TryRemove(connectionId, out var oldSession))
             {
@@ -60,16 +92,10 @@ namespace Gdterm.Tunnel
                     ct.ThrowIfCancellationRequested();
 
                     if (config.JumpChain?.Hops == null || config.JumpChain.Hops.Count == 0)
-                    {
-                        // 直连模式：无跳板链
                         EstablishDirect(session, config, credential, ct);
-                    }
                     else
-                    {
-                        // 跳板模式：逐 hop 连接
                         EstablishWithJumpChain(session, config, credential, ct);
-                    }
-                }, ct);
+                }, ct).ConfigureAwait(false);
 
                 _sessions[connectionId] = session;
 
@@ -102,9 +128,6 @@ namespace Gdterm.Tunnel
             }
         }
 
-        /// <summary>
-        /// 关闭指定 connectionId 的隧道
-        /// </summary>
         public Task CloseAsync(string connectionId)
         {
             if (_sessions.TryRemove(connectionId, out var session))
@@ -114,9 +137,6 @@ namespace Gdterm.Tunnel
             return Task.CompletedTask;
         }
 
-        /// <summary>
-        /// 查询隧道状态
-        /// </summary>
         public TunnelStatus GetStatus(string connectionId)
         {
             if (_sessions.TryGetValue(connectionId, out var session))
@@ -137,9 +157,6 @@ namespace Gdterm.Tunnel
             };
         }
 
-        /// <summary>
-        /// 关闭所有隧道
-        /// </summary>
         public void Dispose()
         {
             foreach (var kvp in _sessions)
@@ -147,6 +164,7 @@ namespace Gdterm.Tunnel
                 try { kvp.Value.Dispose(); } catch { /* best-effort */ }
             }
             _sessions.Clear();
+            _inflight.Clear();
         }
 
         private void EstablishDirect(TunnelSession session, ConnectionConfig config, CredentialPayload credential, CancellationToken ct)
@@ -194,12 +212,10 @@ namespace Gdterm.Tunnel
                 ct.ThrowIfCancellationRequested();
 
                 var hop = hops[i];
-                // finding-06：优先 hop.CredentialRefId 映射，否则叶子 Password
-                var hopPassword = CredentialPayload.ResolveHopPassword(hop, credential);
-
+                // P1-10：优先 hop 映射的完整凭据（含私钥），否则密码
                 try
                 {
-                    session.ConnectHop(hop, hopPassword, lastClient);
+                    session.ConnectHop(hop, credential, lastClient);
                 }
                 catch (Exception ex)
                 {
@@ -211,14 +227,11 @@ namespace Gdterm.Tunnel
                         innerException: ex);
                 }
 
-                // 获取当前 hop 的 SshClient（通过内部列表最后添加的）
-                // 这里通过 session 内部状态获取
                 lastClient = session.GetLastClient();
             }
 
             ct.ThrowIfCancellationRequested();
 
-            // 最后一跳建立端口转发
             try
             {
                 session.StartPortForwarding(config);

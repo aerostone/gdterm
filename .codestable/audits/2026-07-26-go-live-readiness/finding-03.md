@@ -6,7 +6,7 @@ nature: bug
 severity: P1
 confidence: high
 suggested_action: cs-issue
-status: open
+status: **resolved** (2026-07-26 go-live fix batch)
 ---
 
 # Finding 03：锁屏 Pause 吞断线，解锁不 re-arm
@@ -33,3 +33,7 @@ status: open
 ## 建议动作
 
 `cs-issue`。
+
+## Resolution
+
+Fixed in go-live fix batch (2026-07-26). See commit message for details.

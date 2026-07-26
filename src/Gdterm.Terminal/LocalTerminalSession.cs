@@ -35,6 +35,10 @@ namespace Gdterm.Terminal
 
         public event EventHandler<TerminalOutputEventArgs> OutputReceived;
 
+        public event EventHandler Disconnected;
+
+        private int _disconnectRaised;
+
         public object TryGetSshClient() => null;
 
         public LocalTerminalSession(string shellPath = null, string workingDirectory = null)
@@ -182,6 +186,7 @@ namespace Gdterm.Terminal
             if (_disposed) return;
             _disposed = true;
             Disconnect();
+            RaiseDisconnected();
         }
 
         private void OnOutputData(object sender, DataReceivedEventArgs e)
@@ -199,6 +204,15 @@ namespace Gdterm.Terminal
         private void OnProcessExited(object sender, EventArgs e)
         {
             AppendAndRaise("\r\n[本地终端已退出]\r\n");
+            RaiseDisconnected();
+        }
+
+        private void RaiseDisconnected()
+        {
+            if (System.Threading.Interlocked.Exchange(ref _disconnectRaised, 1) != 0)
+                return;
+            try { Disconnected?.Invoke(this, EventArgs.Empty); }
+            catch { }
         }
 
         private void AppendAndRaise(string text)

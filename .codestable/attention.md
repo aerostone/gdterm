@@ -81,3 +81,9 @@
 - P0 post-split 2026-07-26：Connect dispose 竞态、危险命令 fail-closed、主密码 PBKDF2(100k)+旧哈希迁移、锁屏 ClearCachedCredentials+Watchdog.PauseAll、重连无 Sleep/DoEvents
 - master-password.json 现含 algorithm/iterations；缺省 algorithm 视为旧 SHA256，解锁后升级
 - P1 post-split 2026-07-26：分屏终端解析、hop 凭据、pause 不泵 UI、ApiKey 强制 gdk2、SecretScan 脱敏再验证、ITerminalSession.TryGetSshClient、测试扩 CredentialPayload/SecretFinding/PBKDF2
+
+- go-live 2026-07-26：重连必须 async（ConnectAsyncIfNeeded + WaitForTerminalConnectedAsync），禁止 UI 线程 GetResult
+- ConnectionHealthMonitor 用边沿+Rearm/RecordReconnect；锁屏 ResumeAll 会重触发断线会话
+- TunnelManager 同 connectionId 单飞；跳板 ConnectHop 支持私钥
+- AuditLogger 写盘失败回落 audit-fallback.jsonl；锁屏 IdleLock/Unlock 写审计
+- RDP CredWrite 使用 CRED_PERSIST_SESSION；进程退出清理

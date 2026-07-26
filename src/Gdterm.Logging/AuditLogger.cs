@@ -189,22 +189,52 @@ namespace Gdterm.Logging
         {
             lock (_lock)
             {
-                if (_writer == null || _currentFileSize > _config.MaxFileSizeMB * 1024 * 1024)
+                try
                 {
-                    RotateFile();
+                    if (_writer == null || _currentFileSize > _config.MaxFileSizeMB * 1024 * 1024)
+                    {
+                        RotateFile();
+                    }
+
+                    var json = SerializeAuditEntry(entry);
+
+                    if (_config.EncryptLogs)
+                    {
+                        json = EncryptString(json);
+                    }
+
+                    if (_writer != null)
+                    {
+                        _writer.WriteLine(json);
+                        _writer.Flush();
+                        _currentFileSize += json.Length + Environment.NewLine.Length;
+                        return;
+                    }
+                }
+                catch
+                {
+                    // go-live P1-07：主审计文件失败时回落 crash 旁路，不丢安全事件
+                    try { WriteFallback(entry); } catch { }
+                    return;
                 }
 
-                var json = SerializeAuditEntry(entry);
-
-                if (_config.EncryptLogs)
-                {
-                    json = EncryptString(json);
-                }
-
-                _writer.WriteLine(json);
-                _writer.Flush();
-                _currentFileSize += json.Length + Environment.NewLine.Length;
+                try { WriteFallback(entry); } catch { }
             }
+        }
+
+        private void WriteFallback(AuditEntry entry)
+        {
+            try
+            {
+                var dir = _logDirectory;
+                if (string.IsNullOrEmpty(dir)) return;
+                if (!System.IO.Directory.Exists(dir))
+                    System.IO.Directory.CreateDirectory(dir);
+                var path = System.IO.Path.Combine(dir, "audit-fallback.jsonl");
+                var line = SerializeAuditEntry(entry);
+                System.IO.File.AppendAllText(path, line + Environment.NewLine, Encoding.UTF8);
+            }
+            catch { }
         }
 
         private void InitializeCurrentFile()

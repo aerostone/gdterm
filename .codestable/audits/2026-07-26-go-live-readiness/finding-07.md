@@ -6,7 +6,7 @@ nature: maintainability
 severity: P1
 confidence: high
 suggested_action: cs-issue
-status: open
+status: **resolved** (2026-07-26 go-live fix batch)
 ---
 
 # Finding 07：AuditLogger 写盘无失败回退
@@ -31,3 +31,7 @@ WriteEntry 全包 try；失败 `CrashLog`/`DiagLog`；writer null 时降级丢�
 ## 建议动作
 
 `cs-issue`。
+
+## Resolution
+
+Fixed in go-live fix batch (2026-07-26). See commit message for details.

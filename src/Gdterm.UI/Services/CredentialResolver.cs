@@ -67,8 +67,8 @@ namespace Gdterm.UI.Services
                     credential.SshPrivateKeyPassphrase = entry.SshPrivateKeyPassphrase;
                 }
 
-                // finding-06：预解析跳板 hop.CredentialRefId → 密码，供 TunnelManager 使用
-                PopulateHopPasswords(config, credential);
+                // finding-06 / P1-10：预解析跳板密码与私钥，供 TunnelManager 使用
+                PopulateHopCredentials(config, credential);
 
                 return credential;
             }
@@ -78,24 +78,43 @@ namespace Gdterm.UI.Services
             }
         }
 
-        private void PopulateHopPasswords(ConnectionConfig config, CredentialPayload credential)
+        private void PopulateHopCredentials(ConnectionConfig config, CredentialPayload credential)
         {
             if (credential == null || config?.JumpChain?.Hops == null) return;
-            Dictionary<string, string> map = null;
+            Dictionary<string, string> pwdMap = null;
+            Dictionary<string, byte[]> keyMap = null;
+            Dictionary<string, string> ppMap = null;
             foreach (var hop in config.JumpChain.Hops)
             {
                 if (hop == null || string.IsNullOrEmpty(hop.CredentialRefId)) continue;
                 try
                 {
                     var hopEntry = GetKeePassEntry(hop.CredentialRefId);
-                    if (hopEntry == null || string.IsNullOrEmpty(hopEntry.Password)) continue;
-                    if (map == null) map = new Dictionary<string, string>();
-                    map[hop.CredentialRefId] = hopEntry.Password;
+                    if (hopEntry == null) continue;
+                    if (!string.IsNullOrEmpty(hopEntry.Password))
+                    {
+                        if (pwdMap == null) pwdMap = new Dictionary<string, string>();
+                        pwdMap[hop.CredentialRefId] = hopEntry.Password;
+                    }
+                    if (hopEntry.SshPrivateKeyData != null && hopEntry.SshPrivateKeyData.Length > 0)
+                    {
+                        if (keyMap == null) keyMap = new Dictionary<string, byte[]>();
+                        keyMap[hop.CredentialRefId] = hopEntry.SshPrivateKeyData;
+                        if (!string.IsNullOrEmpty(hopEntry.SshPrivateKeyPassphrase))
+                        {
+                            if (ppMap == null) ppMap = new Dictionary<string, string>();
+                            ppMap[hop.CredentialRefId] = hopEntry.SshPrivateKeyPassphrase;
+                        }
+                    }
                 }
                 catch { }
             }
-            if (map != null)
-                credential.HopPasswordsByRefId = map;
+            if (pwdMap != null)
+                credential.HopPasswordsByRefId = pwdMap;
+            if (keyMap != null)
+                credential.HopPrivateKeysByRefId = keyMap;
+            if (ppMap != null)
+                credential.HopPrivateKeyPassphrasesByRefId = ppMap;
         }
 
         private KeePassEntry GetKeePassEntry(string entryId)

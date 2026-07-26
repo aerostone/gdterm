@@ -339,7 +339,7 @@ namespace Gdterm.UI.Forms
 
             _lockCoord = new LockStateCoordinator(
                 this, _securityManager, _keepassService, _lockOverlay,
-                _tabContainer, _reconnectWatchdog);
+                _tabContainer, _reconnectWatchdog, _auditLogger);
         }
 
         private void SetupEventHandlers()

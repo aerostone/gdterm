@@ -37,6 +37,7 @@ namespace Gdterm.UI.Controls
         private bool _isPaused = true; // 默认暂停，等 Resume 再连
         private bool _disposed;
         private bool _connecting;
+        private Task _connectTask;
 
         /// <summary>KeePass 注入的凭据</summary>
         public CredentialPayload Credentials { get; set; }
@@ -152,8 +153,27 @@ namespace Gdterm.UI.Controls
             }
         }
 
-        /// <summary>建立连接（懒加载：ResumeRendering 触发）</summary>
+        /// <summary>建立连接（懒加载 fire-and-forget；重连请用 ConnectAsyncIfNeeded）。</summary>
         public async void Connect()
+        {
+            try { await ConnectAsyncCore().ConfigureAwait(true); }
+            catch { /* ConnectAsyncCore 已写屏/审计 */ }
+        }
+
+        /// <summary>
+        /// go-live P0-01：返回可 await 的连接任务，避免 UI 线程 GetResult 与 async void 死锁。
+        /// 已连接返回 CompletedTask；正在连接返回进行中任务；否则启动新连接。
+        /// </summary>
+        public Task ConnectAsyncIfNeeded()
+        {
+            if (_disposed) return Task.FromResult(false).ContinueWith(_ => { });
+            if (_session != null && _session.IsConnected) return Task.CompletedTask;
+            if (_connectTask != null && !_connectTask.IsCompleted) return _connectTask;
+            _connectTask = ConnectAsyncCore();
+            return _connectTask;
+        }
+
+        private async Task ConnectAsyncCore()
         {
             if (_session != null || _connecting || _disposed) return;
             _connecting = true;
@@ -168,7 +188,7 @@ namespace Gdterm.UI.Controls
                     if (_terminalFactory == null)
                         throw new InvalidOperationException("ITerminalSessionFactory 未注入，无法创建串口会话");
                     session = _terminalFactory.CreateSerial();
-                    await Task.Run(() => session.Connect(_config, credential));
+                    await Task.Run(() => session.Connect(_config, credential)).ConfigureAwait(false);
                 }
                 else
                 {
@@ -179,16 +199,17 @@ namespace Gdterm.UI.Controls
                     if (_config.Tunnel != null && _tunnelManager != null)
                     {
                         var tunnelEndpoint = await _tunnelManager.EstablishAsync(
-                            _config, credential, System.Threading.CancellationToken.None);
-                        await Task.Run(() => session.ConnectViaTunnel(_config, credential, tunnelEndpoint));
+                            _config, credential, System.Threading.CancellationToken.None).ConfigureAwait(false);
+                        await Task.Run(() => session.ConnectViaTunnel(_config, credential, tunnelEndpoint))
+                            .ConfigureAwait(false);
                     }
                     else
                     {
-                        await Task.Run(() => session.Connect(_config, credential));
+                        await Task.Run(() => session.Connect(_config, credential)).ConfigureAwait(false);
                     }
                 }
 
-                // finding-01：关签与 Connect 完成竞态——控件已 dispose 则立刻丢弃会话
+                // 关签与 Connect 完成竞态——控件已 dispose 则立刻丢弃会话
                 if (_disposed)
                 {
                     try { session.Dispose(); } catch { }
@@ -197,38 +218,70 @@ namespace Gdterm.UI.Controls
 
                 _session = session;
                 _session.OutputReceived += OnTerminalOutput;
+                _session.Disconnected += OnSessionDisconnected;
 
-                // 自动运行命令（profile）——走危险命令闸门
+                // 自动运行命令（profile）——走危险命令闸门（回 UI 线程）
                 if (_profile.AutoRunCommands != null)
                 {
-                    foreach (var cmd in _profile.AutoRunCommands)
-                    {
-                        if (!string.IsNullOrWhiteSpace(cmd))
-                            TrySendInput(cmd + (_profile.NewLineSequence ?? "\n"), isCommandLine: true);
+                    void RunAuto() {
+                        foreach (var cmd in _profile.AutoRunCommands)
+                        {
+                            if (!string.IsNullOrWhiteSpace(cmd))
+                                TrySendInput(cmd + (_profile.NewLineSequence ?? "\n"), isCommandLine: true);
+                        }
                     }
+                    if (InvokeRequired) BeginInvoke(new Action(RunAuto));
+                    else RunAuto();
                 }
 
-                _auditLogger?.LogConnection(
-                    _config.Id,
-                    _config.Host ?? _config.Name,
-                    (_config.Protocol).ToString(),
-                    ConnectionAction.Open);
-                SessionConnected?.Invoke(this, EventArgs.Empty);
+                try
+                {
+                    _auditLogger?.LogConnection(
+                        _config.Id,
+                        _config.Host ?? _config.Name,
+                        (_config.Protocol).ToString(),
+                        ConnectionAction.Open);
+                    if (!string.IsNullOrEmpty(credential?.Username))
+                        _auditLogger?.LogCredentialUse(_config.Id, credential.Username, CredentialAction.AutoFill);
+                }
+                catch (Exception ex) { DiagLog.Swallowed("TerminalControl.AuditOpen", ex); }
+
+                void RaiseConnected() { SessionConnected?.Invoke(this, EventArgs.Empty); }
+                if (InvokeRequired) BeginInvoke(new Action(RaiseConnected));
+                else RaiseConnected();
             }
             catch (Exception ex)
             {
                 if (_disposed) return;
-                _renderer?.Write("\r\n\x1b[31m连接失败: " + ex.Message + "\x1b[0m\r\n");
-                _auditLogger?.LogConnection(
-                    _config.Id,
-                    _config.Host ?? _config.Name,
-                    (_config.Protocol).ToString(),
-                    ConnectionAction.Error);
+                void WriteFail() {
+                    _renderer?.Write("\r\n\x1b[31m连接失败: " + ex.Message + "\x1b[0m\r\n");
+                }
+                if (InvokeRequired) BeginInvoke(new Action(WriteFail));
+                else WriteFail();
+                try
+                {
+                    _auditLogger?.LogConnection(
+                        _config.Id,
+                        _config.Host ?? _config.Name,
+                        (_config.Protocol).ToString(),
+                        ConnectionAction.Error);
+                }
+                catch (Exception auditEx) { DiagLog.Swallowed("TerminalControl.AuditError", auditEx); }
             }
             finally
             {
                 _connecting = false;
             }
+        }
+
+        private void OnSessionDisconnected(object sender, EventArgs e)
+        {
+            if (_disposed) return;
+            void Raise() {
+                try { SessionDisconnected?.Invoke(this, EventArgs.Empty); } catch { }
+            }
+            if (InvokeRequired) BeginInvoke(new Action(Raise));
+            else Raise();
         }
 
         /// <summary>启用会话自动日志（默认关闭，外部显式打开）</summary>
@@ -261,7 +314,7 @@ namespace Gdterm.UI.Controls
             }
 
             if (_session == null && !_connecting)
-                Connect();
+                ConnectAsyncIfNeeded();
         }
 
         /// <summary>
@@ -618,7 +671,11 @@ namespace Gdterm.UI.Controls
                     Credentials = null;
                     if (_session != null)
                     {
-                        DiagLog.Try("TerminalControl.Dispose.Unsub", () => _session.OutputReceived -= OnTerminalOutput);
+                        DiagLog.Try("TerminalControl.Dispose.Unsub", () =>
+                        {
+                            _session.OutputReceived -= OnTerminalOutput;
+                            _session.Disconnected -= OnSessionDisconnected;
+                        });
                         DiagLog.Try("TerminalControl.Dispose.Session", () => _session.Dispose());
                         _session = null;
                         try { SessionDisconnected?.Invoke(this, EventArgs.Empty); } catch { }

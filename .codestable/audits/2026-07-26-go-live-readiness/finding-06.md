@@ -6,7 +6,7 @@ nature: performance
 severity: P1
 confidence: high
 suggested_action: cs-issue
-status: open
+status: **resolved** (2026-07-26 go-live fix batch)
 ---
 
 # Finding 06：重连阻塞 UI + 无多标签资源闸
@@ -33,3 +33,7 @@ Watchdog 重连经 UI 同步路径，单次等待至 20s，MaxRetries=5 可造�
 ## 建议动作
 
 `cs-issue`（可与 finding-01 同 issue）。
+
+## Resolution
+
+Fixed in go-live fix batch (2026-07-26). See commit message for details.

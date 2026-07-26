@@ -82,19 +82,25 @@ namespace Gdterm.UI.Controls
 
             if (_reconnectWatchdog != null)
             {
+                // go-live P0-01：UI 线程只调度，await 异步重连，禁止 GetResult 死锁
                 _reconnectWatchdog.DefaultReconnectFunc = async (id, session) =>
                 {
+                    if (IsDisposed) return false;
                     if (InvokeRequired)
                     {
                         var tcs = new TaskCompletionSource<bool>();
-                        BeginInvoke(new Action(() =>
+                        BeginInvoke(new Action(async () =>
                         {
-                            try { tcs.SetResult(ReconnectByIdSync(id)); }
-                            catch (Exception ex) { tcs.SetException(ex); }
+                            try
+                            {
+                                var ok = await ReconnectByIdAsync(id).ConfigureAwait(true);
+                                tcs.TrySetResult(ok);
+                            }
+                            catch (Exception ex) { tcs.TrySetException(ex); }
                         }));
-                        return await tcs.Task;
+                        return await tcs.Task.ConfigureAwait(false);
                     }
-                    return ReconnectByIdSync(id);
+                    return await ReconnectByIdAsync(id).ConfigureAwait(true);
                 };
             }
 
@@ -248,33 +254,54 @@ namespace Gdterm.UI.Controls
             }
         }
 
+        /// <summary>解锁后重新武装所有健康监控（go-live P1-03）。</summary>
+        public void RearmAllHealthMonitors()
+        {
+            foreach (var kvp in _sessions)
+            {
+                try { kvp.Value?.HealthMonitor?.Rearm(); } catch { }
+            }
+        }
+
         public void ReconnectActiveTab()
         {
-            _reconnectService.ReconnectActive(
+            var _ = ReconnectActiveTabAsync();
+        }
+
+        public async Task ReconnectActiveTabAsync()
+        {
+            await _reconnectService.ReconnectActiveAsync(
                 _tabControl.SelectedTab,
                 _sessions,
                 CloseTab,
                 OpenConnection,
                 () => _tabControl.SelectedTab,
-                WireHealthAndReconnect);
+                OnTerminalReconnected).ConfigureAwait(true);
         }
 
         public void ReconnectById(string connectionId)
         {
-            ReconnectByIdSync(connectionId);
+            var _ = ReconnectByIdAsync(connectionId);
         }
 
-        private bool ReconnectByIdSync(string connectionId)
+        private Task<bool> ReconnectByIdAsync(string connectionId)
         {
-            return _reconnectService.ReconnectById(
+            return _reconnectService.ReconnectByIdAsync(
                 connectionId,
                 _sessions,
                 EnumTabs(),
                 CloseTab,
                 OpenConnection,
                 () => _tabControl.SelectedTab,
-                WireHealthAndReconnect,
+                OnTerminalReconnected,
                 _connectionStore);
+        }
+
+        private void OnTerminalReconnected(TabSessionState session, ITerminalSession terminalSession)
+        {
+            WireHealthAndReconnect(session, terminalSession);
+            // P0-02：重连成功后重新武装健康监控
+            try { session?.HealthMonitor?.RecordReconnect(); } catch { }
         }
 
         private IEnumerable<TabPage> EnumTabs()

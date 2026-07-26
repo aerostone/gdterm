@@ -104,9 +104,35 @@ namespace Gdterm.UI.Services
                 if (onLost != null) onLost(sessionId);
                 else _reconnectWatchdog?.NotifyConnectionLost(sessionId);
             };
+            // go-live P1-05：会话层断开事件驱动健康/看门狗，不单靠 5s 轮询
+            try
+            {
+                session.Disconnected += (s, e) =>
+                {
+                    try
+                    {
+                        if (onLost != null) onLost(sessionId);
+                        else _reconnectWatchdog?.NotifyConnectionLost(sessionId);
+                    }
+                    catch { }
+                };
+            }
+            catch { }
             monitor.Start(5000);
             _reconnectWatchdog?.Watch(sessionId, session);
             return monitor;
+        }
+
+        /// <summary>重连成功后重新武装健康监控（P0-02）。</summary>
+        public static void MarkReconnected(ConnectionHealthMonitor monitor)
+        {
+            try { monitor?.RecordReconnect(); } catch { }
+        }
+
+        /// <summary>锁屏解锁后重新武装所有监控（P1-03）。</summary>
+        public static void RearmMonitor(ConnectionHealthMonitor monitor)
+        {
+            try { monitor?.Rearm(); } catch { }
         }
 
         /// <summary>

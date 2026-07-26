@@ -6,7 +6,7 @@ nature: bug
 severity: P1
 confidence: medium
 suggested_action: cs-issue
-status: open
+status: **resolved** (2026-07-26 go-live fix batch)
 ---
 
 # Finding 05：会话断线状态机不完整
@@ -33,3 +33,7 @@ status: open
 ## 建议动作
 
 `cs-issue`。
+
+## Resolution
+
+Fixed in go-live fix batch (2026-07-26). See commit message for details.

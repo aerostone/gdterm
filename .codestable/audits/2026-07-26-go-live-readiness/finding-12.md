@@ -6,7 +6,7 @@ nature: arch-drift
 severity: P1
 confidence: high
 suggested_action: cs-refactor
-status: open
+status: **resolved** (2026-07-26 go-live fix batch)
 ---
 
 # Finding 12：ARCHITECTURE 债务表与健康/Watchdog 表述落后 HEAD
@@ -33,3 +33,7 @@ status: open
 ## 建议动作
 
 `cs-refactor` / `cs-arch`（文档），非代码阻断但影响上线决策质量。
+
+## Resolution
+
+Fixed in go-live fix batch (2026-07-26). See commit message for details.

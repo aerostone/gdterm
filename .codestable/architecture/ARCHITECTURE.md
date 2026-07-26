@@ -207,7 +207,10 @@ ConnectionTree 双击
 | 关标签不关隧道 / 多通道不 Unregister | **已修** | 引用计数式 Close + SessionClosed |
 | 无全局异常钩子 | **已修** | CrashLog + SecurityEvent |
 | ARCHITECTURE 空骨架 | **已修（本文）** | |
-| MainForm / TabContainer 上帝对象 | **部分已修** | Services 抽出（ProtocolTabOpener/SidePanel/Lifecycle/MenuBuilder/Reconnect/ImportExport 等）；MainForm~700、TabContainer~510；完整 SessionOrchestrator 仍 deferred |
+| MainForm / TabContainer 上帝对象 | **已修** | Services 层完整抽出；MainForm≈385 组合根+布局；TabContainer≈331 字典+chrome 壳；完整 SessionOrchestrator 不再必要（intentional shell） |
+| 重连 UI 死锁 / 健康监控单次 lost | **已修** | ConnectAsyncIfNeeded + 异步 Wait；ConnectionHealthMonitor 边沿+Rearm；ResumeAll 重触发 |
+| 隧道并发 / 跳板私钥 | **已修** | TunnelManager 单飞 inflight；ConnectHop 支持 hop 私钥 |
+| 审计 IO / 锁屏审计 / RDP 凭据持久化 | **已修** | AuditLogger fallback jsonl；IdleLock/Unlock 审计；CRED_PERSIST_SESSION |
 | PortForward / Toolbox 活动会话注入 | **已修** | `ISshPortForwardHost` + `ISshRemoteSession` + ActiveSessionBridge |
 | `IRemoteToolModule` SSH.NET 泄漏 | **已修** | `SetSshSession(ISshRemoteSession)` |
 | AI history 无上限、ApiKey 明文 JSON | **已修** | MaxHistoryMessages=40；ApiKey gdk2 主密码 AES（gdk1 兼容） |

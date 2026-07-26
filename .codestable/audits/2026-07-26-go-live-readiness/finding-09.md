@@ -6,7 +6,7 @@ nature: maintainability
 severity: P1
 confidence: high
 suggested_action: cs-issue
-status: open
+status: **resolved** (2026-07-26 go-live fix batch)
 ---
 
 # Finding 09：关键路径空 catch 仍主导，DiagLog 覆盖偏关签/关机
@@ -37,3 +37,7 @@ status: open
 ## 建议动作
 
 `cs-issue`（可批量小步，不必一次清 148）。
+
+## Resolution
+
+Fixed in go-live fix batch (2026-07-26). See commit message for details.

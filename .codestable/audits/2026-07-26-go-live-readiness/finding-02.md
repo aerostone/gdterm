@@ -6,7 +6,7 @@ nature: bug
 severity: P0
 confidence: high
 suggested_action: cs-issue
-status: open
+status: **resolved** (2026-07-26 go-live fix batch)
 ---
 
 # Finding 02：健康监控 ConnectionLost 一生只触发一次
@@ -37,3 +37,7 @@ status: open
 ## 建议动作
 
 `cs-issue` — 客户端 HA 核心闭环断裂。
+
+## Resolution
+
+Fixed in go-live fix batch (2026-07-26). See commit message for details.

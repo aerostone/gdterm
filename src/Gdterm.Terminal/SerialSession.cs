@@ -32,6 +32,10 @@ namespace Gdterm.Terminal
 
         public event EventHandler<TerminalOutputEventArgs> OutputReceived;
 
+        public event EventHandler Disconnected;
+
+        private int _disconnectRaised;
+
         /// <summary>
         /// 连接到串口设备
         /// </summary>
@@ -144,6 +148,7 @@ namespace Gdterm.Terminal
         public void Dispose()
         {
             _connected = false;
+            RaiseDisconnected();
 
             try
             {
@@ -179,10 +184,20 @@ namespace Gdterm.Terminal
                     if (_connected)
                     {
                         _connected = false;
+                        RaiseDisconnected();
                         break;
                     }
                 }
             }
+            RaiseDisconnected();
+        }
+
+        private void RaiseDisconnected()
+        {
+            if (System.Threading.Interlocked.Exchange(ref _disconnectRaised, 1) != 0)
+                return;
+            try { Disconnected?.Invoke(this, EventArgs.Empty); }
+            catch { }
         }
 
         private void ProcessOutput(string text)

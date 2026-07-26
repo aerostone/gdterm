@@ -6,7 +6,7 @@ nature: maintainability
 severity: P1
 confidence: high
 suggested_action: cs-issue
-status: open
+status: **resolved** (2026-07-26 go-live fix batch)
 ---
 
 # Finding 08：凭据使用与闲锁生命周期零业务审计
@@ -32,3 +32,7 @@ Resolve/Inject 路径记 LogCredentialUse（默认可仍 off，但调用链要�
 ## 建议动作
 
 `cs-issue`。
+
+## Resolution
+
+Fixed in go-live fix batch (2026-07-26). See commit message for details.

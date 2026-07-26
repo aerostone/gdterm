@@ -34,6 +34,16 @@ namespace Gdterm.Core.Models
         public Dictionary<string, string> HopPasswordsByRefId { get; set; }
 
         /// <summary>
+        /// 跳板 hop.CredentialRefId → 私钥 PEM（go-live P1-10）。
+        /// </summary>
+        public Dictionary<string, byte[]> HopPrivateKeysByRefId { get; set; }
+
+        /// <summary>
+        /// 跳板 hop.CredentialRefId → 私钥口令。
+        /// </summary>
+        public Dictionary<string, string> HopPrivateKeyPassphrasesByRefId { get; set; }
+
+        /// <summary>
         /// 解析跳板密码：优先 hop.CredentialRefId 映射，否则回落叶子 Password。
         /// </summary>
         public static string ResolveHopPassword(JumpHop hop, CredentialPayload credential)
@@ -49,6 +59,29 @@ namespace Gdterm.Core.Models
                     return pwd;
             }
             return credential != null ? credential.Password : null;
+        }
+
+        /// <summary>解析跳板私钥；无映射返回 null（非叶子私钥）。</summary>
+        public static byte[] ResolveHopPrivateKey(JumpHop hop, CredentialPayload credential)
+        {
+            if (hop == null || string.IsNullOrEmpty(hop.CredentialRefId) || credential?.HopPrivateKeysByRefId == null)
+                return null;
+            byte[] key;
+            if (credential.HopPrivateKeysByRefId.TryGetValue(hop.CredentialRefId, out key) &&
+                key != null && key.Length > 0)
+                return key;
+            return null;
+        }
+
+        public static string ResolveHopPrivateKeyPassphrase(JumpHop hop, CredentialPayload credential)
+        {
+            if (hop == null || string.IsNullOrEmpty(hop.CredentialRefId) ||
+                credential?.HopPrivateKeyPassphrasesByRefId == null)
+                return null;
+            string pp;
+            if (credential.HopPrivateKeyPassphrasesByRefId.TryGetValue(hop.CredentialRefId, out pp))
+                return pp;
+            return null;
         }
 
         /// <summary>
@@ -68,6 +101,22 @@ namespace Gdterm.Core.Models
             {
                 HopPasswordsByRefId.Clear();
                 HopPasswordsByRefId = null;
+            }
+            if (HopPrivateKeysByRefId != null)
+            {
+                foreach (var kv in HopPrivateKeysByRefId)
+                {
+                    var arr = kv.Value;
+                    if (arr == null) continue;
+                    for (int i = 0; i < arr.Length; i++) arr[i] = 0;
+                }
+                HopPrivateKeysByRefId.Clear();
+                HopPrivateKeysByRefId = null;
+            }
+            if (HopPrivateKeyPassphrasesByRefId != null)
+            {
+                HopPrivateKeyPassphrasesByRefId.Clear();
+                HopPrivateKeyPassphrasesByRefId = null;
             }
         }
     }

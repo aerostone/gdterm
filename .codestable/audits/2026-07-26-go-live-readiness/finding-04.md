@@ -6,7 +6,7 @@ nature: bug
 severity: P1
 confidence: high
 suggested_action: cs-issue
-status: open
+status: **resolved** (2026-07-26 go-live fix batch)
 ---
 
 # Finding 04：同 connectionId 并发 EstablishAsync 非原子
@@ -33,3 +33,7 @@ per-connectionId 异步锁 + 引用计数；复用前探测 hop；临时转发 u
 ## 建议动作
 
 `cs-issue`。
+
+## Resolution
+
+Fixed in go-live fix batch (2026-07-26). See commit message for details.

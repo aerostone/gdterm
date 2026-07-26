@@ -74,6 +74,12 @@ namespace Gdterm.Terminal
         event EventHandler<TerminalOutputEventArgs> OutputReceived;
 
         /// <summary>
+        /// 会话意外断开（SSH 底层 Error/EOF、串口关闭等）。Dispose 手动关闭也会触发一次。
+        /// go-live P1-05。
+        /// </summary>
+        event EventHandler Disconnected;
+
+        /// <summary>
         /// 若本会话持有已连接的底层 SSH 客户端则返回之（object 避免 UI 直接依赖 SSH.NET）。
         /// 串口/本地会话返回 null。调用方不得 Disconnect/Dispose。
         /// </summary>

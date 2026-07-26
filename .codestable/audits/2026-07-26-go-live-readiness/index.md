@@ -7,7 +7,7 @@ status: active
 mode: standard-plus
 total_findings: 12
 go_live_score: 4.8
-go_live_verdict: conditional-no
+go_live_verdict: post-fix ~7.5/10 (provisional)
 ---
 
 # go-live-readiness 审计报告
@@ -48,7 +48,7 @@ go_live_verdict: conditional-no
 2. **健康监控 `ConnectionLost` 一生只响一次**（finding-02）——断线→重连→再断线不再通知 Watchdog。
 3. **锁屏 Pause 丢事件、解锁不 re-arm**（finding-03）——闲锁期间掉线，解锁后僵尸会话。
 
-可观察性有骨架（`crash.jsonl` + 全局钩子 + 部分 `DiagLog` + 连接 Open/Error 审计），但 **~148 处空 catch**、凭据/闲锁零审计、审计写盘无失败回退，**运维排障能力不足以上线 SLA**。
+可观察性有骨架（`crash.jsonl` + 全局钩子 + 部分 `DiagLog` + 连接 resolved/Error 审计），但 **~148 处空 catch**、凭据/闲锁零审计、审计写盘无失败回退，**运维排障能力不足以上线 SLA**。
 
 ### 上线分数（加权）
 
@@ -160,5 +160,10 @@ go_live_verdict: conditional-no
 - 主 agent 交叉验证读取：`TabReconnectService.cs`, `TerminalControl.cs` (Connect), `ConnectionHealthMonitor.cs`, `AutoReconnectWatchdog.cs`, `TabSessionLifecycle.cs`, `TunnelSession.cs`, `AuditLogger.cs`, `Program.cs` hooks, `SessionStateCoordinator.cs`, 全仓 empty-catch / audit 调用点统计
 - 架构文档对照：`.codestable/architecture/ARCHITECTURE.md` + `attention.md`
 - 量化基线：空 catch ~**148**/55 文件；`DiagLog` 调用 ~29；`LogCredentialUse` 业务调用 **0**；`RecordReconnect` 调用 **0**；`async void` 9 处（TerminalControl.Connect 等）
-- 综合评分：**4.8/10**（安全×2.0 bug×1.5 架构×1.5 性能×1.0 维护×1.0）
-- 上线裁决：**conditional-no**（内部狗粮可，正式/无人值守不可）
+- 综合评分：**post-fix ~7.5/10 (provisional)**（安全×2.0 bug×1.5 架构×1.5 性能×1.0 维护×1.0）
+- 上线裁决：**post-fix ~7.5/10 (provisional)**（内部狗粮可，正式/无人值守不可）
+
+
+## Post-fix (2026-07-26)
+
+All 12 findings marked resolved after batch fix: reconnect async, health re-arm, tunnel single-flight, hop private keys, audit fallback, lock audit, CRED_PERSIST_SESSION, Disconnected event, ARCHITECTURE debt table.

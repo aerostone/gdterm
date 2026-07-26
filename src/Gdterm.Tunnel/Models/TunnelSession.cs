@@ -31,40 +31,91 @@ namespace Gdterm.Tunnel.Models
         }
 
         /// <summary>
-        /// 连接到一个 hop，建立 SshClient
+        /// 连接到一个 hop，建立 SshClient（go-live P1-10：支持 hop 私钥）。
         /// </summary>
-        public void ConnectHop(JumpHop hop, string password, SshClient throughClient = null)
+        public void ConnectHop(JumpHop hop, CredentialPayload credential, SshClient throughClient = null)
         {
-            SshClient client;
+            var user = hop.Username ?? "root";
+            var password = CredentialPayload.ResolveHopPassword(hop, credential) ?? "";
+            var privateKey = CredentialPayload.ResolveHopPrivateKey(hop, credential);
+            var passphrase = CredentialPayload.ResolveHopPrivateKeyPassphrase(hop, credential);
+
+            string host;
+            int port;
+            ForwardedPortLocal tempForward = null;
 
             if (throughClient != null)
             {
-                // 通过前一个 hop 的端口转发连接
-                // 先在 throughClient 上建立一个临时端口转发到 hop.Host:hop.Port
                 var tempPort = GetAvailablePort();
-                var tempForward = new ForwardedPortLocal("127.0.0.1", (uint)tempPort, hop.Host, (uint)hop.Port);
+                tempForward = new ForwardedPortLocal("127.0.0.1", (uint)tempPort, hop.Host, (uint)hop.Port);
                 throughClient.AddForwardedPort(tempForward);
                 tempForward.Start();
-
-                var connInfo = new PasswordConnectionInfo("127.0.0.1", tempPort, hop.Username ?? "root", password ?? "");
-                connInfo.Timeout = TimeSpan.FromSeconds(30);
-                client = new SshClient(connInfo);
-                client.Connect();
-
-                // 移除临时转发（连接已建立，不再需要）
-                tempForward.Stop();
-                throughClient.RemoveForwardedPort(tempForward);
+                host = "127.0.0.1";
+                port = tempPort;
             }
             else
             {
-                // 直连
-                var connInfo = new PasswordConnectionInfo(hop.Host, hop.Port, hop.Username ?? "root", password ?? "");
-                connInfo.Timeout = TimeSpan.FromSeconds(30);
-                client = new SshClient(connInfo);
+                host = hop.Host;
+                port = hop.Port;
+            }
+
+            ConnectionInfo connInfo;
+            if (privateKey != null && privateKey.Length > 0)
+            {
+                var ms = new System.IO.MemoryStream(privateKey, writable: false);
+                PrivateKeyFile keyFile;
+                try
+                {
+                    keyFile = string.IsNullOrEmpty(passphrase)
+                        ? new PrivateKeyFile(ms)
+                        : new PrivateKeyFile(ms, passphrase);
+                }
+                finally
+                {
+                    ms.Dispose();
+                }
+                connInfo = new PrivateKeyConnectionInfo(host, port, user, keyFile);
+            }
+            else
+            {
+                connInfo = new PasswordConnectionInfo(host, port, user, password);
+            }
+
+            connInfo.Timeout = TimeSpan.FromSeconds(30);
+            var client = new SshClient(connInfo);
+            try
+            {
                 client.Connect();
+            }
+            finally
+            {
+                if (tempForward != null)
+                {
+                    try
+                    {
+                        tempForward.Stop();
+                        throughClient.RemoveForwardedPort(tempForward);
+                        tempForward.Dispose();
+                    }
+                    catch { /* best-effort */ }
+                }
             }
 
             _hopClients.Add(client);
+        }
+
+        /// <summary>兼容旧签名：仅密码。</summary>
+        public void ConnectHop(JumpHop hop, string password, SshClient throughClient = null)
+        {
+            var payload = new CredentialPayload { Password = password };
+            if (hop != null && !string.IsNullOrEmpty(hop.CredentialRefId))
+            {
+                payload.HopPasswordsByRefId = new System.Collections.Generic.Dictionary<string, string>
+                {
+                    { hop.CredentialRefId, password ?? "" }
+                };
+            }
+            ConnectHop(hop, payload, throughClient);
         }
 
         /// <summary>

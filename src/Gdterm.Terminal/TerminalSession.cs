@@ -37,6 +37,11 @@ namespace Gdterm.Terminal
 
         public event EventHandler<TerminalOutputEventArgs> OutputReceived;
 
+        /// <inheritdoc />
+        public event EventHandler Disconnected;
+
+        private int _disconnectRaised;
+
         /// <summary>
         /// 直连模式：直接连接 config.Host:config.Port
         /// </summary>
@@ -119,6 +124,7 @@ namespace Gdterm.Terminal
         {
             if (_disposed) return;
             _disposed = true;
+            RaiseDisconnected();
 
             try
             {
@@ -178,7 +184,25 @@ namespace Gdterm.Terminal
                     });
                 }
                 catch { /* 避免事件处理异常传播 */ }
+                RaiseDisconnected();
             };
+
+            try
+            {
+                if (_sshClient != null)
+                {
+                    _sshClient.ErrorOccurred += (s, e) => RaiseDisconnected();
+                }
+            }
+            catch { }
+        }
+
+        private void RaiseDisconnected()
+        {
+            if (System.Threading.Interlocked.Exchange(ref _disconnectRaised, 1) != 0)
+                return;
+            try { Disconnected?.Invoke(this, EventArgs.Empty); }
+            catch { }
         }
 
         private void ProcessOutput(string text)

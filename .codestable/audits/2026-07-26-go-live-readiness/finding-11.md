@@ -6,7 +6,7 @@ nature: security
 severity: P1
 confidence: high
 suggested_action: cs-issue
-status: open
+status: **resolved** (2026-07-26 go-live fix batch)
 ---
 
 # Finding 11：RDP CredWrite 使用 LOCAL_MACHINE 持久
@@ -32,3 +32,7 @@ status: open
 ## 建议动作
 
 `cs-issue`。
+
+## Resolution
+
+Fixed in go-live fix batch (2026-07-26). See commit message for details.

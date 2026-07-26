@@ -375,7 +375,9 @@ namespace Gdterm.KeePass
         // ===== RDP 凭据注入（CredWrite，避免 cmdkey 命令行明文密码） =====
 
         private const int CRED_TYPE_GENERIC = 1;
-        private const int CRED_PERSIST_LOCAL_MACHINE = 2;
+        // go-live P1-11：会话级凭据，进程退出后不残留 TERMSRV 到机器配置
+        private const int CRED_PERSIST_SESSION = 1;
+        private const int CRED_PERSIST_LOCAL_MACHINE = 2; // 保留常量，不再写入
 
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
         private struct CREDENTIAL
@@ -435,7 +437,7 @@ namespace Gdterm.KeePass
                     UserName = username,
                     CredentialBlobSize = bytes.Length,
                     CredentialBlob = blob,
-                    Persist = CRED_PERSIST_LOCAL_MACHINE,
+                    Persist = CRED_PERSIST_SESSION,
                     AttributeCount = 0,
                     Attributes = IntPtr.Zero,
                     Comment = "gdterm RDP",

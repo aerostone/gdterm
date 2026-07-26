@@ -6,7 +6,7 @@ nature: bug
 severity: P0
 confidence: high
 suggested_action: cs-issue
-status: open
+status: **resolved** (2026-07-26 go-live fix batch)
 ---
 
 # Finding 01：重连等待 UI 死锁（GetResult vs async void Connect）
@@ -36,3 +36,7 @@ Connect 完成用 `TaskCompletionSource`/事件在 **任意线程** 置位；等
 ## 建议动作
 
 `cs-issue` — 运行时正确性 P0，直接决定自动重连是否可用。
+
+## Resolution
+
+Fixed in go-live fix batch (2026-07-26). See commit message for details.

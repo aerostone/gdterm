@@ -1,15 +1,18 @@
 using System;
 using System.Windows.Forms;
 using Gdterm.KeePass;
+using Gdterm.Logging;
+using Gdterm.Logging.Models;
 using Gdterm.Security;
 using Gdterm.Security.Models;
 using Gdterm.Terminal;
 using Gdterm.UI.Controls;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Services
 {
     /// <summary>
-    /// 锁屏/解锁协调：遮罩、KeePass 锁库/解锁、擦除会话明文凭据（finding-04）。
+    /// 锁屏/解锁协调：遮罩、KeePass 锁库/解锁、擦除会话明文凭据、审计（P1-08）、重武装健康监控（P1-03）。
     /// </summary>
     public sealed class LockStateCoordinator
     {
@@ -19,6 +22,7 @@ namespace Gdterm.UI.Services
         private readonly LockOverlayControl _overlay;
         private readonly TabContainerControl _tabs;
         private readonly AutoReconnectWatchdog _watchdog;
+        private readonly IAuditLogger _audit;
 
         public LockStateCoordinator(
             Control uiSync,
@@ -26,7 +30,8 @@ namespace Gdterm.UI.Services
             IKeePassService keepass,
             LockOverlayControl overlay,
             TabContainerControl tabs = null,
-            AutoReconnectWatchdog watchdog = null)
+            AutoReconnectWatchdog watchdog = null,
+            IAuditLogger audit = null)
         {
             _uiSync = uiSync ?? throw new ArgumentNullException(nameof(uiSync));
             _security = security ?? throw new ArgumentNullException(nameof(security));
@@ -34,6 +39,7 @@ namespace Gdterm.UI.Services
             _overlay = overlay;
             _tabs = tabs;
             _watchdog = watchdog;
+            _audit = audit;
         }
 
         public void Handle(object sender, LockStateChangedEventArgs e)
@@ -46,19 +52,22 @@ namespace Gdterm.UI.Services
                 {
                     _uiSync.Invoke(new Action(() => Handle(sender, e)));
                 }
-                catch { }
+                catch (Exception ex) { DiagLog.Swallowed("LockState.Invoke", ex); }
                 return;
             }
 
             if (e.IsLocked)
             {
-                try { _keepass?.Lock(); } catch { }
+                DiagLog.Try("LockState.KeePassLock", () => _keepass?.Lock());
+                DiagLog.Try("LockState.ClearCreds", () => _tabs?.ClearCachedCredentials());
+                DiagLog.Try("LockState.PauseWatchdog", () => _watchdog?.PauseAll());
 
-                // finding-04：锁屏擦除会话缓存明文凭据，阻止无主密码重连
-                try { _tabs?.ClearCachedCredentials(); } catch { }
-
-                // 暂停自动重连，避免用已擦凭据重连
-                try { _watchdog?.PauseAll(); } catch { }
+                try
+                {
+                    _audit?.LogSecurityEvent(SecurityEvent.IdleLock,
+                        "reason=" + (e.Reason ?? "lock"));
+                }
+                catch (Exception ex) { DiagLog.Swallowed("LockState.AuditLock", ex); }
 
                 if (_overlay != null)
                 {
@@ -71,10 +80,22 @@ namespace Gdterm.UI.Services
                 var masterPassword = _security.GetMasterPassword();
                 if (!string.IsNullOrEmpty(masterPassword))
                 {
-                    try { _keepass?.UnlockAsync(masterPassword); } catch { }
+                    DiagLog.Try("LockState.KeePassUnlock", () =>
+                    {
+                        try { _keepass?.UnlockAsync(masterPassword); } catch (Exception ex) { DiagLog.Swallowed("LockState.UnlockAsync", ex); }
+                    });
                 }
 
-                try { _watchdog?.ResumeAll(); } catch { }
+                DiagLog.Try("LockState.ResumeWatchdog", () => _watchdog?.ResumeAll());
+                // P1-03：解锁后重新武装所有健康监控，避免暂停期间 lost 边沿丢失
+                DiagLog.Try("LockState.RearmHealth", () => _tabs?.RearmAllHealthMonitors());
+
+                try
+                {
+                    _audit?.LogSecurityEvent(SecurityEvent.Unlock,
+                        "reason=" + (e.Reason ?? "unlock"));
+                }
+                catch (Exception ex) { DiagLog.Swallowed("LockState.AuditUnlock", ex); }
 
                 if (_overlay != null)
                     _overlay.Visible = false;
