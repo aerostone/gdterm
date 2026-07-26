@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Gdterm.Connections;
 using Gdterm.Core.Enums;
 using Gdterm.Core.Models;
@@ -66,12 +67,35 @@ namespace Gdterm.UI.Services
                     credential.SshPrivateKeyPassphrase = entry.SshPrivateKeyPassphrase;
                 }
 
+                // finding-06：预解析跳板 hop.CredentialRefId → 密码，供 TunnelManager 使用
+                PopulateHopPasswords(config, credential);
+
                 return credential;
             }
             catch
             {
                 return null;
             }
+        }
+
+        private void PopulateHopPasswords(ConnectionConfig config, CredentialPayload credential)
+        {
+            if (credential == null || config?.JumpChain?.Hops == null) return;
+            Dictionary<string, string> map = null;
+            foreach (var hop in config.JumpChain.Hops)
+            {
+                if (hop == null || string.IsNullOrEmpty(hop.CredentialRefId)) continue;
+                try
+                {
+                    var hopEntry = GetKeePassEntry(hop.CredentialRefId);
+                    if (hopEntry == null || string.IsNullOrEmpty(hopEntry.Password)) continue;
+                    if (map == null) map = new Dictionary<string, string>();
+                    map[hop.CredentialRefId] = hopEntry.Password;
+                }
+                catch { }
+            }
+            if (map != null)
+                credential.HopPasswordsByRefId = map;
         }
 
         private KeePassEntry GetKeePassEntry(string entryId)

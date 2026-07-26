@@ -238,9 +238,11 @@ namespace Gdterm.UI.Controls
                 if (state == null) continue;
                 try { state.Credential?.ClearSecrets(); } catch { }
                 state.Credential = null;
-                var tc = state.Control as TerminalControl;
-                if (tc != null)
+                var terminals = new System.Collections.Generic.List<TerminalControl>();
+                TabActiveSessionQuery.CollectSessionTerminals(state, terminals);
+                foreach (var tc in terminals)
                 {
+                    if (tc == null) continue;
                     try { tc.ClearCachedCredentials(); } catch { }
                 }
             }

@@ -46,13 +46,20 @@
       <Project>{B2C3D4E5-F6A7-8901-BCDE-F12345678901}</Project>
       <Name>Gdterm.Connections</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Gdterm.Security\Gdterm.Security.csproj">
+      <Project>{C9D0E1F2-A3B4-5678-CDEF-012345678901}</Project>
+      <Name>Gdterm.Security</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Assert.cs" />
     <Compile Include="Core\DefaultPortsTests.cs" />
+    <Compile Include="Core\CredentialPayloadTests.cs" />
     <Compile Include="Logging\LogSanitizerTests.cs" />
     <Compile Include="Connections\ConnectionStoreJsonTests.cs" />
+    <Compile Include="Security\SecretFindingTests.cs" />
+    <Compile Include="Security\SecurityManagerHashTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

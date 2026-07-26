@@ -203,7 +203,8 @@ namespace Gdterm.UI.Forms
                 _quickCommandStore,
                 _bookmarkStore,
                 _connectionStore,
-                this);
+                this,
+                _securityManager);
             _tabContainer.Dock = DockStyle.Fill;
             _tabContainer.ActiveSessionChanged += OnActiveSessionChanged;
             _tabContainer.SessionClosed += OnSessionClosed;

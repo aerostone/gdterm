@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -10,6 +11,53 @@ namespace Gdterm.UI.Controls
     /// </summary>
     public class SplitPaneControl : UserControl
     {
+        /// <summary>
+        /// 从控件树递归查找第一个 TerminalControl（finding-05）。
+        /// </summary>
+        public static TerminalControl FindFirstTerminal(Control root)
+        {
+            if (root == null) return null;
+            var direct = root as TerminalControl;
+            if (direct != null) return direct;
+
+            var split = root as SplitPaneControl;
+            if (split != null)
+            {
+                var t = FindFirstTerminal(split.FirstPane) ?? FindFirstTerminal(split.SecondPane);
+                if (t != null) return t;
+            }
+
+            foreach (Control child in root.Controls)
+            {
+                var t = FindFirstTerminal(child);
+                if (t != null) return t;
+            }
+            return null;
+        }
+
+        /// <summary>递归收集控件树中全部 TerminalControl。</summary>
+        public static void CollectTerminals(Control root, IList<TerminalControl> into)
+        {
+            if (root == null || into == null) return;
+            var direct = root as TerminalControl;
+            if (direct != null)
+            {
+                into.Add(direct);
+                return;
+            }
+
+            var split = root as SplitPaneControl;
+            if (split != null)
+            {
+                CollectTerminals(split.FirstPane, into);
+                CollectTerminals(split.SecondPane, into);
+                return;
+            }
+
+            foreach (Control child in root.Controls)
+                CollectTerminals(child, into);
+        }
+
         private SplitterControl _splitter;
         private Control _firstPane;
         private Control _secondPane;

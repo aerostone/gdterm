@@ -119,3 +119,17 @@ finding-10 拆分完成后的关键路径（约 40 文件）：
 | 07 | resolved | 重连无 Sleep/DoEvents |
 
 P1 仍 open：05 分屏活动终端、06 hop 凭据、08 暂停输出、09 ApiKey 回退、10 SecretScan UI、11 UnderlyingClient、12 测试扩展。
+
+## P1 修复进度（本迭代）
+
+| # | 状态 | 说明 |
+|---|------|------|
+| 05 | resolved | 分屏 PrimaryTerminal + 递归查找 |
+| 06 | resolved | hop CredentialRefId 映射 |
+| 08 | resolved | pause 不 BeginInvoke |
+| 09 | resolved | ApiKey 强制 gdk2 |
+| 10 | resolved | SecretScan 脱敏+再验证 |
+| 11 | resolved | TryGetSshClient 接口桥接 |
+| 12 | resolved | 测试扩展 + 先前 sln 修复 |
+
+全部 post-split findings 01-12 现为 resolved。

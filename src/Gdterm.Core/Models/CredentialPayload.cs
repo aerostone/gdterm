@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Gdterm.Core.Models
 {
     /// <summary>
@@ -27,6 +29,29 @@ namespace Gdterm.Core.Models
         public string SshPrivateKeyPassphrase { get; set; }
 
         /// <summary>
+        /// 跳板 hop.CredentialRefId → 密码（UI 从 KeePass 预解析后填入；finding-06）
+        /// </summary>
+        public Dictionary<string, string> HopPasswordsByRefId { get; set; }
+
+        /// <summary>
+        /// 解析跳板密码：优先 hop.CredentialRefId 映射，否则回落叶子 Password。
+        /// </summary>
+        public static string ResolveHopPassword(JumpHop hop, CredentialPayload credential)
+        {
+            if (hop != null &&
+                !string.IsNullOrEmpty(hop.CredentialRefId) &&
+                credential != null &&
+                credential.HopPasswordsByRefId != null)
+            {
+                string pwd;
+                if (credential.HopPasswordsByRefId.TryGetValue(hop.CredentialRefId, out pwd) &&
+                    !string.IsNullOrEmpty(pwd))
+                    return pwd;
+            }
+            return credential != null ? credential.Password : null;
+        }
+
+        /// <summary>
         /// 清除敏感字段（锁屏/关签；finding-04）
         /// </summary>
         public void ClearSecrets()
@@ -38,6 +63,11 @@ namespace Gdterm.Core.Models
                 for (int i = 0; i < SshPrivateKey.Length; i++)
                     SshPrivateKey[i] = 0;
                 SshPrivateKey = null;
+            }
+            if (HopPasswordsByRefId != null)
+            {
+                HopPasswordsByRefId.Clear();
+                HopPasswordsByRefId = null;
             }
         }
     }

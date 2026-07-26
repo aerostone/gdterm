@@ -72,5 +72,11 @@ namespace Gdterm.Terminal
         /// 终端输出事件（AI 实时订阅，UI 订阅用于渲染）
         /// </summary>
         event EventHandler<TerminalOutputEventArgs> OutputReceived;
+
+        /// <summary>
+        /// 若本会话持有已连接的底层 SSH 客户端则返回之（object 避免 UI 直接依赖 SSH.NET）。
+        /// 串口/本地会话返回 null。调用方不得 Disconnect/Dispose。
+        /// </summary>
+        object TryGetSshClient();
     }
 }

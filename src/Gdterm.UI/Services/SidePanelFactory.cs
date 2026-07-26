@@ -35,6 +35,7 @@ namespace Gdterm.UI.Services
         private readonly IBookmarkStore _bookmarkStore;
         private readonly IConnectionStore _connectionStore;
         private readonly IWin32Window _dialogOwner;
+        private readonly ISecurityManager _securityManager;
 
         public SidePanelFactory(
             TabContainerControl tabs,
@@ -50,7 +51,8 @@ namespace Gdterm.UI.Services
             QuickCommandStore quickCommandStore,
             IBookmarkStore bookmarkStore,
             IConnectionStore connectionStore,
-            IWin32Window dialogOwner)
+            IWin32Window dialogOwner,
+            ISecurityManager securityManager = null)
         {
             _tabs = tabs;
             _bridge = bridge;
@@ -66,6 +68,7 @@ namespace Gdterm.UI.Services
             _bookmarkStore = bookmarkStore;
             _connectionStore = connectionStore;
             _dialogOwner = dialogOwner;
+            _securityManager = securityManager;
         }
 
         public Control CreateToolboxPanel()
@@ -85,7 +88,7 @@ namespace Gdterm.UI.Services
         {
             if (_secretScanner == null)
                 return Unavailable("扫描器未初始化");
-            return new SecretScanPanel(_secretScanner);
+            return new SecretScanPanel(_secretScanner, _securityManager);
         }
 
         public Control CreateMultiChannelPanel()

@@ -26,8 +26,12 @@ namespace Gdterm.UI.Services
                 var state = kvp.Value;
                 if (state == null) continue;
 
-                if (state.Control is TerminalControl tc)
+                // finding-05：分屏标签下对所有 TerminalControl 暂停/恢复
+                var terminals = new List<TerminalControl>();
+                TabActiveSessionQuery.CollectSessionTerminals(state, terminals);
+                foreach (var tc in terminals)
                 {
+                    if (tc == null) continue;
                     if (isSelected) tc.ResumeRendering();
                     else tc.PauseRendering();
                 }

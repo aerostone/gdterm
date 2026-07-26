@@ -6,27 +6,12 @@ nature: security
 severity: P1
 confidence: high
 suggested_action: cs-issue
-status: open
+status: resolved
 ---
 
 # Finding 09：ApiKey gdk1/明文回退
 
-## 速答
+## 修复状态
 
-`AiModelStore` 无主密码时写 gdk1 固定 XOR；读路径仍接受无前缀明文。
-
-## 关键证据
-
-- `AiModelStore.cs`：`FixedXorKey` / `ProtectXor` / legacy `return stored`  
-
-## 影响
-
-便携 `ai-models.json` 离线可还原 key。
-
-## 修复方向
-
-强制 gdk2；拒绝新写 gdk1/plain；启动时提示升级。
-
-## 建议动作
-
-`cs-issue`。
+- **status**: `resolved`
+- **fix**: `ProtectSecret` 强制 gdk2；无主密码时不落盘（返回空）；读路径仍兼容 gdk1/明文以便迁移；`UpgradeSecretsToMasterKey` 升级存量。

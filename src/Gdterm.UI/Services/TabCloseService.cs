@@ -64,6 +64,24 @@ namespace Gdterm.UI.Services
                 });
             }
 
+            // finding-05：分屏时释放全部 TerminalControl，再释放 SplitPane
+            try
+            {
+                var terminals = new List<Gdterm.UI.Controls.TerminalControl>();
+                TabActiveSessionQuery.CollectSessionTerminals(session, terminals);
+                foreach (var tc in terminals)
+                {
+                    if (tc == null) continue;
+                    if (ReferenceEquals(tc, session.Control)) continue; // 下面统一 Dispose Control
+                    DiagLog.Try("TabClose.SplitTerminal", () =>
+                    {
+                        var d = tc as IDisposable;
+                        if (d != null) d.Dispose();
+                    });
+                }
+            }
+            catch { }
+
             var disposable = session.Control as IDisposable;
             if (disposable != null)
             {

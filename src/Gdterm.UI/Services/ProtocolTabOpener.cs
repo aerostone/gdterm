@@ -112,6 +112,7 @@ namespace Gdterm.UI.Services
             {
                 Config = config,
                 Control = terminalControl,
+                PrimaryTerminal = terminalControl,
                 Protocol = ProtocolType.SSH,
                 IsConnected = false,
                 Credential = credential,
@@ -219,6 +220,7 @@ namespace Gdterm.UI.Services
             {
                 Config = config,
                 Control = terminalControl,
+                PrimaryTerminal = terminalControl,
                 Protocol = ProtocolType.Serial,
                 IsConnected = false,
                 SessionId = config.Id ?? Guid.NewGuid().ToString("N")
@@ -252,6 +254,7 @@ namespace Gdterm.UI.Services
                     Protocol = ProtocolType.SSH
                 },
                 Control = terminal,
+                PrimaryTerminal = terminal,
                 Protocol = ProtocolType.SSH,
                 IsConnected = true,
                 SessionId = Guid.NewGuid().ToString("N")

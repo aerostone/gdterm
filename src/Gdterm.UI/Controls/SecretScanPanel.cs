@@ -11,6 +11,7 @@ namespace Gdterm.UI.Controls
     public class SecretScanPanel : UserControl
     {
         private readonly SecretScanner _scanner;
+        private readonly ISecurityManager _security;
         private readonly Label _lblScore;
         private readonly Label _lblStats;
         private readonly ListView _lvFindings;
@@ -19,9 +20,10 @@ namespace Gdterm.UI.Controls
         private readonly ProgressBar _progress;
         private readonly Label _lblStatus;
 
-        public SecretScanPanel(SecretScanner scanner)
+        public SecretScanPanel(SecretScanner scanner, ISecurityManager security = null)
         {
             _scanner = scanner;
+            _security = security;
             Dock = DockStyle.Fill;
             BackColor = Color.FromArgb(30, 30, 30);
 
@@ -222,6 +224,11 @@ namespace Gdterm.UI.Controls
                 MinimizeBox = false
             };
 
+            // finding-10：默认脱敏；明文需主密码再验证
+            var masked = finding.GetRedactedContent();
+            var matchDisplay = masked;
+            var revealed = false;
+
             var txt = new TextBox
             {
                 Dock = DockStyle.Fill,
@@ -230,22 +237,64 @@ namespace Gdterm.UI.Controls
                 BackColor = Color.FromArgb(30, 30, 30),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 Font = new Font("Consolas", 10f),
-                ScrollBars = ScrollBars.Vertical,
-                Text = string.Format("规则: {0}\n严重程度: {1}\n类别: {2}\n文件: {3}\n行号: {4}\n\n匹配内容:\n{5}\n\n描述: {6}",
+                ScrollBars = ScrollBars.Vertical
+            };
+
+            Action refreshText = () =>
+            {
+                txt.Text = string.Format(
+                    "规则: {0}\n严重程度: {1}\n类别: {2}\n文件: {3}\n行号: {4}\n\n匹配内容{5}:\n{6}\n\n描述: {7}",
                     finding.RuleName,
                     GetSeverityText(finding.Severity),
                     finding.Category,
                     finding.FilePath,
                     finding.LineNumber,
-                    finding.MatchedContent,
-                    finding.Description)
+                    revealed ? "（明文）" : "（已脱敏）",
+                    matchDisplay,
+                    finding.Description);
+            };
+            refreshText();
+
+            var bottom = new Panel { Dock = DockStyle.Bottom, Height = 40, BackColor = Color.FromArgb(37, 37, 38) };
+
+            var btnReveal = new Button
+            {
+                Text = "显示明文",
+                Width = 100,
+                Height = 30,
+                Left = 8,
+                Top = 5,
+                BackColor = Color.FromArgb(60, 60, 60),
+                ForeColor = Color.FromArgb(204, 204, 204),
+                FlatStyle = FlatStyle.Flat
+            };
+            btnReveal.Click += (s2, e2) =>
+            {
+                if (revealed) return;
+                if (_security != null)
+                {
+                    if (!Gdterm.UI.Services.MasterPasswordPrompt.Confirm(_security, form, "查看敏感匹配内容"))
+                        return;
+                }
+                else
+                {
+                    var r = MessageBox.Show(form, "确认显示完整匹配内容？", "gdterm",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                    if (r != DialogResult.Yes) return;
+                }
+                matchDisplay = finding.MatchedContent ?? "";
+                revealed = true;
+                btnReveal.Enabled = false;
+                refreshText();
             };
 
             var btnWhitelist = new Button
             {
                 Text = "加入白名单",
-                Dock = DockStyle.Bottom,
-                Height = 35,
+                Width = 100,
+                Height = 30,
+                Left = 120,
+                Top = 5,
                 BackColor = Color.FromArgb(60, 60, 60),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 FlatStyle = FlatStyle.Flat
@@ -257,8 +306,10 @@ namespace Gdterm.UI.Controls
                 form.Close();
             };
 
+            bottom.Controls.Add(btnReveal);
+            bottom.Controls.Add(btnWhitelist);
             form.Controls.Add(txt);
-            form.Controls.Add(btnWhitelist);
+            form.Controls.Add(bottom);
             form.Show(this);
         }
 

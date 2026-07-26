@@ -28,6 +28,8 @@ namespace Gdterm.Terminal
         public string OsType => "Serial";
         public bool IsConnected => _connected && _port?.IsOpen == true;
 
+        public object TryGetSshClient() => null;
+
         public event EventHandler<TerminalOutputEventArgs> OutputReceived;
 
         /// <summary>

@@ -416,6 +416,13 @@ namespace Gdterm.UI.Controls
         {
             if (_disposed || e == null || string.IsNullOrEmpty(e.Text)) return;
 
+            // finding-08：暂停标签不向 UI 线程泵输出；仅后台写 auto-log（若启用）
+            if (_isPaused)
+            {
+                try { _autoLogger?.LogOutput(e.Text); } catch { }
+                return;
+            }
+
             if (InvokeRequired)
             {
                 try { BeginInvoke(new Action(() => OnTerminalOutput(sender, e))); }
@@ -423,9 +430,7 @@ namespace Gdterm.UI.Controls
                 return;
             }
 
-            if (!_isPaused)
-                _renderer?.Write(e.Text);
-
+            _renderer?.Write(e.Text);
             try { _autoLogger?.LogOutput(e.Text); } catch { }
         }
 

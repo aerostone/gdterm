@@ -4,6 +4,7 @@ using Gdterm.Core.Enums;
 using Gdterm.Core.Models;
 using Gdterm.Rdp;
 using Gdterm.Terminal;
+using Gdterm.UI.Controls;
 
 namespace Gdterm.UI.Services
 {
@@ -21,6 +22,11 @@ namespace Gdterm.UI.Services
         public IRdpClient RdpClient { get; set; }
         public ConnectionHealthMonitor HealthMonitor { get; set; }
         public Action PendingConnect { get; set; }
+
+        /// <summary>
+        /// 主终端控件（分屏时 Control 为 SplitPaneControl，仍可通过此属性取焦点终端）。
+        /// </summary>
+        public TerminalControl PrimaryTerminal { get; set; }
     }
 
     /// <summary>协议工厂产出的标签页 + 会话状态对。</summary>

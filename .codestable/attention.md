@@ -80,3 +80,4 @@
 - 禁止再把业务堆回 MainForm/TabContainer；新逻辑进 Gdterm.UI/Services/
 - P0 post-split 2026-07-26：Connect dispose 竞态、危险命令 fail-closed、主密码 PBKDF2(100k)+旧哈希迁移、锁屏 ClearCachedCredentials+Watchdog.PauseAll、重连无 Sleep/DoEvents
 - master-password.json 现含 algorithm/iterations；缺省 algorithm 视为旧 SHA256，解锁后升级
+- P1 post-split 2026-07-26：分屏终端解析、hop 凭据、pause 不泵 UI、ApiKey 强制 gdk2、SecretScan 脱敏再验证、ITerminalSession.TryGetSshClient、测试扩 CredentialPayload/SecretFinding/PBKDF2

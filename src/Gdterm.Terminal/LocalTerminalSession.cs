@@ -35,6 +35,8 @@ namespace Gdterm.Terminal
 
         public event EventHandler<TerminalOutputEventArgs> OutputReceived;
 
+        public object TryGetSshClient() => null;
+
         public LocalTerminalSession(string shellPath = null, string workingDirectory = null)
         {
             _shellPath = shellPath;

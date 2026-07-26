@@ -9,8 +9,8 @@ using Gdterm.AI.Models;
 namespace Gdterm.AI
 {
     /// <summary>
-    /// AI 模型配置持久化。ApiKey 落盘优先用主密码派生 AES（gdk2:），
-    /// 无主密码时退回 gdk1: 固定密钥 XOR；读取兼容明文与 gdk1。
+    /// AI 模型配置持久化。ApiKey 落盘强制 gdk2（主密码派生 AES）。
+    /// 无主密码时拒绝写入新密钥（finding-09）；读取仍兼容 gdk1/明文以便迁移。
     /// </summary>
     public class AiModelStore
     {
@@ -28,7 +28,7 @@ namespace Gdterm.AI
 
         /// <summary>
         /// 注入主密码提供者（解锁后返回明文；锁定返回 null）。
-        /// 有主密码时 Save 使用 gdk2 AES；否则 gdk1 XOR。
+        /// Save 仅在提供主密码时以 gdk2 写入；否则 ApiKey 不落盘明文/gdk1。
         /// </summary>
         public void SetMasterPasswordProvider(Func<string> provider)
         {
@@ -251,17 +251,21 @@ namespace Gdterm.AI
         private string ProtectSecret(string plain)
         {
             if (string.IsNullOrEmpty(plain)) return "";
-            if (plain.StartsWith(PrefixV2, StringComparison.Ordinal) ||
-                plain.StartsWith(PrefixV1, StringComparison.Ordinal))
+            // 已是密文：不二次加密
+            if (plain.StartsWith(PrefixV2, StringComparison.Ordinal))
+                return plain;
+            // finding-09：禁止新写 gdk1；已有 gdk1 串原样保留直到 UpgradeSecretsToMasterKey
+            if (plain.StartsWith(PrefixV1, StringComparison.Ordinal))
                 return plain;
 
             var master = TryGetMasterPassword();
-            if (!string.IsNullOrEmpty(master))
+            if (string.IsNullOrEmpty(master))
             {
-                try { return PrefixV2 + ProtectAes(plain, master); }
-                catch { /* fall through to v1 */ }
+                // 无主密码：不落盘明文/gdk1，返回空（调用方可提示先解锁）
+                return "";
             }
-            return PrefixV1 + ProtectXor(plain);
+            try { return PrefixV2 + ProtectAes(plain, master); }
+            catch { return ""; }
         }
 
         private string UnprotectSecret(string stored)

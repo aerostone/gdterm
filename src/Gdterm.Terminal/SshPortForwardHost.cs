@@ -21,6 +21,12 @@ namespace Gdterm.Terminal
             return client == null ? null : new SshPortForwardHost(client);
         }
 
+        /// <summary>从 ITerminalSession.TryGetSshClient() 的 object 桥接（finding-11）。</summary>
+        public static ISshPortForwardHost Wrap(object client)
+        {
+            return Wrap(client as SshClient);
+        }
+
         public bool IsConnected
         {
             get { return _client != null && _client.IsConnected; }

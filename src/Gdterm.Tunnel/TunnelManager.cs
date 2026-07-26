@@ -194,7 +194,8 @@ namespace Gdterm.Tunnel
                 ct.ThrowIfCancellationRequested();
 
                 var hop = hops[i];
-                var hopPassword = hop.CredentialRefId != null ? credential?.Password : credential?.Password;
+                // finding-06：优先 hop.CredentialRefId 映射，否则叶子 Password
+                var hopPassword = CredentialPayload.ResolveHopPassword(hop, credential);
 
                 try
                 {

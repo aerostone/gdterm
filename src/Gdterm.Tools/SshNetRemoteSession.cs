@@ -23,6 +23,12 @@ namespace Gdterm.Tools
             return client == null ? null : new SshNetRemoteSession(client);
         }
 
+        /// <summary>从 ITerminalSession.TryGetSshClient() 的 object 桥接（finding-11）。</summary>
+        public static ISshRemoteSession Wrap(object client)
+        {
+            return Wrap(client as SshClient);
+        }
+
         public bool IsConnected
         {
             get { return _client != null && _client.IsConnected; }

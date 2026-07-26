@@ -32,6 +32,9 @@ namespace Gdterm.Terminal
         public SshClient UnderlyingClient =>
             _sshClient != null && _sshClient.IsConnected ? _sshClient : null;
 
+        /// <inheritdoc />
+        public object TryGetSshClient() => UnderlyingClient;
+
         public event EventHandler<TerminalOutputEventArgs> OutputReceived;
 
         /// <summary>

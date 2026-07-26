@@ -6,7 +6,7 @@ using Gdterm.UI.Controls;
 namespace Gdterm.UI.Services
 {
     /// <summary>
-    /// 终端标签分屏编排（finding-10）。TabContainer 只转发菜单/快捷键调用。
+    /// 终端标签分屏编排。finding-05：分屏后保留 PrimaryTerminal，Control 改为 SplitPane。
     /// </summary>
     public sealed class TabSplitService
     {
@@ -17,9 +17,6 @@ namespace Gdterm.UI.Services
             _opener = opener ?? throw new ArgumentNullException(nameof(opener));
         }
 
-        /// <summary>
-        /// 将当前终端标签拆为水平/垂直双窗格。成功返回 true。
-        /// </summary>
         public bool TrySplit(
             string direction,
             TabPage selectedTab,
@@ -32,13 +29,13 @@ namespace Gdterm.UI.Services
             }
 
             var session = sessions[selectedTab];
-            if (session == null || !(session.Control is TerminalControl))
+            var currentTerminal = TabActiveSessionQuery.ResolveTerminal(session);
+            if (session == null || currentTerminal == null)
             {
                 MessageBox.Show("仅终端标签支持分屏", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return false;
             }
 
-            var currentControl = session.Control;
             var newTerminal = _opener.CreateSplitTerminal(session.Config, session.Credential);
             if (newTerminal == null)
             {
@@ -46,14 +43,18 @@ namespace Gdterm.UI.Services
                 return false;
             }
 
+            // 若当前已是分屏，以当前主终端为左/上窗格根
+            Control leftOrTop = session.Control is SplitPaneControl ? session.Control : currentTerminal;
+
             var splitPane = string.Equals(direction, "horizontal", StringComparison.OrdinalIgnoreCase)
-                ? SplitPaneControl.CreateHorizontal(currentControl, newTerminal, 0.5)
-                : SplitPaneControl.CreateVertical(currentControl, newTerminal, 0.5);
+                ? SplitPaneControl.CreateHorizontal(leftOrTop, newTerminal, 0.5)
+                : SplitPaneControl.CreateVertical(leftOrTop, newTerminal, 0.5);
             splitPane.Dock = DockStyle.Fill;
 
             selectedTab.Controls.Clear();
             selectedTab.Controls.Add(splitPane);
             session.Control = splitPane;
+            session.PrimaryTerminal = currentTerminal;
             return true;
         }
     }

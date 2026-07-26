@@ -2,6 +2,7 @@ using System;
 using Gdterm.Tests.Connections;
 using Gdterm.Tests.Core;
 using Gdterm.Tests.Logging;
+using Gdterm.Tests.Security;
 
 namespace Gdterm.Tests
 {
@@ -21,6 +22,9 @@ namespace Gdterm.Tests
             DefaultPortsTests.Run();
             LogSanitizerTests.Run();
             ConnectionStoreJsonTests.Run();
+            CredentialPayloadTests.Run();
+            SecretFindingTests.Run();
+            SecurityManagerHashTests.Run();
 
             Console.WriteLine();
             Console.WriteLine("Passed: {0}  Failed: {1}", Assert.Passes, Assert.Failures);
