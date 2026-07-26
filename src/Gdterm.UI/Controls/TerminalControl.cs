@@ -54,6 +54,16 @@ namespace Gdterm.UI.Controls
         public event EventHandler<KeyBindingActionEventArgs> ActionRequested;
         public event EventHandler SessionConnected;
         public event EventHandler SessionDisconnected;
+        /// <summary>用户在右键菜单点了「查找」。</summary>
+        public event EventHandler SearchRequested;
+        /// <summary>用户在右键菜单点了「重连」。</summary>
+        public event EventHandler ReconnectRequested;
+        /// <summary>用户在右键菜单点了「导出缓冲」。</summary>
+        public event EventHandler ExportRequested;
+        /// <summary>用户在右键菜单点了「外观设置」。</summary>
+        public event EventHandler AppearanceSettingsRequested;
+
+        private ContextMenuStrip _termMenu;
 
         public TerminalControl(
             ConnectionConfig config,
@@ -192,6 +202,116 @@ namespace Gdterm.UI.Controls
             KeyPress += OnKeyPress;
             KeyDown += OnKeyDown;
             PreviewKeyDown += (s, e) => { e.IsInputKey = true; };
+
+            BuildContextMenu();
+        }
+
+        // ===== 终端右键菜单：复制 / 粘贴 / 清屏 / 查找 / 重连 / 导出 / 外观 =====
+        // 行为定调：
+        //   - 右键直接弹菜单（SecureCRT / Windows Terminal 习惯）。
+        //   - Shift+右键 继续作为 VT 鼠标按钮 2 透传给 vim/less，保留 TUI 应用内右键。
+        //   - 复制/粘贴用剪贴板；没有选中文本时「复制」按钮的 Enabled=false。
+        private void BuildContextMenu()
+        {
+            _termMenu = new ContextMenuStrip();
+            _termMenu.Opening += (s, e) =>
+            {
+                // 动态启用/禁用：没选中禁用复制；没连接禁用粘贴/重连/导出
+                bool hasSel = false;
+                try { hasSel = !string.IsNullOrWhiteSpace(GetSelection()); } catch { }
+                SetMenuItemEnabled("_copyItem", hasSel);
+                SetMenuItemEnabled("_pasteItem", IsConnected && ClipboardContainsText());
+                SetMenuItemEnabled("_clearItem", IsConnected);
+                SetMenuItemEnabled("_reconnectItem", !IsConnected || _config != null);
+                SetMenuItemEnabled("_exportItem", IsConnected);
+            };
+
+            var copyItem = new ToolStripMenuItem("复制(&C)");
+            copyItem.Name = "_copyItem";
+            copyItem.Click += (s, e) =>
+            {
+                try
+                {
+                    var text = GetSelection();
+                    if (!string.IsNullOrEmpty(text)) Clipboard.SetText(text);
+                }
+                catch (Exception ex) { DiagLog.Swallowed("TerminalControl.Copy", ex); }
+            };
+
+            var pasteItem = new ToolStripMenuItem("粘贴(&V)");
+            pasteItem.Name = "_pasteItem";
+            pasteItem.Click += (s, e) =>
+            {
+                try
+                {
+                    if (!IsConnected) return;
+                    var text = Clipboard.GetText();
+                    if (!string.IsNullOrEmpty(text)) TrySendInput(text);
+                }
+                catch (Exception ex) { DiagLog.Swallowed("TerminalControl.Paste", ex); }
+            };
+
+            _termMenu.Items.Add(copyItem);
+            _termMenu.Items.Add(pasteItem);
+            _termMenu.Items.Add(new ToolStripSeparator());
+
+            var clearItem = new ToolStripMenuItem("清屏(&L)");
+            clearItem.Name = "_clearItem";
+            clearItem.Click += (s, e) =>
+            {
+                try { ClearTerminal(); } catch (Exception ex) { DiagLog.Swallowed("TerminalControl.Clear", ex); }
+            };
+            _termMenu.Items.Add(clearItem);
+
+            var searchItem = new ToolStripMenuItem("查找(&F)...");
+            searchItem.Name = "_searchItem";
+            searchItem.Click += (s, e) =>
+            {
+                try { SearchRequested?.Invoke(this, EventArgs.Empty); } catch { }
+            };
+            _termMenu.Items.Add(searchItem);
+            _termMenu.Items.Add(new ToolStripSeparator());
+
+            var reconnectItem = new ToolStripMenuItem("重连(&R)");
+            reconnectItem.Name = "_reconnectItem";
+            reconnectItem.Click += (s, e) =>
+            {
+                try { ReconnectRequested?.Invoke(this, EventArgs.Empty); } catch { }
+            };
+            _termMenu.Items.Add(reconnectItem);
+
+            var exportItem = new ToolStripMenuItem("导出缓冲(&E)...");
+            exportItem.Name = "_exportItem";
+            exportItem.Click += (s, e) =>
+            {
+                try { ExportRequested?.Invoke(this, EventArgs.Empty); } catch { }
+            };
+            _termMenu.Items.Add(exportItem);
+            _termMenu.Items.Add(new ToolStripSeparator());
+
+            var settingsItem = new ToolStripMenuItem("外观设置(&A)...");
+            settingsItem.Name = "_settingsItem";
+            settingsItem.Click += (s, e) =>
+            {
+                try { AppearanceSettingsRequested?.Invoke(this, EventArgs.Empty); } catch { }
+            };
+            _termMenu.Items.Add(settingsItem);
+
+            // 绑到 TerminalControl 本身；canvas 会在 OnCellMouseDown 里拦右键后手动 Show。
+            ContextMenuStrip = _termMenu;
+        }
+
+        private void SetMenuItemEnabled(string name, bool enabled)
+        {
+            foreach (ToolStripItem item in _termMenu.Items)
+            {
+                if (item.Name == name) { item.Enabled = enabled; break; }
+            }
+        }
+
+        private static bool ClipboardContainsText()
+        {
+            try { return Clipboard.ContainsText(); } catch { return false; }
         }
 
         private void OnCellSendToHost(object sender, byte[] data)
@@ -215,6 +335,19 @@ namespace Gdterm.UI.Controls
 
         private void OnCellMouseDown(object sender, MouseEventArgs e)
         {
+            // 右键：Shift+右键 → VT 鼠标按钮 2（vim/less 等应用内）；裸右键 → 弹菜单。
+            if (e.Button == MouseButtons.Right && (ModifierKeys & Keys.Shift) == 0)
+            {
+                try
+                {
+                    var canvas = sender as Control;
+                    if (canvas != null && _termMenu != null)
+                        _termMenu.Show(canvas, e.X, e.Y);
+                }
+                catch (Exception ex) { DiagLog.Swallowed("TerminalControl.ContextMenuShow", ex); }
+                return;
+            }
+
             if (_cellRenderer == null || _session?.IsConnected != true) return;
             int col, row;
             if (!_cellRenderer.TryHitTest(e.X, e.Y, out col, out row)) return;

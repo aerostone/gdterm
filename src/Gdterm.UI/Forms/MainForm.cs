@@ -210,6 +210,10 @@ namespace Gdterm.UI.Forms
             _tabContainer.Dock = DockStyle.Fill;
             _tabContainer.ActiveSessionChanged += OnActiveSessionChanged;
             _tabContainer.SessionClosed += OnSessionClosed;
+            _tabContainer.SearchRequested += (s, e) => _sidePanels?.AttachSearchBar(_tabContainer);
+            _tabContainer.ExportRequested += (s, e) => ExportActiveTerminalBuffer();
+            _tabContainer.AppearanceSettingsRequested += (s, e) => _toolsDialogs.OpenAppearanceSettings();
+            // ReconnectRequested 已由 TabContainerControl 内部直走 ReconnectActiveTab，无需重复。
 
             AiCommandGateBinder.Bind(
                 _aiService,
@@ -414,6 +418,50 @@ namespace Gdterm.UI.Forms
                 _quickBar?.SetActiveSession(session, host, user);
 
             try { _sidePanels?.SyncMultiChannelRegistrations(); } catch { }
+        }
+
+        /// <summary>
+        /// 导出当前活动终端的滚动缓冲到文本或 HTML 文件。
+        /// 从右键菜单「导出缓冲」触发；本会话未连接时弹提示。
+        /// </summary>
+        private void ExportActiveTerminalBuffer()
+        {
+            try
+            {
+                var tc = _tabContainer?.GetActiveTerminalControl();
+                if (tc == null || !tc.IsConnected)
+                {
+                    MessageBox.Show(this, "当前没有活动的终端会话。", "导出缓冲",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                using (var dlg = new SaveFileDialog())
+                {
+                    dlg.Title = "导出终端缓冲";
+                    dlg.Filter = "文本文件 (*.txt)|*.txt|HTML 文件 (*.html)|*.html|所有文件 (*.*)|*.*";
+                    dlg.FileName = "terminal-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".txt";
+                    if (dlg.ShowDialog(this) != DialogResult.OK) return;
+
+                    var lines = tc.Session?.GetRecentOutput(2000);
+                    if (lines == null) lines = new System.Collections.Generic.List<string>();
+                    var host = tc.Config?.Host ?? "localhost";
+                    string content;
+                    if (System.IO.Path.GetExtension(dlg.FileName).Equals(".html", StringComparison.OrdinalIgnoreCase))
+                        content = Gdterm.Terminal.TerminalBufferExport.ExportAsHtml(new System.Collections.Generic.List<string>(lines), host);
+                    else
+                        content = Gdterm.Terminal.TerminalBufferExport.ExportAsText(new System.Collections.Generic.List<string>(lines), host);
+                    Gdterm.Terminal.TerminalBufferExport.SaveToFile(content, dlg.FileName);
+                    MessageBox.Show(this, "已导出到：\n" + dlg.FileName, "导出缓冲",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                Gdterm.UI.Diagnostics.DiagLog.Swallowed("MainForm.ExportBuffer", ex);
+                MessageBox.Show(this, "导出失败：" + ex.Message, "导出缓冲",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
         }
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)

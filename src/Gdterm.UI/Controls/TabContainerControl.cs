@@ -44,6 +44,12 @@ namespace Gdterm.UI.Controls
         /// <summary>标签关闭时触发（参数为 SessionId，供多通道注销等）</summary>
         public event EventHandler<string> SessionClosed;
 
+        // ===== 终端右键菜单转发事件（由 TerminalControl 的 4 个同名事件转出） =====
+        public event EventHandler SearchRequested;
+        public event EventHandler ReconnectRequested;
+        public event EventHandler ExportRequested;
+        public event EventHandler AppearanceSettingsRequested;
+
         public TabContainerControl(
             ITunnelManager tunnelManager,
             ITerminalSessionFactory terminalFactory,
@@ -192,6 +198,20 @@ namespace Gdterm.UI.Controls
                 WireHealthAndReconnect(ts, terminalControl != null ? terminalControl.Session : null);
             }
             _lifecycle.TryRunLogonScript(terminalControl, config);
+
+            // 订阅终端右键菜单事件，转发给顶层订阅者（MainForm 调起面板）。
+            if (terminalControl != null)
+            {
+                terminalControl.SearchRequested += (s, e) => SearchRequested?.Invoke(terminalControl, e);
+                terminalControl.ReconnectRequested += (s, e) =>
+                {
+                    // 直接走当前活动标签重连；重连路径已 awaited。
+                    try { ReconnectActiveTab(); } catch { }
+                    ReconnectRequested?.Invoke(terminalControl, e);
+                };
+                terminalControl.ExportRequested += (s, e) => ExportRequested?.Invoke(terminalControl, e);
+                terminalControl.AppearanceSettingsRequested += (s, e) => AppearanceSettingsRequested?.Invoke(terminalControl, e);
+            }
         }
 
         private void HandleRdpConnected(TabPage tab)
