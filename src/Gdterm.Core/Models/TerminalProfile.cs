@@ -27,6 +27,10 @@ namespace Gdterm.Core.Models
         /// <summary>
         /// 回滚缓冲行数
         /// </summary>
+        /// <summary>
+        /// 回滚行数。默认 300（低配友好）；UI 硬顶 2000。
+        /// 低内存机靠此门禁 + 非活动 tab Pause，不需要改 Renderer。
+        /// </summary>
         public int ScrollbackLines { get; set; } = 300;
 
         /// <summary>
@@ -82,6 +86,11 @@ namespace Gdterm.Core.Models
         /// <summary>
         /// 渲染器：VtCell（真彩/TUI，默认）或 Lightweight（16 色行缓冲，极低内存）
         /// Metadata: renderer=vtcell|lightweight 或 terminalProfile.renderer
+        /// </summary>
+        /// <summary>
+        /// 渲染后端。默认 VtCell（真彩/TUI）。
+        /// Lightweight 仅作紧急回退（Metadata renderer=lightweight），
+        /// 低配机请优先降 scrollback，不要默认切 Lightweight。
         /// </summary>
         public string Renderer { get; set; } = "VtCell";
 

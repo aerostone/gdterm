@@ -87,8 +87,8 @@
 - TunnelManager 同 connectionId 单飞；跳板 ConnectHop 支持私钥
 - AuditLogger 写盘失败回落 audit-fallback.jsonl；锁屏 IdleLock/Unlock 写审计
 - RDP CredWrite 使用 CRED_PERSIST_SESSION；进程退出清理
-- VT 真彩/TUI（2026-07-26）：默认 `TerminalProfile.Renderer=VtCell` → `CellGdiRenderer`+`VtTerminalEngine`；`renderer=lightweight` 回退 16 色行缓冲
-- scrollback 默认 profile 300，UI 夹 100–2000；cell 引擎硬顶 2000；Pause 停 Timer
+- VT 真彩/TUI（2026-07-26）：默认 `TerminalProfile.Renderer=VtCell` → `CellGdiRenderer`+`VtTerminalEngine`；`renderer=lightweight` **仅紧急回退**，低配机不要默认切
+- 低配控内存：scrollback 默认 300（UI 夹 100–2000，硬顶 2000）+ 非活动 tab Pause 停 Timer + 真彩 brush 缓存≤256 + 懒连接；暂停 tab 仍 Feed 引擎以保持 TUI/alt-screen 状态，但不 BeginInvoke/不重绘
 - SSH TERM 来自 `TerminalProfile.TerminalType`（默认 xterm-256color）；连接后不自动 uname
 - `ITerminalSession.SendBytes`/`Resize`；SSH window-change 经反射 SendWindowChangeRequest
 - 绿色分发必须带 `VtNetCore.dll` + `LICENSE.VtNetCore.txt`；CI 见根目录 `appveyor.yml`（VS2022 / net462）

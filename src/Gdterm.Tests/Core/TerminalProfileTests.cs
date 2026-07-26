@@ -51,9 +51,10 @@ namespace Gdterm.Tests.Core
 
         private static void ScrollbackHardCapIsProfileSide()
         {
-            // UI NormalizeProfile 夹到 100..2000；此处只验证默认
+            // 低配默认 300；UI NormalizeProfile 夹到 100..2000
             var p = new TerminalProfile();
-            Assert.True(p.ScrollbackLines >= 100, "default scrollback reasonable");
+            Assert.Equal(300, p.ScrollbackLines, "default scrollback 300 for low-memory");
+            Assert.True(p.UseVtCell, "default remains VtCell (not auto Lightweight)");
         }
     }
 }

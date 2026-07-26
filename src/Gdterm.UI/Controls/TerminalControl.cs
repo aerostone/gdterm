@@ -105,6 +105,7 @@ namespace Gdterm.UI.Controls
         private static void NormalizeProfile(TerminalProfile profile)
         {
             if (profile == null) return;
+            // 低配默认：scrollback 300；硬顶 2000。不因内存自动切 Lightweight。
             if (profile.ScrollbackLines > 2000) profile.ScrollbackLines = 2000;
             if (profile.ScrollbackLines < 100) profile.ScrollbackLines = 100;
             if (string.IsNullOrWhiteSpace(profile.TerminalType))
@@ -118,7 +119,8 @@ namespace Gdterm.UI.Controls
             var scheme = ColorSchemes.GetByName(_profile?.ColorScheme) ?? ColorSchemes.Classic;
             int rows = 24;
             int cols = 80;
-            int history = _profile?.ScrollbackLines ?? 500;
+            // 与 TerminalProfile 默认 300 对齐，低配多标签更省
+            int history = _profile?.ScrollbackLines ?? 300;
 
             if (_profile != null && _profile.UseVtCell)
             {
@@ -564,8 +566,11 @@ namespace Gdterm.UI.Controls
         {
             if (_disposed || e == null || string.IsNullOrEmpty(e.Text)) return;
 
+            // 暂停标签：仍喂引擎以保持 TUI/alt-screen 状态，但不进 UI 消息泵、不重绘
+            // （CellGdiRenderer.Write 在 Pause 时只 Feed，不启动 timer）
             if (_isPaused)
             {
+                try { _renderer?.Write(e.Text); } catch { }
                 try { _autoLogger?.LogOutput(e.Text); } catch { }
                 return;
             }

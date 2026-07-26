@@ -45,7 +45,8 @@ msbuild gdterm.sln /p:Configuration=Release /t:Gdterm_Tests
 
 ## 内存门禁（Phase 0 默认）
 
-- `MaximumHistoryLines` 默认 **500**，硬顶 **2000**
+- `MaximumHistoryLines` / `TerminalProfile.ScrollbackLines` 默认 **300**（低配友好），硬顶 **2000**
+- 默认渲染 **VtCell**；低配机靠 scrollback + 非活动 tab Pause 控内存，**不要**默认切 Lightweight
 - `CellGdiRenderer.Pause()` 停 16ms Timer
 - 禁止 RichTextBox 主路径
 

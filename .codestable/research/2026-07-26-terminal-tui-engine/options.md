@@ -135,14 +135,14 @@ SSH.NET ShellStream (bytes)
 | 场景 | 目标 | 手段 |
 |------|------|------|
 | 启动 | 25–35MB | 不预建大 scrollback |
-| 单 SSH 活动标签 | +2–5MB | cell 缓冲 80×24～120×40；scrollback 默认 **500** |
+| 单 SSH 活动标签 | +2–5MB | cell 缓冲 80×24～120×40；scrollback 默认 **300** |
 | 15 SSH 标签（多数 Pause） | **≤80MB** | Pause 标签：停重绘；scrollback 可降到 200；禁止每字符 `new string` |
 | TUI 全屏 | +3–8MB/活动 | alt screen 固定 rows×cols，无无限 history 膨胀 |
 | 真彩 | 可忽略增量 | `Color` 缓存刷子（现有 `_brushCache` 模式） |
 
 硬门禁：
 
-1. `MaxScrollback` 默认 500，Metadata 可调，上限 2000  
+1. `MaxScrollback` 默认 **300**，Metadata 可调，上限 2000；**不**因低配自动切 Lightweight  
 2. 非活动标签不跑 60fps；沿用 16ms 节流且 Pause 停 Timer  
 3. 禁止 RichTextBox 回到主路径  
 4. 可选：仅活动标签启用 true color 全量重绘脏矩形  
@@ -217,7 +217,7 @@ SSH.NET ShellStream (bytes)
 | SDK 还是自研？ | **SDK：VtNetCore（vendoring）+ 自研 GDI cell 渲染** |
 | 能否 true color？ | Phase 0 实测后确认；架构按 true color 预留 |
 | 能否 codex/opencode？ | Phase 3 目标；依赖 alt-screen + 键鼠 + 足够 VT 覆盖 |
-| 内存？ | 默认 scrollback 500 + Pause；15 标签仍盯 80MB |
+| 内存？ | 默认 scrollback 300 + Pause + 真彩 brush 缓存≤256；15 标签仍盯 80MB；Lightweight 仅紧急回退 |
 | 下一步？ | ~~Phase 0 Spike~~ → **Phase 1 UI 接线** |
 
 ## 10. Phase 0 落地状态（2026-07-26）

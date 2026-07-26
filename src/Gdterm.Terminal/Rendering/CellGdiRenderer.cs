@@ -35,6 +35,9 @@ namespace Gdterm.Terminal.Rendering
         private float _charWidth = 8f;
         private float _charHeight = 16f;
 
+        /// <summary>真彩 brush 缓存上限，防止 24-bit 颜色刷爆低配内存。</summary>
+        private const int MaxBrushCache = 256;
+
         /// <summary>引擎请求发往主机的字节（DA/键鼠应答等）。</summary>
         public event EventHandler<byte[]> SendToHost;
 
@@ -165,11 +168,11 @@ namespace Gdterm.Terminal.Rendering
             _isPaused = false;
             lock (_lock)
             {
+                // 暂停期间引擎仍在 Feed；恢复时一次性 snapshot，不持续空转
                 RefreshSnapshot(force: true);
                 _needsRedraw = true;
             }
             ScheduleRedraw();
-            try { _redrawTimer.Start(); } catch { }
         }
 
         public bool TryKeyPressed(string key, bool control, bool shift)
@@ -368,11 +371,21 @@ namespace Gdterm.Terminal.Rendering
         private SolidBrush GetBrush(Color c)
         {
             SolidBrush b;
-            if (!_brushCache.TryGetValue(c, out b))
+            if (_brushCache.TryGetValue(c, out b))
+                return b;
+
+            // 真彩场景颜色种类可能很大：超限时整表重建，避免无限增长
+            if (_brushCache.Count >= MaxBrushCache)
             {
-                b = new SolidBrush(c);
-                _brushCache[c] = b;
+                foreach (var old in _brushCache.Values)
+                {
+                    try { old.Dispose(); } catch { }
+                }
+                _brushCache.Clear();
             }
+
+            b = new SolidBrush(c);
+            _brushCache[c] = b;
             return b;
         }
 
