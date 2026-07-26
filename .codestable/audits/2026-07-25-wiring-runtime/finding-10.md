@@ -42,6 +42,7 @@ status: partial
   - `ProtocolTabOpener` / `TabSessionState` / `MainFormMenuBuilder`
   - `TabReconnectService` / `MasterPasswordPrompt` / `ConnectionImportExportUi`
   - `ViewModeController` / `SidePanelHost` / `ToolsDialogsLauncher` / `GlobalHotkeyController`
-  - `TabActiveSessionQuery`
-- **metrics**: MainForm 1072→~485；TabContainer 836→~500
-- **remaining**: MainForm 仍是组合根（DI 字段 + 布局 + 少量事件）；TabContainer 仍负责字典/关签/绘制 chrome；完整 SessionOrchestrator deferred
+  - `TabActiveSessionQuery` / `TabCloseService`
+- **metrics**: MainForm 1072→~485；TabContainer 836→~427
+- **remaining**: MainForm 仍是组合根（DI 字段 + 布局 + 少量事件）；TabContainer 仍持有字典/绘制 chrome/分屏 UI；完整 SessionOrchestrator deferred
+- **cleanup**: 删除未接线死代码 `PasswordHealthPanel`（菜单走 `PasswordHealthForm`）

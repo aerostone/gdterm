@@ -114,9 +114,6 @@
     <Compile Include="Controls\LockOverlayControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="Controls\PasswordHealthPanel.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
     <Compile Include="Controls\DangerousCommandDialog.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -154,6 +151,7 @@
     <Compile Include="Services\ConnectionImportExportUi.cs" />
     <Compile Include="Services\MasterPasswordPrompt.cs" />
     <Compile Include="Services\TabReconnectService.cs" />
+    <Compile Include="Services\TabCloseService.cs" />
     <Compile Include="Services\ProtocolTabOpener.cs" />
     <Compile Include="Services\TabSessionState.cs" />
     <Compile Include="Services\SessionStateCoordinator.cs" />

@@ -32,6 +32,7 @@ namespace Gdterm.UI.Controls
         private readonly TabSessionLifecycle _lifecycle;
         private readonly ProtocolTabOpener _opener;
         private readonly TabReconnectService _reconnectService;
+        private readonly TabCloseService _closeService;
         private readonly TabActiveSessionQuery _activeQuery;
         private readonly Dictionary<TabPage, TabSessionState> _sessions = new Dictionary<TabPage, TabSessionState>();
         private TabControl _tabControl;
@@ -73,6 +74,8 @@ namespace Gdterm.UI.Controls
             _opener.OnTerminalConnected = HandleTerminalConnected;
             _opener.OnRdpConnected = HandleRdpConnected;
             _reconnectService = new TabReconnectService();
+            _closeService = new TabCloseService(
+                _lifecycle, _reconnectWatchdog, _keepassService, _tunnelManager);
             _activeQuery = new TabActiveSessionQuery(
                 () => _tabControl != null ? _tabControl.SelectedTab : null,
                 _sessions);
@@ -222,62 +225,18 @@ namespace Gdterm.UI.Controls
 
         public void CloseAllTabs()
         {
-            foreach (TabPage tab in _tabControl.TabPages)
-                CloseTab(tab);
-            _tabControl.TabPages.Clear();
-            _sessions.Clear();
+            _closeService.CloseAllTabs(_tabControl, _sessions);
+            try { ActiveSessionChanged?.Invoke(this, EventArgs.Empty); } catch { }
         }
 
         private void CloseTab(TabPage tab)
         {
-            if (!_sessions.TryGetValue(tab, out var session)) return;
-
-            var sessionId = session.SessionId;
-            var connectionId = session.Config?.Id;
-
-            if (!string.IsNullOrEmpty(sessionId))
-                _reconnectWatchdog?.Unwatch(sessionId);
-
-            try { session.HealthMonitor?.Dispose(); } catch { }
-
-            if (session.Protocol == ProtocolType.RDP)
-            {
-                try { session.RdpClient?.Dispose(); } catch { }
-                try { _keepassService?.CleanupRdpCredential(session.Config?.Host); } catch { }
-            }
-
-            if (session.Control is IDisposable disposable)
-            {
-                try { disposable.Dispose(); } catch { }
-            }
-
-            // 先从字典移除，再判断同 connectionId 是否还有其他标签共享隧道
-            _sessions.Remove(tab);
-
-            if (!string.IsNullOrEmpty(connectionId))
-            {
-                var remaining = new List<string>();
-                foreach (var other in _sessions.Values)
-                {
-                    if (other?.Config?.Id != null)
-                        remaining.Add(other.Config.Id);
-                }
-                _lifecycle.CloseTunnelIfLastUser(_tunnelManager, connectionId, remaining);
-            }
-
-            _lifecycle.LogConnectionClose(
-                connectionId,
-                session.Config?.Host ?? session.Config?.Name,
-                session.Protocol.ToString());
-
-            try { _tabControl.TabPages.Remove(tab); } catch { }
-
+            var sessionId = _closeService.CloseTab(tab, _sessions, _tabControl);
             if (!string.IsNullOrEmpty(sessionId))
             {
                 try { SessionClosed?.Invoke(this, sessionId); } catch { }
             }
-
-            ActiveSessionChanged?.Invoke(this, EventArgs.Empty);
+            try { ActiveSessionChanged?.Invoke(this, EventArgs.Empty); } catch { }
         }
 
         private void OnDrawTab(object sender, DrawItemEventArgs e)
@@ -349,25 +308,13 @@ namespace Gdterm.UI.Controls
 
         public void ReconnectActiveTab()
         {
-            if (_tabControl.SelectedTab == null) return;
-            if (!_sessions.TryGetValue(_tabControl.SelectedTab, out var session)) return;
-
-            var config = session.Config;
-            var cred = session.Credential;
-            CloseTab(_tabControl.SelectedTab);
-
-            if (config != null)
-            {
-                OpenConnection(config);
-                // 重新注入凭据
-                if (_tabControl.SelectedTab != null &&
-                    _sessions.TryGetValue(_tabControl.SelectedTab, out var newSession))
-                {
-                    newSession.Credential = cred;
-                    if (newSession.Control is TerminalControl tc)
-                        tc.Credentials = cred;
-                }
-            }
+            _reconnectService.ReconnectActive(
+                _tabControl.SelectedTab,
+                _sessions,
+                CloseTab,
+                OpenConnection,
+                () => _tabControl.SelectedTab,
+                WireHealthAndReconnect);
         }
 
         public void ReconnectById(string connectionId)
@@ -377,41 +324,21 @@ namespace Gdterm.UI.Controls
 
         private bool ReconnectByIdSync(string connectionId)
         {
-            ConnectionConfig config = null;
-            CredentialPayload cred = null;
-
-            foreach (TabPage tab in new List<TabPage>(EnumTabs()))
-            {
-                if (_sessions.TryGetValue(tab, out var session) &&
-                    session.Config?.Id == connectionId)
-                {
-                    config = session.Config;
-                    cred = session.Credential;
-                    CloseTab(tab);
-                    break;
-                }
-            }
-
-            if (config == null && _connectionStore != null)
-                config = _connectionStore.GetById(connectionId);
-
-            if (config == null) return false;
-
-            OpenConnection(config);
-            if (_tabControl.SelectedTab == null ||
-                !_sessions.TryGetValue(_tabControl.SelectedTab, out var newSession))
-                return false;
-
-            return _reconnectService.CompleteAfterOpen(
-                newSession,
-                cred,
-                WireHealthAndReconnect);
+            return _reconnectService.ReconnectById(
+                connectionId,
+                _sessions,
+                EnumTabs(),
+                CloseTab,
+                OpenConnection,
+                () => _tabControl.SelectedTab,
+                WireHealthAndReconnect,
+                _connectionStore);
         }
 
         private IEnumerable<TabPage> EnumTabs()
         {
-            foreach (TabPage t in _tabControl.TabPages)
-                yield return t;
+            foreach (TabPage page in _tabControl.TabPages)
+                yield return page;
         }
 
         public int ActiveTabIndex

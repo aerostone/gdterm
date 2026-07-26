@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Windows.Forms;
+using Gdterm.Connections;
 using Gdterm.Core.Models;
 using Gdterm.Terminal;
 using Gdterm.UI.Controls;
@@ -7,8 +9,7 @@ using Gdterm.UI.Controls;
 namespace Gdterm.UI.Services
 {
     /// <summary>
-    /// 标签重连协调——等待懒连接真正成功，避免 Watchdog 假成功（finding-07 / finding-10）。
-    /// TabContainer 负责关签/开签；本类只处理凭据回填与连接就绪轮询。
+    /// 标签重连协调——关签/开签编排 + 懒连接就绪轮询（finding-07 / finding-10）。
     /// </summary>
     public sealed class TabReconnectService
     {
@@ -16,13 +17,91 @@ namespace Gdterm.UI.Services
         public const int PollIntervalMs = 200;
 
         /// <summary>
+        /// 重连当前选中标签：关闭后按缓存 config/cred 重开，并等待真实连接。
+        /// </summary>
+        public bool ReconnectActive(
+            TabPage selectedTab,
+            IDictionary<TabPage, TabSessionState> sessions,
+            Action<TabPage> closeTab,
+            Action<ConnectionConfig> openConnection,
+            Func<TabPage> getSelectedTab,
+            Action<TabSessionState, ITerminalSession> onTerminalConnected)
+        {
+            if (selectedTab == null || sessions == null || closeTab == null || openConnection == null)
+                return false;
+
+            TabSessionState session;
+            if (!sessions.TryGetValue(selectedTab, out session) || session == null)
+                return false;
+
+            var config = session.Config;
+            var cred = session.Credential;
+            closeTab(selectedTab);
+
+            if (config == null) return false;
+            openConnection(config);
+
+            var tab = getSelectedTab != null ? getSelectedTab() : null;
+            if (tab == null || !sessions.TryGetValue(tab, out var newSession) || newSession == null)
+                return false;
+
+            return CompleteAfterOpen(newSession, cred, onTerminalConnected);
+        }
+
+        /// <summary>
+        /// 按 connectionId 重连：先关同 Id 标签，必要时从 store 取配置，再等待真实连接。
+        /// </summary>
+        public bool ReconnectById(
+            string connectionId,
+            IDictionary<TabPage, TabSessionState> sessions,
+            IEnumerable<TabPage> tabs,
+            Action<TabPage> closeTab,
+            Action<ConnectionConfig> openConnection,
+            Func<TabPage> getSelectedTab,
+            Action<TabSessionState, ITerminalSession> onTerminalConnected,
+            IConnectionStore connectionStore)
+        {
+            if (string.IsNullOrEmpty(connectionId) || sessions == null || closeTab == null || openConnection == null)
+                return false;
+
+            ConnectionConfig config = null;
+            CredentialPayload cred = null;
+
+            if (tabs != null)
+            {
+                foreach (var tab in new List<TabPage>(tabs))
+                {
+                    TabSessionState session;
+                    if (sessions.TryGetValue(tab, out session) &&
+                        session != null &&
+                        session.Config != null &&
+                        session.Config.Id == connectionId)
+                    {
+                        config = session.Config;
+                        cred = session.Credential;
+                        closeTab(tab);
+                        break;
+                    }
+                }
+            }
+
+            if (config == null && connectionStore != null)
+                config = connectionStore.GetById(connectionId);
+
+            if (config == null) return false;
+
+            openConnection(config);
+
+            var selected = getSelectedTab != null ? getSelectedTab() : null;
+            if (selected == null || !sessions.TryGetValue(selected, out var newSession) || newSession == null)
+                return false;
+
+            return CompleteAfterOpen(newSession, cred, onTerminalConnected);
+        }
+
+        /// <summary>
         /// 在 OpenConnection 之后：回填凭据，强制终端连接并等待就绪。
         /// </summary>
-        /// <param name="session">新打开的标签会话</param>
-        /// <param name="credential">重连前缓存的凭据（可空）</param>
-        /// <param name="onTerminalConnected">终端已连上时回调（通常 WireHealthAndReconnect）</param>
-        /// <param name="timeoutSeconds">轮询上限秒数</param>
-        /// <returns>是否确认连接成功</returns>
         public bool CompleteAfterOpen(
             TabSessionState session,
             CredentialPayload credential,

@@ -64,3 +64,5 @@
 - 终端自动日志默认关；连接 Metadata 设 autoLog=true 或 terminalProfile.autoLog 才启用，日志目录 data/logs/terminal
 - finding-10 继续拆分：ViewModeController / SidePanelHost / ToolsDialogsLauncher / GlobalHotkeyController / TabActiveSessionQuery；MainForm~485、TabContainer~500
 - 禁止把视图模式/侧栏 ShowHide/工具对话框逻辑重新堆回 MainForm；新逻辑进 Services/
+- finding-10 再拆：TabCloseService / TabReconnectService 统一关签与重连；TabContainer~427
+- 密码健康只保留 PasswordHealthForm（菜单入口）；PasswordHealthPanel 已删除，勿再引入重复面板

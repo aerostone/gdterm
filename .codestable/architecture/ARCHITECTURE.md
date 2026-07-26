@@ -122,6 +122,7 @@ ConnectionTree 双击
 | `ToolsDialogsLauncher` | KeePass/AI/密码健康等对话框 |
 | `GlobalHotkeyController` | Ctrl+` 全局显隐 |
 | `TabActiveSessionQuery` | 活动标签/SSH 宿主查询 |
+| `TabCloseService` | 关签编排 / 隧道最后用户 / RDP 清理 |
 | `TabReconnectService` | 重连等待真实连接 |
 | `ActiveSessionBridge` | 活动会话 → Toolbox / PortForward 绑定 |
 | `TabReconnectService` | 重连后凭据回填 + 懒连接就绪轮询（避免 Watchdog 假成功） |
