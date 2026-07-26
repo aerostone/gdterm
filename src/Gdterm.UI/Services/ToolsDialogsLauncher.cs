@@ -114,8 +114,8 @@ namespace Gdterm.UI.Services
                 "Ctrl + W          关闭当前标签\n" +
                 "Ctrl + F          终端查找\n" +
                 "Ctrl + P          片段搜索\n" +
-                "Esc / F11         退出专注模式
-右上角按钮         退出专注（专注模式下可见）",
+                "Esc / F11         退出专注模式\n" +
+                "右上角按钮         退出专注（专注模式下可见）",
                 "快捷键", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
