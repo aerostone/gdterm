@@ -10,6 +10,8 @@ using Gdterm.Sftp;
 using Gdterm.Terminal;
 using Gdterm.Tunnel;
 using Gdterm.UI.Controls;
+using TerminalControl = Gdterm.UI.Controls.TerminalControl;
+using Gdterm.Security;
 
 namespace Gdterm.UI.Services
 {

@@ -3,6 +3,8 @@ using System.Windows.Forms;
 using Gdterm.AI;
 using Gdterm.Terminal;
 using Gdterm.UI.Controls;
+using TerminalControl = Gdterm.UI.Controls.TerminalControl;
+using Gdterm.Security;
 
 namespace Gdterm.UI.Services
 {

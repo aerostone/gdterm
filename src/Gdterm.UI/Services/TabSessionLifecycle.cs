@@ -8,6 +8,8 @@ using Gdterm.Logging.Models;
 using Gdterm.Terminal;
 using Gdterm.Tunnel;
 using Gdterm.UI.Controls;
+using TerminalControl = Gdterm.UI.Controls.TerminalControl;
+using Gdterm.Connections;
 
 namespace Gdterm.UI.Services
 {

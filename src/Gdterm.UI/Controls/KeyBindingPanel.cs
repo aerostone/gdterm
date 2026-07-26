@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using Gdterm.Core.Models;
 using Gdterm.Connections;
 using Gdterm.Terminal;
+using TerminalControl = Gdterm.UI.Controls.TerminalControl;
 
 namespace Gdterm.UI.Controls
 {

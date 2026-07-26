@@ -4,6 +4,7 @@ using Gdterm.AI;
 using Gdterm.KeePass;
 using Gdterm.Security;
 using Gdterm.Tunnel;
+using Gdterm.Security.Models;
 
 namespace Gdterm.UI.Controls
 {

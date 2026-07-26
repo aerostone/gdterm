@@ -7,6 +7,7 @@ using Gdterm.Core.Models;
 using Gdterm.Terminal;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Diagnostics;
+using TerminalControl = Gdterm.UI.Controls.TerminalControl;
 
 namespace Gdterm.UI.Services
 {

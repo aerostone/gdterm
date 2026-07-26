@@ -5,6 +5,7 @@ using Gdterm.Terminal;
 using Gdterm.Tools;
 using Gdterm.Tunnel;
 using Gdterm.UI.Controls;
+using TerminalControl = Gdterm.UI.Controls.TerminalControl;
 
 namespace Gdterm.UI.Services
 {

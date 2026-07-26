@@ -14,6 +14,8 @@ using Gdterm.Terminal;
 using Gdterm.Tools;
 using Gdterm.Tunnel;
 using Gdterm.UI.Services;
+using TerminalControl = Gdterm.UI.Controls.TerminalControl;
+using Gdterm.Security;
 
 namespace Gdterm.UI.Controls
 {
