@@ -114,7 +114,7 @@ namespace Gdterm.UI.Controls
                 ForeColor = Color.FromArgb(130, 130, 130),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(10, 0, 0, 0),
-                Text = "选择扫描路径后点击"开始扫描""
+                Text = "选择扫描路径后点击「开始扫描」"
             };
             bottomPanel.Controls.Add(_lblStatus);
 
