@@ -19,6 +19,9 @@ namespace Gdterm.Terminal
         private readonly object _lock = new object();
         private const int MaxBufferLines = 500;
         private bool _disposed;
+        private string _termType = "xterm-256color";
+        private int _rows = 24;
+        private int _columns = 80;
 
         public string ConnectionId { get; private set; }
         public string Hostname { get; private set; }
@@ -52,6 +55,7 @@ namespace Gdterm.Terminal
 
             ConnectionId = config.Id;
             Hostname = config.Host;
+            ApplyTerminalProfile(config, rows, columns);
 
             var connInfo = SshConnectionInfoFactory.Create(
                 config.Host,
@@ -62,7 +66,7 @@ namespace Gdterm.Terminal
             _sshClient = new SshClient(connInfo);
             _sshClient.Connect();
 
-            CreateShellStream(rows, columns);
+            CreateShellStream(_rows, _columns);
         }
 
         /// <summary>
@@ -76,6 +80,7 @@ namespace Gdterm.Terminal
 
             ConnectionId = config.Id;
             Hostname = config.Host;
+            ApplyTerminalProfile(config, rows, columns);
 
             // 通过隧道的本地端口连接（目标主机认证仍用 credential，含私钥）
             var connInfo = SshConnectionInfoFactory.Create(
@@ -87,7 +92,7 @@ namespace Gdterm.Terminal
             _sshClient = new SshClient(connInfo);
             _sshClient.Connect();
 
-            CreateShellStream(rows, columns);
+            CreateShellStream(_rows, _columns);
         }
 
         public IList<string> GetRecentOutput(int lineCount)
@@ -120,6 +125,47 @@ namespace Gdterm.Terminal
             _shellStream.Flush();
         }
 
+        public void SendBytes(byte[] data)
+        {
+            if (!IsConnected) throw new InvalidOperationException("终端未连接");
+            if (data == null || data.Length == 0) return;
+            _shellStream.Write(data, 0, data.Length);
+            _shellStream.Flush();
+        }
+
+        /// <summary>
+        /// SSH.NET 2024 ShellStream 无公开 window-change API；
+        /// 尽力用反射调用 ChannelSession.SendWindowChangeRequest；失败则静默（本地 cell 仍会 resize）。
+        /// </summary>
+        public void Resize(int columns, int rows)
+        {
+            if (columns < 2) columns = 2;
+            if (rows < 1) rows = 1;
+            _columns = columns;
+            _rows = rows;
+            if (!IsConnected) return;
+
+            try
+            {
+                // 私有字段 _channel : IChannelSession
+                var field = typeof(ShellStream).GetField("_channel",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                var channel = field != null ? field.GetValue(_shellStream) : null;
+                if (channel == null) return;
+
+                var method = channel.GetType().GetMethod("SendWindowChangeRequest",
+                    System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic);
+                if (method == null) return;
+
+                // (columns, rows, width, height)
+                method.Invoke(channel, new object[] { (uint)columns, (uint)rows, (uint)(columns * 8), (uint)(rows * 16) });
+            }
+            catch
+            {
+                // best-effort：远端可能保持旧尺寸，本地引擎仍按新尺寸渲染
+            }
+        }
+
         public void Dispose()
         {
             if (_disposed) return;
@@ -145,12 +191,38 @@ namespace Gdterm.Terminal
             _sshClient = null;
         }
 
+        private void ApplyTerminalProfile(ConnectionConfig config, int rows, int columns)
+        {
+            _rows = rows > 0 ? rows : 24;
+            _columns = columns > 0 ? columns : 80;
+            try
+            {
+                var profile = TerminalProfile.FromMetadata(config?.Metadata);
+                if (profile != null && !string.IsNullOrWhiteSpace(profile.TerminalType))
+                    _termType = profile.TerminalType.Trim();
+            }
+            catch
+            {
+                _termType = "xterm-256color";
+            }
+        }
+
         private void CreateShellStream(int rows, int columns)
         {
-            _shellStream = _sshClient.CreateShellStream("xterm-256color", (uint)columns, (uint)rows, 800, 600, 1024);
+            _rows = rows;
+            _columns = columns;
+            // TERM 来自 TerminalProfile；默认 xterm-256color（真彩/TUI 友好）
+            var term = string.IsNullOrWhiteSpace(_termType) ? "xterm-256color" : _termType;
+            _shellStream = _sshClient.CreateShellStream(
+                term,
+                (uint)columns,
+                (uint)rows,
+                (uint)Math.Max(80, columns * 8),
+                (uint)Math.Max(24, rows * 16),
+                8192);
 
-            // 检测 OS 类型（异步，不阻塞连接）
-            DetectOsType();
+            // 不再自动 uname：会污染 TUI/真彩会话首屏
+            OsType = "Unknown";
 
             // 启动数据接收循环
             StartReading();
@@ -241,20 +313,5 @@ namespace Gdterm.Terminal
             });
         }
 
-        private void DetectOsType()
-        {
-            try
-            {
-                // 尝试通过 uname 检测（异步发送，不影响用户）
-                _shellStream.WriteLine("uname -s 2>/dev/null || echo Windows");
-                // 结果会通过 DataReceived 事件回来
-                // v1 不做实时解析，用户可手动标记
-                OsType = "Unknown";
-            }
-            catch
-            {
-                OsType = "Unknown";
-            }
-        }
     }
 }

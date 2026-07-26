@@ -80,6 +80,27 @@ namespace Gdterm.Core.Models
         public bool AutoLog { get; set; } = false;
 
         /// <summary>
+        /// 渲染器：VtCell（真彩/TUI，默认）或 Lightweight（16 色行缓冲，极低内存）
+        /// Metadata: renderer=vtcell|lightweight 或 terminalProfile.renderer
+        /// </summary>
+        public string Renderer { get; set; } = "VtCell";
+
+        /// <summary>是否使用 cell VT 引擎（真彩 / alt-screen / TUI）。</summary>
+        public bool UseVtCell
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(Renderer)) return true;
+                var r = Renderer.Trim();
+                if (string.Equals(r, "Lightweight", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(r, "legacy", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(r, "line", StringComparison.OrdinalIgnoreCase))
+                    return false;
+                return true;
+            }
+        }
+
+        /// <summary>
         /// 环境变量（连接后 export 到终端）
         /// </summary>
         public Dictionary<string, string> EnvironmentVariables { get; set; } = new Dictionary<string, string>();
@@ -110,7 +131,8 @@ namespace Gdterm.Core.Models
                     TrimTrailingWhitespace = ExtractBool(json, "trimTrailingWhitespace", true),
                     CopyOnSelect = ExtractBool(json, "copyOnSelect", false),
                     Opacity = ExtractDouble(json, "opacity", 1.0),
-                    AutoLog = ExtractBool(json, "autoLog", false)
+                    AutoLog = ExtractBool(json, "autoLog", false),
+                    Renderer = ExtractValue(json, "renderer", "VtCell")
                 };
             }
             else
@@ -127,6 +149,10 @@ namespace Gdterm.Core.Models
                 else if (string.Equals(v, "false", StringComparison.OrdinalIgnoreCase) || v == "0")
                     profile.AutoLog = false;
             }
+
+            // Metadata["renderer"]=lightweight|vtcell 覆盖 JSON
+            if (metadata.ContainsKey("renderer") && !string.IsNullOrWhiteSpace(metadata["renderer"]))
+                profile.Renderer = metadata["renderer"].Trim();
 
             return profile;
         }
@@ -149,7 +175,8 @@ namespace Gdterm.Core.Models
                 $"\"trimTrailingWhitespace\":{(TrimTrailingWhitespace ? "true" : "false")}," +
                 $"\"copyOnSelect\":{(CopyOnSelect ? "true" : "false")}," +
                 $"\"opacity\":{Opacity:F2}," +
-                $"\"autoLog\":{(AutoLog ? "true" : "false")}" +
+                $"\"autoLog\":{(AutoLog ? "true" : "false")}," +
+                $"\"renderer\":\"{Escape(Renderer)}\"" +
                 "}";
         }
 

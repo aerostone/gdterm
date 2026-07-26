@@ -26,6 +26,7 @@ namespace Gdterm.Tests
             CredentialPayloadTests.Run();
             SecretFindingTests.Run();
             SecurityManagerHashTests.Run();
+            TerminalProfileTests.Run();
             VtTerminalEngineTests.Run();
 
             Console.WriteLine();

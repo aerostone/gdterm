@@ -71,6 +71,7 @@
     <Compile Include="Security\SecretFindingTests.cs" />
     <Compile Include="Security\SecurityManagerHashTests.cs" />
     <Compile Include="Terminal\VtTerminalEngineTests.cs" />
+    <Compile Include="Core\TerminalProfileTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -33,7 +33,13 @@ msbuild gdterm.sln /p:Configuration=Release /m
 src\Gdterm.Tests\bin\Release\Gdterm.Tests.exe
 ```
 
-当前覆盖：`DefaultPorts`、`LogSanitizer` CLI 脱敏、`ConnectionStoreJson` 往返（且断言无 password 字段）。
+当前覆盖：`DefaultPorts`、`LogSanitizer` CLI 脱敏、`ConnectionStoreJson` 往返（且断言无 password 字段）、`TerminalProfile` 双轨、`VtTerminalEngine` Phase0（truecolor/256/alt-screen/DA）、`CredentialPayload`/`SecretFinding`/`PBKDF2`。
+
+## AppVeyor CI
+
+仓库根 `appveyor.yml`：VS2022 镜像、Release 编 `gdterm.sln`、跑 `Gdterm.Tests.exe`、打包 `dist/gdterm` artifact（含 `VtNetCore.dll` + LICENSE）。
+
+接入：AppVeyor 绑定本仓库后推送 `master`/`main` 即可；无需本机 MSBuild。
 
 ## 打包绿色版
 
@@ -56,6 +62,8 @@ powershell -ExecutionPolicy Bypass -File tools\pack-release.ps1 -SkipTests
 3. **`gdterm.sln` 每个项目都要有 `Build.0`** —— 否则 “生成解决方案” 只编到部分工程。
 4. **SSH.NET / KeePassLib** 需在 Windows 上 `nuget restore`；packages 目录勿提交密钥。
 5. **便携数据** 全在 exe 旁 `data\`；发布包不要带真实 `gdterm.kdbx` / 主密码 hash。
+6. **VtNetCore.dll** 必须在 `lib\` 且随 UI 输出/pack 拷贝；缺 DLL 则 cell 终端无法加载。
+7. **默认渲染器 VtCell**；极低内存可 Metadata `renderer=lightweight`。
 
 ## 诊断日志
 

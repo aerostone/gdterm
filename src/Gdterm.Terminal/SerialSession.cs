@@ -96,7 +96,7 @@ namespace Gdterm.Terminal
         }
 
         /// <summary>
-        /// 发送原始字节（用于特殊控制字符）
+        /// 发送原始字节（用于特殊控制字符 / DA 应答）
         /// </summary>
         public void SendBytes(byte[] data)
         {
@@ -104,6 +104,12 @@ namespace Gdterm.Terminal
             if (data == null || data.Length == 0) return;
 
             _port.Write(data, 0, data.Length);
+        }
+
+        /// <summary>串口无 PTY window-change，本地引擎仍会 resize。</summary>
+        public void Resize(int columns, int rows)
+        {
+            // no-op
         }
 
         /// <summary>

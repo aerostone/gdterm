@@ -87,6 +87,9 @@
 - TunnelManager 同 connectionId 单飞；跳板 ConnectHop 支持私钥
 - AuditLogger 写盘失败回落 audit-fallback.jsonl；锁屏 IdleLock/Unlock 写审计
 - RDP CredWrite 使用 CRED_PERSIST_SESSION；进程退出清理
-- Phase 0 VT 引擎（2026-07-26）：`lib/VtNetCore.dll`（MIT）+ `VtTerminalEngine` + `CellGdiRenderer`；默认 scrollback 500/硬顶 2000；UI 仍 LightweightRenderer，Phase 1 再接线
-- 真彩/TUI 验收：`src/Gdterm.Tests/Terminal/VtTerminalEngineTests.cs` + `tools/phase0-vt-harness.md`；Windows MSBuild 为权威
-- 绿色分发必须带 `VtNetCore.dll` 与 `LICENSE.VtNetCore.txt`（pack-release 已拷贝）
+- VT 真彩/TUI（2026-07-26）：默认 `TerminalProfile.Renderer=VtCell` → `CellGdiRenderer`+`VtTerminalEngine`；`renderer=lightweight` 回退 16 色行缓冲
+- scrollback 默认 profile 300，UI 夹 100–2000；cell 引擎硬顶 2000；Pause 停 Timer
+- SSH TERM 来自 `TerminalProfile.TerminalType`（默认 xterm-256color）；连接后不自动 uname
+- `ITerminalSession.SendBytes`/`Resize`；SSH window-change 经反射 SendWindowChangeRequest
+- 绿色分发必须带 `VtNetCore.dll` + `LICENSE.VtNetCore.txt`；CI 见根目录 `appveyor.yml`（VS2022 / net462）
+- 真彩/TUI 自动化：`VtTerminalEngineTests` + `TerminalProfileTests`；手工 vim/tmux/codex 由 Windows 验收

@@ -135,6 +135,23 @@ namespace Gdterm.Terminal
             }
         }
 
+        public void SendBytes(byte[] data)
+        {
+            if (data == null || data.Length == 0) return;
+            try
+            {
+                var text = Encoding.UTF8.GetString(data);
+                SendInput(text);
+            }
+            catch { }
+        }
+
+        /// <summary>本地进程无 PTY window-change。</summary>
+        public void Resize(int columns, int rows)
+        {
+            // no-op
+        }
+
         public void SendBreak(int durationMs = 100)
         {
             SendInput("\x03");

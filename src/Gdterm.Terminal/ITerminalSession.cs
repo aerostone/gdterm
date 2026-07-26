@@ -69,6 +69,17 @@ namespace Gdterm.Terminal
         void SendInput(string text);
 
         /// <summary>
+        /// 向终端发送原始字节（DA/键鼠应答、窗口尺寸变更路径）。
+        /// 默认实现可转 UTF-8 文本；SSH 会话应直写 ShellStream。
+        /// </summary>
+        void SendBytes(byte[] data);
+
+        /// <summary>
+        /// 通知远端 PTY 尺寸变化（SSH window-change）。串口/本地可 no-op。
+        /// </summary>
+        void Resize(int columns, int rows);
+
+        /// <summary>
         /// 终端输出事件（AI 实时订阅，UI 订阅用于渲染）
         /// </summary>
         event EventHandler<TerminalOutputEventArgs> OutputReceived;

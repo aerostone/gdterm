@@ -235,7 +235,19 @@ SSH.NET ShellStream (bytes)
 
 **测试覆盖（Windows MSBuild 权威）：** plain text/cursor、`38;2` true color、`38;5` 256 色、alt-screen 1049、history 硬顶、DA→SendToHost。
 
-**未做（Phase 1+）：** UI `TerminalControl` 仍用 `LightweightRenderer`；SSH `ShellStream` 未喂入 `CellGdiRenderer`；手工 vim/tmux/codex 验收待接线后进行。
+**Phase 1–4 已落地（2026-07-26）：**
+
+| 项 | 状态 |
+|----|------|
+| UI 默认 `CellGdiRenderer` | ✅ `TerminalProfile.Renderer=VtCell` |
+| 双轨 Lightweight | ✅ `renderer=lightweight` Metadata |
+| ShellStream → Write | ✅ 输出事件喂入 IRenderer |
+| SendToHost → SendBytes | ✅ DA/键鼠应答 |
+| Resize + window-change | ✅ 反射 `SendWindowChangeRequest` |
+| 鼠标 press/move/release | ✅ cell 路径 |
+| 去掉连接 uname 污染 | ✅ |
+| AppVeyor | ✅ 根目录 `appveyor.yml` |
+| 手工 vim/tmux/codex | ⏳ 用户 Windows/AppVeyor 验收 |
 
 ---
 

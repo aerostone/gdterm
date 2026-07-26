@@ -18,7 +18,8 @@ using Gdterm.UI.Diagnostics;
 namespace Gdterm.UI.Controls
 {
     /// <summary>
-    /// SSH/串口/本地终端标签页控件——懒连接、暂停渲染、危险命令拦截、TerminalProfile
+    /// SSH/串口/本地终端标签页——懒连接、暂停渲染、危险命令拦截、TerminalProfile 双轨渲染。
+    /// 默认 VtCell（真彩/TUI）；Metadata renderer=lightweight 回退 16 色行缓冲。
     /// </summary>
     public class TerminalControl : UserControl, IDisposable
     {
@@ -31,36 +32,27 @@ namespace Gdterm.UI.Controls
         private readonly StringBuilder _commandLine = new StringBuilder();
 
         private ITerminalSession _session;
-        private LightweightRenderer _renderer;
+        private IRenderer _renderer;
+        private CellGdiRenderer _cellRenderer;
         private TerminalProfile _profile;
         private TerminalAutoLogger _autoLogger;
-        private bool _isPaused = true; // 默认暂停，等 Resume 再连
+        private bool _isPaused = true;
         private bool _disposed;
         private bool _connecting;
         private Task _connectTask;
+        private bool _mouseDown;
+        private int _mouseButton;
 
-        /// <summary>KeePass 注入的凭据</summary>
         public CredentialPayload Credentials { get; set; }
-
-        /// <summary>底层会话（多通道/快捷栏使用）</summary>
         public ITerminalSession Session => _session;
-
-        /// <summary>连接配置</summary>
         public ConnectionConfig Config => _config;
-
-        /// <summary>是否已连接</summary>
         public bool IsConnected => _session != null && _session.IsConnected;
-
-        /// <summary>快捷键解析器</summary>
         public TerminalKeyBindingResolver KeyResolver => _keyResolver;
+        public bool IsVtCell => _cellRenderer != null;
+        public TerminalProfile Profile => _profile;
 
-        /// <summary>快捷键动作（copy/paste/clear/find）</summary>
         public event EventHandler<KeyBindingActionEventArgs> ActionRequested;
-
-        /// <summary>会话建立后</summary>
         public event EventHandler SessionConnected;
-
-        /// <summary>会话断开</summary>
         public event EventHandler SessionDisconnected;
 
         public TerminalControl(
@@ -77,12 +69,9 @@ namespace Gdterm.UI.Controls
             _dangerousDetector = dangerousDetector;
 
             _profile = TerminalProfile.FromMetadata(config.Metadata);
-            if (_profile.ScrollbackLines > 1000) _profile.ScrollbackLines = 1000;
-            if (_profile.ScrollbackLines < 100) _profile.ScrollbackLines = 100;
-
+            NormalizeProfile(_profile);
             InitializeComponent();
 
-            // 默认关闭；仅当 Metadata/terminalProfile 显式 autoLog=true 时启用
             if (_profile != null && _profile.AutoLog)
             {
                 try
@@ -95,7 +84,6 @@ namespace Gdterm.UI.Controls
             }
         }
 
-        /// <summary>本地终端专用构造</summary>
         public TerminalControl(ITerminalSession localSession, IAuditLogger auditLogger = null)
         {
             _session = localSession ?? throw new ArgumentNullException(nameof(localSession));
@@ -108,15 +96,43 @@ namespace Gdterm.UI.Controls
                 Protocol = ProtocolType.SSH
             };
             _profile = new TerminalProfile();
+            NormalizeProfile(_profile);
             InitializeComponent();
             AttachExistingSession(localSession);
             _isPaused = false;
         }
 
+        private static void NormalizeProfile(TerminalProfile profile)
+        {
+            if (profile == null) return;
+            if (profile.ScrollbackLines > 2000) profile.ScrollbackLines = 2000;
+            if (profile.ScrollbackLines < 100) profile.ScrollbackLines = 100;
+            if (string.IsNullOrWhiteSpace(profile.TerminalType))
+                profile.TerminalType = "xterm-256color";
+            if (string.IsNullOrWhiteSpace(profile.Renderer))
+                profile.Renderer = "VtCell";
+        }
+
         private void InitializeComponent()
         {
             var scheme = ColorSchemes.GetByName(_profile?.ColorScheme) ?? ColorSchemes.Classic;
-            _renderer = new LightweightRenderer(24, 80, scheme);
+            int rows = 24;
+            int cols = 80;
+            int history = _profile?.ScrollbackLines ?? 500;
+
+            if (_profile != null && _profile.UseVtCell)
+            {
+                _cellRenderer = new CellGdiRenderer(rows, cols, scheme, history);
+                _cellRenderer.SendToHost += OnCellSendToHost;
+                _cellRenderer.TerminalResized += OnCellTerminalResized;
+                _renderer = _cellRenderer;
+            }
+            else
+            {
+                _cellRenderer = null;
+                _renderer = new LightweightRenderer(rows, cols, scheme);
+            }
+
             var canvas = _renderer.GetControl();
             canvas.Dock = DockStyle.Fill;
             Controls.Add(canvas);
@@ -124,18 +140,93 @@ namespace Gdterm.UI.Controls
             SetStyle(ControlStyles.Selectable, true);
             TabStop = true;
 
-            // 键盘：渲染器画布获得焦点时转发
             canvas.KeyPress += OnKeyPress;
             canvas.KeyDown += OnKeyDown;
-            canvas.PreviewKeyDown += (s, e) =>
-            {
-                // 让方向键等进入 KeyDown
-                e.IsInputKey = true;
-            };
+            canvas.PreviewKeyDown += (s, e) => { e.IsInputKey = true; };
             canvas.GotFocus += (s, e) => Focus();
+
+            if (_cellRenderer != null)
+            {
+                canvas.MouseDown += OnCellMouseDown;
+                canvas.MouseUp += OnCellMouseUp;
+                canvas.MouseMove += OnCellMouseMove;
+            }
+
             KeyPress += OnKeyPress;
             KeyDown += OnKeyDown;
             PreviewKeyDown += (s, e) => { e.IsInputKey = true; };
+        }
+
+        private void OnCellSendToHost(object sender, byte[] data)
+        {
+            if (_disposed || data == null || data.Length == 0) return;
+            if (_session == null || !_session.IsConnected) return;
+            try { _session.SendBytes(data); }
+            catch (Exception ex) { DiagLog.Swallowed("TerminalControl.CellSendToHost", ex); }
+        }
+
+        private void OnCellTerminalResized(object sender, EventArgs e)
+        {
+            if (_disposed || _cellRenderer == null) return;
+            if (_session == null || !_session.IsConnected) return;
+            try
+            {
+                _session.Resize(_cellRenderer.Columns, _cellRenderer.Rows);
+            }
+            catch (Exception ex) { DiagLog.Swallowed("TerminalControl.CellResize", ex); }
+        }
+
+        private void OnCellMouseDown(object sender, MouseEventArgs e)
+        {
+            if (_cellRenderer == null || _session?.IsConnected != true) return;
+            int col, row;
+            if (!_cellRenderer.TryHitTest(e.X, e.Y, out col, out row)) return;
+            _mouseDown = true;
+            _mouseButton = MapMouseButton(e.Button);
+            try
+            {
+                _cellRenderer.MousePress(col, row, _mouseButton,
+                    (ModifierKeys & Keys.Control) != 0,
+                    (ModifierKeys & Keys.Shift) != 0);
+            }
+            catch { }
+        }
+
+        private void OnCellMouseUp(object sender, MouseEventArgs e)
+        {
+            if (_cellRenderer == null || !_mouseDown) return;
+            _mouseDown = false;
+            int col, row;
+            if (!_cellRenderer.TryHitTest(e.X, e.Y, out col, out row)) return;
+            try
+            {
+                _cellRenderer.MouseRelease(col, row,
+                    (ModifierKeys & Keys.Control) != 0,
+                    (ModifierKeys & Keys.Shift) != 0);
+            }
+            catch { }
+        }
+
+        private void OnCellMouseMove(object sender, MouseEventArgs e)
+        {
+            if (_cellRenderer == null || !_mouseDown) return;
+            int col, row;
+            if (!_cellRenderer.TryHitTest(e.X, e.Y, out col, out row)) return;
+            try
+            {
+                _cellRenderer.MouseMove(col, row, _mouseButton,
+                    (ModifierKeys & Keys.Control) != 0,
+                    (ModifierKeys & Keys.Shift) != 0);
+            }
+            catch { }
+        }
+
+        private static int MapMouseButton(MouseButtons b)
+        {
+            if (b == MouseButtons.Left) return 0;
+            if (b == MouseButtons.Middle) return 1;
+            if (b == MouseButtons.Right) return 2;
+            return 0;
         }
 
         private void AttachExistingSession(ITerminalSession session)
@@ -153,17 +244,12 @@ namespace Gdterm.UI.Controls
             }
         }
 
-        /// <summary>建立连接（懒加载 fire-and-forget；重连请用 ConnectAsyncIfNeeded）。</summary>
         public async void Connect()
         {
             try { await ConnectAsyncCore().ConfigureAwait(true); }
-            catch { /* ConnectAsyncCore 已写屏/审计 */ }
+            catch { }
         }
 
-        /// <summary>
-        /// go-live P0-01：返回可 await 的连接任务，避免 UI 线程 GetResult 与 async void 死锁。
-        /// 已连接返回 CompletedTask；正在连接返回进行中任务；否则启动新连接。
-        /// </summary>
         public Task ConnectAsyncIfNeeded()
         {
             if (_disposed) return Task.FromResult(false).ContinueWith(_ => { });
@@ -183,12 +269,15 @@ namespace Gdterm.UI.Controls
                 var credential = Credentials ?? new CredentialPayload { Username = _config.Username };
                 ITerminalSession session;
 
+                int rows = _renderer != null ? Math.Max(1, _renderer.Rows) : 24;
+                int cols = _renderer != null ? Math.Max(2, _renderer.Columns) : 80;
+
                 if (_config.Protocol == ProtocolType.Serial)
                 {
                     if (_terminalFactory == null)
                         throw new InvalidOperationException("ITerminalSessionFactory 未注入，无法创建串口会话");
                     session = _terminalFactory.CreateSerial();
-                    await Task.Run(() => session.Connect(_config, credential)).ConfigureAwait(false);
+                    await Task.Run(() => session.Connect(_config, credential, rows, cols)).ConfigureAwait(false);
                 }
                 else
                 {
@@ -200,16 +289,15 @@ namespace Gdterm.UI.Controls
                     {
                         var tunnelEndpoint = await _tunnelManager.EstablishAsync(
                             _config, credential, System.Threading.CancellationToken.None).ConfigureAwait(false);
-                        await Task.Run(() => session.ConnectViaTunnel(_config, credential, tunnelEndpoint))
+                        await Task.Run(() => session.ConnectViaTunnel(_config, credential, tunnelEndpoint, rows, cols))
                             .ConfigureAwait(false);
                     }
                     else
                     {
-                        await Task.Run(() => session.Connect(_config, credential)).ConfigureAwait(false);
+                        await Task.Run(() => session.Connect(_config, credential, rows, cols)).ConfigureAwait(false);
                     }
                 }
 
-                // 关签与 Connect 完成竞态——控件已 dispose 则立刻丢弃会话
                 if (_disposed)
                 {
                     try { session.Dispose(); } catch { }
@@ -220,10 +308,17 @@ namespace Gdterm.UI.Controls
                 _session.OutputReceived += OnTerminalOutput;
                 _session.Disconnected += OnSessionDisconnected;
 
-                // 自动运行命令（profile）——走危险命令闸门（回 UI 线程）
+                // 连接后同步一次尺寸（cell 路径）
+                if (_cellRenderer != null)
+                {
+                    try { _session.Resize(_cellRenderer.Columns, _cellRenderer.Rows); }
+                    catch { }
+                }
+
                 if (_profile.AutoRunCommands != null)
                 {
-                    void RunAuto() {
+                    void RunAuto()
+                    {
                         foreach (var cmd in _profile.AutoRunCommands)
                         {
                             if (!string.IsNullOrWhiteSpace(cmd))
@@ -253,7 +348,8 @@ namespace Gdterm.UI.Controls
             catch (Exception ex)
             {
                 if (_disposed) return;
-                void WriteFail() {
+                void WriteFail()
+                {
                     _renderer?.Write("\r\n\x1b[31m连接失败: " + ex.Message + "\x1b[0m\r\n");
                 }
                 if (InvokeRequired) BeginInvoke(new Action(WriteFail));
@@ -277,20 +373,20 @@ namespace Gdterm.UI.Controls
         private void OnSessionDisconnected(object sender, EventArgs e)
         {
             if (_disposed) return;
-            void Raise() {
+            void Raise()
+            {
                 try { SessionDisconnected?.Invoke(this, EventArgs.Empty); } catch { }
             }
             if (InvokeRequired) BeginInvoke(new Action(Raise));
             else Raise();
         }
 
-        /// <summary>启用会话自动日志（默认关闭，外部显式打开）</summary>
         public void EnableAutoLog(string logDirectory)
         {
             if (string.IsNullOrEmpty(logDirectory) || _autoLogger != null) return;
             _autoLogger = new TerminalAutoLogger(logDirectory)
             {
-                MaxFileSizeBytes = 10 * 1024 * 1024, // 10MB
+                MaxFileSizeBytes = 10 * 1024 * 1024,
                 MaxFileCount = 3
             };
             try { _autoLogger.StartRecording(_config?.Host ?? "session", _config?.Name); } catch { }
@@ -317,9 +413,6 @@ namespace Gdterm.UI.Controls
                 ConnectAsyncIfNeeded();
         }
 
-        /// <summary>
-        /// 向终端发送文本。isCommandLine=true 时走危险命令闸门（整行确认后再下发）。
-        /// </summary>
         public bool TrySendInput(string text, bool isCommandLine = false)
         {
             if (string.IsNullOrEmpty(text) || _session == null || !_session.IsConnected)
@@ -329,7 +422,6 @@ namespace Gdterm.UI.Controls
             if (isCommandLine && !ConfirmIfDangerous(trimmed))
                 return false;
 
-            // 外部整行发送会打乱本地行缓冲
             if (isCommandLine)
                 ClearLocalLine(eraseDisplay: true);
 
@@ -338,10 +430,7 @@ namespace Gdterm.UI.Controls
 
             if (isCommandLine && !string.IsNullOrWhiteSpace(trimmed))
             {
-                try
-                {
-                    _auditLogger?.LogCommand(_config?.Id ?? "", trimmed);
-                }
+                try { _auditLogger?.LogCommand(_config?.Id ?? "", trimmed); }
                 catch { }
             }
 
@@ -353,19 +442,27 @@ namespace Gdterm.UI.Controls
             TrySendInput(text, isCommandLine: true);
         }
 
-        /// <summary>是否启用本地行缓冲（有检测器时：确认前不向远端逐字发送）</summary>
         private bool UseLocalLineBuffer
         {
-            get { return _dangerousDetector != null; }
+            get
+            {
+                // cell/TUI 路径：危险命令仍可拦截整行发送；本地缓冲仅对 Lightweight 友好
+                // VtCell 下本地回显会破坏远端光标，故仅在有检测器且非 cell 时缓冲
+                return _dangerousDetector != null && _cellRenderer == null;
+            }
         }
 
-        /// <summary>供 AI/外部调用的危险命令确认入口</summary>
+        /// <summary>VtCell 下危险命令：仅在 Enter 整行时拦截（字符已直通时用 Ctrl+C 中止）。</summary>
+        private bool UseVtCellDangerGate
+        {
+            get { return _dangerousDetector != null && _cellRenderer != null; }
+        }
+
         public bool ConfirmDangerousCommand(string command)
         {
             return ConfirmIfDangerous(command);
         }
 
-        /// <summary>危险命令确认；安全或用户确认返回 true</summary>
         private bool ConfirmIfDangerous(string command)
         {
             if (string.IsNullOrWhiteSpace(command) || _dangerousDetector == null)
@@ -378,7 +475,6 @@ namespace Gdterm.UI.Controls
             }
             catch (Exception ex)
             {
-                // finding-02：fail-closed——检测异常视为拦截
                 try
                 {
                     _auditLogger?.LogSecurityEvent(
@@ -428,7 +524,6 @@ namespace Gdterm.UI.Controls
         {
             if (eraseDisplay && _commandLine.Length > 0 && UseLocalLineBuffer)
             {
-                // 用退格擦除本地回显（远端尚未收到这些字符）
                 var erase = new StringBuilder();
                 for (int i = 0; i < _commandLine.Length; i++)
                     erase.Append("\b \b");
@@ -469,7 +564,6 @@ namespace Gdterm.UI.Controls
         {
             if (_disposed || e == null || string.IsNullOrEmpty(e.Text)) return;
 
-            // finding-08：暂停标签不向 UI 线程泵输出；仅后台写 auto-log（若启用）
             if (_isPaused)
             {
                 try { _autoLogger?.LogOutput(e.Text); } catch { }
@@ -491,11 +585,20 @@ namespace Gdterm.UI.Controls
         {
             if (_session?.IsConnected != true) return;
 
-            // 可打印字符：有检测器时只进本地缓冲+本地回显，确认前不发远端
             if (!char.IsControl(e.KeyChar))
             {
                 _commandLine.Append(e.KeyChar);
-                if (UseLocalLineBuffer)
+
+                if (_cellRenderer != null)
+                {
+                    // TUI：优先 VtNetCore KeyPressed；失败则明文
+                    var keyName = e.KeyChar.ToString();
+                    bool handled = false;
+                    try { handled = _cellRenderer.TryKeyPressed(keyName, false, false); } catch { }
+                    if (!handled)
+                        SafeSend(keyName);
+                }
+                else if (UseLocalLineBuffer)
                 {
                     try { _renderer?.Write(e.KeyChar.ToString()); } catch { }
                 }
@@ -530,6 +633,13 @@ namespace Gdterm.UI.Controls
 
             try
             {
+                // Cell 路径：方向键等走 VtNetCore（应用光标模式）
+                if (_cellRenderer != null && TryCellSpecialKey(e))
+                {
+                    e.Handled = true;
+                    return;
+                }
+
                 switch (e.KeyCode)
                 {
                     case Keys.Enter:
@@ -537,22 +647,32 @@ namespace Gdterm.UI.Controls
                         var cmd = _commandLine.ToString();
                         if (UseLocalLineBuffer)
                         {
-                            // 确认前命令体从未离开本机
                             if (!ConfirmIfDangerous(cmd))
                             {
                                 ClearLocalLine(eraseDisplay: true);
                                 e.Handled = true;
                                 return;
                             }
-                            // 整行下发（远端此前未见字符）
                             _commandLine.Clear();
                             if (cmd.Length > 0)
                                 SafeSend(cmd);
                             SafeSend("\r");
                         }
+                        else if (UseVtCellDangerGate)
+                        {
+                            // 字符已直通远端；危险则 Ctrl+C 中止
+                            _commandLine.Clear();
+                            if (!ConfirmIfDangerous(cmd))
+                            {
+                                SafeSend("\x03");
+                                e.Handled = true;
+                                return;
+                            }
+                            if (_cellRenderer == null || !_cellRenderer.TryKeyPressed("Enter", e.Control, e.Shift))
+                                SafeSend("\r");
+                        }
                         else
                         {
-                            // 无检测器：字符已逐字下发，只补回车（仍尝试闸门，失败则 Ctrl+C）
                             _commandLine.Clear();
                             if (!ConfirmIfDangerous(cmd))
                             {
@@ -572,37 +692,48 @@ namespace Gdterm.UI.Controls
                     }
                     case Keys.Back:
                         if (_commandLine.Length > 0)
-                        {
                             _commandLine.Length--;
-                            if (UseLocalLineBuffer)
-                            {
-                                try { _renderer?.Write("\b \b"); } catch { }
-                            }
-                            else
-                            {
-                                SafeSend("\b");
-                            }
+                        if (UseLocalLineBuffer)
+                        {
+                            try { _renderer?.Write("\b \b"); } catch { }
                         }
-                        else if (!UseLocalLineBuffer)
+                        else if (_cellRenderer != null)
+                        {
+                            if (!_cellRenderer.TryKeyPressed("Back", e.Control, e.Shift))
+                                SafeSend("\b");
+                        }
+                        else
                         {
                             SafeSend("\b");
                         }
                         e.Handled = true;
                         break;
                     case Keys.Tab:
-                        // Tab 补全需要远端：丢弃本地缓冲后直通
                         if (UseLocalLineBuffer && _commandLine.Length > 0)
                         {
                             var partial = _commandLine.ToString();
                             _commandLine.Clear();
                             SafeSend(partial);
                         }
-                        SafeSend("\t");
+                        if (_cellRenderer != null)
+                        {
+                            if (!_cellRenderer.TryKeyPressed("Tab", e.Control, e.Shift))
+                                SafeSend("\t");
+                        }
+                        else
+                        {
+                            SafeSend("\t");
+                        }
                         e.Handled = true;
                         break;
                     case Keys.Escape:
                         ClearLocalLine(eraseDisplay: UseLocalLineBuffer);
-                        SafeSend("\x1b");
+                        if (_cellRenderer != null)
+                        {
+                            if (!_cellRenderer.TryKeyPressed("Escape", e.Control, e.Shift))
+                                SafeSend("\x1b");
+                        }
+                        else SafeSend("\x1b");
                         e.Handled = true;
                         break;
                     case Keys.Up:
@@ -655,7 +786,51 @@ namespace Gdterm.UI.Controls
             catch { }
         }
 
-        /// <summary>锁屏时擦除内存中的明文凭据（finding-04）</summary>
+        /// <summary>VtNetCore 键名映射；成功则已通过 SendToHost 发往会话。</summary>
+        private bool TryCellSpecialKey(KeyEventArgs e)
+        {
+            if (_cellRenderer == null) return false;
+            string name = null;
+            switch (e.KeyCode)
+            {
+                case Keys.Up: name = "Up"; break;
+                case Keys.Down: name = "Down"; break;
+                case Keys.Left: name = "Left"; break;
+                case Keys.Right: name = "Right"; break;
+                case Keys.Home: name = "Home"; break;
+                case Keys.End: name = "End"; break;
+                case Keys.Insert: name = "Insert"; break;
+                case Keys.Delete: name = "Delete"; break;
+                case Keys.PageUp: name = "PageUp"; break;
+                case Keys.PageDown: name = "PageDown"; break;
+                case Keys.F1: name = "F1"; break;
+                case Keys.F2: name = "F2"; break;
+                case Keys.F3: name = "F3"; break;
+                case Keys.F4: name = "F4"; break;
+                case Keys.F5: name = "F5"; break;
+                case Keys.F6: name = "F6"; break;
+                case Keys.F7: name = "F7"; break;
+                case Keys.F8: name = "F8"; break;
+                case Keys.F9: name = "F9"; break;
+                case Keys.F10: name = "F10"; break;
+                case Keys.F11: name = "F11"; break;
+                case Keys.F12: name = "F12"; break;
+                default: return false;
+            }
+
+            // 清空本地命令缓冲（历史导航等）
+            if (e.KeyCode == Keys.Up || e.KeyCode == Keys.Down)
+                ClearLocalLine(eraseDisplay: false);
+
+            try
+            {
+                if (_cellRenderer.TryKeyPressed(name, e.Control, e.Shift))
+                    return true;
+            }
+            catch { }
+            return false;
+        }
+
         public void ClearCachedCredentials()
         {
             Credentials = null;
@@ -669,6 +844,11 @@ namespace Gdterm.UI.Controls
                 if (disposing)
                 {
                     Credentials = null;
+                    if (_cellRenderer != null)
+                    {
+                        try { _cellRenderer.SendToHost -= OnCellSendToHost; } catch { }
+                        try { _cellRenderer.TerminalResized -= OnCellTerminalResized; } catch { }
+                    }
                     if (_session != null)
                     {
                         DiagLog.Try("TerminalControl.Dispose.Unsub", () =>
@@ -687,9 +867,17 @@ namespace Gdterm.UI.Controls
                         {
                             var canvas = _renderer.GetControl();
                             Controls.Remove(canvas);
-                            _renderer.Dispose();
+                            var cell = _renderer as CellGdiRenderer;
+                            if (cell != null) cell.Dispose();
+                            else
+                            {
+                                var light = _renderer as LightweightRenderer;
+                                if (light != null) light.Dispose();
+                            }
                         }
                     });
+                    _cellRenderer = null;
+                    _renderer = null;
                 }
             }
             base.Dispose(disposing);

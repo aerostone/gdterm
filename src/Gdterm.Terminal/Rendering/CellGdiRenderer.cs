@@ -38,10 +38,16 @@ namespace Gdterm.Terminal.Rendering
         /// <summary>引擎请求发往主机的字节（DA/键鼠应答等）。</summary>
         public event EventHandler<byte[]> SendToHost;
 
+        /// <summary>本地 cell 尺寸变化（供 UI 通知 SSH window-change）。</summary>
+        public event EventHandler TerminalResized;
+
         public VtTerminalEngine Engine { get { return _engine; } }
 
         public int Rows { get { return _engine.Rows; } }
         public int Columns { get { return _engine.Columns; } }
+
+        /// <summary>是否为 cell VT 路径（UI 双轨判断）。</summary>
+        public bool IsVtCell { get { return true; } }
 
         public CellGdiRenderer(int rows = 24, int columns = 80, TerminalColorScheme scheme = null, int maxHistory = 500)
         {
@@ -175,13 +181,52 @@ namespace Gdterm.Terminal.Rendering
         public void ResizeTerminal(int columns, int rows)
         {
             if (_disposed) return;
+            bool changed = false;
             lock (_lock)
             {
-                _engine.Resize(columns, rows);
+                if (columns != Columns || rows != Rows)
+                {
+                    _engine.Resize(columns, rows);
+                    changed = true;
+                }
                 RefreshSnapshot(force: true);
                 _needsRedraw = true;
                 ScheduleRedraw();
             }
+            if (changed)
+            {
+                var h = TerminalResized;
+                if (h != null) h(this, EventArgs.Empty);
+            }
+        }
+
+        public void MousePress(int column, int row, int button, bool control, bool shift)
+        {
+            if (_disposed) return;
+            lock (_lock) _engine.MousePress(column, row, button, control, shift);
+        }
+
+        public void MouseRelease(int column, int row, bool control, bool shift)
+        {
+            if (_disposed) return;
+            lock (_lock) _engine.MouseRelease(column, row, control, shift);
+        }
+
+        public void MouseMove(int column, int row, int button, bool control, bool shift)
+        {
+            if (_disposed) return;
+            lock (_lock) _engine.MouseMove(column, row, button, control, shift);
+        }
+
+        /// <summary>像素坐标 → cell 列/行。</summary>
+        public bool TryHitTest(int pixelX, int pixelY, out int column, out int row)
+        {
+            column = 0;
+            row = 0;
+            if (_charWidth <= 0 || _charHeight <= 0) return false;
+            column = Math.Max(0, Math.Min(Columns - 1, (int)(pixelX / _charWidth)));
+            row = Math.Max(0, Math.Min(Rows - 1, (int)(pixelY / _charHeight)));
+            return true;
         }
 
         private void RefreshSnapshot(bool force)

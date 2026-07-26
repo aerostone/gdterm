@@ -1,0 +1,75 @@
+# gdterm — AppVeyor CI for .NET Framework 4.6.2 (Win7 green portable)
+# 权威构建在 Windows；Linux 开发机只做静态检查。
+version: 0.1.{build}
+image: Visual Studio 2022
+
+configuration:
+  - Release
+
+platform: Any CPU
+
+# SSH.NET 等 NuGet 包
+before_build:
+  - ps: |
+      if (Get-Command nuget -ErrorAction SilentlyContinue) {
+        Get-ChildItem -Path src -Recurse -Filter packages.config | ForEach-Object {
+          nuget restore $_.FullName -PackagesDirectory packages -NonInteractive
+        }
+      }
+      # PackageReference 项目（Terminal/Tunnel/Sftp）
+      nuget restore gdterm.sln -PackagesDirectory packages -NonInteractive 2>$null
+      if (-not $?) { Write-Host "nuget restore sln soft-fail — MSBuild may restore PackageReference" }
+
+build:
+  project: gdterm.sln
+  verbosity: minimal
+  parallel: true
+
+# 零 NuGet 测试 + Phase0 VT 引擎 + Profile 双轨
+test_script:
+  - ps: |
+      $testExe = "src\Gdterm.Tests\bin\$env:CONFIGURATION\Gdterm.Tests.exe"
+      if (-not (Test-Path $testExe)) {
+        # 有的 SDK 风格输出路径
+        $alt = Get-ChildItem -Path src\Gdterm.Tests -Recurse -Filter Gdterm.Tests.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($alt) { $testExe = $alt.FullName }
+      }
+      if (-not (Test-Path $testExe)) { throw "Gdterm.Tests.exe not found" }
+      Write-Host "Running $testExe"
+      & $testExe
+      if ($LASTEXITCODE -ne 0) { throw "Tests failed exit=$LASTEXITCODE" }
+
+# 可选：打绿色包（artifact）
+after_test:
+  - ps: |
+      $ui = "src\Gdterm.UI\bin\$env:CONFIGURATION"
+      if (-not (Test-Path (Join-Path $ui "gdterm.exe")) -and -not (Test-Path (Join-Path $ui "Gdterm.UI.exe"))) {
+        Write-Host "UI bin missing — skip portable artifact"
+        return
+      }
+      $out = "dist\gdterm"
+      if (Test-Path $out) { Remove-Item -Recurse -Force $out }
+      New-Item -ItemType Directory -Path $out | Out-Null
+      Copy-Item -Path (Join-Path $ui '*') -Destination $out -Recurse -Force
+      if (Test-Path "lib\VtNetCore.dll") {
+        Copy-Item "lib\VtNetCore.dll" $out -Force
+        Copy-Item "lib\LICENSE.VtNetCore.txt" $out -Force -ErrorAction SilentlyContinue
+      }
+      New-Item -ItemType Directory -Path (Join-Path $out "data\config\tools") -Force | Out-Null
+      New-Item -ItemType Directory -Path (Join-Path $out "data\logs") -Force | Out-Null
+      Write-Host "Portable layout ready: $out"
+
+artifacts:
+  - path: dist\gdterm
+    name: gdterm-portable
+    type: zip
+
+# 仅 master / PR
+branches:
+  only:
+    - master
+    - main
+
+# 不跑在 Linux 镜像
+matrix:
+  fast_finish: true
