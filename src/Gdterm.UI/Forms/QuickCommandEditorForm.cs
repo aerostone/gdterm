@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using Gdterm.UI.Diagnostics;
 using Gdterm.Core.Models;
 
 namespace Gdterm.UI.Forms
@@ -92,13 +93,13 @@ namespace Gdterm.UI.Forms
             // 执行前命令
             AddLabel("前置命令:", lblX, y, font);
             _txtPreCommand = AddTextBox(inputX, y, inputW, smallFont);
-            _txtPreCommand.PlaceholderText = "如: sudo -i";
+            WinFormsCompat.SetCueBanner(_txtPreCommand, "如: sudo -i");
             y += 35;
 
             // 执行后命令
             AddLabel("后置命令:", lblX, y, font);
             _txtPostCommand = AddTextBox(inputX, y, inputW, smallFont);
-            _txtPostCommand.PlaceholderText = "如: cleanup (可选)";
+            WinFormsCompat.SetCueBanner(_txtPostCommand, "如: cleanup (可选)");
             y += 35;
 
             // 需要 root + 排序
@@ -128,7 +129,7 @@ namespace Gdterm.UI.Forms
             // 快捷键
             AddLabel("快捷键:", lblX, y, font);
             _txtShortcut = AddTextBox(inputX, y, 150, font);
-            _txtShortcut.PlaceholderText = "如: Ctrl+Shift+1";
+            WinFormsCompat.SetCueBanner(_txtShortcut, "如: Ctrl+Shift+1");
             y += 35;
 
             // 描述

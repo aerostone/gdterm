@@ -16,7 +16,7 @@ namespace Gdterm.Terminal
             _client = client;
         }
 
-        public static ISshPortForwardHost Wrap(SshClient client)
+        internal static ISshPortForwardHost Wrap(SshClient client)
         {
             return client == null ? null : new SshPortForwardHost(client);
         }

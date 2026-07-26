@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using Gdterm.UI.Diagnostics;
 using Gdterm.Security;
 
 namespace Gdterm.UI.Controls
@@ -81,7 +82,7 @@ namespace Gdterm.UI.Controls
 
             // ── 进度条 ──
             _progress = new ProgressBar { Dock = DockStyle.Top, Height = 3, Style = ProgressBarStyle.Continuous };
-            _progress.SetState(1); // 绿色
+            WinFormsCompat.SetProgressState(_progress, WinFormsCompat.ProgressStateNormal); // 绿色
 
             // ── 发现列表 ──
             _lvFindings = new ListView
@@ -273,7 +274,7 @@ namespace Gdterm.UI.Controls
                 if (revealed) return;
                 if (_security != null)
                 {
-                    if (!Gdterm.UI.Services.MasterPasswordPrompt.Confirm(_security, form, "查看敏感匹配内容"))
+                    if (!Gdterm.UI.Services.MasterPasswordPrompt.Confirm(form, _security, "查看敏感匹配内容"))
                         return;
                 }
                 else

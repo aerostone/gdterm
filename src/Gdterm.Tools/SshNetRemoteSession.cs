@@ -18,7 +18,7 @@ namespace Gdterm.Tools
         }
 
         /// <summary>从已有 SshClient 包装；client 为 null 时返回 null。</summary>
-        public static ISshRemoteSession Wrap(SshClient client)
+        internal static ISshRemoteSession Wrap(SshClient client)
         {
             return client == null ? null : new SshNetRemoteSession(client);
         }

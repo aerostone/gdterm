@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using Gdterm.UI.Diagnostics;
 using Gdterm.Core.Models;
 using Gdterm.Logging;
 
@@ -44,9 +45,9 @@ namespace Gdterm.UI.Controls
 
             _searchBox = new TextBox
             {
-                Size = new Size(150, 23),
-                PlaceholderText = "搜索命令..."
+                Size = new Size(150, 23)
             };
+            WinFormsCompat.SetCueBanner(_searchBox, "搜索命令...");
 
             _hostFilter = new ComboBox
             {

@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using Gdterm.UI.Diagnostics;
 using Gdterm.AI;
 using Gdterm.AI.Models;
 
@@ -69,7 +70,7 @@ namespace Gdterm.UI.Forms
 
             _nameBox = AddField("配置名称：", ref y, labelW, boxX, boxW);
             _endpointBox = AddField("端点 URL：", ref y, labelW, boxX, boxW);
-            _endpointBox.PlaceholderText = "https://api.openai.com/v1";
+            WinFormsCompat.SetCueBanner(_endpointBox, "https://api.openai.com/v1");
 
             // API Key（带掩码）
             var apiKeyLabel = new Label
@@ -108,7 +109,7 @@ namespace Gdterm.UI.Forms
             y += 30;
 
             _modelBox = AddField("模型名称：", ref y, labelW, boxX, boxW);
-            _modelBox.PlaceholderText = "gpt-4";
+            WinFormsCompat.SetCueBanner(_modelBox, "gpt-4");
 
             // Max Tokens
             var maxTokensLabel = new Label

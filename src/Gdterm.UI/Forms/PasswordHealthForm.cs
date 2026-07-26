@@ -120,7 +120,7 @@ namespace Gdterm.UI.Forms
             AddIssueTab("过期密码", report.ExpiredPasswords, Color.FromArgb(255, 200, 60));
         }
 
-        private void AddIssueTab(string name, System.Collections.IList issues, Color color)
+        private void AddIssueTab(string name, System.Collections.Generic.IList<PasswordIssue> issues, Color color)
         {
             var tab = new TabPage($"  {name} ({issues.Count})  ");
             tab.BackColor = Color.FromArgb(35, 35, 35);
@@ -128,7 +128,7 @@ namespace Gdterm.UI.Forms
             var listView = new ListView
             {
                 Dock = DockStyle.Fill,
-                View = ViewMode.Details,
+                View = View.Details,
                 FullRowSelect = true,
                 Font = new Font("Consolas", 9.5f),
                 BackColor = Color.FromArgb(30, 30, 30),
@@ -141,15 +141,15 @@ namespace Gdterm.UI.Forms
             listView.Columns.Add("问题", 150);
             listView.Columns.Add("强度", 60);
 
-            if (issues is System.Collections.Generic.IList<PasswordIssue> issueList)
+            if (issues != null)
             {
-                foreach (var issue in issueList)
+                foreach (var issue in issues)
                 {
                     var item = new ListViewItem(issue.Title ?? "(无标题)");
                     item.SubItems.Add(issue.Username ?? "");
                     item.SubItems.Add(issue.GroupPath ?? "");
                     item.SubItems.Add(issue.Issue ?? "");
-                    item.SubItems.Add($"{issue.StrengthScore}");
+                    item.SubItems.Add(issue.StrengthScore.ToString());
                     item.ForeColor = color;
                     listView.Items.Add(item);
                 }
@@ -167,7 +167,7 @@ namespace Gdterm.UI.Forms
             var listView = new ListView
             {
                 Dock = DockStyle.Fill,
-                View = ViewMode.Details,
+                View = View.Details,
                 FullRowSelect = true,
                 Font = new Font("Consolas", 9.5f),
                 BackColor = Color.FromArgb(30, 30, 30),

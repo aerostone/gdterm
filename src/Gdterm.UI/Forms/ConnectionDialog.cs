@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using Gdterm.UI.Diagnostics;
 using Gdterm.Core.Enums;
 using Gdterm.Core.Models;
 
@@ -96,7 +97,8 @@ namespace Gdterm.UI.Forms
             _portBox = AddRow(basicLayout, 3, "端口:", new NumericUpDown { Minimum = 1, Maximum = 65535, Value = 22 });
             _usernameBox = AddRow(basicLayout, 4, "用户名:", new TextBox());
             _domainBox = AddRow(basicLayout, 5, "域名:", new TextBox());
-            _groupPathBox = AddRow(basicLayout, 6, "分组:", new TextBox { PlaceholderText = "如: Web/生产" });
+            _groupPathBox = AddRow(basicLayout, 6, "分组:", new TextBox());
+            WinFormsCompat.SetCueBanner(_groupPathBox, "如: Web/生产");
             basicTab.Controls.Add(basicLayout);
 
             // === Tab 2: SSH ===
@@ -157,9 +159,9 @@ namespace Gdterm.UI.Forms
                 ScrollBars = ScrollBars.Vertical,
                 BackColor = Color.FromArgb(37, 37, 38),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Font = new Font("Consolas", 10f),
-                PlaceholderText = "服务器用途、特殊配置、注意事项..."
+                Font = new Font("Consolas", 10f)
             };
+            WinFormsCompat.SetCueBanner(_notesBox, "服务器用途、特殊配置、注意事项...");
             notesTab.Controls.Add(_notesBox);
 
             // === Tab 6: 凭据 ===
@@ -253,13 +255,14 @@ namespace Gdterm.UI.Forms
             if (_config.Metadata != null && _config.Metadata.ContainsKey("notes"))
                 _notesBox.Text = _config.Metadata["notes"];
 
-            // SSH 隧道
-            if (_config.Tunnel != null)
+            // SSH 跳板（JumpChain 首跳）
+            if (_config.JumpChain != null && _config.JumpChain.Hops != null && _config.JumpChain.Hops.Count > 0)
             {
+                var hop = _config.JumpChain.Hops[0];
                 _tunnelCheck.Checked = true;
-                _tunnelHostBox.Text = _config.Tunnel.PrimaryEndpoint?.Host ?? "";
-                _tunnelPortBox.Value = _config.Tunnel.PrimaryEndpoint?.Port > 0 ? _config.Tunnel.PrimaryEndpoint.Port : 22;
-                _tunnelUserBox.Text = _config.Tunnel.Username ?? "";
+                _tunnelHostBox.Text = hop.Host ?? "";
+                _tunnelPortBox.Value = hop.Port > 0 ? hop.Port : 22;
+                _tunnelUserBox.Text = hop.Username ?? "";
             }
 
             // Serial
@@ -306,22 +309,25 @@ namespace Gdterm.UI.Forms
             _config.Metadata["rdp_fullscreen"] = _rdpFullScreenCheck.Checked.ToString().ToLower();
             _config.Metadata["rdp_nla"] = _rdpNlaCheck.Checked.ToString().ToLower();
 
-            // Tunnel
+            // JumpChain hop (SSH jump host UI)
             if (_tunnelCheck.Checked && !string.IsNullOrWhiteSpace(_tunnelHostBox.Text))
             {
-                _config.Tunnel = new TunnelConfig
+                _config.JumpChain = new JumpChainConfig
                 {
-                    Username = _tunnelUserBox.Text.Trim(),
-                    PrimaryEndpoint = new TunnelEndpoint
+                    Hops = new System.Collections.Generic.List<JumpHop>
                     {
-                        Host = _tunnelHostBox.Text.Trim(),
-                        Port = (int)_tunnelPortBox.Value
+                        new JumpHop
+                        {
+                            Host = _tunnelHostBox.Text.Trim(),
+                            Port = (int)_tunnelPortBox.Value,
+                            Username = _tunnelUserBox.Text.Trim()
+                        }
                     }
                 };
             }
             else
             {
-                _config.Tunnel = null;
+                _config.JumpChain = null;
             }
 
             // Serial

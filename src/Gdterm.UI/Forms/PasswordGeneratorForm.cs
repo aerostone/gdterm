@@ -291,7 +291,7 @@ namespace Gdterm.UI.Forms
         private void UpdateStrength(int length, int charsetSize)
         {
             // 简单强度评估：熵位数
-            double entropy = length * Math.Log2(charsetSize);
+            double entropy = length * (Math.Log(charsetSize) / Math.Log(2.0));
 
             string strength;
             Color color;

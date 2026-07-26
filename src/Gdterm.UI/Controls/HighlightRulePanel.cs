@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using Gdterm.UI.Diagnostics;
 using Gdterm.Core.Models;
 using Gdterm.Connections;
 
@@ -172,8 +173,8 @@ namespace Gdterm.UI.Controls
             var lblName = Lbl("名称:", 15, y); var txtName = Txt(100, y, 285); y += 32;
             var lblPattern = Lbl("匹配模式:", 15, y); var txtPattern = Txt(100, y, 285); y += 32;
             var chkRegex = Chk("正则表达式", 100, y); var chkCase = Chk("区分大小写", 220, y); y += 28;
-            var lblFg = Lbl("前景色:", 15, y); var txtFg = Txt(100, y, 100); txtFg.PlaceholderText = "#FF4444";
-            var lblBg = Lbl("背景色:", 220, y); var txtBg = Txt(290, y, 95); txtBg.PlaceholderText = "#330000"; y += 32;
+            var lblFg = Lbl("前景色:", 15, y); var txtFg = Txt(100, y, 100); WinFormsCompat.SetCueBanner(txtFg, "#FF4444");
+            var lblBg = Lbl("背景色:", 220, y); var txtBg = Txt(290, y, 95); WinFormsCompat.SetCueBanner(txtBg, "#330000"); y += 32;
             var chkBold = Chk("加粗", 100, y); y += 40;
 
             if (existing != null)
