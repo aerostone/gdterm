@@ -21,6 +21,9 @@ namespace Gdterm.UI.Forms
         private Label _preview;
         private Button _btnOk;
         private Button _btnCancel;
+        // 界面字体（菜单/树/状态栏）
+        private ComboBox _uiFontCombo;
+        private NumericUpDown _uiSizeNum;
 
         public AppearanceSettings Result { get; private set; }
 
@@ -37,7 +40,7 @@ namespace Gdterm.UI.Forms
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
-            ClientSize = new Size(440, 320);
+            ClientSize = new Size(440, 420);
             BackColor = Color.FromArgb(32, 32, 34);
             ForeColor = Color.FromArgb(220, 220, 220);
             Font = new Font("Microsoft YaHei UI", 9f);
@@ -129,6 +132,50 @@ namespace Gdterm.UI.Forms
             Controls.Add(_dpiAwareCheck);
             y += 36;
 
+            // —— 界面字体（非等宽，菜单/树/状态栏/对话框）——
+            Controls.Add(MakeLabel("界面字体", 16, y));
+            _uiFontCombo = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Location = new Point(120, y - 2),
+                Width = 220,
+                BackColor = Color.FromArgb(45, 45, 48),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            try
+            {
+                using (var fonts = new InstalledFontCollection())
+                {
+                    // 中文界面优先 Sans
+                    var prefer = new[] { "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", "PingFang SC", "Noto Sans CJK SC", "Source Han Sans SC" };
+                    foreach (var p in prefer)
+                        if (Array.Exists(fonts.Families, ff => string.Equals(ff.Name, p, StringComparison.OrdinalIgnoreCase)))
+                            _uiFontCombo.Items.Add(p);
+                    foreach (var f in fonts.Families)
+                    {
+                        if (!IsLikelyMono(f.Name) && _uiFontCombo.Items.Count < 60 && !_uiFontCombo.Items.Contains(f.Name))
+                            _uiFontCombo.Items.Add(f.Name);
+                    }
+                }
+            }
+            catch { _uiFontCombo.Items.Add("Microsoft YaHei UI"); }
+            if (_uiFontCombo.Items.Count == 0) _uiFontCombo.Items.Add("Microsoft YaHei UI");
+            Controls.Add(_uiFontCombo);
+
+            _uiSizeNum = new NumericUpDown
+            {
+                Location = new Point(350, y - 2),
+                Width = 56,
+                Minimum = 8,
+                Maximum = 24,
+                Value = 9,
+                BackColor = Color.FromArgb(45, 45, 48),
+                ForeColor = Color.White
+            };
+            Controls.Add(_uiSizeNum);
+            y += 36;
+
             _preview = new Label
             {
                 Text = "AaBbCc 0123 预览 Preview",
@@ -163,7 +210,9 @@ namespace Gdterm.UI.Forms
                     FontName = _fontCombo.SelectedItem != null ? _fontCombo.SelectedItem.ToString() : "Consolas",
                     FontSize = (int)_sizeNum.Value,
                     ColorScheme = _schemeCombo.SelectedItem != null ? _schemeCombo.SelectedItem.ToString() : "Classic",
-                    DpiAware = _dpiAwareCheck.Checked
+                    DpiAware = _dpiAwareCheck.Checked,
+                    UIFontName = _uiFontCombo.SelectedItem != null ? _uiFontCombo.SelectedItem.ToString() : "Microsoft YaHei UI",
+                    UIFontSize = (int)_uiSizeNum.Value
                 };
                 try { Result.Save(_iniPath); } catch (Exception ex) { DiagLog.Swallowed("Appearance.Save", ex); }
             };
@@ -214,6 +263,8 @@ namespace Gdterm.UI.Forms
             _sizeNum.Value = Math.Max(_sizeNum.Minimum, Math.Min(_sizeNum.Maximum, s.FontSize));
             SelectCombo(_schemeCombo, s.ColorScheme);
             _dpiAwareCheck.Checked = s.DpiAware;
+            SelectCombo(_uiFontCombo, s.UIFontName ?? "Microsoft YaHei UI");
+            _uiSizeNum.Value = Math.Max(_uiSizeNum.Minimum, Math.Min(_uiSizeNum.Maximum, s.UIFontSize > 0 ? s.UIFontSize : 9));
             UpdatePreview();
         }
 
@@ -255,10 +306,16 @@ namespace Gdterm.UI.Forms
     /// <summary>外观设置模型 + INI 读写。</summary>
     public sealed class AppearanceSettings
     {
+        /// <summary>终端等宽字体（内容区）。</summary>
         public string FontName { get; set; } = "Consolas";
+        /// <summary>终端等宽字号。</summary>
         public int FontSize { get; set; } = 12;
         public string ColorScheme { get; set; } = "Classic";
         public bool DpiAware { get; set; } = true;
+        /// <summary>界面非等宽字体（菜单/树/状态栏/对话框）。</summary>
+        public string UIFontName { get; set; } = "Microsoft YaHei UI";
+        /// <summary>界面字号。</summary>
+        public int UIFontSize { get; set; } = 9;
 
         public static AppearanceSettings Load(string path)
         {
@@ -286,6 +343,13 @@ namespace Gdterm.UI.Forms
                         s.ColorScheme = val;
                     else if (string.Equals(key, "dpiAware", StringComparison.OrdinalIgnoreCase))
                         s.DpiAware = val == "1" || string.Equals(val, "true", StringComparison.OrdinalIgnoreCase);
+                    else if (string.Equals(key, "uiFontName", StringComparison.OrdinalIgnoreCase))
+                        s.UIFontName = val;
+                    else if (string.Equals(key, "uiFontSize", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int n;
+                        if (int.TryParse(val, out n) && n >= 8 && n <= 24) s.UIFontSize = n;
+                    }
                 }
             }
             catch { }
@@ -301,7 +365,9 @@ namespace Gdterm.UI.Forms
                 "fontName=" + (FontName ?? "Consolas") + "\r\n" +
                 "fontSize=" + FontSize + "\r\n" +
                 "colorScheme=" + (ColorScheme ?? "Classic") + "\r\n" +
-                "dpiAware=" + (DpiAware ? "1" : "0") + "\r\n");
+                "dpiAware=" + (DpiAware ? "1" : "0") + "\r\n" +
+                "uiFontName=" + (UIFontName ?? "Microsoft YaHei UI") + "\r\n" +
+                "uiFontSize=" + UIFontSize + "\r\n");
         }
 
         public static string DefaultPath

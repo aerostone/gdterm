@@ -67,9 +67,16 @@ namespace Gdterm.UI.Services
                 if (form.ShowDialog(_owner) == DialogResult.OK && form.Result != null)
                 {
                     Gdterm.UI.Program.GlobalAppearance = form.Result;
+                    // UI 字体即时生效；DPI 需重启
+                    try
+                    {
+                        if (_owner is Gdterm.UI.Forms.MainForm mf)
+                            mf.ApplyGlobalUIFont();
+                    }
+                    catch { }
                     MessageBox.Show(
                         _owner,
-                        "外观已保存。新开终端立即生效；DPI 感知需重启应用。",
+                        "外观已保存。终端与界面字体已即时生效；DPI 感知需重启应用。",
                         "外观设置",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information);

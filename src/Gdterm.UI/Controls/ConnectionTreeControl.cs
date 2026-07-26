@@ -173,6 +173,19 @@ namespace Gdterm.UI.Controls
             }
         }
 
+        /// <summary>
+        /// 应用界面字体（非等宽）——供 MainForm 在启动时从 GlobalAppearance 应用。
+        /// </summary>
+        public void ApplyUIFont(string name, int size)
+        {
+            if (string.IsNullOrEmpty(name) || size < 8 || size > 24) return;
+            try { _treeView.Font = new Font(name, size, FontStyle.Regular); }
+            catch { _treeView.Font = new Font("Microsoft YaHei UI", 9f); }
+        }
+
+        /// <summary>当前内部 TreeView（供 MainForm 更改字体）。</summary>
+        internal TreeView InternalTree => _treeView;
+
         public void LoadConnections()
         {
             _treeView.Nodes.Clear();

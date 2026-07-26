@@ -332,6 +332,9 @@ namespace Gdterm.UI.Forms
             Controls.Add(_menuStrip);
             _lockOverlay.BringToFront();
 
+            // 主界面统一字体（微软雅黑妖会被镜像发给终端，这里只给 UI 侧）。
+            try { ApplyGlobalUIFont(); } catch { }
+
             _sessionState = new SessionStateCoordinator(
                 _sessionStore,
                 _connectionStore,
@@ -345,6 +348,22 @@ namespace Gdterm.UI.Forms
             _lockCoord = new LockStateCoordinator(
                 this, _securityManager, _keepassService, _lockOverlay,
                 _tabContainer, _reconnectWatchdog, _auditLogger);
+        }
+
+        public void ApplyGlobalUIFont()
+        {
+            var ga = Gdterm.UI.Program.GlobalAppearance;
+            if (ga == null) return;
+            var name = !string.IsNullOrWhiteSpace(ga.UIFontName) ? ga.UIFontName : "Microsoft YaHei UI";
+            var size = ga.UIFontSize > 0 ? ga.UIFontSize : 9;
+            Font font;
+            try { font = new Font(name, size, FontStyle.Regular); }
+            catch { font = new Font("Microsoft YaHei UI", 9f); }
+            try { this.Font = font; } catch { }
+            if (_menuStrip != null) try { _menuStrip.Font = font; } catch { }
+            if (_statusBar != null) try { _statusBar.Font = font; } catch { }
+            if (_connectionTree != null) try { _connectionTree.ApplyUIFont(name, size); } catch { }
+            if (_quickBar != null) try { _quickBar.Font = font; } catch { }
         }
 
         private void SetupEventHandlers()
