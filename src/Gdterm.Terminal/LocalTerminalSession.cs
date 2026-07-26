@@ -12,12 +12,16 @@ using Gdterm.Terminal.Models;
 namespace Gdterm.Terminal
 {
     /// <summary>
-    /// 本地终端：重定向 CMD/PowerShell。
-    /// 用后台线程按块读 stdout/stderr（非 OutputDataReceived 行模式），
-    /// 否则交互式 prompt 永远不刷新，界面像“进不去”。
+    /// 本地终端：三层后端，按优先级回退。
+    /// 1) ConPTY — Win10 1809+ 自带，真 PTY，最佳体验
+    /// 2) winpty — Win7/Server2008 上唯一真 PTY；依赖 lib/winpty/winpty.dll + winpty-agent.exe
+    /// 3) 重定向 Process — 兜底，无交互式 prompt，仅作为最后保险
+    /// 只有真 PTY 后端（ConPTY/winpty）才视为 VT 可用。
     /// </summary>
     public class LocalTerminalSession : ITerminalSession
     {
+        private enum LocalBackend { None, ConPty, WinPty, Redirect }
+
         private Process _process;
         private readonly object _lock = new object();
         private readonly List<string> _outputBuffer = new List<string>();
@@ -27,17 +31,21 @@ namespace Gdterm.Terminal
         private CancellationTokenSource _readCts;
         private const int MaxBufferLines = 500;
 
-        // ConPTY 模式：Win10 1809+ 可用；其他 OS 走旧重定向回退。
         private ConPTY _conpty;
-        private bool _usingConPTY;
+        private WinPty _winpty;
+        private LocalBackend _backend = LocalBackend.None;
         private int _cols = 80, _rows = 24;
 
-        /// <summary>当前是否运行在 ConPTY 模式（VtCell/TUI 真彩可坐）。</summary>
-        public bool IsConPTYMode => _usingConPTY;
-        /// <summary>本会话是否可坐 VT/TUI 渲染：ConPTY 可用且本会话已进入 ConPTY 模式。</summary>
-        public bool IsVtCapable => _usingConPTY;
-        /// <summary>当前 OS 是否支持 ConPTY（静态检查；Win7 false）。</summary>
+        /// <summary>本会话是否走真 PTY（VtCell/TUI 真彩可坐）。</summary>
+        public bool IsVtCapable => _backend == LocalBackend.ConPty || _backend == LocalBackend.WinPty;
+        /// <summary>本会话使用的后端名（诊断用）。</summary>
+        public string BackendName => _backend.ToString();
+        /// <summary>当前 OS 是否支持 ConPTY（Win10 1809+）。</summary>
         public static bool IsConPTYAvailableOnThisOS() => ConPTY.IsAvailable;
+        /// <summary>当前进程是否成功加载 winpty.dll（lib/winpty/ 已随包发布且 OS 兼容）。</summary>
+        public static bool IsWinPtyAvailableOnThisOS() => WinPty.IsAvailable;
+        /// <summary>UI 选 Renderer 的依据：任何真 PTY 后端可用即可走 VtCell。</summary>
+        public static bool IsAnyPtyAvailableOnThisOS() => ConPTY.IsAvailable || WinPty.IsAvailable;
 
         public string ConnectionId { get; private set; }
         public string Hostname { get { return "localhost"; } }
@@ -48,8 +56,13 @@ namespace Gdterm.Terminal
             {
                 try
                 {
-                    if (_usingConPTY) return _conpty != null && _conpty.IsRunning;
-                    return _process != null && !_process.HasExited;
+                    switch (_backend)
+                    {
+                        case LocalBackend.ConPty: return _conpty != null && _conpty.IsRunning;
+                        case LocalBackend.WinPty: return _winpty != null && _winpty.IsRunning;
+                        case LocalBackend.Redirect: return _process != null && !_process.HasExited;
+                        default: return false;
+                    }
                 }
                 catch { return false; }
             }
@@ -57,7 +70,6 @@ namespace Gdterm.Terminal
 
         public event EventHandler<TerminalOutputEventArgs> OutputReceived;
         public event EventHandler Disconnected;
-
         private int _disconnectRaised;
 
         public object TryGetSshClient() => null;
@@ -85,19 +97,23 @@ namespace Gdterm.Terminal
             lock (_lock)
             {
                 if (IsConnected) return;
-
                 ResolveShell();
 
-                // 优先 ConPTY（Win10 1809+）：真 PTY，交互式 prompt / TUI / 真彩全部可用。
                 if (ConPTY.IsAvailable && TryStartConPTY())
                 {
-                    _usingConPTY = true;
+                    _backend = LocalBackend.ConPty;
                     RaiseOutput("\r\n[gdterm] 本地终端已启动 (ConPTY): " + _shellPath + "\r\n");
                     return;
                 }
 
-                // 回退：重定向 Process（Win7/Server2008 或 ConPTY 创建失败）。
-                _usingConPTY = false;
+                if (WinPty.IsAvailable && TryStartWinPty())
+                {
+                    _backend = LocalBackend.WinPty;
+                    RaiseOutput("\r\n[gdterm] 本地终端已启动 (winpty): " + _shellPath + "\r\n");
+                    return;
+                }
+
+                _backend = LocalBackend.Redirect;
                 StartRedirected();
             }
         }
@@ -119,33 +135,16 @@ namespace Gdterm.Terminal
             }
         }
 
-        /// <summary>尝试以 ConPTY 启动子进程；成功返回 true。</summary>
+        // ===== ConPTY 路径 =====
         private bool TryStartConPTY()
         {
             try
             {
-                string commandLine = BuildCommandLineForConPTY(out string _);
-                string cwd = !string.IsNullOrEmpty(_workingDirectory)
-                    ? _workingDirectory
-                    : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-
+                string cwd = ResolveCwd();
                 _conpty = new ConPTY();
-                _conpty.OnOutput += bytes =>
-                {
-                    if (bytes == null || bytes.Length == 0) return;
-                    string text;
-                    try { text = Encoding.UTF8.GetString(bytes); }
-                    catch { text = Encoding.Default.GetString(bytes); }
-                    RaiseOutput(text);
-                };
-                _conpty.OnExited += (s, e) =>
-                {
-                    RaiseOutput("\r\n[本地终端已退出]\r\n");
-                    RaiseDisconnected();
-                };
-                if (!_conpty.Start(commandLine, cwd, (short)_cols, (short)_rows))
-                    return false;
-                return true;
+                _conpty.OnOutput += OnPtyOutput;
+                _conpty.OnExited += OnPtyExited;
+                return _conpty.Start(BuildCommandLineForPty(), cwd, (short)_cols, (short)_rows);
             }
             catch
             {
@@ -155,13 +154,50 @@ namespace Gdterm.Terminal
             }
         }
 
-        private string BuildCommandLineForConPTY(out string workingDirectory)
+        // ===== winpty 路径 =====
+        private bool TryStartWinPty()
         {
-            workingDirectory = !string.IsNullOrEmpty(_workingDirectory)
+            try
+            {
+                string cwd = ResolveCwd();
+                _winpty = new WinPty();
+                _winpty.OnOutput += OnPtyOutput;
+                _winpty.OnExited += OnPtyExited;
+                return _winpty.Start(BuildCommandLineForPty(), cwd, (short)_cols, (short)_rows);
+            }
+            catch
+            {
+                try { _winpty?.Dispose(); } catch { }
+                _winpty = null;
+                return false;
+            }
+        }
+
+        private void OnPtyOutput(byte[] bytes)
+        {
+            if (bytes == null || bytes.Length == 0) return;
+            string text;
+            try { text = Encoding.UTF8.GetString(bytes); }
+            catch { text = Encoding.Default.GetString(bytes); }
+            RaiseOutput(text);
+        }
+
+        private void OnPtyExited(object sender, EventArgs e)
+        {
+            RaiseOutput("\r\n[本地终端已退出]\r\n");
+            RaiseDisconnected();
+        }
+
+        private string ResolveCwd()
+        {
+            return !string.IsNullOrEmpty(_workingDirectory)
                 ? _workingDirectory
                 : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+        }
 
-            // ConPTY 不需重定向参数；shell 自己启动交互式。
+        private string BuildCommandLineForPty()
+        {
+            // PTY 不需要重定向参数；shell 自己启动交互式。
             if (_shellPath.IndexOf("powershell", StringComparison.OrdinalIgnoreCase) >= 0
                 || _shellPath.IndexOf("pwsh", StringComparison.OrdinalIgnoreCase) >= 0)
                 return "\"" + _shellPath + "\" -NoLogo";
@@ -173,7 +209,7 @@ namespace Gdterm.Terminal
             return "\"" + _shellPath + "\"";
         }
 
-        /// <summary>回退重定向实现（Win7 或 ConPTY 不可用）。</summary>
+        // ===== 重定向回退 =====
         private void StartRedirected()
         {
             var startInfo = new ProcessStartInfo
@@ -188,10 +224,7 @@ namespace Gdterm.Terminal
                 StandardErrorEncoding = Encoding.Default
             };
             startInfo.EnvironmentVariables["TERM"] = "xterm";
-            if (!string.IsNullOrEmpty(_workingDirectory))
-                startInfo.WorkingDirectory = _workingDirectory;
-            else
-                startInfo.WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            startInfo.WorkingDirectory = ResolveCwd();
 
             if (_shellPath.IndexOf("powershell", StringComparison.OrdinalIgnoreCase) >= 0
                 || _shellPath.IndexOf("pwsh", StringComparison.OrdinalIgnoreCase) >= 0)
@@ -226,7 +259,7 @@ namespace Gdterm.Terminal
                 Task.Factory.StartNew(() => ReadLoop(stdout, token), token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
                 Task.Factory.StartNew(() => ReadLoop(stderr, token), token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
-                RaiseOutput("\r\n[gdterm] 本地终端已启动: " + _shellPath + "\r\n");
+                RaiseOutput("\r\n[gdterm] 本地终端已启动 (重定向): " + _shellPath + "\r\n");
                 try
                 {
                     _process.StandardInput.WriteLine();
@@ -267,46 +300,38 @@ namespace Gdterm.Terminal
             lock (_lock)
             {
                 if (!IsConnected) return;
-                if (_usingConPTY)
+                if (text == "\n") text = "\r\n";
+                else if (text == "\r") text = "\r\n";
+                switch (_backend)
                 {
-                    if (_conpty == null) return;
-                    try
-                    {
-                        if (text == "\n") text = "\r\n";
-                        else if (text == "\r") text = "\r\n";
-                        _conpty.Write(Encoding.UTF8.GetBytes(text));
-                    }
-                    catch { }
-                    return;
+                    case LocalBackend.ConPty:
+                        try { _conpty?.Write(Encoding.UTF8.GetBytes(text)); } catch { }
+                        return;
+                    case LocalBackend.WinPty:
+                        try { _winpty?.Write(Encoding.UTF8.GetBytes(text)); } catch { }
+                        return;
+                    case LocalBackend.Redirect:
+                        try { _process?.StandardInput.Write(text); _process?.StandardInput.Flush(); } catch { }
+                        return;
                 }
-                if (_process == null) return;
-                try
-                {
-                    if (text == "\n") text = "\r\n";
-                    else if (text == "\r") text = "\r\n";
-                    _process.StandardInput.Write(text);
-                    _process.StandardInput.Flush();
-                }
-                catch { }
             }
         }
 
         public void SendBytes(byte[] data)
         {
             if (data == null || data.Length == 0) return;
-            if (_usingConPTY)
+            switch (_backend)
             {
-                try { _conpty?.Write(data); } catch { }
-                return;
-            }
-            try
-            {
-                var text = Encoding.Default.GetString(data);
-                SendInput(text);
-            }
-            catch
-            {
-                try { SendInput(Encoding.UTF8.GetString(data)); } catch { }
+                case LocalBackend.ConPty:
+                    try { _conpty?.Write(data); } catch { }
+                    return;
+                case LocalBackend.WinPty:
+                    try { _winpty?.Write(data); } catch { }
+                    return;
+                case LocalBackend.Redirect:
+                    try { SendInput(Encoding.Default.GetString(data)); }
+                    catch { try { SendInput(Encoding.UTF8.GetString(data)); } catch { } }
+                    return;
             }
         }
 
@@ -314,7 +339,15 @@ namespace Gdterm.Terminal
         {
             _cols = Math.Max(1, columns);
             _rows = Math.Max(1, rows);
-            if (_usingConPTY) { try { _conpty?.Resize((short)_cols, (short)_rows); } catch { } }
+            switch (_backend)
+            {
+                case LocalBackend.ConPty:
+                    try { _conpty?.Resize((short)_cols, (short)_rows); } catch { }
+                    return;
+                case LocalBackend.WinPty:
+                    try { _winpty?.Resize((short)_cols, (short)_rows); } catch { }
+                    return;
+            }
         }
 
         public void SendBreak(int durationMs = 100)
@@ -337,32 +370,36 @@ namespace Gdterm.Terminal
         {
             lock (_lock)
             {
-                if (_usingConPTY)
+                switch (_backend)
                 {
-                    try { _conpty?.Stop(); } catch { }
-                    try { _conpty?.Dispose(); } catch { }
-                    _conpty = null;
-                    return;
-                }
-                if (_process == null) return;
-                try
-                {
-                    if (!_process.HasExited)
-                    {
+                    case LocalBackend.ConPty:
+                        try { _conpty?.Stop(); } catch { }
+                        try { _conpty?.Dispose(); } catch { }
+                        _conpty = null;
+                        return;
+                    case LocalBackend.WinPty:
+                        try { _winpty?.Stop(); } catch { }
+                        try { _winpty?.Dispose(); } catch { }
+                        _winpty = null;
+                        return;
+                    case LocalBackend.Redirect:
+                        if (_process == null) return;
                         try
                         {
-                            _process.StandardInput.Write("exit\r\n");
-                            _process.StandardInput.Flush();
+                            if (!_process.HasExited)
+                            {
+                                try { _process.StandardInput.Write("exit\r\n"); _process.StandardInput.Flush(); }
+                                catch { }
+                                if (!_process.WaitForExit(2000))
+                                {
+                                    try { _process.Kill(); } catch { }
+                                }
+                            }
                         }
                         catch { }
-                        if (!_process.WaitForExit(2000))
-                        {
-                            try { _process.Kill(); } catch { }
-                        }
-                    }
+                        CleanupProcess();
+                        return;
                 }
-                catch { }
-                CleanupProcess();
             }
         }
 

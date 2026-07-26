@@ -123,6 +123,17 @@ if ((Test-Path $vtDll) -and -not (Test-Path (Join-Path $OutDir 'VtNetCore.dll'))
     Copy-Item $vtDll (Join-Path $OutDir 'VtNetCore.dll') -Force
 }
 
+# winpty (Win7/Server2008 PTY fallback) — winpty.dll 需要与 winpty-agent.exe 同目录
+$winptyDir = Join-Path $Root 'lib\winpty'
+if (Test-Path $winptyDir) {
+    foreach ($f in Get-ChildItem -Path $winptyDir -File) {
+        Copy-Item $f.FullName (Join-Path $OutDir $f.Name) -Force
+        Write-Host "Packed $($f.Name)"
+    }
+} else {
+    Write-Warning "lib\winpty not found — Win7 local terminal will fall back to redirected Process"
+}
+
 # README
 @'
 gdterm portable

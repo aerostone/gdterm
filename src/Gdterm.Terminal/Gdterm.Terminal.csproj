@@ -82,6 +82,7 @@
     <Compile Include="Rendering\CellGdiRenderer.cs" />
     <Compile Include="Rendering\Vt\VtTerminalEngine.cs" />
     <Compile Include="Interop\ConPTY.cs" />
+    <Compile Include="Interop\WinPty.cs" />
     <Compile Include="Transfer\ZmodemHandler.cs" />
     <Compile Include="ITerminalSessionFactory.cs" />
     <Compile Include="TerminalSessionFactory.cs" />
@@ -90,6 +91,18 @@
     <Compile Include="TerminalControl.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SshPortForwardHost.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- winpty (Win7/Server2008 PTY fallback)。winpty.dll 运行时会启动 winpty-agent.exe，
+         两个必须同目录；winpty.exe 可选，保留以便调试。 -->
+    <None Include="..\..\lib\winpty\winpty.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>winpty.dll</Link>
+    </None>
+    <None Include="..\..\lib\winpty\winpty-agent.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>winpty-agent.exe</Link>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 

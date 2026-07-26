@@ -51,6 +51,10 @@ after_test:
         Copy-Item "lib\VtNetCore.dll" $out -Force
         Copy-Item "lib\LICENSE.VtNetCore.txt" $out -Force -ErrorAction SilentlyContinue
       }
+      # winpty (Win7/Server2008 PTY fallback)
+      if (Test-Path "lib\winpty") {
+        Copy-Item "lib\winpty\*" $out -Force
+      }
       # 从各项目 bin 与 NuGet 缓存补齐传递依赖（KeePassLib / SSH.NET）
       $depNames = @('KeePassLib.dll','Renci.SshNet.dll','VtNetCore.dll')
       foreach ($name in $depNames) {

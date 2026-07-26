@@ -95,8 +95,8 @@ namespace Gdterm.UI.Controls
                 Host = "localhost",
                 Protocol = ProtocolType.SSH
             };
-            // 本地会话：Win10 1809+ 有 ConPTY 时走 VtCell 真彩；Win7/Server2008 回退 Lightweight。
-            bool useVt = Gdterm.Terminal.LocalTerminalSession.IsConPTYAvailableOnThisOS();
+            // 本地会话：Win10 1809+ 用 ConPTY；Win7/Server2008 用 winpty；都没才 Lightweight。
+            bool useVt = Gdterm.Terminal.LocalTerminalSession.IsAnyPtyAvailableOnThisOS();
             _profile = new TerminalProfile { Renderer = useVt ? "VtCell" : "Lightweight", TerminalType = "xterm-256color" };
             NormalizeProfile(_profile);
             InitializeComponent();
