@@ -89,14 +89,18 @@ namespace Gdterm.UI.Controls
                     if (InvokeRequired)
                     {
                         var tcs = new TaskCompletionSource<bool>();
-                        BeginInvoke(new Action(async () =>
+                        BeginInvoke(new Action(() =>
                         {
-                            try
+                            // 在 UI 线程启动 async 重连，完成后回填 tcs（无 async void lambda）
+                            ReconnectByIdAsync(id).ContinueWith(t =>
                             {
-                                var ok = await ReconnectByIdAsync(id).ConfigureAwait(true);
-                                tcs.TrySetResult(ok);
-                            }
-                            catch (Exception ex) { tcs.TrySetException(ex); }
+                                if (t.IsFaulted && t.Exception != null)
+                                    tcs.TrySetException(t.Exception.GetBaseException());
+                                else if (t.IsCanceled)
+                                    tcs.TrySetCanceled();
+                                else
+                                    tcs.TrySetResult(t.Result);
+                            }, TaskScheduler.Default);
                         }));
                         return await tcs.Task.ConfigureAwait(false);
                     }

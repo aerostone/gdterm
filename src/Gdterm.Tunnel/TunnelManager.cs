@@ -43,17 +43,18 @@ namespace Gdterm.Tunnel
             }
 
             // P1-04：并发同 connectionId 只建一次
+            Task<TunnelEndpoint> created = null;
             var task = _inflight.GetOrAdd(connectionId, id =>
-                EstablishCoreAsync(config, credential, ct).ContinueWith(t =>
+            {
+                created = EstablishCoreAsync(config, credential, ct);
+                // 无论成败都从 inflight 移除，允许后续重试
+                created.ContinueWith(_ =>
                 {
                     Task<TunnelEndpoint> removed;
                     _inflight.TryRemove(id, out removed);
-                    if (t.IsFaulted && t.Exception != null)
-                        throw t.Exception.GetBaseException();
-                    if (t.IsCanceled)
-                        throw new OperationCanceledException();
-                    return t.Result;
-                }, TaskContinuationOptions.ExecuteSynchronously));
+                }, TaskContinuationOptions.ExecuteSynchronously);
+                return created;
+            });
 
             return task;
         }
