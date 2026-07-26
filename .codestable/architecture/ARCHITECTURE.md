@@ -113,23 +113,30 @@ ConnectionTree 双击
 | `CredentialResolver` | 三档凭据解析 + SSH 私钥附件 |
 | `ProtocolTabOpener` | 按协议建造 `TabPage` + `TabSessionState`（SSH/RDP/Serial/Local/SFTP/分屏终端） |
 | `TabSessionLifecycle` | 登录脚本、健康监控/Watch、隧道最后用户关闭、Close 审计 |
-| `TabSessionState` / `OpenedTab` | 标签会话状态模型（从 TabContainer 内嵌类提升） |
+| `TabSessionState` / `OpenedTab` | 标签会话状态模型 |
+| `TabCloseService` | 关签编排 / 隧道最后用户 / RDP 清理 |
+| `TabReconnectService` | 重连后凭据回填 + 懒连接就绪轮询 |
+| `TabSplitService` | 水平/垂直分屏 |
+| `TabChromePainter` | 标签绘制与关闭按钮命中 |
+| `TabSelectionCoordinator` | 选中切换：渲染暂停/恢复、RDP 懒连 |
+| `TabActiveSessionQuery` | 活动标签/SSH 宿主查询 |
 | `SidePanelFactory` | 侧栏/终端工具面板创建 + 多通道同步/广播闸 |
+| `SidePanelHost` | 右侧工具宿主 Show/Hide |
 | `SessionStateCoordinator` | 窗口几何与打开标签的保存/恢复 |
 | `MainFormMenuBuilder` | 菜单树构建（回调由 MainForm 提供） |
+| `MainFormCommandRouter` | Ctrl+R/W/F/P、Esc 快捷键路由 |
 | `ViewModeController` | Standard/Focus/Compact 与连接树显隐 |
-| `SidePanelHost` | 右侧工具宿主 Show/Hide |
 | `ToolsDialogsLauncher` | KeePass/AI/密码健康等对话框 |
 | `GlobalHotkeyController` | Ctrl+` 全局显隐 |
-| `TabActiveSessionQuery` | 活动标签/SSH 宿主查询 |
-| `TabCloseService` | 关签编排 / 隧道最后用户 / RDP 清理 |
-| `TabReconnectService` | 重连等待真实连接 |
 | `ActiveSessionBridge` | 活动会话 → Toolbox / PortForward 绑定 |
-| `TabReconnectService` | 重连后凭据回填 + 懒连接就绪轮询（避免 Watchdog 假成功） |
-| `MasterPasswordPrompt` | 敏感操作主密码再验证对话框 |
+| `AiCommandGateBinder` | AI Run-this → 危险命令确认 |
+| `ConnectionOpenCoordinator` | 双击打开/新建连接/SFTP + 最近记录 |
+| `LockStateCoordinator` | 锁屏遮罩 + KeePass 锁库/解锁 |
+| `AppShutdownCoordinator` | 窗体关闭有序释放 |
+| `MasterPasswordPrompt` | 敏感操作主密码再验证 |
 | `ConnectionImportExportUi` | 连接导入/导出文件对话框与 merge |
 
-**约定**：新业务逻辑优先进 Services；`MainForm` 保留布局与事件，`TabContainerControl` 保留 Tab chrome / 字典 / 关签编排。
+**约定**：新业务逻辑优先进 Services。`MainForm` ≈385 行仅组合根+布局；`TabContainerControl` ≈309 行仅会话字典 + Tab chrome 壳。finding-10 已 resolved。
 
 ### 3.3 凭据与安全边界
 

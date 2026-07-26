@@ -26,6 +26,9 @@ namespace Gdterm.UI.Forms
         Compact
     }
 
+    /// <summary>
+    /// 组合根 + 布局壳。业务逻辑在 Services/（finding-10）。
+    /// </summary>
     public partial class MainForm : Form
     {
         private readonly IConnectionStore _connectionStore;
@@ -59,6 +62,10 @@ namespace Gdterm.UI.Forms
         private ViewModeController _viewMode;
         private ToolsDialogsLauncher _toolsDialogs;
         private GlobalHotkeyController _hotkeys;
+        private MainFormCommandRouter _cmdRouter;
+        private ConnectionOpenCoordinator _openCoord;
+        private LockStateCoordinator _lockCoord;
+        private AppShutdownCoordinator _shutdown;
         private StatusBarControl _statusBar;
         private LockOverlayControl _lockOverlay;
         private MenuStrip _menuStrip;
@@ -126,7 +133,19 @@ namespace Gdterm.UI.Forms
             }
 
             InitializeComponent();
+            LoadAppIcon();
+            SetupEventHandlers();
+            if (!_securityManager.IsLocked && _lockOverlay != null)
+                _lockOverlay.Visible = false;
 
+            Shown += (s, e) =>
+            {
+                try { _sessionState?.Restore(); } catch { }
+            };
+        }
+
+        private void LoadAppIcon()
+        {
             try
             {
                 var iconStream = typeof(MainForm).Assembly.GetManifestResourceStream("Gdterm.UI.Resources.gdterm.ico");
@@ -137,15 +156,6 @@ namespace Gdterm.UI.Forms
                 }
             }
             catch { }
-
-            SetupEventHandlers();
-            if (!_securityManager.IsLocked)
-                _lockOverlay.Visible = false;
-
-            Shown += (s, e) =>
-            {
-                try { _sessionState?.Restore(); } catch { }
-            };
         }
 
         private void InitializeComponent()
@@ -155,8 +165,6 @@ namespace Gdterm.UI.Forms
             StartPosition = FormStartPosition.CenterScreen;
             MinimumSize = new Size(800, 600);
 
-            // 菜单先建，回调在控件创建后再绑定会更复杂；此处先占位，布局后立即 Build
-            // 实际：先建树/标签，再建菜单回调（需 _tabContainer 等）
             _connectionTree = new ConnectionTreeControl(_connectionStore);
             _connectionTree.Dock = DockStyle.Left;
             _connectionTree.Width = 250;
@@ -200,7 +208,11 @@ namespace Gdterm.UI.Forms
             _tabContainer.ActiveSessionChanged += OnActiveSessionChanged;
             _tabContainer.SessionClosed += OnSessionClosed;
 
-            WireAiCommandGate();
+            AiCommandGateBinder.Bind(
+                _aiService,
+                () => _tabContainer.GetActiveTerminalControl(),
+                _dangerousCmdDetector,
+                this);
 
             var sideHostPanel = SidePanelHost.CreateHost((s, e) => _sidePanelHost?.Hide());
             _sidePanelHost = new SidePanelHost(sideHostPanel);
@@ -240,14 +252,17 @@ namespace Gdterm.UI.Forms
             _toolsDialogs = new ToolsDialogsLauncher(
                 this, _securityManager, _keepassService, _dangerousCmdDetector);
 
+            _openCoord = new ConnectionOpenCoordinator(
+                _tabContainer, _connectionStore, _bookmarkStore, _connectionTree, this);
+
             var menuBuilt = new MainFormMenuBuilder().Build(new MainFormMenuBuilder.Callbacks
             {
-                NewConnection = OnNewConnection,
+                NewConnection = (s, e) => _openCoord.NewConnection(),
                 ImportConnections = (s, e) => ConnectionImportExportUi.Import(this, _connectionStore, () => _connectionTree.LoadConnections()),
                 ExportConnections = (s, e) => ConnectionImportExportUi.Export(this, _connectionStore),
                 Exit = (s, e) => Close(),
                 OpenLocalTerminal = (s, e) => _tabContainer.OpenLocalTerminal(),
-                OpenSftp = OnOpenSftp,
+                OpenSftp = (s, e) => _openCoord.OpenSftpFromActive(),
                 ReconnectActive = (s, e) => _tabContainer.ReconnectActiveTab(),
                 CloseActive = (s, e) => _tabContainer.CloseActiveTab(),
                 ViewStandard = (s, e) => _viewMode?.SetViewMode(ViewMode.Standard),
@@ -274,7 +289,7 @@ namespace Gdterm.UI.Forms
                 ShowSecretScan = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateSecretScanPanel()),
                 ShowBookmarks = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateBookmarksPanel(cfg =>
                 {
-                    if (cfg != null) OnConnectionDoubleClicked(null, cfg);
+                    if (cfg != null) _openCoord.OpenConnection(cfg);
                 })),
                 KeePassManager = (s, e) => _toolsDialogs.OpenKeePassManager(),
                 PasswordHealth = (s, e) => _toolsDialogs.OpenPasswordHealth(),
@@ -297,6 +312,9 @@ namespace Gdterm.UI.Forms
                 menuBuilt.ViewFocusItem,
                 menuBuilt.ViewCompactItem);
 
+            _cmdRouter = new MainFormCommandRouter(
+                _tabContainer, _sidePanels, _sidePanelHost, _viewMode);
+
             Controls.Add(_tabContainer);
             Controls.Add(sideSplitter);
             Controls.Add(sideHostPanel);
@@ -317,46 +335,24 @@ namespace Gdterm.UI.Forms
                 mode => _viewMode?.SetViewMode(mode),
                 () => _connectionTree != null ? _connectionTree.Width : 250,
                 w => { if (_connectionTree != null) _connectionTree.Width = w; });
-        }
 
-        private void WireAiCommandGate()
-        {
-            if (!(_aiService is AiAssistantService aiSvc)) return;
-            aiSvc.CommandGate = cmd =>
-            {
-                var tc = _tabContainer.GetActiveTerminalControl();
-                if (tc != null)
-                    return tc.ConfirmDangerousCommand(cmd);
-                if (_dangerousCmdDetector == null) return true;
-                try
-                {
-                    var check = _dangerousCmdDetector.Check(cmd);
-                    if (check == null || !check.IsDangerous) return true;
-                    using (var dlg = new DangerousCommandDialog(cmd, check))
-                    {
-                        dlg.ShowDialog(this);
-                        if (!dlg.IsConfirmed) return false;
-                        if (dlg.RememberChoice)
-                        {
-                            try { _dangerousCmdDetector.AddToWhitelist(cmd); } catch { }
-                        }
-                        return true;
-                    }
-                }
-                catch { return true; }
-            };
+            _lockCoord = new LockStateCoordinator(
+                this, _securityManager, _keepassService, _lockOverlay);
         }
 
         private void SetupEventHandlers()
         {
-            _connectionTree.ConnectionDoubleClicked += OnConnectionDoubleClicked;
-            _securityManager.LockStateChanged += OnLockStateChanged;
+            _connectionTree.ConnectionDoubleClicked += (s, cfg) => _openCoord.OpenConnection(cfg);
+            _securityManager.LockStateChanged += (s, e) => _lockCoord.Handle(s, e);
             MouseMove += (s, e) => _securityManager.ResetIdleTimer();
             KeyDown += (s, e) => _securityManager.ResetIdleTimer();
             Click += (s, e) => _securityManager.ResetIdleTimer();
             _hotkeys = new GlobalHotkeyController(this);
             _hotkeys.Initialize();
-            FormClosing += OnFormClosing;
+            _shutdown = new AppShutdownCoordinator(
+                _sessionState, _hotkeys, _tabContainer,
+                _tunnelManager, _keepassService, _securityManager);
+            FormClosing += _shutdown.OnFormClosing;
         }
 
         private void OnSessionClosed(object sender, string sessionId)
@@ -379,106 +375,10 @@ namespace Gdterm.UI.Forms
             try { _sidePanels?.SyncMultiChannelRegistrations(); } catch { }
         }
 
-        private void OnConnectionDoubleClicked(object sender, ConnectionConfig config)
-        {
-            _tabContainer.OpenConnection(config);
-            try
-            {
-                _bookmarkStore?.AddRecentConnection(new RecentConnection
-                {
-                    ConnectionId = config.Id,
-                    Host = config.Host,
-                    Protocol = config.Protocol.ToString(),
-                    ConnectedAt = DateTime.UtcNow,
-                    Success = true
-                });
-            }
-            catch { }
-        }
-
-        private void OnOpenSftp(object sender, EventArgs e)
-        {
-            var tc = _tabContainer.GetActiveTerminalControl();
-            if (tc?.Config != null)
-            {
-                _tabContainer.OpenSftpBrowser(tc.Config);
-                return;
-            }
-            MessageBox.Show("请先打开一个 SSH 连接，或从连接树双击后再打开 SFTP。", "SFTP",
-                MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
-        private void OnLockStateChanged(object sender, LockStateChangedEventArgs e)
-        {
-            if (InvokeRequired)
-            {
-                Invoke(new Action(() => OnLockStateChanged(sender, e)));
-                return;
-            }
-
-            if (e.IsLocked)
-            {
-                try { _keepassService.Lock(); } catch { }
-                _lockOverlay.Visible = true;
-                _lockOverlay.BringToFront();
-            }
-            else
-            {
-                var masterPassword = _securityManager.GetMasterPassword();
-                if (!string.IsNullOrEmpty(masterPassword))
-                {
-                    try { _keepassService.UnlockAsync(masterPassword); } catch { }
-                }
-                _lockOverlay.Visible = false;
-            }
-        }
-
-        private void OnNewConnection(object sender, EventArgs e)
-        {
-            using (var dlg = new ConnectionDialog())
-            {
-                if (dlg.ShowDialog(this) == DialogResult.OK && dlg.Result != null)
-                {
-                    _connectionStore.Add(dlg.Result);
-                    _connectionTree.LoadConnections();
-                }
-            }
-        }
-
-        private void OnFormClosing(object sender, FormClosingEventArgs e)
-        {
-            try { _sessionState?.Save(); } catch { }
-            try { _hotkeys?.Dispose(); } catch { }
-            _tabContainer.CloseAllTabs();
-            _tunnelManager.Dispose();
-            _keepassService.Dispose();
-            _securityManager.Dispose();
-        }
-
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
-            if (keyData == Keys.Escape && _viewMode != null && _viewMode.TryHandleEscape())
+            if (_cmdRouter != null && _cmdRouter.TryHandle(keyData))
                 return true;
-            if (keyData == (Keys.Control | Keys.R))
-            {
-                _tabContainer.ReconnectActiveTab();
-                return true;
-            }
-            if (keyData == (Keys.Control | Keys.W))
-            {
-                _tabContainer.CloseActiveTab();
-                return true;
-            }
-            if (keyData == (Keys.Control | Keys.F))
-            {
-                _sidePanels?.AttachSearchBar(_tabContainer);
-                return true;
-            }
-            if (keyData == (Keys.Control | Keys.P))
-            {
-                _sidePanelHost?.ShowSnippetSearch(_sidePanels, _tabContainer);
-                return true;
-            }
             return base.ProcessCmdKey(ref msg, keyData);
         }
     }

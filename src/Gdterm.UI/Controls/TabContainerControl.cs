@@ -5,12 +5,10 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Gdterm.AI;
 using Gdterm.Connections;
-using Gdterm.Core.Enums;
 using Gdterm.Core.Models;
 using Gdterm.KeePass;
 using Gdterm.Logging;
 using Gdterm.Rdp;
-using Gdterm.Security;
 using Gdterm.Sftp;
 using Gdterm.Terminal;
 using Gdterm.Tools;
@@ -20,13 +18,10 @@ using Gdterm.UI.Services;
 namespace Gdterm.UI.Controls
 {
     /// <summary>
-    /// 标签页容器——SSH/RDP/串口/本地/SFTP，懒连接、暂停渲染、自动重连、健康监控
+    /// 标签页容器壳——持有会话字典与 TabControl，业务委托 Services 层（finding-10）。
     /// </summary>
     public class TabContainerControl : UserControl
     {
-        private readonly ITunnelManager _tunnelManager;
-        private readonly IAuditLogger _auditLogger;
-        private readonly IKeePassService _keepassService;
         private readonly AutoReconnectWatchdog _reconnectWatchdog;
         private readonly IConnectionStore _connectionStore;
         private readonly TabSessionLifecycle _lifecycle;
@@ -34,6 +29,9 @@ namespace Gdterm.UI.Controls
         private readonly TabReconnectService _reconnectService;
         private readonly TabCloseService _closeService;
         private readonly TabActiveSessionQuery _activeQuery;
+        private readonly TabSplitService _splitService;
+        private readonly TabChromePainter _chrome;
+        private readonly TabSelectionCoordinator _selection;
         private readonly Dictionary<TabPage, TabSessionState> _sessions = new Dictionary<TabPage, TabSessionState>();
         private TabControl _tabControl;
 
@@ -56,9 +54,8 @@ namespace Gdterm.UI.Controls
             IConnectionStore connectionStore = null,
             IRdpClientFactory rdpFactory = null)
         {
-            _tunnelManager = tunnelManager;
-            _auditLogger = auditLogger;
-            _keepassService = keepassService;
+            // aiService 保留构造参数以兼容 Program/MainForm 签名；协议侧不直接消费
+            _ = aiService;
             _reconnectWatchdog = reconnectWatchdog;
             _connectionStore = connectionStore;
             _lifecycle = new TabSessionLifecycle(auditLogger, reconnectWatchdog);
@@ -75,7 +72,10 @@ namespace Gdterm.UI.Controls
             _opener.OnRdpConnected = HandleRdpConnected;
             _reconnectService = new TabReconnectService();
             _closeService = new TabCloseService(
-                _lifecycle, _reconnectWatchdog, _keepassService, _tunnelManager);
+                _lifecycle, _reconnectWatchdog, keepassService, tunnelManager);
+            _splitService = new TabSplitService(_opener);
+            _chrome = new TabChromePainter();
+            _selection = new TabSelectionCoordinator();
             _activeQuery = new TabActiveSessionQuery(
                 () => _tabControl != null ? _tabControl.SelectedTab : null,
                 _sessions);
@@ -137,11 +137,9 @@ namespace Gdterm.UI.Controls
             _sessions[opened.Page] = opened.Session;
             _tabControl.TabPages.Add(opened.Page);
             _tabControl.SelectedTab = opened.Page;
-            // 懒连接：真实 Open/Error 由 TerminalControl 或 RDP PendingConnect 记录
             ActiveSessionChanged?.Invoke(this, EventArgs.Empty);
         }
 
-        /// <summary>打开本地终端</summary>
         public void OpenLocalTerminal(string shellPath = null)
         {
             var opened = _opener.CreateLocal(shellPath);
@@ -152,7 +150,6 @@ namespace Gdterm.UI.Controls
             ActiveSessionChanged?.Invoke(this, EventArgs.Empty);
         }
 
-        /// <summary>打开 SFTP 浏览器标签</summary>
         public void OpenSftpBrowser(ConnectionConfig config)
         {
             var opened = _opener.CreateSftp(config);
@@ -170,18 +167,13 @@ namespace Gdterm.UI.Controls
                 ts.IsConnected = true;
                 WireHealthAndReconnect(ts, terminalControl != null ? terminalControl.Session : null);
             }
-            TryRunLogonScript(terminalControl, config);
+            _lifecycle.TryRunLogonScript(terminalControl, config);
         }
 
         private void HandleRdpConnected(TabPage tab)
         {
             if (tab != null && _sessions.TryGetValue(tab, out var ts))
                 ts.IsConnected = true;
-        }
-
-        private void TryRunLogonScript(TerminalControl terminal, ConnectionConfig config)
-        {
-            _lifecycle.TryRunLogonScript(terminal, config);
         }
 
         private void WireHealthAndReconnect(TabSessionState ts, ITerminalSession session)
@@ -191,37 +183,8 @@ namespace Gdterm.UI.Controls
                 ts.SessionId, session, ts.HealthMonitor);
         }
 
-        public void SplitHorizontal() => SplitCurrentTab("horizontal");
-        public void SplitVertical() => SplitCurrentTab("vertical");
-
-        private void SplitCurrentTab(string direction)
-        {
-            var selectedTab = _tabControl.SelectedTab;
-            if (selectedTab == null || !_sessions.ContainsKey(selectedTab))
-            {
-                MessageBox.Show("请先打开一个连接", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            var session = _sessions[selectedTab];
-            if (!(session.Control is TerminalControl))
-            {
-                MessageBox.Show("仅终端标签支持分屏", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            var currentControl = session.Control;
-            var newTerminal = _opener.CreateSplitTerminal(session.Config, session.Credential);
-
-            var splitPane = direction == "horizontal"
-                ? SplitPaneControl.CreateHorizontal(currentControl, newTerminal, 0.5)
-                : SplitPaneControl.CreateVertical(currentControl, newTerminal, 0.5);
-            splitPane.Dock = DockStyle.Fill;
-
-            selectedTab.Controls.Clear();
-            selectedTab.Controls.Add(splitPane);
-            session.Control = splitPane;
-        }
+        public void SplitHorizontal() => _splitService.TrySplit("horizontal", _tabControl.SelectedTab, _sessions);
+        public void SplitVertical() => _splitService.TrySplit("vertical", _tabControl.SelectedTab, _sessions);
 
         public void CloseAllTabs()
         {
@@ -241,62 +204,19 @@ namespace Gdterm.UI.Controls
 
         private void OnDrawTab(object sender, DrawItemEventArgs e)
         {
-            if (e.Index < 0 || e.Index >= _tabControl.TabPages.Count) return;
-            var tab = _tabControl.TabPages[e.Index];
-            var rect = e.Bounds;
-
-            bool isSelected = (e.Index == _tabControl.SelectedIndex);
-            using (var brush = new SolidBrush(isSelected ? SystemColors.ControlLight : SystemColors.Control))
-                e.Graphics.FillRectangle(brush, rect);
-
-            var textRect = new Rectangle(rect.X + 4, rect.Y + 2, rect.Width - 24, rect.Height - 4);
-            TextRenderer.DrawText(e.Graphics, tab.Text, e.Font, textRect, SystemColors.ControlText,
-                TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
-
-            var closeRect = new Rectangle(rect.Right - 18, rect.Y + 4, 14, 16);
-            using (var brush = new SolidBrush(Color.DarkGray))
-                e.Graphics.DrawString("×", e.Font, brush, closeRect);
+            _chrome.DrawTab(e, _tabControl);
         }
 
         private void OnTabMouseDown(object sender, MouseEventArgs e)
         {
-            for (int i = 0; i < _tabControl.TabPages.Count; i++)
-            {
-                var rect = _tabControl.GetTabRect(i);
-                var closeRect = new Rectangle(rect.Right - 18, rect.Y + 4, 14, 16);
-                if (closeRect.Contains(e.Location))
-                {
-                    var tab = _tabControl.TabPages[i];
-                    CloseTab(tab);
-                    break;
-                }
-            }
+            var tab = _chrome.HitTestClose(_tabControl, e.Location);
+            if (tab != null)
+                CloseTab(tab);
         }
 
         private void OnTabSelectedIndexChanged(object sender, EventArgs e)
         {
-            foreach (var kvp in _sessions)
-            {
-                bool selected = kvp.Key == _tabControl.SelectedTab;
-
-                if (kvp.Value.Control is TerminalControl tc)
-                {
-                    if (selected) tc.ResumeRendering();
-                    else tc.PauseRendering();
-                }
-
-                if (kvp.Value.HealthMonitor != null)
-                    kvp.Value.HealthMonitor.IsPaused = !selected;
-
-                // RDP 懒连接
-                if (selected && kvp.Value.PendingConnect != null && !kvp.Value.IsConnected)
-                {
-                    var connect = kvp.Value.PendingConnect;
-                    kvp.Value.PendingConnect = null;
-                    connect();
-                }
-            }
-
+            _selection.OnSelectedChanged(_tabControl, _sessions);
             ActiveSessionChanged?.Invoke(this, EventArgs.Empty);
         }
 
@@ -372,51 +292,13 @@ namespace Gdterm.UI.Controls
                 _tabControl.SelectedIndex = index;
         }
 
-        /// <summary>当前活动终端控件</summary>
-        public TerminalControl GetActiveTerminalControl()
-        {
-            return _activeQuery.GetActiveTerminalControl();
-        }
-
-        /// <summary>当前活动终端会话</summary>
-        public ITerminalSession GetActiveSession()
-        {
-            return _activeQuery.GetActiveSession();
-        }
-
-        /// <summary>
-        /// 当前活动 SSH 的端口转发宿主（UI 不直接持有 SshClient）。
-        /// </summary>
-        public ISshPortForwardHost GetActivePortForwardHost()
-        {
-            return _activeQuery.GetActivePortForwardHost();
-        }
-
-        /// <summary>
-        /// 当前活动 SSH 的远程工具会话抽象。
-        /// </summary>
-        public ISshRemoteSession GetActiveRemoteSession()
-        {
-            return _activeQuery.GetActiveRemoteSession();
-        }
-
-        /// <summary>兼容旧调用：返回端口转发宿主</summary>
-        public ISshPortForwardHost GetActiveSshClient()
-        {
-            return GetActivePortForwardHost();
-        }
-
-        /// <summary>所有已连接终端会话（多通道/批量命令）</summary>
-        public Dictionary<string, ITerminalSession> GetConnectedSessions()
-        {
-            return _activeQuery.GetConnectedSessions();
-        }
-
-        /// <summary>当前活动健康监控</summary>
-        public ConnectionHealthMonitor GetActiveHealthMonitor()
-        {
-            return _activeQuery.GetActiveHealthMonitor();
-        }
+        public TerminalControl GetActiveTerminalControl() => _activeQuery.GetActiveTerminalControl();
+        public ITerminalSession GetActiveSession() => _activeQuery.GetActiveSession();
+        public ISshPortForwardHost GetActivePortForwardHost() => _activeQuery.GetActivePortForwardHost();
+        public ISshRemoteSession GetActiveRemoteSession() => _activeQuery.GetActiveRemoteSession();
+        public ISshPortForwardHost GetActiveSshClient() => GetActivePortForwardHost();
+        public Dictionary<string, ITerminalSession> GetConnectedSessions() => _activeQuery.GetConnectedSessions();
+        public ConnectionHealthMonitor GetActiveHealthMonitor() => _activeQuery.GetActiveHealthMonitor();
 
         protected override void Dispose(bool disposing)
         {

@@ -66,7 +66,7 @@ mode: standard-plus
 | 7 | bug | P1 | high | 自动重连假成功 + 健康监控绑旧 session | [finding-07.md](finding-07.md) |
 | 8 | security | P1 | high | 剪贴板密码无 TTL；API key/命令历史脱敏不足 | [finding-08.md](finding-08.md) |
 | 9 | bug | P0 | high | 无全局异常钩子 + 关键路径空 catch | [finding-09.md](finding-09.md) |
-| 10 | maintainability | P1 | high | MainForm/TabContainer 上帝对象 | [finding-10.md](finding-10.md) |
+| 10 | maintainability | P1 | high | MainForm/TabContainer 上帝对象 **resolved** | [finding-10.md](finding-10.md) |
 | 11 | arch-drift | P0 | high | ARCHITECTURE.md 空骨架 vs 12 项目 done | [finding-11.md](finding-11.md) |
 | 12 | arch-drift | P1 | high | UI/Tools 分层泄漏 SSH.NET 与 new 具体类 | [finding-12.md](finding-12.md) |
 | 13 | arch-drift | P1 | high | 端口转发/远程工具会话注入未闭环 | [finding-13.md](finding-13.md) |
@@ -153,6 +153,6 @@ mode: standard-plus
 | 13 | P1 | resolved | `0355592` PortForward/Toolbox 会话注入 |
 | 14 | P1 | resolved | `08b913d` ProtocolType 命名 |
 
-**剩余主动债**：finding-10 仍 partial（TabCloseService + 重连编排再拆，MainForm~485、TabContainer~427；PasswordHealthPanel 死代码已删；完整 SessionOrchestrator deferred）。finding-12 resolved。ApiKey gdk2。
+**剩余主动债**：finding-10 resolved（MainForm~385 组合根，TabContainer~309 chrome 壳，业务全在 Services）。finding-12 resolved。ApiKey gdk2。
 
 **综合观感（修复后预估）**：从 3.3/10 提升到约 **7.0–7.5/10**（P0 闭环，P1 大部分 partial/resolved）。

@@ -1,0 +1,80 @@
+using System;
+using System.Windows.Forms;
+using Gdterm.Connections;
+using Gdterm.Core.Models;
+using Gdterm.UI.Controls;
+using Gdterm.UI.Forms;
+
+namespace Gdterm.UI.Services
+{
+    /// <summary>
+    /// 连接打开/新建/SFTP 入口编排 + 最近连接记录（finding-10）。
+    /// </summary>
+    public sealed class ConnectionOpenCoordinator
+    {
+        private readonly TabContainerControl _tabs;
+        private readonly IConnectionStore _store;
+        private readonly IBookmarkStore _bookmarks;
+        private readonly ConnectionTreeControl _tree;
+        private readonly IWin32Window _owner;
+
+        public ConnectionOpenCoordinator(
+            TabContainerControl tabs,
+            IConnectionStore store,
+            IBookmarkStore bookmarks,
+            ConnectionTreeControl tree,
+            IWin32Window owner)
+        {
+            _tabs = tabs ?? throw new ArgumentNullException(nameof(tabs));
+            _store = store;
+            _bookmarks = bookmarks;
+            _tree = tree;
+            _owner = owner;
+        }
+
+        public void OpenConnection(ConnectionConfig config)
+        {
+            if (config == null) return;
+            _tabs.OpenConnection(config);
+            try
+            {
+                _bookmarks?.AddRecentConnection(new RecentConnection
+                {
+                    ConnectionId = config.Id,
+                    Host = config.Host,
+                    Protocol = config.Protocol.ToString(),
+                    ConnectedAt = DateTime.UtcNow,
+                    Success = true
+                });
+            }
+            catch { }
+        }
+
+        public void NewConnection()
+        {
+            using (var dlg = new ConnectionDialog())
+            {
+                if (dlg.ShowDialog(_owner) == DialogResult.OK && dlg.Result != null)
+                {
+                    _store?.Add(dlg.Result);
+                    try { _tree?.LoadConnections(); } catch { }
+                }
+            }
+        }
+
+        public void OpenSftpFromActive()
+        {
+            var tc = _tabs.GetActiveTerminalControl();
+            if (tc?.Config != null)
+            {
+                _tabs.OpenSftpBrowser(tc.Config);
+                return;
+            }
+            MessageBox.Show(
+                "请先打开一个 SSH 连接，或从连接树双击后再打开 SFTP。",
+                "SFTP",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Information);
+        }
+    }
+}

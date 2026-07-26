@@ -156,6 +156,14 @@
     <Compile Include="Services\TabSessionState.cs" />
     <Compile Include="Services\SessionStateCoordinator.cs" />
     <Compile Include="Services\SidePanelFactory.cs" />
+    <Compile Include="Services\TabSplitService.cs" />
+    <Compile Include="Services\TabChromePainter.cs" />
+    <Compile Include="Services\TabSelectionCoordinator.cs" />
+    <Compile Include="Services\AiCommandGateBinder.cs" />
+    <Compile Include="Services\MainFormCommandRouter.cs" />
+    <Compile Include="Services\LockStateCoordinator.cs" />
+    <Compile Include="Services\AppShutdownCoordinator.cs" />
+    <Compile Include="Services\ConnectionOpenCoordinator.cs" />
     <Compile Include="Controls\SplitPaneControl.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Forms\ConnectionDialog.cs">
