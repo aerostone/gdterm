@@ -14,3 +14,8 @@
 ## 推荐
 - 不要把 `data/` 提交到 git 或公开网盘
 - 锁屏后缓存凭据会清除；重连需重新解析 KeePass
+
+
+## master-password.ini
+主密码校验哈希存 INI（`passwordHash`/`salt`/`algorithm`/`iterations`），兼容旧 `master-password.json`。
+诊断日志：`data/logs/diag.log` 人可读文本；审计过程仍可写 jsonl。

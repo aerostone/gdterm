@@ -95,7 +95,8 @@ namespace Gdterm.UI.Controls
                 Host = "localhost",
                 Protocol = ProtocolType.SSH
             };
-            _profile = new TerminalProfile();
+            // 本地重定向 shell 无真实 PTY：默认 Lightweight，避免 VtCell 空白/无光标
+            _profile = new TerminalProfile { Renderer = "Lightweight", TerminalType = "xterm" };
             NormalizeProfile(_profile);
             InitializeComponent();
             AttachExistingSession(localSession);
@@ -122,6 +123,7 @@ namespace Gdterm.UI.Controls
                 profile.TerminalType = "xterm-256color";
             if (string.IsNullOrWhiteSpace(profile.Renderer))
                 profile.Renderer = "VtCell";
+            // 本地会话强制 line renderer（Normalize 在构造后调用时保留 Lightweight）
         }
 
         private void InitializeComponent()
@@ -241,7 +243,7 @@ namespace Gdterm.UI.Controls
             return 0;
         }
 
-        private void AttachExistingSession(ITerminalSession session)
+                        private void AttachExistingSession(ITerminalSession session)
         {
             _session = session;
             _session.OutputReceived += OnTerminalOutput;
@@ -249,14 +251,39 @@ namespace Gdterm.UI.Controls
             {
                 if (session is LocalTerminalSession local && !local.IsConnected)
                     local.ConnectLocal();
+
+                // 立刻把启动横幅画到画布，避免事件时序导致空白
+                try
+                {
+                    var recent = session.GetRecentOutput(50);
+                    if (recent != null)
+                    {
+                        foreach (var line in recent)
+                        {
+                            if (!string.IsNullOrEmpty(line))
+                                _renderer?.Write(line);
+                        }
+                    }
+                }
+                catch { }
+
+                if (session is LocalTerminalSession)
+                {
+                    try
+                    {
+                        _renderer?.Write("\r\n\x1b[32m[本地终端] 可输入命令；输入 exit 退出\x1b[0m\r\n");
+                    }
+                    catch { }
+                }
             }
             catch (Exception ex)
             {
-                _renderer?.Write("\r\n\x1b[31m本地终端启动失败: " + ex.Message + "\x1b[0m\r\n");
+                try { _renderer?.Write("\r\n\x1b[31m本地终端启动失败: " + ex.Message + "\x1b[0m\r\n"); } catch { }
+                DiagLog.Swallowed("TerminalControl.AttachLocal", ex);
             }
         }
 
-        public async void Connect()
+public async void Connect()
         {
             try { await ConnectAsyncCore().ConfigureAwait(true); }
             catch { }
@@ -776,14 +803,8 @@ namespace Gdterm.UI.Controls
                         e.Handled = true;
                         break;
                     case Keys.Escape:
-                        ClearLocalLine(eraseDisplay: UseLocalLineBuffer);
-                        if (_cellRenderer != null)
-                        {
-                            if (!_cellRenderer.TryKeyPressed("Escape", e.Control, e.Shift))
-                                SafeSend("\x1b");
-                        }
-                        else SafeSend("\x1b");
-                        e.Handled = true;
+                        // 不在此消费 Esc：交给 MainForm ProcessCmdKey 退出专注模式
+                        // （终端应用如 vim 仍可用其它快捷键；专注模式优先可退出）
                         break;
                     case Keys.Up:
                         ClearLocalLine(eraseDisplay: UseLocalLineBuffer);

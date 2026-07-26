@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Text;
 using System.Threading;
 using Gdterm.Core.Models;
@@ -98,11 +99,21 @@ namespace Gdterm.Terminal
                 else
                     startInfo.WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 
+                // 重定向模式下给可交互体验：固定提示符
                 if (_shellPath.IndexOf("powershell", StringComparison.OrdinalIgnoreCase) >= 0 ||
                     _shellPath.IndexOf("pwsh", StringComparison.OrdinalIgnoreCase) >= 0)
                 {
                     OsType = "Windows";
-                    startInfo.Arguments = "-NoLogo -NoProfile";
+                    // 简单交互：NoExit 保持会话
+                    startInfo.Arguments = "-NoLogo -NoExit";
+                }
+                else if (_shellPath.IndexOf("cmd", StringComparison.OrdinalIgnoreCase) >= 0
+                      || string.Equals(Path.GetFileName(_shellPath), "cmd.exe", StringComparison.OrdinalIgnoreCase)
+                      || _shellPath.EndsWith("cmd.exe", StringComparison.OrdinalIgnoreCase))
+                {
+                    OsType = "Windows";
+                    // /Q 关 echo，/K 保持会话；PROMPT 保证有可见提示符
+                    startInfo.Arguments = "/Q /K prompt $P$G";
                 }
 
                 _process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };

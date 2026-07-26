@@ -42,7 +42,7 @@ namespace Gdterm.UI
             Directory.CreateDirectory(Path.Combine(logsDir, "commands"));
             Directory.CreateDirectory(Path.Combine(logsDir, "terminal"));
 
-            // 全局未处理异常：落盘 crash.jsonl + 审计（audit 就绪后补写）
+            // 全局未处理异常：落盘 diag.log + 审计（audit 就绪后补写）
             CrashLog.Initialize(logsDir);
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
             Application.ThreadException += (s, e) =>
@@ -51,7 +51,7 @@ namespace Gdterm.UI
                 try
                 {
                     MessageBox.Show(
-                        "发生未处理错误，详情已写入 data/logs/crash.jsonl\n\n" +
+                        "发生未处理错误，详情已写入 data/logs/diag.log\n\n" +
                         (e.Exception != null ? e.Exception.Message : ""),
                         "gdterm",
                         MessageBoxButtons.OK,
@@ -72,7 +72,9 @@ namespace Gdterm.UI
 
             var connectionsPath = Path.Combine(dataDir, "connections.json");
             var keepassPath = Path.Combine(dataDir, "gdterm.kdbx");
-            var passwordConfigPath = Path.Combine(dataDir, "master-password.json");
+            // 配置优先 INI；兼容旧 master-password.json
+            var passwordConfigPath = Path.Combine(dataDir, "master-password.ini");
+            var passwordConfigPathLegacy = Path.Combine(dataDir, "master-password.json");
             // bookmarks + recent 都在 dataDir 下由 BookmarkStoreJson 管理
             var commandHistoryDir = Path.Combine(logsDir, "commands");
             var dangerousCmdPath = Path.Combine(configDir, "dangerous-commands.json");
@@ -83,14 +85,14 @@ namespace Gdterm.UI
             var highlightPath = Path.Combine(configDir, "highlights.json");
 
             MasterPasswordConfig savedPasswordConfig = null;
-            if (File.Exists(passwordConfigPath))
+            try
             {
-                try
-                {
+                if (File.Exists(passwordConfigPath))
                     savedPasswordConfig = ParsePasswordConfig(File.ReadAllText(passwordConfigPath));
-                }
-                catch { }
+                else if (File.Exists(passwordConfigPathLegacy))
+                    savedPasswordConfig = ParsePasswordConfig(File.ReadAllText(passwordConfigPathLegacy));
             }
+            catch { }
 
             bool isFirstRun = savedPasswordConfig == null;
             var securityManager = new SecurityManager(
@@ -234,14 +236,19 @@ namespace Gdterm.UI
             {
                 var algorithm = string.IsNullOrEmpty(config.Algorithm) ? "pbkdf2" : config.Algorithm;
                 var iterations = config.Iterations > 0 ? config.Iterations : SecurityManager.DefaultPbkdf2Iterations;
-                var json = string.Format(
-                    "{{\"passwordHash\":\"{0}\",\"salt\":\"{1}\",\"algorithm\":\"{2}\",\"iterations\":{3},\"lastChanged\":\"{4:O}\"}}",
+                // INI 人可读；hash/salt 仍是不可逆派生结果
+                var ini = string.Format(
+                    "[master]\r\npasswordHash={0}\r\nsalt={1}\r\nalgorithm={2}\r\niterations={3}\r\nlastChanged={4:O}\r\n",
                     config.PasswordHash ?? "",
                     config.Salt ?? "",
                     algorithm,
                     iterations,
                     config.LastChanged);
-                File.WriteAllText(path, json);
+                // 始终写 .ini；若传入的是 legacy json 路径也改写为 ini 旁路
+                var iniPath = path;
+                if (iniPath != null && iniPath.EndsWith(".json", StringComparison.OrdinalIgnoreCase))
+                    iniPath = Path.ChangeExtension(iniPath, ".ini");
+                File.WriteAllText(iniPath ?? path, ini);
             }
             catch (Exception ex)
             {
@@ -249,26 +256,71 @@ namespace Gdterm.UI
             }
         }
 
-        private static MasterPasswordConfig ParsePasswordConfig(string json)
+        private static MasterPasswordConfig ParsePasswordConfig(string text)
         {
-            var hash = ExtractJsonString(json, "passwordHash");
-            var salt = ExtractJsonString(json, "salt");
-            var lastChangedStr = ExtractJsonString(json, "lastChanged");
-            var algorithm = ExtractJsonString(json, "algorithm");
-            if (string.IsNullOrEmpty(hash) || string.IsNullOrEmpty(salt))
-                return null;
-            var config = new MasterPasswordConfig
+            if (string.IsNullOrWhiteSpace(text)) return null;
+            var trimmed = text.TrimStart();
+            // INI（[master] 或 passwordHash=）优先；旧 JSON 以 { 开头
+            if (!trimmed.StartsWith("{", StringComparison.Ordinal))
             {
-                PasswordHash = hash,
-                Salt = salt,
-                Algorithm = algorithm // null/empty → 旧版 SHA256
+                var hash = ExtractIniValue(text, "passwordHash");
+                var salt = ExtractIniValue(text, "salt");
+                var algorithm = ExtractIniValue(text, "algorithm");
+                var lastChangedStr = ExtractIniValue(text, "lastChanged");
+                if (string.IsNullOrEmpty(hash) || string.IsNullOrEmpty(salt))
+                    return null;
+                var config = new MasterPasswordConfig
+                {
+                    PasswordHash = hash,
+                    Salt = salt,
+                    Algorithm = algorithm
+                };
+                var iterStr = ExtractIniValue(text, "iterations");
+                int iters;
+                if (!string.IsNullOrEmpty(iterStr) && int.TryParse(iterStr, out iters) && iters > 0)
+                    config.Iterations = iters;
+                DateTime dt;
+                if (DateTime.TryParse(lastChangedStr, out dt))
+                    config.LastChanged = dt;
+                return config;
+            }
+
+            // 旧 JSON 兼容
+            var jhash = ExtractJsonString(text, "passwordHash");
+            var jsalt = ExtractJsonString(text, "salt");
+            var jlast = ExtractJsonString(text, "lastChanged");
+            var jalg = ExtractJsonString(text, "algorithm");
+            if (string.IsNullOrEmpty(jhash) || string.IsNullOrEmpty(jsalt))
+                return null;
+            var jconfig = new MasterPasswordConfig
+            {
+                PasswordHash = jhash,
+                Salt = jsalt,
+                Algorithm = jalg
             };
-            var iterStr = ExtractJsonNumber(json, "iterations");
-            if (!string.IsNullOrEmpty(iterStr) && int.TryParse(iterStr, out var iters) && iters > 0)
-                config.Iterations = iters;
-            if (DateTime.TryParse(lastChangedStr, out var dt))
-                config.LastChanged = dt;
-            return config;
+            var jiter = ExtractJsonNumber(text, "iterations");
+            int jit;
+            if (!string.IsNullOrEmpty(jiter) && int.TryParse(jiter, out jit) && jit > 0)
+                jconfig.Iterations = jit;
+            DateTime jdt;
+            if (DateTime.TryParse(jlast, out jdt))
+                jconfig.LastChanged = jdt;
+            return jconfig;
+        }
+
+        private static string ExtractIniValue(string ini, string key)
+        {
+            if (string.IsNullOrEmpty(ini) || string.IsNullOrEmpty(key)) return null;
+            var lines = ini.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+            var prefix = key + "=";
+            foreach (var raw in lines)
+            {
+                var line = raw.Trim();
+                if (line.StartsWith(";") || line.StartsWith("#") || line.StartsWith("[")) continue;
+                if (line.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    return line.Substring(prefix.Length).Trim();
+            }
+            return null;
         }
 
         private static string ExtractJsonNumber(string json, string key)

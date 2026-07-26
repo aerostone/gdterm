@@ -1,4 +1,5 @@
 using System;
+using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Forms;
@@ -7,7 +8,7 @@ namespace Gdterm.UI.Services
 {
     /// <summary>
     /// 视图模式控制器——Standard / Focus / Compact 与连接树显隐（finding-10）。
-    /// MainForm 只持有控件引用，模式切换逻辑集中在此。
+    /// Focus 下显示浮动「退出专注」按钮，避免菜单隐藏后无法回标准视图。
     /// </summary>
     public sealed class ViewModeController
     {
@@ -19,6 +20,8 @@ namespace Gdterm.UI.Services
         private readonly ToolStripMenuItem _viewStandardItem;
         private readonly ToolStripMenuItem _viewFocusItem;
         private readonly ToolStripMenuItem _viewCompactItem;
+        private readonly Control _host;
+        private Button _exitFocusButton;
 
         private ViewMode _current = ViewMode.Standard;
 
@@ -30,7 +33,8 @@ namespace Gdterm.UI.Services
             Action hideSidePanel,
             ToolStripMenuItem viewStandardItem,
             ToolStripMenuItem viewFocusItem,
-            ToolStripMenuItem viewCompactItem)
+            ToolStripMenuItem viewCompactItem,
+            Control host = null)
         {
             _connectionTree = connectionTree;
             _statusBar = statusBar;
@@ -40,6 +44,63 @@ namespace Gdterm.UI.Services
             _viewStandardItem = viewStandardItem;
             _viewFocusItem = viewFocusItem;
             _viewCompactItem = viewCompactItem;
+            _host = host;
+            EnsureExitButton();
+        }
+
+        private void EnsureExitButton()
+        {
+            if (_host == null || _exitFocusButton != null) return;
+            _exitFocusButton = new Button
+            {
+                Text = "退出专注 (Esc/F11)",
+                AutoSize = true,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(0, 122, 204),
+                ForeColor = Color.White,
+                Font = new Font("Microsoft YaHei", 9f, FontStyle.Bold),
+                Padding = new Padding(10, 4, 10, 4),
+                Visible = false,
+                TabStop = false,
+                Cursor = Cursors.Hand
+            };
+            _exitFocusButton.FlatAppearance.BorderSize = 0;
+            _exitFocusButton.Click += (s, e) => SetViewMode(ViewMode.Standard);
+            try
+            {
+                _host.Controls.Add(_exitFocusButton);
+                _exitFocusButton.BringToFront();
+                _host.Resize += (s, e) => PositionExitButton();
+            }
+            catch { }
+        }
+
+        private void PositionExitButton()
+        {
+            if (_exitFocusButton == null || _host == null || !_exitFocusButton.Visible) return;
+            try
+            {
+                _exitFocusButton.Location = new Point(
+                    Math.Max(8, _host.ClientSize.Width - _exitFocusButton.Width - 12),
+                    8);
+                _exitFocusButton.BringToFront();
+            }
+            catch { }
+        }
+
+        private void SetExitButtonVisible(bool visible)
+        {
+            if (_exitFocusButton == null) return;
+            try
+            {
+                _exitFocusButton.Visible = visible;
+                if (visible)
+                {
+                    PositionExitButton();
+                    _exitFocusButton.BringToFront();
+                }
+            }
+            catch { }
         }
 
         public ViewMode Current
@@ -65,6 +126,7 @@ namespace Gdterm.UI.Services
                     if (_statusBar != null) _statusBar.Visible = true;
                     if (_menuStrip != null) _menuStrip.Visible = true;
                     if (_quickBar != null) _quickBar.Visible = true;
+                    SetExitButtonVisible(false);
                     break;
                 case ViewMode.Focus:
                     if (_connectionTree != null) _connectionTree.Visible = false;
@@ -72,6 +134,7 @@ namespace Gdterm.UI.Services
                     if (_menuStrip != null) _menuStrip.Visible = false;
                     if (_quickBar != null) _quickBar.Visible = false;
                     try { _hideSidePanel?.Invoke(); } catch { }
+                    SetExitButtonVisible(true);
                     break;
                 case ViewMode.Compact:
                     if (_connectionTree != null)
@@ -81,6 +144,7 @@ namespace Gdterm.UI.Services
                     }
                     if (_statusBar != null) _statusBar.Visible = false;
                     if (_menuStrip != null) _menuStrip.Visible = false;
+                    SetExitButtonVisible(true);
                     break;
             }
         }

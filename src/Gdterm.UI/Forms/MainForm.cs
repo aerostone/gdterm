@@ -162,6 +162,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "gdterm - 绿色运维客户端";
+            KeyPreview = true; // Esc/F11 在终端焦点时也能回到主窗体
             Size = new Size(1200, 800);
             StartPosition = FormStartPosition.CenterScreen;
             MinimumSize = new Size(800, 600);
@@ -312,7 +313,8 @@ namespace Gdterm.UI.Forms
                 () => _sidePanelHost?.Hide(),
                 menuBuilt.ViewStandardItem,
                 menuBuilt.ViewFocusItem,
-                menuBuilt.ViewCompactItem);
+                menuBuilt.ViewCompactItem,
+                host: this);
 
             _cmdRouter = new MainFormCommandRouter(
                 _tabContainer, _sidePanels, _sidePanelHost, _viewMode);
@@ -348,7 +350,22 @@ namespace Gdterm.UI.Forms
             _connectionTree.ConnectionDoubleClicked += (s, cfg) => _openCoord.OpenConnection(cfg);
             _securityManager.LockStateChanged += (s, e) => _lockCoord.Handle(s, e);
             MouseMove += (s, e) => _securityManager.ResetIdleTimer();
-            KeyDown += (s, e) => _securityManager.ResetIdleTimer();
+            KeyDown += (s, e) =>
+            {
+                _securityManager.ResetIdleTimer();
+                // KeyPreview 备份：终端吃键时仍可 Esc/F11 退出专注
+                if (e.KeyCode == Keys.Escape && _viewMode != null && _viewMode.TryHandleEscape())
+                {
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                }
+                else if (e.KeyCode == Keys.F11 && _viewMode != null)
+                {
+                    _viewMode.ToggleFocus();
+                    e.Handled = true;
+                    e.SuppressKeyPress = true;
+                }
+            };
             Click += (s, e) => _securityManager.ResetIdleTimer();
             _hotkeys = new GlobalHotkeyController(this);
             _hotkeys.Initialize();

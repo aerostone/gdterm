@@ -6,9 +6,8 @@ using System.Threading;
 namespace Gdterm.UI.Diagnostics
 {
     /// <summary>
-    /// 轻量崩溃/未处理异常落盘——不依赖 AuditLogger 生命周期，
-    /// 保证启动早期与进程退出阶段也能写。
-    /// 文件：data/logs/crash.jsonl（JSON Lines，手写序列化）
+    /// 轻量诊断/崩溃落盘——不依赖 AuditLogger 生命周期。
+    /// 人可读文本：data/logs/diag.log（过程审计仍可另写 jsonl）。
     /// </summary>
     internal static class CrashLog
     {
@@ -24,7 +23,8 @@ namespace Gdterm.UI.Diagnostics
             {
                 if (!Directory.Exists(logsDirectory))
                     Directory.CreateDirectory(logsDirectory);
-                _path = Path.Combine(logsDirectory, "crash.jsonl");
+                // 人可读主日志；旧 crash.jsonl 不再写入
+                _path = Path.Combine(logsDirectory, "diag.log");
             }
             catch
             {
@@ -39,32 +39,59 @@ namespace Gdterm.UI.Diagnostics
 
             try
             {
-                var sb = new StringBuilder(512);
-                sb.Append("{\"ts\":\"");
-                sb.Append(DateTime.UtcNow.ToString("o"));
-                sb.Append("\",\"source\":\"");
-                sb.Append(Escape(source ?? ""));
-                sb.Append("\",\"terminating\":");
-                sb.Append(isTerminating ? "true" : "false");
-                sb.Append(",\"thread\":");
-                sb.Append(Thread.CurrentThread.ManagedThreadId);
+                var sb = new StringBuilder(256);
+                // 2026-07-26 17:29:05 [INFO] source | message
+                sb.Append(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                sb.Append(' ');
+                var level = "INFO";
+                var src = source ?? "";
+                if (src.StartsWith("info:", StringComparison.OrdinalIgnoreCase))
+                {
+                    level = "INFO";
+                    src = src.Substring(5);
+                }
+                else if (src.StartsWith("swallowed:", StringComparison.OrdinalIgnoreCase))
+                {
+                    level = "WARN";
+                    src = src.Substring(10);
+                }
+                else if (isTerminating || (ex != null && !(ex is Exception && string.IsNullOrEmpty(ex.Message))))
+                {
+                    if (ex != null && !src.StartsWith("info", StringComparison.OrdinalIgnoreCase))
+                        level = isTerminating ? "FATAL" : "ERROR";
+                }
+                if (ex != null && level == "INFO" && !string.IsNullOrEmpty(ex.Message)
+                    && (src.IndexOf("Exception", StringComparison.OrdinalIgnoreCase) >= 0
+                        || src.IndexOf("swallowed", StringComparison.OrdinalIgnoreCase) >= 0))
+                    level = "ERROR";
+
+                sb.Append('[').Append(level).Append("] ");
+                sb.Append(src);
+                sb.Append(" | thr=").Append(Thread.CurrentThread.ManagedThreadId);
                 if (ex != null)
                 {
-                    sb.Append(",\"type\":\"");
-                    sb.Append(Escape(ex.GetType().FullName ?? "Exception"));
-                    sb.Append("\",\"message\":\"");
-                    sb.Append(Escape(ex.Message));
-                    sb.Append("\",\"stack\":\"");
-                    sb.Append(Escape(Trim(ex.ToString(), 4000)));
-                    sb.Append("\"");
-                    if (ex.InnerException != null)
+                    // DiagLog.Info 用假 Exception 只带 message
+                    var msg = ex.Message ?? "";
+                    if (ex.GetType() == typeof(Exception) && string.IsNullOrEmpty(ex.StackTrace)
+                        && (level == "INFO" || src.Length > 0))
                     {
-                        sb.Append(",\"inner\":\"");
-                        sb.Append(Escape(Trim(ex.InnerException.ToString(), 1000)));
-                        sb.Append("\"");
+                        sb.Append(" | ").Append(msg);
+                    }
+                    else
+                    {
+                        sb.Append(" | ").Append(ex.GetType().Name).Append(": ").Append(msg);
+                        if (!string.IsNullOrEmpty(ex.StackTrace))
+                        {
+                            sb.AppendLine();
+                            sb.Append(Trim(ex.StackTrace, 2000));
+                        }
+                        if (ex.InnerException != null)
+                        {
+                            sb.AppendLine();
+                            sb.Append("  inner: ").Append(Trim(ex.InnerException.ToString(), 800));
+                        }
                     }
                 }
-                sb.Append("}");
                 sb.AppendLine();
 
                 lock (_lock)
@@ -73,7 +100,6 @@ namespace Gdterm.UI.Diagnostics
                     if (string.IsNullOrEmpty(path))
                         return;
 
-                    // 简单体积保护：超过 ~5MB 轮转到 .1
                     try
                     {
                         var fi = new FileInfo(path);
@@ -92,7 +118,7 @@ namespace Gdterm.UI.Diagnostics
             }
             catch
             {
-                // 最后一道：绝不因日志本身再抛
+                // 绝不因日志本身再抛
             }
         }
 
@@ -102,30 +128,6 @@ namespace Gdterm.UI.Diagnostics
         {
             if (string.IsNullOrEmpty(s)) return "";
             return s.Length <= max ? s : s.Substring(0, max) + "...";
-        }
-
-        private static string Escape(string s)
-        {
-            if (string.IsNullOrEmpty(s)) return "";
-            var sb = new StringBuilder(s.Length + 8);
-            foreach (var c in s)
-            {
-                switch (c)
-                {
-                    case '\\': sb.Append("\\\\"); break;
-                    case '"': sb.Append("\\\""); break;
-                    case '\n': sb.Append("\\n"); break;
-                    case '\r': sb.Append("\\r"); break;
-                    case '\t': sb.Append("\\t"); break;
-                    default:
-                        if (c < 0x20)
-                            sb.AppendFormat("\\u{0:x4}", (int)c);
-                        else
-                            sb.Append(c);
-                        break;
-                }
-            }
-            return sb.ToString();
         }
     }
 }
