@@ -104,10 +104,8 @@ namespace Gdterm.Terminal.Rendering.Vt
         public void Feed(string text)
         {
             if (string.IsNullOrEmpty(text) || _disposed) return;
-            lock (_lock)
-            {
-                _consumer.Write(text);
-            }
+            // net46 VtNetCore 1.0.30 公共表面以 Push(byte[]) 为准；Write(string) 在部分构建不可见
+            Feed(Encoding.UTF8.GetBytes(text));
         }
 
         public void ClearChanges()

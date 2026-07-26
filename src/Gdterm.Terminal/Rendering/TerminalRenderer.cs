@@ -56,7 +56,7 @@ namespace Gdterm.Terminal.Rendering
                     BackColor = Color.Black,
                     ForeColor = Color.LightGray,
                     Font = new Font("Consolas", 10f, FontStyle.Regular),
-                    ScrollBars = RichTextBox.Vertical,
+                    ScrollBars = RichTextBoxScrollBars.Vertical,
                     WordWrap = false,
                     BorderStyle = BorderStyle.None
                 };

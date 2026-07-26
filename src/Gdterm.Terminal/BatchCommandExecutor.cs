@@ -73,9 +73,11 @@ namespace Gdterm.Terminal
                 var output = new List<string>();
                 var tcs = new TaskCompletionSource<bool>();
 
-                Action<string> handler = null;
-                handler = line =>
+                EventHandler<Models.TerminalOutputEventArgs> handler = null;
+                handler = (s, e) =>
                 {
+                    var line = e != null ? e.Text : null;
+                    if (line == null) return;
                     output.Add(line);
                     // 检测命令结束（简单策略：等待 prompt 返回）
                     if (output.Count > 2 && string.IsNullOrEmpty(line))

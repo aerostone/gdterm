@@ -77,7 +77,7 @@ namespace Gdterm.Sftp
                     Name = e.Name,
                     FullPath = e.FullName,
                     IsDirectory = e.IsDirectory,
-                    SizeBytes = e.Length,
+                    SizeBytes = (long)e.Length,
                     LastModified = e.LastWriteTime,
                     Permissions = e.OwnerCanRead.ToString(), // 简化权限表示
                     Owner = e.UserId.ToString(),
@@ -110,7 +110,7 @@ namespace Gdterm.Sftp
                     ct.ThrowIfCancellationRequested();
                     progress?.Report(new FileTransferProgress
                     {
-                        BytesTransferred = uploadedBytes,
+                        BytesTransferred = (long)uploadedBytes,
                         TotalBytes = totalBytes,
                         Elapsed = stopwatch.Elapsed
                     });
@@ -127,9 +127,9 @@ namespace Gdterm.Sftp
         {
             EnsureConnected();
 
-            // 获取远程文件大小
+            // 获取远程文件大小（SSH.NET 2024 Length 为 ulong）
             var remoteInfo = _client.Get(remotePath);
-            var totalBytes = remoteInfo.Length;
+            var totalBytes = (long)remoteInfo.Length;
             var stopwatch = Stopwatch.StartNew();
 
             using (var fileStream = File.Create(localPath))
@@ -139,7 +139,7 @@ namespace Gdterm.Sftp
                     ct.ThrowIfCancellationRequested();
                     progress?.Report(new FileTransferProgress
                     {
-                        BytesTransferred = downloadedBytes,
+                        BytesTransferred = (long)downloadedBytes,
                         TotalBytes = totalBytes,
                         Elapsed = stopwatch.Elapsed
                     });

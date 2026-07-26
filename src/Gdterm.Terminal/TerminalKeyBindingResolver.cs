@@ -169,7 +169,7 @@ namespace Gdterm.Terminal
                 case Keys.OemMinus: return "OemMinus";                 // -
                 case Keys.Oemplus: return "Oemplus";                   // =
                 case Keys.Oem5: return "Oem5";                         // \
-                case Keys.Oem7: return "Oem7";                         // "
+                // Keys.Oem7 与 OemQuotes 同为 0xDE(222)，不可重复 case
 
                 default: return keyCode.ToString();
             }

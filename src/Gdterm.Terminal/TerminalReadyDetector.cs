@@ -115,8 +115,12 @@ namespace Gdterm.Terminal
                 }
             }
 
-            // 检查最近几行是否有长时间运行的特征
-            var recentText = string.Join(" ", recentOutput.TakeLast(5)).ToLowerInvariant();
+            // 检查最近几行是否有长时间运行的特征（net462 无 TakeLast）
+            var take = Math.Min(5, recentOutput.Count);
+            var recentSlice = new List<string>(take);
+            for (var i = recentOutput.Count - take; i < recentOutput.Count; i++)
+                recentSlice.Add(recentOutput[i]);
+            var recentText = string.Join(" ", recentSlice).ToLowerInvariant();
             foreach (var indicator in LongRunningIndicators)
             {
                 if (recentText.Contains(indicator.ToLowerInvariant()))
