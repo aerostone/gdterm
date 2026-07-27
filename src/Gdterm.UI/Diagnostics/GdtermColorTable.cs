@@ -31,7 +31,6 @@ namespace Gdterm.UI.Diagnostics
         public override Color MenuBorder => Border;
         public override Color MenuItemBorder => Border;
         public override Color MenuItemSelected => Hover;
-        public override Color MenuItemPressed => Pressed;
         public override Color MenuStripGradientBegin => Background;
         public override Color MenuStripGradientEnd => Background;
         public override Color MenuItemSelectedGradientBegin => Hover;
@@ -89,7 +88,7 @@ namespace Gdterm.UI.Diagnostics
             catch { }
         }
 
-        protected override void OnRenderText(ToolStripItemTextRenderEventArgs e)
+        protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
         {
             try
             {
@@ -97,28 +96,28 @@ namespace Gdterm.UI.Diagnostics
                 var oldSmoothing = e.Graphics.SmoothingMode;
                 e.Graphics.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
                 e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                base.OnRenderText(e);
+                base.OnRenderItemText(e);
                 e.Graphics.TextRenderingHint = oldMode;
                 e.Graphics.SmoothingMode = oldSmoothing;
             }
             catch
             {
-                base.OnRenderText(e);
+                base.OnRenderItemText(e);
             }
         }
 
-        protected override void OnRenderImage(ToolStripItemImageRenderEventArgs e)
+        protected override void OnRenderItemImage(ToolStripItemImageRenderEventArgs e)
         {
             try
             {
                 var old = e.Graphics.InterpolationMode;
                 e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
-                base.OnRenderImage(e);
+                base.OnRenderItemImage(e);
                 e.Graphics.InterpolationMode = old;
             }
             catch
             {
-                base.OnRenderImage(e);
+                base.OnRenderItemImage(e);
             }
         }
     }
