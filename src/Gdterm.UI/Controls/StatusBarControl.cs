@@ -24,6 +24,8 @@ namespace Gdterm.UI.Controls
         private ToolStripStatusLabel _keepassStatus;
         private ToolStripStatusLabel _aiStatus;
         private ToolStripStatusLabel _securityStatus;
+        private ToolStripStatusLabel _terminalSizeLabel;
+        private ToolStripStatusLabel _encodingLabel;
 
         public StatusBarControl(
             ITunnelManager tunnelManager,
@@ -54,6 +56,8 @@ namespace Gdterm.UI.Controls
             _keepassStatus = new ToolStripStatusLabel("密码库: 锁定");
             _aiStatus = new ToolStripStatusLabel("AI: 就绪");
             _securityStatus = new ToolStripStatusLabel("安全: 已锁定");
+            _terminalSizeLabel = new ToolStripStatusLabel("80×24");
+            _encodingLabel = new ToolStripStatusLabel("UTF-8");
 
             statusStrip.Items.Add(_connectionStatus);
             statusStrip.Items.Add(new ToolStripSeparator());
@@ -64,6 +68,12 @@ namespace Gdterm.UI.Controls
             statusStrip.Items.Add(_aiStatus);
             statusStrip.Items.Add(new ToolStripSeparator());
             statusStrip.Items.Add(_securityStatus);
+            // 终端尺寸与编码靠右显示（Spring 标签把右侧空位吃掉）
+            var spring = new ToolStripStatusLabel { Spring = true };
+            statusStrip.Items.Add(spring);
+            statusStrip.Items.Add(_terminalSizeLabel);
+            statusStrip.Items.Add(new ToolStripSeparator());
+            statusStrip.Items.Add(_encodingLabel);
 
             Controls.Add(statusStrip);
 
@@ -111,6 +121,22 @@ namespace Gdterm.UI.Controls
             }
 
             _keepassStatus.Text = _keepassService.IsUnlocked ? "密码库: 已解锁" : "密码库: 锁定";
+        }
+
+        /// <summary>更新当前终端的尺寸与编码显示（由 TerminalControl 在 Resize 时调用）。</summary>
+        public void UpdateTerminalInfo(int columns, int rows, string encoding)
+        {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action<int, int, string>(UpdateTerminalInfo), columns, rows, encoding);
+                return;
+            }
+            try
+            {
+                _terminalSizeLabel.Text = columns > 0 && rows > 0 ? (columns + "×" + rows) : "";
+                _encodingLabel.Text = string.IsNullOrEmpty(encoding) ? "" : encoding;
+            }
+            catch { }
         }
     }
 }

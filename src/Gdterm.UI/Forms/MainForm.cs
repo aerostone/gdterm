@@ -223,6 +223,17 @@ namespace Gdterm.UI.Forms
             _tabContainer.SearchRequested += (s, e) => _sidePanels?.AttachSearchBar(_tabContainer);
             _tabContainer.ExportRequested += (s, e) => ExportActiveTerminalBuffer();
             _tabContainer.AppearanceSettingsRequested += (s, e) => _toolsDialogs.OpenAppearanceSettings();
+            // 终端尺寸/编码变化→状态栏显示
+            _tabContainer.TerminalInfoChanged += (s, size) =>
+            {
+                try
+                {
+                    var tc = s as Gdterm.UI.Controls.TerminalControl;
+                    var enc = tc != null ? tc.CurrentEncoding : "UTF-8";
+                    _statusBar?.UpdateTerminalInfo(size.Width, size.Height, enc);
+                }
+                catch { }
+            };
             // ReconnectRequested 已由 TabContainerControl 内部直走 ReconnectActiveTab，无需重复。
 
             AiCommandGateBinder.Bind(

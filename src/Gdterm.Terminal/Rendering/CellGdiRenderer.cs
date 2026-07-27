@@ -22,6 +22,10 @@ namespace Gdterm.Terminal.Rendering
 
         private Font _font;
         private Font _boldFont;
+        /// <summary>终端画布左侧内边距（参考成熟终端客户端的 8-12px 画布留白）。</summary>
+        internal const float PadX = 8f;
+        /// <summary>终端画布顶部内边距。</summary>
+        internal const float PadY = 6f;
         private TerminalColorScheme _scheme;
         private VtPageSnapshot _page;
         private bool _isPaused;
@@ -224,8 +228,8 @@ namespace Gdterm.Terminal.Rendering
             column = 0;
             row = 0;
             if (_charWidth <= 0 || _charHeight <= 0) return false;
-            column = Math.Max(0, Math.Min(Columns - 1, (int)(pixelX / _charWidth)));
-            row = Math.Max(0, Math.Min(Rows - 1, (int)(pixelY / _charHeight)));
+            column = Math.Max(0, Math.Min(Columns - 1, (int)((pixelX - PadX) / _charWidth)));
+            row = Math.Max(0, Math.Min(Rows - 1, (int)((pixelY - PadY) / _charHeight)));
             return true;
         }
 
@@ -292,11 +296,11 @@ namespace Gdterm.Terminal.Rendering
             g.Clear(_scheme.Background);
             if (page == null || page.Lines == null) return;
 
-            float y = 0;
+            float y = PadY;
             for (int r = 0; r < page.Lines.Count; r++)
             {
                 var line = page.Lines[r];
-                float x = 0;
+                float x = PadX;
                 if (line != null && line.Spans != null)
                 {
                     foreach (var span in line.Spans)
@@ -337,8 +341,8 @@ namespace Gdterm.Terminal.Rendering
 
             if (page.ShowCursor)
             {
-                float cx = page.CursorColumn * _charWidth;
-                float cy = page.CursorRow * _charHeight;
+                float cx = PadX + page.CursorColumn * _charWidth;
+                float cy = PadY + page.CursorRow * _charHeight;
                 g.FillRectangle(GetBrush(_scheme.CursorColor), cx, cy, Math.Max(2, _charWidth * 0.15f), _charHeight);
             }
         }
@@ -347,8 +351,9 @@ namespace Gdterm.Terminal.Rendering
         {
             if (_disposed || _canvas.ClientSize.Width <= 0 || _canvas.ClientSize.Height <= 0) return;
             MeasureCell();
-            int cols = Math.Max(2, (int)(_canvas.ClientSize.Width / _charWidth));
-            int rows = Math.Max(1, (int)(_canvas.ClientSize.Height / _charHeight));
+            // 减去两侧 padding 再计算 cols/rows — 否则右侧/底部边缘会有半截字被裁
+            int cols = Math.Max(2, (int)((_canvas.ClientSize.Width - PadX * 2) / _charWidth));
+            int rows = Math.Max(1, (int)((_canvas.ClientSize.Height - PadY * 2) / _charHeight));
             if (cols != Columns || rows != Rows)
                 ResizeTerminal(cols, rows);
         }

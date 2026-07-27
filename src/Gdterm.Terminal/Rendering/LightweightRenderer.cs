@@ -53,6 +53,9 @@ namespace Gdterm.Terminal.Rendering
         private const int MaxBufferLines = 300;
         private int _charWidth = 8;
         private int _lineHeight = 16;
+        /// <summary>终端画布左侧/顶部内边距。成熟终端客户端画布不贴边，留 8/6px。</summary>
+        internal const int PadX = 8;
+        internal const int PadY = 6;
         private string _fontName = "Consolas";
         private float _fontSize = 12f;
 
@@ -320,20 +323,21 @@ namespace Gdterm.Terminal.Rendering
                 var bgBrush = GetBrush(_scheme.Background);
                 g.FillRectangle(bgBrush, 0, 0, _canvas.Width, _canvas.Height);
 
-                int visibleLines = Math.Max(1, _canvas.Height / _lineHeight);
+                // 画布内边距 — 顶部留空留白
+                int visibleLines = Math.Max(1, (_canvas.Height - PadY * 2) / _lineHeight);
                 int startLine = Math.Max(0, _lineBuffer.Count - visibleLines);
-                int y = 0;
+                int y = PadY;
 
                 for (int i = startLine; i < _lineBuffer.Count && y < _canvas.Height; i++)
                 {
                     var line = _lineBuffer[i];
-                    DrawColoredLine(g, line, 0, y);
+                    DrawColoredLine(g, line, PadX, y);
                     y += _lineHeight;
                 }
 
                 if (y < _canvas.Height && _currentLine.Length > 0)
                 {
-                    DrawSpans(g, _currentSpans, _currentLine.ToString(), 0, y);
+                    DrawSpans(g, _currentSpans, _currentLine.ToString(), PadX, y);
                 }
 
                 // 绘制光标
@@ -345,7 +349,7 @@ namespace Gdterm.Terminal.Rendering
         {
             if (_isPaused) return;
 
-            var cursorX = _currentLine.Length * _charWidth;
+            var cursorX = PadX + _currentLine.Length * _charWidth;
             var brush = GetBrush(_scheme.CursorColor);
             g.FillRectangle(brush, cursorX, y, _charWidth, _lineHeight);
         }

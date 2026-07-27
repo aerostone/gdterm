@@ -40,9 +40,9 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Fill,
                 ImageList = _imageList,
-                BackColor = Color.FromArgb(30, 30, 30),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                Font = new Font("Microsoft YaHei", 9f),
+                BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Background,
+                ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Foreground,
+                Font = ResolveDefaultFont(),
                 BorderStyle = BorderStyle.None,
                 ShowLines = true,
                 ShowPlusMinus = true,
@@ -181,6 +181,22 @@ namespace Gdterm.UI.Controls
             if (string.IsNullOrEmpty(name) || size < 8 || size > 24) return;
             try { _treeView.Font = new Font(name, size, FontStyle.Regular); }
             catch { _treeView.Font = new Font("Microsoft YaHei UI", 9f); }
+        }
+
+        /// <summary>
+        /// 从 GlobalAppearance 取 UI 字体 — 若尚未初始化则回到安全默认值。
+        /// 重冷启动时 AppearanceSettings 还未加载，退到 Microsoft YaHei UI 9。
+        /// </summary>
+        private static Font ResolveDefaultFont()
+        {
+            try
+            {
+                var ga = Gdterm.UI.Program.GlobalAppearance;
+                if (ga != null && !string.IsNullOrEmpty(ga.UIFontName) && ga.UIFontSize >= 8 && ga.UIFontSize <= 24)
+                    return new Font(ga.UIFontName, ga.UIFontSize, FontStyle.Regular);
+            }
+            catch { }
+            return new Font("Microsoft YaHei UI", 9f, FontStyle.Regular);
         }
 
         /// <summary>当前内部 TreeView（供 MainForm 更改字体）。</summary>

@@ -9,24 +9,23 @@ namespace Gdterm.UI.Diagnostics
     /// 全局 UI 主题色表 + ToolStrip 渲染器：解决"发虚/不稳重"的视觉问题。
     /// </summary>
     /// <remarks>
-    /// 默认 SystemRenderer 在自定义 BackColor 上会留灰边、字体锯齿、悬停高亮突兀；
-    /// 这个 ColorTable + ProfessionalRenderer 组合把菜单/状态栏/工具栏统一为暗色、
-    /// 平滑边缘、ClearType 文本，配合 manifest 的 DPI awareness 让 UI 在高 DPI 屏清晰。
-    ///
-    /// 色板参考 design-system 推荐：bg #0F172A / surface #1E293B / accent #16A34A /
-    /// border #334155 / fg #F8FAFC。
+    /// 色板对齐 ui-ux-pro-max 推荐（GitHub Dark / 终端绿）：
+    /// bg #0D1117 / surface #161B22 / border #30363D / muted #25292F /
+    /// accent #00FF41 终端绿 / destructive #EF4444 / fg #E6EDF3。
+    /// 参照 Xshell/SecureCRT 暗色专业外观：深背景、低饱和、单一绿色强调，
+    /// 不要彩色渐变。
     /// </remarks>
     internal sealed class GdtermColorTable : ProfessionalColorTable
     {
-        // 与 MainForm BackColor 一致的深色
-        public static readonly Color Background = Color.FromArgb(30, 30, 30);
-        public static readonly Color Surface = Color.FromArgb(45, 45, 48);
-        public static readonly Color Border = Color.FromArgb(64, 64, 64);
-        public static readonly Color Accent = Color.FromArgb(22, 163, 74);
-        public static readonly Color Foreground = Color.FromArgb(240, 240, 240);
-        public static readonly Color Muted = Color.FromArgb(160, 160, 160);
-        public static readonly Color Hover = Color.FromArgb(60, 60, 65);
-        public static readonly Color Pressed = Color.FromArgb(80, 80, 85);
+        // GitHub Dark + 终端绿 — 对齐成熟终端客户端的暗色规范
+        public static readonly Color Background = Color.FromArgb(0x0D, 0x11, 0x17);
+        public static readonly Color Surface = Color.FromArgb(0x16, 0x1B, 0x22);
+        public static readonly Color Border = Color.FromArgb(0x30, 0x36, 0x3D);
+        public static readonly Color Accent = Color.FromArgb(0x00, 0xFF, 0x41);
+        public static readonly Color Foreground = Color.FromArgb(0xE6, 0xED, 0xF3);
+        public static readonly Color Muted = Color.FromArgb(0x8B, 0x94, 0x9E);
+        public static readonly Color Hover = Color.FromArgb(0x25, 0x29, 0x2F);
+        public static readonly Color Pressed = Color.FromArgb(0x35, 0x39, 0x3F);
 
         public override Color MenuBorder => Border;
         public override Color MenuItemBorder => Border;

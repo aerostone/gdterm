@@ -54,6 +54,8 @@ namespace Gdterm.UI.Controls
         public event EventHandler<KeyBindingActionEventArgs> ActionRequested;
         public event EventHandler SessionConnected;
         public event EventHandler SessionDisconnected;
+        /// <summary>终端尺寸/编码变化（Right=cols,Down=rows,Tag=encoding）。供状态栏显示。</summary>
+        public event EventHandler<Size> TerminalInfoChanged;
         /// <summary>用户在右键菜单点了「查找」。</summary>
         public event EventHandler SearchRequested;
         /// <summary>用户在右键菜单点了「重连」。</summary>
@@ -322,9 +324,39 @@ namespace Gdterm.UI.Controls
             catch (Exception ex) { DiagLog.Swallowed("TerminalControl.CellSendToHost", ex); }
         }
 
+        /// <summary>当前终端尺寸与编码，供状态栏使用。</summary>
+        public Size GetCurrentTerminalInfo()
+        {
+            try
+            {
+                int cols = _cellRenderer != null ? _cellRenderer.Columns
+                           : _renderer != null ? _renderer.Columns : 80;
+                int rows = _cellRenderer != null ? _cellRenderer.Rows
+                           : _renderer != null ? _renderer.Rows : 24;
+                return new Size(cols, rows);
+            }
+            catch { return new Size(80, 24); }
+        }
+
+        /// <summary>当前编码（从 TerminalProfile 取，默认 UTF-8）。</summary>
+        public string CurrentEncoding
+        {
+            get
+            {
+                try { return _profile != null && !string.IsNullOrEmpty(_profile.Encoding) ? _profile.Encoding : "UTF-8"; }
+                catch { return "UTF-8"; }
+            }
+        }
+
         private void OnCellTerminalResized(object sender, EventArgs e)
         {
             if (_disposed || _cellRenderer == null) return;
+            try
+            {
+                var info = new Size(_cellRenderer.Columns, _cellRenderer.Rows);
+                TerminalInfoChanged?.Invoke(this, info);
+            }
+            catch { }
             if (_session == null || !_session.IsConnected) return;
             try
             {

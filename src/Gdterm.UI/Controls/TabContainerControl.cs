@@ -49,6 +49,8 @@ namespace Gdterm.UI.Controls
         public event EventHandler ReconnectRequested;
         public event EventHandler ExportRequested;
         public event EventHandler AppearanceSettingsRequested;
+        /// <summary>终端尺寸/编码变化转发（由 TerminalControl.TerminalInfoChanged 转出）。</summary>
+        public event EventHandler<Size> TerminalInfoChanged;
 
         public TabContainerControl(
             ITunnelManager tunnelManager,
@@ -211,6 +213,18 @@ namespace Gdterm.UI.Controls
                 };
                 terminalControl.ExportRequested += (s, e) => ExportRequested?.Invoke(terminalControl, e);
                 terminalControl.AppearanceSettingsRequested += (s, e) => AppearanceSettingsRequested?.Invoke(terminalControl, e);
+                // 终端尺寸/编码变化转发到状态栏
+                terminalControl.TerminalInfoChanged += (s, size) =>
+                {
+                    try { TerminalInfoChanged?.Invoke(terminalControl, size); } catch { }
+                };
+                // 连上后立即推送一次尺寸 + 编码给状态栏
+                try
+                {
+                    var info = terminalControl.GetCurrentTerminalInfo();
+                    TerminalInfoChanged?.Invoke(terminalControl, info);
+                }
+                catch { }
             }
         }
 
