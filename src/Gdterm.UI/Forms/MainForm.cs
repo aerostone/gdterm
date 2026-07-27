@@ -117,6 +117,14 @@ namespace Gdterm.UI.Forms
             _toolRegistry = toolRegistry;
             _secretScanner = secretScanner;
 
+            // 消除重绘闪烁：DoubleBuffered + 指定一致暗色背景。
+            // 这是「发虚」的第二根因——重绘时 GDI 一帧帧走，看起来不稳重。
+            DoubleBuffered = true;
+            SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
+            BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Background;
+            ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Foreground;
+            Font = new Font("Microsoft YaHei UI", 9f, FontStyle.Regular, GraphicsUnit.Point, 134);
+
             if (_reconnectWatchdog != null)
             {
                 _reconnectWatchdog.ReconnectFailed += (s, e) =>
@@ -310,6 +318,14 @@ namespace Gdterm.UI.Forms
             });
             _menuStrip = menuBuilt.Menu;
             MainMenuStrip = _menuStrip;
+            // ManagerRenderMode 让 ToolStripManager.Renderer 生效（全局 GdtermToolStripRenderer）。
+            try
+            {
+                _menuStrip.RenderMode = ToolStripRenderMode.ManagerRenderMode;
+                _menuStrip.BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Background;
+                _menuStrip.ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Foreground;
+            }
+            catch { }
 
             _viewMode = new ViewModeController(
                 _connectionTree,

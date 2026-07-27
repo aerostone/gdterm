@@ -42,6 +42,12 @@ namespace Gdterm.UI.Controls
         private void InitializeComponent()
         {
             var statusStrip = new StatusStrip();
+            try
+            {
+                statusStrip.RenderMode = ToolStripRenderMode.ManagerRenderMode;
+                statusStrip.SizingGrip = false;
+            }
+            catch { }
 
             _connectionStatus = new ToolStripStatusLabel("连接: 就绪");
             _tunnelStatus = new ToolStripStatusLabel("隧道: 无");

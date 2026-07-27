@@ -38,6 +38,16 @@ namespace Gdterm.UI
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
+            // 统一 ToolStrip / MenuStrip / StatusStrip 渲染：暗色专业主题。
+            // 默认的 SystemRenderer 在自定义暗色 BackColor 上会留灰边;
+            // ProfessionalRenderer 跟随系统主题色彩表格，没有突兑。
+            // 这个小修改让菜单/状态栏瞬间「稳重」，不再发虚。
+            try
+            {
+                ToolStripManager.Renderer = new Gdterm.UI.Diagnostics.GdtermToolStripRenderer();
+            }
+            catch { }
+
             var appDir = AppDomain.CurrentDomain.BaseDirectory;
             var dataDir = Path.Combine(appDir, "data");
             var configDir = Path.Combine(dataDir, "config");

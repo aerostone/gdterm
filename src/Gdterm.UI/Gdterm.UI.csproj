@@ -10,6 +10,7 @@
     <RootNamespace>Gdterm.UI</RootNamespace>
     <AssemblyName>gdterm</AssemblyName>
     <ApplicationIcon>Resources\gdterm.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
     <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
@@ -144,6 +145,7 @@
     <Compile Include="Diagnostics\DiagLog.cs" />
     <Compile Include="Diagnostics\ClipboardProtector.cs" />
     <Compile Include="Diagnostics\WinFormsCompat.cs" />
+    <Compile Include="Diagnostics\GdtermColorTable.cs" />
     <Compile Include="Services\ActiveSessionBridge.cs" />
     <Compile Include="Services\CredentialResolver.cs" />
     <Compile Include="Services\TabSessionLifecycle.cs" />
@@ -185,6 +187,7 @@
     <Content Include="Resources\gdterm.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <None Include="app.manifest" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 
