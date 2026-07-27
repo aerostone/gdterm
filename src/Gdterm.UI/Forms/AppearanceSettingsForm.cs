@@ -366,7 +366,8 @@ namespace Gdterm.UI.Forms
         }
     }
 
-    /// <summary>外观设置模型 + INI 读写。</n    public sealed class AppearanceSettings
+    /// <summary>外观设置模型 + INI 读写。</summary>
+    public sealed class AppearanceSettings
     {
         /// <summary>终端等宽字体（ASCII 内容区）。</summary>
         public string FontName { get; set; } = "Consolas";
