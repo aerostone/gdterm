@@ -25,6 +25,9 @@ namespace Gdterm.UI.Forms
 
         public QuickCommandEditorForm(QuickCommand existing = null, string defaultGroup = null)
         {
+            // 高/低 DPI 自适应
+            AutoScaleMode = AutoScaleMode.Dpi;
+            AutoScaleDimensions = new SizeF(96F, 96F);
             BuildUI(existing, defaultGroup);
             if (existing != null) FillFrom(existing);
         }

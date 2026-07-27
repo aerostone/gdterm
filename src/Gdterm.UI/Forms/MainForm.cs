@@ -171,13 +171,16 @@ namespace Gdterm.UI.Forms
         {
             Text = "gdterm - 绿色运维客户端";
             KeyPreview = true; // Esc/F11 在终端焦点时也能回到主窗体
-            Size = new Size(1200, 800);
+            // 高/低 DPI 自适应：AutoScaleMode.Dpi + 96 基准 + 按 DPI 计算的启动/最小尺寸。
+            // 这样 100% / 125% / 150% / 200% / 250% 缩放下控件布局一致，分辨率不同时窗口不会超出屏。
+            Gdterm.UI.Diagnostics.DpiHelper.ApplyAutoScale(this);
+            Size = Gdterm.UI.Diagnostics.DpiHelper.GetStartupWindowSize();
+            MinimumSize = Gdterm.UI.Diagnostics.DpiHelper.GetMinimumWindowSize();
             StartPosition = FormStartPosition.CenterScreen;
-            MinimumSize = new Size(800, 600);
 
             _connectionTree = new ConnectionTreeControl(_connectionStore);
             _connectionTree.Dock = DockStyle.Left;
-            _connectionTree.Width = 250;
+            _connectionTree.Width = Gdterm.UI.Diagnostics.DpiHelper.ScaleInt(250);
 
             var mainSplitter = new Splitter
             {
@@ -376,13 +379,15 @@ namespace Gdterm.UI.Forms
             if (ga == null) return;
             var name = !string.IsNullOrWhiteSpace(ga.UIFontName) ? ga.UIFontName : "Microsoft YaHei UI";
             var size = ga.UIFontSize > 0 ? ga.UIFontSize : 9;
+            // 用户设置的 pt 是基于 96 DPI 设计，当前屏是高 DPI 时按 scale 放大字号保持视觉一致。
+            var scaledSize = Gdterm.UI.Diagnostics.DpiHelper.ScaleFont(size);
             Font font;
-            try { font = new Font(name, size, FontStyle.Regular); }
-            catch { font = new Font("Microsoft YaHei UI", 9f); }
+            try { font = new Font(name, scaledSize, FontStyle.Regular); }
+            catch { font = new Font("Microsoft YaHei UI", scaledSize); }
             try { this.Font = font; } catch { }
             if (_menuStrip != null) try { _menuStrip.Font = font; } catch { }
             if (_statusBar != null) try { _statusBar.Font = font; } catch { }
-            if (_connectionTree != null) try { _connectionTree.ApplyUIFont(name, size); } catch { }
+            if (_connectionTree != null) try { _connectionTree.ApplyUIFont(name, (int)Math.Round(scaledSize)); } catch { }
             if (_quickBar != null) try { _quickBar.Font = font; } catch { }
         }
 
