@@ -22,6 +22,8 @@ namespace Gdterm.Terminal.Rendering
 
         private Font _font;
         private Font _boldFont;
+        private Font _cjkFont;
+        private Font _cjkBoldFont;
         /// <summary>终端画布左侧内边距（参考成熟终端客户端的 8-12px 画布留白）。</summary>
         internal const float PadX = 8f;
         /// <summary>终端画布顶部内边距。</summary>
@@ -316,6 +318,8 @@ namespace Gdterm.Terminal.Rendering
                         var fg = span.Foreground;
                         // 若背景接近默认黑且未设真彩，用 scheme 背景
                         var font = span.Bold ? _boldFont : _font;
+                        // CJK 补充字体（非 ASCII 段用 cjk 字体绘制，Xshell 风格双字体）
+                        var cjkFont = span.Bold ? _cjkBoldFont : _cjkFont;
                         var textSize = g.MeasureString(span.Text, font, int.MaxValue, StringFormat.GenericTypographic);
                         float w = Math.Max(textSize.Width, span.Text.Length * _charWidth);
 
@@ -324,13 +328,7 @@ namespace Gdterm.Terminal.Rendering
                             g.FillRectangle(GetBrush(bg), x, y, w, _charHeight);
                         }
 
-                        g.DrawString(span.Text, font, GetBrush(fg), x, y, StringFormat.GenericTypographic);
-
-                        if (span.Underline)
-                        {
-                            using (var pen = new Pen(fg))
-                                g.DrawLine(pen, x, y + _charHeight - 1, x + w, y + _charHeight - 1);
-                        }
+                        DrawSpanWithCjkFallback(g, span.Text, font, cjkFont, GetBrush(fg), x, y, span.Underline, fg);
 
                         x += w;
                     }
@@ -360,6 +358,12 @@ namespace Gdterm.Terminal.Rendering
 
         public void ApplyFont(string fontName, float fontSizePx)
         {
+            ApplyFont(fontName, fontSizePx, null);
+        }
+
+        /// <param name="cjkFontName">Xshell 风格的非 ASCII 补充字体；空则不分割。</param>
+        public void ApplyFont(string fontName, float fontSizePx, string cjkFontName)
+        {
             if (_disposed) return;
             if (string.IsNullOrWhiteSpace(fontName)) fontName = FontName;
             if (fontSizePx < 8f) fontSizePx = 8f;
@@ -368,6 +372,8 @@ namespace Gdterm.Terminal.Rendering
             {
                 try { if (_font != null) _font.Dispose(); } catch { }
                 try { if (_boldFont != null) _boldFont.Dispose(); } catch { }
+                try { if (_cjkFont != null) _cjkFont.Dispose(); } catch { }
+                try { if (_cjkBoldFont != null) _cjkBoldFont.Dispose(); } catch { }
                 try
                 {
                     _font = new Font(fontName, fontSizePx, FontStyle.Regular, GraphicsUnit.Pixel);
@@ -378,9 +384,94 @@ namespace Gdterm.Terminal.Rendering
                 }
                 try { _boldFont = new Font(_font.FontFamily, fontSizePx, FontStyle.Bold, GraphicsUnit.Pixel); }
                 catch { _boldFont = new Font(_font, FontStyle.Bold); }
+
+                // CJK 补充字体（可空）
+                if (!string.IsNullOrWhiteSpace(cjkFontName))
+                {
+                    try { _cjkFont = new Font(cjkFontName, fontSizePx, FontStyle.Regular, GraphicsUnit.Pixel); }
+                    catch { _cjkFont = null; }
+                    if (_cjkFont != null)
+                    {
+                        try { _cjkBoldFont = new Font(_cjkFont.FontFamily, fontSizePx, FontStyle.Bold, GraphicsUnit.Pixel); }
+                        catch { try { _cjkBoldFont = new Font(_cjkFont, FontStyle.Bold); } catch { _cjkBoldFont = null; } }
+                    }
+                }
+                else
+                {
+                    _cjkFont = null;
+                    _cjkBoldFont = null;
+                }
+
                 MeasureCell();
                 _needsRedraw = true;
                 ScheduleRedraw();
+            }
+        }
+
+        /// <summary>
+        /// 按 ASCII / 非 ASCII 分段绘制（Xshell 风格双字体）。
+        /// 没有 cjk 字体时退化为全部用主字体画。
+        /// </summary>
+        private void DrawSpanWithCjkFallback(Graphics g, string text, Font mainFont, Font cjkFont,
+                                            Brush brush, float x, float y, bool underline, Color underlineColor)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+            var fmt = StringFormat.GenericTypographic;
+            // 没有 cjk 字体 -> 一次性画完
+            if (cjkFont == null)
+            {
+                g.DrawString(text, mainFont, brush, x, y, fmt);
+                if (underline)
+                {
+                    using (var pen = new Pen(underlineColor))
+                    {
+                        var w = g.MeasureString(text, mainFont, int.MaxValue, fmt).Width;
+                        g.DrawLine(pen, x, y + _charHeight - 1, x + Math.Max(w, text.Length * _charWidth), y + _charHeight - 1);
+                    }
+                }
+                return;
+            }
+
+            // 按字符遍历分段：ASCII 用主字体，其他用 cjk 字体
+            float cx = x;
+            var asciiBuf = new System.Text.StringBuilder();
+            var cjkBuf = new System.Text.StringBuilder();
+            for (int i = 0; i <= text.Length; i++)
+            {
+                bool isLast = (i == text.Length);
+                char ch = isLast ? '\0' : text[i];
+                bool isAscii = !isLast && ch < 0x80;
+
+                if (isAscii)
+                    asciiBuf.Append(ch);
+                else if (!isLast)
+                    cjkBuf.Append(ch);
+
+                // 段间刷新
+                bool segBreak = isLast || (i + 1 < text.Length && ((text[i + 1] < 0x80) != isAscii));
+                if (segBreak || isLast)
+                {
+                    if (asciiBuf.Length > 0)
+                    {
+                        var s = asciiBuf.ToString();
+                        g.DrawString(s, mainFont, brush, cx, y, fmt);
+                        cx += g.MeasureString(s, mainFont, int.MaxValue, fmt).Width;
+                        asciiBuf.Clear();
+                    }
+                    if (cjkBuf.Length > 0)
+                    {
+                        var s = cjkBuf.ToString();
+                        g.DrawString(s, cjkFont, brush, cx, y, fmt);
+                        cx += g.MeasureString(s, cjkFont, int.MaxValue, fmt).Width;
+                        cjkBuf.Clear();
+                    }
+                }
+            }
+
+            if (underline)
+            {
+                using (var pen = new Pen(underlineColor))
+                    g.DrawLine(pen, x, y + _charHeight - 1, x + Math.Max(cx - x, text.Length * _charWidth), y + _charHeight - 1);
             }
         }
 

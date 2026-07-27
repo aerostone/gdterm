@@ -156,6 +156,8 @@ namespace Gdterm.UI.Controls
             float fontSize = _profile != null && _profile.FontSize > 0 && _profile.FontSize != 12
                 ? _profile.FontSize
                 : (ga != null && ga.FontSize > 0 ? ga.FontSize : 12f);
+            // CJK 补充字体（可空）—— Xshell 风格非 ASCII 字体。
+            string cjkFontName = ga != null && !string.IsNullOrWhiteSpace(ga.CjkFontName) ? ga.CjkFontName : null;
 
             int rows = 24;
             int cols = 80;
@@ -168,7 +170,7 @@ namespace Gdterm.UI.Controls
                 _cellRenderer.SendToHost += OnCellSendToHost;
                 _cellRenderer.TerminalResized += OnCellTerminalResized;
                 _renderer = _cellRenderer;
-                try { _cellRenderer.ApplyFont(fontName, fontSize); } catch { }
+                try { _cellRenderer.ApplyFont(fontName, fontSize, cjkFontName); } catch { }
             }
             else
             {

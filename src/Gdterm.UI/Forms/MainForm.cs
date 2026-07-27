@@ -297,6 +297,11 @@ namespace Gdterm.UI.Forms
                 ViewFocus = (s, e) => _viewMode?.SetViewMode(ViewMode.Focus),
                 ViewCompact = (s, e) => _viewMode?.SetViewMode(ViewMode.Compact),
                 ToggleTree = (s, e) => _viewMode?.ToggleConnectionTree(),
+                ToggleTreePin = (s, e) =>
+                {
+                    try { _connectionTree?.TogglePin(); }
+                    catch { }
+                },
                 SplitHorizontal = (s, e) => _tabContainer.SplitHorizontal(),
                 SplitVertical = (s, e) => _tabContainer.SplitVertical(),
                 ToggleQuickBar = (s, e) =>

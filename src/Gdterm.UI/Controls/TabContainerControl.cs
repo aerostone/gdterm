@@ -37,6 +37,7 @@ namespace Gdterm.UI.Controls
         private readonly TabSelectionCoordinator _selection;
         private readonly Dictionary<TabPage, TabSessionState> _sessions = new Dictionary<TabPage, TabSessionState>();
         private TabControl _tabControl;
+        private ContextMenuStrip _tabContextMenu;
 
         /// <summary>活动标签变化</summary>
         public event EventHandler ActiveSessionChanged;
@@ -136,6 +137,17 @@ namespace Gdterm.UI.Controls
             _tabControl.MouseDown += OnTabMouseDown;
             _tabControl.SelectedIndexChanged += OnTabSelectedIndexChanged;
             Controls.Add(_tabControl);
+
+            // 右键菜单（参考 Xshell/MobaXterm Tab 右键）
+            _tabContextMenu = new ContextMenuStrip();
+            _tabContextMenu.Items.Add("关闭当前(&C)", null, (s, e) => TryCloseSelected());
+            _tabContextMenu.Items.Add("关闭其他(&O)", null, (s, e) => CloseOthers());
+            _tabContextMenu.Items.Add("关闭右侧全部(&R)", null, (s, e) => CloseRight());
+            _tabContextMenu.Items.Add("-");
+            _tabContextMenu.Items.Add("水平拆分(&H)", null, (s, e) => SplitHorizontal());
+            _tabContextMenu.Items.Add("垂直拆分(&V)", null, (s, e) => SplitVertical());
+            _tabContextMenu.Items.Add("-");
+            _tabContextMenu.Items.Add("重连当前(&E)", null, (s, e) => { try { ReconnectActiveTab(); } catch { } });
         }
 
         public void OpenConnection(ConnectionConfig config)
@@ -267,9 +279,53 @@ namespace Gdterm.UI.Controls
 
         private void OnTabMouseDown(object sender, MouseEventArgs e)
         {
+            // 右键：选中所点标签 + 弹右键菜单（参考 Xshell/MobaXterm）
+            if (e.Button == MouseButtons.Right)
+            {
+                for (int i = 0; i < _tabControl.TabCount; i++)
+                {
+                    if (_tabControl.GetTabRect(i).Contains(e.Location))
+                    {
+                        try { _tabControl.SelectedIndex = i; } catch { }
+                        try { _tabContextMenu.Show(_tabControl, e.Location); } catch { }
+                        return;
+                    }
+                }
+                return;
+            }
+
             var tab = _chrome.HitTestClose(_tabControl, e.Location);
             if (tab != null)
                 CloseTab(tab);
+        }
+
+        private void TryCloseSelected()
+        {
+            if (_tabControl.SelectedTab != null)
+                CloseTab(_tabControl.SelectedTab);
+        }
+
+        /// <summary>关闭除当前以外的所有标签。</summary>
+        public void CloseOthers()
+        {
+            var current = _tabControl.SelectedTab;
+            if (current == null) return;
+            // 复制一份再迭代，避免 CloseTab 修改枚举
+            var toClose = new List<TabPage>();
+            foreach (TabPage t in _tabControl.TabPages)
+                if (t != current) toClose.Add(t);
+            foreach (var t in toClose) CloseTab(t);
+        }
+
+        /// <summary>关闭当前右侧所有标签。</summary>
+        public void CloseRight()
+        {
+            int idx = _tabControl.SelectedIndex;
+            if (idx < 0) return;
+            var toClose = new List<TabPage>();
+            for (int i = idx + 1; i < _tabControl.TabCount; i++)
+                toClose.Add(_tabControl.TabPages[i]);
+            foreach (var t in toClose) CloseTab(t);
         }
 
         private void OnTabSelectedIndexChanged(object sender, EventArgs e)

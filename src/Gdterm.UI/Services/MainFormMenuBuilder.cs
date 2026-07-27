@@ -23,6 +23,7 @@ namespace Gdterm.UI.Services
             public EventHandler ViewFocus { get; set; }
             public EventHandler ViewCompact { get; set; }
             public EventHandler ToggleTree { get; set; }
+            public EventHandler ToggleTreePin { get; set; }
             public EventHandler SplitHorizontal { get; set; }
             public EventHandler SplitVertical { get; set; }
             public EventHandler ToggleQuickBar { get; set; }
@@ -99,6 +100,9 @@ namespace Gdterm.UI.Services
             };
             toggleTree.Click += cb.ToggleTree;
             viewMenu.DropDownItems.Add(toggleTree);
+            var toggleTreePin = new ToolStripMenuItem("自动隐藏连接面板(&P)");
+            toggleTreePin.Click += cb.ToggleTreePin;
+            viewMenu.DropDownItems.Add(toggleTreePin);
             viewMenu.DropDownItems.Add(new ToolStripSeparator());
             viewMenu.DropDownItems.Add("水平分割", null, cb.SplitHorizontal);
             viewMenu.DropDownItems.Add("垂直分割", null, cb.SplitVertical);

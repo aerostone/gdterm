@@ -16,6 +16,7 @@ namespace Gdterm.UI.Forms
         private readonly string _iniPath;
         private ComboBox _fontCombo;
         private NumericUpDown _sizeNum;
+        private ComboBox _cjkFontCombo;
         private ComboBox _schemeCombo;
         private CheckBox _dpiAwareCheck;
         private Label _preview;
@@ -24,6 +25,7 @@ namespace Gdterm.UI.Forms
         // 界面字体（菜单/树/状态栏）
         private ComboBox _uiFontCombo;
         private NumericUpDown _uiSizeNum;
+        private ComboBox _uiThemeCombo;
 
         public AppearanceSettings Result { get; private set; }
 
@@ -41,7 +43,7 @@ namespace Gdterm.UI.Forms
             MinimizeBox = false;
             ShowInTaskbar = false;
             // 高/低 DPI 自适应
-            ClientSize = new Size(440, 420);
+            ClientSize = new Size(440, 492);
             BackColor = Color.FromArgb(32, 32, 34);
             ForeColor = Color.FromArgb(220, 220, 220);
             Font = new Font("Microsoft YaHei UI", 9f);
@@ -120,6 +122,62 @@ namespace Gdterm.UI.Forms
             })
                 _schemeCombo.Items.Add(name);
             Controls.Add(_schemeCombo);
+            y += 36;
+
+            // —— 中日韩补充字体（非 ASCII 内容，Xshell 风格双字体）——
+            Controls.Add(MakeLabel("中日韩字体", 16, y));
+            _cjkFontCombo = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Location = new Point(120, y - 2),
+                Width = 200,
+                BackColor = Color.FromArgb(45, 45, 48),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            _cjkFontCombo.Items.Add(""); // 空表示跟随主字体
+            _cjkFontCombo.Items.Add("Microsoft YaHei Mono");
+            _cjkFontCombo.Items.Add("Sarasa Mono SC");
+            _cjkFontCombo.Items.Add("Noto Sans Mono CJK SC");
+            _cjkFontCombo.Items.Add("PingFang SC");
+            _cjkFontCombo.Items.Add("Source Han Mono SC");
+            try
+            {
+                using (var fonts = new System.Drawing.Text.InstalledFontCollection())
+                {
+                    foreach (var f in fonts.Families)
+                    {
+                        var n = f.Name;
+                        if ((n.IndexOf("YaHei", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                             n.IndexOf("Noto", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                             n.IndexOf("Sarasa", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                             n.IndexOf("PingFang", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                             n.IndexOf("Source Han", StringComparison.OrdinalIgnoreCase) >= 0) &&
+                            !_cjkFontCombo.Items.Contains(n))
+                        {
+                            _cjkFontCombo.Items.Add(n);
+                        }
+                    }
+                }
+            }
+            catch { }
+            Controls.Add(_cjkFontCombo);
+            y += 36;
+
+            // —— UI 外壳主题（与终端 ColorScheme 独立）——
+            Controls.Add(MakeLabel("界面主题", 16, y));
+            _uiThemeCombo = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Location = new Point(120, y - 2),
+                Width = 200,
+                BackColor = Color.FromArgb(45, 45, 48),
+                ForeColor = Color.White,
+                FlatStyle = FlatStyle.Flat
+            };
+            foreach (var name in new[] { "Dark", "Darker", "OLED" })
+                _uiThemeCombo.Items.Add(name);
+            Controls.Add(_uiThemeCombo);
             y += 36;
 
             _dpiAwareCheck = new CheckBox
@@ -210,7 +268,9 @@ namespace Gdterm.UI.Forms
                 {
                     FontName = _fontCombo.SelectedItem != null ? _fontCombo.SelectedItem.ToString() : "Consolas",
                     FontSize = (int)_sizeNum.Value,
+                    CjkFontName = _cjkFontCombo.SelectedItem != null ? (_cjkFontCombo.SelectedItem.ToString() ?? "") : "",
                     ColorScheme = _schemeCombo.SelectedItem != null ? _schemeCombo.SelectedItem.ToString() : "Classic",
+                    UiTheme = _uiThemeCombo.SelectedItem != null ? _uiThemeCombo.SelectedItem.ToString() : "Dark",
                     DpiAware = _dpiAwareCheck.Checked,
                     UIFontName = _uiFontCombo.SelectedItem != null ? _uiFontCombo.SelectedItem.ToString() : "Microsoft YaHei UI",
                     UIFontSize = (int)_uiSizeNum.Value
@@ -263,6 +323,8 @@ namespace Gdterm.UI.Forms
             SelectCombo(_fontCombo, s.FontName);
             _sizeNum.Value = Math.Max(_sizeNum.Minimum, Math.Min(_sizeNum.Maximum, s.FontSize));
             SelectCombo(_schemeCombo, s.ColorScheme);
+            SelectCombo(_cjkFontCombo, string.IsNullOrEmpty(s.CjkFontName) ? "" : s.CjkFontName);
+            SelectCombo(_uiThemeCombo, string.IsNullOrEmpty(s.UiTheme) ? "Dark" : s.UiTheme);
             _dpiAwareCheck.Checked = s.DpiAware;
             SelectCombo(_uiFontCombo, s.UIFontName ?? "Microsoft YaHei UI");
             _uiSizeNum.Value = Math.Max(_uiSizeNum.Minimum, Math.Min(_uiSizeNum.Maximum, s.UIFontSize > 0 ? s.UIFontSize : 9));
@@ -304,14 +366,17 @@ namespace Gdterm.UI.Forms
         }
     }
 
-    /// <summary>外观设置模型 + INI 读写。</summary>
-    public sealed class AppearanceSettings
+    /// <summary>外观设置模型 + INI 读写。</n    public sealed class AppearanceSettings
     {
-        /// <summary>终端等宽字体（内容区）。</summary>
+        /// <summary>终端等宽字体（ASCII 内容区）。</summary>
         public string FontName { get; set; } = "Consolas";
         /// <summary>终端等宽字号。</summary>
         public int FontSize { get; set; } = 12;
+        /// <summary>终端 CJK 补充字体（Xshell 风格的非 ASCII 字体，可空）。</summary>
+        public string CjkFontName { get; set; } = "";
         public string ColorScheme { get; set; } = "Classic";
+        /// <summary>UI 外壳主题名（与终端 ColorScheme 独立）。</summary>
+        public string UiTheme { get; set; } = "Dark";
         public bool DpiAware { get; set; } = true;
         /// <summary>界面非等宽字体（菜单/树/状态栏/对话框）。</summary>
         public string UIFontName { get; set; } = "Microsoft YaHei UI";
@@ -340,8 +405,12 @@ namespace Gdterm.UI.Forms
                         int n;
                         if (int.TryParse(val, out n) && n >= 8 && n <= 36) s.FontSize = n;
                     }
+                    else if (string.Equals(key, "cjkFontName", StringComparison.OrdinalIgnoreCase))
+                        s.CjkFontName = val;
                     else if (string.Equals(key, "colorScheme", StringComparison.OrdinalIgnoreCase))
                         s.ColorScheme = val;
+                    else if (string.Equals(key, "uiTheme", StringComparison.OrdinalIgnoreCase))
+                        s.UiTheme = val;
                     else if (string.Equals(key, "dpiAware", StringComparison.OrdinalIgnoreCase))
                         s.DpiAware = val == "1" || string.Equals(val, "true", StringComparison.OrdinalIgnoreCase);
                     else if (string.Equals(key, "uiFontName", StringComparison.OrdinalIgnoreCase))
@@ -365,7 +434,9 @@ namespace Gdterm.UI.Forms
                 "[appearance]\r\n" +
                 "fontName=" + (FontName ?? "Consolas") + "\r\n" +
                 "fontSize=" + FontSize + "\r\n" +
+                "cjkFontName=" + (CjkFontName ?? "") + "\r\n" +
                 "colorScheme=" + (ColorScheme ?? "Classic") + "\r\n" +
+                "uiTheme=" + (UiTheme ?? "Dark") + "\r\n" +
                 "dpiAware=" + (DpiAware ? "1" : "0") + "\r\n" +
                 "uiFontName=" + (UIFontName ?? "Microsoft YaHei UI") + "\r\n" +
                 "uiFontSize=" + UIFontSize + "\r\n");

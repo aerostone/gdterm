@@ -18,14 +18,64 @@ namespace Gdterm.UI.Diagnostics
     internal sealed class GdtermColorTable : ProfessionalColorTable
     {
         // GitHub Dark + 终端绿 — 对齐成熟终端客户端的暗色规范
-        public static readonly Color Background = Color.FromArgb(0x0D, 0x11, 0x17);
-        public static readonly Color Surface = Color.FromArgb(0x16, 0x1B, 0x22);
-        public static readonly Color Border = Color.FromArgb(0x30, 0x36, 0x3D);
-        public static readonly Color Accent = Color.FromArgb(0x00, 0xFF, 0x41);
-        public static readonly Color Foreground = Color.FromArgb(0xE6, 0xED, 0xF3);
-        public static readonly Color Muted = Color.FromArgb(0x8B, 0x94, 0x9E);
-        public static readonly Color Hover = Color.FromArgb(0x25, 0x29, 0x2F);
-        public static readonly Color Pressed = Color.FromArgb(0x35, 0x39, 0x3F);
+        // 采用静态属性 + 后台字段，使运行时可切换主题而不重启。
+        private static Color s_background = Color.FromArgb(0x0D, 0x11, 0x17);
+        private static Color s_surface = Color.FromArgb(0x16, 0x1B, 0x22);
+        private static Color s_border = Color.FromArgb(0x30, 0x36, 0x3D);
+        private static Color s_accent = Color.FromArgb(0x00, 0xFF, 0x41);
+        private static Color s_foreground = Color.FromArgb(0xE6, 0xED, 0xF3);
+        private static Color s_muted = Color.FromArgb(0x8B, 0x94, 0x9E);
+        private static Color s_hover = Color.FromArgb(0x25, 0x29, 0x2F);
+        private static Color s_pressed = Color.FromArgb(0x35, 0x39, 0x3F);
+
+        public static Color Background { get { return s_background; } }
+        public static Color Surface { get { return s_surface; } }
+        public static Color Border { get { return s_border; } }
+        public static Color Accent { get { return s_accent; } }
+        public static Color Foreground { get { return s_foreground; } }
+        public static Color Muted { get { return s_muted; } }
+        public static Color Hover { get { return s_hover; } }
+        public static Color Pressed { get { return s_pressed; } }
+
+        /// <summary>运行时切换外壳主题（与终端 ColorScheme 独立）。</summary>
+        public static void ApplyTheme(string name)
+        {
+            if (string.IsNullOrEmpty(name)) name = "Dark";
+            switch (name)
+            {
+                case "Darker":
+                    s_background = Color.FromArgb(0x10, 0x10, 0x10);
+                    s_surface = Color.FromArgb(0x1A, 0x1A, 0x1A);
+                    s_border = Color.FromArgb(0x33, 0x33, 0x33);
+                    s_accent = Color.FromArgb(0x3B, 0x82, 0xF6);
+                    s_foreground = Color.FromArgb(0xE6, 0xED, 0xF3);
+                    s_muted = Color.FromArgb(0x82, 0x82, 0x82);
+                    s_hover = Color.FromArgb(0x26, 0x26, 0x26);
+                    s_pressed = Color.FromArgb(0x36, 0x36, 0x36);
+                    break;
+                case "OLED":
+                    s_background = Color.FromArgb(0x00, 0x00, 0x00);
+                    s_surface = Color.FromArgb(0x08, 0x08, 0x08);
+                    s_border = Color.FromArgb(0x20, 0x20, 0x20);
+                    s_accent = Color.FromArgb(0x00, 0xFF, 0x41);
+                    s_foreground = Color.FromArgb(0xFA, 0xFA, 0xFA);
+                    s_muted = Color.FromArgb(0x80, 0x80, 0x80);
+                    s_hover = Color.FromArgb(0x14, 0x14, 0x14);
+                    s_pressed = Color.FromArgb(0x22, 0x22, 0x22);
+                    break;
+                case "Dark":
+                default:
+                    s_background = Color.FromArgb(0x0D, 0x11, 0x17);
+                    s_surface = Color.FromArgb(0x16, 0x1B, 0x22);
+                    s_border = Color.FromArgb(0x30, 0x36, 0x3D);
+                    s_accent = Color.FromArgb(0x00, 0xFF, 0x41);
+                    s_foreground = Color.FromArgb(0xE6, 0xED, 0xF3);
+                    s_muted = Color.FromArgb(0x8B, 0x94, 0x9E);
+                    s_hover = Color.FromArgb(0x25, 0x29, 0x2F);
+                    s_pressed = Color.FromArgb(0x35, 0x39, 0x3F);
+                    break;
+            }
+        }
 
         public override Color MenuBorder => Border;
         public override Color MenuItemBorder => Border;

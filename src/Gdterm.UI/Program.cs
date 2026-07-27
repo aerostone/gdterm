@@ -60,6 +60,8 @@ namespace Gdterm.UI
                     Path.Combine(configDir, "appearance.ini"));
             }
             catch { GlobalAppearance = new Gdterm.UI.Forms.AppearanceSettings(); }
+            // 初始外壳主题（与终端 ColorScheme 独立）
+            try { Gdterm.UI.Diagnostics.GdtermColorTable.ApplyTheme(GlobalAppearance.UiTheme); } catch { }
 
 
             // 全局未处理异常：落盘 diag.log + 审计（audit 就绪后补写）

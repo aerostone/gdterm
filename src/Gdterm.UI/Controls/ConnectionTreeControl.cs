@@ -21,6 +21,14 @@ namespace Gdterm.UI.Controls
         private ImageList _imageList;
         // 右键点中的节点（ContextMenuStrip.Opening 读的），后后菜单设置选中
         private TreeNode _rightClickedNode;
+        // 顶部搜索框（参考 Xshell/SecureCRT Session Manager filter bar）
+        private TextBox _filterBox;
+        // 所有连接的原始列表（筛选时从它重建树）
+        private List<ConnectionConfig> _allConnections;
+        // auto-hide 状态：true=固定展开（默认）；false=收为窄边，悬停展开。
+        private bool _pinned = true;
+        private int _pinnedWidth = 250;
+        private const int CollapsedWidth = 18;
 
         public event EventHandler<ConnectionConfig> ConnectionDoubleClicked;
         public event EventHandler ConnectionListChanged;
@@ -35,6 +43,20 @@ namespace Gdterm.UI.Controls
         private void InitializeComponent()
         {
             BuildImageList();
+
+            // 顶部筛选框（输即过滤）-- Xshell/SecureCRT filter bar 风格。
+            _filterBox = new TextBox
+            {
+                Dock = DockStyle.Top,
+                BorderStyle = BorderStyle.FixedSingle,
+                BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Surface,
+                ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Foreground,
+                Font = ResolveDefaultFont(),
+                Height = 24
+            };
+            try { Gdterm.UI.Diagnostics.WinFormsCompat.SetCueBanner(_filterBox, "输入主机/名称/分组过滤…"); }
+            catch { }
+            _filterBox.TextChanged += (s, e) => ApplyFilter(_filterBox.Text);
 
             _treeView = new TreeView
             {
@@ -53,7 +75,9 @@ namespace Gdterm.UI.Controls
             _treeView.NodeMouseDoubleClick += OnNodeMouseDoubleClick;
             _treeView.NodeMouseClick += OnNodeMouseClick;
             _treeView.MouseDown += OnMouseDownSelectRightClick;
+            // WinForms Dock：Fill 要先加，Top 后加才能占位
             Controls.Add(_treeView);
+            Controls.Add(_filterBox);
 
             // 右键菜单——在 Opening 中按右键节点动态调整项，避免“主机上右键也弹新建”
             _contextMenu = new ContextMenuStrip();
@@ -204,9 +228,16 @@ namespace Gdterm.UI.Controls
 
         public void LoadConnections()
         {
-            _treeView.Nodes.Clear();
+            _allConnections = new List<ConnectionConfig>(_connectionStore.LoadAll());
+            RebuildTree(_allConnections);
+        }
 
-            var connections = _connectionStore.LoadAll();
+        /// <summary>
+        /// 从给定连接列表重建树。筛选时传过滤后的子集，全量加载传 _allConnections。
+        /// </summary>
+        private void RebuildTree(List<ConnectionConfig> connections)
+        {
+            _treeView.Nodes.Clear();
             var groupNodes = new Dictionary<string, TreeNode>();
 
             var rootNode = new TreeNode("所有连接") { ImageKey = "folder", SelectedImageKey = "folder" };
@@ -236,6 +267,89 @@ namespace Gdterm.UI.Controls
             }
 
             rootNode.Expand();
+        }
+
+        /// <summary>
+        /// 输入过滤文本：名称/主机/分组名任一包含即保留，分组路径上 未命中也保留其空父节点。
+        /// 空文本重建全量。
+        /// </summary>
+        private void ApplyFilter(string text)
+        {
+            if (_disposed) return;
+            if (_allConnections == null) return;
+
+            text = (text ?? string.Empty).Trim();
+            if (string.IsNullOrEmpty(text))
+            {
+                RebuildTree(_allConnections);
+                return;
+            }
+
+            // 大小写不敏感 + 平台友好
+            var q = text.ToLowerInvariant();
+            var filtered = new List<ConnectionConfig>();
+            foreach (var c in _allConnections)
+            {
+                if (c == null) continue;
+                var name = (c.Name ?? string.Empty).ToLowerInvariant();
+                var host = (c.Host ?? string.Empty).ToLowerInvariant();
+                var grp  = (c.GroupPath ?? string.Empty).ToLowerInvariant();
+                if (name.Contains(q) || host.Contains(q) || grp.Contains(q))
+                    filtered.Add(c);
+            }
+            RebuildTree(filtered);
+        }
+
+        /// <summary>
+        /// 固定/取消固定切换（Auto-hide 模式）。
+        /// 取消固定后收为 CollapsedWidth 窄边，鼠标进入则临时展开，离开则收回。
+        /// </summary>
+        public void TogglePin()
+        {
+            if (_disposed) return;
+            _pinned = !_pinned;
+            ApplyPinState();
+        }
+
+        private void ApplyPinState()
+        {
+            if (_disposed) return;
+            if (_pinned)
+            {
+                Width = _pinnedWidth;
+                if (_filterBox != null) _filterBox.Visible = true;
+                if (_treeView != null) _treeView.Visible = true;
+            }
+            else
+            {
+                if (Width >= _pinnedWidth) _pinnedWidth = Width;
+                Width = CollapsedWidth;
+                if (_filterBox != null) _filterBox.Visible = false;
+                if (_treeView != null) _treeView.Visible = false;
+            }
+        }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            base.OnMouseEnter(e);
+            if (!_pinned && Width == CollapsedWidth)
+            {
+                // 临时展开（不置位 _pinned）
+                Width = _pinnedWidth;
+                if (_filterBox != null) _filterBox.Visible = true;
+                if (_treeView != null) _treeView.Visible = true;
+            }
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            if (!_pinned)
+            {
+                Width = CollapsedWidth;
+                if (_filterBox != null) _filterBox.Visible = false;
+                if (_treeView != null) _treeView.Visible = false;
+            }
         }
 
         private TreeNode GetOrCreateGroupNode(TreeNode root, Dictionary<string, TreeNode> dict, string groupPath)
