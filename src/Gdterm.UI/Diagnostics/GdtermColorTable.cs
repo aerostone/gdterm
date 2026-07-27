@@ -83,7 +83,6 @@ namespace Gdterm.UI.Diagnostics
             {
                 toolStrip.BackColor = GdtermColorTable.Background;
                 toolStrip.ForeColor = GdtermColorTable.Foreground;
-                toolStrip.BorderStyle = BorderStyle.None;
             }
             catch { }
         }
