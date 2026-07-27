@@ -36,6 +36,8 @@ namespace Gdterm.UI.Controls
         public ConnectionTreeControl(IConnectionStore connectionStore)
         {
             _connectionStore = connectionStore;
+            // collapsed 窄边上画 pin 图标作为展开提示
+            SetStyle(ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
             InitializeComponent();
             LoadConnections();
         }
@@ -344,11 +346,41 @@ namespace Gdterm.UI.Controls
         protected override void OnMouseLeave(EventArgs e)
         {
             base.OnMouseLeave(e);
+            // WinForms 会把鼠标进入子控件当成父控件的 MouseLeave 事件，所以这里必须用全局光标位置判一下
+            // 否则用户从窄边移动到刚展开的 tree 时会立刻收回去，根本点不到 tree
             if (!_pinned)
             {
-                Width = CollapsedWidth;
-                if (_filterBox != null) _filterBox.Visible = false;
-                if (_treeView != null) _treeView.Visible = false;
+                var clientPos = PointToClient(Cursor.Position);
+                if (!ClientRectangle.Contains(clientPos))
+                {
+                    Width = CollapsedWidth;
+                    if (_filterBox != null) _filterBox.Visible = false;
+                    if (_treeView != null) _treeView.Visible = false;
+                }
+            }
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            // 折叠窄边时画一个 pin 箭头，提示用户悬停可以展开
+            if (!_pinned && Width <= CollapsedWidth + 2)
+            {
+                var g = e.Graphics;
+                g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                using (var brush = new SolidBrush(Gdterm.UI.Diagnostics.GdtermColorTable.Muted))
+                {
+                    float cx = Width / 2f;
+                    // chevron » 指向右（展开方向）
+                    var p1 = new PointF(cx - 3, 6);
+                    var p2 = new PointF(cx + 3, 12);
+                    var p3 = new PointF(cx - 3, 18);
+                    using (var pen = new Pen(Gdterm.UI.Diagnostics.GdtermColorTable.Muted, 1.5f))
+                    {
+                        g.DrawLine(pen, p1, p2);
+                        g.DrawLine(pen, p2, p3);
+                    }
+                }
             }
         }
 

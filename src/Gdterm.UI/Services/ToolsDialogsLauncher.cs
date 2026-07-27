@@ -67,6 +67,21 @@ namespace Gdterm.UI.Services
                 if (form.ShowDialog(_owner) == DialogResult.OK && form.Result != null)
                 {
                     Gdterm.UI.Program.GlobalAppearance = form.Result;
+                    // 即时应用界面主题（若改了）——ToolStrip 不会自感静态颜色变化，所以调用 ApplyTheme 后手动 Invalidate 所有工具条
+                    if (!string.IsNullOrEmpty(form.Result.UiTheme))
+                    {
+                        try
+                        {
+                            Gdterm.UI.Diagnostics.GdtermColorTable.ApplyTheme(form.Result.UiTheme);
+                            // ToolStripManager.Renderer 是静态的，设成新实例会触发 Toolstrip 重画；但我们的自定义 GdtermToolStripRenderer 事件是读静态颜色属性，所以只要主动 Refresh 一下可见的 UI 即可
+                            if (_owner is Gdterm.UI.Forms.MainForm mf2)
+                            {
+                                mf2.Refresh();
+                                mf2.Invalidate(true);
+                            }
+                        }
+                        catch { }
+                    }
                     // UI 字体即时生效；DPI 需重启
                     try
                     {

@@ -320,15 +320,14 @@ namespace Gdterm.Terminal.Rendering
                         var font = span.Bold ? _boldFont : _font;
                         // CJK 补充字体（非 ASCII 段用 cjk 字体绘制，Xshell 风格双字体）
                         var cjkFont = span.Bold ? _cjkBoldFont : _cjkFont;
-                        var textSize = g.MeasureString(span.Text, font, int.MaxValue, StringFormat.GenericTypographic);
-                        float w = Math.Max(textSize.Width, span.Text.Length * _charWidth);
+                        // 双字体宽度：AffCStyle，ASCII 都用主字体测量会过宽或过窄，实际宽度以 DrawSpanWithCjkFallback 返回的为准
+                        float w = DrawSpanWithCjkFallback(g, span.Text, font, cjkFont, GetBrush(fg), x, y, span.Underline, fg);
+                        w = Math.Max(w, span.Text.Length * _charWidth);
 
                         if (bg.A > 0 && (bg.R | bg.G | bg.B) != 0)
                         {
                             g.FillRectangle(GetBrush(bg), x, y, w, _charHeight);
                         }
-
-                        DrawSpanWithCjkFallback(g, span.Text, font, cjkFont, GetBrush(fg), x, y, span.Underline, fg);
 
                         x += w;
                     }
@@ -412,24 +411,24 @@ namespace Gdterm.Terminal.Rendering
         /// 按 ASCII / 非 ASCII 分段绘制（Xshell 风格双字体）。
         /// 没有 cjk 字体时退化为全部用主字体画。
         /// </summary>
-        private void DrawSpanWithCjkFallback(Graphics g, string text, Font mainFont, Font cjkFont,
+        /// <returns>实际渲染的宽度（ASCII 段用主字体测量 + CJK 段用 cjk 字体测量之和），用于后续 span 的 x 步进。</returns>
+        private float DrawSpanWithCjkFallback(Graphics g, string text, Font mainFont, Font cjkFont,
                                             Brush brush, float x, float y, bool underline, Color underlineColor)
         {
-            if (string.IsNullOrEmpty(text)) return;
+            if (string.IsNullOrEmpty(text)) return 0;
             var fmt = StringFormat.GenericTypographic;
+            float measuredW;
             // 没有 cjk 字体 -> 一次性画完
             if (cjkFont == null)
             {
+                measuredW = g.MeasureString(text, mainFont, int.MaxValue, fmt).Width;
                 g.DrawString(text, mainFont, brush, x, y, fmt);
                 if (underline)
                 {
                     using (var pen = new Pen(underlineColor))
-                    {
-                        var w = g.MeasureString(text, mainFont, int.MaxValue, fmt).Width;
-                        g.DrawLine(pen, x, y + _charHeight - 1, x + Math.Max(w, text.Length * _charWidth), y + _charHeight - 1);
-                    }
+                        g.DrawLine(pen, x, y + _charHeight - 1, x + Math.Max(measuredW, text.Length * _charWidth), y + _charHeight - 1);
                 }
-                return;
+                return Math.Max(measuredW, text.Length * _charWidth);
             }
 
             // 按字符遍历分段：ASCII 用主字体，其他用 cjk 字体
@@ -473,6 +472,7 @@ namespace Gdterm.Terminal.Rendering
                 using (var pen = new Pen(underlineColor))
                     g.DrawLine(pen, x, y + _charHeight - 1, x + Math.Max(cx - x, text.Length * _charWidth), y + _charHeight - 1);
             }
+            return Math.Max(cx - x, text.Length * _charWidth);
         }
 
         private void MeasureCell()
