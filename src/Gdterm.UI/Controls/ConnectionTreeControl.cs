@@ -277,7 +277,7 @@ namespace Gdterm.UI.Controls
         /// </summary>
         private void ApplyFilter(string text)
         {
-            if (_disposed) return;
+            if (IsDisposed) return;
             if (_allConnections == null) return;
 
             text = (text ?? string.Empty).Trim();
@@ -308,14 +308,14 @@ namespace Gdterm.UI.Controls
         /// </summary>
         public void TogglePin()
         {
-            if (_disposed) return;
+            if (IsDisposed) return;
             _pinned = !_pinned;
             ApplyPinState();
         }
 
         private void ApplyPinState()
         {
-            if (_disposed) return;
+            if (IsDisposed) return;
             if (_pinned)
             {
                 Width = _pinnedWidth;
