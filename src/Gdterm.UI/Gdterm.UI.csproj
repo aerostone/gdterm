@@ -146,7 +146,6 @@
     <Compile Include="Diagnostics\ClipboardProtector.cs" />
     <Compile Include="Diagnostics\WinFormsCompat.cs" />
     <Compile Include="Diagnostics\GdtermColorTable.cs" />
-    <Compile Include="Diagnostics\DpiHelper.cs" />
     <Compile Include="Services\ActiveSessionBridge.cs" />
     <Compile Include="Services\CredentialResolver.cs" />
     <Compile Include="Services\TabSessionLifecycle.cs" />

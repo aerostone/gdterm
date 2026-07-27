@@ -41,9 +41,7 @@ namespace Gdterm.UI.Forms
             MinimizeBox = false;
             ShowInTaskbar = false;
             // 高/低 DPI 自适应
-            AutoScaleMode = AutoScaleMode.Dpi;
-            AutoScaleDimensions = new SizeF(96F, 96F);
-            ClientSize = Gdterm.UI.Diagnostics.DpiHelper.ScaleSize(new Size(440, 420));
+            ClientSize = new Size(440, 420);
             BackColor = Color.FromArgb(32, 32, 34);
             ForeColor = Color.FromArgb(220, 220, 220);
             Font = new Font("Microsoft YaHei UI", 9f);

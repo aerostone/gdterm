@@ -26,15 +26,8 @@ namespace Gdterm.UI
         [STAThread]
         static void Main()
         {
-            try
-            {
-                var appIniEarly = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "config", "appearance.ini");
-                var early = Gdterm.UI.Forms.AppearanceSettings.Load(appIniEarly);
-                if (early == null || early.DpiAware)
-                    TrySetDpiAware();
-            }
-            catch { TrySetDpiAware(); }
-
+            // app.manifest 已声明 PerMonitorV2 DPI awareness，OS 会自动处理缩放。
+            // 不要再调用 SetProcessDPIAware —— 那会和 manifest 冲突，且让 WinForms 再做一次手工缩放。
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
@@ -516,19 +509,6 @@ namespace Gdterm.UI
                     return System.Text.Encoding.UTF8.GetString(bytes);
                 }
             }
-        }
-
-        [System.Runtime.InteropServices.DllImport("user32.dll")]
-        private static extern bool SetProcessDPIAware();
-
-        private static void TrySetDpiAware()
-        {
-            try
-            {
-                if (Environment.OSVersion.Version.Major >= 6)
-                    SetProcessDPIAware();
-            }
-            catch { }
         }
 
         /// <summary>全局外观，供新开终端读取。</summary>
