@@ -6,12 +6,18 @@ AI 辅助开发里，有几类场景会反复出现——加新功能、修 bug�
 
 CodeStable 把这几类场景各配一套子技能，产物放进统一的目录结构、带统一的 YAML frontmatter,互相之间可以检索引用。
 
+## 模型能力基线
+
+CodeStable 面向具备可靠工具调用、结构化输出和代码推理能力的 27B+ 现代模型，默认 profile 是 128K；64K 使用 constrained profile，只缩减上下文文件数、字符预算和 reference 读取，不改变工程门禁。9B 不作为兼容目标，也不维护独立低上下文分支。
+
+入口和阶段技能都保持可见、可显式或自然语言调用；触发边界由各技能 frontmatter description 声明。阶段技能的状态条件写在 description 中，避免它们抢占新任务路由。
+
 
 ## 技能分成四部分
 
 **根入口**——开放式诉求 / 不知道走哪个时的统一入口:
 
-- `cs` — 介绍体系全貌 + 把诉求路由到正确的 cs-* 子技能。本技能不做事,只做分诊和提示
+- `cs` — 介绍体系、路由诉求；明确 lean 小任务会在同一轮接续执行技能
 
 **做事**——从一段模糊想法走到上线的功能、或者从一份错误报告走到修好的 bug:
 
@@ -19,13 +25,13 @@ CodeStable 把这几类场景各配一套子技能，产物放进统一的目录
 - `cs-issue` — 修 bug,report → analyze → fix
 - `cs-refactor` — 代码优化(行为不变、结构/性能/可读性变),scan → design → apply
 
-两类都不直接让 AI 写代码,而是先产出 spec(功能方案 / 问题分析),用户 review 后再动手,代码和 doc 一起交付。针对的是术语冲突、范围失控、改完不留存档这三种 AI 默认会出的问题。
+standard 先产出 Change Package 并经 review 再实现；lean 的低风险小任务直接实现和验证，不制造过程文档。两种档位都必须遵守项目规则、范围和测试证据。
+
+standard 可按风险启用 artifact graph、`evidence.jsonl`、constitution 和 changes index：高风险任务强制 standard；大型项目通过索引和结构化证据获得追溯，小项目不预建这些文件。
 
 **沉淀**——把做事过程产生的知识存下来,下次遇到同类问题直接复用:
 
-- `cs-learn` — 回顾"做 X 时踩了 Y 这个坑"
-- `cs-trick` — 处方"以后做 X 就这样做"
-- `cs-decide` — 规定"全项目今后都按 X 来"
+- `cs-knowledge` — 统一归档 learning / trick / decision，按 frontmatter 区分性质
 - `cs-explore` — 存档"调查了 X 问题,看到代码里是这样的"
 - `cs-note` — 把一两行启动必读的项目注意事项追加到 `.codestable/attention.md`
 
@@ -57,25 +63,23 @@ CodeStable 把这几类场景各配一套子技能，产物放进统一的目录
 | 补 / 更新需求文档 | `cs-req` |
 | 补 / 更新 / 检查架构文档 | `cs-arch` |
 | 大需求拆解 / 排期规划 | `cs-roadmap` |
-| 技术选型 / 约束 / 规约 | `cs-decide` |
-| 踩坑回顾、经验总结 | `cs-learn` |
-| 可复用的编程模式、库用法 | `cs-trick` |
+| 经验、技巧、技术决定与规约 | `cs-knowledge` |
 | 开发者指南 / 用户指南 | `cs-guide` |
 | 库 API 参考 | `cs-libdoc` |
 
 完整的操作手册、退出条件、和其他工作流的关系,各子技能里讲。
 
 
-## 沉淀类四个子技能如何区分
+## 沉淀文档如何区分
 
 learning / trick / decision / explore 都是存档文档类型,区别在记录内容的性质:
 
-- 回顾某次做 X 时发现了 Y —— `cs-learn`(产出 `doc_type: learning`)
-- 以后做 X 就这样做的处方 —— `cs-trick`(产出 `doc_type: trick`)
-- 全项目今后都得遵守的规定 —— `cs-decide`(产出 `doc_type: decision`)
+- 回顾某次做 X 时发现了 Y —— `cs-knowledge` + `doc_type: learning`
+- 以后做 X 就这样做的处方 —— `cs-knowledge` + `doc_type: trick`
+- 全项目今后都得遵守的规定 —— `cs-knowledge` + `doc_type: decision`
 - 调查了一个问题,留份证据 —— `cs-explore`(产出 `doc_type: explore`)
 
-四者共用 `.codestable/compound/` 目录,靠 frontmatter 的 `doc_type` 字段和文件名中间的类型段(`YYYY-MM-DD-{doc_type}-{slug}.md`)区分。每个子技能只认自己的 `doc_type`,不读写别家产物——**"A 和 B 有什么不同"这种判断由本节负责,子技能里不再重复**。
+四种文档共用 `.codestable/compound/`，靠 `doc_type` 和文件名区分。`cs-knowledge` 负责前三种，`cs-explore` 负责调查证据。
 
 
 ## 愿景档案 vs 结构档案 vs 规划档案 vs 单次动作
@@ -90,22 +94,23 @@ learning / trick / decision / explore 都是存档文档类型,区别在记录�
 用户说"我想要一个 X 系统"这种大需求,先走 roadmap 拆成若干子 feature,再一条一条走 feature 流程。直接起 feature 会变成巨型 design 塞不下、拆了又没有追踪抓手。
 
 
-## feature 和 issue 的阶段不可跳
+## 阶段与快速通道
 
-feature 走 brainstorm(可选) → design → implement → acceptance,issue 走 report → analyze → fix。每个阶段有退出条件,上一个没满足,下一个不开始。
+standard feature 走 brainstorm(可选) → design → implement → acceptance，standard issue 走 report → analyze → fix。每个阶段有退出条件，上一个没满足，下一个不开始。
 
 AI 最常见的问题是一口气铺几百行代码才让人看——等发现问题已经很难中止。阶段间的人工 checkpoint 就是为了早一步中止。每个 checkpoint 具体检查什么,对应子技能里讲。
 
-例外两种:issue 根因一眼确定时走快速通道,跳过 analyze 直接 fix;feature 范围小时走 `cs-feat-ff`,写完 spec 直接进实现。
+lean 例外：根因明确的小 issue 直接 fix；小 feature 由 `cs-feat` 内置直通完成，默认不写 spec。命中安全、迁移、公开 API、跨模块或无法验证时必须升级 standard。
 
 
 ## 进一步参考
 
-- `.codestable/reference/shared-conventions.md` — 目录结构、YAML frontmatter 口径、`{slug}-checklist.yaml` 生命周期、收尾 commit 约定、归档类共享规则
-- `.codestable/reference/tools.md` — `search-yaml.py` / `validate-yaml.py` 用法
+- `.codestable/reference/change-package.md` — 新版 feature / issue / refactor / audit 单文档变更包规范
+- `.codestable/reference/shared-conventions.md` — 目录结构、元数据、执行计划、收尾和归档共享规则
+- `.codestable/reference/tools.md` — 校验、检索与可选 Codex/Pi 路由观测用法
 - `.codestable/reference/maintainer-notes.md` — 断点恢复、新增子工作流的登记
 
-目录结构(requirements/、architecture/、roadmap/、features/、issues/、compound/、tools/、reference/)的权威定义在 `shared-conventions.md`。要改目录先改那里——方法是改 `cs-onboard/reference/shared-conventions.md` 这个模板,新项目 onboard 时会带上新版本。
+目录结构（requirements / architecture / roadmap / changes / compound，以及旧版 features / issues / refactors）的权威定义在 `shared-conventions.md`。要改目录先改模板，新项目 onboard 时会带上新版本。
 
 
 ## 相关

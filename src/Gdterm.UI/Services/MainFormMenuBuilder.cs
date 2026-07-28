@@ -49,6 +49,10 @@ namespace Gdterm.UI.Services
             public EventHandler ShowHotkeys { get; set; }
             public EventHandler About { get; set; }
             public EventHandler AppearanceSettings { get; set; }
+            public EventHandler SshKeyManager { get; set; }
+            public EventHandler ShowTransferCenter { get; set; }
+            public EventHandler ShowNotificationCenter { get; set; }
+            public EventHandler QuickJump { get; set; }
         }
 
         public sealed class Result
@@ -78,6 +82,7 @@ namespace Gdterm.UI.Services
             connectionMenu.DropDownItems.Add("新建连接", null, cb.NewConnection);
             connectionMenu.DropDownItems.Add("本地终端(&L)", null, cb.OpenLocalTerminal);
             connectionMenu.DropDownItems.Add("SFTP 浏览器", null, cb.OpenSftp);
+            connectionMenu.DropDownItems.Add("快速跳转连接 Ctrl+K", null, cb.QuickJump);
             connectionMenu.DropDownItems.Add(new ToolStripSeparator());
             connectionMenu.DropDownItems.Add("重连当前标签 Ctrl+R", null, cb.ReconnectActive);
             connectionMenu.DropDownItems.Add("关闭当前标签 Ctrl+W", null, cb.CloseActive);
@@ -128,10 +133,13 @@ namespace Gdterm.UI.Services
             toolsMenu.DropDownItems.Add("运维工具箱", null, cb.ShowToolbox);
             toolsMenu.DropDownItems.Add("敏感信息扫描", null, cb.ShowSecretScan);
             toolsMenu.DropDownItems.Add("书签 / 最近连接", null, cb.ShowBookmarks);
+            toolsMenu.DropDownItems.Add("传输中心", null, cb.ShowTransferCenter);
+            toolsMenu.DropDownItems.Add("通知中心", null, cb.ShowNotificationCenter);
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
             toolsMenu.DropDownItems.Add("密码库管理(&K)", null, cb.KeePassManager);
             toolsMenu.DropDownItems.Add("密码健康报告(&H)", null, cb.PasswordHealth);
             toolsMenu.DropDownItems.Add("🔑 密码生成器(&G)", null, cb.PasswordGenerator);
+            toolsMenu.DropDownItems.Add("SSH 密钥管理", null, cb.SshKeyManager);
             toolsMenu.DropDownItems.Add("修改主密码(&M)...", null, cb.ChangeMasterPassword);
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
             toolsMenu.DropDownItems.Add("外观设置(&R)...", null, cb.AppearanceSettings);

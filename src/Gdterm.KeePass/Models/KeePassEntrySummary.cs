@@ -26,5 +26,15 @@ namespace Gdterm.KeePass.Models
         /// 分组路径（/ 分隔）
         /// </summary>
         public string GroupPath { get; set; }
+
+        /// <summary>URL（可空）</summary>
+        public string Url { get; set; }
+
+        /// <summary>最后修改时间（UTC）</summary>
+        public DateTime LastModified { get; set; }
+
+        /// <summary>是否含 SSH 私钥附件</summary>
+        public bool HasSshPrivateKey { get; set; }
     }
 }
+

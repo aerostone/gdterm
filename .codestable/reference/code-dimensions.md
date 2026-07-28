@@ -2,7 +2,7 @@
 
 写代码前先确认每个维度的档位。没明说的走默认，偏离默认的地方要标出来让用户确认。
 
-这份文档是 CodeStable 子技能共享的口径，被 design / fastforward / issue-fix 等阶段引用。项目内的权威副本在 `.codestable/reference/code-dimensions.md`，由 `cs-onboard` 从技能包释放。
+这份文档是 CodeStable 子技能共享的口径，被 design / lean 直通 / issue-fix 等阶段引用。项目内的权威副本在 `.codestable/reference/code-dimensions.md`，由 `cs-onboard` 从技能包释放。
 
 ---
 
@@ -92,6 +92,6 @@
 
 ## 怎么用这份文档
 
-- **design / fastforward 起草时**：AI 先按场景猜默认组合，把判断出的"可能偏离默认"的维度列出来问用户；用户没明确说的维度按默认走。只记偏离项，默认档位不抄。
+- **design / lean 直通起草时**：AI 先按场景推断默认组合，只把可能偏离默认且会改变方案的维度交给用户确认；默认项不抄写。
 - **implement / fix 写代码时**：翻一眼当前 feature 或 issue 记录的维度档位，按档位写。比如记了 `健壮性=L3` 就不要偷工省掉输入校验；记了 `可读性=public` 就得补示例和文档。
 - **acceptance / review 时**：把维度档位当成验收标准的一部分——档位说 L3 但代码里外部输入没校验，就是不达标。

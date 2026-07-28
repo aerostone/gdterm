@@ -1,0 +1,71 @@
+version: 1
+
+phases:
+  design:
+    contract_required: true
+  impl:
+    contract_required: true
+  accept:
+    contract_required: true
+
+kinds:
+  feature:
+    state_order: [draft, approved, in-progress, accepted, closed]
+    required_sections:
+      draft: [目标与边界]
+      approved: [目标与边界, 行为增量, 设计与契约, 执行计划]
+      in-progress: [目标与边界, 行为增量, 设计与契约, 执行计划]
+      accepted: [目标与边界, 行为增量, 设计与契约, 执行计划, 执行证据, 验收结果]
+      closed: [目标与边界, 行为增量, 设计与契约, 执行计划, 执行证据, 验收结果]
+    next:
+      draft: cs-feat-design
+      approved: cs-feat-impl
+      in-progress: cs-feat-impl
+      ready: cs-feat-accept
+      accepted: none
+      closed: none
+  issue:
+    state_order: [draft:reported, approved:reported, approved:analyzed, in-progress:analyzed, accepted:analyzed, closed:analyzed]
+    required_sections:
+      draft: [目标与边界]
+      approved: [目标与边界, 行为增量, 设计与契约, 执行计划]
+      in-progress: [目标与边界, 行为增量, 设计与契约, 执行计划]
+      accepted: [目标与边界, 行为增量, 设计与契约, 执行计划, 执行证据, 验收结果]
+      closed: [目标与边界, 行为增量, 设计与契约, 执行计划, 执行证据, 验收结果]
+    next_phase:
+      reported: cs-issue-analyze
+      analyzed: cs-issue-fix
+    next:
+      draft: cs-issue-report
+      approved: cs-issue-fix
+      in-progress: cs-issue-fix
+      accepted: none
+      closed: none
+  refactor:
+    state_order: [draft, approved, in-progress, accepted, closed]
+    required_sections:
+      draft: [目标与边界]
+      approved: [目标与边界, 行为增量, 设计与契约, 执行计划]
+      in-progress: [目标与边界, 行为增量, 设计与契约, 执行计划]
+      accepted: [目标与边界, 行为增量, 设计与契约, 执行计划, 执行证据, 验收结果]
+      closed: [目标与边界, 行为增量, 设计与契约, 执行计划, 执行证据, 验收结果]
+    next:
+      draft: cs-refactor
+      approved: cs-refactor
+      in-progress: cs-refactor
+      accepted: none
+      closed: none
+  audit:
+    state_order: [draft, approved, in-progress, accepted, closed]
+    required_sections:
+      draft: [范围, 发现]
+      approved: [范围, 发现]
+      in-progress: [范围, 发现]
+      accepted: [范围, 发现, Verification Evidence]
+      closed: [范围, 发现, Verification Evidence]
+    next:
+      draft: cs-audit
+      approved: cs-audit
+      in-progress: cs-audit
+      accepted: none
+      closed: none

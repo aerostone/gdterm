@@ -273,6 +273,13 @@ namespace Gdterm.KeePass
             return result;
         }
 
+        public KeePassEntry GetEntry(string entryId)
+        {
+            EnsureUnlocked();
+            if (string.IsNullOrEmpty(entryId)) return null;
+            return GetFullEntry(entryId);
+        }
+
         // ===== 智能匹配 =====
 
         public KeePassEntry FindEntryByConnection(ConnectionConfig config)
@@ -748,12 +755,17 @@ namespace Gdterm.KeePass
         {
             foreach (var entry in group.Entries)
             {
+                var hasKey = false;
+                try { hasKey = entry.Binaries != null && entry.Binaries.Get("id_rsa") != null; } catch { }
                 result.Add(new KeePassEntrySummary
                 {
                     Id = entry.Uuid.ToHexString(),
                     Title = entry.Strings.ReadSafe(PwDefs.TitleField),
                     Username = entry.Strings.ReadSafe(PwDefs.UserNameField),
-                    GroupPath = GetGroupPath(entry.ParentGroup)
+                    GroupPath = GetGroupPath(entry.ParentGroup),
+                    Url = entry.Strings.ReadSafe(PwDefs.UrlField),
+                    LastModified = entry.LastModificationTime,
+                    HasSshPrivateKey = hasKey
                 });
             }
 

@@ -77,6 +77,11 @@ namespace Gdterm.UI.Controls
             _treeView.NodeMouseDoubleClick += OnNodeMouseDoubleClick;
             _treeView.NodeMouseClick += OnNodeMouseClick;
             _treeView.MouseDown += OnMouseDownSelectRightClick;
+            // 拖放：把连接节点拖到分组节点上移动 GroupPath
+            _treeView.AllowDrop = true;
+            _treeView.ItemDrag += OnItemDrag;
+            _treeView.DragOver += OnDragOver;
+            _treeView.DragDrop += OnDragDrop;
             // WinForms Dock：Fill 要先加，Top 后加才能占位
             Controls.Add(_treeView);
             Controls.Add(_filterBox);
@@ -420,6 +425,65 @@ namespace Gdterm.UI.Controls
             {
                 ConnectionDoubleClicked?.Invoke(this, config);
             }
+        }
+
+        // ===== 拖放：连接节点 -> 分组节点（修改 GroupPath） =====
+
+        private void OnItemDrag(object sender, ItemDragEventArgs e)
+        {
+            if (e.Item is TreeNode node && IsConnectionNode(node))
+            {
+                try { _treeView.DoDragDrop(node, DragDropEffects.Move); } catch { }
+            }
+        }
+
+        private void OnDragOver(object sender, DragEventArgs e)
+        {
+            if (e.Data == null) { e.Effect = DragDropEffects.None; return; }
+            var node = NodeAtDragPoint(e);
+            bool ok = node != null && (IsGroupNode(node) || IsRootNode(node));
+            e.Effect = ok ? DragDropEffects.Move : DragDropEffects.None;
+        }
+
+        private void OnDragDrop(object sender, DragEventArgs e)
+        {
+            if (e.Data == null || e.Effect != DragDropEffects.Move) return;
+            var dragged = e.Data.GetData(typeof(TreeNode)) as TreeNode;
+            if (dragged == null || !IsConnectionNode(dragged)) return;
+            var target = NodeAtDragPoint(e);
+            if (target == null) return;
+
+            // 目标分组路径：根节点 -> ""，分组节点 -> 其 GroupPath
+            string newGroup;
+            if (IsRootNode(target)) newGroup = "";
+            else if (IsGroupNode(target)) newGroup = (string)target.Tag;
+            else return;
+
+            var cfg = (ConnectionConfig)dragged.Tag;
+            if (string.Equals(cfg.GroupPath ?? "", newGroup ?? "", StringComparison.Ordinal)) return; // 无变化
+
+            try
+            {
+                cfg.GroupPath = newGroup;
+                _connectionStore.Update(cfg);
+                LoadConnections();
+                ConnectionListChanged?.Invoke(this, EventArgs.Empty);
+            }
+            catch (Exception ex)
+            {
+                Gdterm.UI.Diagnostics.DiagLog.Swallowed("ConnectionTree.DragDrop", ex);
+                Gdterm.UI.Diagnostics.ToastNotifier.Error("移动失败: " + ex.Message);
+            }
+        }
+
+        private TreeNode NodeAtDragPoint(DragEventArgs e)
+        {
+            try
+            {
+                var pt = _treeView.PointToClient(new System.Drawing.Point(e.X, e.Y));
+                return _treeView.GetNodeAt(pt);
+            }
+            catch { return null; }
         }
 
         /// <summary>右键选中节点——确保右键点中的节点成为选中节点，以便后续菜单项处理。</summary>

@@ -33,6 +33,16 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+try:
+    from yaml_support import has_pyyaml, parse_yaml
+except ImportError:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from yaml_support import has_pyyaml, parse_yaml
+
+if sys.version_info < (3, 9):
+    sys.stderr.write("validate-yaml.py requires Python 3.9 or newer\n")
+    sys.exit(2)
+
 # Force UTF-8 stdout/stderr on Windows where default codepage (e.g. GBK / cp936)
 # can't encode the ✓ / ✗ icons used in text output. Safe no-op on POSIX.
 # Streams that aren't a real TextIOWrapper (e.g. captured by pytest, redirected
@@ -46,60 +56,12 @@ for _stream in (sys.stdout, sys.stderr):
             pass
 
 
-# ---------------------------------------------------------------------------
-# YAML parsing
-# ---------------------------------------------------------------------------
-
-_HAS_PYYAML = False
-try:
-    import yaml  # type: ignore
-    _HAS_PYYAML = True
-except ImportError:
-    pass
-
-
-def _builtin_parse_yaml(text: str) -> dict:
-    """Minimal YAML parser for flat key-value frontmatter (no nested structures)."""
-    result: dict = {}
-    for line in text.splitlines():
-        stripped = line.strip()
-        if not stripped or stripped.startswith("#") or ":" not in stripped:
-            continue
-        key, _, raw = stripped.partition(":")
-        val = raw.strip()
-        # Inline list
-        if val.startswith("[") and val.endswith("]"):
-            inner = val[1:-1]
-            result[key.strip()] = [
-                item.strip().strip("'\"") for item in inner.split(",") if item.strip()
-            ]
-        else:
-            result[key.strip()] = val.strip("'\"") if val else ""
-    return result
-
-
 def parse_yaml_text(text: str) -> tuple[Optional[dict], Optional[str]]:
     """
     Parse a YAML string. Returns (parsed_dict, None) on success,
     or (None, error_message) on failure.
     """
-    if _HAS_PYYAML:
-        try:
-            result = yaml.safe_load(text)
-            if result is None:
-                return {}, None
-            if not isinstance(result, dict):
-                return None, f"Expected a mapping, got {type(result).__name__}"
-            return result, None
-        except yaml.YAMLError as exc:
-            return None, str(exc)
-    else:
-        # Builtin fallback — can only detect gross syntax issues
-        try:
-            result = _builtin_parse_yaml(text)
-            return result, None
-        except Exception as exc:
-            return None, str(exc)
+    return parse_yaml(text, prefer_pyyaml=True)
 
 
 # ---------------------------------------------------------------------------
@@ -161,7 +123,7 @@ def _check_required(parsed: Optional[dict], required_fields: Optional[list[str]]
 
 
 def _warn_if_builtin(result: ValidationResult) -> None:
-    if not _HAS_PYYAML:
+    if not has_pyyaml():
         result.warnings.append(
             "PyYAML not installed — using builtin fallback parser "
             "(may miss some syntax errors). Install with: pip install pyyaml"

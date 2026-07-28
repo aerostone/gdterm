@@ -59,6 +59,18 @@ namespace Gdterm.UI.Services
                 form.ShowDialog(_owner);
         }
 
+        public void OpenSshKeyManager()
+        {
+            if (!ReAuthenticate("管理 SSH 密钥")) return;
+            if (_keepassService == null || !_keepassService.IsUnlocked)
+            {
+                MessageBox.Show(_owner, "密码库未解锁", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            using (var form = new SshKeyManagerForm(_keepassService))
+                form.ShowDialog(_owner);
+        }
+
         public void OpenAppearanceSettings()
         {
             var configDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "config");
@@ -89,12 +101,16 @@ namespace Gdterm.UI.Services
                             mf.ApplyGlobalUIFont();
                     }
                     catch { }
-                    MessageBox.Show(
-                        _owner,
-                        "外观已保存。终端与界面字体已即时生效；DPI 感知需重启应用。",
-                        "外观设置",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Information);
+                    try { Gdterm.UI.Diagnostics.ToastNotifier.Success("外观已保存（DPI 需重启）"); }
+                    catch
+                    {
+                        MessageBox.Show(
+                            _owner,
+                            "外观已保存。终端与界面字体已即时生效；DPI 感知需重启应用。",
+                            "外观设置",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Information);
+                    }
                 }
             }
         }

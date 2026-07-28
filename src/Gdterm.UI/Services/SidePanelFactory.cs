@@ -287,6 +287,16 @@ namespace Gdterm.UI.Services
             return panel;
         }
 
+        public Control CreateTransferCenterPanel()
+        {
+            return new Gdterm.UI.Controls.TransferCenterPanel();
+        }
+
+        public Control CreateNotificationCenterPanel()
+        {
+            return new Gdterm.UI.Controls.NotificationCenterPanel();
+        }
+
         private static Control Unavailable(string text)
         {
             return new Label

@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "package": "codestable",
+  "version": "0.1.0",
+  "files": {
+    ".codestable/reference/change-package.md": "bdd803138ad8d978a8883406cc72ef49925b1df01938446bea0c553f144dbf72",
+    ".codestable/reference/code-dimensions.md": "8595d2f0b2ef429569b997257b28ad4dc823e1c8900994eb292a73800a7f382b",
+    ".codestable/reference/constitution.yaml": "077c3c8ab7380176f5ae2206a2a0615be03d662a0a69c4408b41c56d77f77da5",
+    ".codestable/reference/maintainer-notes.md": "905256291966b4f1fbb9c4ceea260962983b48270415e00f3b4960693865320a",
+    ".codestable/reference/model-profile.yaml": "90f4e6a9e38bda932196b53601dff85f8b33073b4814f04609607507b77950a4",
+    ".codestable/reference/requirement-example.md": "56133613b12eefda3342b17f06e674f356c00c13ae04a48d7cc5713033bfdc34",
+    ".codestable/reference/shared-conventions.md": "44ed79ecd40eb51384221d011f33c2a71ac25f394b6d27a85fee3592b5fe7e7b",
+    ".codestable/reference/system-overview.md": "29d821eafc79657c7a5348a253f94909fa9c897fe2bdc5ba53cc6f76c958b925",
+    ".codestable/reference/tools.md": "146a37d3c4c5cf428d9ce271183c035c59f6afc7e093722f793a332e26cb39d2",
+    ".codestable/reference/workflow.yaml": "488a2de9791a7600738edb194525445a7b02bedd90e253cf011ed7ea8e17c08e",
+    ".codestable/tools/adapters/codex-hooks.json": "00bc04c93c5f7fa8e8824c053ac0fd62850a57f6ef39c75dd9701d5052eb5be1",
+    ".codestable/tools/adapters/pi-route-observer.ts": "58e26f64accb4807cf69af57179a080eb2cdeeccc38cab75e05ed91ba9dafd3b",
+    ".codestable/tools/check-compliance.py": "eb2e0584c700217539b551a9219b8f40e103d9515d5096b455e0488e541f69c0",
+    ".codestable/tools/route-observer.py": "5aaaf843a528c8d8c0d8b09b2e1fb577fb5a9afdd867c48dc8f842cde26fb5e2",
+    ".codestable/tools/search-yaml.py": "f7d3509cd86afb85c41e169cd12204c987bf19e481473531e33d90aceba69fcc",
+    ".codestable/tools/validate-yaml.py": "90199d5a8274212de2ff3222feb5d6c16c1a34bd14b668a80559158920769c52",
+    ".codestable/tools/yaml_support.py": "2ad6659834e4b957eaf2ab0b13ad56f908bfa5ce7596f27b12d54e1f4184cdc4"
+  }
+}

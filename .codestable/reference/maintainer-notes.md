@@ -9,9 +9,10 @@
 AI 对话随时可能中断（token 超限、网络断开、用户换设备）。各阶段发现自己不是从零开始时，必须优先检查已有产物的完成度，从上次停下的地方继续：
 
 - **brainstorm**：如 `{slug}-brainstorm.md` 已有部分内容，读取后问用户"上次聊到 X，要接着聊还是推翻重来？"
-- **design**：如 `{slug}-design.md` 已有部分节，逐节检查完成度，补齐缺失节，不重写已完成节
+- **Change Package**：优先读取 `changes/{slug}/change.md` 的 status / phase，从第一个未完成章节继续，不拆回多文件
+- **legacy design**：如 `{slug}-design.md` 已有部分节，逐节检查完成度，补齐缺失节，不重写已完成节
 - **implement**：`{slug}-checklist.yaml` 中已 `done` 的步骤不重做，从第一个 `pending` 步骤开始
-- **acceptance**：如 `{slug}-acceptance.md` 已有部分节，检查哪些节已填写（有实质 checklist 勾选），从下一个未完成节继续
+- **legacy acceptance**：如 `{slug}-acceptance.md` 已有部分节，检查哪些节已填写，从下一个未完成节继续
 - **issue-analyze**：如 `{slug}-analysis.md` 已存在，检查 5 节是否都有内容，缺失的补做，已有的不重写
 - **issue-fix**：如代码已改但 `{slug}-fix-note.md` 不存在，直接进入验证 + 写 fix-note 环节
 
@@ -23,7 +24,7 @@ AI 对话随时可能中断（token 超限、网络断开、用户换设备）�
 
 ### 新增子工作流
 
-新工作流定型后，在 `cs-onboard/reference/system-overview.md` 的"技能分成四部分"和"场景路由"表里加一段索引，并登记新的目录位置。
+新工作流定型后，先更新 `workflow.yaml` 的状态、必需章节和下一技能，再同步 `system-overview.md` 的索引与目录位置。checker 和各入口技能不得各自维护另一套状态机。
 
 ### 跨阶段新约束
 

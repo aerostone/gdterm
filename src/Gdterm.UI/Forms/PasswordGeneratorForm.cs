@@ -29,6 +29,12 @@ namespace Gdterm.UI.Forms
         private static readonly string SpecialChars = "!@#$%^&*()-_=+[]{}|;:',.<>?/";
         private static readonly string AmbiguousChars = "Il1O0";
 
+        /// <summary>当前生成框中的密码（供 KeePass 编辑器调用）。</summary>
+        public string GeneratedPassword
+        {
+            get { return _resultBox != null ? _resultBox.Text : null; }
+        }
+
         public PasswordGeneratorForm()
         {
             InitializeComponent();

@@ -64,6 +64,11 @@ namespace Gdterm.KeePass
         /// </summary>
         IList<KeePassEntrySummary> ListEntries();
 
+        /// <summary>
+        /// 按 Id 读取完整条目（含密码与密钥元数据，仅在已解锁时可用）
+        /// </summary>
+        KeePassEntry GetEntry(string entryId);
+
         // ===== 智能匹配 =====
 
         /// <summary>

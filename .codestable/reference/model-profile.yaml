@@ -1,0 +1,16 @@
+version: 1
+profile: modern-27b-128k
+
+profiles:
+  modern-27b-128k:
+    context:
+      max_files: 32
+      max_chars: 320000
+      output: any
+      full_reference: true
+  constrained-27b-64k:
+    context:
+      max_files: 16
+      max_chars: 160000
+      output: compact
+      full_reference: false

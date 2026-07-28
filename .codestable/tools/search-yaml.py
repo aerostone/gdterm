@@ -40,64 +40,22 @@ from pathlib import Path
 from typing import Optional
 
 try:
-    import yaml  # type: ignore
-    _HAS_PYYAML = True
+    from yaml_support import split_frontmatter
 except ImportError:
-    _HAS_PYYAML = False
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from yaml_support import split_frontmatter
 
-
-# ---------------------------------------------------------------------------
-# Frontmatter parsing  (PyYAML used when available, builtin fallback otherwise)
-# ---------------------------------------------------------------------------
-
-def _parse_yaml_scalar(val: str):
-    val = val.strip()
-    if val.startswith("[") and val.endswith("]"):
-        inner = val[1:-1]
-        return [item.strip().strip("'\"") for item in inner.split(",") if item.strip()]
-    lower = val.lower()
-    if lower in ("true", "yes"):
-        return True
-    if lower in ("false", "no"):
-        return False
-    if lower in ("null", "~", ""):
-        return None
-    return val
-
+if sys.version_info < (3, 9):
+    sys.stderr.write("search-yaml.py requires Python 3.9 or newer\n")
+    sys.exit(2)
 
 def parse_frontmatter(text: str) -> tuple[dict, str]:
     """
     Split a markdown document into (frontmatter_dict, body_text).
     Returns ({}, full_text) when no frontmatter is present.
     """
-    if not text.startswith("---"):
-        return {}, text
-
-    end = text.find("\n---", 3)
-    if end == -1:
-        return {}, text
-
-    fm_text = text[3:end].strip()
-    body = text[end + 4:].strip()
-
-    if _HAS_PYYAML:
-        try:
-            meta = yaml.safe_load(fm_text)
-            return (meta or {}), body
-        except yaml.YAMLError:
-            # Malformed frontmatter — fall through to the lenient builtin parser
-            # so partial / hand-written frontmatter still produces best-effort results.
-            pass
-
-    # Minimal fallback: handles scalar values and inline lists
-    meta: dict = {}
-    for line in fm_text.splitlines():
-        if not line.strip() or line.startswith("#") or ":" not in line:
-            continue
-        key, _, raw = line.partition(":")
-        meta[key.strip()] = _parse_yaml_scalar(raw)
-
-    return meta, body
+    meta, body, error = split_frontmatter(text)
+    return (meta if error is None else {}), body if error is None else text
 
 
 # ---------------------------------------------------------------------------

@@ -53,6 +53,9 @@ namespace Gdterm.UI.Controls
         /// <summary>终端尺寸/编码变化转发（由 TerminalControl.TerminalInfoChanged 转出）。</summary>
         public event EventHandler<Size> TerminalInfoChanged;
 
+        /// <summary>标签数量变化（落地页显示/隐藏）。</summary>
+        public event EventHandler TabCountChanged;
+
         public TabContainerControl(
             ITunnelManager tunnelManager,
             ITerminalSessionFactory terminalFactory,
@@ -169,6 +172,7 @@ namespace Gdterm.UI.Controls
 
             _sessions[opened.Page] = opened.Session;
             _tabControl.TabPages.Add(opened.Page);
+            RaiseTabCountChanged();
             _tabControl.SelectedTab = opened.Page;
             // 首开标签时 SelectedIndexChanged 可能不触发（Index 已是 0），强制恢复渲染并懒连接
             ForceActivateSession(opened.Page);
@@ -188,6 +192,7 @@ namespace Gdterm.UI.Controls
             if (opened == null) return;
             _sessions[opened.Page] = opened.Session;
             _tabControl.TabPages.Add(opened.Page);
+            RaiseTabCountChanged();
             _tabControl.SelectedTab = opened.Page;
             ForceActivateSession(opened.Page);
             ActiveSessionChanged?.Invoke(this, EventArgs.Empty);
@@ -200,6 +205,7 @@ namespace Gdterm.UI.Controls
             if (opened == null) return;
             _sessions[opened.Page] = opened.Session;
             _tabControl.TabPages.Add(opened.Page);
+            RaiseTabCountChanged();
             _tabControl.SelectedTab = opened.Page;
             ActiveSessionChanged?.Invoke(this, EventArgs.Empty);
         }
@@ -351,7 +357,7 @@ namespace Gdterm.UI.Controls
             }
         }
 
-        public void CloseActiveTab()
+        public void CloseActiveTab() /*tabcount*/
         {
             if (_tabControl.SelectedTab != null)
                 CloseTab(_tabControl.SelectedTab);
@@ -433,6 +439,25 @@ namespace Gdterm.UI.Controls
         {
             foreach (TabPage page in _tabControl.TabPages)
                 yield return page;
+        }
+
+        public int OpenTabCount
+        {
+            get
+            {
+                try { return _tabControl != null ? _tabControl.TabCount : 0; }
+                catch { return 0; }
+            }
+        }
+
+        private void RaiseTabCountChanged()
+        {
+            try
+            {
+                var h = TabCountChanged;
+                if (h != null) h(this, EventArgs.Empty);
+            }
+            catch { }
         }
 
         public int ActiveTabIndex

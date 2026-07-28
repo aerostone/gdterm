@@ -143,6 +143,25 @@
     <Compile Include="Controls\TerminalControl.cs" />
     <Compile Include="Diagnostics\CrashLog.cs" />
     <Compile Include="Diagnostics\DiagLog.cs" />
+    <Compile Include="Forms\SshKeyManagerForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Controls\NotificationCenterPanel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Controls\TransferCenterPanel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Controls\ConnectionQuickJumpForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Controls\TransferProgressDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Controls\WelcomePanel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Diagnostics\ToastNotifier.cs" />
     <Compile Include="Diagnostics\ClipboardProtector.cs" />
     <Compile Include="Diagnostics\WinFormsCompat.cs" />
     <Compile Include="Diagnostics\GdtermColorTable.cs" />

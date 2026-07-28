@@ -16,6 +16,7 @@ using Gdterm.Tools;
 using Gdterm.Tunnel;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Services;
+using Gdterm.UI.Diagnostics;
 using TerminalControl = Gdterm.UI.Controls.TerminalControl;
 
 namespace Gdterm.UI.Forms
@@ -71,6 +72,9 @@ namespace Gdterm.UI.Forms
         private LockOverlayControl _lockOverlay;
         private MenuStrip _menuStrip;
         private QuickBarPanel _quickBar;
+        private WelcomePanel _welcomePanel;
+        private NotifyIcon _trayIcon;
+        private bool _closeToTray = true;
 
         public MainForm(
             IConnectionStore connectionStore,
@@ -332,7 +336,11 @@ namespace Gdterm.UI.Forms
                 AiSettings = (s, e) => _toolsDialogs.OpenAiSettings(),
                 DangerousCmdSettings = (s, e) => _toolsDialogs.OpenDangerousCmdSettings(),
                 ShowHotkeys = (s, e) => _toolsDialogs.ShowHotkeysHelp(),
-                About = (s, e) => _toolsDialogs.ShowAbout()
+                About = (s, e) => _toolsDialogs.ShowAbout(),
+                SshKeyManager = (s, e) => { try { _toolsDialogs?.OpenSshKeyManager(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.SshKey", ex); } },
+                ShowTransferCenter = (s, e) => { try { _sidePanelHost?.Show(_sidePanels?.CreateTransferCenterPanel()); } catch { } },
+                ShowNotificationCenter = (s, e) => { try { _sidePanelHost?.Show(_sidePanels?.CreateNotificationCenterPanel()); } catch { } },
+                QuickJump = (s, e) => OpenQuickJump()
             });
             _menuStrip = menuBuilt.Menu;
             MainMenuStrip = _menuStrip;
@@ -358,6 +366,19 @@ namespace Gdterm.UI.Forms
 
             _cmdRouter = new MainFormCommandRouter(
                 _tabContainer, _sidePanels, _sidePanelHost, _viewMode);
+
+            // Toast / 落地页 / 托盘
+            try { ToastNotifier.Bind(this); } catch { }
+            try { SetupWelcomePanel(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.Welcome", ex); }
+            try { SetupTrayIcon(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.Tray", ex); }
+            try
+            {
+                if (_tabContainer != null)
+                {
+                    _tabContainer.TabCountChanged += (s, e) => UpdateWelcomeVisibility();
+                }
+            }
+            catch { }
 
             Controls.Add(_tabContainer);
             Controls.Add(sideSplitter);
@@ -432,6 +453,7 @@ namespace Gdterm.UI.Forms
             _shutdown = new AppShutdownCoordinator(
                 _sessionState, _hotkeys, _tabContainer,
                 _tunnelManager, _keepassService, _securityManager);
+            FormClosing += MaybeCloseToTray;
             FormClosing += _shutdown.OnFormClosing;
         }
 
@@ -466,8 +488,7 @@ namespace Gdterm.UI.Forms
                 var tc = _tabContainer?.GetActiveTerminalControl();
                 if (tc == null || !tc.IsConnected)
                 {
-                    MessageBox.Show(this, "当前没有活动的终端会话。", "导出缓冲",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ToastNotifier.Info("当前没有活动的终端会话"); return;
                     return;
                 }
 
@@ -487,8 +508,7 @@ namespace Gdterm.UI.Forms
                     else
                         content = Gdterm.Terminal.TerminalBufferExport.ExportAsText(new System.Collections.Generic.List<string>(lines), host);
                     Gdterm.Terminal.TerminalBufferExport.SaveToFile(content, dlg.FileName);
-                    MessageBox.Show(this, "已导出到：\n" + dlg.FileName, "导出缓冲",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ToastNotifier.Success("已导出缓冲");
                 }
             }
             catch (Exception ex)
@@ -499,8 +519,166 @@ namespace Gdterm.UI.Forms
             }
         }
 
+
+        private void SetupWelcomePanel()
+        {
+            _welcomePanel = new WelcomePanel(_connectionStore, _bookmarkStore)
+            {
+                Dock = DockStyle.Fill,
+                Visible = false
+            };
+            _welcomePanel.NewConnectionRequested += () =>
+            {
+                try { _openCoord?.NewConnection(); } catch { }
+            };
+            _welcomePanel.OpenLocalTerminalRequested += () =>
+            {
+                try { _tabContainer?.OpenLocalTerminal(); UpdateWelcomeVisibility(); } catch { }
+            };
+            _welcomePanel.OpenBookmarksRequested += () =>
+            {
+                try
+                {
+                    _sidePanelHost?.Show(_sidePanels.CreateBookmarksPanel(cfg =>
+                    {
+                        if (cfg != null) _openCoord?.OpenConnection(cfg);
+                    }));
+                }
+                catch { }
+            };
+            _welcomePanel.OpenKeePassRequested += () =>
+            {
+                try { _toolsDialogs?.OpenKeePassManager(); } catch { }
+            };
+            _welcomePanel.OpenConnectionRequested += cfg =>
+            {
+                try
+                {
+                    if (cfg != null) _openCoord?.OpenConnection(cfg);
+                    UpdateWelcomeVisibility();
+                }
+                catch { }
+            };
+            Controls.Add(_welcomePanel);
+            _welcomePanel.BringToFront();
+            UpdateWelcomeVisibility();
+        }
+
+        private void UpdateWelcomeVisibility()
+        {
+            try
+            {
+                int tabs = 0;
+                try { tabs = _tabContainer != null ? _tabContainer.OpenTabCount : 0; } catch { }
+                bool show = tabs <= 0;
+                if (_welcomePanel != null && !_welcomePanel.IsDisposed)
+                {
+                    if (show) _welcomePanel.Reload();
+                    _welcomePanel.Visible = show;
+                    if (show) _welcomePanel.BringToFront();
+                }
+            }
+            catch (Exception ex) { DiagLog.Swallowed("MainForm.UpdateWelcome", ex); }
+        }
+
+        private void SetupTrayIcon()
+        {
+            _trayIcon = new NotifyIcon
+            {
+                Text = "gdterm",
+                Visible = true
+            };
+            try
+            {
+                if (this.Icon != null) _trayIcon.Icon = this.Icon;
+                else _trayIcon.Icon = SystemIcons.Application;
+            }
+            catch
+            {
+                try { _trayIcon.Icon = SystemIcons.Application; } catch { }
+            }
+
+            var menu = new ContextMenuStrip();
+            menu.Items.Add("显示主窗口", null, (s, e) => RestoreFromTray());
+            menu.Items.Add("本地终端", null, (s, e) =>
+            {
+                RestoreFromTray();
+                try { _tabContainer?.OpenLocalTerminal(); } catch { }
+            });
+            menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add("退出", null, (s, e) =>
+            {
+                _closeToTray = false;
+                try { _trayIcon.Visible = false; } catch { }
+                Close();
+            });
+            _trayIcon.ContextMenuStrip = menu;
+            _trayIcon.DoubleClick += (s, e) => RestoreFromTray();
+        }
+
+        private void RestoreFromTray()
+        {
+            try
+            {
+                Show();
+                WindowState = FormWindowState.Normal;
+                Activate();
+                ShowInTaskbar = true;
+            }
+            catch { }
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            try
+            {
+                if (_trayIcon != null && WindowState == FormWindowState.Minimized)
+                {
+                    Hide();
+                    ShowInTaskbar = false;
+                    try
+                    {
+                        _trayIcon.ShowBalloonTip(1200, "gdterm",
+                            "已最小化到托盘，双击图标恢复。", ToolTipIcon.Info);
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+        }
+
+
+
+        private void MaybeCloseToTray(object sender, FormClosingEventArgs e)
+        {
+            if (!_closeToTray || e.CloseReason != CloseReason.UserClosing || _trayIcon == null)
+                return;
+            e.Cancel = true;
+            WindowState = FormWindowState.Minimized;
+        }
+
+        /// <summary>Ctrl+K 快速跳转连接。</summary>
+        private void OpenQuickJump()
+        {
+            try
+            {
+                using (var dlg = new ConnectionQuickJumpForm(_connectionStore))
+                {
+                    if (dlg.ShowDialog(this) == DialogResult.OK && dlg.Selected != null)
+                        _openCoord?.OpenConnection(dlg.Selected);
+                }
+            }
+            catch (Exception ex) { DiagLog.Swallowed("MainForm.QuickJump", ex); }
+        }
+
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
+            if (keyData == (Keys.Control | Keys.K))
+            {
+                OpenQuickJump();
+                return true;
+            }
             if (_cmdRouter != null && _cmdRouter.TryHandle(keyData))
                 return true;
             return base.ProcessCmdKey(ref msg, keyData);

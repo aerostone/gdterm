@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .codestable/tools/route-observer.py codex-hook --root .",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 .codestable/tools/route-observer.py codex-hook --root .",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

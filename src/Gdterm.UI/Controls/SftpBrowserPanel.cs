@@ -8,6 +8,7 @@ using Gdterm.Core.Models;
 using Gdterm.Sftp;
 using Gdterm.Sftp.Models;
 using Gdterm.Tunnel;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Controls
 {
@@ -209,15 +210,49 @@ namespace Gdterm.UI.Controls
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
                 var name = Path.GetFileName(dlg.FileName);
                 var remote = Combine(_currentPath, name);
-                try
+                using (var progressDlg = new TransferProgressDialog("上传 " + name))
                 {
-                    _status.Text = "上传中 " + name;
-                    await _sftp.UploadAsync(dlg.FileName, remote, null, CancellationToken.None);
-                    RefreshList();
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("上传失败: " + ex.Message, "SFTP", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    progressDlg.Show(this);
+                    try
+                    {
+                        _status.Text = "上传中 " + name;
+                        var progress = new TransferProgressAdapter(progressDlg, name);
+                        var cts = new CancellationTokenSource();
+                        // 轮询取消
+                        var task = _sftp.UploadAsync(dlg.FileName, remote, progress, cts.Token);
+                        while (!task.IsCompleted)
+                        {
+                            await Task.Delay(100);
+                            if (progressDlg.IsCancelled)
+                            {
+                                try { cts.Cancel(); } catch { }
+                                break;
+                            }
+                            Application.DoEvents();
+                        }
+                        await task;
+                        if (progressDlg.IsCancelled)
+                        {
+                            progressDlg.Complete(false, "已取消");
+                            _status.Text = "上传已取消";
+                            ToastNotifier.Warning("上传已取消: " + name);
+                            TransferCenterPanel.Record("上传取消  " + name + " → " + remote);
+                        }
+                        else
+                        {
+                            progressDlg.Complete(true, "上传完成");
+                            ToastNotifier.Success("上传完成: " + name);
+                            TransferCenterPanel.Record("上传完成  " + name + " → " + remote);
+                            RefreshList();
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        progressDlg.Complete(false, ex.Message);
+                        ToastNotifier.Error("上传失败: " + ex.Message);
+                        _status.Text = "上传失败";
+                        TransferCenterPanel.Record("上传失败  " + name + " → " + remote + "  " + ex.Message);
+                    }
                 }
             }
         }
@@ -231,16 +266,49 @@ namespace Gdterm.UI.Controls
             using (var dlg = new SaveFileDialog { FileName = info.Name, Title = "下载到" })
             {
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
-                try
+                using (var progressDlg = new TransferProgressDialog("下载 " + info.Name))
                 {
-                    _status.Text = "下载中 " + info.Name;
-                    var remote = Combine(_currentPath, info.Name);
-                    await _sftp.DownloadAsync(remote, dlg.FileName, null, CancellationToken.None);
-                    _status.Text = "下载完成";
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("下载失败: " + ex.Message, "SFTP", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    progressDlg.Show(this);
+                    try
+                    {
+                        _status.Text = "下载中 " + info.Name;
+                        var remote = Combine(_currentPath, info.Name);
+                        var progress = new TransferProgressAdapter(progressDlg, info.Name);
+                        var cts = new CancellationTokenSource();
+                        var task = _sftp.DownloadAsync(remote, dlg.FileName, progress, cts.Token);
+                        while (!task.IsCompleted)
+                        {
+                            await Task.Delay(100);
+                            if (progressDlg.IsCancelled)
+                            {
+                                try { cts.Cancel(); } catch { }
+                                break;
+                            }
+                            Application.DoEvents();
+                        }
+                        await task;
+                        if (progressDlg.IsCancelled)
+                        {
+                            progressDlg.Complete(false, "已取消");
+                            _status.Text = "下载已取消";
+                            ToastNotifier.Warning("下载已取消: " + info.Name);
+                            TransferCenterPanel.Record("下载取消  " + remote + " → " + dlg.FileName);
+                        }
+                        else
+                        {
+                            progressDlg.Complete(true, "下载完成");
+                            _status.Text = "下载完成";
+                            ToastNotifier.Success("下载完成: " + info.Name);
+                            TransferCenterPanel.Record("下载完成  " + remote + " → " + dlg.FileName);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        progressDlg.Complete(false, ex.Message);
+                        ToastNotifier.Error("下载失败: " + ex.Message);
+                        _status.Text = "下载失败";
+                        TransferCenterPanel.Record("下载失败  " + remote + " → " + dlg.FileName + "  " + ex.Message);
+                    }
                 }
             }
         }

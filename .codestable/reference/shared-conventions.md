@@ -6,57 +6,48 @@ skill 本身不共享文件系统（每个 skill 是独立安装单元），共�
 
 ---
 
+## 工作流档位
+
+档位只在 `.codestable/attention.md` frontmatter 声明：`workflow_mode: lean | standard`。未声明时按仓库现状推断：只有 attention/少量现状文档时按 `lean`；已有多阶段 feature、roadmap、refactor 或审计要求时按 `standard`。用户显式声明优先。
+
+### lean
+
+面向小项目和低风险日常修改，目标是保留工程约束，不制造过程文档：
+
+- 低风险、小范围 feature / issue / refactor 直接执行并验证，默认不写每任务 spec、note 或报告
+- 目录和共享工具按需创建，不预建空目录，不复制当前任务不会读取的参考文件
+- 最终回复必须包含改动、验证和未解决风险；需要长期追溯时依赖 git commit，或由用户明确要求留档
+- 只有命中相关文件才读取 architecture / compound；禁止启动时全量读取知识库
+
+### standard
+
+面向大型、多人、长期维护或强审计项目，保留完整阶段和证据，但默认聚合在一个 Change Package，不再默认每阶段一个文件。
+
+### 自动升级
+
+lean 任务出现任一情况，当前任务升级到 standard，不必修改项目默认档位：跨 3 个以上模块、方案存在未决权衡、超过 4 个实现步骤、涉及安全/数据迁移/公开 API、无法用现有测试验证、用户明确要求完整留档。升级前说明原因并取得用户确认。
+
+**优先级**：安全与正确性守护规则 > 用户明确要求 > 当前任务升级结果 > 项目默认档位。档位只控制过程重量，不降低测试、证据和范围控制要求。
+
+### 交互预算
+
+lean 的目标是“一次对齐 → 一次执行 → 一次验证汇报”：不逐步汇报、不要求用户再次触发下一技能、不为同一结论重复搬运上下文。standard 只在阶段边界、未决方案、人工验证或风险升级处停顿；同一阶段内应批量完成可独立验证的动作。
+
+Change Package 的目录、状态机和旧格式兼容规则见 `change-package.md`。feature / issue / refactor / audit 的新任务默认使用该格式；requirements / architecture / compound 仍保持独立文档。
+
+---
+
 ## 0. 目录结构与路径命名
 
-onboard 完成后骨架（`cs-onboard` 负责搭建）：
+onboard 后只保留这些职责：`attention.md` 放常驻规则；`requirements/` 放能力愿景；`architecture/` 放当前系统地图；`roadmap/` 放跨 feature 规划；`changes/` 聚合 standard 变更；`compound/` 放可检索知识；`tools/` 和 `reference/` 放共享支持文件。`brainstorm/` 只在 spike 时创建。
 
-```
-.codestable/
-├── attention.md           CodeStable 技能启动必读的项目注意事项
-├── requirements/          能力愿景层（"用户需要什么、系统提供什么能力来满足"，过去/现在/未来）
-│   ├── VISION.md           中心索引（按 status 分组，每条带 pitch 一句话）
-│   └── {slug}.md           一个能力一份，扁平（cs-req 产出）
-├── architecture/          架构中心目录（"用什么结构实现"，只记现状）
-│   ├── ARCHITECTURE.md    总入口（索引 + 关键架构决定）
-│   └── {type}-{slug}.md   子系统 / 模块 doc（cs-arch 产出）
-├── roadmap/               规划层（"接下来怎么做这块大需求 + 模块怎么切 + 接口怎么定"）
-│   └── {slug}/            一个大需求一个子目录（cs-roadmap 产出）
-│       ├── {slug}-roadmap.md   主文档：背景 / 范围 / 模块拆分 / 接口契约 / 子 feature 清单 / 排期
-│       ├── {slug}-items.yaml   机器可读子 feature 清单，acceptance 回写状态
-│       └── drafts/             可选
-├── features/              feature spec 聚合根
-│   └── YYYY-MM-DD-{slug}/  每个 feature 一个目录
-│       ├── {slug}-brainstorm.md  （可选，case 2 时产出）
-│       ├── {slug}-design.md      （标准流程）
-│       ├── {slug}-checklist.yaml （标准流程）
-│       ├── {slug}-acceptance.md  （标准流程）
-│       └── {slug}-ff-note.md     （fastforward 通道唯一产物，与上面四份互斥）
-├── issues/                issue spec 聚合根
-│   └── YYYY-MM-DD-{slug}/
-│       ├── {slug}-report.md
-│       ├── {slug}-analysis.md   （根因不显然才有）
-│       └── {slug}-fix-note.md
-├── refactors/             refactor spec 聚合根
-│   └── YYYY-MM-DD-{slug}/
-│       ├── {slug}-scan.md
-│       ├── {slug}-refactor-design.md
-│       ├── {slug}-checklist.yaml
-│       └── {slug}-apply-notes.md
-├── compound/              沉淀类文档统一目录
-│   └── YYYY-MM-DD-{doc_type}-{slug}.md
-│                          doc_type ∈ {learning, trick, decision, explore}
-├── brainstorm/            brainstorm 阶段 spike 实验代码区（cs-brainstorm 临时产出）
-│   └── {slug}/            一次 spike 一个子目录，文件名随意
-│                          验完不强制清理，结论回写到对应 brainstorm note
-├── tools/                 跨工作流共享脚本（onboard 从技能包释放）
-└── reference/             共享参考文档（onboard 从技能包释放）
-```
+旧 `features/`、`issues/`、`refactors/`、`audits/` 只读兼容，不在新项目创建，也不在新任务写入。
 
 ### 命名规则
 
 - 需求文档：`requirements/{slug}.md`（能力愿景，不带日期前缀，扁平不分组）；中心索引 `requirements/VISION.md`
 - roadmap：`roadmap/{slug}/`（不带日期前缀，平铺不嵌套）
-- feature / issue / refactor 目录：带日期前缀 `YYYY-MM-DD-{slug}`
+- standard 变更目录：`changes/YYYY-MM-DD-{slug}/`
 - 沉淀类：`compound/YYYY-MM-DD-{doc_type}-{slug}.md`，日期用**归档当天**
 - 架构 doc：`architecture/{type}-{slug}.md`（长效，不带日期前缀）；总入口固定 `ARCHITECTURE.md`
 - 项目注意事项入口固定为 `.codestable/attention.md`，所有 CodeStable 子技能启动前必须读取；不再兼容 `AGENTS.md` / `CLAUDE.md` 等外部入口
@@ -71,7 +62,7 @@ onboard 完成后骨架（`cs-onboard` 负责搭建）：
 
 **只升不降**：删到 ≤5 份也不折回平铺。
 
-**触发时谁负责**：`cs-arch` 的 `backfill` / `update` 模式在 Phase 6 落盘前主动检查并搬迁；命中阈值时这次操作要把"本次新加 / 改的 + 已有同类全部"一起搬，并同步改 `ARCHITECTURE.md` 链接（搬迁本身要在 Phase 5 给用户 review，不偷偷做）。`check` 模式不主动搬迁，但发现 ≥6 仍平铺时在报告末尾列为观察项。
+**触发时谁负责**：`cs-arch` 的 `backfill` / `update` 在落盘前检查并提出搬迁清单，用户 review 后再搬，同时更新 `ARCHITECTURE.md`。`check` 只报告，不搬迁。
 
 ### 改目录结构
 
@@ -83,7 +74,7 @@ onboard 完成后骨架（`cs-onboard` 负责搭建）：
 
 **feature spec**：brainstorm / design / acceptance 共用 `doc_type` / `feature` / `status` / `summary` / `tags`。子技能只补特有字段。`status`：brainstorm = `confirmed`（落盘即确认无 draft）；design = `draft` / `approved`；acceptance 见对应技能。
 
-**issue spec**：report / analysis / fix-note 共用 `doc_type` / `issue` / `status` / `tags`。`severity` / `root_cause_type` / `path` 由对应阶段按需补。
+**旧版 issue spec**：report / analysis / fix-note 共用 `doc_type` / `issue` / `status` / `tags`。新任务统一使用 `doc_type: change`、`kind: issue`。
 
 **归档类（compound）**：
 
@@ -100,28 +91,11 @@ onboard 完成后骨架（`cs-onboard` 负责搭建）：
 
 ---
 
-## 2. {slug}-checklist.yaml 生命周期
+## 2. 执行计划生命周期
 
-- 是 feature 工作流的唯一执行清单
-- 由 `cs-feat-design` 在 design 确认通过后一次生成 `steps` + `checks`
-- `cs-feat-ff` **不生成** checklist（也不写 design / acceptance），是跳过 spec 流程直接写代码的超轻量通道；唯一留下的痕迹是动手后回写的 `{slug}-ff-note.md`（轻量回顾，参与 scoped-commit、可被 cs-arch / cs-req backfill 检索到）
+新任务把 `steps` 和 `checks` 写入 Change Package；只有需要机器状态时才增加 `checks.yaml`。design 定义范围、退出信号和验收项；implement 只推进 step 状态；acceptance 只更新 check 结果。存在 `preexisting_changes` 时必须记录 `baseline` 快照，不能按文件名永久忽略后续修改。任何阶段发现范围或架构影响变化，都先回 design 修改 contract，不静默扩大。
 
-`steps` 的粒度是 **编排-计算分离维度的切片策略**——按"先编排骨架、后计算节点、最后持久化与测试"写（最简 Workflow 先行 → 逐个节点填充），**不下沉到 file:line / 函数级**。具体改哪个文件由 implement 阶段决定。
-
-**design 的职责**：
-
-- 提取 `steps`（4-8 步，每步独立可验证退出信号）：后端节奏 = 编排骨架 → 计算节点逐个填 → 接通持久化 → 测试覆盖；前端 = 静态结构 → 交互逻辑 → 状态接入 → 联调收尾
-- 提取 `checks`：第 1 节"明确不做"→ 范围守护；第 2.1 接口 → 名词契约；第 2.2 主流程 + 流程级约束 → 编排骨架；第 2.3 挂载点 → 挂载点；第 3 节场景清单 → 验收场景
-
-**implement 的职责**：
-
-- 按 `steps` 顺序执行，每步完成把 status `pending` → `done`
-- 实现到具体文件级时需要拆分某步、或发现微重构是其前置（参考第 7 节反射检查）→ 跟用户对齐后追加 / 拆分 steps，**不偷偷做**
-- 不改写 `checks`
-
-**acceptance 的职责**：只更新 `checks[].status`（`pending` → `passed` / `failed`），不重写 `steps`。
-
-**写作约束**：子技能描述 checklist 时只补本阶段读 / 写哪一部分，不重新定义生命周期。
+旧 `{slug}-checklist.yaml` 只读兼容。lean 直通不生成 checklist 或任务 note；用户要求留档时升级 standard。
 
 ---
 
@@ -143,7 +117,7 @@ planned  → dropped      （cs-roadmap update 模式，用户决定不做时改
 
 **cs-feat-design 的职责**（从 roadmap 起头时）：
 
-1. design.md frontmatter 加 `roadmap: {roadmap-slug}` + `roadmap_item: {子 feature slug}`
+1. 新 Change Package 的 frontmatter 加 `roadmap: {roadmap-slug}` + `roadmap_item: {子 feature slug}`；旧版 design.md 同样支持
 2. items.yaml 对应条目 `status: in-progress` + `feature: YYYY-MM-DD-{slug}`
 3. 校验 yaml
 
@@ -165,23 +139,20 @@ planned  → dropped      （cs-roadmap update 模式，用户决定不做时改
 
 **feature-acceptance** 收尾按顺序判断：
 
-1. `cs-learn`：沉淀经验
-2. `cs-decide`：长期约束 / 选型
-3. `cs-guide`：开发者 / 用户指南
-4. `cs-libdoc`：公开 API 参考
-5. `scoped-commit`
+1. `cs-knowledge`：按 learning / trick / decision 归档值得复用的结论
+2. `cs-guide`：开发者 / 用户指南
+3. `cs-libdoc`：公开 API 参考
+4. `scoped-commit`
 
 **issue-fix** 收尾按顺序判断：
 
-1. `cs-learn`：坑点
-2. `cs-decide`：暴露的长期约束
-3. `scoped-commit`
+1. `cs-knowledge`：坑点或暴露的长期约束
+2. `scoped-commit`
 
-**feature-ff** 收尾按顺序判断（比标准 acceptance 短，没有 architecture / req 回写动作）：
+**lean feature** 收尾按顺序判断（没有 architecture / req 回写动作）：
 
-1. `cs-learn`：动手过程暴露的坑
-2. `cs-decide`：动手过程拍板的长期约束
-3. `scoped-commit`
+1. `cs-knowledge`：动手过程值得复用的结论
+2. `scoped-commit`
 
 **统一规则**：一律一句话提示；用户说"不用"立即跳过；不强制；上游主动提示，下游承接执行。
 
@@ -197,6 +168,12 @@ acceptance / issue-fix 走完后把本次产物提交为一个 commit：
 - **commit message**：一句话说清"做了什么"，不贴 spec 目录路径
 
 子技能只描述本阶段特有提交范围，通用规则看这里。
+
+阶段技能的 frontmatter description 必须写明所需 Change Package 状态和排除条件；根入口根据 `workflow.yaml` 接续，避免 design / impl / accept 抢占彼此。
+
+大型项目可按需启用 `.codestable/constitution.yaml`、Change Package `artifacts`、`evidence.jsonl` 和 `changes/index.yaml`；lean 项目不预建空文件。它们是可选加速/门禁产物，不替代 `change.md`。
+
+模型上下文差异通过 `.codestable/model-profile.yaml` 管理，不分叉技能代码。128K profile 仍优先 `--agent`；64K profile 强制按 `context_refs` 的 heading/symbol 读取，超过预算就缩小当前 step，不删除 contract 或验证门禁。
 
 ---
 
@@ -215,7 +192,7 @@ feature-design / issue-analyze / issue-fix 动手前到 `.codestable/compound/` 
 
 ## 6. 归档类子技能共享守护规则
 
-`cs-learn` / `cs-trick` / `cs-decide` / `cs-explore` 共享下面这组规则。子技能正文只写特有反模式，通用看这里：
+`cs-knowledge` / `cs-explore` 共享下面这组规则：
 
 1. **只增不删**——已归档除非被明确取代（`status=superseded`）否则不删；理由丢失成本极高
 2. **宁缺毋滥**——用户说不出理由的节直接省略，不要 AI 编造
@@ -227,7 +204,7 @@ feature-design / issue-analyze / issue-fix 动手前到 `.codestable/compound/` 
    - **确实是不同主题**：新建，文末"相关文档"列出已有那条说明区别
 6. **识别用户意图是"改已有"还是"记新的"**——用户说"改 / 更新 / 修订 / 补充 {某条}"、明确指向某条旧文档、或话题高度重合时默认走"更新已有"，不要闷头新建。分不清就问。
 
-各子技能只认自己的 `doc_type`，不读写别家产物。
+`cs-knowledge` 可读写 learning / trick / decision；`cs-explore` 只写 explore。
 
 ---
 
