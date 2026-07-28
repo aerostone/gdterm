@@ -269,10 +269,10 @@ namespace Gdterm.UI.Controls
                 using (var progressDlg = new TransferProgressDialog("下载 " + info.Name))
                 {
                     progressDlg.Show(this);
+                    var remote = Combine(_currentPath, info.Name);
                     try
                     {
                         _status.Text = "下载中 " + info.Name;
-                        var remote = Combine(_currentPath, info.Name);
                         var progress = new TransferProgressAdapter(progressDlg, info.Name);
                         var cts = new CancellationTokenSource();
                         var task = _sftp.DownloadAsync(remote, dlg.FileName, progress, cts.Token);

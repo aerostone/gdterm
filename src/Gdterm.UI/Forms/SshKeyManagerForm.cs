@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using Gdterm.KeePass;
 using Gdterm.KeePass.Models;
 using Gdterm.UI.Diagnostics;
+using Gdterm.UI.Controls;
 
 namespace Gdterm.UI.Forms
 {
