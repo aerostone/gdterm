@@ -43,6 +43,7 @@ namespace Gdterm.UI.Controls
         private Task _connectTask;
         private bool _mouseDown;
         private int _mouseButton;
+        private bool _selecting;
 
         public CredentialPayload Credentials { get; set; }
         public ITerminalSession Session => _session;
@@ -383,7 +384,26 @@ namespace Gdterm.UI.Controls
                 return;
             }
 
-            if (_cellRenderer == null || _session?.IsConnected != true) return;
+            if (_cellRenderer == null) return;
+
+            // 左键：若应用未启用鼠标上报，则走本地拖选（SecureCRT 习惯）
+            bool mouseTracking = _cellRenderer.IsMouseTrackingEnabled;
+            if (e.Button == MouseButtons.Left && !mouseTracking)
+            {
+                try { _cellRenderer.ClearSelection(); } catch { } // 新选区从空开始
+                _selecting = true;
+                try { _cellRenderer.BeginSelection(e.X, e.Y); } catch { }
+                return;
+            }
+            if (e.Button == MouseButtons.Left && mouseTracking && (ModifierKeys & Keys.Shift) != 0)
+            {
+                // Shift+左键在鼠标应用里仍允许本地拖选（强制选择）
+                _selecting = true;
+                try { _cellRenderer.BeginSelection(e.X, e.Y); } catch { }
+                return;
+            }
+
+            if (_session?.IsConnected != true) return;
             int col, row;
             if (!_cellRenderer.TryHitTest(e.X, e.Y, out col, out row)) return;
             _mouseDown = true;
@@ -399,7 +419,17 @@ namespace Gdterm.UI.Controls
 
         private void OnCellMouseUp(object sender, MouseEventArgs e)
         {
-            if (_cellRenderer == null || !_mouseDown) return;
+            if (_cellRenderer == null) return;
+
+            // 拖选释放：选区已保留，不自动复制（右键复制 / Ctrl+C 复制）
+            if (_selecting)
+            {
+                _selecting = false;
+                try { _cellRenderer.ExtendSelection(e.X, e.Y); } catch { }
+                return;
+            }
+
+            if (!_mouseDown) return;
             _mouseDown = false;
             int col, row;
             if (!_cellRenderer.TryHitTest(e.X, e.Y, out col, out row)) return;
@@ -414,7 +444,14 @@ namespace Gdterm.UI.Controls
 
         private void OnCellMouseMove(object sender, MouseEventArgs e)
         {
-            if (_cellRenderer == null || !_mouseDown) return;
+            if (_cellRenderer == null) return;
+            // 本地拖选扩展
+            if (_selecting)
+            {
+                try { _cellRenderer.ExtendSelection(e.X, e.Y); } catch { }
+                return;
+            }
+            if (!_mouseDown) return;
             int col, row;
             if (!_cellRenderer.TryHitTest(e.X, e.Y, out col, out row)) return;
             try
@@ -1062,6 +1099,19 @@ public async void Connect()
 
                 if (e.Control && e.KeyCode == Keys.C && !_keyResolver.HasBinding(e))
                 {
+                    // 有选区时 Ctrl+C 先复制，不发中断（SecureCRT/Windows Terminal 习惯）
+                    try
+                    {
+                        var sel = _cellRenderer != null ? _cellRenderer.GetSelection() : null;
+                        if (_cellRenderer != null && !string.IsNullOrEmpty(sel))
+                        {
+                            Clipboard.SetText(sel);
+                            // 选中后复制可选自动清选区；这里保留高亮，用户左键点击会清除
+                            e.Handled = true;
+                            return;
+                        }
+                    }
+                    catch (Exception ex) { DiagLog.Swallowed("TerminalControl.CopySel", ex); }
                     ClearLocalLine(eraseDisplay: UseLocalLineBuffer);
                     SafeSend("\x03");
                     e.Handled = true;

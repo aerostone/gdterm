@@ -75,6 +75,19 @@ namespace Gdterm.Terminal.Rendering.Vt
             get { lock (_lock) return _controller.CursorState.ShowCursor; }
         }
 
+        /// <summary>应用是否启用了鼠标上报（vim/less/mc）。UI 据此决定左键是拖选还是透传。</summary>
+        public bool IsMouseTrackingEnabled
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    try { return _controller.MouseTrackingEnabled; }
+                    catch { return false; }
+                }
+            }
+        }
+
         public VtTerminalEngine(int columns = 80, int rows = 24, int maxHistory = 500)
         {
             if (columns < 2) columns = 2;

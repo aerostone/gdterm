@@ -58,6 +58,16 @@ namespace Gdterm.Terminal.Rendering
         /// <summary>是否为 cell VT 路径（UI 双轨判断）。</summary>
         public bool IsVtCell { get { return true; } }
 
+        /// <summary>应用是否启用了 VT 鼠标上报（vim/less/mc）。UI 据此决定左键是拖选还是透传。</summary>
+        public bool IsMouseTrackingEnabled
+        {
+            get { lock (_lock) return _engine.IsMouseTrackingEnabled; }
+        }
+
+        // ===== 文本选择（左键拖选 / Shift+左键 扩选） =====
+        private bool _hasSelection;
+        private int _selStartCol, _selStartRow, _selEndCol, _selEndRow;
+
         public CellGdiRenderer(int rows = 24, int columns = 80, TerminalColorScheme scheme = null, int maxHistory = 500)
         {
             _scheme = scheme ?? ColorSchemes.Classic;
@@ -138,8 +148,113 @@ namespace Gdterm.Terminal.Rendering
 
         public string GetSelection()
         {
-            // Phase 0：未实现拖选；返回可见全文便于复制调试
-            return GetScreenText();
+            if (!_hasSelection) return string.Empty;
+            VtPageSnapshot page;
+            int sc, sr, ec, er;
+            lock (_lock)
+            {
+                page = _page;
+                sc = _selStartCol; sr = _selStartRow;
+                ec = _selEndCol; er = _selEndRow;
+            }
+            if (page == null || page.Lines == null) return string.Empty;
+            // 规范化：从上到下、左到右
+            if (er < sr || (er == sr && ec < sc))
+            {
+                int t = sc; sc = ec; ec = t;
+                t = sr; sr = er; er = t;
+            }
+            var sb = new StringBuilder();
+            for (int r = sr; r <= er && r < page.Lines.Count; r++)
+            {
+                var line = page.Lines[r];
+                int lineLen = LineTextLength(line);
+                int startC = (r == sr) ? Math.Min(sc, lineLen) : 0;
+                int endC = (r == er) ? Math.Min(ec, lineLen) : lineLen;
+                if (endC > startC)
+                    sb.Append(ExtractSubstring(line, startC, endC - startC));
+                if (r < er) sb.Append('\n');
+            }
+            return sb.ToString();
+        }
+
+        /// <summary>左键拖选起点（像素）。返回是否进入选择模式。</summary>
+        public bool BeginSelection(int pixelX, int pixelY)
+        {
+            int col, row;
+            if (!TryHitTest(pixelX, pixelY, out col, out row)) return false;
+            lock (_lock)
+            {
+                _hasSelection = true;
+                _selStartCol = _selEndCol = col;
+                _selStartRow = _selEndRow = row;
+                _needsRedraw = true;
+            }
+            ScheduleRedraw();
+            return true;
+        }
+
+        /// <summary>拖选过程（像素）。extend=true 表示 Shift+点击扩选。</summary>
+        public bool ExtendSelection(int pixelX, int pixelY)
+        {
+            if (!_hasSelection) return false;
+            int col, row;
+            if (!TryHitTest(pixelX, pixelY, out col, out row)) return false;
+            lock (_lock)
+            {
+                _selEndCol = col;
+                _selEndRow = row;
+                _needsRedraw = true;
+            }
+            ScheduleRedraw();
+            return true;
+        }
+
+        /// <summary>清选区。</summary>
+        public void ClearSelection()
+        {
+            bool needRedraw;
+            lock (_lock)
+            {
+                needRedraw = _hasSelection;
+                _hasSelection = false;
+                _needsRedraw = needRedraw;
+            }
+            if (needRedraw) ScheduleRedraw();
+        }
+
+        public bool HasSelection { get { lock (_lock) return _hasSelection; } }
+
+        private static int LineTextLength(VtLineSnapshot line)
+        {
+            if (line == null || line.Spans == null) return 0;
+            int n = 0;
+            foreach (var s in line.Spans)
+                if (s != null && s.Text != null) n += s.Text.Length;
+            return n;
+        }
+
+        private static string ExtractSubstring(VtLineSnapshot line, int start, int length)
+        {
+            if (line == null || line.Spans == null || length <= 0) return string.Empty;
+            var sb = new StringBuilder(length);
+            int taken = 0, skipped = 0;
+            foreach (var s in line.Spans)
+            {
+                if (s == null || string.IsNullOrEmpty(s.Text)) continue;
+                if (skipped + s.Text.Length <= start)
+                {
+                    skipped += s.Text.Length;
+                    continue;
+                }
+                int off = Math.Max(0, start - skipped);
+                int take = Math.Min(s.Text.Length - off, length - taken);
+                if (take > 0) sb.Append(s.Text, off, take);
+                taken += take;
+                skipped += s.Text.Length;
+                if (taken >= length) break;
+            }
+            return sb.ToString();
         }
 
         public string[] GetRecentLines(int lineCount)
@@ -290,19 +405,39 @@ namespace Gdterm.Terminal.Rendering
             g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
             VtPageSnapshot page;
+            bool hasSel;
+            int sc, sr, ec, er;
             lock (_lock)
             {
                 page = _page;
+                hasSel = _hasSelection;
+                sc = _selStartCol; sr = _selStartRow;
+                ec = _selEndCol; er = _selEndRow;
             }
 
             g.Clear(_scheme.Background);
             if (page == null || page.Lines == null) return;
+
+            // 选区规范化（上→下、左→右）
+            if (hasSel && (er < sr || (er == sr && ec < sc)))
+            {
+                int t = sc; sc = ec; ec = t;
+                t = sr; sr = er; er = t;
+            }
 
             float y = PadY;
             for (int r = 0; r < page.Lines.Count; r++)
             {
                 var line = page.Lines[r];
                 float x = PadX;
+                // 该行选区起止列（不含则 -1）
+                int selStart = -1, selEnd = -1;
+                if (hasSel && r >= sr && r <= er)
+                {
+                    selStart = (r == sr) ? sc : 0;
+                    selEnd = (r == er) ? ec : int.MaxValue;
+                }
+                int colCursor = 0;
                 if (line != null && line.Spans != null)
                 {
                     foreach (var span in line.Spans)
@@ -310,12 +445,22 @@ namespace Gdterm.Terminal.Rendering
                         if (span == null || span.Hidden || string.IsNullOrEmpty(span.Text))
                         {
                             if (span != null && !string.IsNullOrEmpty(span.Text))
+                            {
                                 x += span.Text.Length * _charWidth;
+                                colCursor += span.Text.Length;
+                            }
                             continue;
                         }
 
                         var bg = span.Background;
                         var fg = span.Foreground;
+                        // 选区高亮：覆盖背景为 SelectionBackground，前景为 SelectionForeground
+                        bool inSel = selStart >= 0 && colCursor < selEnd && (colCursor + span.Text.Length) > selStart;
+                        if (inSel)
+                        {
+                            bg = _scheme.SelectionBackground;
+                            fg = _scheme.SelectionForeground;
+                        }
                         // 若背景接近默认黑且未设真彩，用 scheme 背景
                         var font = span.Bold ? _boldFont : _font;
                         // CJK 补充字体（非 ASCII 段用 cjk 字体绘制，Xshell 风格双字体）
@@ -330,6 +475,7 @@ namespace Gdterm.Terminal.Rendering
                         }
 
                         x += w;
+                        colCursor += span.Text.Length;
                     }
                 }
 
@@ -340,7 +486,12 @@ namespace Gdterm.Terminal.Rendering
             {
                 float cx = PadX + page.CursorColumn * _charWidth;
                 float cy = PadY + page.CursorRow * _charHeight;
-                g.FillRectangle(GetBrush(_scheme.CursorColor), cx, cy, Math.Max(2, _charWidth * 0.15f), _charHeight);
+                // 半透明整格光标：可见且不删除字符（密度打磨）
+                Color cc = _scheme.CursorColor;
+                using (var cursorBrush = new SolidBrush(Color.FromArgb(110, cc.R, cc.G, cc.B)))
+                {
+                    g.FillRectangle(cursorBrush, cx, cy, _charWidth, _charHeight);
+                }
             }
         }
 
