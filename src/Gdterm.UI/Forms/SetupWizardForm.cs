@@ -156,14 +156,26 @@ namespace Gdterm.UI.Forms
             Controls.Add(stepBar);
             Controls.Add(_stepPanel);
 
-            // 禁用关闭按钮（必须完成设置）
+            // 允许用户关闭退出（不强制完成）；但提示尚未设置主密码，且直接结束进程避免进入主界面。
             FormClosing += (s, e) =>
             {
                 if (!IsCompleted && e.CloseReason == CloseReason.UserClosing)
                 {
-                    e.Cancel = true;
-                    MessageBox.Show("请先完成主密码设置，这是安全要求。", "提示",
-                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    var dr = MessageBox.Show(
+                        "尚未设置主密码。\n\n点击「是」退出 gdterm（下次启动仍需完成设置）；\n点击「否」返回继续设置。",
+                        "确认退出",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question,
+                        MessageBoxDefaultButton.Button2);
+                    if (dr == DialogResult.Yes)
+                    {
+                        // 不取消关闭；让窗体关闭后主流程检测到未完成即退出进程
+                        e.Cancel = false;
+                    }
+                    else
+                    {
+                        e.Cancel = true;
+                    }
                 }
             };
         }
