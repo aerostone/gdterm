@@ -155,9 +155,14 @@ namespace Gdterm.UI.Controls
                 && !string.Equals(_profile.FontName, "Consolas", StringComparison.OrdinalIgnoreCase)
                     ? _profile.FontName
                     : (ga != null && !string.IsNullOrWhiteSpace(ga.FontName) ? ga.FontName : "Consolas");
-            float fontSize = _profile != null && _profile.FontSize > 0 && _profile.FontSize != 11
-                ? _profile.FontSize
-                : (ga != null && ga.FontSize > 0 ? ga.FontSize : 11f);
+            // 终端字号优先级：GlobalAppearance.FontSize 是“全局用户选择”，应优先于 Profile.FontSize 默认 12 生效。
+            // 只有当 Profile.FontSize 被用户在新建连接对话框显式修改（≠ 12）时才覆盖。
+            // 这样在 AppearanceSettings 里改字号能真正反映到已存在连接的终端上。
+            float fontSize = (ga != null && ga.FontSize > 0)
+                ? (float)ga.FontSize
+                : (_profile != null && _profile.FontSize > 0 && _profile.FontSize != 12
+                    ? (float)_profile.FontSize
+                    : 14f);
             // CJK 补充字体（可空）—— Xshell 风格非 ASCII 字体。
             string cjkFontName = ga != null && !string.IsNullOrWhiteSpace(ga.CjkFontName) ? ga.CjkFontName : null;
 
@@ -210,6 +215,40 @@ namespace Gdterm.UI.Controls
             PreviewKeyDown += (s, e) => { e.IsInputKey = true; };
 
             BuildContextMenu();
+        }
+
+        /// <summary>
+        /// 按当前 GlobalAppearance 与 _profile 重新应用字体 / CJK 字体 / 配色到现有渲染器。
+        /// 供 ToolsDialogsLauncher 在用户保存外观设置后即时刷新已开标签页使用。
+        /// 仅当 renderer 已初始化时生效（InitializeComponent 走原始初始化路径，不走本方法）。
+        /// 优先级链与 InitializeComponent 保持一致：Profile 显式>0 → 覆盖；否则 GlobalAppearance；否则兑底默认。
+        /// </summary>
+        public void ApplyCurrentAppearance()
+        {
+            if (_renderer == null) return;
+            var ga = Gdterm.UI.Program.GlobalAppearance;
+
+            string fontName = _profile != null && !string.IsNullOrWhiteSpace(_profile.FontName)
+                && !string.Equals(_profile.FontName, "Consolas", StringComparison.OrdinalIgnoreCase)
+                    ? _profile.FontName
+                    : (ga != null && !string.IsNullOrWhiteSpace(ga.FontName) ? ga.FontName : "Consolas");
+            // 与 InitializeComponent 同样的优先级规则——GlobalAppearance.FontSize 优先于 Profile.FontSize 默认。
+            float fontSize = (ga != null && ga.FontSize > 0)
+                ? (float)ga.FontSize
+                : (_profile != null && _profile.FontSize > 0 && _profile.FontSize != 12
+                    ? (float)_profile.FontSize
+                    : 14f);
+            string cjkFontName = ga != null && !string.IsNullOrWhiteSpace(ga.CjkFontName) ? ga.CjkFontName : null;
+
+            if (_cellRenderer != null)
+            {
+                try { _cellRenderer.ApplyFont(fontName, fontSize, cjkFontName); } catch { }
+            }
+            else if (_renderer is LightweightRenderer light)
+            {
+                try { light.ApplyFont(fontName, fontSize); } catch { }
+            }
+            try { _renderer.GetControl()?.Invalidate(); } catch { }
         }
 
         // ===== 终端右键菜单：复制 / 粘贴 / 清屏 / 查找 / 重连 / 导出 / 外观 =====

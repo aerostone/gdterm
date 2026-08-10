@@ -57,7 +57,9 @@ namespace Gdterm.Terminal.Rendering
         internal const int PadX = 8;
         internal const int PadY = 6;
         private string _fontName = "Consolas";
-        private float _fontSize = 11f;
+        // 防御性默认——TerminalControl.InitializeComponent 必然会 ApplyFont 覆盖；
+        // 对齐 AppearanceSettings.FontName 默认 12 以避免“裁织调 ApplyFont 前突然变小”。
+        private float _fontSize = 14f;
 
         // 重绘定时器 — 用于合并高频写入
         private readonly Timer _redrawTimer;

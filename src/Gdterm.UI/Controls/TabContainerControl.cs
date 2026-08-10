@@ -385,6 +385,26 @@ namespace Gdterm.UI.Controls
             }
         }
 
+        /// <summary>
+        /// 将当前 GlobalAppearance 重新应用到所有已开标签页（包含 split-pane 子面板）。
+        /// 供 ToolsDialogsLauncher 在用户保存外观设置后即时刷新已开终端使用。 Split-pane 通过 TabActiveSessionQuery.CollectSessionTerminals 递归收集。
+        /// </summary>
+        public void ApplyAppearanceToAllTerminals()
+        {
+            foreach (var kvp in _sessions)
+            {
+                var state = kvp.Value;
+                if (state == null) continue;
+                var terminals = new System.Collections.Generic.List<TerminalControl>();
+                TabActiveSessionQuery.CollectSessionTerminals(state, terminals);
+                foreach (var tc in terminals)
+                {
+                    if (tc == null) continue;
+                    try { tc.ApplyCurrentAppearance(); } catch { }
+                }
+            }
+        }
+
         /// <summary>解锁后重新武装所有健康监控（go-live P1-03）。</summary>
         public void RearmAllHealthMonitors()
         {

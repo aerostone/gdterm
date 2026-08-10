@@ -282,7 +282,8 @@ namespace Gdterm.UI.Forms
             _lockOverlay.Visible = _securityManager.IsLocked;
 
             _toolsDialogs = new ToolsDialogsLauncher(
-                this, _securityManager, _keepassService, _dangerousCmdDetector);
+                this, _securityManager, _keepassService, _dangerousCmdDetector,
+                () => _tabContainer.ApplyAppearanceToAllTerminals());
 
             _openCoord = new ConnectionOpenCoordinator(
                 _tabContainer, _connectionStore, _bookmarkStore, _connectionTree, this);

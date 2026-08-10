@@ -17,17 +17,20 @@ namespace Gdterm.UI.Services
         private readonly ISecurityManager _securityManager;
         private readonly IKeePassService _keepassService;
         private readonly DangerousCommandDetector _dangerousCmdDetector;
+        private readonly Action _applyAppearanceToTerminals;
 
         public ToolsDialogsLauncher(
             IWin32Window owner,
             ISecurityManager securityManager,
             IKeePassService keepassService,
-            DangerousCommandDetector dangerousCmdDetector)
+            DangerousCommandDetector dangerousCmdDetector,
+            Action applyAppearanceToTerminals = null)
         {
             _owner = owner;
             _securityManager = securityManager;
             _keepassService = keepassService;
             _dangerousCmdDetector = dangerousCmdDetector;
+            _applyAppearanceToTerminals = applyAppearanceToTerminals;
         }
 
         public bool ReAuthenticate(string action)
@@ -79,6 +82,9 @@ namespace Gdterm.UI.Services
                 if (form.ShowDialog(_owner) == DialogResult.OK && form.Result != null)
                 {
                     Gdterm.UI.Program.GlobalAppearance = form.Result;
+                    // 即时应用终端字体到所有已开标签页（含 split-pane 子面板）——以前只刷 UI 不刷终端，用户改字号看不出变化。
+                    try { _applyAppearanceToTerminals?.Invoke(); }
+                    catch (Exception ex) { Gdterm.UI.Diagnostics.DiagLog.Swallowed("Appearance.ApplyTerminals", ex); }
                     // 即时应用界面主题（若改了）——ToolStrip 不会自感静态颜色变化，所以调用 ApplyTheme 后手动 Invalidate 所有工具条
                     if (!string.IsNullOrEmpty(form.Result.UiTheme))
                     {
