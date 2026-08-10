@@ -87,7 +87,12 @@ after_test:
       # 5) 安装 ILRepack 并合并所有托管 DLL 进 gdterm.exe
       #    用 dotnet global tool 装 ILRepack.Tool，并把 ~/.dotnet/tools 加到 PATH。
       # 不可达的 dotnet tool 路径刪除，直接用 NuGet 独立包（以免失败后兜底在 0.1.44 里已证仍引入传递依赖问题）
-      Write-Host "Installing ILRepack (NuGet standalone)..."
+      # 5) 收集 out 下所有托管 DLL 作为 ILRepack 输入与 /lib 搜索路径
+      $allDlls = Get-ChildItem -Path $out -Filter *.dll | Where-Object { $_.Name -ne 'winpty.dll' } | Select-Object -ExpandProperty FullName
+      $primeExe = Join-Path $out 'gdterm.exe'
+      $asmPaths = @($primeExe) + ($allDlls | Where-Object { $_ -ne $primeExe })
+      Write-Host "[ILRepack] merging $($asmPaths.Count) files into gdterm.exe"
+      # 安装独立 ILRepack NuGet 包（带 ILRepack.exe，不依赖 dotnet tool PATH）
       $pkgDir = Join-Path "$env:USERPROFILE\.nuget\packages" "ilrepack"
       if (-not (Test-Path (Join-Path $pkgDir '2.0.18'))) {
         nuget install ILRepack -Version 2.0.18 -OutputDirectory "$env:USERPROFILE\.nuget\packages" -NonInteractive -Verbosity quiet 2>$null
@@ -95,9 +100,7 @@ after_test:
       $ilrepack = Get-ChildItem -Path $pkgDir -Recurse -Filter "ILRepack.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
       if (-not $ilrepack) { throw "ILRepack.exe not found under $pkgDir" }
       Write-Host "ILRepack: $ilrepack"
-
-      # 先补齐 UI bin 所有第三方传递依赖 DLL（Microsoft.Bcl.AsyncInterfaces 等，
-      # 由 SSH.NET 2024.1.0 拖入，cyproj CopyPackageReferencesToOutput 只拷直接引用）。
+      # git PackageReference 传递依赖（SSH.NET 2024.1.0 -> Microsoft.Bcl.AsyncInterfaces 等）
       $transitiveNames = @('Microsoft.Bcl.AsyncInterfaces.dll','System.Threading.Tasks.Extensions.dll','System.Memory.dll','System.Buffers.dll','System.Runtime.CompilerServices.Unsafe.dll','System.Numerics.Vectors.dll','System.ValueTuple.dll')
       foreach ($name in $transitiveNames) {
         if (-not (Test-Path (Join-Path $out $name))) {
@@ -107,14 +110,9 @@ after_test:
           if ($found) { Copy-Item $found.FullName $out -Force; Write-Host "Packed transitive: $name" }
         }
       }
-
-      # 收集 out 下所有托管 DLL 作为 ILRepack 输入与 /lib 搜索路径，这样传递依赖能被解析。
-      $allDlls = Get-ChildItem -Path $out -Filter *.dll | Where-Object { $_.Name -ne 'winpty.dll' } | Select-Object -ExpandProperty FullName
-      $primeExe = Join-Path $out 'gdterm.exe'
-      $asmPaths = @($primeExe) + ($allDlls | Where-Object { $_ -ne $primeExe })
-      Write-Host "[ILRepack] merging $($asmPaths.Count) files into gdterm.exe"
-      $outExe  = Join-Path $out 'gdterm.exe'
-      $argsArr = @('/out:' + $outExe, '/wildcards', '/lib:' + $out, '/copyattrs', '/allowDuplicateAssembly', '/internalize') + $asmPaths
+      # PowerShell 调 ILRepack：各开关独立数组元素，/out: 只跟一个值，避免被串联
+      $outExe = Join-Path $out 'gdterm.exe'
+      $argsArr = @('/out:' + $outExe, '/lib:' + $out, '/wildcards', '/copyattrs', '/allowdup', '/internalize') + $asmPaths
       & $ilrepack $argsArr
       if ($LASTEXITCODE -ne 0) { throw "ILRepack failed exit=$LASTEXITCODE" }
 
