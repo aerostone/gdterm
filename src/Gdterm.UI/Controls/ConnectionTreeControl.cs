@@ -32,6 +32,8 @@ namespace Gdterm.UI.Controls
 
         public event EventHandler<ConnectionConfig> ConnectionDoubleClicked;
         public event EventHandler ConnectionListChanged;
+        /// <summary>右键菜单“本地终端”被点击时触发（由 MainForm 订阅 → TabContainer.OpenLocalTerminal）。</summary>
+        public event Action OpenLocalTerminalRequested;
 
         public ConnectionTreeControl(IConnectionStore connectionStore)
         {
@@ -88,6 +90,7 @@ namespace Gdterm.UI.Controls
 
             // 右键菜单——在 Opening 中按右键节点动态调整项，避免“主机上右键也弹新建”
             _contextMenu = new ContextMenuStrip();
+            _contextMenu.Items.Add("本地终端(&L)", null, OnOpenLocalTerminal);
             _contextMenu.Items.Add("新建连接(&N)", null, OnNewConnection);
             _contextMenu.Items.Add("编辑(&E)", null, OnEditConnection);
             _contextMenu.Items.Add("-");
@@ -510,16 +513,19 @@ namespace Gdterm.UI.Controls
         private void OnContextMenuOpening(object sender, System.ComponentModel.CancelEventArgs e)
         {
             var node = _rightClickedNode;
-            var itemNew = _contextMenu.Items[0] as ToolStripMenuItem; // 新建连接
-            var sep1 = _contextMenu.Items[1] as ToolStripSeparator;
-            var itemEdit = _contextMenu.Items[2] as ToolStripMenuItem; // 编辑
-            var sep2 = _contextMenu.Items[3] as ToolStripSeparator;
-            var itemDel = _contextMenu.Items[4] as ToolStripMenuItem; // 删除
-            var sep3 = _contextMenu.Items[5] as ToolStripSeparator;
-            var itemConn = _contextMenu.Items[6] as ToolStripMenuItem; // 连接
+            var itemLocal = _contextMenu.Items[0] as ToolStripMenuItem; // 本地终端
+            var itemNew = _contextMenu.Items[1] as ToolStripMenuItem;   // 新建连接
+            var itemEdit = _contextMenu.Items[2] as ToolStripMenuItem;   // 编辑
+            var sep1 = _contextMenu.Items[3] as ToolStripSeparator;
+            var itemDel = _contextMenu.Items[4] as ToolStripMenuItem;   // 删除
+            var sep2 = _contextMenu.Items[5] as ToolStripSeparator;
+            var itemConn = _contextMenu.Items[6] as ToolStripMenuItem;  // 连接
 
-            if (itemNew == null || itemEdit == null || sep1 == null || sep2 == null || itemDel == null || sep3 == null || itemConn == null)
+            if (itemLocal == null || itemNew == null || itemEdit == null || sep1 == null || sep2 == null || itemDel == null || itemConn == null)
                 return;
+
+            // “本地终端”始终可用——根节点/空白/分组/连接都可开本地终端（独立动作，不依赖节点语义）。
+            itemLocal.Enabled = true;
 
             if (IsConnectionNode(node))
             {
@@ -530,7 +536,7 @@ namespace Gdterm.UI.Controls
                 itemEdit.Enabled = true;
                 itemDel.Enabled = true;
                 itemConn.Enabled = true;
-                sep1.Visible = sep2.Visible = sep3.Visible = true;
+                sep1.Visible = sep2.Visible = true;
             }
             else if (IsGroupNode(node))
             {
@@ -541,17 +547,16 @@ namespace Gdterm.UI.Controls
                 itemDel.Enabled = false;  // 未支持删分组（避免误删连接）
                 itemConn.Enabled = false;
                 sep2.Visible = false;
-                sep3.Visible = false;
             }
             else
             {
                 // 根节点 / 空白：只允许顶层新建连接，编辑/删除/连接禁用
                 itemNew.Text = "新建连接(&N)";
                 itemEdit.Enabled = false;
-                sep2.Visible = false;
                 itemDel.Enabled = false;
                 itemConn.Enabled = false;
-                sep3.Visible = false;
+                sep1.Visible = false;
+                sep2.Visible = false;
             }
         }
 
@@ -650,6 +655,11 @@ namespace Gdterm.UI.Controls
             {
                 ConnectionDoubleClicked?.Invoke(this, config);
             }
+        }
+
+        private void OnOpenLocalTerminal(object sender, EventArgs e)
+        {
+            OpenLocalTerminalRequested?.Invoke();
         }
 
         protected override void Dispose(bool disposing)

@@ -155,9 +155,9 @@ namespace Gdterm.UI.Controls
                 && !string.Equals(_profile.FontName, "Consolas", StringComparison.OrdinalIgnoreCase)
                     ? _profile.FontName
                     : (ga != null && !string.IsNullOrWhiteSpace(ga.FontName) ? ga.FontName : "Consolas");
-            float fontSize = _profile != null && _profile.FontSize > 0 && _profile.FontSize != 12
+            float fontSize = _profile != null && _profile.FontSize > 0 && _profile.FontSize != 11
                 ? _profile.FontSize
-                : (ga != null && ga.FontSize > 0 ? ga.FontSize : 12f);
+                : (ga != null && ga.FontSize > 0 ? ga.FontSize : 11f);
             // CJK 补充字体（可空）—— Xshell 风格非 ASCII 字体。
             string cjkFontName = ga != null && !string.IsNullOrWhiteSpace(ga.CjkFontName) ? ga.CjkFontName : null;
 

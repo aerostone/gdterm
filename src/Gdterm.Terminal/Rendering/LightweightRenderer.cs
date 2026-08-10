@@ -57,7 +57,7 @@ namespace Gdterm.Terminal.Rendering
         internal const int PadX = 8;
         internal const int PadY = 6;
         private string _fontName = "Consolas";
-        private float _fontSize = 12f;
+        private float _fontSize = 11f;
 
         // 重绘定时器 — 用于合并高频写入
         private readonly Timer _redrawTimer;

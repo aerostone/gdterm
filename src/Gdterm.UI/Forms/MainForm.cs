@@ -429,6 +429,10 @@ namespace Gdterm.UI.Forms
         private void SetupEventHandlers()
         {
             _connectionTree.ConnectionDoubleClicked += (s, cfg) => _openCoord.OpenConnection(cfg);
+            _connectionTree.OpenLocalTerminalRequested += () =>
+            {
+                try { _tabContainer?.OpenLocalTerminal(); UpdateWelcomeVisibility(); } catch { }
+            };
             _securityManager.LockStateChanged += (s, e) => _lockCoord.Handle(s, e);
             MouseMove += (s, e) => _securityManager.ResetIdleTimer();
             KeyDown += (s, e) =>
