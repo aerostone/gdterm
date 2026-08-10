@@ -15,6 +15,8 @@ namespace Gdterm.UI.Forms
     {
         private readonly ISecurityManager _securityManager;
         private Panel _stepPanel;
+        private Label _stepIndicator;
+        private Button _nextButton;
         private int _currentStep = 0;
 
         // Step 1: 欢迎
@@ -37,7 +39,6 @@ namespace Gdterm.UI.Forms
         {
             _securityManager = securityManager;
             InitializeComponent();
-            // 高/低 DPI 自适应：声明设计基准 96 DPI，让 .NET 自动按当前 DPI 缩放控件。
 
             // 加载应用图标
             try
@@ -57,106 +58,121 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "gdterm - 首次使用设置";
-            Size = new Size(580, 520);
+            ClientSize = new Size(560, 480);
+            MinimumSize = new Size(520, 440);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = true;
             BackColor = Color.FromArgb(30, 30, 30);
+            // PerMonitorV2 清单已声明 DPI 感知；Font 模式按字号等比缩放，避免控件被挤扁
+            AutoScaleMode = AutoScaleMode.Font;
+            AutoScaleDimensions = new SizeF(6F, 12F);
+            Font = new Font("Microsoft YaHei", 9f);
 
-            // 顶部标题栏
+            // —— 顶部标题 ——
             var headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 70,
+                Height = 78,
                 BackColor = Color.FromArgb(45, 45, 45),
-                Padding = new Padding(20, 15, 20, 10)
+                Padding = new Padding(24, 14, 24, 10)
             };
 
             var titleLabel = new Label
             {
-                Text = "🔧 欢迎使用 gdterm",
-                Font = new Font("Microsoft YaHei", 16f, FontStyle.Bold),
+                Text = "欢迎使用 gdterm",
+                Font = new Font("Microsoft YaHei", 15f, FontStyle.Bold),
                 ForeColor = Color.White,
                 Dock = DockStyle.Top,
-                Height = 35
+                Height = 32,
+                TextAlign = ContentAlignment.MiddleLeft
             };
 
             var subtitleLabel = new Label
             {
                 Text = "绿色运维客户端 · 首次使用请完成以下设置",
-                Font = new Font("Microsoft YaHei", 9.5f),
-                ForeColor = Color.FromArgb(180, 180, 180),
-                Dock = DockStyle.Fill
+                Font = new Font("Microsoft YaHei", 9f),
+                ForeColor = Color.FromArgb(170, 170, 170),
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.TopLeft
             };
 
             headerPanel.Controls.Add(subtitleLabel);
             headerPanel.Controls.Add(titleLabel);
 
-            // 步骤指示器
+            // —— 步骤指示器 ——
             var stepBar = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 40,
-                BackColor = Color.FromArgb(35, 35, 35),
-                Padding = new Padding(20, 0, 20, 0)
+                Height = 36,
+                BackColor = Color.FromArgb(38, 38, 38),
+                Padding = new Padding(16, 0, 16, 0)
             };
 
-            var stepLabel = new Label
+            _stepIndicator = new Label
             {
-                Text = "① 欢迎    ② 设置主密码    ③ 完成",
+                Text = BuildStepText(0),
                 Font = new Font("Microsoft YaHei", 9f),
-                ForeColor = Color.FromArgb(140, 140, 140),
+                ForeColor = Color.FromArgb(160, 160, 160),
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleCenter
             };
-            stepBar.Controls.Add(stepLabel);
+            stepBar.Controls.Add(_stepIndicator);
 
-            // 步骤内容面板
-            _stepPanel = new Panel
-            {
-                Dock = DockStyle.Fill,
-                Padding = new Padding(30, 20, 30, 10)
-            };
-
-            // 底部按钮栏
-            var buttonPanel = new FlowLayoutPanel
+            // —— 底部按钮栏 ——
+            var buttonPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 55,
-                FlowDirection = FlowDirection.RightToLeft,
-                Padding = new Padding(10, 10, 10, 10),
-                BackColor = Color.FromArgb(35, 35, 35)
+                Height = 60,
+                BackColor = Color.FromArgb(35, 35, 35),
+                Padding = new Padding(16, 12, 16, 12)
             };
 
-            var nextButton = new Button
+            _nextButton = new Button
             {
                 Text = "开始设置 →",
-                Size = new Size(120, 36),
+                Size = new Size(128, 34),
+                Anchor = AnchorStyles.Right | AnchorStyles.Top,
                 FlatStyle = FlatStyle.Flat,
                 Font = new Font("Microsoft YaHei", 10f),
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White,
-                DialogResult = DialogResult.None
+                Cursor = Cursors.Hand,
+                Name = "nextButton"
             };
-            nextButton.Click += OnNextClick;
-            nextButton.Name = "nextButton";
+            _nextButton.FlatAppearance.BorderSize = 0;
+            _nextButton.Click += OnNextClick;
+            // 右对齐
+            _nextButton.Location = new Point(
+                buttonPanel.ClientSize.Width - _nextButton.Width - 16,
+                12);
+            buttonPanel.Resize += (s, e) =>
+            {
+                _nextButton.Left = buttonPanel.ClientSize.Width - _nextButton.Width - 16;
+            };
+            buttonPanel.Controls.Add(_nextButton);
 
-            buttonPanel.Controls.Add(nextButton);
+            // —— 步骤内容区 ——
+            _stepPanel = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Padding = new Padding(28, 20, 28, 12),
+                BackColor = Color.FromArgb(30, 30, 30)
+            };
 
-            // 创建三步面板
             CreateWelcomePanel();
             CreatePasswordPanel();
             CreateCompletePanel();
 
-            // Dock 顺序：先 Bottom/Top，最后 Fill，避免欢迎文案被挤没
-            Controls.Add(buttonPanel);
-            Controls.Add(headerPanel);
-            Controls.Add(stepBar);
+            // WinForms Dock：先加 Fill（最低 z-order），后加边缘控件（高 z-order 先占边）
+            // 否则 Fill 会先占满客户区，顶部栏和按钮栏被挤没或叠在一起
             Controls.Add(_stepPanel);
+            Controls.Add(buttonPanel);
+            Controls.Add(stepBar);
+            Controls.Add(headerPanel);
 
-            // 允许用户关闭退出（不强制完成）；但提示尚未设置主密码，且直接结束进程避免进入主界面。
             FormClosing += (s, e) =>
             {
                 if (!IsCompleted && e.CloseReason == CloseReason.UserClosing)
@@ -167,202 +183,252 @@ namespace Gdterm.UI.Forms
                         MessageBoxButtons.YesNo,
                         MessageBoxIcon.Question,
                         MessageBoxDefaultButton.Button2);
-                    if (dr == DialogResult.Yes)
-                    {
-                        // 不取消关闭；让窗体关闭后主流程检测到未完成即退出进程
-                        e.Cancel = false;
-                    }
-                    else
-                    {
-                        e.Cancel = true;
-                    }
+                    e.Cancel = dr != DialogResult.Yes;
                 }
             };
+        }
+
+        private static string BuildStepText(int step)
+        {
+            // 高亮当前步
+            string s1 = step == 0 ? "● 欢迎" : "○ 欢迎";
+            string s2 = step == 1 ? "● 设置主密码" : "○ 设置主密码";
+            string s3 = step == 2 ? "● 完成" : "○ 完成";
+            return s1 + "    →    " + s2 + "    →    " + s3;
         }
 
         private void CreateWelcomePanel()
         {
             _welcomePanel = new Panel { Dock = DockStyle.Fill };
 
+            // 用 TableLayout 纵向均分，避免内容全贴顶
+            var layout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 3,
+                BackColor = Color.Transparent
+            };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 8f));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 8f));
+
             var infoLabel = new Label
             {
                 Text =
-                    "为了保护您的连接信息和密码数据，\r\n" +
-                    "gdterm 使用主密码加密所有敏感信息。\r\n\r\n" +
+                    "为了保护您的连接信息和密码数据，gdterm 使用主密码加密所有敏感信息。\r\n\r\n" +
                     "在开始之前，您需要：\r\n\r\n" +
-                    "  ✓  设置一个强主密码（至少 12 位）\r\n" +
-                    "  ✓  密码需包含大小写字母、数字和特殊字符\r\n" +
-                    "  ✓  此密码用于锁定/解锁应用和加密配置\r\n\r\n" +
-                    "⚠ 请牢记此密码，忘记后无法恢复数据！",
+                    "    ·  设置一个强主密码（至少 12 位）\r\n" +
+                    "    ·  密码需包含大小写字母、数字和特殊字符\r\n" +
+                    "    ·  此密码用于锁定/解锁应用和加密配置\r\n\r\n" +
+                    "请牢记此密码，忘记后无法恢复数据。",
                 Font = new Font("Microsoft YaHei", 10f),
-                ForeColor = Color.FromArgb(220, 220, 220),
+                ForeColor = Color.FromArgb(215, 215, 215),
+                Dock = DockStyle.Fill,
                 AutoSize = false,
-                Location = new Point(0, 0),
-                Size = new Size(480, 280),
-                MaximumSize = new Size(480, 0),
-                TextAlign = ContentAlignment.TopLeft
+                TextAlign = ContentAlignment.MiddleLeft
             };
 
-            _welcomePanel.AutoScroll = true;
-            _welcomePanel.Controls.Add(infoLabel);
+            layout.Controls.Add(new Panel { Dock = DockStyle.Fill }, 0, 0);
+            layout.Controls.Add(infoLabel, 0, 1);
+            layout.Controls.Add(new Panel { Dock = DockStyle.Fill }, 0, 2);
+            _welcomePanel.Controls.Add(layout);
         }
 
         private void CreatePasswordPanel()
         {
             _passwordPanel = new Panel { Dock = DockStyle.Fill };
 
+            var layout = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                RowCount = 7,
+                BackColor = Color.Transparent,
+                Padding = new Padding(0, 4, 0, 0)
+            };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 64f));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            // 行高：标题 / 密码 / 确认 / 强度 / 错误 / 显示密码 / 弹性空白
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36f));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40f));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40f));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28f));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 72f));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32f));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+
             var promptLabel = new Label
             {
-                Text = "请设置主密码：",
+                Text = "请设置主密码",
                 Font = new Font("Microsoft YaHei", 11f, FontStyle.Bold),
                 ForeColor = Color.White,
-                Location = new Point(0, 10),
-                Size = new Size(480, 30)
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft
             };
+            layout.SetColumnSpan(promptLabel, 2);
+            layout.Controls.Add(promptLabel, 0, 0);
 
             var pwdLabel = new Label
             {
-                Text = "密码：",
+                Text = "密码",
                 Font = new Font("Microsoft YaHei", 10f),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Location = new Point(0, 55),
-                Size = new Size(60, 25)
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft
             };
-
             _passwordBox = new TextBox
             {
-                Location = new Point(65, 52),
-                Size = new Size(400, 28),
+                Dock = DockStyle.Fill,
                 Font = new Font("Consolas", 11f),
                 UseSystemPasswordChar = true,
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle
+                BorderStyle = BorderStyle.FixedSingle,
+                Margin = new Padding(0, 6, 0, 6)
             };
             _passwordBox.TextChanged += OnPasswordChanged;
+            layout.Controls.Add(pwdLabel, 0, 1);
+            layout.Controls.Add(_passwordBox, 1, 1);
 
             var confirmLabel = new Label
             {
-                Text = "确认：",
+                Text = "确认",
                 Font = new Font("Microsoft YaHei", 10f),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Location = new Point(0, 95),
-                Size = new Size(60, 25)
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft
             };
-
             _confirmBox = new TextBox
             {
-                Location = new Point(65, 92),
-                Size = new Size(400, 28),
+                Dock = DockStyle.Fill,
                 Font = new Font("Consolas", 11f),
                 UseSystemPasswordChar = true,
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle
+                BorderStyle = BorderStyle.FixedSingle,
+                Margin = new Padding(0, 6, 0, 6)
             };
+            layout.Controls.Add(confirmLabel, 0, 2);
+            layout.Controls.Add(_confirmBox, 1, 2);
 
             _strengthLabel = new Label
             {
                 Text = "密码强度：未输入",
                 Font = new Font("Microsoft YaHei", 9f),
                 ForeColor = Color.FromArgb(140, 140, 140),
-                Location = new Point(0, 135),
-                Size = new Size(480, 25)
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft
             };
+            layout.SetColumnSpan(_strengthLabel, 2);
+            layout.Controls.Add(_strengthLabel, 0, 3);
 
             _errorLabel = new Label
             {
                 Text = "",
                 Font = new Font("Microsoft YaHei", 9f),
                 ForeColor = Color.FromArgb(255, 100, 100),
-                Location = new Point(0, 165),
-                Size = new Size(480, 80)
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.TopLeft
             };
+            layout.SetColumnSpan(_errorLabel, 2);
+            layout.Controls.Add(_errorLabel, 0, 4);
 
             var showPwdCheck = new CheckBox
             {
                 Text = "显示密码",
                 Font = new Font("Microsoft YaHei", 9f),
                 ForeColor = Color.FromArgb(160, 160, 160),
-                Location = new Point(0, 250),
-                Size = new Size(100, 25)
+                Dock = DockStyle.Left,
+                AutoSize = true,
+                Margin = new Padding(0, 4, 0, 0)
             };
             showPwdCheck.CheckedChanged += (s, e) =>
             {
                 _passwordBox.UseSystemPasswordChar = !showPwdCheck.Checked;
                 _confirmBox.UseSystemPasswordChar = !showPwdCheck.Checked;
             };
+            layout.SetColumnSpan(showPwdCheck, 2);
+            layout.Controls.Add(showPwdCheck, 0, 5);
 
-            _passwordPanel.Controls.AddRange(new Control[]
-            {
-                promptLabel, pwdLabel, _passwordBox,
-                confirmLabel, _confirmBox,
-                _strengthLabel, _errorLabel, showPwdCheck
-            });
+            // 底部弹性空白，把表单内容留在上半但有均匀行距，不再叠成一团
+            layout.Controls.Add(new Panel { Dock = DockStyle.Fill }, 0, 6);
+
+            _passwordPanel.Controls.Add(layout);
         }
 
         private void CreateCompletePanel()
         {
             _completePanel = new Panel { Dock = DockStyle.Fill };
 
-            var checkLabel = new Label
+            var layout = new TableLayoutPanel
             {
-                Text = "✅",
-                Font = new Font("Segoe UI Emoji", 36f),
-                ForeColor = Color.FromArgb(80, 200, 80),
-                Location = new Point(200, 30),
-                Size = new Size(80, 70),
-                TextAlign = ContentAlignment.MiddleCenter
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 5,
+                BackColor = Color.Transparent
             };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 20f));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48f));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40f));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 30f));
 
             var doneLabel = new Label
             {
-                Text = "设置完成！",
+                Text = "设置完成",
                 Font = new Font("Microsoft YaHei", 16f, FontStyle.Bold),
-                ForeColor = Color.White,
-                Location = new Point(0, 110),
-                Size = new Size(480, 40),
+                ForeColor = Color.FromArgb(80, 200, 120),
+                Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleCenter
             };
 
             var summaryLabel = new Label
             {
-                Text = "主密码已设置，您的数据将被安全加密。\n\n" +
-                       "• 配置文件保存在 data/ 目录，可整体迁移\n" +
-                       "• 空闲 5 分钟后自动锁定\n" +
-                       "• Ctrl+` 全局热键可快速呼出/隐藏窗口\n\n" +
-                       "点击「进入 gdterm」开始使用。",
+                Text =
+                    "主密码已设置，您的数据将被安全加密。\r\n\r\n" +
+                    "·  配置文件保存在 data/ 目录，可整体迁移\r\n" +
+                    "·  空闲 5 分钟后自动锁定\r\n" +
+                    "·  Ctrl+` 全局热键可快速呼出/隐藏窗口\r\n\r\n" +
+                    "点击「进入 gdterm」开始使用。",
                 Font = new Font("Microsoft YaHei", 10f),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Location = new Point(0, 160),
-                Size = new Size(480, 160),
+                Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.TopCenter
             };
 
-            _completePanel.Controls.AddRange(new Control[] { checkLabel, doneLabel, summaryLabel });
+            layout.Controls.Add(new Panel { Dock = DockStyle.Fill }, 0, 0);
+            layout.Controls.Add(doneLabel, 0, 1);
+            layout.Controls.Add(new Panel { Dock = DockStyle.Fill }, 0, 2);
+            layout.Controls.Add(summaryLabel, 0, 3);
+            layout.Controls.Add(new Panel { Dock = DockStyle.Fill }, 0, 4);
+
+            _completePanel.Controls.Add(layout);
         }
 
         private void ShowStep(int step)
         {
             _currentStep = step;
             _stepPanel.Controls.Clear();
+            if (_stepIndicator != null)
+                _stepIndicator.Text = BuildStepText(step);
 
             Control panel;
-            Button nextBtn = FindButton();
-
             switch (step)
             {
                 case 0:
                     panel = _welcomePanel;
-                    if (nextBtn != null) nextBtn.Text = "开始设置 →";
+                    _nextButton.Text = "开始设置 →";
                     break;
                 case 1:
                     panel = _passwordPanel;
-                    if (nextBtn != null) nextBtn.Text = "确认设置 →";
+                    _nextButton.Text = "确认设置 →";
                     break;
                 case 2:
                     panel = _completePanel;
-                    if (nextBtn != null) nextBtn.Text = "进入 gdterm";
+                    _nextButton.Text = "进入 gdterm";
                     break;
                 default:
                     return;
@@ -370,36 +436,6 @@ namespace Gdterm.UI.Forms
 
             panel.Dock = DockStyle.Fill;
             _stepPanel.Controls.Add(panel);
-        }
-
-        private Button FindButton()
-        {
-            foreach (Control c in Parent?.Controls ?? Controls)
-            {
-                if (c is FlowLayoutPanel flp)
-                {
-                    foreach (Control fc in flp.Controls)
-                    {
-                        if (fc is Button btn) return btn;
-                    }
-                }
-            }
-            // 递归搜索
-            return FindButtonRecursive(this);
-        }
-
-        private Button FindButtonRecursive(Control parent)
-        {
-            foreach (Control c in parent.Controls)
-            {
-                if (c is Button btn && btn.Name == "nextButton") return btn;
-                if (c.HasChildren)
-                {
-                    var found = FindButtonRecursive(c);
-                    if (found != null) return found;
-                }
-            }
-            return null;
         }
 
         private void OnNextClick(object sender, EventArgs e)
@@ -450,7 +486,7 @@ namespace Gdterm.UI.Forms
             else if (score <= 4) { strength = "中"; color = Color.FromArgb(255, 200, 60); }
             else { strength = "强"; color = Color.FromArgb(80, 220, 80); }
 
-            _strengthLabel.Text = $"密码强度：{strength}（{pwd.Length} 字符）";
+            _strengthLabel.Text = string.Format("密码强度：{0}（{1} 字符）", strength, pwd.Length);
             _strengthLabel.ForeColor = color;
         }
 
@@ -471,23 +507,22 @@ namespace Gdterm.UI.Forms
                 return false;
             }
 
-            // 尝试设置密码（会触发强度校验）
             try
             {
                 _securityManager.SetMasterPassword(null, password);
-                // 设置后立即解锁，这样进入主界面时不会显示锁定遮罩
+                // 设置后立即解锁，进入主界面时不显示锁定遮罩
                 _securityManager.Unlock(password);
                 _errorLabel.Text = "";
                 return true;
             }
             catch (WeakPasswordException ex)
             {
-                _errorLabel.Text = "密码不符合要求：\n• " + string.Join("\n• ", ex.Violations);
+                _errorLabel.Text = "密码不符合要求：\n· " + string.Join("\n· ", ex.Violations);
                 return false;
             }
             catch (Exception ex)
             {
-                _errorLabel.Text = $"设置失败：{ex.Message}";
+                _errorLabel.Text = "设置失败：" + ex.Message;
                 return false;
             }
         }
