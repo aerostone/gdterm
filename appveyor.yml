@@ -85,17 +85,24 @@ after_test:
       }
 
       # 5) 安装 ILRepack 并合并所有托管 DLL 进 gdterm.exe
-      #    用 NuGet 装 ILRepack.MSBuild.Task（全离线、不依赖 dotnet tool 的 PATH），
-      #    它的 tools/ 下有现成 ILRepack.exe。
-      Write-Host "Installing ILRepack.MSBuild.Task..."
-      $ilpkg = "ILRepack.MSBuild.Task"
-      $ilver = "2.0.18"
-      $pkgDir = Join-Path "$env:USERPROFILE\.nuget\packages" ($ilpkg.ToLower())
-      if (-not (Test-Path (Join-Path $pkgDir $ilver))) {
-        nuget install $ilpkg -Version $ilver -OutputDirectory "$env:USERPROFILE\.nuget\packages" -NonInteractive -Verbosity quiet
+      #    用 dotnet global tool 装 ILRepack.Tool，并把 ~/.dotnet/tools 加到 PATH。
+      Write-Host "Installing ILRepack.Tool..."
+      $toolsPath = Join-Path $env:USERPROFILE ".dotnet\tools"
+      if ((Test-Path $toolsPath) -and (($env:PATH -split ';') -notcontains $toolsPath)) {
+        $env:PATH = "$toolsPath;$env:PATH"
       }
-      $ilrepack = Get-ChildItem -Path $pkgDir -Recurse -Filter "ILRepack.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
-      if (-not $ilrepack) { throw "ILRepack.exe not found under $pkgDir" }
+      dotnet tool install --global ILRepack.Tool --version 2.0.18 2>$null
+      # 兜底：若已安装则 update
+      if (-not (Get-Command ilrepack -ErrorAction SilentlyContinue)) {
+        dotnet tool update --global ILRepack.Tool --version 2.0.18 2>$null
+      }
+      $ilrepack = (Get-Command ilrepack -ErrorAction SilentlyContinue).Source
+      if (-not $ilrepack) {
+        # 最后一道兜底：从 ~/.nuget 拉独立 ILRepack 包（既有 ILRepack.exe）
+        nuget install ILRepack -Version 2.0.18 -OutputDirectory "$env:USERPROFILE\.nuget\packages" -NonInteractive -Verbosity quiet 2>$null
+        $ilrepack = Get-ChildItem -Path "$env:USERPROFILE\.nuget\packages\ilrepack" -Recurse -Filter "ILRepack.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+      }
+      if (-not $ilrepack) { throw "ILRepack executable not found" }
       Write-Host "ILRepack: $ilrepack"
 
       # 需合并的托管程序集（gdterm.exe + 11 个 Gdterm.*.dll + 3 个第三方托管 DLL）
