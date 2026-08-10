@@ -86,54 +86,41 @@ after_test:
 
       # 5) 安装 ILRepack 并合并所有托管 DLL 进 gdterm.exe
       #    用 dotnet global tool 装 ILRepack.Tool，并把 ~/.dotnet/tools 加到 PATH。
-      Write-Host "Installing ILRepack.Tool..."
-      $toolsPath = Join-Path $env:USERPROFILE ".dotnet\tools"
-      if ((Test-Path $toolsPath) -and (($env:PATH -split ';') -notcontains $toolsPath)) {
-        $env:PATH = "$toolsPath;$env:PATH"
-      }
-      dotnet tool install --global ILRepack.Tool --version 2.0.18 2>$null
-      # 兜底：若已安装则 update
-      if (-not (Get-Command ilrepack -ErrorAction SilentlyContinue)) {
-        dotnet tool update --global ILRepack.Tool --version 2.0.18 2>$null
-      }
-      $ilrepack = (Get-Command ilrepack -ErrorAction SilentlyContinue).Source
-      if (-not $ilrepack) {
-        # 最后一道兜底：从 ~/.nuget 拉独立 ILRepack 包（既有 ILRepack.exe）
+      # 不可达的 dotnet tool 路径刪除，直接用 NuGet 独立包（以免失败后兜底在 0.1.44 里已证仍引入传递依赖问题）
+      Write-Host "Installing ILRepack (NuGet standalone)..."
+      $pkgDir = Join-Path "$env:USERPROFILE\.nuget\packages" "ilrepack"
+      if (-not (Test-Path (Join-Path $pkgDir '2.0.18'))) {
         nuget install ILRepack -Version 2.0.18 -OutputDirectory "$env:USERPROFILE\.nuget\packages" -NonInteractive -Verbosity quiet 2>$null
-        $ilrepack = Get-ChildItem -Path "$env:USERPROFILE\.nuget\packages\ilrepack" -Recurse -Filter "ILRepack.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
       }
-      if (-not $ilrepack) { throw "ILRepack executable not found" }
+      $ilrepack = Get-ChildItem -Path $pkgDir -Recurse -Filter "ILRepack.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+      if (-not $ilrepack) { throw "ILRepack.exe not found under $pkgDir" }
       Write-Host "ILRepack: $ilrepack"
 
-      # 需合并的托管程序集（gdterm.exe + 11 个 Gdterm.*.dll + 3 个第三方托管 DLL）
-      $managed = @(
-        'gdterm.exe',
-        'Gdterm.Core.dll','Gdterm.Connections.dll','Gdterm.Logging.dll','Gdterm.Security.dll',
-        'Gdterm.KeePass.dll','Gdterm.Rdp.dll','Gdterm.Tunnel.dll','Gdterm.Terminal.dll',
-        'Gdterm.Sftp.dll','Gdterm.Tools.dll','Gdterm.AI.dll',
-        'Renci.SshNet.dll','KeePassLib.dll','VtNetCore.dll'
-      )
-      $asmPaths = @()
-      foreach ($n in $managed) {
-        $p = Join-Path $out $n
-        if (Test-Path $p) { $asmPaths += $p } else { Write-Host "[ILRepack] skip absent: $n" }
+      # 先补齐 UI bin 所有第三方传递依赖 DLL（Microsoft.Bcl.AsyncInterfaces 等，
+      # 由 SSH.NET 2024.1.0 拖入，cyproj CopyPackageReferencesToOutput 只拷直接引用）。
+      $transitiveNames = @('Microsoft.Bcl.AsyncInterfaces.dll','System.Threading.Tasks.Extensions.dll','System.Memory.dll','System.Buffers.dll','System.Runtime.CompilerServices.Unsafe.dll','System.Numerics.Vectors.dll','System.ValueTuple.dll')
+      foreach ($name in $transitiveNames) {
+        if (-not (Test-Path (Join-Path $out $name))) {
+          $found = Get-ChildItem -Path src -Recurse -Filter $name -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -match 'bin\\' + $env:CONFIGURATION } |
+            Select-Object -First 1
+          if ($found) { Copy-Item $found.FullName $out -Force; Write-Host "Packed transitive: $name" }
+        }
       }
-      Write-Host "[ILRepack] merging $($asmPaths.Count) assemblies into gdterm.exe"
-      # PowerShell 调外部命令：实参必须预先求值好，不能把 (Join-Path) 当字面参数传。
-      $outExe      = Join-Path $out 'gdterm.exe'
-      $argsArr     = @('/out:' + $outExe, '/wildcards', '/keyfile:' + (Join-Path $ui 'gdterm.snk'))
-      # 没有强名 key 就不签
-      $testSnk     = Join-Path $ui 'gdterm.snk'
-      if (-not (Test-Path $testSnk)) { $argsArr = @('/out:' + $outExe, '/wildcards', '/copyattrs', '/allowDuplicateAssembly') }
-      $argsArr    += $asmPaths
+
+      # 收集 out 下所有托管 DLL 作为 ILRepack 输入与 /lib 搜索路径，这样传递依赖能被解析。
+      $allDlls = Get-ChildItem -Path $out -Filter *.dll | Where-Object { $_.Name -ne 'winpty.dll' } | Select-Object -ExpandProperty FullName
+      $primeExe = Join-Path $out 'gdterm.exe'
+      $asmPaths = @($primeExe) + ($allDlls | Where-Object { $_ -ne $primeExe })
+      Write-Host "[ILRepack] merging $($asmPaths.Count) files into gdterm.exe"
+      $outExe  = Join-Path $out 'gdterm.exe'
+      $argsArr = @('/out:' + $outExe, '/wildcards', '/lib:' + $out, '/copyattrs', '/allowDuplicateAssembly', '/internalize') + $asmPaths
       & $ilrepack $argsArr
       if ($LASTEXITCODE -ne 0) { throw "ILRepack failed exit=$LASTEXITCODE" }
 
-      # 6) 合并完成后删除被合并进 exe 的单个托管 DLL（gdterm.exe 自更新为合并版）
-      $mergedDlls = $managed | Where-Object { $_ -ne 'gdterm.exe' }
-      foreach ($n in $mergedDlls) {
-        $p = Join-Path $out $n
-        if (Test-Path $p) { Remove-Item $p -Force }
+      # 6) 合并完成后删除被合并进 exe 的所有托管 DLL（winpty.dll 是原生保留）
+      foreach ($n in (Get-ChildItem -Path $out -Filter *.dll | Where-Object { $_.Name -ne 'winpty.dll' } | Select-Object -ExpandProperty Name)) {
+        Remove-Item (Join-Path $out $n) -Force
       }
 
       # 7) 删除噪声文件：.pdb / .xml / .config / .txt（含 LICENSE.winpty.txt、README 等）
