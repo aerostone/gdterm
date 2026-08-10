@@ -38,25 +38,38 @@ test_script:
 
 after_test:
   - ps: |
+      # ===== 绿色版最小化打包 =====
+      # 目标：托管 DLL 全部用 ILRepack 合进 gdterm.exe，产物只剩
+      #   gdterm.exe + winpty.dll + winpty-agent.exe + winpty.exe + data/骨架
+      # 删除所有 .txt / .pdb / .xml / .config 噪声文件。
       $ui = "src\Gdterm.UI\bin\$env:CONFIGURATION"
-      if (-not (Test-Path (Join-Path $ui "gdterm.exe")) -and -not (Test-Path (Join-Path $ui "Gdterm.UI.exe"))) {
+      if (-not (Test-Path (Join-Path $ui "gdterm.exe"))) {
         Write-Host "UI bin missing — skip portable artifact"
         return
       }
+
       $out = "dist\gdterm"
       if (Test-Path $out) { Remove-Item -Recurse -Force $out }
       New-Item -ItemType Directory -Path $out | Out-Null
+
+      # 1) 先把 UI 输出目录所有东西拷过去（含 Gdterm.*.dll / Renci.SshNet.dll /
+      #    KeePassLib.dll / VtNetCore.dll / gdterm.exe / *.pdb / *.xml / *.config）
       Copy-Item -Path (Join-Path $ui '*') -Destination $out -Recurse -Force
+
+      # 2) 补齐 lib 下的 VtNetCore.dll（若 csproj 的 HintPath Private 没拷过来）
       if (Test-Path "lib\VtNetCore.dll") {
         Copy-Item "lib\VtNetCore.dll" $out -Force
-        Copy-Item "lib\LICENSE.VtNetCore.txt" $out -Force -ErrorAction SilentlyContinue
       }
-      # winpty (Win7/Server2008 PTY fallback)
+
+      # 3) winpty（Win7/Server2008 本地终端 PTY fallback —— 原生二进制，必须单文件留存）
       if (Test-Path "lib\winpty") {
-        Copy-Item "lib\winpty\*" $out -Force
+        Copy-Item "lib\winpty\winpty.dll"      $out -Force
+        Copy-Item "lib\winpty\winpty-agent.exe" $out -Force
+        Copy-Item "lib\winpty\winpty.exe"     $out -Force
       }
-      # 从各项目 bin 与 NuGet 缓存补齐传递依赖（KeePassLib / SSH.NET）
-      $depNames = @('KeePassLib.dll','Renci.SshNet.dll','VtNetCore.dll')
+
+      # 4) 从各项目 bin / NuGet 缓存补齐传递依赖（KeePassLib / SSH.NET）
+      $depNames = @('KeePassLib.dll','Renci.SshNet.dll')
       foreach ($name in $depNames) {
         if (-not (Test-Path (Join-Path $out $name))) {
           $found = Get-ChildItem -Path src -Recurse -Filter $name -ErrorAction SilentlyContinue |
@@ -66,17 +79,59 @@ after_test:
             $found = Get-ChildItem -Path "$env:USERPROFILE\.nuget\packages" -Recurse -Filter $name -ErrorAction SilentlyContinue |
               Select-Object -First 1
           }
-          if ($found) {
-            Copy-Item $found.FullName $out -Force
-            Write-Host "Packed dependency: $name from $($found.FullName)"
-          } else {
-            Write-Warning "Missing dependency in portable package: $name"
-          }
+          if ($found) { Copy-Item $found.FullName $out -Force; Write-Host "Packed dependency: $name" }
+          else { Write-Warning "Missing dependency in portable package: $name" }
         }
       }
+
+      # 5) 安装 ILRepack.Tool 并合并所有托管 DLL 进 gdterm.exe
+      Write-Host "Installing ILRepack.Tool..."
+      dotnet tool install --global ILRepack.Tool --version 2.0.18 2>$null
+      $ilrepack = "ilrepack"
+      $toolsDir = Join-Path $env:APPDATA "ilrepack-tool"
+      if (-not (Get-Command $ilrepack -ErrorAction SilentlyContinue)) {
+        # 兜底：从 ~/.nuget 找 ILRepack.MSBuild.Task 的 ILRepack.exe
+        $ilrepack = Get-ChildItem -Path "$env:USERPROFILE\.nuget\packages" -Recurse -Filter "ILRepack.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+      }
+
+      # 需合并的托管程序集（gdterm.exe + 11 个 Gdterm.*.dll + 3 个第三方托管 DLL）
+      $managed = @(
+        'gdterm.exe',
+        'Gdterm.Core.dll','Gdterm.Connections.dll','Gdterm.Logging.dll','Gdterm.Security.dll',
+        'Gdterm.KeePass.dll','Gdterm.Rdp.dll','Gdterm.Tunnel.dll','Gdterm.Terminal.dll',
+        'Gdterm.Sftp.dll','Gdterm.Tools.dll','Gdterm.AI.dll',
+        'Renci.SshNet.dll','KeePassLib.dll','VtNetCore.dll'
+      )
+      $asmPaths = @()
+      foreach ($n in $managed) {
+        $p = Join-Path $out $n
+        if (Test-Path $p) { $asmPaths += $p } else { Write-Host "[ILRepack] skip absent: $n" }
+      }
+      Write-Host "[ILRepack] merging $($asmPaths.Count) assemblies into gdterm.exe"
+      & $ilrepack /out:(Join-Path $out 'gdterm.exe') /wildcards $asmPaths
+      if ($LASTEXITCODE -ne 0) { throw "ILRepack failed exit=$LASTEXITCODE" }
+
+      # 6) 合并完成后删除被合并进 exe 的单个托管 DLL（gdterm.exe 自更新为合并版）
+      $mergedDlls = $managed | Where-Object { $_ -ne 'gdterm.exe' }
+      foreach ($n in $mergedDlls) {
+        $p = Join-Path $out $n
+        if (Test-Path $p) { Remove-Item $p -Force }
+      }
+
+      # 7) 删除噪声文件：.pdb / .xml / .config / .txt（含 LICENSE.winpty.txt、README 等）
+      Get-ChildItem -Path $out -Recurse -File |
+        Where-Object { $_.Extension -in '.pdb','.xml','.config','.txt' } |
+        ForEach-Object { Remove-Item $_.FullName -Force; Write-Host "Removed noise: $($_.Name)" }
+
+      # 8) 便携数据骨架（空 —— 无密钥）
       New-Item -ItemType Directory -Path (Join-Path $out "data\config\tools") -Force | Out-Null
       New-Item -ItemType Directory -Path (Join-Path $out "data\logs") -Force | Out-Null
-      Write-Host "Portable layout files:" (Get-ChildItem $out -File | Select-Object -ExpandProperty Name) -Separator ', '
+
+      # 9) 最终产物清单（应该只剩个位数文件）
+      Write-Host ""
+      Write-Host "===== Portable layout (final) ====="
+      Get-ChildItem $out -File | ForEach-Object { Write-Host ("  {0,-25} {1,8:N0} bytes" -f $_.Name, $_.Length) }
+      Write-Host "===== Total files: $((Get-ChildItem $out -File).Count) ====="
       Write-Host "Portable layout ready: $out"
 
 artifacts:
