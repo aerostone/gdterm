@@ -84,15 +84,19 @@ after_test:
         }
       }
 
-      # 5) 安装 ILRepack.Tool 并合并所有托管 DLL 进 gdterm.exe
-      Write-Host "Installing ILRepack.Tool..."
-      dotnet tool install --global ILRepack.Tool --version 2.0.18 2>$null
-      $ilrepack = "ilrepack"
-      $toolsDir = Join-Path $env:APPDATA "ilrepack-tool"
-      if (-not (Get-Command $ilrepack -ErrorAction SilentlyContinue)) {
-        # 兜底：从 ~/.nuget 找 ILRepack.MSBuild.Task 的 ILRepack.exe
-        $ilrepack = Get-ChildItem -Path "$env:USERPROFILE\.nuget\packages" -Recurse -Filter "ILRepack.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+      # 5) 安装 ILRepack 并合并所有托管 DLL 进 gdterm.exe
+      #    用 NuGet 装 ILRepack.MSBuild.Task（全离线、不依赖 dotnet tool 的 PATH），
+      #    它的 tools/ 下有现成 ILRepack.exe。
+      Write-Host "Installing ILRepack.MSBuild.Task..."
+      $ilpkg = "ILRepack.MSBuild.Task"
+      $ilver = "2.0.18"
+      $pkgDir = Join-Path "$env:USERPROFILE\.nuget\packages" ($ilpkg.ToLower())
+      if (-not (Test-Path (Join-Path $pkgDir $ilver))) {
+        nuget install $ilpkg -Version $ilver -OutputDirectory "$env:USERPROFILE\.nuget\packages" -NonInteractive -Verbosity quiet
       }
+      $ilrepack = Get-ChildItem -Path $pkgDir -Recurse -Filter "ILRepack.exe" -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+      if (-not $ilrepack) { throw "ILRepack.exe not found under $pkgDir" }
+      Write-Host "ILRepack: $ilrepack"
 
       # 需合并的托管程序集（gdterm.exe + 11 个 Gdterm.*.dll + 3 个第三方托管 DLL）
       $managed = @(
@@ -108,7 +112,14 @@ after_test:
         if (Test-Path $p) { $asmPaths += $p } else { Write-Host "[ILRepack] skip absent: $n" }
       }
       Write-Host "[ILRepack] merging $($asmPaths.Count) assemblies into gdterm.exe"
-      & $ilrepack /out:(Join-Path $out 'gdterm.exe') /wildcards $asmPaths
+      # PowerShell 调外部命令：实参必须预先求值好，不能把 (Join-Path) 当字面参数传。
+      $outExe      = Join-Path $out 'gdterm.exe'
+      $argsArr     = @('/out:' + $outExe, '/wildcards', '/keyfile:' + (Join-Path $ui 'gdterm.snk'))
+      # 没有强名 key 就不签
+      $testSnk     = Join-Path $ui 'gdterm.snk'
+      if (-not (Test-Path $testSnk)) { $argsArr = @('/out:' + $outExe, '/wildcards', '/copyattrs', '/allowDuplicateAssembly') }
+      $argsArr    += $asmPaths
+      & $ilrepack $argsArr
       if ($LASTEXITCODE -ne 0) { throw "ILRepack failed exit=$LASTEXITCODE" }
 
       # 6) 合并完成后删除被合并进 exe 的单个托管 DLL（gdterm.exe 自更新为合并版）
