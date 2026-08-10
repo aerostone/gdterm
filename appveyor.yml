@@ -110,9 +110,10 @@ after_test:
           if ($found) { Copy-Item $found.FullName $out -Force; Write-Host "Packed transitive: $name" }
         }
       }
-      # PowerShell 调 ILRepack：各开关独立数组元素，/out: 只跟一个值，避免被串联
+      # PowerShell 调 ILRepack：长参数语法 --out=FILE / --lib=DIR 避免 NDesk.Options
+      # 在 '/out:val' 形式下把后续 '/' 开头的开关吞进 out 路径 (ILRepack 2.0.18 已知parse怪癖)。
       $outExe = Join-Path $out 'gdterm.exe'
-      $argsArr = @('/out:' + $outExe, '/lib:' + $out, '/wildcards', '/copyattrs', '/allowdup', '/internalize') + $asmPaths
+      $argsArr = @("--out=$outExe", "--lib=$out", '/wildcards', '/copyattrs', '/allowdup', '/internalize') + $asmPaths
       & $ilrepack $argsArr
       if ($LASTEXITCODE -ne 0) { throw "ILRepack failed exit=$LASTEXITCODE" }
 
