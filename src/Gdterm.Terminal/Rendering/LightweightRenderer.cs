@@ -58,7 +58,7 @@ namespace Gdterm.Terminal.Rendering
         internal const int PadY = 6;
         private string _fontName = "Consolas";
         // 防御性默认——TerminalControl.InitializeComponent 必然会 ApplyFont 覆盖；
-        // 对齐 AppearanceSettings.FontName 默认 12 以避免“裁织调 ApplyFont 前突然变小”。
+        // pt 单位，与 TerminalControl 的 fallback 14f 一致。
         private float _fontSize = 14f;
 
         // 重绘定时器 — 用于合并高频写入
@@ -75,7 +75,7 @@ namespace Gdterm.Terminal.Rendering
             _scheme = scheme ?? ColorSchemes.Classic;
             _currentColor = _scheme.Foreground;
 
-            // 缓存字体 — 用 Point 单位 + 实测字宽，避免固定 8px 导致间距错乱
+            // 缓存字体 — pt 输入，内部转为 px 创建 Pixel 字体，实测字宽避免间距错乱
             ApplyFont(_fontName, _fontSize);
 
             // 双缓冲 Panel — 消除闪烁，不触发持续渲染
