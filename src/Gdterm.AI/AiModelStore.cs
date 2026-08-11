@@ -9,8 +9,8 @@ using Gdterm.AI.Models;
 namespace Gdterm.AI
 {
     /// <summary>
-    /// AI 模型配置持久化。ApiKey 落盘强制 gdk2（主密码派生 AES）。
-    /// 无主密码时拒绝写入新密钥（finding-09）；读取仍兼容 gdk1/明文以便迁移。
+    /// AI 模型配置持久化。ApiKey 落盘强制 gdk3（主密码派生 AES-CBC + HMAC-SHA256 认证加密）。
+    /// 无主密码时拒绝写入新密钥（finding-09）；读取仍兼容 gdk2/gdk1/明文以便迁移。
     /// </summary>
     public class AiModelStore
     {
@@ -242,17 +242,21 @@ namespace Gdterm.AI
             catch { return null; }
         }
 
-        // gdk2: PBKDF2(主密码) + AES-CBC；gdk1: 固定密钥 XOR；兼容旧明文
+        // gdk3: PBKDF2(主密码, 100000) + AES-CBC + HMAC-SHA256 (Encrypt-then-MAC)；gdk2: PBKDF2(10000) + AES-CBC（旧）；gdk1: 固定密钥 XOR；兼容旧明文
+        private const string PrefixV3 = "gdk3:";
         private const string PrefixV2 = "gdk2:";
         private const string PrefixV1 = "gdk1:";
         private static readonly byte[] FixedXorKey = Encoding.UTF8.GetBytes("gdterm-ai-model-key-v1");
-        private static readonly byte[] Pbkdf2SaltPurpose = Encoding.UTF8.GetBytes("gdterm-ai-apikey-v2");
+        private static readonly byte[] Pbkdf2SaltPurpose = Encoding.UTF8.GetBytes("gdterm-ai-apikey-v3");
+        private const int Pbkdf2IterationsV3 = 100000;
+        private const int Pbkdf2IterationsV2 = 10000;
 
         private string ProtectSecret(string plain)
         {
             if (string.IsNullOrEmpty(plain)) return "";
             // 已是密文：不二次加密
-            if (plain.StartsWith(PrefixV2, StringComparison.Ordinal))
+            if (plain.StartsWith(PrefixV3, StringComparison.Ordinal) ||
+                plain.StartsWith(PrefixV2, StringComparison.Ordinal))
                 return plain;
             // finding-09：禁止新写 gdk1；已有 gdk1 串原样保留直到 UpgradeSecretsToMasterKey
             if (plain.StartsWith(PrefixV1, StringComparison.Ordinal))
@@ -264,7 +268,7 @@ namespace Gdterm.AI
                 // 无主密码：不落盘明文/gdk1，返回空（调用方可提示先解锁）
                 return "";
             }
-            try { return PrefixV2 + ProtectAes(plain, master); }
+            try { return PrefixV3 + ProtectAes(plain, master); }
             catch { return ""; }
         }
 
@@ -272,12 +276,21 @@ namespace Gdterm.AI
         {
             if (string.IsNullOrEmpty(stored)) return "";
 
-            if (stored.StartsWith(PrefixV2, StringComparison.Ordinal))
+            if (stored.StartsWith(PrefixV3, StringComparison.Ordinal))
             {
                 var master = TryGetMasterPassword();
                 if (string.IsNullOrEmpty(master))
                     return ""; // 锁定时无法还原；内存中不保留密文口令
-                try { return UnprotectAes(stored.Substring(PrefixV2.Length), master); }
+                try { return UnprotectAesV3(stored.Substring(PrefixV3.Length), master); }
+                catch { return ""; }
+            }
+
+            if (stored.StartsWith(PrefixV2, StringComparison.Ordinal))
+            {
+                var master = TryGetMasterPassword();
+                if (string.IsNullOrEmpty(master))
+                    return ""; // 锁定时无法还原
+                try { return UnprotectAesV2(stored.Substring(PrefixV2.Length), master); }
                 catch { return ""; }
             }
 
@@ -309,7 +322,7 @@ namespace Gdterm.AI
             return Encoding.UTF8.GetString(data);
         }
 
-        /// <summary>payload = salt(16) | iv(16) | cipher</summary>
+        /// <summary>gdk3 加密：payload = salt(16) | iv(16) | cipher | hmac(32)。HMAC-SHA256 覆盖 salt|iv|cipher（Encrypt-then-MAC）。</summary>
         private static string ProtectAes(string plain, string masterPassword)
         {
             var salt = new byte[16];
@@ -317,7 +330,7 @@ namespace Gdterm.AI
                 rng.GetBytes(salt);
 
             byte[] key;
-            using (var derive = new Rfc2898DeriveBytes(masterPassword, salt, 10000))
+            using (var derive = new Rfc2898DeriveBytes(masterPassword, salt, Pbkdf2IterationsV3))
                 key = derive.GetBytes(32);
 
             using (var aes = Aes.Create())
@@ -327,20 +340,78 @@ namespace Gdterm.AI
                 aes.Padding = PaddingMode.PKCS7;
                 aes.Key = key;
                 aes.GenerateIV();
+                byte[] cipher;
                 using (var enc = aes.CreateEncryptor())
                 {
                     var plainBytes = Encoding.UTF8.GetBytes(plain);
-                    var cipher = enc.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
-                    var payload = new byte[16 + 16 + cipher.Length];
-                    Buffer.BlockCopy(salt, 0, payload, 0, 16);
-                    Buffer.BlockCopy(aes.IV, 0, payload, 16, 16);
-                    Buffer.BlockCopy(cipher, 0, payload, 32, cipher.Length);
-                    return Convert.ToBase64String(payload);
+                    cipher = enc.TransformFinalBlock(plainBytes, 0, plainBytes.Length);
+                }
+
+                // HMAC over salt | iv | cipher
+                var macInput = new byte[16 + 16 + cipher.Length];
+                Buffer.BlockCopy(salt, 0, macInput, 0, 16);
+                Buffer.BlockCopy(aes.IV, 0, macInput, 16, 16);
+                Buffer.BlockCopy(cipher, 0, macInput, 32, cipher.Length);
+                byte[] mac;
+                using (var hmac = new HMACSHA256(key))
+                    mac = hmac.ComputeHash(macInput);
+
+                var payload = new byte[16 + 16 + cipher.Length + 32];
+                Buffer.BlockCopy(salt, 0, payload, 0, 16);
+                Buffer.BlockCopy(aes.IV, 0, payload, 16, 16);
+                Buffer.BlockCopy(cipher, 0, payload, 32, cipher.Length);
+                Buffer.BlockCopy(mac, 0, payload, 32 + cipher.Length, 32);
+                return Convert.ToBase64String(payload);
+            }
+        }
+
+        /// <summary>gdk3 解密：校验 HMAC（固定时间比较），失败抛 CryptographicException。</summary>
+        private static string UnprotectAesV3(string b64, string masterPassword)
+        {
+            var payload = Convert.FromBase64String(b64);
+            if (payload.Length < 16 + 16 + 32 + 1) throw new CryptographicException("payload too short");
+
+            var salt = new byte[16];
+            var iv = new byte[16];
+            var cipher = new byte[payload.Length - 16 - 16 - 32];
+            var mac = new byte[32];
+            Buffer.BlockCopy(payload, 0, salt, 0, 16);
+            Buffer.BlockCopy(payload, 16, iv, 0, 16);
+            Buffer.BlockCopy(payload, 32, cipher, 0, cipher.Length);
+            Buffer.BlockCopy(payload, 32 + cipher.Length, mac, 0, 32);
+
+            byte[] key;
+            using (var derive = new Rfc2898DeriveBytes(masterPassword, salt, Pbkdf2IterationsV3))
+                key = derive.GetBytes(32);
+
+            // 重算 HMAC 并固定时间比较
+            var macInput = new byte[16 + 16 + cipher.Length];
+            Buffer.BlockCopy(salt, 0, macInput, 0, 16);
+            Buffer.BlockCopy(iv, 0, macInput, 16, 16);
+            Buffer.BlockCopy(cipher, 0, macInput, 32, cipher.Length);
+            byte[] expected;
+            using (var hmac = new HMACSHA256(key))
+                expected = hmac.ComputeHash(macInput);
+            if (!FixedTimeEquals(expected, mac))
+                throw new CryptographicException("HMAC 校验失败（密文被篡改或主密码错误）");
+
+            using (var aes = Aes.Create())
+            {
+                aes.KeySize = 256;
+                aes.Mode = CipherMode.CBC;
+                aes.Padding = PaddingMode.PKCS7;
+                aes.Key = key;
+                aes.IV = iv;
+                using (var dec = aes.CreateDecryptor())
+                {
+                    var plain = dec.TransformFinalBlock(cipher, 0, cipher.Length);
+                    return Encoding.UTF8.GetString(plain);
                 }
             }
         }
 
-        private static string UnprotectAes(string b64, string masterPassword)
+        /// <summary>gdk2 解密（旧格式，无 HMAC；仅读取用，读取后由 UpgradeSecretsToMasterKey 重写为 gdk3）。</summary>
+        private static string UnprotectAesV2(string b64, string masterPassword)
         {
             var payload = Convert.FromBase64String(b64);
             if (payload.Length < 33) throw new CryptographicException("payload too short");
@@ -352,7 +423,7 @@ namespace Gdterm.AI
             Buffer.BlockCopy(payload, 32, cipher, 0, cipher.Length);
 
             byte[] key;
-            using (var derive = new Rfc2898DeriveBytes(masterPassword, salt, 10000))
+            using (var derive = new Rfc2898DeriveBytes(masterPassword, salt, Pbkdf2IterationsV2))
                 key = derive.GetBytes(32);
 
             using (var aes = Aes.Create())
@@ -368,6 +439,16 @@ namespace Gdterm.AI
                     return Encoding.UTF8.GetString(plain);
                 }
             }
+        }
+
+        /// <summary>.NET 4.6.2 无 CryptographicOperations.FixedTimeEquals，用 XOR 累积实现固定时间比较。</summary>
+        private static bool FixedTimeEquals(byte[] a, byte[] b)
+        {
+            if (a == null || b == null || a.Length != b.Length) return false;
+            int diff = 0;
+            for (int i = 0; i < a.Length; i++)
+                diff |= a[i] ^ b[i];
+            return diff == 0;
         }
     }
 }

@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Text;
+using Gdterm.Core.Security;
 using Gdterm.Tools.Models;
 
 namespace Gdterm.Tools.Modules
@@ -34,8 +35,17 @@ namespace Gdterm.Tools.Modules
         /// <summary>同步本地时间</summary>
         public RemoteCommandResult SyncLocalTime(string ntpServer)
         {
+            // SEC-01: NTP 服务器白名单
+            try
+            {
+                ntpServer = ShellArgument.ValidateNtpServer(ntpServer);
+            }
+            catch (ArgumentException ex)
+            {
+                return new RemoteCommandResult { Command = "w32tm", ExitCode = -1, Stderr = ex.Message };
+            }
             OnOutput("本地同步: " + ntpServer);
-            // Windows: w32tm /resync
+            // Windows: w32tm /resync /computer:NTP
             return ExecuteLocal("w32tm", "/resync /computer:" + ntpServer);
         }
 
@@ -50,6 +60,15 @@ namespace Gdterm.Tools.Modules
         {
             if (!HasRemoteSession)
                 return new RemoteCommandResult { Command = "remote-time", ExitCode = -1, Stderr = "未连接远程SSH" };
+            // SEC-01: NTP 服务器白名单 + shell 引号
+            try
+            {
+                ntpServer = ShellArgument.ShellQuote(ShellArgument.ValidateNtpServer(ntpServer));
+            }
+            catch (ArgumentException ex)
+            {
+                return new RemoteCommandResult { Command = "remote-time", ExitCode = -1, Stderr = ex.Message };
+            }
 
             var sw = Stopwatch.StartNew();
             var sb = new StringBuilder();
@@ -61,13 +80,12 @@ namespace Gdterm.Tools.Modules
                 var beforeResult = ExecuteRemote("date '+%Y-%m-%d %H:%M:%S' && timedatectl status 2>/dev/null | grep -i 'synchronized\\|NTP'");
                 sb.AppendLine("=== 同步前 ===").AppendLine(beforeResult.Stdout);
 
-                // 检测并执行时间同步
-                var syncResult = ExecuteRemote(string.Format(
+                // 检测并执行时间同步——ntpServer 已用 ShellQuote 包裹为 POSIX 安全单引号
+                var syncResult = ExecuteRemote(
                     "(chronyc -a 'burst 3/4' && chronyc -a makestep 2>/dev/null) || " +
-                    "(ntpd -gq -p {0} 2>/dev/null && systemctl restart ntpd 2>/dev/null) || " +
-                    "(ntpdate {0} 2>/dev/null) || " +
-                    "(timedatectl set-ntp true 2>/dev/null)",
-                    ntpServer));
+                    "(ntpd -gq -p " + ntpServer + " 2>/dev/null && systemctl restart ntpd 2>/dev/null) || " +
+                    "(ntpdate " + ntpServer + " 2>/dev/null) || " +
+                    "(timedatectl set-ntp true 2>/dev/null)");
                 exitCode = syncResult.ExitCode;
 
                 // 获取同步后时间
@@ -139,6 +157,14 @@ namespace Gdterm.Tools.Modules
                 {
                     var ntp = string.IsNullOrWhiteSpace(inputs[0].Text) || inputs[0].Text.StartsWith("目标")
                         ? "ntp.aliyun.com" : inputs[0].Text.Trim();
+                    // SEC-01: 入口处提前拒绝非法 NTP 服务器名
+                    try { ShellArgument.ValidateNtpServer(ntp); }
+                    catch (ArgumentException ex)
+                    {
+                        status.Text = "无效 NTP 服务器";
+                        ToolPanelHelper.AppendLine(output, "错误: " + ex.Message);
+                        return;
+                    }
                     var local = SyncLocalTime(ntp);
                     ToolPanelHelper.AppendLine(output, "[本地] exit=" + local.ExitCode + " " + local.Stdout + local.Stderr);
                     if (HasRemoteSession)

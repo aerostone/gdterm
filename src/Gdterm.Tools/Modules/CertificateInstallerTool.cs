@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Gdterm.Core.Security;
 using Gdterm.Tools.Models;
 
 namespace Gdterm.Tools.Modules
@@ -35,11 +36,23 @@ namespace Gdterm.Tools.Modules
         /// <summary>安装本地证书</summary>
         public RemoteCommandResult InstallLocal(string certPath, bool isTrustedRoot)
         {
+            // SEC-01: 本地路径走 Windows 进程，certutil 本身不解析 shell 元字符，但仍校验避免意外执行
+            try
+            {
+                ShellArgument.ValidateLocalPath(certPath, "certPath");
+            }
+            catch (ArgumentException ex)
+            {
+                return new RemoteCommandResult { Command = "local-certutil", ExitCode = -1, Stderr = ex.Message };
+            }
             if (!File.Exists(certPath))
                 return new RemoteCommandResult { Command = "local-certutil", ExitCode = -1, Stderr = "证书文件不存在: " + certPath };
 
             var store = isTrustedRoot ? "Root" : "My";
-            var args = "-addstore \"" + store + "\" \"" + certPath + "\"";
+            // 双引号包裹 Windows 路径，内部双引号转义为 ""
+            var safePath = "\"" + certPath.Replace("\"", "\"\"") + "\"";
+            var safeStore = "\"" + store + "\"";
+            var args = "-addstore " + safeStore + " " + safePath;
             var result = ExecuteLocal("certutil", args);
             OnOutput("本地证书安装" + (result.IsSuccess ? "成功" : "失败") + ": " + certPath);
             return result;
@@ -70,24 +83,25 @@ namespace Gdterm.Tools.Modules
                         var osInfo = osResult.Stdout ?? "";
 
                         string installCmd;
+                        // SEC-01: remotePath 与 dest 全部走 ShellArgument.ShellQuote——避免临时文件路径含空格/特殊字符触发注入
                         if (osInfo.Contains("Ubuntu") || osInfo.Contains("Debian"))
                         {
                             var dest = isTrustedRoot
                                 ? "/usr/local/share/ca-certificates/" + Path.GetFileName(localCertPath)
                                 : "/etc/ssl/certs/" + Path.GetFileName(localCertPath);
-                            installCmd = string.Format("sudo cp {0} {1} && sudo update-ca-certificates", remotePath, dest);
+                            installCmd = "sudo cp " + ShellArgument.ShellQuote(remotePath) + " " + ShellArgument.ShellQuote(dest) + " && sudo update-ca-certificates";
                         }
                         else if (osInfo.Contains("CentOS") || osInfo.Contains("Red Hat") || osInfo.Contains("RHEL"))
                         {
                             var dest = isTrustedRoot
                                 ? "/etc/pki/ca-trust/source/anchors/" + Path.GetFileName(localCertPath)
                                 : "/etc/pki/tls/certs/" + Path.GetFileName(localCertPath);
-                            installCmd = string.Format("sudo cp {0} {1} && sudo update-ca-trust", remotePath, dest);
+                            installCmd = "sudo cp " + ShellArgument.ShellQuote(remotePath) + " " + ShellArgument.ShellQuote(dest) + " && sudo update-ca-trust";
                         }
                         else
                         {
                             // 通用方式
-                            installCmd = string.Format("sudo cp {0} /usr/local/share/ca-certificates/ 2>/dev/null || sudo cp {0} /etc/pki/ca-trust/source/anchors/ 2>/dev/null; sudo update-ca-certificates 2>/dev/null || sudo update-ca-trust 2>/dev/null", remotePath);
+                            installCmd = "sudo cp " + ShellArgument.ShellQuote(remotePath) + " /usr/local/share/ca-certificates/ 2>/dev/null || sudo cp " + ShellArgument.ShellQuote(remotePath) + " /etc/pki/ca-trust/source/anchors/ 2>/dev/null; sudo update-ca-certificates 2>/dev/null || sudo update-ca-trust 2>/dev/null";
                         }
 
                         var result = ExecuteRemote(installCmd);
@@ -98,7 +112,7 @@ namespace Gdterm.Tools.Modules
                         // 验证证书链
                         if (result.IsSuccess)
                         {
-                            var verifyCmd = string.Format("openssl x509 -in {0} -text -noout 2>&1 | head -5", remotePath);
+                            var verifyCmd = "openssl x509 -in " + ShellArgument.ShellQuote(remotePath) + " -text -noout 2>&1 | head -5";
                             var verifyResult = ExecuteRemote(verifyCmd);
                             sb.AppendLine().AppendLine("=== 证书信息 ===").Append(verifyResult.Stdout);
                         }
@@ -123,10 +137,20 @@ namespace Gdterm.Tools.Modules
         /// <summary>查看证书信息</summary>
         public RemoteCommandResult InspectCert(string certPath)
         {
+            // SEC-01: 路径元字符拦截
+            try
+            {
+                ShellArgument.ValidateLocalPath(certPath, "certPath");
+            }
+            catch (ArgumentException ex)
+            {
+                return new RemoteCommandResult { Command = "openssl", ExitCode = -1, Stderr = ex.Message };
+            }
             if (!File.Exists(certPath))
                 return new RemoteCommandResult { Command = "openssl", ExitCode = -1, Stderr = "文件不存在" };
 
-            return ExecuteLocal("openssl", "x509 -in \"" + certPath + "\" -text -noout");
+            var safePath = "\"" + certPath.Replace("\"", "\"\"") + "\"";
+            return ExecuteLocal("openssl", "x509 -in " + safePath + " -text -noout");
         }
 
         private RemoteCommandResult ExecuteLocal(string fileName, string arguments)

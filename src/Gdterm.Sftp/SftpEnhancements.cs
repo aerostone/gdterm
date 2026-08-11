@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Gdterm.Core.Security;
 using Gdterm.Sftp.Models;
 using Renci.SshNet;
 
@@ -107,9 +108,18 @@ namespace Gdterm.Sftp
         public static Task<bool> ChmodAsync(SshClient ssh, string remotePath, string permission)
         {
             if (ssh == null || !ssh.IsConnected) return Task.FromResult(false);
+            // SEC-02: permission 白名单 + remotePath ShellQuote
             try
             {
-                var cmd = ssh.RunCommand(string.Format("chmod {0} {1}", permission, remotePath));
+                ShellArgument.ValidatePermission(permission);
+            }
+            catch (ArgumentException)
+            {
+                return Task.FromResult(false);
+            }
+            try
+            {
+                var cmd = ssh.RunCommand("chmod " + permission + " " + ShellArgument.ShellQuote(remotePath));
                 return Task.FromResult(cmd.ExitStatus.GetValueOrDefault(-1) == 0);
             }
             catch { return Task.FromResult(false); }
@@ -119,10 +129,19 @@ namespace Gdterm.Sftp
         public static Task<bool> ChownAsync(SshClient ssh, string remotePath, string owner, string group = null)
         {
             if (ssh == null || !ssh.IsConnected) return Task.FromResult(false);
+            // SEC-02: owner/group 白名单 + remotePath ShellQuote
+            string target;
             try
             {
-                var target = group != null ? owner + ":" + group : owner;
-                var cmd = ssh.RunCommand(string.Format("chown {0} {1}", target, remotePath));
+                target = ShellArgument.ValidateOwner(owner, group);
+            }
+            catch (ArgumentException)
+            {
+                return Task.FromResult(false);
+            }
+            try
+            {
+                var cmd = ssh.RunCommand("chown " + target + " " + ShellArgument.ShellQuote(remotePath));
                 return Task.FromResult(cmd.ExitStatus.GetValueOrDefault(-1) == 0);
             }
             catch { return Task.FromResult(false); }
@@ -134,7 +153,8 @@ namespace Gdterm.Sftp
             if (ssh == null || !ssh.IsConnected) return null;
             try
             {
-                var cmd = ssh.RunCommand(string.Format("stat -c '%a %U %G %F' {0}", remotePath));
+                // SEC-02: remotePath ShellQuote
+                var cmd = ssh.RunCommand("stat -c '%a %U %G %F' " + ShellArgument.ShellQuote(remotePath));
                 if (cmd.ExitStatus.GetValueOrDefault(-1) != 0) return null;
 
                 var parts = cmd.Result.Trim().Split(new[] { ' ' }, 4);

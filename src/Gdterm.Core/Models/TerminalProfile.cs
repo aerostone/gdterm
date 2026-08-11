@@ -39,9 +39,9 @@ namespace Gdterm.Core.Models
         public string FontName { get; set; } = "Consolas";
 
         /// <summary>
-        /// 字体大小
+        /// 字体大小（0=未显式设置，由 GlobalAppearance 决定）
         /// </summary>
-        public int FontSize { get; set; } = 12;
+        public int FontSize { get; set; } = 0;
 
         /// <summary>
         /// 换行符（LF / CRLF / CR）
@@ -133,7 +133,7 @@ namespace Gdterm.Core.Models
                     ColorScheme = ExtractValue(json, "colorScheme", "Classic"),
                     ScrollbackLines = ExtractInt(json, "scrollbackLines", 300),
                     FontName = ExtractValue(json, "fontName", "Consolas"),
-                    FontSize = ExtractInt(json, "fontSize", 12),
+                    FontSize = ExtractInt(json, "fontSize", 0),
                     NewLineSequence = ExtractValue(json, "newLineSequence", "\n"),
                     CursorStyle = ExtractValue(json, "cursorStyle", "Block"),
                     CursorBlink = ExtractBool(json, "cursorBlink", true),

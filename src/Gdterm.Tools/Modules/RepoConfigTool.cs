@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Text;
+using Gdterm.Core.Security;
 using Gdterm.Tools.Models;
 
 namespace Gdterm.Tools.Modules
@@ -45,6 +46,16 @@ namespace Gdterm.Tools.Modules
         {
             if (!HasRemoteSession)
                 return new RemoteCommandResult { Command = "repo-add", ExitCode = -1, Stderr = "未连接远程SSH" };
+            // SEC-01: name 走白名单（yum repo ID 字符集），url 走协议白名单 + 元字符拦截
+            try
+            {
+                ShellArgument.ValidateRepoName(name);
+                ShellArgument.ValidateRepoUrl(url);
+            }
+            catch (ArgumentException ex)
+            {
+                return new RemoteCommandResult { Command = "repo-add", ExitCode = -1, Stderr = ex.Message };
+            }
 
             var sw = Stopwatch.StartNew();
             var sb = new StringBuilder();
@@ -104,6 +115,12 @@ namespace Gdterm.Tools.Modules
         {
             if (!HasRemoteSession)
                 return new RemoteCommandResult { Command = "repo-remove", ExitCode = -1, Stderr = "未连接远程SSH" };
+            // SEC-01: name 白名单后才可拼到 rm/sed/
+            try { ShellArgument.ValidateRepoName(name); }
+            catch (ArgumentException ex)
+            {
+                return new RemoteCommandResult { Command = "repo-remove", ExitCode = -1, Stderr = ex.Message };
+            }
 
             var result = ExecuteRemote(string.Format(
                 "rm -f /etc/yum.repos.d/{0}.repo 2>/dev/null; " +

@@ -156,11 +156,11 @@ namespace Gdterm.UI.Controls
                     ? _profile.FontName
                     : (ga != null && !string.IsNullOrWhiteSpace(ga.FontName) ? ga.FontName : "Consolas");
             // 终端字号优先级：GlobalAppearance.FontSize 是“全局用户选择”，应优先于 Profile.FontSize 默认 12 生效。
-            // 只有当 Profile.FontSize 被用户在新建连接对话框显式修改（≠ 12）时才覆盖。
-            // 这样在 AppearanceSettings 里改字号能真正反映到已存在连接的终端上。
+            // 若 Profile.FontSize 被显式设置（>0），则用 Profile 值覆盖全局；
+            // 最后兜底 14f。
             float fontSize = (ga != null && ga.FontSize > 0)
                 ? (float)ga.FontSize
-                : (_profile != null && _profile.FontSize > 0 && _profile.FontSize != 12
+                : (_profile != null && _profile.FontSize > 0
                     ? (float)_profile.FontSize
                     : 14f);
             // CJK 补充字体（可空）—— Xshell 风格非 ASCII 字体。
@@ -232,10 +232,10 @@ namespace Gdterm.UI.Controls
                 && !string.Equals(_profile.FontName, "Consolas", StringComparison.OrdinalIgnoreCase)
                     ? _profile.FontName
                     : (ga != null && !string.IsNullOrWhiteSpace(ga.FontName) ? ga.FontName : "Consolas");
-            // 与 InitializeComponent 同样的优先级规则——GlobalAppearance.FontSize 优先于 Profile.FontSize 默认。
+            // 与 InitializeComponent 同样的优先级规则——GlobalAppearance.FontSize 优先于 Profile。
             float fontSize = (ga != null && ga.FontSize > 0)
                 ? (float)ga.FontSize
-                : (_profile != null && _profile.FontSize > 0 && _profile.FontSize != 12
+                : (_profile != null && _profile.FontSize > 0
                     ? (float)_profile.FontSize
                     : 14f);
             string cjkFontName = ga != null && !string.IsNullOrWhiteSpace(ga.CjkFontName) ? ga.CjkFontName : null;
