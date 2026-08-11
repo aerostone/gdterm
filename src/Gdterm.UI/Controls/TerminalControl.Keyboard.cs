@@ -1,5 +1,6 @@
 using System;
 using System.Windows.Forms;
+using Gdterm.Core.Models;
 using Gdterm.Terminal;
 using Gdterm.UI.Diagnostics;
 
