@@ -181,7 +181,7 @@ namespace Gdterm.UI.Forms
             MinimumSize = new Size(800, 600);
             StartPosition = FormStartPosition.CenterScreen;
 
-            _connectionTree = new ConnectionTreeControl(_connectionStore);
+            _connectionTree = new ConnectionTreeControl(_connectionStore, _keepassService);
             _connectionTree.Dock = DockStyle.Left;
             _connectionTree.Width = 250;
 
@@ -286,7 +286,7 @@ namespace Gdterm.UI.Forms
                 () => _tabContainer.ApplyAppearanceToAllTerminals());
 
             _openCoord = new ConnectionOpenCoordinator(
-                _tabContainer, _connectionStore, _bookmarkStore, _connectionTree, this);
+                _tabContainer, _connectionStore, _bookmarkStore, _connectionTree, this, _keepassService);
 
             var menuBuilt = new MainFormMenuBuilder().Build(new MainFormMenuBuilder.Callbacks
             {

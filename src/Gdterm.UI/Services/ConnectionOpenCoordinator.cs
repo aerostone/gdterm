@@ -2,6 +2,7 @@ using System;
 using System.Windows.Forms;
 using Gdterm.Connections;
 using Gdterm.Core.Models;
+using Gdterm.KeePass;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Forms;
 
@@ -18,18 +19,22 @@ namespace Gdterm.UI.Services
         private readonly ConnectionTreeControl _tree;
         private readonly IWin32Window _owner;
 
+        private readonly IKeePassService _keepass;
+
         public ConnectionOpenCoordinator(
             TabContainerControl tabs,
             IConnectionStore store,
             IBookmarkStore bookmarks,
             ConnectionTreeControl tree,
-            IWin32Window owner)
+            IWin32Window owner,
+            IKeePassService keepass = null)
         {
             _tabs = tabs ?? throw new ArgumentNullException(nameof(tabs));
             _store = store;
             _bookmarks = bookmarks;
             _tree = tree;
             _owner = owner;
+            _keepass = keepass;
         }
 
         public void OpenConnection(ConnectionConfig config)
@@ -52,7 +57,7 @@ namespace Gdterm.UI.Services
 
         public void NewConnection()
         {
-            using (var dlg = new ConnectionDialog())
+            using (var dlg = new ConnectionDialog(keepass: _keepass))
             {
                 if (dlg.ShowDialog(_owner) == DialogResult.OK && dlg.Result != null)
                 {

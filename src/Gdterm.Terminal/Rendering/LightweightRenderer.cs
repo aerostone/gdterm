@@ -97,30 +97,30 @@ namespace Gdterm.Terminal.Rendering
         }
 
         /// <summary>运行时改字体；按真实字形测量 cell 宽高。</summary>
-        public void ApplyFont(string fontName, float fontSizePx)
+        public void ApplyFont(string fontName, float fontSize)
         {
             if (_disposed) return;
             if (string.IsNullOrWhiteSpace(fontName)) fontName = "Consolas";
-            if (fontSizePx < 8f) fontSizePx = 8f;
-            if (fontSizePx > 36f) fontSizePx = 36f;
+            if (fontSize < 8f) fontSize = 8f;
+            if (fontSize > 36f) fontSize = 36f;
             _fontName = fontName;
-            _fontSize = fontSizePx;
+            _fontSize = fontSize;
             lock (_lock)
             {
                 try { if (_font != null) _font.Dispose(); } catch { }
                 try { if (_boldFont != null) _boldFont.Dispose(); } catch { }
                 try
                 {
-                    _font = new Font(_fontName, _fontSize, FontStyle.Regular, GraphicsUnit.Pixel);
+                    _font = new Font(_fontName, _fontSize, FontStyle.Regular, GraphicsUnit.Point);
                 }
                 catch
                 {
                     _fontName = "Consolas";
-                    _font = new Font(_fontName, _fontSize, FontStyle.Regular, GraphicsUnit.Pixel);
+                    _font = new Font(_fontName, _fontSize, FontStyle.Regular, GraphicsUnit.Point);
                 }
                 try
                 {
-                    _boldFont = new Font(_font.FontFamily, _fontSize, FontStyle.Bold, GraphicsUnit.Pixel);
+                    _boldFont = new Font(_font.FontFamily, _fontSize, FontStyle.Bold, GraphicsUnit.Point);
                 }
                 catch
                 {

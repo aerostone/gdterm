@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using Gdterm.Connections;
 using Gdterm.Core.Enums;
 using Gdterm.Core.Models;
+using Gdterm.KeePass;
 using Gdterm.UI.Forms;
 
 namespace Gdterm.UI.Controls
@@ -16,6 +17,7 @@ namespace Gdterm.UI.Controls
     public class ConnectionTreeControl : UserControl
     {
         private readonly IConnectionStore _connectionStore;
+        private readonly IKeePassService _keepass;
         private TreeView _treeView;
         private ContextMenuStrip _contextMenu;
         private ImageList _imageList;
@@ -35,9 +37,10 @@ namespace Gdterm.UI.Controls
         /// <summary>右键菜单“本地终端”被点击时触发（由 MainForm 订阅 → TabContainer.OpenLocalTerminal）。</summary>
         public event Action OpenLocalTerminalRequested;
 
-        public ConnectionTreeControl(IConnectionStore connectionStore)
+        public ConnectionTreeControl(IConnectionStore connectionStore, IKeePassService keepass = null)
         {
             _connectionStore = connectionStore;
+            _keepass = keepass;
             // collapsed 窄边上画 pin 图标作为展开提示
             SetStyle(ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
             InitializeComponent();
@@ -616,7 +619,7 @@ namespace Gdterm.UI.Controls
             var defaultGroup = ResolveDefaultGroupFromRightClick();
             if (string.IsNullOrEmpty(defaultGroup))
             {
-                using (var dlg = new ConnectionDialog())
+                using (var dlg = new ConnectionDialog(keepass: _keepass))
                 {
                     if (dlg.ShowDialog(this) == DialogResult.OK && dlg.Result != null)
                     {
@@ -628,7 +631,7 @@ namespace Gdterm.UI.Controls
             }
             else
             {
-                using (var dlg = new ConnectionDialog(defaultGroup))
+                using (var dlg = new ConnectionDialog(defaultGroup, keepass: _keepass))
                 {
                     if (dlg.ShowDialog(this) == DialogResult.OK && dlg.Result != null)
                     {
@@ -645,7 +648,7 @@ namespace Gdterm.UI.Controls
             var node = _rightClickedNode ?? _treeView.SelectedNode;
             if (node?.Tag is ConnectionConfig config)
             {
-                using (var dlg = new ConnectionDialog(config))
+                using (var dlg = new ConnectionDialog(config, keepass: _keepass))
                 {
                     if (dlg.ShowDialog(this) == DialogResult.OK && dlg.Result != null)
                     {

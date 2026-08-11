@@ -92,7 +92,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(_fontCombo);
             y += 36;
 
-            Controls.Add(MakeLabel("字号 (px)", 16, y));
+            Controls.Add(MakeLabel("字号 (pt)", 16, y));
             _sizeNum = new NumericUpDown
             {
                 Location = new Point(120, y - 2),
@@ -357,11 +357,11 @@ namespace Gdterm.UI.Forms
             {
                 var name = _fontCombo.SelectedItem != null ? _fontCombo.SelectedItem.ToString() : "Consolas";
                 var size = (float)_sizeNum.Value;
-                _preview.Font = new Font(name, size, FontStyle.Regular, GraphicsUnit.Pixel);
+                _preview.Font = new Font(name, size, FontStyle.Regular, GraphicsUnit.Point);
             }
             catch
             {
-                try { _preview.Font = new Font("Consolas", 12f, FontStyle.Regular, GraphicsUnit.Pixel); } catch { }
+                try { _preview.Font = new Font("Consolas", 12f, FontStyle.Regular, GraphicsUnit.Point); } catch { }
             }
         }
     }

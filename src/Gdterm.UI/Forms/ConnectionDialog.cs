@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
 using Gdterm.Core.Enums;
 using Gdterm.Core.Models;
+using Gdterm.KeePass;
 
 namespace Gdterm.UI.Forms
 {
@@ -54,11 +55,14 @@ namespace Gdterm.UI.Forms
         private Panel _rdpPanel;
         private Panel _serialPanel;
 
+        private readonly IKeePassService _keepass;
+
         public ConnectionConfig Result { get; private set; }
 
-        public ConnectionDialog(ConnectionConfig existing = null)
+        public ConnectionDialog(ConnectionConfig existing = null, IKeePassService keepass = null)
         {
             _config = existing ?? new ConnectionConfig();
+            _keepass = keepass;
             _isNew = existing == null;
             InitializeComponent();
             // 高/低 DPI 自适应：声明设计基准 96 DPI，让 .NET 自动按当前 DPI 缩放控件。
@@ -69,9 +73,10 @@ namespace Gdterm.UI.Forms
         /// 新建连接，预填分组路径（供右键分组节点 “新建连接到本分组” 使用）。
         /// 永远作为新建模式，不进入编辑分支。
         /// </summary>
-        public ConnectionDialog(string defaultGroupPath)
+        public ConnectionDialog(string defaultGroupPath, IKeePassService keepass = null)
         {
             _config = new ConnectionConfig { GroupPath = defaultGroupPath ?? string.Empty };
+            _keepass = keepass;
             _isNew = true;
             InitializeComponent();
             LoadFromConfig();
@@ -186,22 +191,34 @@ namespace Gdterm.UI.Forms
             // === Tab 6: 凭据 ===
             var credTab = new TabPage("凭据");
             credTab.BackColor = Color.FromArgb(30, 30, 30);
-            var credLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 2, Padding = new Padding(12) };
+            var credLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 2, Padding = new Padding(12) };
             credLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
             credLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            credLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 80));
             credLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 35));
             credLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             credLayout.Controls.Add(new Label { Text = "凭据 ID:", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true }, 0, 0);
             _credentialRefBox = new TextBox { Dock = DockStyle.Fill };
             credLayout.Controls.Add(_credentialRefBox, 1, 0);
+            var btnPickCred = new Button
+            {
+                Text = "选择...",
+                Dock = DockStyle.Fill,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(60, 60, 60),
+                ForeColor = Color.FromArgb(204, 204, 204),
+                Margin = new Padding(6, 0, 0, 0)
+            };
+            btnPickCred.Click += OnPickCredential;
+            credLayout.Controls.Add(btnPickCred, 2, 0);
             credLayout.Controls.Add(new Label
             {
-                Text = "提示: 留空则自动匹配密码库条目。\n可手动指定 KeePass 条目 UUID 进行绑定。",
+                Text = "提示: 留空则自动匹配密码库条目。\n可点击「选择」浏览 KeePass 条目，或手动指定 UUID。",
                 ForeColor = Color.FromArgb(100, 100, 100),
                 AutoSize = true,
                 Dock = DockStyle.Fill
             }, 0, 1);
-            credLayout.SetColumnSpan(credLayout.GetControlFromPosition(0, 1), 2);
+            credLayout.SetColumnSpan(credLayout.GetControlFromPosition(0, 1), 3);
             credTab.Controls.Add(credLayout);
 
             tabControl.TabPages.AddRange(new[] { basicTab, notesTab, credTab });
@@ -388,6 +405,29 @@ namespace Gdterm.UI.Forms
                 _config.Id = Guid.NewGuid().ToString("N");
 
             Result = _config;
+        }
+
+        private void OnPickCredential(object sender, EventArgs e)
+        {
+            if (_keepass == null)
+            {
+                MessageBox.Show("密码库服务不可用。", "提示",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (!_keepass.IsUnlocked)
+            {
+                MessageBox.Show("请先解锁密码库。", "提示",
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            using (var picker = new KeePassEntryPicker(_keepass))
+            {
+                if (picker.ShowDialog(this) == DialogResult.OK && !string.IsNullOrEmpty(picker.SelectedEntryId))
+                {
+                    _credentialRefBox.Text = picker.SelectedEntryId;
+                }
+            }
         }
     }
 }

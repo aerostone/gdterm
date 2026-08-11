@@ -506,18 +506,18 @@ namespace Gdterm.Terminal.Rendering
                 ResizeTerminal(cols, rows);
         }
 
-        public void ApplyFont(string fontName, float fontSizePx)
+        public void ApplyFont(string fontName, float fontSize)
         {
-            ApplyFont(fontName, fontSizePx, null);
+            ApplyFont(fontName, fontSize, null);
         }
 
         /// <param name="cjkFontName">Xshell 风格的非 ASCII 补充字体；空则不分割。</param>
-        public void ApplyFont(string fontName, float fontSizePx, string cjkFontName)
+        public void ApplyFont(string fontName, float fontSize, string cjkFontName)
         {
             if (_disposed) return;
             if (string.IsNullOrWhiteSpace(fontName)) fontName = FontName;
-            if (fontSizePx < 8f) fontSizePx = 8f;
-            if (fontSizePx > 36f) fontSizePx = 36f;
+            if (fontSize < 8f) fontSize = 8f;
+            if (fontSize > 36f) fontSize = 36f;
             lock (_lock)
             {
                 try { if (_font != null) _font.Dispose(); } catch { }
@@ -526,23 +526,23 @@ namespace Gdterm.Terminal.Rendering
                 try { if (_cjkBoldFont != null) _cjkBoldFont.Dispose(); } catch { }
                 try
                 {
-                    _font = new Font(fontName, fontSizePx, FontStyle.Regular, GraphicsUnit.Pixel);
+                    _font = new Font(fontName, fontSize, FontStyle.Regular, GraphicsUnit.Point);
                 }
                 catch
                 {
-                    _font = new Font(FontName, fontSizePx, FontStyle.Regular, GraphicsUnit.Pixel);
+                    _font = new Font(FontName, fontSize, FontStyle.Regular, GraphicsUnit.Point);
                 }
-                try { _boldFont = new Font(_font.FontFamily, fontSizePx, FontStyle.Bold, GraphicsUnit.Pixel); }
+                try { _boldFont = new Font(_font.FontFamily, fontSize, FontStyle.Bold, GraphicsUnit.Point); }
                 catch { _boldFont = new Font(_font, FontStyle.Bold); }
 
                 // CJK 补充字体（可空）
                 if (!string.IsNullOrWhiteSpace(cjkFontName))
                 {
-                    try { _cjkFont = new Font(cjkFontName, fontSizePx, FontStyle.Regular, GraphicsUnit.Pixel); }
+                    try { _cjkFont = new Font(cjkFontName, fontSize, FontStyle.Regular, GraphicsUnit.Point); }
                     catch { _cjkFont = null; }
                     if (_cjkFont != null)
                     {
-                        try { _cjkBoldFont = new Font(_cjkFont.FontFamily, fontSizePx, FontStyle.Bold, GraphicsUnit.Pixel); }
+                        try { _cjkBoldFont = new Font(_cjkFont.FontFamily, fontSize, FontStyle.Bold, GraphicsUnit.Point); }
                         catch { try { _cjkBoldFont = new Font(_cjkFont, FontStyle.Bold); } catch { _cjkBoldFont = null; } }
                     }
                 }
