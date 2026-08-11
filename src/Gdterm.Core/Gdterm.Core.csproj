@@ -57,6 +57,7 @@
     <Compile Include="Models\LogonScript.cs" />
     <Compile Include="Models\PortForwardRule.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Security\ShellArgument.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
