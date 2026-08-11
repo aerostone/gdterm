@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
+using System.Web.Script.Serialization;
 using Gdterm.Core.Models;
 
 namespace Gdterm.Logging
@@ -232,99 +232,22 @@ namespace Gdterm.Logging
 
         // ===== JSON 序列化 =====
 
+        private static readonly JavaScriptSerializer _json = new JavaScriptSerializer();
+
         private static string SerializeEntry(CommandHistoryEntry entry)
         {
-            var sb = new StringBuilder();
-            sb.Append('{');
-            sb.Append($"\"id\":\"{Escape(entry.Id)}\"");
-            sb.Append($",\"connectionId\":\"{Escape(entry.ConnectionId ?? "")}\"");
-            sb.Append($",\"hostname\":\"{Escape(entry.Hostname ?? "")}\"");
-            sb.Append($",\"protocol\":\"{Escape(entry.Protocol ?? "")}\"");
-            sb.Append($",\"command\":\"{Escape(entry.Command ?? "")}\"");
-            sb.Append($",\"output\":\"{Escape(entry.Output ?? "")}\"");
-            if (entry.ExitCode.HasValue)
-                sb.Append($",\"exitCode\":{entry.ExitCode.Value}");
-            sb.Append($",\"executedAt\":\"{entry.ExecutedAt:O}\"");
-            sb.Append($",\"durationMs\":{entry.DurationMs}");
-            sb.Append($",\"isBroadcast\":{(entry.IsBroadcast ? "true" : "false")}");
-            if (entry.BroadcastTargets != null && entry.BroadcastTargets.Count > 0)
-            {
-                sb.Append(",\"broadcastTargets\":[");
-                for (int i = 0; i < entry.BroadcastTargets.Count; i++)
-                {
-                    if (i > 0) sb.Append(',');
-                    sb.Append($"\"{Escape(entry.BroadcastTargets[i])}\"");
-                }
-                sb.Append(']');
-            }
-            if (!string.IsNullOrEmpty(entry.Tags))
-                sb.Append($",\"tags\":\"{Escape(entry.Tags)}\"");
-            sb.Append('}');
-            return sb.ToString();
+            return _json.Serialize(entry);
         }
 
         private static CommandHistoryEntry DeserializeEntry(string json)
         {
             try
             {
-                return new CommandHistoryEntry
-                {
-                    Id = ExtractString(json, "id"),
-                    ConnectionId = ExtractString(json, "connectionId"),
-                    Hostname = ExtractString(json, "hostname"),
-                    Protocol = ExtractString(json, "protocol"),
-                    Command = ExtractString(json, "command"),
-                    Output = ExtractString(json, "output"),
-                    ExitCode = TryExtractInt(json, "exitCode"),
-                    ExecutedAt = DateTime.TryParse(ExtractString(json, "executedAt"), out var dt) ? dt : DateTime.MinValue,
-                    DurationMs = long.TryParse(ExtractString(json, "durationMs"), out var ms) ? ms : 0,
-                    IsBroadcast = ExtractString(json, "isBroadcast") == "true",
-                    Tags = ExtractString(json, "tags")
-                };
+                return _json.Deserialize<CommandHistoryEntry>(json);
             }
             catch { return null; }
         }
 
-        private static string ExtractString(string json, string key)
-        {
-            var pattern = $"\"{key}\":\"";
-            int start = json.IndexOf(pattern, StringComparison.Ordinal);
-            if (start < 0) return "";
-            start += pattern.Length;
-            int end = start;
-            while (end < json.Length)
-            {
-                if (json[end] == '\\') { end += 2; continue; }
-                if (json[end] == '"') break;
-                end++;
-            }
-            return Unescape(json.Substring(start, end - start));
-        }
-
-        private static int? TryExtractInt(string json, string key)
-        {
-            var pattern = $"\"{key}\":";
-            int start = json.IndexOf(pattern, StringComparison.Ordinal);
-            if (start < 0) return null;
-            start += pattern.Length;
-            int end = json.IndexOfAny(new[] { ',', '}' }, start);
-            if (end < 0) return null;
-            if (int.TryParse(json.Substring(start, end - start).Trim(), out int val))
-                return val;
-            return null;
-        }
-
-        private static string Escape(string s)
-        {
-            if (string.IsNullOrEmpty(s)) return "";
-            return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r").Replace("\t", "\\t");
-        }
-
-        private static string Unescape(string s)
-        {
-            if (string.IsNullOrEmpty(s)) return "";
-            return s.Replace("\\t", "\t").Replace("\\n", "\n").Replace("\\r", "\r").Replace("\\\"", "\"").Replace("\\\\", "\\");
-        }
     }
 
     /// <summary>

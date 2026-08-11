@@ -90,13 +90,13 @@ namespace Gdterm.UI.Controls
 
             // 右键菜单——在 Opening 中按右键节点动态调整项，避免“主机上右键也弹新建”
             _contextMenu = new ContextMenuStrip();
-            _contextMenu.Items.Add("本地终端(&L)", null, OnOpenLocalTerminal);
-            _contextMenu.Items.Add("新建连接(&N)", null, OnNewConnection);
-            _contextMenu.Items.Add("编辑(&E)", null, OnEditConnection);
-            _contextMenu.Items.Add("-");
-            _contextMenu.Items.Add("删除(&D)", null, OnDeleteConnection);
-            _contextMenu.Items.Add("-");
-            _contextMenu.Items.Add("连接(&C)", null, OnConnect);
+            _contextMenu.Items.Add("本地终端(&L)", null, OnOpenLocalTerminal) { Tag = "local" };
+            _contextMenu.Items.Add("新建连接(&N)", null, OnNewConnection) { Tag = "new" };
+            _contextMenu.Items.Add("编辑(&E)", null, OnEditConnection) { Tag = "edit" };
+            _contextMenu.Items.Add("-") { Tag = "sep1" };
+            _contextMenu.Items.Add("删除(&D)", null, OnDeleteConnection) { Tag = "delete" };
+            _contextMenu.Items.Add("-") { Tag = "sep2" };
+            _contextMenu.Items.Add("连接(&C)", null, OnConnect) { Tag = "connect" };
             _contextMenu.Opening += OnContextMenuOpening;
             _treeView.ContextMenuStrip = _contextMenu;
         }
@@ -513,13 +513,13 @@ namespace Gdterm.UI.Controls
         private void OnContextMenuOpening(object sender, System.ComponentModel.CancelEventArgs e)
         {
             var node = _rightClickedNode;
-            var itemLocal = _contextMenu.Items[0] as ToolStripMenuItem; // 本地终端
-            var itemNew = _contextMenu.Items[1] as ToolStripMenuItem;   // 新建连接
-            var itemEdit = _contextMenu.Items[2] as ToolStripMenuItem;   // 编辑
-            var sep1 = _contextMenu.Items[3] as ToolStripSeparator;
-            var itemDel = _contextMenu.Items[4] as ToolStripMenuItem;   // 删除
-            var sep2 = _contextMenu.Items[5] as ToolStripSeparator;
-            var itemConn = _contextMenu.Items[6] as ToolStripMenuItem;  // 连接
+            var itemLocal = FindItemByTag("local") as ToolStripMenuItem;
+            var itemNew = FindItemByTag("new") as ToolStripMenuItem;
+            var itemEdit = FindItemByTag("edit") as ToolStripMenuItem;
+            var sep1 = FindItemByTag("sep1") as ToolStripSeparator;
+            var itemDel = FindItemByTag("delete") as ToolStripMenuItem;
+            var sep2 = FindItemByTag("sep2") as ToolStripSeparator;
+            var itemConn = FindItemByTag("connect") as ToolStripMenuItem;
 
             if (itemLocal == null || itemNew == null || itemEdit == null || sep1 == null || sep2 == null || itemDel == null || itemConn == null)
                 return;
@@ -558,6 +558,17 @@ namespace Gdterm.UI.Controls
                 sep1.Visible = false;
                 sep2.Visible = false;
             }
+        }
+
+        /// <summary>按 Tag 查找上下文菜单项，不依赖硬编码索引。</summary>
+        private ToolStripItem FindItemByTag(string tag)
+        {
+            foreach (ToolStripItem item in _contextMenu.Items)
+            {
+                if (string.Equals(item.Tag as string, tag, StringComparison.Ordinal))
+                    return item;
+            }
+            return null;
         }
 
         private void OnNodeMouseClick(object sender, TreeNodeMouseClickEventArgs e)
