@@ -266,3 +266,5 @@ namespace Gdterm.UI.Controls
             return false;
         }
 }
+}
+
