@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using Gdterm.Core.Models;
 
 namespace Gdterm.UI.Controls
 {

@@ -1,6 +1,7 @@
 using System;
 using System.Windows.Forms;
-using Gdterm.Terminal.KeyBinding;
+using Gdterm.Terminal;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Controls
 {
