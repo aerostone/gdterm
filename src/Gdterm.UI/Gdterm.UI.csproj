@@ -199,6 +199,7 @@
     </Compile>
     <Compile Include="ImportExport\ConnectionImporterExporter.cs" />
     <Compile Include="Forms\KeePassManagerForm.cs" />
+    <Compile Include="Forms\KeePassEntryPicker.cs" />
     <Compile Include="Forms\AiSettingsForm.cs" />
     <Compile Include="Forms\DangerousCommandConfigForm.cs" />
     <Compile Include="Forms\AppearanceSettingsForm.cs" />

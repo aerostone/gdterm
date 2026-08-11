@@ -494,7 +494,6 @@ namespace Gdterm.UI.Forms
                 if (tc == null || !tc.IsConnected)
                 {
                     ToastNotifier.Info("当前没有活动的终端会话"); return;
-                    return;
                 }
 
                 using (var dlg = new SaveFileDialog())
