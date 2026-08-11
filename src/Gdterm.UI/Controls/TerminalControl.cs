@@ -204,13 +204,6 @@ namespace Gdterm.UI.Controls
             BuildContextMenu();
         }
 
-            else if (_renderer is LightweightRenderer light)
-            {
-                try { light.ApplyFont(fontName, fontSize); } catch { }
-            }
-            try { _renderer.GetControl()?.Invalidate(); } catch { }
-        }
-
         // ===== 终端右键菜单：复制 / 粘贴 / 清屏 / 查找 / 重连 / 导出 / 外观 =====
         // 行为定调：
         //   - 右键直接弹菜单（SecureCRT / Windows Terminal 习惯）。

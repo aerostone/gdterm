@@ -90,13 +90,31 @@ namespace Gdterm.UI.Controls
 
             // 右键菜单——在 Opening 中按右键节点动态调整项，避免“主机上右键也弹新建”
             _contextMenu = new ContextMenuStrip();
-            _contextMenu.Items.Add("本地终端(&L)", null, OnOpenLocalTerminal) { Tag = "local" };
-            _contextMenu.Items.Add("新建连接(&N)", null, OnNewConnection) { Tag = "new" };
-            _contextMenu.Items.Add("编辑(&E)", null, OnEditConnection) { Tag = "edit" };
-            _contextMenu.Items.Add("-") { Tag = "sep1" };
-            _contextMenu.Items.Add("删除(&D)", null, OnDeleteConnection) { Tag = "delete" };
-            _contextMenu.Items.Add("-") { Tag = "sep2" };
-            _contextMenu.Items.Add("连接(&C)", null, OnConnect) { Tag = "connect" };
+
+            var itemLocal = new ToolStripMenuItem("本地终端(&L)", null, OnOpenLocalTerminal);
+            itemLocal.Tag = "local";
+            _contextMenu.Items.Add(itemLocal);
+
+            var itemNew = new ToolStripMenuItem("新建连接(&N)", null, OnNewConnection);
+            itemNew.Tag = "new";
+            _contextMenu.Items.Add(itemNew);
+
+            var itemEdit = new ToolStripMenuItem("编辑(&E)", null, OnEditConnection);
+            itemEdit.Tag = "edit";
+            _contextMenu.Items.Add(itemEdit);
+
+            _contextMenu.Items.Add(new ToolStripSeparator { Tag = "sep1" });
+
+            var itemDelete = new ToolStripMenuItem("删除(&D)", null, OnDeleteConnection);
+            itemDelete.Tag = "delete";
+            _contextMenu.Items.Add(itemDelete);
+
+            _contextMenu.Items.Add(new ToolStripSeparator { Tag = "sep2" });
+
+            var itemConnect = new ToolStripMenuItem("连接(&C)", null, OnConnect);
+            itemConnect.Tag = "connect";
+            _contextMenu.Items.Add(itemConnect);
+
             _contextMenu.Opening += OnContextMenuOpening;
             _treeView.ContextMenuStrip = _contextMenu;
         }

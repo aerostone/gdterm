@@ -47,6 +47,10 @@ namespace Gdterm.UI.Controls
             {
                 try { _cellRenderer.ApplyFont(fontName, fontSize, cjkFontName); } catch { }
             }
+            else if (_renderer is LightweightRenderer light)
+            {
+                try { light.ApplyFont(fontName, fontSize); } catch { }
+            }
             try { _renderer.GetControl()?.Invalidate(); } catch { }
         }
     }
