@@ -141,6 +141,8 @@
     <Compile Include="Controls\SftpBrowserPanel.cs" />
     <Compile Include="Controls\SessionBookmarksPanel.cs" />
     <Compile Include="Controls\TerminalControl.cs" />
+    <Compile Include="Controls\TerminalControl.Keyboard.cs" />
+    <Compile Include="Controls\TerminalControl.Profile.cs" />
     <Compile Include="Diagnostics\CrashLog.cs" />
     <Compile Include="Diagnostics\DiagLog.cs" />
     <Compile Include="Forms\SshKeyManagerForm.cs">
