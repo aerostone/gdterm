@@ -96,7 +96,8 @@ namespace Gdterm.Terminal.Rendering
             _redrawTimer.Tick += OnRedrawTimerTick;
         }
 
-        /// <summary>运行时改字体；按真实字形测量 cell 宽高。</summary>
+        /// <summary>运行时改字体；按真实字形测量 cell 宽高。
+        /// fontSize 是 pt（与 UI 控件一致），内部转为 px 创建字体。</summary>
         public void ApplyFont(string fontName, float fontSize)
         {
             if (_disposed) return;
@@ -105,22 +106,24 @@ namespace Gdterm.Terminal.Rendering
             if (fontSize > 36f) fontSize = 36f;
             _fontName = fontName;
             _fontSize = fontSize;
+            // pt → px 转换：保持与 UI 控件（GraphicsUnit.Point）一致的物理大小
+            var fontSizePx = fontSize * 96f / 72f;
             lock (_lock)
             {
                 try { if (_font != null) _font.Dispose(); } catch { }
                 try { if (_boldFont != null) _boldFont.Dispose(); } catch { }
                 try
                 {
-                    _font = new Font(_fontName, _fontSize, FontStyle.Regular, GraphicsUnit.Point);
+                    _font = new Font(_fontName, fontSizePx, FontStyle.Regular, GraphicsUnit.Pixel);
                 }
                 catch
                 {
                     _fontName = "Consolas";
-                    _font = new Font(_fontName, _fontSize, FontStyle.Regular, GraphicsUnit.Point);
+                    _font = new Font(_fontName, fontSizePx, FontStyle.Regular, GraphicsUnit.Pixel);
                 }
                 try
                 {
-                    _boldFont = new Font(_font.FontFamily, _fontSize, FontStyle.Bold, GraphicsUnit.Point);
+                    _boldFont = new Font(_font.FontFamily, fontSizePx, FontStyle.Bold, GraphicsUnit.Pixel);
                 }
                 catch
                 {
