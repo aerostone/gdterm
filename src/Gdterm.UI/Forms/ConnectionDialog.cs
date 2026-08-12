@@ -5,6 +5,7 @@ using Gdterm.UI.Diagnostics;
 using Gdterm.Core.Enums;
 using Gdterm.Core.Models;
 using Gdterm.KeePass;
+using Gdterm.KeePass.Models;
 
 namespace Gdterm.UI.Forms
 {
@@ -49,6 +50,7 @@ namespace Gdterm.UI.Forms
 
         // KeePass
         private TextBox _credentialRefBox;
+        private Label _credentialTitleLabel;
 
         // Panels for protocol-specific settings
         private Panel _sshPanel;
@@ -191,34 +193,72 @@ namespace Gdterm.UI.Forms
             // === Tab 6: 凭据 ===
             var credTab = new TabPage("凭据");
             credTab.BackColor = Color.FromArgb(30, 30, 30);
-            var credLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3, RowCount = 2, Padding = new Padding(12) };
+            var credLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 4, Padding = new Padding(12) };
             credLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
             credLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            credLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 80));
-            credLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 35));
-            credLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            credLayout.Controls.Add(new Label { Text = "凭据 ID:", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true }, 0, 0);
-            _credentialRefBox = new TextBox { Dock = DockStyle.Fill };
-            credLayout.Controls.Add(_credentialRefBox, 1, 0);
+            credLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 4));   // row0: 隐藏 UUID 存储
+            credLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));  // row1: 当前凭据 + 标题
+            credLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40)); // row2: 按钮
+            credLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));// row3: 说明 + 弹性
+
+            // 隐藏的 UUID 存储框（不可见，保存时读它）
+            _credentialRefBox = new TextBox { Dock = DockStyle.Fill, Visible = false };
+            credLayout.Controls.Add(_credentialRefBox, 0, 0);
+            credLayout.SetColumnSpan(_credentialRefBox, 2);
+
+            credLayout.Controls.Add(new Label { Text = "当前凭据", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft }, 0, 1);
+            _credentialTitleLabel = new Label
+            {
+                Text = "未选（保存后将按主机+用户名自动匹配）",
+                ForeColor = Color.FromArgb(100, 100, 100),
+                AutoSize = false,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            credLayout.Controls.Add(_credentialTitleLabel, 1, 1);
+
+            var credBtnPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false
+            };
             var btnPickCred = new Button
             {
-                Text = "选择...",
-                Dock = DockStyle.Fill,
+                Text = "选择凭据...",
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(0, 122, 204),
+                ForeColor = Color.White,
+                Size = new Size(110, 30),
+                Margin = new Padding(0, 6, 8, 0)
+            };
+            btnPickCred.Click += OnPickCredential;
+            var btnClearCred = new Button
+            {
+                Text = "清除（自动匹配）",
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(60, 60, 60),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Margin = new Padding(6, 0, 0, 0)
+                Size = new Size(140, 30),
+                Margin = new Padding(0, 6, 0, 0)
             };
-            btnPickCred.Click += OnPickCredential;
-            credLayout.Controls.Add(btnPickCred, 2, 0);
-            credLayout.Controls.Add(new Label
+            btnClearCred.Click += OnClearCredential;
+            credBtnPanel.Controls.Add(btnPickCred);
+            credBtnPanel.Controls.Add(btnClearCred);
+            credLayout.Controls.Add(credBtnPanel, 0, 2);
+            credLayout.SetColumnSpan(credBtnPanel, 2);
+
+            var credHint = new Label
             {
-                Text = "提示: 留空则自动匹配密码库条目。\n可点击「选择」浏览 KeePass 条目，或手动指定 UUID。",
-                ForeColor = Color.FromArgb(100, 100, 100),
+                Text = "说明：点「选择凭据」从 KeePass 浏览或新建条目；点「清除」恢复自动匹配模式。\n自动匹配按主机/端口+用户名在密码库中智能查找。",
+                ForeColor = Color.FromArgb(120, 120, 120),
                 AutoSize = true,
-                Dock = DockStyle.Fill
-            }, 0, 1);
-            credLayout.SetColumnSpan(credLayout.GetControlFromPosition(0, 1), 3);
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.TopLeft
+            };
+            credLayout.Controls.Add(credHint, 0, 3);
+            credLayout.SetColumnSpan(credHint, 2);
+
             credTab.Controls.Add(credLayout);
 
             tabControl.TabPages.AddRange(new[] { basicTab, notesTab, credTab });
@@ -299,6 +339,7 @@ namespace Gdterm.UI.Forms
             _domainBox.Text = _config.Domain ?? "";
             _groupPathBox.Text = _config.GroupPath ?? "";
             _credentialRefBox.Text = _config.CredentialRefId ?? "";
+            RefreshCredentialTitle();
 
             // 备注（从 Metadata 取）
             if (_config.Metadata != null && _config.Metadata.ContainsKey("notes"))
@@ -426,7 +467,54 @@ namespace Gdterm.UI.Forms
                 if (picker.ShowDialog(this) == DialogResult.OK && !string.IsNullOrEmpty(picker.SelectedEntryId))
                 {
                     _credentialRefBox.Text = picker.SelectedEntryId;
+                    RefreshCredentialTitle();
                 }
+            }
+        }
+
+        private void OnClearCredential(object sender, EventArgs e)
+        {
+            _credentialRefBox.Text = "";
+            RefreshCredentialTitle();
+        }
+
+        /// <summary>
+        /// 根据 _credentialRefBox 中的 UUID 反查条目标题展示；未选或反查失败时显示“自动匹配”提示。
+        /// </summary>
+        private void RefreshCredentialTitle()
+        {
+            var uuid = _credentialRefBox.Text;
+            if (string.IsNullOrWhiteSpace(uuid))
+            {
+                _credentialTitleLabel.Text = "未选（保存后将按主机+用户名自动匹配）";
+                _credentialTitleLabel.ForeColor = Color.FromArgb(100, 100, 100);
+                return;
+            }
+            if (_keepass == null || !_keepass.IsUnlocked)
+            {
+                // 未解锁时仅显示 UUID 前 8 位，避免用户面对原始 UUID。
+                _credentialTitleLabel.Text = "已选 UUID: " + (uuid.Length > 12 ? uuid.Substring(0, 12) + "…" : uuid);
+                _credentialTitleLabel.ForeColor = Color.FromArgb(204, 204, 204);
+                return;
+            }
+            try
+            {
+                var entry = _keepass.GetEntry(uuid);
+                if (entry == null)
+                {
+                    _credentialTitleLabel.Text = "凭据已被删除（清除后自动匹配）";
+                    _credentialTitleLabel.ForeColor = Color.FromArgb(204, 120, 60);
+                    return;
+                }
+                var title = string.IsNullOrWhiteSpace(entry.Title) ? "(无标题)" : entry.Title;
+                var user = string.IsNullOrWhiteSpace(entry.Username) ? "" : " — " + entry.Username;
+                _credentialTitleLabel.Text = "已选: " + title + user;
+                _credentialTitleLabel.ForeColor = Color.FromArgb(120, 200, 120);
+            }
+            catch
+            {
+                _credentialTitleLabel.Text = "已选 UUID: " + (uuid.Length > 12 ? uuid.Substring(0, 12) + "…" : uuid);
+                _credentialTitleLabel.ForeColor = Color.FromArgb(204, 204, 204);
             }
         }
     }

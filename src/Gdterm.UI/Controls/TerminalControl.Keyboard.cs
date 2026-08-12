@@ -13,7 +13,14 @@ namespace Gdterm.UI.Controls
     {
         private void OnKeyPress(object sender, KeyPressEventArgs e)
         {
-            if (_session?.IsConnected != true) return;
+            if (_session?.IsConnected != true)
+            {
+                try { DiagLog.Info("TerminalControl.OnKeyPress.GuardDrop",
+                    "connected=" + (_session != null && _session.IsConnected) +
+                    " backend=" + ((_session as LocalTerminalSession)?.BackendName ?? "non-local") +
+                    " keyCharCode=0x" + (e.KeyChar == '\0' ? "0" : ((int)e.KeyChar).ToString("X"))); } catch { }
+                return;
+            }
 
             if (!char.IsControl(e.KeyChar))
             {
@@ -42,7 +49,16 @@ namespace Gdterm.UI.Controls
 
         private void OnKeyDown(object sender, KeyEventArgs e)
         {
-            if (_session?.IsConnected != true) return;
+            if (_session?.IsConnected != true)
+            {
+                if (e.KeyCode != Keys.ShiftKey && e.KeyCode != Keys.ControlKey && e.KeyCode != Keys.Menu)
+                {
+                    try { DiagLog.Info("TerminalControl.OnKeyDown.GuardDrop",
+                        "kc=" + e.KeyCode + " connected=" + (_session != null && _session.IsConnected) +
+                        " backend=" + ((_session as LocalTerminalSession)?.BackendName ?? "non-local")); } catch { }
+                }
+                return;
+            }
 
             var result = _keyResolver.Resolve(e);
             if (result != null)

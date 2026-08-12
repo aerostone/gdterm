@@ -315,7 +315,13 @@ namespace Gdterm.UI.Controls
         private void OnCellSendToHost(object sender, byte[] data)
         {
             if (_disposed || data == null || data.Length == 0) return;
-            if (_session == null || !_session.IsConnected) return;
+            if (_session == null || !_session.IsConnected)
+            {
+                try { DiagLog.Info("TerminalControl.OnCellSendToHost.Drop",
+                    "sessionNull=" + (_session == null) + " connected=" + (_session != null && _session.IsConnected) +
+                    " backend=" + ((_session as LocalTerminalSession)?.BackendName ?? "non-local")); } catch { }
+                return;
+            }
             try { _session.SendBytes(data); }
             catch (Exception ex) { DiagLog.Swallowed("TerminalControl.CellSendToHost", ex); }
         }
