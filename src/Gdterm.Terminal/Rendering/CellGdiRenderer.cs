@@ -512,15 +512,19 @@ namespace Gdterm.Terminal.Rendering
         }
 
         /// <param name="cjkFontName">Xshell 风格的非 ASCII 补充字体；空则不分割。</param>
-        /// <param name="fontSize">pt 单位（与 UI 控件一致），内部转为 px 创建字体。</param>
+        /// <param name="fontSize">pt 单位（与 UI 控件一致），内部按实际屏幕 DPI 转为 px 创建字体。</param>
         public void ApplyFont(string fontName, float fontSize, string cjkFontName)
         {
             if (_disposed) return;
             if (string.IsNullOrWhiteSpace(fontName)) fontName = FontName;
             if (fontSize < 8f) fontSize = 8f;
             if (fontSize > 36f) fontSize = 36f;
-            // pt → px 转换：保持与 UI 控件（GraphicsUnit.Point）一致的物理大小
-            var fontSizePx = fontSize * 96f / 72f;
+            // pt → px 按实际屏幕 DPI 转换，非 96 硬编码（4K/高 DPI 下字体大小才一致）
+            float dpiX;
+            using (var bmp = new Bitmap(1, 1))
+            using (var g = Graphics.FromImage(bmp))
+                dpiX = g.DpiX;
+            var fontSizePx = fontSize * dpiX / 72f;
             lock (_lock)
             {
                 try { if (_font != null) _font.Dispose(); } catch { }

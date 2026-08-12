@@ -97,7 +97,7 @@ namespace Gdterm.Terminal.Rendering
         }
 
         /// <summary>运行时改字体；按真实字形测量 cell 宽高。
-        /// fontSize 是 pt（与 UI 控件一致），内部转为 px 创建字体。</summary>
+        /// fontSize 是 pt（与 UI 控件一致），内部按实际屏幕 DPI 转为 px 创建字体。</summary>
         public void ApplyFont(string fontName, float fontSize)
         {
             if (_disposed) return;
@@ -106,8 +106,12 @@ namespace Gdterm.Terminal.Rendering
             if (fontSize > 36f) fontSize = 36f;
             _fontName = fontName;
             _fontSize = fontSize;
-            // pt → px 转换：保持与 UI 控件（GraphicsUnit.Point）一致的物理大小
-            var fontSizePx = fontSize * 96f / 72f;
+            // pt → px 按实际屏幕 DPI 转换，非 96 硬编码（4K/高 DPI 下字体大小才一致）
+            float dpiX;
+            using (var bmp = new Bitmap(1, 1))
+            using (var g = Graphics.FromImage(bmp))
+                dpiX = g.DpiX;
+            var fontSizePx = fontSize * dpiX / 72f;
             lock (_lock)
             {
                 try { if (_font != null) _font.Dispose(); } catch { }
