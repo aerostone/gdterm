@@ -502,7 +502,10 @@ namespace Gdterm.Terminal.Rendering
         // ===== 内部类型 =====
 
         /// <summary>
-        /// 双缓冲 Panel — 消除闪烁，不引入持续渲染
+        /// 双缓冲 Panel — 消除闪烁，不引入持续渲染。
+        /// 默认 Panel 的 ControlStyles.Selectable=false，拿不到焦点，
+        /// 键盘事件不会路由过来——必需显式打开 Selectable + TabStop，
+        /// 并在 MouseDown 主动 Focus()，让 KeyPress/KeyDown 事件能到达。
         /// </summary>
         private class DoubleBufferedPanel : Panel
         {
@@ -512,9 +515,17 @@ namespace Gdterm.Terminal.Rendering
                     ControlStyles.AllPaintingInWmPaint |
                     ControlStyles.UserPaint |
                     ControlStyles.OptimizedDoubleBuffer |
-                    ControlStyles.ResizeRedraw,
+                    ControlStyles.ResizeRedraw |
+                    ControlStyles.Selectable,
                     true);
+                TabStop = true;
                 UpdateStyles();
+            }
+
+            protected override void OnMouseDown(MouseEventArgs e)
+            {
+                if (!Focused) Focus();
+                base.OnMouseDown(e);
             }
         }
 

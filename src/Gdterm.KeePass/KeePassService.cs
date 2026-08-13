@@ -161,13 +161,8 @@ namespace Gdterm.KeePass
             EnsureUnlocked();
             if (entry == null) throw new ArgumentNullException(nameof(entry));
 
-            // 校验密码强度
-            if (!string.IsNullOrEmpty(entry.Password))
-            {
-                var violations = _validator.Validate(entry.Password);
-                if (violations.Count > 0)
-                    throw new WeakPasswordException(violations);
-            }
+            // 密码强度只警告不阻断——远端策略可能比本地严格，
+            // 但本地不拦截、让用户自行决定（见 UI 层 ValidatePasswordStrength 弹警告）
 
             var group = GetOrCreateGroup(entry.GroupPath ?? "");
             var pwEntry = new PwEntry(true, true);
@@ -213,12 +208,7 @@ namespace Gdterm.KeePass
             if (string.IsNullOrEmpty(entry.Id))
                 throw new ArgumentException("条目 Id 不能为空", nameof(entry));
 
-            if (!string.IsNullOrEmpty(entry.Password))
-            {
-                var violations = _validator.Validate(entry.Password);
-                if (violations.Count > 0)
-                    throw new WeakPasswordException(violations);
-            }
+            // 密码强度只警告不阻断（同 CreateEntry）
 
             var pwEntry = FindEntryByUuid(entry.Id);
             if (pwEntry == null)
@@ -246,6 +236,16 @@ namespace Gdterm.KeePass
                 pwEntry.Strings.Set(SshKeyPassFieldName, new ProtectedString(true, entry.SshPrivateKeyPassphrase));
 
             SaveDatabase();
+        }
+
+        /// <summary>
+        /// 仅验证密码强度但不抛异常。
+        /// UI 层调此方法在保存前提示用户——远端密码强度不足时只警告不阻断。
+        /// </summary>
+        public IList<string> ValidatePasswordStrength(string password)
+        {
+            if (string.IsNullOrEmpty(password)) return new List<string>();
+            return _validator.Validate(password).ToList();
         }
 
         public void DeleteEntry(string entryId)

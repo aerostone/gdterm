@@ -687,7 +687,11 @@ namespace Gdterm.Terminal.Rendering
             _brushCache.Clear();
         }
 
-        /// <summary>与 LightweightRenderer 一致的双缓冲 Panel。</summary>
+        /// <summary>
+        /// 与 LightweightRenderer 一致的双缓冲 Panel。
+        /// 默认 Panel 的 Selectable=false，拿不到焦点 —— 必需显式打开，
+        /// 否则 OnKeyPress/OnKeyDown 不会路由进来，键盘输入静默丢失。
+        /// </summary>
         private sealed class DoubleBufferedPanel : Panel
         {
             public DoubleBufferedPanel()
@@ -695,8 +699,16 @@ namespace Gdterm.Terminal.Rendering
                 SetStyle(ControlStyles.AllPaintingInWmPaint |
                          ControlStyles.UserPaint |
                          ControlStyles.OptimizedDoubleBuffer |
-                         ControlStyles.ResizeRedraw, true);
+                         ControlStyles.ResizeRedraw |
+                         ControlStyles.Selectable, true);
+                TabStop = true;
                 UpdateStyles();
+            }
+
+            protected override void OnMouseDown(MouseEventArgs e)
+            {
+                if (!Focused) Focus();
+                base.OnMouseDown(e);
             }
         }
     }

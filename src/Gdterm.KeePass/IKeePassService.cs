@@ -55,6 +55,14 @@ namespace Gdterm.KeePass
         void UpdateEntry(KeePassEntry entry);
 
         /// <summary>
+        /// 仅验证密码强度但不抛异常——返回违反的规则列表（空列表表示通过）。
+        /// 用于 UI 层在创建/更新条目前警告用户：远端密码强度不足时可能远端策略限制，
+        /// 本地只提示不阻断、交由用户决定是否仍保存。
+        /// </summary>
+        /// <param name="password">待验证的密码（空字符串跳过，返回空列表）</param>
+        IList<string> ValidatePasswordStrength(string password);
+
+        /// <summary>
         /// 删除密码条目
         /// </summary>
         void DeleteEntry(string entryId);

@@ -7,6 +7,7 @@ using Gdterm.KeePass;
 using Gdterm.KeePass.Models;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Controls;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Forms
 {
@@ -116,6 +117,8 @@ namespace Gdterm.UI.Forms
                     SshPrivateKeyPassphrase = _passphrase.Text,
                     Notes = "Imported SSH private key " + DateTime.Now.ToString("yyyy-MM-dd HH:mm")
                 };
+                if (!KeePassPasswordWarning.ConfirmSaveIfWeak(this, _keepass, entry.SshPrivateKeyPassphrase))
+                    return; // 用户取消密钥短语强度警告
                 var created = _keepass.CreateEntry(entry);
                 ToastNotifier.Success("密钥已导入: " + entry.Title + " (" + (created != null ? created.Id : "") + ")");
                 NotificationCenterPanel.Push("KEY", "导入 SSH 密钥 " + entry.Title);

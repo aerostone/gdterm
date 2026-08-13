@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows.Forms;
 using Gdterm.KeePass;
 using Gdterm.KeePass.Models;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Forms
 {
@@ -223,6 +224,8 @@ namespace Gdterm.UI.Forms
                     };
                     try
                     {
+                        if (!KeePassPasswordWarning.ConfirmSaveIfWeak(this, _keepass, entry.Password))
+                            return; // 用户取消，保持在 picker 界面
                         var created = _keepass.CreateEntry(entry);
                         if (created != null)
                         {

@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using Gdterm.KeePass;
 using Gdterm.KeePass.Models;
 using Gdterm.UI.Diagnostics;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Forms
 {
@@ -159,6 +160,11 @@ namespace Gdterm.UI.Forms
                             Notes = dlg.EntryNotes,
                             GroupPath = dlg.EntryGroupPath
                         };
+                        if (!KeePassPasswordWarning.ConfirmSaveIfWeak(this, _keepassService, entry.Password))
+                        {
+                            _statusLabel.Text = "已取消：密码强度警告未确认";
+                            return;
+                        }
                         _keepassService.CreateEntry(entry);
                         LoadEntries();
                         _statusLabel.Text = "条目已创建";
@@ -205,6 +211,11 @@ namespace Gdterm.UI.Forms
                         full.Port = dlg.EntryPort;
                         full.Protocol = dlg.EntryProtocol;
                         full.AutoTypeSequence = dlg.EntryAutoType;
+                        if (!KeePassPasswordWarning.ConfirmSaveIfWeak(this, _keepassService, full.Password))
+                        {
+                            _statusLabel.Text = "已取消：密码强度警告未确认";
+                            return;
+                        }
                         _keepassService.UpdateEntry(full);
                         LoadEntries();
                         _statusLabel.Text = "条目已更新：" + full.Title;
