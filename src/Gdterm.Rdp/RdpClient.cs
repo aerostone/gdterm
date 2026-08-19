@@ -9,6 +9,38 @@ using Gdterm.Rdp.Models;
 namespace Gdterm.Rdp
 {
     /// <summary>
+    /// IMsTscAxEvents dispinterface（mstscax 事件源，IID 336D5562-EFA8-482E-8CB3-C5C0FC7A7DB6）。
+    /// 声明为 ComImport + InterfaceIsIDispatch，让 RdpEventSink 实现它后，连接点
+    /// QI {336D5562-...} 能命中托管对象 → Advise 不再返回 0x80040202。
+    /// dispid 顺序按 ReactOS mstsclib.idl（权威定义）。
+    /// </summary>
+    [ComImport]
+    [Guid("336D5562-EFA8-482E-8CB3-C5C0FC7A7DB6")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIDispatch)]
+    public interface IMsTscAxEvents
+    {
+        [DispId(1)]  void OnConnecting();
+        [DispId(2)]  void OnConnected();
+        [DispId(3)]  void OnLoginComplete();
+        [DispId(4)]  void OnDisconnected(int discReason);
+        [DispId(5)]  void OnEnterFullScreenMode();
+        [DispId(6)]  void OnLeaveFullScreenMode();
+        [DispId(7)]  void OnChannelReceivedData([MarshalAs(UnmanagedType.BStr)] string chanName, [MarshalAs(UnmanagedType.BStr)] string data);
+        [DispId(8)]  void OnRequestGoFullScreen();
+        [DispId(9)]  void OnRequestLeaveFullScreen();
+        [DispId(10)] void OnFatalError(int errorCode);
+        [DispId(11)] void OnWarning(int warningCode);
+        [DispId(12)] void OnRemoteDesktopSizeChange(int width, int height);
+        [DispId(13)] void OnIdleTimeoutNotification();
+        [DispId(14)] void OnRequestContainerMinimize();
+        [DispId(15)] bool OnConfirmClose();
+        [DispId(16)] bool OnReceivedTSPublicKey([MarshalAs(UnmanagedType.BStr)] string publicKey);
+        [DispId(17)] int  OnAutoReconnecting(int disconnectReason, int attemptCount);
+        [DispId(18)] void OnAuthenticationWarningDisplayed();
+        [DispId(19)] void OnAuthenticationWarningDismissed();
+    }
+
+    /// <summary>
     /// RDP 客户端——AxHost 按 CLSID 直接承载 mstscax ActiveX，零 interop DLL 依赖。
     ///
     /// 背景：旧实现运行时反射加载 AxMsTscLib.dll（aximp 生成），但该 DLL 不在仓库
@@ -17,10 +49,9 @@ namespace Gdterm.Rdp
     /// 现方案：
     /// - CLSID 回落链 10→9→8→7→6→1，取注册表里实际存在的最新版本；
     /// - 属性读写走 IDispatch 后期绑定（__ComObject + InvokeMember）；
-    /// - 事件走 IConnectionPoint(IMsTscAxEvents) + [DispId] 汇类；
+    /// - 事件走 ComImport dispinterface 汇类（QI 命中 + dispid 路由）；
     /// - 密码双通道：NotSafeForScripting CLSID 可 IDispatch 写 ClearTextPassword；
     ///   KeePass 预写 TERMSRV/host 到 Windows 凭据管理器（所有版本兜底）。
-    /// GUID 来源：MS Learn TermServ 文档（CLSID_MsRdpClient*NotSafeForScripting）。
     /// </summary>
     public class RdpClient : IRdpClient
     {
@@ -34,9 +65,6 @@ namespace Gdterm.Rdp
             "{7390F3D8-0439-4C05-91E3-CF5CB290C3D0}", // MsRdpClient6 (Vista+)
             "{791FA017-2DE3-492E-ACC5-53C67A2B94D0}", // MsRdpClient (base)
         };
-
-        /// <summary>IMsTscAxEvents dispinterface IID（mstscax 事件源）。</summary>
-        private static readonly Guid ImstscAxEventsIid = new Guid("336D5562-EFA8-482E-8CB3-C5C0FC7A7DB6");
 
         private RdpAxHost _ax;
         private UserControl _container;
@@ -140,7 +168,10 @@ namespace Gdterm.Rdp
             var ocx = _ocx;
             if (ocx == null) return;
             if (IsConnected)
-                InvokeMethod(ocx, "Disconnect");
+            {
+                try { InvokeMethod(ocx, "Disconnect"); }
+                catch (Exception ex) { RdpLog.Swallowed("RdpClient.Disconnect", ex); }
+            }
         }
 
         public void Dispose()
@@ -214,15 +245,20 @@ namespace Gdterm.Rdp
             SetProp(adv, "RedirectDevices", opts.RedirectDevices);
             SetProp(adv, "AudioRedirectionMode", (int)opts.AudioMode);
             SetProp(ocx, "ColorDepth", opts.ColorDepth);
-            SetProp(adv, "UseMultimon", opts.UseMultimon);
+            // UseMultimon 在 IMsRdpClientNonScriptable5（IUnknown 接口，IDispatch 后期绑定不通），
+            // 无法通过 AdvancedSettings 设置；多屏支持留待需要时走 NonScriptable5 专属通道
             if (opts.FullScreen)
                 SetProp(ocx, "FullScreen", true);
 
             SetProp(adv, "BandwidthDetection", true);
             SetProp(adv, "EnableAutoReconnect", opts.AutoReconnectCount > 0);
             SetProp(adv, "MaxReconnectAttempts", opts.AutoReconnectCount);
-            SetProp(adv, "EnableFontSmoothing", opts.EnableFontSmoothing);
-            SetProp(adv, "EnableDesktopComposition", opts.EnableDesktopComposition);
+            // 字体平滑/桌面合成不是独立属性，走 PerformanceFlags 位掩码：
+            // TS_PERF_ENABLE_FONT_SMOOTHING=0x80, TS_PERF_ENABLE_DESKTOP_COMPOSITION=0x100
+            int perf = 0;
+            if (opts.EnableFontSmoothing) perf |= 0x80;
+            if (opts.EnableDesktopComposition) perf |= 0x100;
+            SetProp(adv, "PerformanceFlags", perf);
             SetProp(adv, "singleConnectionTimeout", opts.ConnectionTimeout);
             // NLA：typelib 属性名是 EnableCredSspSupport（旧代码写 "EnableNLA" 是无效名，一直被吞掉）
             if (opts.EnableNLA)
@@ -270,13 +306,13 @@ namespace Gdterm.Rdp
             {
                 var cpc = (IConnectionPointContainer)ocx;
                 IConnectionPoint cp;
-                var iid = ImstscAxEventsIid;
+                var iid = typeof(IMsTscAxEvents).GUID;
                 cpc.FindConnectionPoint(ref iid, out cp);
                 if (cp == null) { RdpLog.Info("RdpClient.HookEvents", "connection point not found"); return; }
 
                 _sink = new RdpEventSink(this);
-                // ComTypes.IConnectionPoint.Advise 接 object（MarshalAs IUnknown），
-                // 连接点自行 QI 成 IDispatch；AutoDispatch 类接口按 [DispId] 路由 Invoke
+                // sink 实现 ComImport dispinterface → CCW 对 QI {336D5562-...} 返回自身 → Advise 成功
+                // （旧实现用 AutoDispatch 类接口，QI 命中不了事件 IID → 0x80040202）
                 int cookie;
                 cp.Advise(_sink, out cookie);
                 _eventCookie = cookie;
@@ -299,6 +335,12 @@ namespace Gdterm.Rdp
         {
             RdpLog.Info("RdpClient.Event", "OnDisconnected reason=" + reason + " msg=" + GetDisconnectReasonMessage(reason));
             StateChanged?.Invoke(this, new RdpStateChangedEventArgs(false, "disconnected", GetDisconnectReasonMessage(reason)));
+        }
+
+        internal void RaiseFatalError(int errorCode)
+        {
+            RdpLog.Info("RdpClient.Event", "OnFatalError code=" + errorCode);
+            StateChanged?.Invoke(this, new RdpStateChangedEventArgs(false, "fatal-error", "RDP 致命错误 (代码 " + errorCode + ")"));
         }
 
         // ===== IDispatch 后期绑定辅助 =====
@@ -339,6 +381,9 @@ namespace Gdterm.Rdp
             catch (Exception ex)
             {
                 RdpLog.Swallowed("RdpClient.Invoke:" + name, ex);
+                // Connect 失败必须向上抛出，让 ProtocolTabOpener 显示“RDP 连接失败” MessageBox；
+                // 其他方法（Disconnect 等）吞掉即可。
+                throw;
             }
         }
 
@@ -365,13 +410,11 @@ namespace Gdterm.Rdp
         }
 
         /// <summary>
-        /// IMsTscAxEvents 事件汇——AutoDispatch 类接口 + [DispId] 匹配 dispinterface 的
-        /// dispid（OnConnecting=1, OnConnected=2, OnLoginComplete=3, OnDisconnected=4, ...）。
-        /// 连接点按 dispid 调 IDispatch::Invoke，CLR 类接口的 dispatch 映射会路由到对应方法。
+        /// IMsTscAxEvents 事件汇——实现 ComImport dispinterface，CCW 的 QI 能命中
+        /// 事件 IID，Advise 成功；事件按 [DispId] 路由到对应方法。
         /// </summary>
         [ComVisible(true)]
-        [ClassInterface(ClassInterfaceType.AutoDispatch)]
-        private sealed class RdpEventSink
+        private sealed class RdpEventSink : IMsTscAxEvents
         {
             private readonly RdpClient _owner;
 
@@ -380,15 +423,25 @@ namespace Gdterm.Rdp
                 _owner = owner;
             }
 
-            [DispId(1)] public void OnConnecting() { }
-            [DispId(2)] public void OnConnected() { _owner.RaiseConnected(); }
-            [DispId(3)] public void OnLoginComplete() { _owner.RaiseConnected(); }
-            [DispId(4)] public void OnDisconnected(int discReason) { _owner.RaiseDisconnected(discReason); }
-            [DispId(5)] public void OnFullscreenModeChanged(bool fullscreen) { }
-            [DispId(6)] public void OnRemoteDesktopSizeChange(int width, int height) { }
-            [DispId(7)] public void OnLogonError(int error) { }
-            [DispId(8)] public void OnFatalError(int errorCode) { }
-            [DispId(9)] public void OnWarning(int warningCode) { }
+            public void OnConnecting() { RdpLog.Info("RdpClient.Event", "OnConnecting"); }
+            public void OnConnected() { RdpLog.Info("RdpClient.Event", "OnConnected"); _owner.RaiseConnected(); }
+            public void OnLoginComplete() { RdpLog.Info("RdpClient.Event", "OnLoginComplete"); _owner.RaiseConnected(); }
+            public void OnDisconnected(int discReason) { _owner.RaiseDisconnected(discReason); }
+            public void OnEnterFullScreenMode() { }
+            public void OnLeaveFullScreenMode() { }
+            public void OnChannelReceivedData(string chanName, string data) { }
+            public void OnRequestGoFullScreen() { }
+            public void OnRequestLeaveFullScreen() { }
+            public void OnFatalError(int errorCode) { _owner.RaiseFatalError(errorCode); }
+            public void OnWarning(int warningCode) { RdpLog.Info("RdpClient.Event", "OnWarning code=" + warningCode); }
+            public void OnRemoteDesktopSizeChange(int width, int height) { }
+            public void OnIdleTimeoutNotification() { }
+            public void OnRequestContainerMinimize() { }
+            public bool OnConfirmClose() { return true; }
+            public bool OnReceivedTSPublicKey(string publicKey) { return true; }
+            public int OnAutoReconnecting(int disconnectReason, int attemptCount) { return 0; /* autoReconnectContinueAutomatic */ }
+            public void OnAuthenticationWarningDisplayed() { RdpLog.Info("RdpClient.Event", "OnAuthenticationWarningDisplayed"); }
+            public void OnAuthenticationWarningDismissed() { }
         }
     }
 }
