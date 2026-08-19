@@ -482,9 +482,10 @@ namespace Gdterm.Terminal.Rendering
                         int selS = -1, selE = -1;
                         if (selStart >= 0)
                         {
-                            int s = Math.Max(selStart, colCursor);
-                            int e = Math.Min(selEnd, colCursor + spanLen);
-                            if (e > s) { selS = s - colCursor; selE = e - colCursor; }
+                            // 注意不能声明局部 s/e：外层 OnPaint(PaintEventArgs e) 在 C# 7.3 下禁止遮蔽
+                            int from = Math.Max(selStart, colCursor);
+                            int to = Math.Min(selEnd, colCursor + spanLen);
+                            if (to > from) { selS = from - colCursor; selE = to - colCursor; }
                         }
 
                         if (selS < 0)
