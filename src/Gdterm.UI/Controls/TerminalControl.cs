@@ -40,6 +40,7 @@ namespace Gdterm.UI.Controls
         private bool _isPaused = true;
         private bool _disposed;
         private bool _connecting;
+        private bool _fontMetricsLoggedWithLayout;
         private Task _connectTask;
         private bool _mouseDown;
         private int _mouseButton;
@@ -165,6 +166,7 @@ namespace Gdterm.UI.Controls
                 _cellRenderer.TerminalResized += OnCellTerminalResized;
                 _renderer = _cellRenderer;
                 try { _cellRenderer.ApplyFont(fontName, fontSize, cjkFontName); } catch { }
+                LogFontMetrics("cell");
             }
             else
             {
@@ -176,6 +178,7 @@ namespace Gdterm.UI.Controls
                     if (light != null) light.ApplyFont(fontName, fontSize);
                 }
                 catch { }
+                LogFontMetrics("light");
             }
 
             var canvas = _renderer.GetControl();
@@ -340,6 +343,44 @@ namespace Gdterm.UI.Controls
             catch { return new Size(80, 24); }
         }
 
+        /// <summary>
+        /// 字体可观测性：把实际生效的字体度量写入 diag.log，
+        /// 用于定位“字号过大/行重叠/被 UI 组件遮挡”类问题。
+        /// 记录内容：实际生效字体、pt/px/DPI、cell 宽高、宽高比、可见画布尺寸。
+        /// </summary>
+        private void LogFontMetrics(string path)
+        {
+            try
+            {
+                int canvasW = 0, canvasH = 0;
+                try
+                {
+                    var c = _renderer != null ? _renderer.GetControl() : null;
+                    if (c != null) { canvasW = c.ClientSize.Width; canvasH = c.ClientSize.Height; }
+                }
+                catch { }
+                string msg;
+                if (_cellRenderer != null)
+                {
+                    msg = "path=" + path +
+                          " font=" + _cellRenderer.AppliedFontName +
+                          " size=" + _cellRenderer.AppliedFontSizePt.ToString("0.#") + "pt/" + _cellRenderer.AppliedFontSizePx.ToString("0.#") + "px" +
+                          " dpi=" + _cellRenderer.AppliedDpi.ToString("0") +
+                          " cell=" + _cellRenderer.CharWidth.ToString("0.#") + "x" + _cellRenderer.CharHeight.ToString("0.#") +
+                          " grid=" + _cellRenderer.Columns + "x" + _cellRenderer.Rows +
+                          " canvas=" + canvasW + "x" + canvasH;
+                }
+                else
+                {
+                    msg = "path=" + path +
+                          " canvas=" + canvasW + "x" + canvasH +
+                          " grid=" + (_renderer != null ? _renderer.Columns + "x" + _renderer.Rows : "?");
+                }
+                DiagLog.Info("TerminalControl.FontMetrics", msg);
+            }
+            catch { }
+        }
+
         /// <summary>当前编码（从 TerminalProfile 取，默认 UTF-8）。</summary>
         public string CurrentEncoding
         {
@@ -357,6 +398,12 @@ namespace Gdterm.UI.Controls
             {
                 var info = new Size(_cellRenderer.Columns, _cellRenderer.Rows);
                 TerminalInfoChanged?.Invoke(this, info);
+                // 首次实际布局后补记一次带真实画布尺寸的度量（构造时 canvas=0x0）
+                if (!_fontMetricsLoggedWithLayout)
+                {
+                    _fontMetricsLoggedWithLayout = true;
+                    LogFontMetrics("cell-layout");
+                }
             }
             catch { }
             if (_session == null || !_session.IsConnected) return;
@@ -767,10 +814,13 @@ public async void Connect()
         {
             get
             {
-                // 本地 shell：始终本地回显（重定向进程 echo 不可靠）
+                // cell/TUI 路径：字符逐键直通远端（TryKeyPressed→SendToHost），不能用本地行缓冲——
+                // 否则 Enter 会把 _commandLine 整行 SafeSend 重发一遍，主机收到 ls+ls\r，回显成 lsls/clearclear。
+                if (_cellRenderer != null) return false;
+                // 本地 shell（LightweightRenderer）：始终本地回显（重定向进程 echo 不可靠）
                 if (_session is LocalTerminalSession) return true;
-                // cell/TUI：危险命令整行拦截；本地缓冲仅 Lightweight
-                return _dangerousDetector != null && _cellRenderer == null;
+                // SSH + LightweightRenderer：仅危险命令拦截时本地缓冲
+                return _dangerousDetector != null;
             }
         }
 

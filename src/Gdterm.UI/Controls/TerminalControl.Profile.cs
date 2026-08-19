@@ -48,10 +48,12 @@ namespace Gdterm.UI.Controls
             if (_cellRenderer != null)
             {
                 try { _cellRenderer.ApplyFont(fontName, fontSize, cjkFontName); } catch { }
+                LogFontMetrics("cell");
             }
             else if (_renderer is LightweightRenderer light)
             {
                 try { light.ApplyFont(fontName, fontSize); } catch { }
+                LogFontMetrics("light");
             }
             try { _renderer.GetControl()?.Invalidate(); } catch { }
         }

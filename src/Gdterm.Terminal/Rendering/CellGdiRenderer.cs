@@ -41,6 +41,12 @@ namespace Gdterm.Terminal.Rendering
         private float _charWidth = 8f;
         private float _charHeight = 16f;
 
+        // 字体可观测性：供 UI 在日志中记录实际生效的字体/单元格度量，定位“字体过大/行重叠/被 UI 遮挡”问题
+        private string _appliedFontName = FontName;
+        private float _appliedFontSizePt = FontSize;
+        private float _appliedFontSizePx = 0f;
+        private float _appliedDpi = 96f;
+
         /// <summary>真彩 brush 缓存上限，防止 24-bit 颜色刷爆低配内存。</summary>
         private const int MaxBrushCache = 256;
 
@@ -54,6 +60,19 @@ namespace Gdterm.Terminal.Rendering
 
         public int Rows { get { return _engine.Rows; } }
         public int Columns { get { return _engine.Columns; } }
+
+        /// <summary>实际生效的字体名（可观测性，供 UI 日志）。</summary>
+        public string AppliedFontName { get { return _appliedFontName; } }
+        /// <summary>实际生效的字号（pt，用户语义）。</summary>
+        public float AppliedFontSizePt { get { return _appliedFontSizePt; } }
+        /// <summary>实际生效的字号（px，已按屏幕 DPI 换算）。</summary>
+        public float AppliedFontSizePx { get { return _appliedFontSizePx; } }
+        /// <summary>字体测量时的屏幕 DPI（横向）。</summary>
+        public float AppliedDpi { get { return _appliedDpi; } }
+        /// <summary>单个 ASCII 单元格像素宽。</summary>
+        public float CharWidth { get { return _charWidth; } }
+        /// <summary>单个单元行像素高。</summary>
+        public float CharHeight { get { return _charHeight; } }
 
         /// <summary>是否为 cell VT 路径（UI 双轨判断）。</summary>
         public bool IsVtCell { get { return true; } }
@@ -461,18 +480,22 @@ namespace Gdterm.Terminal.Rendering
                             bg = _scheme.SelectionBackground;
                             fg = _scheme.SelectionForeground;
                         }
-                        // 若背景接近默认黑且未设真彩，用 scheme 背景
                         var font = span.Bold ? _boldFont : _font;
                         // CJK 补充字体（非 ASCII 段用 cjk 字体绘制，Xshell 风格双字体）
                         var cjkFont = span.Bold ? _cjkBoldFont : _cjkFont;
-                        // 双字体宽度：AffCStyle，ASCII 都用主字体测量会过宽或过窄，实际宽度以 DrawSpanWithCjkFallback 返回的为准
-                        float w = DrawSpanWithCjkFallback(g, span.Text, font, cjkFont, GetBrush(fg), x, y, span.Underline, fg);
+                        // 双字体宽度：实际宽度以 MeasureSpanWidth 为准（取测量值与 cell 宽度较大者）
+                        float w = MeasureSpanWidth(g, span.Text, font, cjkFont);
                         w = Math.Max(w, span.Text.Length * _charWidth);
 
-                        if (bg.A > 0 && (bg.R | bg.G | bg.B) != 0)
+                        // 绘制顺序：先背景后文字。
+                        // 原实现先 DrawString 再 FillRectangle，选区/背景矩形会盖在文字上——
+                        // 拖选时 SelectionBackground 直接把选中文字遮成不可见。
+                        // 选区背景色即使是纯黑（0,0,0）也要填充，否则选区在黑底主题下不可见。
+                        if (inSel || (bg.A > 0 && (bg.R | bg.G | bg.B) != 0))
                         {
                             g.FillRectangle(GetBrush(bg), x, y, w, _charHeight);
                         }
+                        DrawSpanText(g, span.Text, font, cjkFont, GetBrush(fg), x, y, span.Underline, fg);
 
                         x += w;
                         colCursor += span.Text.Length;
@@ -559,6 +582,12 @@ namespace Gdterm.Terminal.Rendering
                     _cjkBoldFont = null;
                 }
 
+                // 记录实际生效度量（供 UI 在日志中输出，定位字体过大/重叠）
+                _appliedFontName = fontName;
+                _appliedFontSizePt = fontSize;
+                _appliedFontSizePx = fontSizePx;
+                _appliedDpi = dpiX;
+
                 MeasureCell();
                 _needsRedraw = true;
                 ScheduleRedraw();
@@ -566,12 +595,63 @@ namespace Gdterm.Terminal.Rendering
         }
 
         /// <summary>
-        /// 按 ASCII / 非 ASCII 分段绘制（Xshell 风格双字体）。
-        /// 没有 cjk 字体时退化为全部用主字体画。
+        /// 测量 span 实宽（ASCII 主字体 + CJK 字体分段测量之和，与 DrawSpanText 的绘制宽度一致）。
+        /// 绘制前先测量：背景矩形需要宽度才能填充，而背景必须画在文字下面。
         /// </summary>
-        /// <returns>实际渲染的宽度（ASCII 段用主字体测量 + CJK 段用 cjk 字体测量之和），用于后续 span 的 x 步进。</returns>
-        private float DrawSpanWithCjkFallback(Graphics g, string text, Font mainFont, Font cjkFont,
-                                            Brush brush, float x, float y, bool underline, Color underlineColor)
+        private float MeasureSpanWidth(Graphics g, string text, Font mainFont, Font cjkFont)
+        {
+            if (string.IsNullOrEmpty(text)) return 0;
+            var fmt = StringFormat.GenericTypographic;
+            // 没有 cjk 字体 -> 一次性测完
+            if (cjkFont == null)
+            {
+                return g.MeasureString(text, mainFont, int.MaxValue, fmt).Width;
+            }
+
+            // 按 ASCII/非 ASCII 分段测量，CJK 段末尾对齐 cell 网格（与 DrawSpanText 一致）
+            float cx = 0;
+            var asciiBuf = new System.Text.StringBuilder();
+            var cjkBuf = new System.Text.StringBuilder();
+            for (int i = 0; i <= text.Length; i++)
+            {
+                bool isLast = (i == text.Length);
+                char ch = isLast ? '\0' : text[i];
+                bool isAscii = !isLast && ch < 0x80;
+
+                if (isAscii)
+                    asciiBuf.Append(ch);
+                else if (!isLast)
+                    cjkBuf.Append(ch);
+
+                bool segBreak = isLast || (i + 1 < text.Length && ((text[i + 1] < 0x80) != isAscii));
+                if (segBreak || isLast)
+                {
+                    if (asciiBuf.Length > 0)
+                    {
+                        var s = asciiBuf.ToString();
+                        cx += g.MeasureString(s, mainFont, int.MaxValue, fmt).Width;
+                        asciiBuf.Clear();
+                    }
+                    if (cjkBuf.Length > 0)
+                    {
+                        var s = cjkBuf.ToString();
+                        cx += g.MeasureString(s, cjkFont, int.MaxValue, fmt).Width;
+                        cjkBuf.Clear();
+                        // CJK 字形占 2 cell —— 对齐 cell 网格，与 DrawSpanText 保持一致
+                        cx = (float)Math.Ceiling(cx / _charWidth) * _charWidth;
+                    }
+                }
+            }
+            return cx;
+        }
+
+        /// <summary>
+        /// 绘制 span 文本（ASCII / 非 ASCII 分段双字体，Xshell 风格）。
+        /// 没有 cjk 字体时退化为全部用主字体画。背景已由调用方填充。
+        /// </summary>
+        /// <returns>实际渲染的宽度（ASCII 段主字体 + CJK 段 cjk 字体之和），用于下划线。</returns>
+        private float DrawSpanText(Graphics g, string text, Font mainFont, Font cjkFont,
+                                 Brush brush, float x, float y, bool underline, Color underlineColor)
         {
             if (string.IsNullOrEmpty(text)) return 0;
             var fmt = StringFormat.GenericTypographic;
@@ -621,6 +701,8 @@ namespace Gdterm.Terminal.Rendering
                         g.DrawString(s, cjkFont, brush, cx, y, fmt);
                         cx += g.MeasureString(s, cjkFont, int.MaxValue, fmt).Width;
                         cjkBuf.Clear();
+                        // CJK 字形占 2 cell —— 对齐 cell 网格，避免后续 ASCII 紧贴汉字
+                        cx = x + (float)Math.Ceiling((cx - x) / _charWidth) * _charWidth;
                     }
                 }
             }
