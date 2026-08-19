@@ -82,12 +82,14 @@ namespace Gdterm.Rdp
                 var clsid = PickClsid();
                 if (clsid == null)
                     throw new InvalidOperationException("mstscax ActiveX 未注册（需要 Windows 远程桌面组件）");
+                RdpLog.Info("RdpClient.ctor", "clsid=" + clsid);
 
                 _ax = new RdpAxHost(clsid) { Dock = DockStyle.Fill };
                 _container.Controls.Add(_ax);
             }
-            catch
+            catch (Exception ex)
             {
+                RdpLog.Swallowed("RdpClient.ctor", ex);
                 _ax = null;
                 var label = new Label
                 {
@@ -107,6 +109,7 @@ namespace Gdterm.Rdp
             _isViaTunnel = false;
             CurrentOptions = options ?? new RdpOptions();
             ApplyOptions(config, credential);
+            RdpLog.Info("RdpClient.Connect", "host=" + config.Host + " port=" + config.Port + " user=" + (credential?.Username ?? config.Username ?? ""));
             InvokeMethod(ocx, "Connect");
         }
 
@@ -128,6 +131,7 @@ namespace Gdterm.Rdp
                 SetProp(ocx, "Domain", config.Domain);
 
             ApplyOptions(config, credential);
+            RdpLog.Info("RdpClient.ConnectViaTunnel", "endpoint=" + tunnelEndpoint.LocalHost + ":" + tunnelEndpoint.LocalPort + " user=" + (credential?.Username ?? config.Username ?? ""));
             InvokeMethod(ocx, "Connect");
         }
 
@@ -168,11 +172,15 @@ namespace Gdterm.Rdp
         private object EnsureOcx()
         {
             if (_ocx != null) return _ocx;
-            try { var dummy = _ax.Handle; } catch { } // 强制创建句柄 → AxHost 实例化 OCX
+            try { var dummy = _ax.Handle; } catch (Exception ex) { RdpLog.Swallowed("RdpClient.EnsureOcx:CreateHandle", ex); } // 强制创建句柄 → AxHost 实例化 OCX
             _ocx = _ax.GetOcx();
             if (_ocx == null)
+            {
+                RdpLog.Info("RdpClient.EnsureOcx", "GetOcx returned null");
                 throw new InvalidOperationException("RDP ActiveX 实例化失败");
+            }
             _adv = ResolveAdvancedSettings(_ocx);
+            RdpLog.Info("RdpClient.EnsureOcx", "ocx=" + _ocx.GetType().Name + " adv=" + (_adv != null ? "ok" : "null"));
             HookEvents(_ocx);
             return _ocx;
         }
@@ -264,7 +272,7 @@ namespace Gdterm.Rdp
                 IConnectionPoint cp;
                 var iid = ImstscAxEventsIid;
                 cpc.FindConnectionPoint(ref iid, out cp);
-                if (cp == null) return;
+                if (cp == null) { RdpLog.Info("RdpClient.HookEvents", "connection point not found"); return; }
 
                 _sink = new RdpEventSink(this);
                 // ComTypes.IConnectionPoint.Advise 接 object（MarshalAs IUnknown），
@@ -273,17 +281,23 @@ namespace Gdterm.Rdp
                 cp.Advise(_sink, out cookie);
                 _eventCookie = cookie;
                 _cp = cp;
+                RdpLog.Info("RdpClient.HookEvents", "advised, cookie=" + cookie);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                RdpLog.Swallowed("RdpClient.HookEvents", ex);
+            }
         }
 
         internal void RaiseConnected()
         {
+            RdpLog.Info("RdpClient.Event", "OnConnected/OnLoginComplete");
             StateChanged?.Invoke(this, new RdpStateChangedEventArgs(true, "connected"));
         }
 
         internal void RaiseDisconnected(int reason)
         {
+            RdpLog.Info("RdpClient.Event", "OnDisconnected reason=" + reason + " msg=" + GetDisconnectReasonMessage(reason));
             StateChanged?.Invoke(this, new RdpStateChangedEventArgs(false, "disconnected", GetDisconnectReasonMessage(reason)));
         }
 
@@ -308,7 +322,10 @@ namespace Gdterm.Rdp
                 target.GetType().InvokeMember(name,
                     System.Reflection.BindingFlags.SetProperty, null, target, new[] { value });
             }
-            catch { }
+            catch (Exception ex)
+            {
+                RdpLog.Swallowed("RdpClient.SetProp:" + name, ex);
+            }
         }
 
         private static void InvokeMethod(object target, string name)
@@ -319,7 +336,10 @@ namespace Gdterm.Rdp
                 target.GetType().InvokeMember(name,
                     System.Reflection.BindingFlags.InvokeMethod, null, target, null);
             }
-            catch { }
+            catch (Exception ex)
+            {
+                RdpLog.Swallowed("RdpClient.Invoke:" + name, ex);
+            }
         }
 
         private static string GetDisconnectReasonMessage(int reasonCode)

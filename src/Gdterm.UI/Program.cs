@@ -66,6 +66,13 @@ namespace Gdterm.UI
 
             // 全局未处理异常：落盘 diag.log + 审计（audit 就绪后补写）
             CrashLog.Initialize(logsDir);
+            // RDP 诊断日志接线：Gdterm.Rdp 的静态 sink → diag.log（source 带级别前缀，与 DiagLog 同约定）
+            try
+            {
+                Gdterm.Rdp.RdpLog.Initialize((source, message) =>
+                    CrashLog.Write(source, new Exception(message ?? ""), isTerminating: false));
+            }
+            catch { }
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
             Application.ThreadException += (s, e) =>
             {

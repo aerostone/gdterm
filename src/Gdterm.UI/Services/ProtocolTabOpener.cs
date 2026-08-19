@@ -195,6 +195,7 @@ namespace Gdterm.UI.Services
             {
                 try
                 {
+                    DiagLog.Info("RdpTab.Connect", "host=" + config.Host + " tunnel=" + (config.Tunnel != null));
                     if (config.Tunnel != null && _tunnelManager != null)
                     {
                         var tunnel = _tunnelManager.EstablishAsync(config, credential,
@@ -205,6 +206,7 @@ namespace Gdterm.UI.Services
                     {
                         rdp.Connect(config, credential, options);
                     }
+                    DiagLog.Info("RdpTab.Connect", "Connect() returned, connected=" + SafeIsConnected(rdp));
                     OnRdpConnected?.Invoke(tab);
                     try
                     {
@@ -218,6 +220,7 @@ namespace Gdterm.UI.Services
                 }
                 catch (Exception ex)
                 {
+                    DiagLog.Swallowed("RdpTab.Connect", ex);
                     try
                     {
                         _auditLogger?.LogConnection(
@@ -337,6 +340,12 @@ namespace Gdterm.UI.Services
             newTerminal.Dock = DockStyle.Fill;
             newTerminal.ResumeRendering();
             return newTerminal;
+        }
+
+        private static string SafeIsConnected(Gdterm.Rdp.IRdpClient rdp)
+        {
+            try { return rdp != null && rdp.IsConnected ? "true" : "false"; }
+            catch { return "unknown"; }
         }
     }
 }

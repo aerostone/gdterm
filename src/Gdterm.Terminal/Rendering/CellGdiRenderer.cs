@@ -471,34 +471,40 @@ namespace Gdterm.Terminal.Rendering
                             continue;
                         }
 
-                        var bg = span.Background;
-                        var fg = span.Foreground;
-                        // 选区高亮：覆盖背景为 SelectionBackground，前景为 SelectionForeground
-                        bool inSel = selStart >= 0 && colCursor < selEnd && (colCursor + span.Text.Length) > selStart;
-                        if (inSel)
-                        {
-                            bg = _scheme.SelectionBackground;
-                            fg = _scheme.SelectionForeground;
-                        }
                         var font = span.Bold ? _boldFont : _font;
                         // CJK 补充字体（非 ASCII 段用 cjk 字体绘制，Xshell 风格双字体）
                         var cjkFont = span.Bold ? _cjkBoldFont : _cjkFont;
-                        // 双字体宽度：实际宽度以 MeasureSpanWidth 为准（取测量值与 cell 宽度较大者）
-                        float w = MeasureSpanWidth(g, span.Text, font, cjkFont);
-                        w = Math.Max(w, span.Text.Length * _charWidth);
 
-                        // 绘制顺序：先背景后文字。
-                        // 原实现先 DrawString 再 FillRectangle，选区/背景矩形会盖在文字上——
-                        // 拖选时 SelectionBackground 直接把选中文字遮成不可见。
-                        // 选区背景色即使是纯黑（0,0,0）也要填充，否则选区在黑底主题下不可见。
-                        if (inSel || (bg.A > 0 && (bg.R | bg.G | bg.B) != 0))
+                        // 选区按列裁剪成最多三段（前/选中/后）：
+                        // 旧实现整 span 命中即整段反色，单击（起点==终点）落在 span 中间
+                        // 也会高亮整段 —— 看起来“一点就选中整行”
+                        int spanLen = span.Text.Length;
+                        int selS = -1, selE = -1;
+                        if (selStart >= 0)
                         {
-                            g.FillRectangle(GetBrush(bg), x, y, w, _charHeight);
+                            int s = Math.Max(selStart, colCursor);
+                            int e = Math.Min(selEnd, colCursor + spanLen);
+                            if (e > s) { selS = s - colCursor; selE = e - colCursor; }
                         }
-                        DrawSpanText(g, span.Text, font, cjkFont, GetBrush(fg), x, y, span.Underline, fg);
 
-                        x += w;
-                        colCursor += span.Text.Length;
+                        if (selS < 0)
+                        {
+                            DrawSpanCell(g, span.Text, font, cjkFont,
+                                span.Background, span.Foreground, span.Underline, false, ref x, y);
+                        }
+                        else
+                        {
+                            if (selS > 0)
+                                DrawSpanCell(g, span.Text.Substring(0, selS), font, cjkFont,
+                                    span.Background, span.Foreground, span.Underline, false, ref x, y);
+                            DrawSpanCell(g, span.Text.Substring(selS, selE - selS), font, cjkFont,
+                                _scheme.SelectionBackground, _scheme.SelectionForeground, span.Underline, true, ref x, y);
+                            if (selE < spanLen)
+                                DrawSpanCell(g, span.Text.Substring(selE), font, cjkFont,
+                                    span.Background, span.Foreground, span.Underline, false, ref x, y);
+                        }
+
+                        colCursor += spanLen;
                     }
                 }
 
@@ -598,6 +604,23 @@ namespace Gdterm.Terminal.Rendering
         /// 测量 span 实宽（ASCII 主字体 + CJK 字体分段测量之和，与 DrawSpanText 的绘制宽度一致）。
         /// 绘制前先测量：背景矩形需要宽度才能填充，而背景必须画在文字下面。
         /// </summary>
+        /// <summary>
+        /// 绘制一个（可能被选区裁出的）文本段：先背景后文字。
+        /// 选区背景色即使是纯黑（0,0,0）也要填充（forceFill），否则选区在黑底主题下不可见。
+        /// </summary>
+        private void DrawSpanCell(Graphics g, string text, Font font, Font cjkFont,
+                                  Color bg, Color fg, bool underline, bool forceFill, ref float x, float y)
+        {
+            if (string.IsNullOrEmpty(text)) return;
+            // 双字体宽度：实际宽度以 MeasureSpanWidth 为准（取测量值与 cell 宽度较大者）
+            float w = MeasureSpanWidth(g, text, font, cjkFont);
+            w = Math.Max(w, text.Length * _charWidth);
+            if (forceFill || (bg.A > 0 && (bg.R | bg.G | bg.B) != 0))
+                g.FillRectangle(GetBrush(bg), x, y, w, _charHeight);
+            DrawSpanText(g, text, font, cjkFont, GetBrush(fg), x, y, underline, fg);
+            x += w;
+        }
+
         private float MeasureSpanWidth(Graphics g, string text, Font mainFont, Font cjkFont)
         {
             if (string.IsNullOrEmpty(text)) return 0;
@@ -723,7 +746,10 @@ namespace Gdterm.Terminal.Rendering
             {
                 g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
                 var size = g.MeasureString("W", _font, int.MaxValue, StringFormat.GenericTypographic);
-                _charWidth = Math.Max(6f, (float)Math.Ceiling(size.Width));
+                // 关键：cell 宽取字体精确步进（不取整）。
+                // 若 Ceiling 取整：文字按自然步进批量绘制，光标/选区按 cell 网格定位，
+                // 每字符错开零点几像素，行尾累积到 1-2 字符宽 —— 光标看起来和文字隔了空格。
+                _charWidth = Math.Max(6f, size.Width);
                 _charHeight = Math.Max(12f, (float)Math.Ceiling(_font.GetHeight(g)) + 2f);
             }
         }
@@ -783,6 +809,8 @@ namespace Gdterm.Terminal.Rendering
                          ControlStyles.OptimizedDoubleBuffer |
                          ControlStyles.ResizeRedraw |
                          ControlStyles.Selectable, true);
+                // 终端区域内鼠标应为文本输入光标（I-beam），而非默认箭头
+                Cursor = Cursors.IBeam;
                 TabStop = true;
                 UpdateStyles();
             }
