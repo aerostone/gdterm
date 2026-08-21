@@ -13,6 +13,12 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <!-- 强制 x64：
+         1) 嵌入式 mstscax 与系统 64 位 mstsc 共享同一份 HKLM\SOFTWARE\Microsoft\MSLicensing 许可存储，
+            消解 reason=2056/ext=267（许可存储创建被拒绝）；
+         2) 随包 winpty 三件套为 x86-64 原生二进制，32 位进程无法加载，x64 下 Win7 fallback 才真正可用。 -->
+    <Prefer32Bit>false</Prefer32Bit>
+    <PlatformTarget>x64</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
