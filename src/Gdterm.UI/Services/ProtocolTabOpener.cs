@@ -191,6 +191,40 @@ namespace Gdterm.UI.Services
                 SessionId = config.Id ?? Guid.NewGuid().ToString("N")
             };
 
+            // 订阅状态事件：断开/致命错误时更新 tab 状态并向用户报错（旧代码从不订阅，
+            // 导致断开后 tab 假死空白）。事件来自 COM 连接点，稳妥起见弹回 UI 线程。
+            rdp.StateChanged += (sender, ev) =>
+            {
+                var ctrl = rdp.Control;
+                Action a = () =>
+                {
+                    try
+                    {
+                        if (ev.IsConnected)
+                        {
+                            session.IsConnected = true;
+                            DiagLog.Info("RdpTab.StateChanged", "connected");
+                            return;
+                        }
+                        session.IsConnected = false;
+                        DiagLog.Info("RdpTab.StateChanged", "disconnected reason=" + ev.Reason + " msg=" + ev.ErrorMessage);
+                        if (ev.Reason == "closed") return; // 用户/服务器正常断开，不弹窗
+                        if (tab.IsDisposed) return;
+                        MessageBox.Show("RDP 已断开: " + (ev.ErrorMessage ?? ev.Reason), "远程桌面",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                    catch (Exception ex2) { DiagLog.Swallowed("RdpTab.StateChanged", ex2); }
+                };
+                try
+                {
+                    if (ctrl != null && ctrl.IsHandleCreated && ctrl.InvokeRequired)
+                        ctrl.BeginInvoke(a);
+                    else
+                        a();
+                }
+                catch (Exception ex3) { DiagLog.Swallowed("RdpTab.StateChanged", ex3); }
+            };
+
             session.PendingConnect = () =>
             {
                 try

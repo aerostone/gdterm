@@ -75,6 +75,7 @@ namespace Gdterm.Rdp
         private int _eventCookie;
         private bool _disposed;
         private bool _isViaTunnel;
+        private bool _userInitiatedDisconnect;
 
         public bool IsConnected
         {
@@ -169,6 +170,7 @@ namespace Gdterm.Rdp
             if (ocx == null) return;
             if (IsConnected)
             {
+                _userInitiatedDisconnect = true;
                 try { InvokeMethod(ocx, "Disconnect"); }
                 catch (Exception ex) { RdpLog.Swallowed("RdpClient.Disconnect", ex); }
             }
@@ -213,6 +215,7 @@ namespace Gdterm.Rdp
             _adv = ResolveAdvancedSettings(_ocx);
             RdpLog.Info("RdpClient.EnsureOcx", "ocx=" + _ocx.GetType().Name + " adv=" + (_adv != null ? "ok" : "null"));
             HookEvents(_ocx);
+            LogLicensingDiagnostics();
             return _ocx;
         }
 
@@ -333,8 +336,53 @@ namespace Gdterm.Rdp
 
         internal void RaiseDisconnected(int reason)
         {
-            RdpLog.Info("RdpClient.Event", "OnDisconnected reason=" + reason + " msg=" + GetDisconnectReasonMessage(reason));
-            StateChanged?.Invoke(this, new RdpStateChangedEventArgs(false, "disconnected", GetDisconnectReasonMessage(reason)));
+            // ExtendedDisconnectReason（IMsRdpClient, dispid 0x67）给出细分类别：
+            // 256-267=许可子类, 768=凭据无效, 7-10=服务器拒绝等；
+            // GetErrorDescription（IMsRdpClient5）返回控件本地化的官方错误文案。
+            int ext = 0;
+            try
+            {
+                var v = GetProp(_ocx, "ExtendedDisconnectReason");
+                if (v != null) ext = Convert.ToInt32(v, CultureInfo.InvariantCulture);
+            }
+            catch { }
+            var desc = TryGetErrorDescription(reason, ext);
+            var msg = GetDisconnectReasonMessage(reason);
+            if (!string.IsNullOrEmpty(desc) && desc != msg) msg = msg + " / " + desc;
+            if (ext != 0)
+            {
+                var extText = GetExtendedReasonText(ext);
+                msg = msg + " [ext=" + ext + (extText != null ? " " + extText : "") + "]";
+            }
+            if (reason == 2056)
+            {
+                msg = msg + "\r\n\r\n嵌入式 RDP 控件需要访问许可存储 HKLM\\SOFTWARE\\Microsoft\\MSLicensing。" +
+                      "请以管理员身份运行一次 gdterm（或先用系统 mstsc 连接一次目标机）以初始化许可存储。";
+            }
+            RdpLog.Info("RdpClient.Event", "OnDisconnected reason=" + reason + " ext=" + ext + " desc=" + (desc ?? "<null>") + " msg=" + msg);
+            // 1-3 是官方标注“非错误”的正常断开；0 无信息——若非用户主动断开则视为异常
+            var normal = (reason >= 1 && reason <= 3) || (reason == 0 && _userInitiatedDisconnect);
+            _userInitiatedDisconnect = false;
+            StateChanged?.Invoke(this, new RdpStateChangedEventArgs(false, normal ? "closed" : "disconnected", msg));
+        }
+
+        /// <summary>调用控件自身的 GetErrorDescription 获取官方本地化错误文案（失败返回 null）。</summary>
+        private string TryGetErrorDescription(int reason, int ext)
+        {
+            try
+            {
+                var ocx = _ocx;
+                if (ocx == null) return null;
+                var r = ocx.GetType().InvokeMember("GetErrorDescription",
+                    System.Reflection.BindingFlags.InvokeMethod, null, ocx,
+                    new object[] { unchecked((uint)reason), unchecked((uint)ext) });
+                return r as string;
+            }
+            catch (Exception ex)
+            {
+                RdpLog.Swallowed("RdpClient.GetErrorDescription", ex);
+                return null;
+            }
         }
 
         internal void RaiseFatalError(int errorCode)
@@ -387,19 +435,135 @@ namespace Gdterm.Rdp
             }
         }
 
+        /// <summary>官方 disconnect reason 表（MS Learn IMsTscAxEvents::OnDisconnected）。</summary>
         private static string GetDisconnectReasonMessage(int reasonCode)
         {
             switch (reasonCode)
             {
-                case 0: return "本地初始化断开";
-                case 1: return "远程桌面已关闭";
-                case 2: return "用户断开连接";
-                case 3: return "空闲超时";
-                case 4: return "会话超时";
-                case 5: return "另一用户连接";
-                case 6: return "服务器拒绝连接";
-                case 10: return "网络连接丢失";
+                case 0: return "无可用信息";
+                case 1: return "本地断开（非错误）";
+                case 2: return "远端用户断开（非错误）";
+                case 3: return "服务器断开（非错误）";
+                case 260: return "DNS 名称解析失败";
+                case 262: return "内存不足";
+                case 264: return "连接超时";
+                case 516: return "Socket 连接失败";
+                case 518: return "内存不足";
+                case 520: return "主机未找到";
+                case 772: return "Windows 套接字 send 失败";
+                case 774: return "内存不足";
+                case 776: return "指定的 IP 地址无效";
+                case 1028: return "Windows 套接字 recv 失败";
+                case 1030: return "安全数据无效";
+                case 1032: return "内部错误";
+                case 1286: return "指定的加密方法无效";
+                case 1288: return "DNS 查找失败";
+                case 1540: return "gethostbyname 调用失败";
+                case 1542: return "服务器安全数据无效";
+                case 1544: return "内部定时器错误";
+                case 1796: return "超时";
+                case 1798: return "服务器证书解包失败";
+                case 2052: return "指定的 IP 地址错误";
+                case 2055: return "登录失败（用户名或密码错误）";
+                case 2056: return "许可协商失败";
+                case 2308: return "Socket 已关闭";
+                case 2310: return "内部安全错误";
+                case 2312: return "许可超时";
+                case 2566: return "内部安全错误";
+                case 2567: return "指定用户无账户";
+                case 2822: return "加密错误";
+                case 2823: return "账户已禁用";
+                case 3078: return "解密错误";
+                case 3079: return "账户受限";
+                case 3080: return "解压缩错误";
+                case 3335: return "账户已锁定";
+                case 3591: return "账户已过期";
+                case 3847: return "密码已过期";
+                case 4615: return "首次登录前必须更改密码";
+                case 5639: return "策略不支持凭据委派";
+                case 5895: return "未经相互认证不允许凭据委派";
+                case 6151: return "无法联系身份验证机构";
+                case 6919: return "收到的证书已过期";
+                case 7175: return "智能卡 PIN 码错误";
+                case 8455: return "服务器认证策略要求输入新凭据";
+                case 8711: return "智能卡已锁定";
                 default: return "断开连接 (原因代码: " + reasonCode + ")";
+            }
+        }
+
+        /// <summary>ExtendedDisconnectReasonCode 枚举（MS Learn）——许可子类与凭据错误的细分类别。</summary>
+        private static string GetExtendedReasonText(int ext)
+        {
+            switch (ext)
+            {
+                case 0: return null;
+                case 1: return "本地 API 发起断开";
+                case 2: return "本地 API 发起注销";
+                case 3: return "服务器空闲超时";
+                case 4: return "服务器登录超时";
+                case 5: return "被其他连接替换";
+                case 6: return "内存不足";
+                case 7: return "服务器拒绝连接";
+                case 8: return "服务器因 FIPS 拒绝连接";
+                case 9: return "权限不足";
+                case 10: return "需要新凭据";
+                case 11: return "用户发起 RPC 断开";
+                case 12: return "用户注销";
+                case 256: return "许可-内部错误";
+                case 257: return "许可-无许可服务器";
+                case 258: return "许可-无许可证";
+                case 259: return "许可-客户端消息错误";
+                case 260: return "许可-硬件 ID 与许可证不匹配";
+                case 261: return "许可-客户端许可证错误";
+                case 262: return "许可-无法完成协议";
+                case 263: return "许可-客户端终止协议";
+                case 264: return "许可-客户端加密错误";
+                case 265: return "许可-无法升级许可证";
+                case 266: return "许可-不允许远程连接";
+                case 267: return "许可-创建许可存储被拒绝";
+                case 768: return "凭据无效";
+                default: return null;
+            }
+        }
+
+        /// <summary>
+        /// 许可存储诊断——嵌入式 mstscax 断开 2056（许可协商失败）的头号成因是
+        /// HKLM\SOFTWARE\Microsoft\MSLicensing 不存在或不可写（KB 187498：
+        /// 非管理员首次连接无法创建许可存储）。记录进程位数（x86 进程走
+        /// WOW6432Node 视图，与系统 mstsc 使用的存储不同）与存储状态。
+        /// </summary>
+        private static void LogLicensingDiagnostics()
+        {
+            var proc = Environment.Is64BitProcess ? "x64" : "x86";
+            try
+            {
+                using (var baseKey = Microsoft.Win32.RegistryKey.OpenBaseKey(
+                    Microsoft.Win32.RegistryHive.LocalMachine, Microsoft.Win32.RegistryView.Default))
+                {
+                    using (var ro = baseKey.OpenSubKey("SOFTWARE\\Microsoft\\MSLicensing"))
+                    {
+                        if (ro == null)
+                        {
+                            RdpLog.Info("RdpClient.MSLicensing", "proc=" + proc + " store=missing（将以管理员身份运行一次来创建）");
+                            return;
+                        }
+                    }
+                    try
+                    {
+                        using (var rw = baseKey.OpenSubKey("SOFTWARE\\Microsoft\\MSLicensing", true))
+                        {
+                            RdpLog.Info("RdpClient.MSLicensing", "proc=" + proc + " store=present writable=" + (rw != null));
+                        }
+                    }
+                    catch (Exception ex2)
+                    {
+                        RdpLog.Info("RdpClient.MSLicensing", "proc=" + proc + " store=present writable=false (" + ex2.GetType().Name + ")");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                RdpLog.Swallowed("RdpClient.MSLicensing", ex);
             }
         }
 
