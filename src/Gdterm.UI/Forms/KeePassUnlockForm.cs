@@ -27,6 +27,7 @@ namespace Gdterm.UI.Forms
             _keepassService = keepassService;
             InitializeComponent();
             // 高/低 DPI 自适应：声明设计基准 96 DPI，让 .NET 自动按当前 DPI 缩放控件。
+            Gdterm.UI.Services.FormFontPolicy.Apply(this);
         }
 
         private void InitializeComponent()

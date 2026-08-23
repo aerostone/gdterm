@@ -89,6 +89,7 @@ namespace Gdterm.UI.Forms
             cancel.FlatAppearance.BorderColor = GdtermColorTable.Border;
             Controls.Add(ok); Controls.Add(cancel);
             CancelButton = cancel;
+            Gdterm.UI.Services.FormFontPolicy.Apply(this); 
         }
 
         private void OnImport(object sender, EventArgs e)

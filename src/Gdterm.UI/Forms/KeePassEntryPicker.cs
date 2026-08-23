@@ -26,6 +26,7 @@ namespace Gdterm.UI.Forms
         {
             _keepass = keepass ?? throw new ArgumentNullException(nameof(keepass));
             InitializeComponent();
+            Gdterm.UI.Services.FormFontPolicy.Apply(this);
             LoadEntries();
         }
 

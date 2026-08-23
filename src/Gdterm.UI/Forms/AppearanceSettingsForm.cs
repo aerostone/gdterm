@@ -50,6 +50,7 @@ namespace Gdterm.UI.Forms
 
             BuildUi();
             LoadCurrent();
+            Gdterm.UI.Services.FormFontPolicy.Apply(this); // 全局 UI 字体传导（含显式雅黑硬编码子控件）
         }
 
         private void BuildUi()
@@ -178,6 +179,13 @@ namespace Gdterm.UI.Forms
             foreach (var name in new[] { "Dark", "Darker", "OLED" })
                 _uiThemeCombo.Items.Add(name);
             Controls.Add(_uiThemeCombo);
+            Controls.Add(new Label
+            {
+                Text = "← 搭配建议：Dark/Darker/OLED 配 Solarized Dark / Dracula / Monokai，Light 配 Light",
+                ForeColor = Color.FromArgb(120, 120, 125),
+                AutoSize = true,
+                Location = new Point(332, y)
+            });
             y += 36;
 
             _dpiAwareCheck = new CheckBox

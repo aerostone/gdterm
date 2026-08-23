@@ -64,6 +64,7 @@ namespace Gdterm.UI.Controls
 
             Controls.Add(_list);
             Controls.Add(_filter);
+            Gdterm.UI.Services.FormFontPolicy.Apply(this);
             LoadData();
             KeyDown += (s, e) =>
             {

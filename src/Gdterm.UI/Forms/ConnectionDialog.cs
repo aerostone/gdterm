@@ -10,7 +10,11 @@ using Gdterm.KeePass.Models;
 namespace Gdterm.UI.Forms
 {
     /// <summary>
-    /// 新建/编辑连接对话框——支持 SSH、RDP、Serial 三种协议
+    /// 新建/编辑连接对话框——支持 SSH、RDP、Serial 三种协议。
+    ///
+    /// 设计原则「简洁优先」：默认只显示必填的 6 行（名称/协议/主机/端口/用户名/分组）
+    /// 加一行凭据；协议专属选项（SSH 隧道 / RDP 选项 / 串口参数）和备注收进
+    /// 「更多选项」折叠区，点开才出现。编辑已有连接且配置过高级选项时自动展开。
     /// </summary>
     public class ConnectionDialog : Form
     {
@@ -23,9 +27,7 @@ namespace Gdterm.UI.Forms
         private TextBox _hostBox;
         private NumericUpDown _portBox;
         private TextBox _usernameBox;
-        private TextBox _domainBox;
         private TextBox _groupPathBox;
-        private TextBox _notesBox;
 
         // SSH 高级
         private CheckBox _tunnelCheck;
@@ -34,6 +36,7 @@ namespace Gdterm.UI.Forms
         private TextBox _tunnelUserBox;
 
         // RDP
+        private TextBox _domainBox;
         private CheckBox _rdpDriveCheck;
         private CheckBox _rdpClipboardCheck;
         private CheckBox _rdpPrinterCheck;
@@ -52,10 +55,15 @@ namespace Gdterm.UI.Forms
         private TextBox _credentialRefBox;
         private Label _credentialTitleLabel;
 
-        // Panels for protocol-specific settings
-        private Panel _sshPanel;
-        private Panel _rdpPanel;
-        private Panel _serialPanel;
+        // 布局
+        private Panel _advancedHost;
+        private FlowLayoutPanel _advFlow;
+        private TableLayoutPanel _secSsh;
+        private TableLayoutPanel _secRdp;
+        private TableLayoutPanel _secSerial;
+        private TextBox _notesBox;
+        private LinkLabel _moreLink;
+        private bool _expanded;
 
         private readonly IKeePassService _keepass;
 
@@ -68,6 +76,7 @@ namespace Gdterm.UI.Forms
             _isNew = existing == null;
             InitializeComponent();
             // 高/低 DPI 自适应：声明设计基准 96 DPI，让 .NET 自动按当前 DPI 缩放控件。
+            Gdterm.UI.Services.FormFontPolicy.Apply(this);
             LoadFromConfig();
         }
 
@@ -81,13 +90,14 @@ namespace Gdterm.UI.Forms
             _keepass = keepass;
             _isNew = true;
             InitializeComponent();
+            Gdterm.UI.Services.FormFontPolicy.Apply(this);
             LoadFromConfig();
         }
 
         private void InitializeComponent()
         {
             Text = _isNew ? "新建连接" : $"编辑连接 — {_config.Name}";
-            Size = new Size(560, 620);
+            ClientSize = new Size(560, 330);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -95,24 +105,18 @@ namespace Gdterm.UI.Forms
             BackColor = Color.FromArgb(30, 30, 30);
             Font = new Font("Microsoft YaHei", 9f);
 
-            var tabControl = new TabControl { Dock = DockStyle.Fill, Padding = new Point(12, 4) };
+            // ===== 顶部：基本信息 + 凭据 + 更多选项开关 =====
+            var topPanel = new Panel { Dock = DockStyle.Top, AutoSize = true, BackColor = Color.FromArgb(30, 30, 30), Padding = new Padding(12, 10, 12, 4) };
 
-            // === Tab 1: 基本信息 ===
-            var basicTab = new TabPage("基本信息");
-            basicTab.BackColor = Color.FromArgb(30, 30, 30);
-            basicTab.Padding = new Padding(12);
             var basicLayout = new TableLayoutPanel
             {
-                Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 7,
-                AutoSize = true
+                Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true
             };
-            // 标签列加宽，避免中文「用户名/分组」被裁切错位
             basicLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 96));
             basicLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            for (int r = 0; r < 7; r++)
-                basicLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));
 
             _nameBox = AddRow(basicLayout, 0, "名称", new TextBox());
+            WinFormsCompat.SetCueBanner(_nameBox, "可选，留空则用 主机:端口");
             _protocolCombo = AddRow(basicLayout, 1, "协议", new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList });
             _protocolCombo.Items.AddRange(new object[] { "SSH", "RDP", "Serial" });
             _protocolCombo.SelectedIndexChanged += OnProtocolChanged;
@@ -120,150 +124,168 @@ namespace Gdterm.UI.Forms
             WinFormsCompat.SetCueBanner(_hostBox, "IP 或主机名，如 192.168.1.10");
             _portBox = AddRow(basicLayout, 3, "端口", new NumericUpDown { Minimum = 1, Maximum = 65535, Value = 22 });
             _usernameBox = AddRow(basicLayout, 4, "用户名", new TextBox());
-            // 域名仅 RDP 域账户（DOMAIN\user）；SSH 不需要
-            _domainBox = AddRow(basicLayout, 5, "RDP域名", new TextBox());
-            WinFormsCompat.SetCueBanner(_domainBox, "仅 RDP 域账户，如 CONTOSO（SSH 可留空）");
-            _groupPathBox = AddRow(basicLayout, 6, "分组", new TextBox());
+            _groupPathBox = AddRow(basicLayout, 5, "分组", new TextBox());
             WinFormsCompat.SetCueBanner(_groupPathBox, "如: Web/生产");
-            basicTab.Controls.Add(basicLayout);
+            topPanel.Controls.Add(basicLayout);
 
-            // === Tab 2: SSH ===
-            _sshPanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.FromArgb(30, 30, 30), Padding = new Padding(12) };
-            var sshLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 4, AutoSize = true };
-            sshLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
-            sshLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            _tunnelCheck = new CheckBox { Text = "使用 SSH 隧道", ForeColor = Color.FromArgb(204, 204, 204) };
-            sshLayout.Controls.Add(_tunnelCheck, 0, 0); sshLayout.SetColumnSpan(_tunnelCheck, 2);
-            _tunnelHostBox = AddRow(sshLayout, 1, "隧道主机:", new TextBox());
-            _tunnelPortBox = AddRow(sshLayout, 2, "隧道端口:", new NumericUpDown { Minimum = 1, Maximum = 65535, Value = 22 });
-            _tunnelUserBox = AddRow(sshLayout, 3, "隧道用户:", new TextBox());
-            _sshPanel.Controls.Add(sshLayout);
-
-            // === Tab 3: RDP ===
-            _rdpPanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.FromArgb(30, 30, 30), Padding = new Padding(12) };
-            var rdpLayout = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false };
-            _rdpDriveCheck = new CheckBox { Text = "重定向本地磁盘", ForeColor = Color.FromArgb(204, 204, 204) };
-            _rdpClipboardCheck = new CheckBox { Text = "共享剪贴板", ForeColor = Color.FromArgb(204, 204, 204), Checked = true };
-            _rdpPrinterCheck = new CheckBox { Text = "重定向打印机", ForeColor = Color.FromArgb(204, 204, 204) };
-            var depthPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true };
-            depthPanel.Controls.Add(new Label { Text = "色深:", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true });
-            _rdpColorDepth = new NumericUpDown { Minimum = 8, Maximum = 32, Value = 32, Increment = 8, Width = 60 };
-            depthPanel.Controls.Add(_rdpColorDepth);
-            _rdpFullScreenCheck = new CheckBox { Text = "全屏模式", ForeColor = Color.FromArgb(204, 204, 204) };
-            _rdpNlaCheck = new CheckBox { Text = "NLA (网络级别认证)", ForeColor = Color.FromArgb(204, 204, 204), Checked = true };
-            rdpLayout.Controls.AddRange(new Control[] { _rdpDriveCheck, _rdpClipboardCheck, _rdpPrinterCheck, depthPanel, _rdpFullScreenCheck, _rdpNlaCheck });
-            _rdpPanel.Controls.Add(rdpLayout);
-
-            // === Tab 4: Serial ===
-            _serialPanel = new Panel { Dock = DockStyle.Fill, BackColor = Color.FromArgb(30, 30, 30), Padding = new Padding(12) };
-            var serialLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 5, AutoSize = true };
-            serialLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 80));
-            serialLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            _serialPortCombo = AddRow(serialLayout, 0, "端口:", new ComboBox { DropDownStyle = ComboBoxStyle.DropDown });
-            _serialPortCombo.Items.AddRange(new object[] { "COM1", "COM2", "COM3", "COM4", "/dev/ttyS0", "/dev/ttyUSB0" });
-            _serialBaudCombo = AddRow(serialLayout, 1, "波特率:", new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList });
-            _serialBaudCombo.Items.AddRange(new object[] { "9600", "19200", "38400", "57600", "115200" });
-            _serialBaudCombo.SelectedItem = "9600";
-            _serialDataBitsCombo = AddRow(serialLayout, 2, "数据位:", new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList });
-            _serialDataBitsCombo.Items.AddRange(new object[] { "5", "6", "7", "8" });
-            _serialDataBitsCombo.SelectedItem = "8";
-            _serialStopBitsCombo = AddRow(serialLayout, 3, "停止位:", new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList });
-            _serialStopBitsCombo.Items.AddRange(new object[] { "1", "1.5", "2" });
-            _serialStopBitsCombo.SelectedItem = "1";
-            _serialParityCombo = AddRow(serialLayout, 4, "校验位:", new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList });
-            _serialParityCombo.Items.AddRange(new object[] { "None", "Odd", "Even", "Mark", "Space" });
-            _serialParityCombo.SelectedItem = "None";
-            _serialPanel.Controls.Add(serialLayout);
-
-            // === Tab 5: 备注 ===
-            var notesTab = new TabPage("备注");
-            notesTab.BackColor = Color.FromArgb(30, 30, 30);
-            _notesBox = new TextBox
+            // ===== 凭据行（原独立标签页收为一行）=====
+            var credRow = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 3, AutoSize = true, Padding = new Padding(0, 6, 0, 0) };
+            credRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 96));
+            credRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            credRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            // 隐藏的 UUID 存储框（不入布局，仅作保存时读取的存储）
+            _credentialRefBox = new TextBox { Visible = false, Enabled = false };
+            credRow.Controls.Add(new Label
             {
-                Dock = DockStyle.Fill,
-                Multiline = true,
-                ScrollBars = ScrollBars.Vertical,
-                BackColor = Color.FromArgb(37, 37, 38),
+                Text = "凭据",
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Font = new Font("Consolas", 10f)
-            };
-            WinFormsCompat.SetCueBanner(_notesBox, "服务器用途、特殊配置、注意事项...");
-            notesTab.Controls.Add(_notesBox);
-
-            // === Tab 6: 凭据 ===
-            var credTab = new TabPage("凭据");
-            credTab.BackColor = Color.FromArgb(30, 30, 30);
-            var credLayout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 4, Padding = new Padding(12) };
-            credLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
-            credLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            credLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 4));   // row0: 隐藏 UUID 存储
-            credLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36));  // row1: 当前凭据 + 标题
-            credLayout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40)); // row2: 按钮
-            credLayout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));// row3: 说明 + 弹性
-
-            // 隐藏的 UUID 存储框（不可见，保存时读它）
-            _credentialRefBox = new TextBox { Dock = DockStyle.Fill, Visible = false };
-            credLayout.Controls.Add(_credentialRefBox, 0, 0);
-            credLayout.SetColumnSpan(_credentialRefBox, 2);
-
-            credLayout.Controls.Add(new Label { Text = "当前凭据", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleLeft }, 0, 1);
+                AutoSize = false,
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleRight,
+                Padding = new Padding(0, 0, 8, 0),
+                Height = 30
+            }, 0, 0);
             _credentialTitleLabel = new Label
             {
-                Text = "未选（保存后将按主机+用户名自动匹配）",
+                Text = "未选（按主机+用户名自动匹配）",
                 ForeColor = Color.FromArgb(100, 100, 100),
                 AutoSize = false,
                 Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleLeft
+                TextAlign = ContentAlignment.MiddleLeft,
+                Height = 30
             };
-            credLayout.Controls.Add(_credentialTitleLabel, 1, 1);
-
-            var credBtnPanel = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false
-            };
+            credRow.Controls.Add(_credentialTitleLabel, 1, 0);
+            var credBtns = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = false, AutoSize = true };
             var btnPickCred = new Button
             {
                 Text = "选择凭据...",
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White,
-                Size = new Size(110, 30),
-                Margin = new Padding(0, 6, 8, 0)
+                Size = new Size(96, 26),
+                Margin = new Padding(0, 2, 6, 0)
             };
             btnPickCred.Click += OnPickCredential;
             var btnClearCred = new Button
             {
-                Text = "清除（自动匹配）",
+                Text = "清除",
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(60, 60, 60),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Size = new Size(140, 30),
-                Margin = new Padding(0, 6, 0, 0)
+                Size = new Size(52, 26),
+                Margin = new Padding(0, 2, 0, 0)
             };
             btnClearCred.Click += OnClearCredential;
-            credBtnPanel.Controls.Add(btnPickCred);
-            credBtnPanel.Controls.Add(btnClearCred);
-            credLayout.Controls.Add(credBtnPanel, 0, 2);
-            credLayout.SetColumnSpan(credBtnPanel, 2);
+            credBtns.Controls.Add(btnPickCred);
+            credBtns.Controls.Add(btnClearCred);
+            credRow.Controls.Add(credBtns, 2, 0);
+            topPanel.Controls.Add(credRow);
 
-            var credHint = new Label
+            // ===== 更多选项 开关 =====
+            var linkRow = new Panel { Dock = DockStyle.Top, AutoSize = true, Height = 28, Padding = new Padding(0, 6, 0, 0) };
+            _moreLink = new LinkLabel
             {
-                Text = "说明：点「选择凭据」从 KeePass 浏览或新建条目；点「清除」恢复自动匹配模式。\n自动匹配按主机/端口+用户名在密码库中智能查找。",
-                ForeColor = Color.FromArgb(120, 120, 120),
+                Text = "更多选项 ▾",
                 AutoSize = true,
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.TopLeft
+                Location = new Point(0, 6),
+                LinkColor = Color.FromArgb(120, 180, 255),
+                ActiveLinkColor = Color.White
             };
-            credLayout.Controls.Add(credHint, 0, 3);
-            credLayout.SetColumnSpan(credHint, 2);
+            _moreLink.LinkBehavior = LinkBehavior.HoverUnderline;
+            _moreLink.Click += (s, e) => ToggleAdvanced();
+            linkRow.Controls.Add(_moreLink);
+            topPanel.Controls.Add(linkRow);
 
-            credTab.Controls.Add(credLayout);
+            // ===== 高级区：协议专属选项 + 备注（默认折叠）=====
+            _advancedHost = new Panel { Dock = DockStyle.Fill, Visible = false, BackColor = Color.FromArgb(30, 30, 30), Padding = new Padding(12, 4, 12, 4) };
+            _advFlow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoSize = true,
+                BackColor = Color.FromArgb(30, 30, 30)
+            };
 
-            tabControl.TabPages.AddRange(new[] { basicTab, notesTab, credTab });
+            // --- SSH 区 ---
+            _secSsh = MakeSection("SSH 隧道 / 跳板");
+            var sshLayout = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true };
+            sshLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
+            sshLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            _tunnelCheck = new CheckBox { Text = "使用 SSH 隧道（跳板机）", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true };
+            sshLayout.Controls.Add(_tunnelCheck, 0, 0); sshLayout.SetColumnSpan(_tunnelCheck, 2);
+            _tunnelHostBox = AddRow(sshLayout, 1, "跳板主机", new TextBox());
+            _tunnelPortBox = AddRow(sshLayout, 2, "跳板端口", new NumericUpDown { Minimum = 1, Maximum = 65535, Value = 22 });
+            _tunnelUserBox = AddRow(sshLayout, 3, "跳板用户", new TextBox());
+            SectionContent(_secSsh, sshLayout);
+            _advFlow.Controls.Add(_secSsh);
 
-            // 按钮
+            // --- RDP 区 ---
+            _secRdp = MakeSection("RDP 选项");
+            var rdpGrid = new TableLayoutPanel { ColumnCount = 2, AutoSize = true };
+            rdpGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
+            rdpGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            // 域名仅 RDP 域账户有意义——从基本信息移到这里
+            _domainBox = AddRow(rdpGrid, 0, "RDP域名", new TextBox());
+            WinFormsCompat.SetCueBanner(_domainBox, "域账户如 CONTOSO，普通账户留空");
+            var rdpChecks = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = true, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 4, 0, 4) };
+            _rdpDriveCheck = new CheckBox { Text = "本地磁盘", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true };
+            _rdpClipboardCheck = new CheckBox { Text = "剪贴板", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true, Checked = true };
+            _rdpPrinterCheck = new CheckBox { Text = "打印机", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true };
+            _rdpFullScreenCheck = new CheckBox { Text = "全屏", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true };
+            _rdpNlaCheck = new CheckBox { Text = "NLA 认证", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true, Checked = true };
+            rdpChecks.Controls.AddRange(new Control[] { _rdpDriveCheck, _rdpClipboardCheck, _rdpPrinterCheck, _rdpFullScreenCheck, _rdpNlaCheck });
+            var depthPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 4) };
+            depthPanel.Controls.Add(new Label { Text = "色深:", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true });
+            _rdpColorDepth = new NumericUpDown { Minimum = 8, Maximum = 32, Value = 32, Increment = 8, Width = 60 };
+            depthPanel.Controls.Add(_rdpColorDepth);
+            rdpGrid.Controls.Add(rdpChecks, 1, 1);
+            rdpGrid.Controls.Add(depthPanel, 1, 2);
+            SectionContent(_secRdp, rdpGrid);
+            _advFlow.Controls.Add(_secRdp);
+
+            // --- Serial 区 ---
+            _secSerial = MakeSection("串口参数");
+            var serialLayout = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true };
+            serialLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
+            serialLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            _serialPortCombo = AddRow(serialLayout, 0, "端口", new ComboBox { DropDownStyle = ComboBoxStyle.DropDown });
+            _serialPortCombo.Items.AddRange(new object[] { "COM1", "COM2", "COM3", "COM4", "/dev/ttyS0", "/dev/ttyUSB0" });
+            _serialBaudCombo = AddRow(serialLayout, 1, "波特率", new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList });
+            _serialBaudCombo.Items.AddRange(new object[] { "9600", "19200", "38400", "57600", "115200" });
+            _serialBaudCombo.SelectedItem = "9600";
+            _serialDataBitsCombo = AddRow(serialLayout, 2, "数据位", new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList });
+            _serialDataBitsCombo.Items.AddRange(new object[] { "5", "6", "7", "8" });
+            _serialDataBitsCombo.SelectedItem = "8";
+            _serialStopBitsCombo = AddRow(serialLayout, 3, "停止位", new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList });
+            _serialStopBitsCombo.Items.AddRange(new object[] { "1", "1.5", "2" });
+            _serialStopBitsCombo.SelectedItem = "1";
+            _serialParityCombo = AddRow(serialLayout, 4, "校验位", new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList });
+            _serialParityCombo.Items.AddRange(new object[] { "None", "Odd", "Even", "Mark", "Space" });
+            _serialParityCombo.SelectedItem = "None";
+            SectionContent(_secSerial, serialLayout);
+            _advFlow.Controls.Add(_secSerial);
+
+            // --- 备注 ---
+            var notesSec = MakeSection("备注");
+            _notesBox = new TextBox
+            {
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                Width = 512,
+                Height = 56,
+                BackColor = Color.FromArgb(37, 37, 38),
+                ForeColor = Color.FromArgb(204, 204, 204),
+                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Consolas", 9f)
+            };
+            WinFormsCompat.SetCueBanner(_notesBox, "服务器用途、特殊配置、注意事项...");
+            SectionContent(notesSec, _notesBox);
+            _advFlow.Controls.Add(notesSec);
+
+            _advancedHost.Controls.Add(_advFlow);
+
+            // ===== 底部按钮 =====
             var btnPanel = new Panel { Dock = DockStyle.Bottom, Height = 45, BackColor = Color.FromArgb(37, 37, 38) };
             var okBtn = new Button
             {
@@ -273,7 +295,8 @@ namespace Gdterm.UI.Forms
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Size = new Size(80, 30),
-                Location = new Point(Width - 190, 8)
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                Location = new Point(560 - 190, 8)
             };
             var cancelBtn = new Button
             {
@@ -283,20 +306,92 @@ namespace Gdterm.UI.Forms
                 ForeColor = Color.FromArgb(204, 204, 204),
                 FlatStyle = FlatStyle.Flat,
                 Size = new Size(80, 30),
-                Location = new Point(Width - 100, 8)
+                Anchor = AnchorStyles.Top | AnchorStyles.Right,
+                Location = new Point(560 - 100, 8)
             };
             okBtn.Click += (s, e) => { SaveToConfig(); };
             btnPanel.Controls.AddRange(new Control[] { okBtn, cancelBtn });
 
-            Controls.Add(tabControl);
+            // Dock 顺序：后添加的先布局——Top 先钉住，Bottom 再钉住，Fill 吃剩余空间
+            Controls.Add(_advancedHost);
             Controls.Add(btnPanel);
+            Controls.Add(topPanel);
 
-            // 初始化面板（协议切换在 LoadFromConfig 中处理）
+            AcceptButton = okBtn;
+            CancelButton = cancelBtn;
+        }
+
+        /// <summary>高级区小节：标题行 + 内容行（TableLayoutPanel 避免绝对定位重叠）。</summary>
+        private TableLayoutPanel MakeSection(string title)
+        {
+            var t = new TableLayoutPanel
+            {
+                ColumnCount = 1,
+                RowCount = 2,
+                AutoSize = true,
+                Width = 516,
+                Margin = new Padding(0, 0, 0, 10)
+            };
+            t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            t.Controls.Add(new Label
+            {
+                Text = title,
+                ForeColor = Color.FromArgb(150, 150, 155),
+                AutoSize = true,
+                Font = new Font("Microsoft YaHei", 9f, FontStyle.Bold),
+                Margin = new Padding(0, 0, 0, 3)
+            }, 0, 0);
+            return t;
+        }
+
+        /// <summary>把内容控件放进小节第 1 行。</summary>
+        private void SectionContent(TableLayoutPanel section, Control content)
+        {
+            content.Dock = DockStyle.Fill;
+            content.Margin = new Padding(0);
+            section.Controls.Add(content, 0, 1);
+        }
+
+        /// <summary>展开/收起高级区并同步调整窗口高度。</summary>
+        private void ToggleAdvanced()
+        {
+            bool expand = !_expanded;
+            if (expand)
+            {
+                _advancedHost.Visible = true;
+                _advancedHost.PerformLayout();
+                int h = Math.Max(_advFlow.Height, _advFlow.PreferredSize.Height);
+                Height += h + 16;
+                _moreLink.Text = "收起高级选项 ▴";
+            }
+            else
+            {
+                Height -= Math.Max(_advFlow.Height, _advFlow.PreferredSize.Height) + 16;
+                _advancedHost.Visible = false;
+                _moreLink.Text = "更多选项 ▾";
+            }
+            _expanded = expand;
+        }
+
+        /// <summary>编辑既有连接时若配置过高级选项，自动展开让用户看到当前状态。</summary>
+        private void MaybeAutoExpand()
+        {
+            bool hasAdvanced =
+                (_config.JumpChain != null && _config.JumpChain.Hops != null && _config.JumpChain.Hops.Count > 0)
+                || (_config.Metadata != null &&
+                    (_config.Metadata.ContainsKey("rdp_drives") || _config.Metadata.ContainsKey("rdp_fullscreen")
+                     || (_config.Metadata.ContainsKey("rdp_nla") && _config.Metadata["rdp_nla"] == "false")
+                     || (_config.Metadata.ContainsKey("rdp_clipboard") && _config.Metadata["rdp_clipboard"] == "false")))
+                || _config.Serial != null
+                || (_config.Metadata != null && _config.Metadata.ContainsKey("notes")
+                    && !string.IsNullOrEmpty(_config.Metadata["notes"]));
+            if (hasAdvanced && !_expanded) ToggleAdvanced();
         }
 
         private T AddRow<T>(TableLayoutPanel layout, int row, string label, T control) where T : Control
         {
-            // 去掉冒号，统一右对齐，避免中文标签宽窄不一导致错位
             var text = label ?? "";
             if (text.EndsWith(":") || text.EndsWith("："))
                 text = text.TrimEnd(':', '：');
@@ -307,7 +402,8 @@ namespace Gdterm.UI.Forms
                 AutoSize = false,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleRight,
-                Padding = new Padding(0, 0, 8, 0)
+                Padding = new Padding(0, 0, 8, 0),
+                Height = 30
             }, 0, row);
             control.Dock = DockStyle.Fill;
             control.Margin = new Padding(0, 4, 0, 4);
@@ -319,13 +415,13 @@ namespace Gdterm.UI.Forms
         {
             var proto = (string)_protocolCombo.SelectedItem;
             _portBox.Value = proto == "SSH" ? 22 : proto == "RDP" ? 3389 : 9600;
-            // 域名只对 RDP 域账户有意义；SSH/Serial 禁用并提示
-            bool rdp = proto == "RDP";
-            _domainBox.Enabled = rdp;
-            if (!rdp && string.IsNullOrWhiteSpace(_domainBox.Text))
-                _domainBox.BackColor = Color.FromArgb(45, 45, 45);
-            else
-                _domainBox.BackColor = Color.FromArgb(37, 37, 38);
+            // 高级区只显示当前协议相关的分节
+            bool isSsh = proto == "SSH", isRdp = proto == "RDP", isSerial = proto == "Serial";
+            _secSsh.Visible = isSsh;
+            _secRdp.Visible = isRdp;
+            _secSerial.Visible = isSerial;
+            _domainBox.Enabled = isRdp;
+            if (_advancedHost.Visible) _advancedHost.PerformLayout();
         }
 
         private void LoadFromConfig()
@@ -336,7 +432,6 @@ namespace Gdterm.UI.Forms
             _hostBox.Text = _config.Host ?? "";
             _portBox.Value = _config.Port > 0 ? _config.Port : 22;
             _usernameBox.Text = _config.Username ?? "";
-            _domainBox.Text = _config.Domain ?? "";
             _groupPathBox.Text = _config.GroupPath ?? "";
             _credentialRefBox.Text = _config.CredentialRefId ?? "";
             RefreshCredentialTitle();
@@ -374,6 +469,9 @@ namespace Gdterm.UI.Forms
                 _rdpFullScreenCheck.Checked = _config.Metadata.ContainsKey("rdp_fullscreen") && _config.Metadata["rdp_fullscreen"] == "true";
                 _rdpNlaCheck.Checked = !_config.Metadata.ContainsKey("rdp_nla") || _config.Metadata["rdp_nla"] != "false";
             }
+
+            // 配置过高级选项则自动展开，避免“明明配了却看不见”
+            MaybeAutoExpand();
         }
 
         private void SaveToConfig()
@@ -486,7 +584,7 @@ namespace Gdterm.UI.Forms
             var uuid = _credentialRefBox.Text;
             if (string.IsNullOrWhiteSpace(uuid))
             {
-                _credentialTitleLabel.Text = "未选（保存后将按主机+用户名自动匹配）";
+                _credentialTitleLabel.Text = "未选（按主机+用户名自动匹配）";
                 _credentialTitleLabel.ForeColor = Color.FromArgb(100, 100, 100);
                 return;
             }

@@ -28,6 +28,7 @@ namespace Gdterm.UI.Forms
             // 高/低 DPI 自适应
             BuildUI(existing, defaultGroup);
             if (existing != null) FillFrom(existing);
+            Gdterm.UI.Services.FormFontPolicy.Apply(this);
         }
 
         private void BuildUI(QuickCommand existing, string defaultGroup)
