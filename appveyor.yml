@@ -33,13 +33,18 @@ install:
       Write-Host "Downloading FreeRDP source: $zipUrl"
       [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
       Invoke-WebRequest -Uri $zipUrl -OutFile $zipFile -UseBasicParsing
-      # 官方 sha256 校验（供应链完整性）；DownloadString 恒返回字符串，
-      # 避免 PS5.1 对非 HTML 内容把 Content 给成 byte[]
-      $shaText = (New-Object Net.WebClient).DownloadString("$zipUrl.sha256")
-      $sha = $shaText.Trim().Split(' ')[0]
+      # 供应链校验（防同源自指）：主判据是 yml 内钉死的指纹——若只比远端 .sha256，
+      # 攻击者把 zip 和 .sha256 一起换掉校验照样通过。远端文件仅作交叉比对日志。
+      # 升级 FreeRDP 版本时必须人工核对官方发布页后更新此常量！
+      $shaPin = 'b773f36d3972199e799502bd3418daab74c573fa31e1e2c37c322f2b4d810a0e'
       $actual = (Get-FileHash $zipFile -Algorithm SHA256).Hash.ToLower()
-      if ($sha.ToLower() -ne $actual) { throw "FreeRDP sha256 mismatch expected=$sha actual=$actual" }
-      Write-Host "FreeRDP source sha256 OK: $actual"
+      if ($actual -ne $shaPin) { throw "FreeRDP sha256 PIN mismatch pin=$shaPin actual=$actual" }
+      try {
+        # DownloadString 恒返回字符串，避免 PS5.1 对非 HTML 内容把 Content 给成 byte[]
+        $remoteSha = ((New-Object Net.WebClient).DownloadString("$zipUrl.sha256")).Trim().Split(' ')[0].ToLower()
+        if ($remoteSha -ne $shaPin) { Write-Host "WARNING: remote .sha256 differs from pinned: $remoteSha (pin wins)" }
+        else { Write-Host "FreeRDP source sha256 OK (pinned, remote agrees): $actual" }
+      } catch { Write-Host "NOTE: remote .sha256 fetch failed - pinned check already passed" }
       $srcDir = "$env:TEMP\freerdp-src"
       if (Test-Path $srcDir) { Remove-Item -Recurse -Force $srcDir }
       Expand-Archive -Path $zipFile -DestinationPath $srcDir
@@ -135,6 +140,23 @@ after_test:
         Write-Host "UI bin missing — skip portable artifact"
         return
       }
+
+      # ===== 步骤 0：入库二进制完整性自检 =====
+      # 指纹钉在下方；更换任何 lib 二进制必须同步更新对应常量并在提交说明里写明来源
+      $pins = [ordered]@{
+        'lib\winpty\winpty.dll'       = '5d892d04b5051d998907147c514f6ae058e5d0bbbf98e2ed78cd1d30dd5d0360'
+        'lib\winpty\winpty-agent.exe' = '84f6ce4535f7f3e09b2aef7d833b9a99ba675b304576d188a1db349246e41378'
+        'lib\winpty\winpty.exe'       = '1a8e92e0b03f7f83aa344b0dcfd141354b5bdaf6c824edbe872a95ab996d87b6'
+        'lib\fzf\fzf.exe'             = '2c14a927c1ce5bad37e80630685e3149d442a55594a935c57548742b9dc2b9b2'
+        'lib\fd\fd.exe'               = 'c089c9ee1e412a111d65c917a95c757b4e192041f316a52535bfaa3e9e03429f'
+      }
+      foreach ($k in $pins.Keys) {
+        $p = Join-Path $env:APPVEYOR_BUILD_FOLDER $k
+        if (-not (Test-Path $p)) { throw "Bundled binary missing: $k" }
+        $h = (Get-FileHash $p -Algorithm SHA256).Hash.ToLower()
+        if ($h -ne $pins[$k]) { throw "Binary integrity FAIL: $k expected=$($pins[$k]) actual=$h" }
+      }
+      Write-Host "Bundled binaries sha256 verified: $($pins.Count) files OK"
 
       $out = "dist\gdterm"
       if (Test-Path $out) { Remove-Item -Recurse -Force $out }
@@ -260,6 +282,14 @@ after_test:
       Get-ChildItem $out -File | ForEach-Object { Write-Host ("  {0,-25} {1,8:N0} bytes" -f $_.Name, $_.Length) }
       Write-Host "===== Total files: $((Get-ChildItem $out -File).Count) ====="
       Write-Host "Portable layout ready: $out"
+
+      # 10) 发布校验和：SHA256SUMS.txt 随包分发（用户可逐文件核验），
+      #     相对路径格式与 sha256sum -c 兼容；内容纯 ASCII，避免 BOM 干扰首行哈希
+      $outRoot = (Resolve-Path $out).Path
+      $lines = Get-ChildItem $out -Recurse -File |
+        ForEach-Object { "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower(), $_.FullName.Substring($outRoot.Length + 1) }
+      Set-Content -Path (Join-Path $outRoot 'SHA256SUMS.txt') -Value $lines -Encoding Ascii
+      Write-Host "SHA256SUMS.txt written: $($lines.Count) entries"
 
 artifacts:
   - path: dist\gdterm
