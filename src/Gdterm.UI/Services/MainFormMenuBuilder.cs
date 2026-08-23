@@ -51,6 +51,7 @@ namespace Gdterm.UI.Services
             public EventHandler ShowPortForward { get; set; }
             public EventHandler ShowToolbox { get; set; }
             public EventHandler ShowSecretScan { get; set; }
+            public EventHandler ShowScannerCenter { get; set; }
             public EventHandler ShowBookmarks { get; set; }
             public EventHandler KeePassManager { get; set; }
             public EventHandler PasswordHealth { get; set; }
@@ -172,6 +173,7 @@ namespace Gdterm.UI.Services
             var toolsMenu = new ToolStripMenuItem("工具(&T)");
             toolsMenu.DropDownItems.Add(Mk("运维工具箱", cb.ShowToolbox, "toolbox"));
             toolsMenu.DropDownItems.Add(Mk("敏感信息扫描", cb.ShowSecretScan, "scaneye"));
+            toolsMenu.DropDownItems.Add(Mk("扫描中心（插件）", cb.ShowScannerCenter, "scaneye"));
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
             toolsMenu.DropDownItems.Add(Mk("传输中心", cb.ShowTransferCenter, "transfer"));
             toolsMenu.DropDownItems.Add(Mk("通知中心", cb.ShowNotificationCenter, "notify"));

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Windows.Forms;
 using Gdterm.AI;
@@ -18,20 +18,27 @@ namespace Gdterm.UI.Services
         private readonly IKeePassService _keepassService;
         private readonly DangerousCommandDetector _dangerousCmdDetector;
         private readonly Action _applyAppearanceToTerminals;
+        private readonly Func<Gdterm.Tools.ISshRemoteSession> _remoteSessionFactory;
 
         public ToolsDialogsLauncher(
             IWin32Window owner,
             ISecurityManager securityManager,
             IKeePassService keepassService,
             DangerousCommandDetector dangerousCmdDetector,
-            Action applyAppearanceToTerminals = null)
+            Action applyAppearanceToTerminals = null,
+            Func<Gdterm.Tools.ISshRemoteSession> remoteSessionFactory = null)
         {
             _owner = owner;
             _securityManager = securityManager;
             _keepassService = keepassService;
             _dangerousCmdDetector = dangerousCmdDetector;
             _applyAppearanceToTerminals = applyAppearanceToTerminals;
+            _remoteSessionFactory = remoteSessionFactory;
         }
+
+        /// <summary>扫描插件仓库——进程级共享，扫描中心与后续功能复用。</summary>
+        public static Gdterm.Tools.Scanning.ScanPluginStore SharedScanPluginStore { get; } =
+            new Gdterm.Tools.Scanning.ScanPluginStore();
 
         public bool ReAuthenticate(string action)
         {
@@ -222,6 +229,25 @@ namespace Gdterm.UI.Services
                 _owner,
                 "gdterm - 绿色运维客户端\n版本 1.0.0\n\nSSH / RDP / SFTP / 串口 / 本地终端 / 运维工具箱",
                 "关于", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        /// <summary>
+        /// 扫描中心（插件化扫描体系）：内置+用户自建脚本插件，支持热更新。
+        /// </summary>
+        public void OpenScannerCenter()
+        {
+            try
+            {
+                var store = SharedScanPluginStore;
+                store.Start(); // 幂等
+                using (var form = new ScannerCenterForm(store, _remoteSessionFactory))
+                    form.ShowDialog(_owner);
+            }
+            catch (Exception ex)
+            {
+                Gdterm.UI.Diagnostics.DiagLog.Swallowed("ToolsDialogs.ScannerCenter", ex);
+                MessageBox.Show(_owner, "打开扫描中心失败: " + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
     }
 }

@@ -284,7 +284,8 @@ namespace Gdterm.UI.Forms
 
             _toolsDialogs = new ToolsDialogsLauncher(
                 this, _securityManager, _keepassService, _dangerousCmdDetector,
-                () => _tabContainer.ApplyAppearanceToAllTerminals());
+                () => _tabContainer.ApplyAppearanceToAllTerminals(),
+                () => _tabContainer.GetActiveRemoteSession());
 
             // 状态栏可点击：把二级菜单里的高频入口提为一击直达
             _statusBar.StatusClicked += (s, key) =>
@@ -339,6 +340,7 @@ namespace Gdterm.UI.Forms
                 ShowPortForward = (s, e) => _sidePanelHost?.Show(_sidePanels.CreatePortForwardPanel()),
                 ShowToolbox = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateToolboxPanel()),
                 ShowSecretScan = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateSecretScanPanel()),
+                ShowScannerCenter = (s, e) => _toolsDialogs.OpenScannerCenter(),
                 ShowBookmarks = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateBookmarksPanel(cfg =>
                 {
                     if (cfg != null) _openCoord.OpenConnection(cfg);

@@ -109,6 +109,7 @@
     <Compile Include="Forms\PasswordHealthForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Forms\ScannerCenterForm.cs" />
     <Compile Include="Forms\MainForm.Designer.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
