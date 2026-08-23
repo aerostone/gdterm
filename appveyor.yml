@@ -33,8 +33,10 @@ install:
       Write-Host "Downloading FreeRDP source: $zipUrl"
       [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
       Invoke-WebRequest -Uri $zipUrl -OutFile $zipFile -UseBasicParsing
-      # 官方 sha256 校验（供应链完整性）
-      $sha = ((Invoke-WebRequest -Uri "$zipUrl.sha256" -UseBasicParsing).Content).Trim().Split(' ')[0]
+      # 官方 sha256 校验（供应链完整性）；DownloadString 恒返回字符串，
+      # 避免 PS5.1 对非 HTML 内容把 Content 给成 byte[]
+      $shaText = (New-Object Net.WebClient).DownloadString("$zipUrl.sha256")
+      $sha = $shaText.Trim().Split(' ')[0]
       $actual = (Get-FileHash $zipFile -Algorithm SHA256).Hash.ToLower()
       if ($sha.ToLower() -ne $actual) { throw "FreeRDP sha256 mismatch expected=$sha actual=$actual" }
       Write-Host "FreeRDP source sha256 OK: $actual"
