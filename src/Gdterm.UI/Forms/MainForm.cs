@@ -285,6 +285,19 @@ namespace Gdterm.UI.Forms
                 this, _securityManager, _keepassService, _dangerousCmdDetector,
                 () => _tabContainer.ApplyAppearanceToAllTerminals());
 
+            // 状态栏可点击：把二级菜单里的高频入口提为一击直达
+            _statusBar.StatusClicked += (s, key) =>
+            {
+                try
+                {
+                    if (key == "tunnel") _sidePanelHost?.Show(_sidePanels.CreatePortForwardPanel());
+                    else if (key == "keepass") _toolsDialogs.OpenKeePassManager();
+                    else if (key == "ai") _toolsDialogs.OpenAiSettings();
+                    else if (key == "security") _toolsDialogs.OpenChangeMasterPassword();
+                }
+                catch (Exception ex) { Gdterm.UI.Diagnostics.DiagLog.Swallowed("StatusBar.Click", ex); }
+            };
+
             _openCoord = new ConnectionOpenCoordinator(
                 _tabContainer, _connectionStore, _bookmarkStore, _connectionTree, this, _keepassService);
 

@@ -19,6 +19,12 @@ namespace Gdterm.UI.Controls
         private readonly ISecurityManager _securityManager;
         private EventHandler<LockStateChangedEventArgs> _lockChangedHandler;
 
+        /// <summary>
+        /// 状态栏项被点击：参数为 "tunnel" / "keepass" / "ai" / "security"，
+        /// 由主窗体路由到对应面板/对话框——把二级菜单里的高频入口提为一击直达。
+        /// </summary>
+        public event EventHandler<string> StatusClicked;
+
         private ToolStripStatusLabel _connectionStatus;
         private ToolStripStatusLabel _tunnelStatus;
         private ToolStripStatusLabel _keepassStatus;
@@ -58,6 +64,11 @@ namespace Gdterm.UI.Controls
             _securityStatus = new ToolStripStatusLabel("安全: 已锁定");
             _terminalSizeLabel = new ToolStripStatusLabel("80×24");
             _encodingLabel = new ToolStripStatusLabel("UTF-8");
+
+            MakeClickable(_tunnelStatus, "点击打开端口转发面板");
+            MakeClickable(_keepassStatus, "点击打开密码库管理");
+            MakeClickable(_aiStatus, "点击打开 AI 助手设置");
+            MakeClickable(_securityStatus, "点击修改主密码");
 
             statusStrip.Items.Add(_connectionStatus);
             statusStrip.Items.Add(new ToolStripSeparator());
@@ -99,6 +110,20 @@ namespace Gdterm.UI.Controls
         {
             UpdateSecurityStatus();
             UpdateKeePassStatus();
+        }
+
+        /// <summary>把状态标签变成可点击入口（链接外观 + 手型光标 + 点击事件）。</summary>
+        private void MakeClickable(ToolStripStatusLabel label, string tooltip)
+        {
+            label.IsLink = true;
+            label.LinkBehavior = LinkBehavior.HoverUnderline;
+            label.ToolTipText = tooltip;
+            string key = null;
+            if (label == _tunnelStatus) key = "tunnel";
+            else if (label == _keepassStatus) key = "keepass";
+            else if (label == _aiStatus) key = "ai";
+            else if (label == _securityStatus) key = "security";
+            label.Click += (s, e) => { if (key != null) StatusClicked?.Invoke(this, key); };
         }
 
         private void UpdateSecurityStatus()
