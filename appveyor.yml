@@ -63,6 +63,9 @@ install:
       Write-Host "OpenSSL root: $ossl"
 
       # ---- CMake 配置 + 编译（静态 CRT 免 VC redist、静态通道、最小依赖）----
+      # 坑：CMake 把警告写到 stderr，PS5.1 在 EAP=Stop 下会把原生进程的 stderr
+      # 输出当 ErrorRecord 终止 —— 此段切回 Continue，只以 $LASTEXITCODE 判定成败
+      $ErrorActionPreference = 'Continue'
       $bld = "$env:TEMP\freerdp-build"
       if (Test-Path $bld) { Remove-Item -Recurse -Force $bld }
       # CMake 4.x 移除了对 cmake_minimum_required(<3.5) 的兼容，
