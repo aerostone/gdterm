@@ -66,6 +66,32 @@ namespace Gdterm.UI
 
             // 全局未处理异常：落盘 diag.log + 审计（audit 就绪后补写）
             CrashLog.Initialize(logsDir);
+
+            // 随附终端工具加入 PATH：本地终端子进程（ConPTY/winpty/cmd/PowerShell）直接敲 fzf/fd 即可用。
+            // 追加在末尾：系统里若已装更新版本则优先用系统的。
+            try
+            {
+                var toolDirs = new[]
+                {
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "fzf"),
+                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "fd")
+                };
+                var existing = Environment.GetEnvironmentVariable("PATH") ?? "";
+                var add = new System.Text.StringBuilder();
+                foreach (var d in toolDirs)
+                {
+                    if (Directory.Exists(d) &&
+                        (existing + ";" + add).IndexOf(d, StringComparison.OrdinalIgnoreCase) < 0)
+                    {
+                        if (add.Length > 0) add.Append(';');
+                        add.Append(d);
+                    }
+                }
+                if (add.Length > 0)
+                    Environment.SetEnvironmentVariable("PATH", existing.TrimEnd(';') + ";" + add);
+            }
+            catch { }
+
             // RDP 诊断日志接线：Gdterm.Rdp 的静态 sink → diag.log（source 带级别前缀，与 DiagLog 同约定）
             try
             {

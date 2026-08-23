@@ -19,7 +19,9 @@
 ### 编译与构建
 
 - 目标：.NET Framework 4.6.2，绿色版免安装
-- 产出：单文件夹，U盘便携
+- 产出：单文件夹，U盘便携；随附子目录：winpty 三件套、freerdp\（wfreerdp.exe）、
+  fzf\（v0.65.2，末代 Win7 支持）、fd\（v10.2.0，Rust 1.77 锁定构建）；
+  Program.cs 启动时把 fzf\/fd\ 追加到 PATH 末尾，本地终端直接可用
 - 当前环境无 .NET SDK，需在 Windows 上用 Visual Studio/MSBuild 编译
 - `gdterm.sln` 已含全部 13 个项目的 Build.0（含 Gdterm.Tests）
 - Terminal ProjectGuid 已修正为合法 hex（DEFA，非 DEFG）
