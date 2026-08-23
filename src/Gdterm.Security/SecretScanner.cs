@@ -124,8 +124,10 @@ namespace Gdterm.Security
             };
 
             // 显式标 int：未类型化 lambda 会让重载解析选中 Parallel.For 的 long 变体
-            Parallel.For(0, total, options, (int filePath) =>
+            // 注意：lambda 收到的是循环索引，路径需从 allFiles 取
+            Parallel.For(0, total, options, (int idx) =>
             {
+                var filePath = allFiles[idx];
                 try
                 {
                     var findings = ScanFile(filePath);
