@@ -337,6 +337,7 @@ namespace Gdterm.UI.Forms
                 AiSettings = (s, e) => _toolsDialogs.OpenAiSettings(),
                 DangerousCmdSettings = (s, e) => _toolsDialogs.OpenDangerousCmdSettings(),
                 ShowHotkeys = (s, e) => _toolsDialogs.ShowHotkeysHelp(),
+                ShowLogsFolder = (s, e) => { try { _toolsDialogs.ShowLogsFolder(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.LogsFolder", ex); } },
                 About = (s, e) => _toolsDialogs.ShowAbout(),
                 SshKeyManager = (s, e) => { try { _toolsDialogs?.OpenSshKeyManager(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.SshKey", ex); } },
                 ShowTransferCenter = (s, e) => { try { _sidePanelHost?.Show(_sidePanels?.CreateTransferCenterPanel()); } catch { } },
@@ -672,7 +673,7 @@ namespace Gdterm.UI.Forms
             WindowState = FormWindowState.Minimized;
         }
 
-        /// <summary>Ctrl+K 快速跳转连接。</summary>
+        /// <summary>Ctrl+Shift+K 快速跳转连接。</summary>
         private void OpenQuickJump()
         {
             try
@@ -688,7 +689,8 @@ namespace Gdterm.UI.Forms
 
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
-            if (keyData == (Keys.Control | Keys.K))
+            // Ctrl+Shift+K：普通 Ctrl+K 是 shell kill-line，不能被抢
+            if (keyData == (Keys.Control | Keys.Shift | Keys.K))
             {
                 OpenQuickJump();
                 return true;

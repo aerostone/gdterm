@@ -188,16 +188,29 @@ namespace Gdterm.UI.Services
         {
             MessageBox.Show(
                 _owner,
-                "快捷键：\n\n" +
-                "Ctrl + `          呼出/隐藏窗口\n" +
-                "Ctrl + L          切换连接面板\n" +
-                "Ctrl + R          重连当前标签\n" +
-                "Ctrl + W          关闭当前标签\n" +
-                "Ctrl + F          终端查找\n" +
-                "Ctrl + P          片段搜索\n" +
-                "Esc / F11         退出专注模式\n" +
-                "右上角按钮         退出专注（专注模式下可见）",
+                "快捷键（UI 动作均为 Ctrl+Shift 组合，普通 Ctrl 留给终端）：\n\n" +
+                "Ctrl + `            呼出/隐藏窗口\n" +
+                "Ctrl + Shift + K    快速跳转连接\n" +
+                "Ctrl + Shift + L    切换连接面板\n" +
+                "Ctrl + Shift + R    重连当前标签\n" +
+                "Ctrl + Shift + W    关闭当前标签\n" +
+                "Ctrl + Shift + F    终端查找\n" +
+                "Ctrl + Shift + P    片段搜索\n" +
+                "Esc / F11           退出专注模式\n" +
+                "右上角按钮          退出专注（专注模式下可见）\n\n" +
+                "提示：在终端里，普通 Ctrl 组合直接发给 shell，\n" +
+                "例如 Ctrl+R 反向搜索历史、Ctrl+W 删词、Ctrl+L 清屏。",
                 "快捷键", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
+        /// <summary>用资源管理器打开诊断日志目录（data/logs），方便排查问题。</summary>
+        public void ShowLogsFolder()
+        {
+            var logsDir = Path.Combine(
+                AppDomain.CurrentDomain.BaseDirectory, "data", "logs");
+            if (!Directory.Exists(logsDir))
+                Directory.CreateDirectory(logsDir);
+            System.Diagnostics.Process.Start("explorer.exe", "\"" + logsDir + "\"");
         }
 
         public void ShowAbout()

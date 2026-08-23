@@ -39,25 +39,27 @@ namespace Gdterm.UI.Services
                 return true;
             }
 
-            if (keyData == (Keys.Control | Keys.R))
+            // UI 快捷键一律 Ctrl+Shift+字母：普通 Ctrl 组合留给 shell readline
+            // （Ctrl+R 反向搜索 / Ctrl+W 删词 / Ctrl+F 前进字符 / Ctrl+P 上一条历史）
+            if (keyData == (Keys.Control | Keys.Shift | Keys.R))
             {
                 _tabs?.ReconnectActiveTab();
                 return true;
             }
 
-            if (keyData == (Keys.Control | Keys.W))
+            if (keyData == (Keys.Control | Keys.Shift | Keys.W))
             {
                 _tabs?.CloseActiveTab();
                 return true;
             }
 
-            if (keyData == (Keys.Control | Keys.F))
+            if (keyData == (Keys.Control | Keys.Shift | Keys.F))
             {
                 _sidePanels?.AttachSearchBar(_tabs);
                 return true;
             }
 
-            if (keyData == (Keys.Control | Keys.P))
+            if (keyData == (Keys.Control | Keys.Shift | Keys.P))
             {
                 _sideHost?.ShowSnippetSearch(_sidePanels, _tabs);
                 return true;

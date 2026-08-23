@@ -10,7 +10,7 @@ using Gdterm.UI.Diagnostics;
 namespace Gdterm.UI.Controls
 {
     /// <summary>
-    /// Ctrl+K 全局连接快速跳转。
+    /// Ctrl+Shift+K 全局连接快速跳转（普通 Ctrl+K 是 shell kill-line，不占用）。
     /// </summary>
     public sealed class ConnectionQuickJumpForm : Form
     {
@@ -24,7 +24,7 @@ namespace Gdterm.UI.Controls
         public ConnectionQuickJumpForm(IConnectionStore store)
         {
             _store = store;
-            Text = "快速跳转连接 (Ctrl+K)";
+            Text = "快速跳转连接 (Ctrl+Shift+K)";
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = new Size(520, 360);

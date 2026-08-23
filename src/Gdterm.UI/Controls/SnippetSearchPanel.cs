@@ -10,7 +10,7 @@ using TerminalControl = Gdterm.UI.Controls.TerminalControl;
 namespace Gdterm.UI.Controls
 {
     /// <summary>
-    /// 代码片段搜索面板——Ctrl+P 模糊搜索 + 变量填充弹窗
+    /// 代码片段搜索面板——Ctrl+Shift+P 模糊搜索 + 变量填充弹窗
     /// </summary>
     public class SnippetSearchPanel : Panel
     {

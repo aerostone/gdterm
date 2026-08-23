@@ -5,7 +5,7 @@ using System.Windows.Forms;
 namespace Gdterm.UI.Controls
 {
     /// <summary>
-    /// 终端搜索栏——Ctrl+F 弹出，正则/大小写/全字匹配，上下跳转
+    /// 终端搜索栏——Ctrl+Shift+F 弹出，正则/大小写/全字匹配，上下跳转
     /// </summary>
     public class TerminalSearchBar : Panel
     {
