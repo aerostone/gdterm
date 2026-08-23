@@ -123,7 +123,8 @@ namespace Gdterm.Security
                 MaxDegreeOfParallelism = Math.Max(2, Environment.ProcessorCount)
             };
 
-            Parallel.For(0, total, options, filePath =>
+            // 显式标 int：未类型化 lambda 会让重载解析选中 Parallel.For 的 long 变体
+            Parallel.For(0, total, options, (int filePath) =>
             {
                 try
                 {
@@ -136,7 +137,7 @@ namespace Gdterm.Security
                             {
                                 report.Findings.Add(f);
                             }
-                            Interlocked.Increment(ref FindingsCount);
+                            Interlocked.Increment(ref _findingsCount);
                             FindingDetected?.Invoke(f); // UI 侧已 BeginInvoke 封送
                         }
                     }
