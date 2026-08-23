@@ -225,6 +225,7 @@ namespace Gdterm.UI.Forms
             _tabContainer.ActiveSessionChanged += OnActiveSessionChanged;
             _tabContainer.SessionClosed += OnSessionClosed;
             _tabContainer.SearchRequested += (s, e) => _sidePanels?.AttachSearchBar(_tabContainer);
+            _tabContainer.BlankAreaDoubleClicked += (s, e) => { try { _openCoord.NewConnection(); } catch { } };
             _tabContainer.ExportRequested += (s, e) => ExportActiveTerminalBuffer();
             _tabContainer.AppearanceSettingsRequested += (s, e) => _toolsDialogs.OpenAppearanceSettings();
             // 终端尺寸/编码变化→状态栏显示

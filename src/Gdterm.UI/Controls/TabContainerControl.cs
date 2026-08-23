@@ -56,6 +56,9 @@ namespace Gdterm.UI.Controls
         /// <summary>标签数量变化（落地页显示/隐藏）。</summary>
         public event EventHandler TabCountChanged;
 
+        /// <summary>双击标签栏空白处（非任何标签头）时触发——主窗体路由到新建连接（浏览器惯例）。</summary>
+        public event EventHandler BlankAreaDoubleClicked;
+
         public TabContainerControl(
             ITunnelManager tunnelManager,
             ITerminalSessionFactory terminalFactory,
@@ -143,14 +146,14 @@ namespace Gdterm.UI.Controls
 
             // 右键菜单（参考 Xshell/MobaXterm Tab 右键）
             _tabContextMenu = new ContextMenuStrip();
-            _tabContextMenu.Items.Add("关闭当前(&C)", null, (s, e) => TryCloseSelected());
-            _tabContextMenu.Items.Add("关闭其他(&O)", null, (s, e) => CloseOthers());
-            _tabContextMenu.Items.Add("关闭右侧全部(&R)", null, (s, e) => CloseRight());
+            AddCtxItem(_tabContextMenu, "关闭当前(&C)", "close", (s, e) => TryCloseSelected());
+            AddCtxItem(_tabContextMenu, "关闭其他(&O)", "close", (s, e) => CloseOthers());
+            AddCtxItem(_tabContextMenu, "关闭右侧全部(&R)", "close", (s, e) => CloseRight());
             _tabContextMenu.Items.Add("-");
-            _tabContextMenu.Items.Add("水平拆分(&H)", null, (s, e) => SplitHorizontal());
-            _tabContextMenu.Items.Add("垂直拆分(&V)", null, (s, e) => SplitVertical());
+            AddCtxItem(_tabContextMenu, "水平拆分(&H)", "splith", (s, e) => SplitHorizontal());
+            AddCtxItem(_tabContextMenu, "垂直拆分(&V)", "splitv", (s, e) => SplitVertical());
             _tabContextMenu.Items.Add("-");
-            _tabContextMenu.Items.Add("重连当前(&E)", null, (s, e) => { try { ReconnectActiveTab(); } catch { } });
+            AddCtxItem(_tabContextMenu, "重连当前(&E)", "reconnect", (s, e) => { try { ReconnectActiveTab(); } catch { } });
         }
 
         public void OpenConnection(ConnectionConfig config)
@@ -283,8 +286,32 @@ namespace Gdterm.UI.Controls
             _chrome.DrawTab(e, _tabControl);
         }
 
+        /// <summary>右键菜单条目 + 手绘图标（失败回退纯文本）。</summary>
+        private static void AddCtxItem(ContextMenuStrip menu, string text, string icon, EventHandler onClick)
+        {
+            var item = new ToolStripMenuItem(text, null, onClick);
+            try { var img = Gdterm.UI.Services.MenuIconFactory.Get(icon); if (img != null) item.Image = img; }
+            catch { }
+            menu.Items.Add(item);
+        }
+
         private void OnTabMouseDown(object sender, MouseEventArgs e)
         {
+            // 双击标签栏空白处 = 新建连接（浏览器惯例）；限定在标签头行内，
+            // 避免点下方页面区域误触发。无标签时整个控件都是空白区。
+            if (e.Button == MouseButtons.Left && e.Clicks >= 2)
+            {
+                bool onHeaderRow = _tabControl.TabCount == 0 || e.Y <= _tabControl.GetTabRect(0).Bottom + 2;
+                bool onTab = false;
+                for (int i = 0; i < _tabControl.TabCount; i++)
+                    if (_tabControl.GetTabRect(i).Contains(e.Location)) { onTab = true; break; }
+                if (onHeaderRow && !onTab)
+                {
+                    try { BlankAreaDoubleClicked?.Invoke(this, EventArgs.Empty); } catch { }
+                    return;
+                }
+            }
+
             // 右键：选中所点标签 + 弹右键菜单（参考 Xshell/MobaXterm）
             if (e.Button == MouseButtons.Right)
             {

@@ -97,9 +97,11 @@ namespace Gdterm.UI.Controls
 
             var itemConnect = new ToolStripMenuItem("连接(&C)", null, OnConnect);
             itemConnect.Tag = "connect";
+            AttachMenuIcon(itemConnect, "globe");
             _contextMenu.Items.Add(itemConnect);
 
             var itemCopyHost = new ToolStripMenuItem("复制主机地址(&O)", null, OnCopyHost);
+            AttachMenuIcon(itemCopyHost, "copy");
             itemCopyHost.Tag = "copyhost";
             _contextMenu.Items.Add(itemCopyHost);
 
@@ -107,24 +109,35 @@ namespace Gdterm.UI.Controls
 
             var itemLocal = new ToolStripMenuItem("本地终端(&L)", null, OnOpenLocalTerminal);
             itemLocal.Tag = "local";
+            AttachMenuIcon(itemLocal, "terminal");
             _contextMenu.Items.Add(itemLocal);
 
             var itemNew = new ToolStripMenuItem("新建连接(&N)", null, OnNewConnection);
             itemNew.Tag = "new";
+            AttachMenuIcon(itemNew, "new");
             _contextMenu.Items.Add(itemNew);
 
             var itemEdit = new ToolStripMenuItem("编辑(&E)", null, OnEditConnection);
             itemEdit.Tag = "edit";
+            AttachMenuIcon(itemEdit, "pencil");
             _contextMenu.Items.Add(itemEdit);
 
             _contextMenu.Items.Add(new ToolStripSeparator { Tag = "sep1" });
 
             var itemDelete = new ToolStripMenuItem("删除(&D)", null, OnDeleteConnection);
             itemDelete.Tag = "delete";
+            AttachMenuIcon(itemDelete, "close");
             _contextMenu.Items.Add(itemDelete);
 
             _contextMenu.Opening += OnContextMenuOpening;
             _treeView.ContextMenuStrip = _contextMenu;
+
+            // 拖拽归组：拖动连接节点到分组/根节点即改 GroupPath（浏览器/书签管理器惯例）
+            _treeView.AllowDrop = true;
+            _treeView.ItemDrag += OnTreeItemDrag;
+            _treeView.DragEnter += OnTreeDragEnter;
+            _treeView.DragOver += OnTreeDragOver;
+            _treeView.DragDrop += OnTreeDragDrop;
         }
 
         /// <summary>
@@ -597,6 +610,93 @@ namespace Gdterm.UI.Controls
             var cfg = _rightClickedNode.Tag as ConnectionConfig;
             if (cfg == null || string.IsNullOrEmpty(cfg.Host)) return;
             try { Clipboard.SetText(cfg.Host); } catch { }
+        }
+
+        // ===== 拖拽归组 =====
+
+        private void OnTreeItemDrag(object sender, ItemDragEventArgs e)
+        {
+            // 仅允许拖动连接节点；分组层级由 GroupPath 推导，不支持手动重排分组
+            var node = e.Item as TreeNode;
+            if (!IsConnectionNode(node)) return;
+            try { _treeView.DoDragDrop(node, DragDropEffects.Move); } catch { }
+        }
+
+        private void OnTreeDragEnter(object sender, DragEventArgs e)
+        {
+            e.Effect = IsConnectionDrag(e) ? DragDropEffects.Move : DragDropEffects.None;
+        }
+
+        private static bool IsConnectionDrag(DragEventArgs e)
+        {
+            var node = e.Data.GetData(typeof(TreeNode)) as TreeNode;
+            return node != null && (node.Tag is ConnectionConfig);
+        }
+
+        private void OnTreeDragOver(object sender, DragEventArgs e)
+        {
+            if (!IsConnectionDrag(e)) { e.Effect = DragDropEffects.None; return; }
+            var target = DropTargetAt(e);
+            if (target == null) { e.Effect = DragDropEffects.None; return; }
+            // 高亮落点，给用户明确的目标反馈
+            _treeView.SelectedNode = target;
+            e.Effect = DragDropEffects.Move;
+        }
+
+        /// <summary>合法落点：分组节点或根节点；返回 null 表示不可落。</summary>
+        private TreeNode DropTargetAt(DragEventArgs e)
+        {
+            var pt = _treeView.PointToClient(new Point(e.X, e.Y));
+            var node = _treeView.GetNodeAt(pt);
+            if (IsGroupNode(node) || IsRootNode(node)) return node;
+            // 落在连接节点上时回退到其父分组，体验更顺（拖到同组主机上也能归组）
+            if (node != null && node.Parent != null && (IsGroupNode(node.Parent) || IsRootNode(node.Parent)))
+                return node.Parent;
+            return null;
+        }
+
+        private void OnTreeDragDrop(object sender, DragEventArgs e)
+        {
+            try
+            {
+                var node = e.Data.GetData(typeof(TreeNode)) as TreeNode;
+                var cfg = node != null ? node.Tag as ConnectionConfig : null;
+                var target = DropTargetAt(e);
+                if (cfg == null || target == null) return;
+
+                string newGroup = IsRootNode(target) ? "" : ((string)target.Tag ?? "");
+                if (string.Equals(cfg.GroupPath ?? "", newGroup, StringComparison.Ordinal)) return; // 原地未动
+
+                cfg.GroupPath = newGroup;
+                _connectionStore.Update(cfg);
+                LoadConnections();
+                SelectNodeByConfigId(cfg.Id);
+            }
+            catch (Exception ex)
+            {
+                Gdterm.UI.Diagnostics.DiagLog.Swallowed("ConnectionTree.DragDrop", ex);
+            }
+        }
+
+        /// <summary>重建后按配置 Id 恢复选中，让拖拽结果可见。</summary>
+        private void SelectNodeByConfigId(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return;
+            Action<TreeNode> walk = null;
+            walk = n =>
+            {
+                var c = n.Tag as ConnectionConfig;
+                if (c != null && c.Id == id) { _treeView.SelectedNode = n; return; }
+                foreach (TreeNode child in n.Nodes) walk(child);
+            };
+            foreach (TreeNode root in _treeView.Nodes) walk(root);
+        }
+
+        /// <summary>给上下文菜单项挂手绘图标；失败静默回退纯文本。</summary>
+        private static void AttachMenuIcon(ToolStripMenuItem item, string icon)
+        {
+            try { var img = Gdterm.UI.Services.MenuIconFactory.Get(icon); if (img != null) item.Image = img; }
+            catch { }
         }
 
         /// <summary>按 Tag 查找上下文菜单项，不依赖硬编码索引。</summary>

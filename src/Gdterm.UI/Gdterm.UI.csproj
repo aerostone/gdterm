@@ -176,6 +176,7 @@
     <Compile Include="Services\ActiveSessionBridge.cs" />
     <Compile Include="Services\CredentialResolver.cs" />
     <Compile Include="Services\FormFontPolicy.cs" />
+    <Compile Include="Services\MenuIconFactory.cs" />
     <Compile Include="Services\KeePassPasswordWarning.cs" />
     <Compile Include="Services\TabSessionLifecycle.cs" />
     <Compile Include="Services\TabActiveSessionQuery.cs" />
