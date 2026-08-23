@@ -423,9 +423,11 @@ namespace Gdterm.UI.Forms
             // 可观测性：外壳 UI 字体与终端字体是两套度量，出问题先对照这条与 FontMetrics
             try
             {
+                float uiDpi;
+                using (var g2 = CreateGraphics()) uiDpi = g2.DpiX;
                 Gdterm.UI.Diagnostics.DiagLog.Info("MainForm.UIFont",
                     "font=" + font.Name + "/" + size.ToString("0.#") + "pt applied=" + font.SizeInPoints.ToString("0.#") +
-                    "pt dpi=" + DeviceDpi + " formClient=" + ClientSize.Width + "x" + ClientSize.Height);
+                    "pt dpi=" + uiDpi.ToString("0") + " formClient=" + ClientSize.Width + "x" + ClientSize.Height);
             }
             catch { }
             try { this.Font = font; } catch { }
