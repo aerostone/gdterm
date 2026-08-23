@@ -8,8 +8,8 @@
 
 ### 技术栈与选型
 
-- **框架：** .NET Framework 4.6.2 + WinForms（Win7/Server 2008 原生支持）
-- **RDP：** AxMsTscLib ActiveX 嵌入
+- **框架：** .NET Framework 4.6.2 + WinForms（Win7/Server 2008 原生支持）；**主程序强制 x64**（PlatformTarget=x64，修 RDP 许可存储错位与 winpty 加载）
+- **RDP：** 双引擎——默认 **FreeRDP 进程嵌入**（wfreerdp.exe /parent-window，CI 自建 2.11.7 免 MSLicensing 提权）；元数据 rdp_engine=mstscax 可切回 AxHost 零 interop 承载 mstscax（编译不依赖 AxMsTscLib.dll）
 - **终端：** 成熟持续演进的 .NET 终端模拟库（v1 引入库，后期评估自研）
 - **SSH 隧道：** SSH.NET（Renci.SshNet）纯托管，无 native 依赖
 - **KeePass：** KeePassLib，.kdbx 读写
@@ -24,7 +24,7 @@
 - `gdterm.sln` 已含全部 13 个项目的 Build.0（含 Gdterm.Tests）
 - Terminal ProjectGuid 已修正为合法 hex（DEFA，非 DEFG）
 - CommandHistoryStore 已列入 Logging.csproj Compile
-- 非致命吞异常经 `DiagLog` 写入 data/logs/crash.jsonl（source 前缀 swallowed:）
+- 非致命吞异常经 `DiagLog` 写入 data/logs/diag.log（人读文本，source 前缀 info:/swallowed: 分级）；Gdterm.Terminal/Gdterm.Rdp 不引用 UI，各自有静态日志汇 TerminalLog/RdpLog（Initialize(Action<string,string>) 由 Program.cs 接 CrashLog）
 
 
 ### 安全约束
@@ -92,7 +92,18 @@
 - SSH TERM 来自 `TerminalProfile.TerminalType`（默认 xterm-256color）；连接后不自动 uname
 - `ITerminalSession.SendBytes`/`Resize`；SSH window-change 经反射 SendWindowChangeRequest
 - 绿色分发必须带 `VtNetCore.dll` + `LICENSE.VtNetCore.txt`；CI 见根目录 `appveyor.yml`（VS2022 / net462）
-- AppVeyor 坑（2026-07-26）：`Gdterm.Tools` 禁止错误 Import 路径拼接；Core 禁止 `RdpOptions`；KeePassLib 用 **2.30.0** + `ProtectedBinary`/`Binaries.Set`；RDP 反射加载、编译不依赖 AxMsTscLib.dll；PackageReference 项目需 `RestoreProjectStyle=PackageReference`
+- AppVeyor 坑（2026-07-26）：`Gdterm.Tools` 禁止错误 Import 路径拼接；Core 禁止 `RdpOptions`；KeePassLib 用 **2.30.0** + `ProtectedBinary`/`Binaries.Set`；PackageReference 项目需 `RestoreProjectStyle=PackageReference`
+- AppVeyor PowerShell 坑（2026-08）：PS5.1 Invoke-WebRequest 对非 HTML 返回 byte[]，用 WebClient.DownloadString；CMake≥4 需 `-DCMAKE_POLICY_VERSION_MINIMUM=3.5`；EAP=Stop 会把 native stderr 变 ErrorRecord 中断脚本，native 调用段设 EAP=Continue 只看 $LASTEXITCODE；反引号续行内不能放 # 注释
+- C# 7.3 LangVersion（net462 经典 csproj 默认）：嵌套作用域不能遮蔽外层局部名/参数名（如 OnPaint(PaintEventArgs e) 里不能再声明 e，否则 CS0136）
+
+## UI 快捷键与菜单约定（2026-08）
+
+- **UI 动作一律 Ctrl+Shift+字母**（Ctrl+Shift+K/L/R/W/F/P），普通 Ctrl 组合属于 shell readline，禁止被 ProcessCmdKey/menu ShortcutKeys 抢走
+- 菜单按职责分组：文件=打开类动作+导入导出；连接=当前会话操作+书签/最近；视图=外观布局；终端=搜索/会话功能/监控；工具=独立工具+安全集群+设置集群；帮助=快捷键/日志/关于
+- 菜单/右键图标走 `MenuIconFactory`（纯 GDI+ 手绘 16x16，零资源零字体依赖，按 key 缓存）；弹窗字体统一走 `FormFontPolicy.Apply(form)`（跟随全局 UI 字体，只替换雅黑系，等宽字体不动）
+- 弹窗遵循渐进披露：默认简洁，“更多选项”折叠进阶区（ConnectionDialog 为范本）
+- 标签导航：Ctrl+Tab/Ctrl+Shift+Tab 循环切签、Ctrl+Alt+1..9 直达、中键关标签、双击标签栏空白=新建连接；连接树支持拖拽归组（改 GroupPath 并持久化）
+- 状态栏可点击直达：隧道→端口转发、密码库→KeePass 管理、AI→AI 设置、安全→修改主密码
 - 真彩/TUI 自动化：`VtTerminalEngineTests` + `TerminalProfileTests`；手工 vim/tmux/codex 由 Windows 验收
 
 ## 2026-07-26 trial UX fixes
@@ -101,7 +112,7 @@
 - 试运行 AuditLogConfig 全开 + DiagLog.Info → data/logs/diag.log（人读文本，不再 crash.jsonl）
 - Esc/F11 + 右上角「退出专注」从专注回标准；connections.json host gdh1: 混淆
 - 绿色包补拷 KeePassLib/Renci.SshNet/VtNetCore
-- 本地终端：块读 stdout（非行事件）+ Lightweight 强制 + 本地行缓冲回显
-- 字体：renderer 实测 cell 宽高（GenericTypographic），禁止写死 8x16
-- 外观：工具→外观设置 → data/config/appearance.ini；启动 SetProcessDPIAware 减菜单糊
+- 本地终端：块读 stdout（非行事件）+ 本地行缓冲回显仅限 Lightweight 渲染路径
+- 字体：renderer 实测 cell 宽高（GenericTypographic，精确 advance 不取整防光标漂移），禁止写死 8x16
+- 外观：工具→外观设置 → data/config/appearance.ini；DPI 感知靠 app.manifest PerMonitorV2，**禁止 SetProcessDPIAware**（与 manifest 冲突）
 - SSH 无密码/无私钥时终端黄字提示；连接前若 KeePass 未解锁弹 KeePassUnlockForm
