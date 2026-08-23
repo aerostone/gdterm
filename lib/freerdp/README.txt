@@ -1,4 +1,4 @@
-FreeRDP 进程嵌入引擎（wfreerdp.exe）——放置说明
+FreeRDP 进程嵌入引擎（wfreerdp.exe）——来源说明
 ====================================================
 
 gdterm 的 RDP 引擎优先使用 FreeRDP（进程嵌入），相比 mstscax ActiveX：
@@ -6,21 +6,20 @@ gdterm 的 RDP 引擎优先使用 FreeRDP（进程嵌入），相比 mstscax Act
     彻底规避「reason=2056 / ext=267 许可存储创建被拒绝」提权问题；
   - 无 COM 注册、无位数依赖。
 
-放置位置（二选一，运行时按序探测）：
-  1. <程序目录>\freerdp\          （绿色发布包用这个）
-  2. <程序目录>\lib\freerdp\      （仓库/源码运行用这个，即本目录）
+二进制从哪来？
+  【默认】无需任何手工操作——AppVeyor CI 在 install 阶段直接从官方源码
+    （GitHub Releases 的 freerdp-2.11.7.zip，带 sha256 校验）编译
+    wfreerdp.exe + freerdp2.dll + winpr2.dll，产物缓存在 CI 的
+    freerdp-bin\ 目录并打包进 dist\gdterm\freerdp\。
+    （官方已停发 2.x Windows 二进制：夜间构建只留最近 5 个且已是 3.x，
+     GitHub Releases 仅源码包，3.x 的 sdl-freerdp 嵌入参数损坏 #12227，
+     故只能自建。）
 
-下载来源（需要 FreeRDP 2.x 的 wfreerdp.exe，≥2.7 含键盘嵌入修复 PR #7790）：
-  - 夜间构建：https://ci.freerdp.com/job/freerdp-nightly-windows/
-    选 freerdp-2.x-win64.zip 之类条目
-  - 或 GitHub Releases / 第三方镜像中的 2.11.x Windows 包
+  【可选覆盖】把现成的 FreeRDP 2.x Windows 构建解压到本目录
+    （lib\freerdp\wfreerdp.exe ...），CI 会优先采用手工放置的版本。
+    运行时探测顺序：<程序目录>\freerdp\ → <程序目录>\lib\freerdp\。
 
-注意：FreeRDP 3.x 已用 sdl3-freerdp 替换 wfreerdp 且官方不再发稳定版
-二进制；本引擎依赖 /parent-window 嵌入参数，请使用 2.x 构建。
+技术要求：FreeRDP ≥ 2.7（含 parent-window 键盘输入修复 PR #7790）；
+必须用 2.x 构建（/parent-window 参数在 3.x 已移除）。
 
-解压后至少应包含：
-  wfreerdp.exe
-  freerdp2.dll / winpr2.dll 及其依赖 DLL（zlib1.dll、libssl/x509 等）
-  （保持 zip 内目录结构整体拷入即可）
-
-提交：与 lib\winpty 同理，二进制直接提交进仓库随 CI 打包。
+本目录若只有 README.txt 而无 exe，属正常状态——CI 会自行构建。

@@ -8,6 +8,92 @@ configuration:
 
 platform: Any CPU
 
+# FreeRDP 2.11.7 源码构建产物缓存：键随本文件变化失效，命中则跳过重编
+# （官方已停发 2.x Windows 二进制，只能自建；详见 install 阶段）
+cache:
+  - freerdp-bin -> appveyor.yml
+
+install:
+  - ps: |
+      # ===== FreeRDP 2.11.7 源码构建（wfreerdp 进程嵌入引擎）=====
+      # 背景：wfreerdp.exe 是唯一支持 /parent-window 嵌入的客户端（3.x 已删且
+      # sdl-freerdp 嵌入损坏 issue #12227），但官方不再发布 2.x Windows 二进制
+      # （夜间构建只留最近 5 个且已切 3.x；GitHub Releases 仅源码包），
+      # 故从官方源码自建并缓存。产物进 freerdp-bin\，打包阶段拷入 dist\gdterm\freerdp\。
+      $ErrorActionPreference = 'Stop'
+      $frBin = "$env:APPVEYOR_BUILD_FOLDER\freerdp-bin"
+      if (Test-Path (Join-Path $frBin 'wfreerdp.exe')) {
+        Write-Host "FreeRDP cache hit: $frBin"
+        return
+      }
+      New-Item -ItemType Directory -Path $frBin -Force | Out-Null
+      $ver = '2.11.7'
+      $zipUrl = "https://github.com/FreeRDP/FreeRDP/releases/download/$ver/freerdp-$ver.zip"
+      $zipFile = "$env:TEMP\freerdp-$ver.zip"
+      Write-Host "Downloading FreeRDP source: $zipUrl"
+      [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+      Invoke-WebRequest -Uri $zipUrl -OutFile $zipFile -UseBasicParsing
+      # 官方 sha256 校验（供应链完整性）
+      $sha = ((Invoke-WebRequest -Uri "$zipUrl.sha256" -UseBasicParsing).Content).Trim().Split(' ')[0]
+      $actual = (Get-FileHash $zipFile -Algorithm SHA256).Hash.ToLower()
+      if ($sha.ToLower() -ne $actual) { throw "FreeRDP sha256 mismatch expected=$sha actual=$actual" }
+      Write-Host "FreeRDP source sha256 OK: $actual"
+      $srcDir = "$env:TEMP\freerdp-src"
+      if (Test-Path $srcDir) { Remove-Item -Recurse -Force $srcDir }
+      Expand-Archive -Path $zipFile -DestinationPath $srcDir
+      $root = Get-ChildItem $srcDir | Select-Object -First 1 -ExpandProperty FullName
+
+      # ---- OpenSSL 开发库（探测预装路径，否则 choco 安装；2.x 强制依赖 OpenSSL）----
+      function Find-OpenSslRoot {
+        foreach ($p in @('C:\OpenSSL-Win64','C:\Program Files\OpenSSL-Win64','C:\Program Files\OpenSSL',
+                         'C:\OpenSSL-v111-win64','C:\OpenSSL-v30-win64','C:\OpenSSL-v3-win64')) {
+          if (Test-Path (Join-Path $p 'include\openssl\ssl.h')) { return $p }
+        }
+        return $null
+      }
+      $ossl = Find-OpenSslRoot
+      if (-not $ossl) {
+        Write-Host "Installing OpenSSL via Chocolatey..."
+        choco install openssl --yes --no-progress | Out-Null
+        $ossl = Find-OpenSslRoot
+      }
+      if (-not $ossl) { throw "OpenSSL development libraries not found after choco install" }
+      Write-Host "OpenSSL root: $ossl"
+
+      # ---- CMake 配置 + 编译（静态 CRT 免 VC redist、静态通道、最小依赖）----
+      $bld = "$env:TEMP\freerdp-build"
+      if (Test-Path $bld) { Remove-Item -Recurse -Force $bld }
+      cmake -S $root -B $bld -G "Visual Studio 17 2022" -A x64 `
+        "-DCMAKE_BUILD_TYPE=Release" `
+        "-DOPENSSL_ROOT_DIR=$($ossl -replace '\\','/')" `
+        "-DWITH_CLIENT_COMMON=ON" "-DWITH_CLIENT=ON" `
+        "-DWITH_SERVER=OFF" "-DWITH_SERVER_CHANNELS=OFF" `
+        "-DBUILD_TESTING=OFF" "-DWITH_SAMPLE=OFF" "-DWITH_MANPAGES=OFF" `
+        "-DWITH_CAIRO=OFF" "-DWITH_JPEG=OFF" "-DWITH_SWSCALE=OFF" "-DWITH_DSP_FFMPEG=OFF" `
+        "-DWITH_GSSAPI=OFF" "-DWITH_ICU=OFF" "-DCHANNEL_URBDRC=OFF" `
+        "-DBUILTIN_CHANNELS=ON" "-DMSVC_RUNTIME=static"
+      if ($LASTEXITCODE -ne 0) { throw "cmake configure failed exit=$LASTEXITCODE" }
+      cmake --build $bld --config Release -- /m /v:m
+      if ($LASTEXITCODE -ne 0) { throw "FreeRDP build failed exit=$LASTEXITCODE" }
+
+      # ---- 收集产物：exe + 自家 DLL + OpenSSL 运行时 DLL ----
+      foreach ($n in @('wfreerdp.exe','freerdp2.dll','winpr2.dll')) {
+        $f = Get-ChildItem -Path $bld -Recurse -Filter $n -ErrorAction SilentlyContinue | Select-Object -First 1
+        if ($f) { Copy-Item $f.FullName $frBin -Force; Write-Host "Collected $($f.FullName)" }
+        else { throw "Build output missing: $n" }
+      }
+      foreach ($pat in @('libcrypto-*.dll','libssl-*.dll')) {
+        Get-ChildItem -Path $ossl -Recurse -Filter $pat -ErrorAction SilentlyContinue |
+          Where-Object { $_.FullName -notmatch 'static' } |
+          Select-Object -First 1 | ForEach-Object {
+            Copy-Item $_.FullName $frBin -Force; Write-Host "Collected $($_.Name)"
+          }
+      }
+      # Apache-2.0 许可证随分发保留
+      $lic = Join-Path $root 'LICENSE'
+      if (Test-Path $lic) { Copy-Item $lic (Join-Path $frBin 'LICENSE.FreeRDP.txt') -Force }
+      Write-Host "===== FreeRDP engine ready: $((Get-ChildItem $frBin -File).Count) files ====="
+
 # classic csproj + PackageReference：先 nuget restore，再 MSBuild Restore
 before_build:
   - ps: |
@@ -70,11 +156,22 @@ after_test:
 
       # 3b) FreeRDP（wfreerdp.exe 进程嵌入引擎 —— 许可证存储为文件，规避 MSLicensing 提权问题；
       #     放子目录 freerdp\ 以避开步骤 6 的顶层 *.dll 清理，原生 DLL 需与其 exe 同目录共存）
-      if (Test-Path "lib\freerdp") {
+      #     来源优先级：lib\freerdp\（手工放置覆盖）> freerdp-bin\（install 阶段源码构建产物）
+      $frSrc = $null
+      if ((Test-Path "lib\freerdp\wfreerdp.exe") -or
+          (Get-ChildItem "lib\freerdp" -Filter *.exe -ErrorAction SilentlyContinue)) {
+        $frSrc = "lib\freerdp"
+      } elseif (Test-Path "$env:APPVEYOR_BUILD_FOLDER\freerdp-bin\wfreerdp.exe") {
+        $frSrc = "$env:APPVEYOR_BUILD_FOLDER\freerdp-bin"
+      }
+      if ($frSrc) {
         $frDir = Join-Path $out "freerdp"
         New-Item -ItemType Directory -Path $frDir -Force | Out-Null
-        Copy-Item "lib\freerdp\*" $frDir -Recurse -Force
-        Write-Host "Packed FreeRDP: $((Get-ChildItem $frDir -File).Count) files"
+        if ($frSrc -eq "lib\freerdp") { Copy-Item "lib\freerdp\*" $frDir -Recurse -Force }
+        else { Copy-Item "$env:APPVEYOR_BUILD_FOLDER\freerdp-bin\*" $frDir -Force }
+        Write-Host "Packed FreeRDP from ${frSrc}: $((Get-ChildItem $frDir -File).Count) files"
+      } else {
+        Write-Warning "No FreeRDP engine available — RDP falls back to mstscax ActiveX at runtime"
       }
 
       # 4) 从各项目 bin / NuGet 缓存补齐传递依赖（KeePassLib / SSH.NET）
