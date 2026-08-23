@@ -63,7 +63,11 @@
 - 主密码与 KeePass 密码合一，启动时输入一次，自动解锁 KeePass
 - 空闲锁定上限 30 分钟（硬限制），重启应用后重新输入主密码
 - 所有工具支持 config 文件自定义（data/config/tools/*.json）
-- 运维工具采用内置模块而非插件系统（.NET 4.6.2 + Win7 限制）
+- 扫描体系已插件化（2026-08 用户决策，取代旧的"仅内置模块"约束）：Gdterm.Tools/Scanning，
+  插件 = manifest.json + ps1/sh 脚本于 data\plugins\scanner\，输出契约 FINDING|级别|标题|详情，
+  FileSystemWatcher 热更新；通道 LocalChannel/SshChannel（win 远端与宿主机同源 ps1 EncodedCommand），
+  WinRM/Ansible 预留；脚本必须落在插件目录内（防越界）；UI 入口 工具→扫描中心（插件）
+- 运维工具箱本体仍是内置模块（IToolModule），插件化仅限扫描体系
 - 密码分析器检测弱/重复/过期密码，生成健康报告
 - 凭据继承支持文件夹→子连接传播，连接级覆盖优先
 - 会话持久化保存窗口布局和打开的 tab，重启自动恢复
