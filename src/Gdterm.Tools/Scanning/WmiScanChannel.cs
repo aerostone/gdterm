@@ -135,7 +135,7 @@ namespace Gdterm.Tools.Scanning
             {
                 inParams["CommandLine"] = cmdline;
                 inParams["CurrentDirectory"] = @"C:\Windows\Temp";
-                using (var outParams = procClass.InvokeMethod(inParams, null))
+                using (var outParams = procClass.InvokeMethod("Create", inParams, null))
                 {
                     uint rc = outParams["ReturnValue"] != null ? Convert.ToUInt32(outParams["ReturnValue"]) : 8;
                     if (rc != 0)
