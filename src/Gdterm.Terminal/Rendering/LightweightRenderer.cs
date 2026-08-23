@@ -137,6 +137,12 @@ namespace Gdterm.Terminal.Rendering
                 _needsRedraw = true;
                 ScheduleRedraw();
             }
+            // 字体变了 → 行高/字宽变了 → 网格按当前画布重算（行缓冲渲染无引擎重排，仅同步列行数）
+            if (_canvas.ClientSize.Width > 0 && _canvas.ClientSize.Height > 0)
+            {
+                Columns = Math.Max(2, (int)((_canvas.ClientSize.Width - PadX * 2) / Math.Max(1, _charWidth)));
+                Rows = Math.Max(1, (int)((_canvas.ClientSize.Height - PadY * 2) / Math.Max(1, _lineHeight)));
+            }
         }
 
         private void MeasureCell()

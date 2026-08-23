@@ -540,6 +540,16 @@ namespace Gdterm.Terminal.Rendering
         {
             if (_disposed || _canvas.ClientSize.Width <= 0 || _canvas.ClientSize.Height <= 0) return;
             MeasureCell();
+            RecomputeGrid();
+        }
+
+        /// <summary>
+        /// 按当前画布与单元格度量重算列行数；变化时走 ResizeTerminal（引擎重排 + 通知会话同步 PTY）。
+        /// 字体变化后必须调用——否则旧网格 × 新字宽溢出画布右侧/底部，或内容缩在角落。
+        /// </summary>
+        private void RecomputeGrid()
+        {
+            if (_disposed || _canvas.ClientSize.Width <= 0 || _canvas.ClientSize.Height <= 0) return;
             // 减去两侧 padding 再计算 cols/rows — 否则右侧/底部边缘会有半截字被裁
             int cols = Math.Max(2, (int)((_canvas.ClientSize.Width - PadX * 2) / _charWidth));
             int rows = Math.Max(1, (int)((_canvas.ClientSize.Height - PadY * 2) / _charHeight));
@@ -623,6 +633,9 @@ namespace Gdterm.Terminal.Rendering
                 _needsRedraw = true;
                 ScheduleRedraw();
             }
+            // 字体变了 → 单元格尺寸变了 → 网格必须按当前画布重算并同步 PTY，
+            // 否则调大字号内容溢出组件、调小则缩在左上角（用户报告的“改字号就超出/错位”）。
+            RecomputeGrid();
         }
 
         /// <summary>
