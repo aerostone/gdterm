@@ -68,6 +68,15 @@ after_test:
         Copy-Item "lib\winpty\winpty.exe"     $out -Force
       }
 
+      # 3b) FreeRDP（wfreerdp.exe 进程嵌入引擎 —— 许可证存储为文件，规避 MSLicensing 提权问题；
+      #     放子目录 freerdp\ 以避开步骤 6 的顶层 *.dll 清理，原生 DLL 需与其 exe 同目录共存）
+      if (Test-Path "lib\freerdp") {
+        $frDir = Join-Path $out "freerdp"
+        New-Item -ItemType Directory -Path $frDir -Force | Out-Null
+        Copy-Item "lib\freerdp\*" $frDir -Recurse -Force
+        Write-Host "Packed FreeRDP: $((Get-ChildItem $frDir -File).Count) files"
+      }
+
       # 4) 从各项目 bin / NuGet 缓存补齐传递依赖（KeePassLib / SSH.NET）
       $depNames = @('KeePassLib.dll','Renci.SshNet.dll')
       foreach ($name in $depNames) {
@@ -123,8 +132,9 @@ after_test:
       }
 
       # 7) 删除噪声文件：.pdb / .xml / .config / .txt（含 LICENSE.winpty.txt、README 等）
+      #    排除 freerdp\ 子目录：Apache-2.0 要求随分发保留许可证文本
       Get-ChildItem -Path $out -Recurse -File |
-        Where-Object { $_.Extension -in '.pdb','.xml','.config','.txt' } |
+        Where-Object { $_.Extension -in '.pdb','.xml','.config','.txt' -and $_.FullName -notmatch '\\freerdp\\' } |
         ForEach-Object { Remove-Item $_.FullName -Force; Write-Host "Removed noise: $($_.Name)" }
 
       # 8) 便携数据骨架（空 —— 无密钥）

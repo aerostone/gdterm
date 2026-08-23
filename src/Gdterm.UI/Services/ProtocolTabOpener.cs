@@ -174,7 +174,7 @@ namespace Gdterm.UI.Services
                 catch { }
             }
 
-            var rdp = _rdpFactory.Create();
+            var rdp = _rdpFactory.CreateFor(config);
             rdp.Control.Dock = DockStyle.Fill;
             tab.Controls.Add(rdp.Control);
 
