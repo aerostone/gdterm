@@ -196,6 +196,9 @@ namespace Gdterm.UI.Services
                 "Ctrl + Shift + W    关闭当前标签\n" +
                 "Ctrl + Shift + F    终端查找\n" +
                 "Ctrl + Shift + P    片段搜索\n" +
+                "Ctrl + Tab          下一个标签（Ctrl+Shift+Tab 上一个）\n" +
+                "Ctrl + Alt + 1..9   直达第 N 个标签\n" +
+                "中键点标签头        关闭该标签\n" +
                 "Esc / F11           退出专注模式\n" +
                 "右上角按钮          退出专注（专注模式下可见）\n\n" +
                 "提示：在终端里，普通 Ctrl 组合直接发给 shell，\n" +

@@ -92,7 +92,18 @@ namespace Gdterm.UI.Controls
             Controls.Add(_filterBox);
 
             // 右键菜单——在 Opening 中按右键节点动态调整项，避免“主机上右键也弹新建”
+            // 顺序按使用频率：连接/复制地址（主机节点专属）→ 本地终端 → 新建/编辑/删除
             _contextMenu = new ContextMenuStrip();
+
+            var itemConnect = new ToolStripMenuItem("连接(&C)", null, OnConnect);
+            itemConnect.Tag = "connect";
+            _contextMenu.Items.Add(itemConnect);
+
+            var itemCopyHost = new ToolStripMenuItem("复制主机地址(&O)", null, OnCopyHost);
+            itemCopyHost.Tag = "copyhost";
+            _contextMenu.Items.Add(itemCopyHost);
+
+            _contextMenu.Items.Add(new ToolStripSeparator { Tag = "sep0" });
 
             var itemLocal = new ToolStripMenuItem("本地终端(&L)", null, OnOpenLocalTerminal);
             itemLocal.Tag = "local";
@@ -111,12 +122,6 @@ namespace Gdterm.UI.Controls
             var itemDelete = new ToolStripMenuItem("删除(&D)", null, OnDeleteConnection);
             itemDelete.Tag = "delete";
             _contextMenu.Items.Add(itemDelete);
-
-            _contextMenu.Items.Add(new ToolStripSeparator { Tag = "sep2" });
-
-            var itemConnect = new ToolStripMenuItem("连接(&C)", null, OnConnect);
-            itemConnect.Tag = "connect";
-            _contextMenu.Items.Add(itemConnect);
 
             _contextMenu.Opening += OnContextMenuOpening;
             _treeView.ContextMenuStrip = _contextMenu;
@@ -538,11 +543,12 @@ namespace Gdterm.UI.Controls
             var itemNew = FindItemByTag("new") as ToolStripMenuItem;
             var itemEdit = FindItemByTag("edit") as ToolStripMenuItem;
             var sep1 = FindItemByTag("sep1") as ToolStripSeparator;
+            var sep0 = FindItemByTag("sep0") as ToolStripSeparator;
             var itemDel = FindItemByTag("delete") as ToolStripMenuItem;
-            var sep2 = FindItemByTag("sep2") as ToolStripSeparator;
             var itemConn = FindItemByTag("connect") as ToolStripMenuItem;
+            var itemCopyHost = FindItemByTag("copyhost") as ToolStripMenuItem;
 
-            if (itemLocal == null || itemNew == null || itemEdit == null || sep1 == null || sep2 == null || itemDel == null || itemConn == null)
+            if (itemLocal == null || itemNew == null || itemEdit == null || sep1 == null || sep0 == null || itemDel == null || itemConn == null || itemCopyHost == null)
                 return;
 
             // “本地终端”始终可用——根节点/空白/分组/连接都可开本地终端（独立动作，不依赖节点语义）。
@@ -557,7 +563,8 @@ namespace Gdterm.UI.Controls
                 itemEdit.Enabled = true;
                 itemDel.Enabled = true;
                 itemConn.Enabled = true;
-                sep1.Visible = sep2.Visible = true;
+                itemCopyHost.Enabled = !string.IsNullOrEmpty(cfg.Host);
+                sep0.Visible = sep1.Visible = true;
             }
             else if (IsGroupNode(node))
             {
@@ -567,7 +574,8 @@ namespace Gdterm.UI.Controls
                 itemEdit.Enabled = false; // 未支持编辑分组（实现重构后可动）
                 itemDel.Enabled = false;  // 未支持删分组（避免误删连接）
                 itemConn.Enabled = false;
-                sep2.Visible = false;
+                itemCopyHost.Enabled = false;
+                sep0.Visible = false;
             }
             else
             {
@@ -576,9 +584,19 @@ namespace Gdterm.UI.Controls
                 itemEdit.Enabled = false;
                 itemDel.Enabled = false;
                 itemConn.Enabled = false;
+                itemCopyHost.Enabled = false;
+                sep0.Visible = false;
                 sep1.Visible = false;
-                sep2.Visible = false;
             }
+        }
+
+        /// <summary>复制主机地址到剪贴板（仅连接节点可用）。</summary>
+        private void OnCopyHost(object sender, EventArgs e)
+        {
+            if (!IsConnectionNode(_rightClickedNode)) return;
+            var cfg = _rightClickedNode.Tag as ConnectionConfig;
+            if (cfg == null || string.IsNullOrEmpty(cfg.Host)) return;
+            try { Clipboard.SetText(cfg.Host); } catch { }
         }
 
         /// <summary>按 Tag 查找上下文菜单项，不依赖硬编码索引。</summary>

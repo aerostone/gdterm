@@ -300,6 +300,20 @@ namespace Gdterm.UI.Controls
                 return;
             }
 
+            // 中键：关闭所点标签（浏览器/VS Code 肌肉记忆）
+            if (e.Button == MouseButtons.Middle)
+            {
+                for (int i = 0; i < _tabControl.TabCount; i++)
+                {
+                    if (_tabControl.GetTabRect(i).Contains(e.Location))
+                    {
+                        CloseTab(_tabControl.TabPages[i]);
+                        return;
+                    }
+                }
+                return;
+            }
+
             var tab = _chrome.HitTestClose(_tabControl, e.Location);
             if (tab != null)
                 CloseTab(tab);
@@ -309,6 +323,22 @@ namespace Gdterm.UI.Controls
         {
             if (_tabControl.SelectedTab != null)
                 CloseTab(_tabControl.SelectedTab);
+        }
+
+        /// <summary>循环切换标签：delta=+1 下一个，-1 上一个（首尾环绕）。</summary>
+        public void CycleTab(int delta)
+        {
+            int count = _tabControl.TabCount;
+            if (count < 2) return;
+            int idx = ((_tabControl.SelectedIndex + delta) % count + count) % count;
+            _tabControl.SelectedIndex = idx;
+        }
+
+        /// <summary>直达第 index 个标签（0 基，越界忽略）。</summary>
+        public void ActivateTabIndex(int index)
+        {
+            if (index < 0 || index >= _tabControl.TabCount) return;
+            _tabControl.SelectedIndex = index;
         }
 
         /// <summary>关闭除当前以外的所有标签。</summary>

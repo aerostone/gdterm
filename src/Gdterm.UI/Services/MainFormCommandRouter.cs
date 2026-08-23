@@ -39,6 +39,28 @@ namespace Gdterm.UI.Services
                 return true;
             }
 
+            // 标签导航（Windows Terminal 惯例）：Ctrl+Tab 循环、Ctrl+Alt+数字 直达；
+            // 不占用普通 Ctrl 组合，shell readline 不受影响
+            if (keyData == (Keys.Control | Keys.Tab))
+            {
+                _tabs?.CycleTab(1);
+                return true;
+            }
+            if (keyData == (Keys.Control | Keys.Shift | Keys.Tab))
+            {
+                _tabs?.CycleTab(-1);
+                return true;
+            }
+            if ((keyData & (Keys.Control | Keys.Alt)) == (Keys.Control | Keys.Alt))
+            {
+                var digit = keyData & Keys.KeyCode;
+                if (digit >= Keys.D1 && digit <= Keys.D9)
+                {
+                    _tabs?.ActivateTabIndex((int)digit - (int)Keys.D1);
+                    return true;
+                }
+            }
+
             // UI 快捷键一律 Ctrl+Shift+字母：普通 Ctrl 组合留给 shell readline
             // （Ctrl+R 反向搜索 / Ctrl+W 删词 / Ctrl+F 前进字符 / Ctrl+P 上一条历史）
             if (keyData == (Keys.Control | Keys.Shift | Keys.R))
