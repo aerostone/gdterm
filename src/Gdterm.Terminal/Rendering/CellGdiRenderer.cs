@@ -46,6 +46,8 @@ namespace Gdterm.Terminal.Rendering
         private float _appliedFontSizePt = FontSize;
         private float _appliedFontSizePx = 0f;
         private float _appliedDpi = 96f;
+        private string _appliedCjkFontName = null;
+        private bool _cjkLoadFailed = false;
 
         /// <summary>真彩 brush 缓存上限，防止 24-bit 颜色刷爆低配内存。</summary>
         private const int MaxBrushCache = 256;
@@ -69,6 +71,15 @@ namespace Gdterm.Terminal.Rendering
         public float AppliedFontSizePx { get { return _appliedFontSizePx; } }
         /// <summary>字体测量时的屏幕 DPI（横向）。</summary>
         public float AppliedDpi { get { return _appliedDpi; } }
+        /// <summary>实际生效的 CJK 补充字体名（空=未配置；配置了但加载失败时返回 "<名字>(加载失败)"，可观测性）。</summary>
+        public string AppliedCjkFontName
+        {
+            get
+            {
+                if (string.IsNullOrEmpty(_appliedCjkFontName)) return null;
+                return _cjkLoadFailed ? _appliedCjkFontName + "(加载失败)" : _appliedCjkFontName;
+            }
+        }
         /// <summary>单个 ASCII 单元格像素宽。</summary>
         public float CharWidth { get { return _charWidth; } }
         /// <summary>单个单元行像素高。</summary>
@@ -572,15 +583,27 @@ namespace Gdterm.Terminal.Rendering
                 try { _boldFont = new Font(_font.FontFamily, fontSizePx, FontStyle.Bold, GraphicsUnit.Pixel); }
                 catch { _boldFont = new Font(_font, FontStyle.Bold); }
 
-                // CJK 补充字体（可空）
+                // CJK 补充字体（可空）—— 加载失败不再静默：记入日志并标记到 AppliedCjkFontName
+                _cjkLoadFailed = false;
                 if (!string.IsNullOrWhiteSpace(cjkFontName))
                 {
                     try { _cjkFont = new Font(cjkFontName, fontSizePx, FontStyle.Regular, GraphicsUnit.Pixel); }
-                    catch { _cjkFont = null; }
+                    catch (Exception cjkEx)
+                    {
+                        _cjkFont = null;
+                        _cjkLoadFailed = true;
+                        Gdterm.Terminal.Diagnostics.TerminalLog.Swallowed("CellGdiRenderer.CjkFont", cjkEx);
+                        Gdterm.Terminal.Diagnostics.TerminalLog.Info("CellGdiRenderer.CjkFont",
+                            "CJK 字体加载失败，非 ASCII 回退主字体 name=" + cjkFontName + " px=" + fontSizePx.ToString("0.#"));
+                    }
                     if (_cjkFont != null)
                     {
                         try { _cjkBoldFont = new Font(_cjkFont.FontFamily, fontSizePx, FontStyle.Bold, GraphicsUnit.Pixel); }
                         catch { try { _cjkBoldFont = new Font(_cjkFont, FontStyle.Bold); } catch { _cjkBoldFont = null; } }
+                    }
+                    else
+                    {
+                        _cjkBoldFont = null;
                     }
                 }
                 else
@@ -594,6 +617,7 @@ namespace Gdterm.Terminal.Rendering
                 _appliedFontSizePt = fontSize;
                 _appliedFontSizePx = fontSizePx;
                 _appliedDpi = dpiX;
+                _appliedCjkFontName = string.IsNullOrWhiteSpace(cjkFontName) ? null : cjkFontName;
 
                 MeasureCell();
                 _needsRedraw = true;

@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Gdterm.Core.Models;
+using Gdterm.Terminal.Diagnostics;
 using Gdterm.Terminal.Interop;
 using Gdterm.Terminal.Models;
 
@@ -99,20 +100,32 @@ namespace Gdterm.Terminal
                 if (IsConnected) return;
                 ResolveShell();
 
-                if (ConPTY.IsAvailable && TryStartConPTY())
+                bool conptyAvail = ConPTY.IsAvailable;
+                bool winptyAvail = WinPty.IsAvailable;
+                TerminalLog.Info("LocalSession.Connect",
+                    "shell=" + _shellPath + " conptyAvailable=" + conptyAvail + " winptyAvailable=" + winptyAvail);
+
+                if (conptyAvail && TryStartConPTY())
                 {
                     _backend = LocalBackend.ConPty;
+                    TerminalLog.Info("LocalSession.Started", "backend=ConPTY shell=" + _shellPath);
                     RaiseOutput("\r\n[gdterm] 本地终端已启动 (ConPTY): " + _shellPath + "\r\n");
                     return;
                 }
 
-                if (WinPty.IsAvailable && TryStartWinPty())
+                if (winptyAvail && TryStartWinPty())
                 {
                     _backend = LocalBackend.WinPty;
+                    TerminalLog.Info("LocalSession.Started", "backend=WinPty shell=" + _shellPath);
                     RaiseOutput("\r\n[gdterm] 本地终端已启动 (winpty): " + _shellPath + "\r\n");
                     return;
                 }
 
+                // 两个 PTY 后端都不可用/启动失败——回退到管道重定向（无真 PTY，交互式程序受限）
+                string reason = !conptyAvail && !winptyAvail
+                    ? "两个后端均不可用（需 Win10 1809+ 或 lib/winpty）"
+                    : "PTY 启动失败（详见上方 Swallowed 日志）";
+                TerminalLog.Info("LocalSession.Fallback", "backend=Redirect reason=" + reason);
                 _backend = LocalBackend.Redirect;
                 StartRedirected();
             }
@@ -144,10 +157,14 @@ namespace Gdterm.Terminal
                 _conpty = new ConPTY();
                 _conpty.OnOutput += OnPtyOutput;
                 _conpty.OnExited += OnPtyExited;
-                return _conpty.Start(BuildCommandLineForPty(), cwd, (short)_cols, (short)_rows);
+                bool ok = _conpty.Start(BuildCommandLineForPty(), cwd, (short)_cols, (short)_rows);
+                if (!ok)
+                    TerminalLog.Info("LocalSession.ConPTY", "Start 返回 false cmd=" + BuildCommandLineForPty());
+                return ok;
             }
-            catch
+            catch (Exception ex)
             {
+                TerminalLog.Swallowed("LocalSession.ConPTY.Start", ex);
                 try { _conpty?.Dispose(); } catch { }
                 _conpty = null;
                 return false;
@@ -163,10 +180,15 @@ namespace Gdterm.Terminal
                 _winpty = new WinPty();
                 _winpty.OnOutput += OnPtyOutput;
                 _winpty.OnExited += OnPtyExited;
-                return _winpty.Start(BuildCommandLineForPty(), cwd, (short)_cols, (short)_rows);
+                bool ok = _winpty.Start(BuildCommandLineForPty(), cwd, (short)_cols, (short)_rows);
+                if (!ok)
+                    TerminalLog.Info("LocalSession.WinPty", "Start 返回 false cmd=" + BuildCommandLineForPty());
+                return ok;
             }
-            catch
+            catch (Exception ex)
             {
+                // 典型：winpty.dll 加载失败/架构不匹配——DLLNotFound/BadImageFormat 都会走到这
+                TerminalLog.Swallowed("LocalSession.WinPty.Start", ex);
                 try { _winpty?.Dispose(); } catch { }
                 _winpty = null;
                 return false;
@@ -184,6 +206,16 @@ namespace Gdterm.Terminal
 
         private void OnPtyExited(object sender, EventArgs e)
         {
+            // 可观测性：退出码是排查“终端自己退了/崩了”的关键证据（0x40010004=被调试器分离，1=shell 主动退等）
+            uint code = uint.MaxValue;
+            try
+            {
+                if (_backend == LocalBackend.ConPty && _conpty != null) code = _conpty.ExitCode;
+                else if (_backend == LocalBackend.WinPty && _winpty != null) code = _winpty.ExitCode;
+            }
+            catch { }
+            TerminalLog.Info("LocalSession.Exited",
+                "backend=" + _backend + " exitCode=" + (code == uint.MaxValue ? "unknown" : "0x" + code.ToString("X")));
             RaiseOutput("\r\n[本地终端已退出]\r\n");
             RaiseDisconnected();
         }
@@ -251,6 +283,7 @@ namespace Gdterm.Terminal
             {
                 if (!_process.Start())
                     throw new InvalidOperationException("Process.Start 返回 false");
+                TerminalLog.Info("LocalSession.Started", "backend=Redirect pid=" + _process.Id + " shell=" + _shellPath);
 
                 _readCts = new CancellationTokenSource();
                 var token = _readCts.Token;
@@ -269,6 +302,7 @@ namespace Gdterm.Terminal
             }
             catch (Exception ex)
             {
+                TerminalLog.Swallowed("LocalSession.Redirect.Start", ex);
                 CleanupProcess();
                 throw new InvalidOperationException("无法启动本地终端: " + ex.Message, ex);
             }
@@ -425,6 +459,14 @@ namespace Gdterm.Terminal
 
         private void OnProcessExited(object sender, EventArgs e)
         {
+            // 可观测性：重定向路径的退出码（进程对象可用时）
+            string codeText = "unknown";
+            try
+            {
+                if (_process != null && _process.HasExited) codeText = _process.ExitCode.ToString();
+            }
+            catch { }
+            TerminalLog.Info("LocalSession.Exited", "backend=Redirect exitCode=" + codeText);
             RaiseOutput("\r\n[本地终端已退出]\r\n");
             RaiseDisconnected();
         }

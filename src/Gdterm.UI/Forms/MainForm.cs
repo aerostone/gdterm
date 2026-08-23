@@ -420,6 +420,14 @@ namespace Gdterm.UI.Forms
             Font font;
             try { font = new Font(name, size, FontStyle.Regular); }
             catch { font = new Font("Microsoft YaHei UI", size); }
+            // 可观测性：外壳 UI 字体与终端字体是两套度量，出问题先对照这条与 FontMetrics
+            try
+            {
+                Gdterm.UI.Diagnostics.DiagLog.Info("MainForm.UIFont",
+                    "font=" + font.Name + "/" + size.ToString("0.#") + "pt applied=" + font.SizeInPoints.ToString("0.#") +
+                    "pt dpi=" + DeviceDpi + " formClient=" + ClientSize.Width + "x" + ClientSize.Height);
+            }
+            catch { }
             try { this.Font = font; } catch { }
             if (_menuStrip != null) try { _menuStrip.Font = font; } catch { }
             if (_statusBar != null) try { _statusBar.Font = font; } catch { }

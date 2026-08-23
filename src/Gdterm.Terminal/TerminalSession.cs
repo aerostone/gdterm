@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using Gdterm.Core.Models;
+using Gdterm.Terminal.Diagnostics;
 using Gdterm.Terminal.Models;
 using Renci.SshNet;
 
@@ -64,9 +66,18 @@ namespace Gdterm.Terminal
                 credential);
 
             _sshClient = new SshClient(connInfo);
-            _sshClient.Connect();
+            LogConnect("direct", connInfo, credential);
+            try { _sshClient.Connect(); }
+            catch (Exception ex)
+            {
+                // SSH.NET 报错原文（SocketException/PermissionDenied/SshException 等）是排查对接问题的第一证据
+                TerminalLog.Swallowed("SshSession.Connect", ex);
+                throw;
+            }
 
             CreateShellStream(_rows, _columns);
+            TerminalLog.Info("SshSession.Connected",
+                "mode=direct host=" + config.Host + ":" + config.Port + " term=" + _termType);
         }
 
         /// <summary>
@@ -90,9 +101,18 @@ namespace Gdterm.Terminal
                 credential);
 
             _sshClient = new SshClient(connInfo);
-            _sshClient.Connect();
+            LogConnect("tunnel->" + tunnelEndpoint.LocalHost + ":" + tunnelEndpoint.LocalPort, connInfo, credential);
+            try { _sshClient.Connect(); }
+            catch (Exception ex)
+            {
+                TerminalLog.Swallowed("SshSession.Connect", ex);
+                throw;
+            }
 
             CreateShellStream(_rows, _columns);
+            TerminalLog.Info("SshSession.Connected",
+                "mode=tunnel target=" + config.Host + ":" + config.Port +
+                " via=" + tunnelEndpoint.LocalHost + ":" + tunnelEndpoint.LocalPort + " term=" + _termType);
         }
 
         public IList<string> GetRecentOutput(int lineCount)
@@ -228,6 +248,24 @@ namespace Gdterm.Terminal
             StartReading();
         }
 
+        /// <summary>连接前记录对接参数（不含任何机密值；authMethod 只记类型不记内容）。</summary>
+        private static void LogConnect(string mode, Renci.SshNet.ConnectionInfo connInfo, CredentialPayload credential)
+        {
+            try
+            {
+                bool hasKey = credential != null && !string.IsNullOrWhiteSpace(credential.SshPrivateKey);
+                bool hasPwd = credential != null && !string.IsNullOrWhiteSpace(credential.Password);
+                string auth = hasKey ? (hasPwd ? "key+password" : "key") : (hasPwd ? "password" : "none");
+                string methods = connInfo != null && connInfo.AuthenticationMethods != null
+                    ? string.Join(",", connInfo.AuthenticationMethods.Select(m => m.Name))
+                    : "?";
+                TerminalLog.Info("SshSession.Connect",
+                    "mode=" + mode + " auth=" + auth + " sshnetMethods=" + methods +
+                    " timeoutMs=" + (connInfo != null ? connInfo.Timeout.TotalMilliseconds.ToString("0") : "?"));
+            }
+            catch { }
+        }
+
         private void StartReading()
         {
             var buffer = new byte[4096];
@@ -247,6 +285,8 @@ namespace Gdterm.Terminal
 
             _shellStream.ErrorOccurred += (sender, e) =>
             {
+                // SSH.NET ShellStream 错误原文——断线排查第一证据
+                TerminalLog.Swallowed("SshSession.ShellError", e.Exception);
                 try
                 {
                     OutputReceived?.Invoke(this, new TerminalOutputEventArgs
@@ -262,9 +302,11 @@ namespace Gdterm.Terminal
             try
             {
                 if (_sshClient != null)
-                {
-                    _sshClient.ErrorOccurred += (s, e) => RaiseDisconnected();
-                }
+                    _sshClient.ErrorOccurred += (s2, e2) =>
+                    {
+                        TerminalLog.Swallowed("SshSession.ClientError", e2.Exception);
+                        RaiseDisconnected();
+                    };
             }
             catch { }
         }

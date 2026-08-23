@@ -57,6 +57,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ITerminalSession.cs" />
+    <Compile Include="Diagnostics\TerminalLog.cs" />
     <Compile Include="Models\TerminalOutputEventArgs.cs" />
     <Compile Include="Rendering\IRenderer.cs" />
     <Compile Include="TerminalSession.cs" />

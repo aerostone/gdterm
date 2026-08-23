@@ -90,6 +90,9 @@ namespace Gdterm.Terminal.Interop
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool TerminateProcess(IntPtr hProcess, uint uExitCode);
 
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool GetExitCodeProcess(IntPtr hProcess, out uint lpExitCode);
+
         // 常量
         private const uint GENERIC_READ = 0x80000000;
         private const uint GENERIC_WRITE = 0x40000000;
@@ -262,6 +265,16 @@ namespace Gdterm.Terminal.Interop
             {
                 if (_hProcess == IntPtr.Zero) return false;
                 return WaitForSingleObject(_hProcess, 0) == WAIT_TIMEOUT;
+            }
+        }
+
+        /// <summary>子进程退出码（可观测性：未启动/不可得时返回 uint.MaxValue）。</summary>
+        public uint ExitCode
+        {
+            get
+            {
+                uint code;
+                return _hProcess != IntPtr.Zero && GetExitCodeProcess(_hProcess, out code) ? code : uint.MaxValue;
             }
         }
 

@@ -19,6 +19,7 @@ namespace Gdterm.Terminal.Rendering.Vt
         private readonly DataConsumer _consumer;
         private readonly object _lock = new object();
         private bool _disposed;
+        private int _feedErrCount;
 
         /// <summary>终端需要回写主机的序列（DA/CPR/键鼠等）。</summary>
         public event EventHandler<byte[]> SendToHost;
@@ -119,9 +120,18 @@ namespace Gdterm.Terminal.Rendering.Vt
         public void Feed(byte[] data)
         {
             if (data == null || data.Length == 0 || _disposed) return;
-            lock (_lock)
+            try
             {
-                _consumer.Push(data);
+                lock (_lock)
+                {
+                    _consumer.Push(data);
+                }
+            }
+            catch (Exception ex)
+            {
+                // VtNetCore 解析异常不再静默——表现为“输出不动”时这里是唯一线索（限流防刷屏）
+                if (_feedErrCount++ % 50 == 0)
+                    Gdterm.Terminal.Diagnostics.TerminalLog.Swallowed("VtEngine.Feed", ex);
             }
         }
 

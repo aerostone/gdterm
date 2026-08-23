@@ -275,7 +275,15 @@ namespace Gdterm.UI.Forms
                     UIFontName = _uiFontCombo.SelectedItem != null ? _uiFontCombo.SelectedItem.ToString() : "Microsoft YaHei UI",
                     UIFontSize = (int)_uiSizeNum.Value
                 };
-                try { Result.Save(_iniPath); } catch (Exception ex) { DiagLog.Swallowed("Appearance.Save", ex); }
+                try
+                {
+                    Result.Save(_iniPath);
+                    // 可观测性：用户选了什么（终端字体/字号/CJK/UI 字体）——排查“字号不匹配”时与 FontMetrics 对照
+                    DiagLog.Info("Appearance.Save",
+                        "font=" + Result.FontName + "/" + Result.FontSize + "pt cjk=" + (string.IsNullOrEmpty(Result.CjkFontName) ? "-" : Result.CjkFontName) +
+                        " scheme=" + Result.ColorScheme + " uiFont=" + Result.UIFontName + "/" + Result.UIFontSize + "pt dpiAware=" + Result.DpiAware);
+                }
+                catch (Exception ex) { DiagLog.Swallowed("Appearance.Save", ex); }
             };
             Controls.Add(_btnOk);
 

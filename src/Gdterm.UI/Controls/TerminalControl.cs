@@ -154,6 +154,21 @@ namespace Gdterm.UI.Controls
             // CJK 补充字体（可空）—— Xshell 风格非 ASCII 字体。
             string cjkFontName = ga != null && !string.IsNullOrWhiteSpace(ga.CjkFontName) ? ga.CjkFontName : null;
 
+            // 可观测性：字号/字体的实际来源链（“字号不匹配”排查第一步——先看是谁提供的值）
+            try
+            {
+                DiagLog.Info("TerminalControl.Appearance",
+                    "renderer=" + (_profile != null && _profile.UseVtCell ? "VtCell" : "Lightweight") +
+                    " scheme=" + schemeName +
+                    " font=" + fontName +
+                    " size=" + fontSize.ToString("0.#") +
+                    " sizeSrc=" + (ga != null && ga.FontSize > 0 ? "global" : (_profile != null && _profile.FontSize > 0 ? "profile" : "default14")) +
+                    " fontSrc=" + ((_profile != null && !string.IsNullOrWhiteSpace(_profile.FontName)
+                        && !string.Equals(_profile.FontName, "Consolas", StringComparison.OrdinalIgnoreCase)) ? "profile" : (ga != null && !string.IsNullOrWhiteSpace(ga.FontName) ? "global" : "default")) +
+                    " cjk=" + (string.IsNullOrEmpty(cjkFontName) ? "-" : cjkFontName));
+            }
+            catch { }
+
             int rows = 24;
             int cols = 80;
             // 与 TerminalProfile 默认 300 对齐，低配多标签更省
@@ -345,20 +360,32 @@ namespace Gdterm.UI.Controls
 
         /// <summary>
         /// 字体可观测性：把实际生效的字体度量写入 diag.log，
-        /// 用于定位“字号过大/行重叠/被 UI 组件遮挡”类问题。
-        /// 记录内容：实际生效字体、pt/px/DPI、cell 宽高、宽高比、可见画布尺寸。
+        /// 定位“字号过大/行重叠/被 UI 遮挡/跨屏 DPI 漂移”类问题。
+        /// 记录：实际字体（含 CJK 补充）、pt/px/DPI、cell 宽高、网格与画布、
+        /// 窗口实时 per-monitor DPI（对比 AppliedDpi 发现漂移）、UI 字体对照、遮挡扫描。
         /// </summary>
         private void LogFontMetrics(string path)
         {
             try
             {
+                var c = _renderer != null ? _renderer.GetControl() : null;
                 int canvasW = 0, canvasH = 0;
-                try
+                float liveDpi = -1f;
+                if (c != null)
                 {
-                    var c = _renderer != null ? _renderer.GetControl() : null;
-                    if (c != null) { canvasW = c.ClientSize.Width; canvasH = c.ClientSize.Height; }
+                    canvasW = c.ClientSize.Width; canvasH = c.ClientSize.Height;
+                    // 窗口所在显示器的实时 DPI：窗口 DC 在 PerMonitorV2 下随所在屏缩放。
+                    // 与 ApplyFont 时的系统 DPI 对比即可发现跨屏漂移。
+                    // 仅在句柄已就绪时探测——构造期强制建句柄会干扰后续父级挂接。
+                    if (c.IsHandleCreated || c.Parent != null)
+                    {
+                        try
+                        {
+                            using (var g = c.CreateGraphics()) liveDpi = g.DpiX;
+                        }
+                        catch { }
+                    }
                 }
-                catch { }
                 string msg;
                 if (_cellRenderer != null)
                 {
@@ -366,6 +393,10 @@ namespace Gdterm.UI.Controls
                           " font=" + _cellRenderer.AppliedFontName +
                           " size=" + _cellRenderer.AppliedFontSizePt.ToString("0.#") + "pt/" + _cellRenderer.AppliedFontSizePx.ToString("0.#") + "px" +
                           " dpi=" + _cellRenderer.AppliedDpi.ToString("0") +
+                          (liveDpi > 0 && Math.Abs(liveDpi - _cellRenderer.AppliedDpi) > 1f
+                              ? " LIVE-DPI=" + liveDpi.ToString("0") + "(漂移!字号未重应用)"
+                              : "") +
+                          " cjk=" + (_cellRenderer.AppliedCjkFontName ?? "-") +
                           " cell=" + _cellRenderer.CharWidth.ToString("0.#") + "x" + _cellRenderer.CharHeight.ToString("0.#") +
                           " grid=" + _cellRenderer.Columns + "x" + _cellRenderer.Rows +
                           " canvas=" + canvasW + "x" + canvasH;
@@ -376,9 +407,55 @@ namespace Gdterm.UI.Controls
                           " canvas=" + canvasW + "x" + canvasH +
                           " grid=" + (_renderer != null ? _renderer.Columns + "x" + _renderer.Rows : "?");
                 }
+                // UI 字体对照：终端 cell 度量 vs 外壳 pt（两套度量不一致是“字号不匹配”常见根因）
+                try
+                {
+                    var ga2 = Gdterm.UI.Program.GlobalAppearance;
+                    if (ga2 != null)
+                        msg += " uiFont=" + (string.IsNullOrEmpty(ga2.UIFontName) ? "Microsoft YaHei UI" : ga2.UIFontName) + "/" + (ga2.UIFontSize > 0 ? ga2.UIFontSize : 9) + "pt";
+                }
+                catch { }
+                msg += " " + DescribeOcclusion(c);
                 DiagLog.Info("TerminalControl.FontMetrics", msg);
             }
             catch { }
+        }
+
+        /// <summary>
+        /// 遮挡扫描：从画布向上走最多 4 层父级，报告每层与画布屏幕矩形相交的可见兄弟控件
+        /// （搜索栏/状态栏/Dock 冲突等）。front=true 表示该兄弟在画布之上（z 序更靠前，真遮挡候选）。
+        /// </summary>
+        private static string DescribeOcclusion(Control canvas)
+        {
+            try
+            {
+                if (canvas == null) return "occl=?";
+                var screen = canvas.RectangleToScreen(canvas.ClientRectangle);
+                int hits = 0;
+                string detail = "";
+                var node = canvas.Parent;
+                int depth = 0;
+                while (node != null && depth < 4)
+                {
+                    foreach (Control sib in node.Controls)
+                    {
+                        if (sib == canvas || !sib.Visible || sib.Width <= 0 || sib.Height <= 0) continue;
+                        Rectangle sb2;
+                        try { sb2 = sib.RectangleToScreen(sib.ClientRectangle); } catch { continue; }
+                        if (!sb2.IntersectsWith(screen)) continue;
+                        hits++;
+                        if (hits <= 3)
+                        {
+                            bool front = node.Controls.GetChildIndex(sib, false) < node.Controls.GetChildIndex(canvas, false);
+                            detail += " " + sib.GetType().Name + (front ? "[front]" : "[back]") + sb2.Size.ToString();
+                        }
+                    }
+                    node = node.Parent;
+                    depth++;
+                }
+                return "occl=" + hits + detail;
+            }
+            catch { return "occl=?"; }
         }
 
         /// <summary>当前编码（从 TerminalProfile 取，默认 UTF-8）。</summary>

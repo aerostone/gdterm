@@ -73,6 +73,13 @@ namespace Gdterm.UI
                     CrashLog.Write(source, new Exception(message ?? ""), isTerminating: false));
             }
             catch { }
+            // 终端层诊断日志接线：渲染器/会话/引擎（Gdterm.Terminal 不引用 UI，同 RdpLog 模式）
+            try
+            {
+                Gdterm.Terminal.Diagnostics.TerminalLog.Initialize((source, message) =>
+                    CrashLog.Write(source, new Exception(message ?? ""), isTerminating: false));
+            }
+            catch { }
             Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
             Application.ThreadException += (s, e) =>
             {

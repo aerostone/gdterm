@@ -307,6 +307,16 @@ namespace Gdterm.Terminal.Interop
         /// <summary>进程是否仍在运行。</summary>
         public bool IsRunning => _hProcess != IntPtr.Zero && WaitForSingleObject(_hProcess, 0) == 258 /* WAIT_TIMEOUT */;
 
+        /// <summary>子进程退出码（可观测性：未启动/不可得时返回 uint.MaxValue）。</summary>
+        public uint ExitCode
+        {
+            get
+            {
+                uint code;
+                return _hProcess != IntPtr.Zero && GetExitCodeProcess(_hProcess, out code) ? code : uint.MaxValue;
+            }
+        }
+
         /// <summary>要求子进程退出：发 exit\r\n，超时再 kill。</summary>
         public void Stop()
         {
