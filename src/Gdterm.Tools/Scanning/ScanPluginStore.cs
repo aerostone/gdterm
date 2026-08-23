@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Timers;
 using System.Web.Script.Serialization;
 
@@ -171,13 +172,89 @@ namespace Gdterm.Tools.Scanning
                         Directory.CreateDirectory(dir);
                         File.WriteAllText(manifestPath, def.ManifestJson, new System.Text.UTF8Encoding(false));
                         File.WriteAllText(scriptPath, def.ScriptContent, new System.Text.UTF8Encoding(false));
+                        continue;
                     }
+                    RefreshOutdatedBuiltin(def, manifestPath, scriptPath);
                 }
             }
             catch (Exception)
             {
                 // 只读安装盘等场景物化失败不致命——内置仍可经 user 根补充
             }
+        }
+
+        /// <summary>
+        /// 版本感知更新：磁盘上的内置插件版本旧于程序集内嵌版时刷新，
+        /// 旧脚本备份为 *.bak（用户改动不丢）；版本一致或磁盘更新则不动。
+        /// </summary>
+        private static void RefreshOutdatedBuiltin(BuiltinPluginDef def, string manifestPath, string scriptPath)
+        {
+            try
+            {
+                var diskVersion = ReadManifestVersion(manifestPath);
+                if (CompareVersions(diskVersion, ExtractVersion(def.ManifestJson)) >= 0) return;
+
+                var bakScript = scriptPath + ".bak";
+                if (File.Exists(bakScript)) File.Delete(bakScript);
+                File.Copy(scriptPath, bakScript, true);
+
+                File.WriteAllText(manifestPath, def.ManifestJson, new System.Text.UTF8Encoding(false));
+                File.WriteAllText(scriptPath, def.ScriptContent, new System.Text.UTF8Encoding(false));
+            }
+            catch (Exception)
+            {
+                // 更新失败保留旧文件——旧版能跑总比损坏强
+            }
+        }
+
+        /// <summary>从 manifest JSON 文本提取 "version" 字段；解析失败视为 "0"。</summary>
+        private static string ExtractVersion(string json)
+        {
+            if (json != null)
+            {
+                var m = Regex.Match(json, "\"version\"\\s*:\\s*\"([^\"]+)\"", RegexOptions.IgnoreCase);
+                if (m.Success) return m.Groups[1].Value.Trim();
+            }
+            return "0";
+        }
+
+        /// <summary>从 manifest.json 文件提取 "version" 字段；解析失败视为 "0"。</summary>
+        private static string ReadManifestVersion(string manifestPath)
+        {
+            try
+            {
+                foreach (var line in File.ReadLines(manifestPath))
+                {
+                    var m = Regex.Match(line, "\"version\"\\s*:\\s*\"([^\"]+)\"", RegexOptions.IgnoreCase);
+                    if (m.Success) return m.Groups[1].Value.Trim();
+                }
+            }
+            catch { }
+            return "0";
+        }
+
+        /// <summary>按数字段比较版本号（1.2 > 1.10 按段比较为小于）；不可解析段按字符串比。</summary>
+        private static int CompareVersions(string a, string b)
+        {
+            if (string.Equals(a, b, StringComparison.OrdinalIgnoreCase)) return 0;
+            var sa = (a ?? "0").Split('.');
+            var sb = (b ?? "0").Split('.');
+            for (var i = 0; i < Math.Max(sa.Length, sb.Length); i++)
+            {
+                int na, nb;
+                var ta = i < sa.Length ? sa[i] : "0";
+                var tb = i < sb.Length ? sb[i] : "0";
+                if (int.TryParse(ta, out na) && int.TryParse(tb, out nb))
+                {
+                    if (na != nb) return na.CompareTo(nb);
+                }
+                else
+                {
+                    var c = string.Compare(ta, tb, StringComparison.OrdinalIgnoreCase);
+                    if (c != 0) return c;
+                }
+            }
+            return 0;
         }
 
         // ===== 热更新监控 =====

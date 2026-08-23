@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 
 namespace Gdterm.Tools.Scanning
 {
@@ -40,7 +40,7 @@ namespace Gdterm.Tools.Scanning
   ""targets"": [ ""windows"" ],
   ""scriptFile"": ""scan.ps1"",
   ""timeoutSeconds"": 120,
-  ""version"": ""1.0"",
+  ""version"": ""1.1"",
   ""enabled"": true
 }",
             // 注意：PS 单引号字符串内不能出现裸单引号——正则一律避开引号字符类
@@ -73,7 +73,9 @@ foreach ($d in $dirs) {
     if ($count -ge 200) { break }
     if ($f.Length -gt $maxFileBytes) { continue }
     $text = $null
-    try { $text = Get-Content $f.FullName -Raw -ErrorAction Stop } catch { continue }
+    # 兼容 PS 2.0（Win7/2008R2 原生）：不用 Get-Content -Raw（PS 3+ 才有），直接 .NET 读取
+    try { if ($f.Length -gt 0) { $text = [System.IO.File]::ReadAllText($f.FullName) } } catch { continue }
+    if ($null -eq $text) { continue }
     foreach ($p in $patterns) {
       if ($text -match $p.r) {
         Write-Output ('FINDING|' + $p.s + '|' + $p.n + '|' + $f.FullName)
