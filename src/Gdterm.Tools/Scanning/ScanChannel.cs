@@ -64,13 +64,21 @@ namespace Gdterm.Tools.Scanning
 
         internal static ScanExecutionOutput RunWindows(string scriptContent, int timeoutSeconds)
         {
+            var exe = ResolvePowerShell();
+            if (exe == null)
+            {
+                return new ScanExecutionOutput
+                {
+                    RuntimeError = "未找到 PowerShell（已尝试 PATH、pwsh、System32\\WindowsPowerShell、Program Files\\PowerShell\\7）"
+                };
+            }
             // 前置 UTF-8 控制台编码：重定向输出默认走 OEM 代码页，中文会乱码
             var prefixed = "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8\r\n" + (scriptContent ?? "");
             // UTF-16LE base64 —— powershell -EncodedCommand 的官方编码
             var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(prefixed));
             var psi = new ProcessStartInfo
             {
-                FileName = "powershell.exe",
+                FileName = exe,
                 Arguments = "-NoProfile -NonInteractive -EncodedCommand " + encoded,
                 UseShellExecute = false,
                 RedirectStandardOutput = true,
@@ -82,8 +90,41 @@ namespace Gdterm.Tools.Scanning
             return RunProcess(psi, timeoutSeconds);
         }
 
+        /// <summary>
+        /// 稳健的 PowerShell 定位：PATH 可能不含 WindowsPowerShell 目录，逐个探测已知位置。
+        /// 返回可执行文件完整路径，全部落空返回 null。
+        /// </summary>
+        internal static string ResolvePowerShell()
+        {
+            var candidates = new List<string>
+            {
+                "powershell.exe",
+                "pwsh.exe",
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "WindowsPowerShell", "v1.0", "powershell.exe"),
+                Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles), "PowerShell", "7", "pwsh.exe")
+            };
+            foreach (var c in candidates)
+            {
+                try
+                {
+                    if (!Path.IsPathRooted(c)) return c; // 交由 Process 去 PATH 解析
+                    if (File.Exists(c)) return c;
+                }
+                catch { }
+            }
+            return null;
+        }
+
         internal static ScanExecutionOutput RunBash(string scriptContent, int timeoutSeconds)
         {
+            // gdterm 是 Windows 应用：本机没有 bash，linux 插件必须走 SSH/WMI 远端通道
+            if (Environment.OSVersion.Platform == PlatformID.Win32NT)
+            {
+                return new ScanExecutionOutput
+                {
+                    RuntimeError = "本机是 Windows：linux 脚本请选择“当前远程主机（SSH）”目标执行"
+                };
+            }
             var psi = new ProcessStartInfo
             {
                 FileName = "/bin/bash",
@@ -164,6 +205,25 @@ namespace Gdterm.Tools.Scanning
 
         public string Name { get { return "SSH 远端"; } }
 
+        /// <summary>超过此大小的脚本才需要 SFTP 上传；以内一律 base64 内联。</summary>
+        internal const int InlineScriptLimit = 200 * 1024;
+
+        /// <summary>
+        /// base64 内联执行：写入唯一临时文件后运行并清理，保留退出码。
+        /// 不需要 SFTP 子系统，只要目标有 sh 和 base64（coreutils/busybox 均内置）。
+        /// </summary>
+        private RemoteCommandResult RunInline(byte[] bytes)
+        {
+            var b64 = Convert.ToBase64String(bytes);
+            var tmp = "/tmp/.gdterm_scan_$$.sh"; // $$=远端 shell pid，天然防并发冲突
+            var cmdline = "printf %s " + b64
+                + " | base64 -d > " + tmp
+                + "; sh " + tmp
+                + "; __rc=$?; rm -f " + tmp
+                + "; exit $__rc";
+            return _session.RunCommand(cmdline);
+        }
+
         public bool Supports(string scriptKind)
         {
             return (_session != null && _session.IsConnected) && (scriptKind == "linux" || scriptKind == "windows");
@@ -194,12 +254,22 @@ namespace Gdterm.Tools.Scanning
                 }
                 else
                 {
-                    using (var transfer = _session.CreateFileTransfer())
+                    var bytes = Encoding.UTF8.GetBytes(scriptContent ?? "");
+                    if (bytes.Length <= InlineScriptLimit)
                     {
-                        tempPath = transfer.UploadToTemp(Encoding.UTF8.GetBytes(scriptContent ?? ""), "gdterm_scan_" + Guid.NewGuid().ToString("N").Substring(0, 8) + ".sh");
-                        // 显式回传退出码并清理临时文件
-                        result = _session.RunCommand("sh " + tempPath + "; __rc=$?; rm -f " + tempPath + "; exit $__rc");
-                        tempPath = null; // 命令内已清理
+                        // 主通道：base64 内联下发——零 SFTP 依赖，目标机只需 sh + coreutils base64
+                        result = RunInline(bytes);
+                    }
+                    else
+                    {
+                        // 大脚本回退 SFTP 上传
+                        using (var transfer = _session.CreateFileTransfer())
+                        {
+                            tempPath = transfer.UploadToTemp(bytes, "gdterm_scan_" + Guid.NewGuid().ToString("N").Substring(0, 8) + ".sh");
+                            // 显式回传退出码并清理临时文件
+                            result = _session.RunCommand("sh " + tempPath + "; __rc=$?; rm -f " + tempPath + "; exit $__rc");
+                            tempPath = null; // 命令内已清理
+                        }
                     }
                 }
                 if (tempPath != null)

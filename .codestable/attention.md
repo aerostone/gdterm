@@ -65,8 +65,10 @@
 - 所有工具支持 config 文件自定义（data/config/tools/*.json）
 - 扫描体系已插件化（2026-08 用户决策，取代旧的"仅内置模块"约束）：Gdterm.Tools/Scanning，
   插件 = manifest.json + ps1/sh 脚本于 data\plugins\scanner\，输出契约 FINDING|级别|标题|详情，
-  FileSystemWatcher 热更新；通道 LocalChannel/SshChannel（win 远端与宿主机同源 ps1 EncodedCommand），
-  WinRM/Ansible 预留；脚本必须落在插件目录内（防越界）；UI 入口 工具→扫描中心（插件）
+  FileSystemWatcher 热更新；通道 LocalChannel（PowerShell 解析链：PATH→pwsh→System32 显式路径）/SshChannel
+  （linux 脚本 base64 内联为主、SFTP 仅大文件回退；win 远端与宿主机同源 ps1 EncodedCommand）/
+  WmiScanChannel（远端 Windows 无 OpenSSH 的备用通道，Win32_Process+ADMIN$ 取回），
+  Ansible 预留；脚本必须落在插件目录内（防越界）；UI 入口 工具→扫描中心（插件）
 - 运维工具箱本体仍是内置模块（IToolModule），插件化仅限扫描体系
 - 密码分析器检测弱/重复/过期密码，生成健康报告
 - 凭据继承支持文件夹→子连接传播，连接级覆盖优先

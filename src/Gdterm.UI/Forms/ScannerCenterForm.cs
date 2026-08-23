@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -30,6 +30,12 @@ namespace Gdterm.UI.Forms
         private Label _findingHeader;
         private TextBox _rawOutput;
         private SplitContainer _split;
+
+        // WMI 免 SSH 通道的连接参数行（仅该目标可见）
+        private Panel _wmiPanel;
+        private TextBox _wmiHost;
+        private TextBox _wmiUser;
+        private TextBox _wmiPass;
 
         private readonly ScanRunner _runner = new ScanRunner();
         private bool _running;
@@ -78,12 +84,13 @@ namespace Gdterm.UI.Forms
             _targetCombo = new ComboBox
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Width = 240
+                Width = 250
             };
             _targetCombo.Items.Add("本机（Windows）");
-            _targetCombo.Items.Add("当前远程主机（需已连接）");
+            _targetCombo.Items.Add("当前远程主机（SSH 已连）");
+            _targetCombo.Items.Add("远程 Windows（WMI·免SSH）");
             _targetCombo.SelectedIndex = 0;
-            _targetCombo.SelectedIndexChanged += (s, ev) => UpdateRunButtonState();
+            _targetCombo.SelectedIndexChanged += (s, ev) => { UpdateWmiPanelVisibility(); UpdateRunButtonState(); };
             top.Controls.Add(_targetCombo);
 
             _runButton = new Button { Text = "运行选中", Width = 96 };
@@ -190,7 +197,10 @@ namespace Gdterm.UI.Forms
             rawHeader.BringToFront();
             rightSplit.Panel2.Controls.Add(rawPanel);
             _split.Panel2.Controls.Add(rightSplit);
+            // Dock 按添加逆序布局：先加 Fill，再加两个 Top，视觉自上而下 = top / wmi / split
             Controls.Add(_split);
+            Controls.Add(BuildWmiPanel());
+            UpdateWmiPanelVisibility();
 
             // 必须在停靠生效（获得真实尺寸）后再设，否则构造期默认尺寸过小会拋参数异常；
             // 布局在句柄创建后才完成，故延到 OnShown
@@ -266,9 +276,44 @@ namespace Gdterm.UI.Forms
             _hotStateLabel.Text = string.Format("热更新监控中 · {0} 个插件（可运行 {1}）", total, runnable);
         }
 
+        /// <summary>WMI 目标的主机/凭据行；仅选中 WMI 目标时显示。</summary>
+        private Panel BuildWmiPanel()
+        {
+            _wmiPanel = new Panel { Dock = DockStyle.Top, Height = 34, Visible = false };
+            var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Padding = new Padding(8, 4, 8, 0) };
+            flow.Controls.Add(new Label { Text = "主机:", AutoSize = true, Margin = new Padding(3, 9, 4, 0) });
+            _wmiHost = new TextBox { Width = 160 };
+            flow.Controls.Add(_wmiHost);
+            flow.Controls.Add(new Label { Text = "用户名:", AutoSize = true, Margin = new Padding(10, 9, 4, 0) });
+            _wmiUser = new TextBox { Width = 140 };
+            flow.Controls.Add(_wmiUser);
+            flow.Controls.Add(new Label { Text = "密码:", AutoSize = true, Margin = new Padding(10, 9, 4, 0) });
+            _wmiPass = new TextBox { Width = 140, UseSystemPasswordChar = true };
+            flow.Controls.Add(_wmiPass);
+            flow.Controls.Add(new Label
+            {
+                Text = "留空凭据=用当前身份；域账号格式 DOMAIN\\user；需目标管理员权限 + ADMIN$ 共享",
+                AutoSize = true,
+                ForeColor = SystemColors.GrayText,
+                Margin = new Padding(10, 9, 3, 0)
+            });
+            _wmiPanel.Controls.Add(flow);
+            return _wmiPanel;
+        }
+
+        private void UpdateWmiPanelVisibility()
+        {
+            if (_wmiPanel != null) _wmiPanel.Visible = IsWmiTarget;
+        }
+
         private bool IsRemoteTarget
         {
             get { return _targetCombo != null && _targetCombo.SelectedIndex == 1; }
+        }
+
+        private bool IsWmiTarget
+        {
+            get { return _targetCombo != null && _targetCombo.SelectedIndex == 2; }
         }
 
         private List<ScanPlugin> SelectedRunnablePlugins()
@@ -282,7 +327,12 @@ namespace Gdterm.UI.Forms
         private void UpdateRunButtonState()
         {
             if (_runButton == null) return;
-            _runButton.Enabled = !_running && SelectedRunnablePlugins().Count > 0 && (!IsRemoteTarget || RemoteSessionAvailable());
+            if (IsRemoteTarget)
+                _runButton.Enabled = !_running && SelectedRunnablePlugins().Count > 0 && RemoteSessionAvailable();
+            else if (IsWmiTarget)
+                _runButton.Enabled = !_running && SelectedRunnablePlugins().Count > 0;
+            else
+                _runButton.Enabled = !_running && SelectedRunnablePlugins().Count > 0;
         }
 
         private bool RemoteSessionAvailable()
@@ -293,6 +343,35 @@ namespace Gdterm.UI.Forms
                 return s != null && s.IsConnected;
             }
             catch { return false; }
+        }
+
+        /// <summary>构造对应目标的执行通道。</summary>
+        private IScanChannel BuildChannel(out string validationError)
+        {
+            validationError = null;
+            if (IsWmiTarget)
+            {
+                var host = (_wmiHost != null ? _wmiHost.Text : "").Trim();
+                if (host.Length == 0)
+                {
+                    validationError = "请填写远程主机地址（IP 或机器名）";
+                    return null;
+                }
+                return new Gdterm.Tools.Scanning.WmiScanChannel(host,
+                    _wmiUser != null ? _wmiUser.Text.Trim() : "",
+                    _wmiPass != null ? _wmiPass.Text : "");
+            }
+            if (IsRemoteTarget)
+            {
+                var session = _remoteSessionFactory != null ? _remoteSessionFactory() : null;
+                if (session == null || !session.IsConnected)
+                {
+                    validationError = "没有已连接的 SSH 远程主机。若目标无法安装 OpenSSH Server，可改选「远程 Windows（WMI·免SSH）」。";
+                    return null;
+                }
+                return new SshScanChannel(session);
+            }
+            return new LocalScanChannel();
         }
 
         private void OnOpenPluginsFolder(object sender, EventArgs e)
@@ -316,20 +395,12 @@ namespace Gdterm.UI.Forms
             if (plugins.Count == 0) return;
 
             IScanChannel channel;
-            if (IsRemoteTarget)
+            string validationError;
+            channel = BuildChannel(out validationError);
+            if (channel == null)
             {
-                var session = _remoteSessionFactory != null ? _remoteSessionFactory() : null;
-                if (session == null || !session.IsConnected)
-                {
-                    MessageBox.Show(this, "没有已连接的 SSH 远程主机。请先连接一个远程会话再选“当前远程主机”。",
-                        "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-                channel = new SshScanChannel(session);
-            }
-            else
-            {
-                channel = new LocalScanChannel();
+                MessageBox.Show(this, validationError, "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
 
             _running = true;
