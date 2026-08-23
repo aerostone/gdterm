@@ -7,6 +7,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 
 namespace Gdterm.Security
@@ -29,8 +30,11 @@ namespace Gdterm.Security
 
         // ── 状态 ──
         public bool IsScanning { get; private set; }
-        public int FilesScanned { get; private set; }
-        public int FindingsCount { get; private set; }
+        // 并行计数需要 Interlocked，必须用字段后备（ref 不能指向自动属性）
+        private int _filesScanned;
+        private int _findingsCount;
+        public int FilesScanned { get { return _filesScanned; } private set { _filesScanned = value; } }
+        public int FindingsCount { get { return _findingsCount; } private set { _findingsCount = value; } }
 
         public SecretScanner(SecretScanConfig config)
         {
@@ -56,6 +60,7 @@ namespace Gdterm.Security
             IsScanning = true;
             FilesScanned = 0;
             FindingsCount = 0;
+            _progress = 0;
             _scanThread.Start();
         }
 
@@ -66,38 +71,11 @@ namespace Gdterm.Security
             IsScanning = false;
         }
 
-        /// <summary>同步扫描（阻塞调用线程）</summary>
+        /// <summary>同步扫描（阻塞调用线程）。多核并行：读文件+正则匹配按 CPU 核数分流。</summary>
         public SecretScanReport Scan()
         {
             var report = new SecretScanReport();
-            var allFiles = CollectFiles();
-            int total = allFiles.Count;
-
-            for (int i = 0; i < total; i++)
-            {
-                var filePath = allFiles[i];
-                try
-                {
-                    var findings = ScanFile(filePath);
-                    foreach (var f in findings)
-                    {
-                        if (!_whitelist.Contains(f.FilePath + ":" + f.MatchedContent))
-                        {
-                            report.Findings.Add(f);
-                            FindingsCount++;
-                            FindingDetected?.Invoke(f);
-                        }
-                    }
-                    FilesScanned++;
-                    ProgressChanged?.Invoke(i + 1, total);
-                }
-                catch (Exception ex)
-                {
-                    ErrorOccurred?.Invoke(string.Format("{0}: {1}", filePath, ex.Message));
-                    report.FilesSkipped++;
-                }
-            }
-
+            ScanFilesParallel(CollectFiles(), CancellationToken.None, report);
             report.FilesScanned = FilesScanned;
             report.ScanCompleted = DateTime.Now;
             ScanCompleted?.Invoke(report);
@@ -111,35 +89,7 @@ namespace Gdterm.Security
             try
             {
                 var report = new SecretScanReport();
-                var allFiles = CollectFiles();
-                int total = allFiles.Count;
-
-                for (int i = 0; i < total; i++)
-                {
-                    if (ct.IsCancellationRequested) break;
-
-                    var filePath = allFiles[i];
-                    try
-                    {
-                        var findings = ScanFile(filePath);
-                        foreach (var f in findings)
-                        {
-                            if (!_whitelist.Contains(f.FilePath + ":" + f.MatchedContent))
-                            {
-                                report.Findings.Add(f);
-                                FindingsCount++;
-                                FindingDetected?.Invoke(f);
-                            }
-                        }
-                        FilesScanned++;
-                        ProgressChanged?.Invoke(i + 1, total);
-                    }
-                    catch { report.FilesSkipped++; }
-
-                    // 降低CPU占用：每扫描50个文件让出时间片
-                    if (i % 50 == 49) Thread.Sleep(10);
-                }
-
+                ScanFilesParallel(CollectFiles(), ct, report);
                 report.FilesScanned = FilesScanned;
                 report.ScanCompleted = DateTime.Now;
                 ScanCompleted?.Invoke(report);
@@ -153,6 +103,63 @@ namespace Gdterm.Security
                 IsScanning = false;
             }
         }
+
+        /// <summary>
+        /// 并行扫描核心：文件级并行（读 IO + 正则都是可并行的），
+        /// 计数用 Interlocked、发现入并发队列；事件由 UI 侧 BeginInvoke 封送，工作线程触发安全。
+        /// </summary>
+        private void ScanFilesParallel(List<string> allFiles, CancellationToken ct, SecretScanReport report)
+        {
+            int total = allFiles.Count;
+            if (total == 0) return;
+            Interlocked.Exchange(ref _progress, 0);
+
+            var skipped = new int[1]; // 数组包装以便 lambda 内自增（C# 7.3 闭包对局部变量也可，但数组更明确）
+            var errors = new System.Collections.Concurrent.ConcurrentQueue<string>();
+
+            var options = new ParallelOptions
+            {
+                CancellationToken = ct,
+                MaxDegreeOfParallelism = Math.Max(2, Environment.ProcessorCount)
+            };
+
+            Parallel.For(0, total, options, filePath =>
+            {
+                try
+                {
+                    var findings = ScanFile(filePath);
+                    foreach (var f in findings)
+                    {
+                        if (!_whitelist.Contains(f.FilePath + ":" + f.MatchedContent))
+                        {
+                            lock (report.Findings)
+                            {
+                                report.Findings.Add(f);
+                            }
+                            Interlocked.Increment(ref FindingsCount);
+                            FindingDetected?.Invoke(f); // UI 侧已 BeginInvoke 封送
+                        }
+                    }
+                    Interlocked.Increment(ref _filesScanned);
+                    ProgressChanged?.Invoke(Interlocked.Increment(ref _progress), total);
+                }
+                catch (OperationCanceledException)
+                {
+                    throw; // Parallel.For 靠它整体取消
+                }
+                catch (Exception ex)
+                {
+                    Interlocked.Increment(ref skipped[0]);
+                    errors.Enqueue(filePath + ": " + ex.Message);
+                }
+            });
+
+            report.FilesSkipped += skipped[0];
+            string err;
+            while (errors.TryDequeue(out err)) ErrorOccurred?.Invoke(err);
+        }
+
+        private int _progress;
 
         /// <summary>扫描单个文件</summary>
         public List<SecretFinding> ScanFile(string filePath)
