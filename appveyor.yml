@@ -179,14 +179,14 @@ after_test:
       # 3c) fzf / fd（本地终端随附工具——运行时加入 PATH，详见 lib\fzf\README.txt）
       #     均为官方 Win7 兼容版：fzf v0.65.2（末代 Win7 支持）、fd v10.2.0（Rust 1.77 锁定构建）
       foreach ($tool in @('fzf','fd')) {
-        $exe = Join-Path "lib\$tool" "$tool.exe"
+        $exe = "lib\${tool}\${tool}.exe"
         if (Test-Path $exe) {
-          $tDir = Join-Path $out $tool
+          $tDir = Join-Path $out ${tool}
           New-Item -ItemType Directory -Path $tDir -Force | Out-Null
-          Copy-Item "lib\$tool\*" $tDir -Recurse -Force
-          Write-Host "Packed $tool: $((Get-ChildItem $tDir -File).Count) files"
+          Copy-Item "lib\${tool}\*" $tDir -Recurse -Force
+          Write-Host ("Packed {0}: {1} files" -f $tool, (Get-ChildItem $tDir -File).Count)
         } else {
-          Write-Warning "lib\$tool\$tool.exe missing - skipped"
+          Write-Warning "lib\${tool}\${tool}.exe missing - skipped"
         }
       }
 
