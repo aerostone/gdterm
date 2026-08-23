@@ -65,10 +65,10 @@ install:
       # ---- CMake 配置 + 编译（静态 CRT 免 VC redist、静态通道、最小依赖）----
       $bld = "$env:TEMP\freerdp-build"
       if (Test-Path $bld) { Remove-Item -Recurse -Force $bld }
+      # CMake 4.x 移除了对 cmake_minimum_required(<3.5) 的兼容，
+      # FreeRDP 2.11.7 声明的是 2.8 —— 用官方逃生门变量放行
       cmake -S $root -B $bld -G "Visual Studio 17 2022" -A x64 `
         "-DCMAKE_BUILD_TYPE=Release" `
-        # CMake 4.x 移除了对 cmake_minimum_required(<3.5) 的兼容，
-        # FreeRDP 2.11.7 声明的是 2.8 —— 用官方逃生门变量放行
         "-DCMAKE_POLICY_VERSION_MINIMUM=3.5" `
         "-DOPENSSL_ROOT_DIR=$($ossl -replace '\\','/')" `
         "-DWITH_CLIENT_COMMON=ON" "-DWITH_CLIENT=ON" `
