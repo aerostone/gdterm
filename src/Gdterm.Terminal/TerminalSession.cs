@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using Gdterm.Core.Models;
 using Gdterm.Terminal.Diagnostics;
@@ -253,14 +252,18 @@ namespace Gdterm.Terminal
         {
             try
             {
-                bool hasKey = credential != null && !string.IsNullOrWhiteSpace(credential.SshPrivateKey);
+                bool hasKey = credential != null && credential.SshPrivateKey != null && credential.SshPrivateKey.Length > 0;
                 bool hasPwd = credential != null && !string.IsNullOrWhiteSpace(credential.Password);
                 string auth = hasKey ? (hasPwd ? "key+password" : "key") : (hasPwd ? "password" : "none");
-                string methods = connInfo != null && connInfo.AuthenticationMethods != null
-                    ? string.Join(",", connInfo.AuthenticationMethods.Select(m => m.Name))
-                    : "?";
+                var methodNames = new System.Text.StringBuilder();
+                if (connInfo != null && connInfo.AuthenticationMethods != null)
+                    foreach (var am in connInfo.AuthenticationMethods)
+                    {
+                        if (methodNames.Length > 0) methodNames.Append(',');
+                        methodNames.Append(am != null ? am.Name : "?");
+                    }
                 TerminalLog.Info("SshSession.Connect",
-                    "mode=" + mode + " auth=" + auth + " sshnetMethods=" + methods +
+                    "mode=" + mode + " auth=" + auth + " sshnetMethods=" + methodNames +
                     " timeoutMs=" + (connInfo != null ? connInfo.Timeout.TotalMilliseconds.ToString("0") : "?"));
             }
             catch { }
