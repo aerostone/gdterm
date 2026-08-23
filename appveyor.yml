@@ -79,24 +79,18 @@ install:
         "-DBUILD_TESTING=OFF" "-DWITH_SAMPLE=OFF" "-DWITH_MANPAGES=OFF" `
         "-DWITH_CAIRO=OFF" "-DWITH_JPEG=OFF" "-DWITH_SWSCALE=OFF" "-DWITH_DSP_FFMPEG=OFF" `
         "-DWITH_GSSAPI=OFF" "-DWITH_ICU=OFF" "-DCHANNEL_URBDRC=OFF" `
-        "-DBUILTIN_CHANNELS=ON" "-DMSVC_RUNTIME=static"
+        "-DBUILTIN_CHANNELS=ON" "-DMSVC_RUNTIME=static" `
+        # 静态 CRT 要求全静态（BUILD_SHARED_LIBS=OFF）→ 产物为单个自包含 wfreerdp.exe；
+        # OpenSSL 同步用 /MT 静态库，避免 /MT 主程序混链 /MD 库的 CRT 状态问题
+        "-DBUILD_SHARED_LIBS=OFF" "-DOPENSSL_USE_STATIC_LIBS=ON"
       if ($LASTEXITCODE -ne 0) { throw "cmake configure failed exit=$LASTEXITCODE" }
       cmake --build $bld --config Release -- /m /v:m
       if ($LASTEXITCODE -ne 0) { throw "FreeRDP build failed exit=$LASTEXITCODE" }
 
-      # ---- 收集产物：exe + 自家 DLL + OpenSSL 运行时 DLL ----
-      foreach ($n in @('wfreerdp.exe','freerdp2.dll','winpr2.dll')) {
-        $f = Get-ChildItem -Path $bld -Recurse -Filter $n -ErrorAction SilentlyContinue | Select-Object -First 1
-        if ($f) { Copy-Item $f.FullName $frBin -Force; Write-Host "Collected $($f.FullName)" }
-        else { throw "Build output missing: $n" }
-      }
-      foreach ($pat in @('libcrypto-*.dll','libssl-*.dll')) {
-        Get-ChildItem -Path $ossl -Recurse -Filter $pat -ErrorAction SilentlyContinue |
-          Where-Object { $_.FullName -notmatch 'static' } |
-          Select-Object -First 1 | ForEach-Object {
-            Copy-Item $_.FullName $frBin -Force; Write-Host "Collected $($_.Name)"
-          }
-      }
+      # ---- 收集产物（全静态构建 → 单个 wfreerdp.exe，无自家/第三方 DLL）----
+      $f = Get-ChildItem -Path $bld -Recurse -Filter 'wfreerdp.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+      if ($f) { Copy-Item $f.FullName $frBin -Force; Write-Host "Collected $($f.FullName) ($([math]::Round($f.Length/1MB,1)) MB)" }
+      else { throw "Build output missing: wfreerdp.exe" }
       # Apache-2.0 许可证随分发保留
       $lic = Join-Path $root 'LICENSE'
       if (Test-Path $lic) { Copy-Item $lic (Join-Path $frBin 'LICENSE.FreeRDP.txt') -Force }
