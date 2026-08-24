@@ -136,6 +136,7 @@ namespace Gdterm.UI.Forms
             _pluginList.Columns.Add("目标", 90);
             _pluginList.Columns.Add("分类", 70);
             _pluginList.Columns.Add("来源", 66);
+            _pluginList.Columns.Add("签名", 74);
             _pluginList.Columns.Add("版本", 50);
             _pluginList.SelectedIndexChanged += (s, ev) => UpdateRunButtonState();
             _pluginList.DoubleClick += (s, ev) => { if (!_running && SelectedRunnablePlugins().Count > 0) OnRunClicked(null, null); };
@@ -257,6 +258,7 @@ namespace Gdterm.UI.Forms
                 item.SubItems.Add(p.TargetSummary);
                 item.SubItems.Add(p.Manifest != null ? (p.Manifest.Category ?? "-") : "-");
                 item.SubItems.Add(p.Source == "builtin" ? "内置" : "用户");
+                item.SubItems.Add(TrustBadge(p));
                 item.SubItems.Add(p.Manifest != null ? (p.Manifest.Version ?? "-") : "-");
                 if (p.LoadError != null)
                     item.ToolTipText = p.LoadError;
@@ -314,6 +316,18 @@ namespace Gdterm.UI.Forms
         private bool IsWmiTarget
         {
             get { return _targetCombo != null && _targetCombo.SelectedIndex == 2; }
+        }
+
+        /// <summary>签名徽标：官方签名/未签名/签名无效，颜色区分。</summary>
+        private static string TrustBadge(ScanPlugin p)
+        {
+            if (p.LoadError != null) return "-";
+            switch (p.Trust)
+            {
+                case ScanTrust.Trusted: return "官方签名";
+                case ScanTrust.Invalid: return "签名无效!";
+                default: return "未签名";
+            }
         }
 
         private List<ScanPlugin> SelectedRunnablePlugins()
@@ -393,6 +407,29 @@ namespace Gdterm.UI.Forms
             if (_running) return;
             var plugins = SelectedRunnablePlugins();
             if (plugins.Count == 0) return;
+
+            // 签名门禁：Invalid 拒跑；Unsigned 首次逐个确认并记台账（内容变更后重新问）
+            foreach (var p in plugins)
+            {
+                if (p.Trust == ScanTrust.Invalid)
+                {
+                    MessageBox.Show(this,
+                        "插件「" + p.DisplayName + "」的官方签名校验失败：\r\n\r\n" + p.ScriptPath +
+                        "\r\n\r\n内容可能与发布时不一致（疑似被篡改），已拒绝运行。",
+                        "签名无效", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
+                if (p.Trust == ScanTrust.Unsigned && !_store.IsApproved(p))
+                {
+                    var r = MessageBox.Show(this,
+                        "插件「" + p.DisplayName + "」未经官方签名，无法验证来源。\r\n\r\n" +
+                        "脚本: " + p.ScriptPath + "\r\n\r\n是否信任并运行？\r\n（批准按内容哈希记账；之后修改该插件会再次询问）",
+                        "运行未签名插件", MessageBoxButtons.YesNo, MessageBoxIcon.Warning,
+                        MessageBoxDefaultButton.Button2);
+                    if (r != DialogResult.Yes) return;
+                    _store.Approve(p);
+                }
+            }
 
             IScanChannel channel;
             string validationError;

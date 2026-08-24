@@ -9,6 +9,9 @@ namespace Gdterm.Tools.Scanning
         public string ManifestJson { get; set; }
         public string ScriptFile { get; set; }
         public string ScriptContent { get; set; }
+
+        /// <summary>官方签名的 plugin.sig 文件内容（JSON 信封）；物化时与脚本一起写出。</summary>
+        public string SignatureJson { get; set; }
     }
 
     /// <summary>
@@ -85,7 +88,14 @@ foreach ($d in $dirs) {
   }
 }
 Write-Output ('完成: 命中 ' + $count + ' 处')
-"
+",
+            SignatureJson = @"{
+  ""alg"": ""RSA-SHA256-PKCS1"",
+  ""keyId"": ""gdterm-official-1"",
+  ""manifest"": ""b2c06a5a36bcece05698fa4ca2f0dc57e7c2954e677e80c906eb8f294d59292b"",
+  ""script"": ""2156a58b3f59b0d2626aa6142f0811c289eca77facfb93c9e7e7f9a7cf23398b"",
+  ""signature"": ""CejvglY5nj0Ud8BUwyWkCUNfH/wbwHNjhUBN0GDM9jCB6zip6sxPEg+2me8P/cEk5DdX1PCx1JI7kP1U2/Z11QRGUu7Y+mFleVueUdWHLtcOCxTnI3ahrFwnVQW3xBiuXXdRqmOkWceL9hTiUlbylRNi+/a2U5+my1HudoSO5xehYZIPoqy0TZLb1vCFG1lyFAgFUwtibKOkza365jOFXKemPHvd36ogRmVdV4wloJrfYW0vJYUM4N5drPt0KgwsqzRNmagwQeLYRA9q89BTvc02ZQb3OYBakuiZ3xGqV+eFgud3X7J2UHykC8QIg7EhTi7gaX1zjgzRu6uFtQsREkhDe0KgtmL174UWSFTZ8rsGTRcdKFDZeCw5QXboMyepIuG8L8mc4dSmgjPQhoATA6VQ21fpFIthpWhxpc4djXuasaB5pR5wvG9lrUfSpROi7m3SNQCN+VkSE407587yIeyobABFA8zUatWHoVTFHQV4XR48Fy8sQCiHHeHZkotQ""
+}"
         };
 
         // ===== 2. 本机证书体检 =====
@@ -133,7 +143,14 @@ foreach ($store in $stores) {
   }
 }
 Write-Output '证书体检完成'
-"
+",
+            SignatureJson = @"{
+  ""alg"": ""RSA-SHA256-PKCS1"",
+  ""keyId"": ""gdterm-official-1"",
+  ""manifest"": ""7e0bd9e69451c0b17c10d87b053c17a3f499c8b1309e9160f61743206f349b70"",
+  ""script"": ""cdc8fb89356f975ca2e7b187d017d13fbb5468c6d11fe40e9b67969649588769"",
+  ""signature"": ""DaMlod7RTlCsxpC7hRufA5oxehUX+ysLEoXl/b24VAUWt1i+DkH/sTWPDQRAbezb9G9VZ022zX3Vxd8v5oeHMSxL+fR1j8G1YEU8uq5CDe/LyD3XVuHLNfuvyBB//EGsCWXSH0fGy+kwgs6FGeXh0ddsZfzjrXmd4Fv/G9Q6Olgawu+0buDT9752dJZWWmqeHmaF7KoquoDAQp60M16f8tNnWvzF8jkQCEG/HTlw2BLsImNsZ8hs977YzUQegoOK8srMNpUIGQCZQBucA6clM42qtbC0R0VkyT7VLj2Vnl9tChmxbLJzTI0v5tVE5G/5yJDrOT4Wq+ZwfDigKFInNKiwN8KO+Vpx0WAHY4xQOowAe+qyd/cp/zJxdDUMeMRoYcJ/8y8hQ3wWJzybM8ZSzYwOnEd0sAhXh1wloMlJqzIgxQqO+TmwtCGMgW7f/+7YnBjeM3o+ldsI8ONozWHO4eD6qopBUDX4UXEDqwl7dlfJZza01PF0tWEqqQoiBwXq""
+}"
         };
 
         // ===== 3. 本机时间同步状态 =====
@@ -187,7 +204,14 @@ try {
   }
 } catch { Write-Output ('查询配置失败: ' + $_.Exception.Message) }
 Write-Output 'NTP 状态检查完成'
-"
+",
+            SignatureJson = @"{
+  ""alg"": ""RSA-SHA256-PKCS1"",
+  ""keyId"": ""gdterm-official-1"",
+  ""manifest"": ""436f3968b000f8e66e4d61aa13cd8d3a60b52995ebf20f31100a0f128b7dd06d"",
+  ""script"": ""939e087ce42303e2ae5abc10dc8e8d9325d36d7f8876ae2d905f90c4d5d38f40"",
+  ""signature"": ""Hem7s/JbHNb/S/MiPtqOoz5+VgkmiTL8vdZztq8eaVqsoBupe2x2I26hLHxt7hxCBoO4g0TKGAtdrmXx3JGfPMvX9RAw0YcMflaEooFhBXX8w14/WS048P4xioYOWv/JSz4vBHHABzeXzut5htFnqL2FmUs9P9M1APKlfiJEoTz2F9Yl6slw7PSbtpTLvsEzyLQJa/4ZdZR4wLpK6U4r+otzhKGS5t2EIgMk3Z8j271zqBKoiFqIJfcwNprq9ldajMnYAWpaHoDpiVGaeU5R7zOLgNK0JDYOzjB4UEcYvRPhEpzrwIMdzA/qaORcSHviY9QTnPQa1TMBTSz1WyGlbEYQTxqeG7LVa6tyMVhJsCw/zxQoTZdUii8iDNFPtC2v5oeIkyGtR3Pqz+Stdmyfwn4G9UeRM7AFFH1r98hCGhUaWIJLWp6Us3NJIwFOM/Ud2I2sGsY2lfCXA/vwcwQQL/ioLct1OObb/QLGA4EgNed4xrJ7kYYPVvRH/8u4ntRD""
+}"
         };
 
         // ===== 4. Linux 健康基线 =====
@@ -263,7 +287,14 @@ for keydir in /root/.ssh ""$HOME/.ssh""; do
 done
 
 echo 'Linux 基线检查完成'
-"
+",
+            SignatureJson = @"{
+  ""alg"": ""RSA-SHA256-PKCS1"",
+  ""keyId"": ""gdterm-official-1"",
+  ""manifest"": ""0f3a579a5b710af5fa814bbc3c8ae58cd8088a4002fc800aa36a0910905f3adc"",
+  ""script"": ""07218602f1454117bf297d414cc52179c50329e7b5d9654ad29cc45162c595fb"",
+  ""signature"": ""G4m/CTSvlkjDlTGgJtGmf0Ec8mn1WtrtUN3EeYg8/xtmxKE5LKnqHnlAOaymEEyeTvHICLYuKEMztQs9zV1d72n/79aO3LYzZrovKxzum6Dh4BQqQHIA5HeBEg6QtTbhMW9CIRoPEvpOT7DuFoMJ71yS0M+6dTIuQnzd0h/18cpXkmdW40HkvMMsOGdh3J448Yqn4huHKyYF4cTiLMKklKMvXdqSGr5BV10oVR4Xpvrg23RJ3bxLfF06QkE2jqEuE7J6MlNJWTGmZVbqmoYmnosgjRvre67g3XV9+8kgaOq36sNdGwuotNu/GkYXW6iwlParOPBNBuuGTpp5/u3LxdEYqeTqefX7fKp6VkHaN2UXJMjs2ulcnhQhyFc55/ToN/Oj/XkhwGYHMXk7EsP1w+E/jmzzKxAKI+e1+QQKO7JkjhD9xWYesTkVq4H45KuXBaeA5YTsYqag+hjN/qsJMYj2tKdI+W0wKpSqcUl+EWnYvTvOsbhZGVcN4Y8nm5Fl""
+}"
         };
     }
 }

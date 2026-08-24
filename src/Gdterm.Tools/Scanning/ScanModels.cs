@@ -38,6 +38,19 @@ namespace Gdterm.Tools.Scanning
         public bool Enabled { get; set; } = true;
     }
 
+    /// <summary>插件签名信任状态。</summary>
+    public enum ScanTrust
+    {
+        /// <summary>官方签名验签通过，静默加载执行</summary>
+        Trusted,
+
+        /// <summary>无签名或非官方签名——首次运行需用户确认（按内容哈希记账）</summary>
+        Unsigned,
+
+        /// <summary>有官方签名但内容/签名不匹配——疑似被篡改，硬拒绝执行</summary>
+        Invalid
+    }
+
     /// <summary>加载完成的插件实例。</summary>
     public class ScanPlugin
     {
@@ -51,6 +64,9 @@ namespace Gdterm.Tools.Scanning
 
         /// <summary>加载失败原因（非 null 时此插件不可运行）</summary>
         public string LoadError { get; set; }
+
+        /// <summary>签名信任状态（发现时由仓库计算；LoadError 非 null 时无意义）</summary>
+        public ScanTrust Trust { get; set; }
 
         public bool IsRunnable { get { return LoadError == null && Manifest != null && Manifest.Enabled && File.Exists(ScriptPath); } }
 

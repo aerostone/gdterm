@@ -60,6 +60,14 @@ namespace Gdterm.Tools.Scanning
                     return result;
                 }
 
+                // 签名门禁：官方签名但内容不符 = 篡改信号，无论哪个调用方都必须硬拒绝；
+                // Unsigned 的首次确认在 UI 层（ScannerCenterForm）完成并记入台账。
+                if (plugin.Trust == ScanTrust.Invalid)
+                {
+                    result.RuntimeError = "签名校验失败：插件内容与官方签名不符，疑似被篡改，已拒绝执行";
+                    return result;
+                }
+
                 var kind = manifest.Targets[0].Trim().ToLowerInvariant();
                 if (!channel.Supports(kind))
                 {

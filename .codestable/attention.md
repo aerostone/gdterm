@@ -71,6 +71,12 @@
   （linux 脚本 base64 内联为主、SFTP 仅大文件回退；win 远端与宿主机同源 ps1 EncodedCommand）/
   WmiScanChannel（远端 Windows 无 OpenSSH 的备用通道，Win32_Process+ADMIN$ 取回），
   Ansible 预留；脚本必须落在插件目录内（防越界）；UI 入口 工具→扫描中心（插件）
+- 插件签名信任链（2026-08）：RSA-3072+SHA256，官方公钥 XML 钉死在 ScanPluginStore.OfficialPublicKeyXml
+  （私钥 gdterm-official-1 离线保存于维护者机器，不进仓库/CI）；plugin.sig 记录 manifest/script 双哈希+签名，
+  规范负载 = hex(sha256(manifest))||0x00||hex(sha256(script))；判定：无 sig/外来 keyId → Unsigned（首次运行确认，
+  按 id+内容哈希记账于 data/config/scanner-approved.json），官方 keyId 但哈希/验签不符 → Invalid（篡改信号，Runner 硬拒绝）；
+  内置四插件也走真实签名流程（BuiltinPlugins.SignatureJson 内嵌，物化/版本刷新/无篡改补齐三路径写 .sig）；
+  改动任一 verbatim 内容必须重签（tools 流程见提交历史 python 扫描器，注意 C# verbatim "" 转义成对扫描）
 - 运维工具箱本体仍是内置模块（IToolModule），插件化仅限扫描体系
 - 密码分析器检测弱/重复/过期密码，生成健康报告
 - 凭据继承支持文件夹→子连接传播，连接级覆盖优先

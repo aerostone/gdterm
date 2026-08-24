@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Timers;
 using System.Web.Script.Serialization;
@@ -14,10 +16,14 @@ namespace Gdterm.Tools.Scanning
     ///   builtin：BaseDirectory\plugins\scanner\（首次启动从内嵌资源物化，用户可编辑/停用）
     ///   user   ：data\plugins\scanner\（用户自建）
     /// 热更新：FileSystemWatcher 监控两个根（递归），去抖后重载并触发 PluginsReloaded。
+    /// 签名信任：官方 RSA-3072 公钥钉死在程序集内；Trusted 静默执行，
+    /// Unsigned 首次运行需用户确认（按内容哈希记账），Invalid（内容与签名不符）硬拒绝。
     /// </summary>
     public class ScanPluginStore : IDisposable
     {
-        private readonly string _builtinRoot;
+        /// <summary>官方发布公钥（gdterm-official-1，RSA-3072）。私钥离线保存，不进仓库/CI。</summary>
+        internal const string OfficialPublicKeyXml =
+            "<RSAKeyValue><Modulus>vrrLhL198Q4ERm/hX8vVZx+bw8asZtb0CeBkOPZ/A/t/rRyZxzATY0HKlDNN2heGcySCbk/n1Yh3GZSbBFFFma2Oxa0c34e8PXSNw9rtKIiPgdGnAmMBUEEG6x6CRySRMXrerDGHcDZmPbXdlHpv1Pc8FeTE6aqZWYvKHQxqqUvKSegmFKUPW4QSJFqbiOX2k114w5Qgl9etN1u1J6fjmkhsL+TLn8rPCY/j483KcjLyE5ps+wrGXBHCifsdoEhKji3Ur44O7JgACaQG5lBRXsEIQ8iitm2/dBTAGQ050CdBAAWbmc5lofdR9fXsTyTaNiSM2kvojgQwiIGBflNg74JX8op3hHQDG1QaTsdKMDpW5XHi/h/gOafddUwZmPMzoeFq/XMOaK3txbtGxM4d3EBOb5CRRWnJjtQWssdtG/K6CWpFLy25lHZX7h6eIGEv6hhQ8QcWXR0mn5qKAc5SFhwFs/65M6De/LTqimO/xuaVI387Mnd4leeOCcVe3x3N</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>"
         private readonly string _userRoot;
         private readonly List<ScanPlugin> _plugins = new List<ScanPlugin>();
         private readonly object _gate = new object();
@@ -141,7 +147,8 @@ namespace Gdterm.Tools.Scanning
                     Manifest = manifest,
                     ScriptPath = scriptPath,
                     Source = source,
-                    LoadError = null
+                    LoadError = null,
+                    Trust = VerifyTrust(manifestPath, scriptPath)
                 };
             }
             catch (Exception ex)
@@ -153,6 +160,161 @@ namespace Gdterm.Tools.Scanning
         private static ScanPlugin BadPlugin(string id, ScanPluginManifest manifest, string source, string error)
         {
             return new ScanPlugin { Manifest = manifest, Source = source, LoadError = error };
+        }
+
+        // ===== 官方签名验证（RSA-3072 + SHA256，公钥钉死在程序集） =====
+        // 规范负载 = hex(sha256(manifest.json)) || 0x00 || hex(sha256(脚本))；
+        // plugin.sig 记录两个哈希便于精确报错"哪个文件被改过"。
+        // 判定：无 sig → Unsigned；keyId 非官方 → Unsigned（外来签名视同未签）；
+        //       官方 keyId 但哈希不匹配/验签失败/sig 损坏 → Invalid（篡改信号，硬拒绝）。
+
+        private const string OfficialKeyId = "gdterm-official-1";
+
+        private sealed class SigEnvelope
+        {
+            public string alg { get; set; }
+            public string keyId { get; set; }
+            public string manifest { get; set; }
+            public string script { get; set; }
+            public string signature { get; set; }
+        }
+
+        private static string Sha256Hex(byte[] data)
+        {
+            using (var sha = SHA256.Create())
+            {
+                var sb = new StringBuilder(data.Length * 2);
+                foreach (var b in sha.ComputeHash(data)) sb.Append(b.ToString("x2"));
+                return sb.ToString();
+            }
+        }
+
+        /// <summary>规范负载字节：hex(manifestSha) || 0x00 || hex(scriptSha)。批准台账复用其再散列。</summary>
+        internal static byte[] BuildCanonicalPayload(string manifestPath, string scriptPath)
+        {
+            var d1 = Sha256Hex(File.ReadAllBytes(manifestPath));
+            var d2 = Sha256Hex(File.ReadAllBytes(scriptPath));
+            return Encoding.ASCII.GetBytes(d1 + "\0" + d2);
+        }
+
+        private static ScanTrust VerifyTrust(string manifestPath, string scriptPath)
+        {
+            try
+            {
+                var sigPath = Path.Combine(Path.GetDirectoryName(manifestPath), "plugin.sig");
+                if (!File.Exists(sigPath)) return ScanTrust.Unsigned;
+
+                var env = new JavaScriptSerializer().Deserialize<SigEnvelope>(File.ReadAllText(sigPath));
+                if (env == null || env.signature == null || env.manifest == null || env.script == null)
+                    return ScanTrust.Invalid;
+                if (!string.Equals(env.keyId, OfficialKeyId, StringComparison.Ordinal))
+                    return ScanTrust.Unsigned;
+                if (!string.Equals(env.alg, "RSA-SHA256-PKCS1", StringComparison.Ordinal))
+                    return ScanTrust.Invalid;
+
+                var payload = BuildCanonicalPayload(manifestPath, scriptPath);
+                var text = Encoding.ASCII.GetString(payload);
+                var sep = text.IndexOf('\0');
+                if (!string.Equals(text.Substring(0, sep), env.manifest.ToLowerInvariant(), StringComparison.Ordinal)
+                    || !string.Equals(text.Substring(sep + 1), env.script.ToLowerInvariant(), StringComparison.Ordinal))
+                    return ScanTrust.Invalid; // 内容与签名记录的哈希不符——能精确知道被改过
+
+                using (var rsa = RSA.Create())
+                {
+                    rsa.FromXmlString(OfficialPublicKeyXml);
+                    var ok = rsa.VerifyData(payload, Convert.FromBase64String(env.signature),
+                        HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
+                    return ok ? ScanTrust.Trusted : ScanTrust.Invalid;
+                }
+            }
+            catch
+            {
+                return ScanTrust.Invalid; // sig 存在但读不了/解析不了——按篡改处理
+            }
+        }
+
+        // ===== 未签名插件批准台账（按内容哈希记账，内容变更自动失效重问） =====
+
+        private readonly object _ledgerGate = new object();
+        private List<ApprovedEntry> _approved;
+
+        private sealed class ApprovedEntry
+        {
+            public string id { get; set; }
+            public string hash { get; set; }
+        }
+
+        private string LedgerPath
+        {
+            get { return Path.Combine(Path.GetDirectoryName(_userRoot), "config", "scanner-approved.json"); }
+        }
+
+        private List<ApprovedEntry> LoadLedger()
+        {
+            lock (_ledgerGate)
+            {
+                if (_approved != null) return _approved;
+                _approved = new List<ApprovedEntry>();
+                try
+                {
+                    if (File.Exists(LedgerPath))
+                    {
+                        var box = new JavaScriptSerializer().Deserialize<Dictionary<string, List<ApprovedEntry>>>(File.ReadAllText(LedgerPath));
+                        if (box != null && box.ContainsKey("approved") && box["approved"] != null) _approved = box["approved"];
+                    }
+                }
+                catch { /* 台账损坏视为空——最多重新确认一次 */ }
+                return _approved;
+            }
+        }
+
+        /// <summary>该未签名插件是否已被用户批准过（按 id + 内容哈希记账）。</summary>
+        public bool IsApproved(ScanPlugin plugin)
+        {
+            if (plugin == null || plugin.Trust == ScanTrust.Trusted) return true;
+            var hash = CanonicalHash(plugin);
+            if (hash == null) return false;
+            lock (_ledgerGate)
+            {
+                foreach (var e in LoadLedger())
+                {
+                    if (e != null && string.Equals(e.id, plugin.Id, StringComparison.OrdinalIgnoreCase)
+                        && string.Equals(e.hash, hash, StringComparison.OrdinalIgnoreCase)) return true;
+                }
+            }
+            return false;
+        }
+
+        /// <summary>记录用户对未签名插件的批准。</summary>
+        public void Approve(ScanPlugin plugin)
+        {
+            var hash = CanonicalHash(plugin);
+            if (hash == null) return;
+            lock (_ledgerGate)
+            {
+                var list = LoadLedger();
+                list.RemoveAll(e => e != null && string.Equals(e.id, plugin.Id, StringComparison.OrdinalIgnoreCase));
+                list.Add(new ApprovedEntry { id = plugin.Id, hash = hash });
+                try
+                {
+                    var dir = Path.GetDirectoryName(LedgerPath);
+                    if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+                    File.WriteAllText(LedgerPath,
+                        new JavaScriptSerializer().Serialize(new Dictionary<string, List<ApprovedEntry>> { { "approved", list } }),
+                        new UTF8Encoding(false));
+                }
+                catch { /* 只读盘写不进——本次会话内仍生效 */ }
+            }
+        }
+
+        private static string CanonicalHash(ScanPlugin plugin)
+        {
+            try
+            {
+                var manifestPath = Path.Combine(Path.GetDirectoryName(plugin.ScriptPath), "manifest.json");
+                return Sha256Hex(BuildCanonicalPayload(manifestPath, plugin.ScriptPath));
+            }
+            catch { return null; }
         }
 
         // ===== 内置物化 =====
@@ -172,9 +334,11 @@ namespace Gdterm.Tools.Scanning
                         Directory.CreateDirectory(dir);
                         File.WriteAllText(manifestPath, def.ManifestJson, new System.Text.UTF8Encoding(false));
                         File.WriteAllText(scriptPath, def.ScriptContent, new System.Text.UTF8Encoding(false));
+                        WriteBuiltinSignature(def, Path.Combine(dir, "plugin.sig"));
                         continue;
                     }
                     RefreshOutdatedBuiltin(def, manifestPath, scriptPath);
+                    BackfillPristineSignature(def, manifestPath, scriptPath);
                 }
             }
             catch (Exception)
@@ -200,11 +364,40 @@ namespace Gdterm.Tools.Scanning
 
                 File.WriteAllText(manifestPath, def.ManifestJson, new System.Text.UTF8Encoding(false));
                 File.WriteAllText(scriptPath, def.ScriptContent, new System.Text.UTF8Encoding(false));
+                WriteBuiltinSignature(def, Path.Combine(Path.GetDirectoryName(manifestPath), "plugin.sig"));
             }
             catch (Exception)
             {
                 // 更新失败保留旧文件——旧版能跑总比损坏强
             }
+        }
+
+        /// <summary>升级安装补齐：文件存在且与内嵌逐字节一致（未被用户改过）但缺 .sig 时补写；改过的保持 Unsigned 走确认流。</summary>
+        private static void BackfillPristineSignature(BuiltinPluginDef def, string manifestPath, string scriptPath)
+        {
+            try
+            {
+                var sigPath = Path.Combine(Path.GetDirectoryName(manifestPath), "plugin.sig");
+                if (File.Exists(sigPath)) return;
+                if (def.SignatureJson == null) return;
+                if (!FileMatchesContent(manifestPath, def.ManifestJson)) return;
+                if (!FileMatchesContent(scriptPath, def.ScriptContent)) return;
+                WriteBuiltinSignature(def, sigPath);
+            }
+            catch { }
+        }
+
+        private static bool FileMatchesContent(string path, string expected)
+        {
+            try { return File.ReadAllBytes(path) == new System.Text.UTF8Encoding(false).GetBytes(expected); }
+            catch { return false; }
+        }
+
+        private static void WriteBuiltinSignature(BuiltinPluginDef def, string sigPath)
+        {
+            if (def.SignatureJson == null) return;
+            try { File.WriteAllText(sigPath, def.SignatureJson, new System.Text.UTF8Encoding(false)); }
+            catch { /* 只读盘——下次启动再试 */ }
         }
 
         /// <summary>从 manifest JSON 文本提取 "version" 字段；解析失败视为 "0"。</summary>
