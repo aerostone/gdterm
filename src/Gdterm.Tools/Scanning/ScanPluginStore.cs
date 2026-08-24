@@ -23,7 +23,8 @@ namespace Gdterm.Tools.Scanning
     {
         /// <summary>官方发布公钥（gdterm-official-1，RSA-3072）。私钥离线保存，不进仓库/CI。</summary>
         internal const string OfficialPublicKeyXml =
-            "<RSAKeyValue><Modulus>vrrLhL198Q4ERm/hX8vVZx+bw8asZtb0CeBkOPZ/A/t/rRyZxzATY0HKlDNN2heGcySCbk/n1Yh3GZSbBFFFma2Oxa0c34e8PXSNw9rtKIiPgdGnAmMBUEEG6x6CRySRMXrerDGHcDZmPbXdlHpv1Pc8FeTE6aqZWYvKHQxqqUvKSegmFKUPW4QSJFqbiOX2k114w5Qgl9etN1u1J6fjmkhsL+TLn8rPCY/j483KcjLyE5ps+wrGXBHCifsdoEhKji3Ur44O7JgACaQG5lBRXsEIQ8iitm2/dBTAGQ050CdBAAWbmc5lofdR9fXsTyTaNiSM2kvojgQwiIGBflNg74JX8op3hHQDG1QaTsdKMDpW5XHi/h/gOafddUwZmPMzoeFq/XMOaK3txbtGxM4d3EBOb5CRRWnJjtQWssdtG/K6CWpFLy25lHZX7h6eIGEv6hhQ8QcWXR0mn5qKAc5SFhwFs/65M6De/LTqimO/xuaVI387Mnd4leeOCcVe3x3N</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>"
+            "<RSAKeyValue><Modulus>vrrLhL198Q4ERm/hX8vVZx+bw8asZtb0CeBkOPZ/A/t/rRyZxzATY0HKlDNN2heGcySCbk/n1Yh3GZSbBFFFma2Oxa0c34e8PXSNw9rtKIiPgdGnAmMBUEEG6x6CRySRMXrerDGHcDZmPbXdlHpv1Pc8FeTE6aqZWYvKHQxqqUvKSegmFKUPW4QSJFqbiOX2k114w5Qgl9etN1u1J6fjmkhsL+TLn8rPCY/j483KcjLyE5ps+wrGXBHCifsdoEhKji3Ur44O7JgACaQG5lBRXsEIQ8iitm2/dBTAGQ050CdBAAWbmc5lofdR9fXsTyTaNiSM2kvojgQwiIGBflNg74JX8op3hHQDG1QaTsdKMDpW5XHi/h/gOafddUwZmPMzoeFq/XMOaK3txbtGxM4d3EBOb5CRRWnJjtQWssdtG/K6CWpFLy25lHZX7h6eIGEv6hhQ8QcWXR0mn5qKAc5SFhwFs/65M6De/LTqimO/xuaVI387Mnd4leeOCcVe3x3N</Modulus><Exponent>AQAB</Exponent></RSAKeyValue>";
+        private readonly string _builtinRoot;
         private readonly string _userRoot;
         private readonly List<ScanPlugin> _plugins = new List<ScanPlugin>();
         private readonly object _gate = new object();
