@@ -164,20 +164,51 @@ namespace Gdterm.Tools.Modules
                     }
                     var host = parts[0];
                     int start = 1, end = 1024;
-                    List<PortScanResult> results;
                     if (parts.Length >= 3)
                     {
                         int.TryParse(parts[1], out start);
                         int.TryParse(parts[2], out end);
-                        results = ScanAsync(host, start, end).GetAwaiter().GetResult();
                     }
-                    else
+
+                    // finding-05：扫描在后台线程执行，禁止同步阻塞 UI（此前 GetAwaiter().GetResult()
+                    // 会冻住主窗体直到上千端口全部探完）。AppendLine 自带封送，可安全跨线程调用；
+                    // status/按钮状态经 output 所在面板 BeginInvoke 封送回 UI 线程。
+                    var root = output.Parent as System.Windows.Forms.Control;
+                    Action ui = () =>
                     {
-                        results = ScanCommonPortsAsync(host).GetAwaiter().GetResult();
-                    }
-                    foreach (var r in results)
-                        if (r.IsOpen) ToolPanelHelper.AppendLine(output, r.Host + ":" + r.Port + " open " + r.Service);
-                    status.Text = "完成，开放 " + FindOpenCount(results) + " 个端口";
+                        status.Text = "扫描中...";
+                        status.ForeColor = System.Drawing.Color.FromArgb(255, 200, 80);
+                    };
+                    if (root != null && root.IsHandleCreated) root.BeginInvoke(ui); else ui();
+
+                    Task.Run(async () =>
+                    {
+                        try
+                        {
+                            var results = parts.Length >= 3
+                                ? await ScanAsync(host, start, end)
+                                : await ScanCommonPortsAsync(host);
+                            foreach (var r in results)
+                                if (r.IsOpen) ToolPanelHelper.AppendLine(output, r.Host + ":" + r.Port + " open " + r.Service);
+                            ToolPanelHelper.AppendLine(output, string.Format("完成：开放 {0} / 扫描 {1} 个端口", FindOpenCount(results), results.Count));
+                            Action doneUi = () =>
+                            {
+                                status.Text = "完成，开放 " + FindOpenCount(results) + " 个端口";
+                                status.ForeColor = System.Drawing.Color.FromArgb(120, 200, 120);
+                            };
+                            if (root != null && root.IsHandleCreated) root.BeginInvoke(doneUi); else doneUi();
+                        }
+                        catch (Exception ex)
+                        {
+                            ToolPanelHelper.AppendLine(output, "扫描失败: " + ex.Message);
+                            Action failUi = () =>
+                            {
+                                status.Text = "失败: " + ex.Message;
+                                status.ForeColor = System.Drawing.Color.FromArgb(255, 100, 100);
+                            };
+                            if (root != null && root.IsHandleCreated) root.BeginInvoke(failUi); else failUi();
+                        }
+                    });
                 });
         }
 

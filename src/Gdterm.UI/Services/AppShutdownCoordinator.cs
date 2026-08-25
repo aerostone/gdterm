@@ -20,6 +20,7 @@ namespace Gdterm.UI.Services
         private readonly ITunnelManager _tunnels;
         private readonly IKeePassService _keepass;
         private readonly ISecurityManager _security;
+        private readonly Gdterm.Tools.Scanning.ScanPluginStore _scanPlugins;
 
         public AppShutdownCoordinator(
             SessionStateCoordinator sessionState,
@@ -27,7 +28,8 @@ namespace Gdterm.UI.Services
             TabContainerControl tabs,
             ITunnelManager tunnels,
             IKeePassService keepass,
-            ISecurityManager security)
+            ISecurityManager security,
+            Gdterm.Tools.Scanning.ScanPluginStore scanPlugins = null)
         {
             _sessionState = sessionState;
             _hotkeys = hotkeys;
@@ -35,6 +37,7 @@ namespace Gdterm.UI.Services
             _tunnels = tunnels;
             _keepass = keepass;
             _security = security;
+            _scanPlugins = scanPlugins;
         }
 
         public void OnFormClosing(object sender, FormClosingEventArgs e)
@@ -45,6 +48,8 @@ namespace Gdterm.UI.Services
             DiagLog.Try("AppShutdown.Tunnels", () => _tunnels?.Dispose());
             DiagLog.Try("AppShutdown.KeePass", () => _keepass?.Dispose());
             DiagLog.Try("AppShutdown.Security", () => _security?.Dispose());
+            // finding-09：扫描插件仓库（FileSystemWatcher + 去抖 Timer）纳入关闭释放链
+            DiagLog.Try("AppShutdown.ScanPluginStore", () => _scanPlugins?.Dispose());
         }
     }
 }

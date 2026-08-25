@@ -212,7 +212,7 @@ namespace Gdterm.Tools.Scanning
         /// base64 内联执行：写入唯一临时文件后运行并清理，保留退出码。
         /// 不需要 SFTP 子系统，只要目标有 sh 和 base64（coreutils/busybox 均内置）。
         /// </summary>
-        private RemoteCommandResult RunInline(byte[] bytes)
+        private RemoteCommandResult RunInline(byte[] bytes, int timeoutSeconds)
         {
             var b64 = Convert.ToBase64String(bytes);
             var tmp = "/tmp/.gdterm_scan_$$.sh"; // $$=远端 shell pid，天然防并发冲突
@@ -221,7 +221,7 @@ namespace Gdterm.Tools.Scanning
                 + "; sh " + tmp
                 + "; __rc=$?; rm -f " + tmp
                 + "; exit $__rc";
-            return _session.RunCommand(cmdline);
+            return _session.RunCommand(cmdline, timeoutSeconds);
         }
 
         public bool Supports(string scriptKind)
@@ -250,7 +250,7 @@ namespace Gdterm.Tools.Scanning
                     // 与本机通道同源：同一 ps1 经 EncodedCommand 下发；前置 UTF-8 编码防中文乱码
                     var prefixed = "[Console]::OutputEncoding=[System.Text.Encoding]::UTF8\r\n" + (scriptContent ?? "");
                     var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(prefixed));
-                    result = _session.RunCommand("powershell -NoProfile -NonInteractive -EncodedCommand " + encoded);
+                    result = _session.RunCommand("powershell -NoProfile -NonInteractive -EncodedCommand " + encoded, timeoutSeconds);
                 }
                 else
                 {
@@ -258,7 +258,7 @@ namespace Gdterm.Tools.Scanning
                     if (bytes.Length <= InlineScriptLimit)
                     {
                         // 主通道：base64 内联下发——零 SFTP 依赖，目标机只需 sh + coreutils base64
-                        result = RunInline(bytes);
+                        result = RunInline(bytes, timeoutSeconds);
                     }
                     else
                     {
@@ -267,7 +267,7 @@ namespace Gdterm.Tools.Scanning
                         {
                             tempPath = transfer.UploadToTemp(bytes, "gdterm_scan_" + Guid.NewGuid().ToString("N").Substring(0, 8) + ".sh");
                             // 显式回传退出码并清理临时文件
-                            result = _session.RunCommand("sh " + tempPath + "; __rc=$?; rm -f " + tempPath + "; exit $__rc");
+                            result = _session.RunCommand("sh " + tempPath + "; __rc=$?; rm -f " + tempPath + "; exit $__rc", timeoutSeconds);
                             tempPath = null; // 命令内已清理
                         }
                     }

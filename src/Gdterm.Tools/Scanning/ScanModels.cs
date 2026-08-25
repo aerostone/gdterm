@@ -68,6 +68,12 @@ namespace Gdterm.Tools.Scanning
         /// <summary>签名信任状态（发现时由仓库计算；LoadError 非 null 时无意义）</summary>
         public ScanTrust Trust { get; set; }
 
+        /// <summary>
+        /// 信任判定时验过的脚本内容 SHA256（十六进制小写）。
+        /// 执行前用于重验脚本未被替换（TOCTOU 防护）；null 表示未知（不可执行）。
+        /// </summary>
+        public string VerifiedScriptSha256 { get; set; }
+
         public bool IsRunnable { get { return LoadError == null && Manifest != null && Manifest.Enabled && File.Exists(ScriptPath); } }
 
         public string DisplayName { get { return Manifest != null ? Manifest.Name : Id; } }

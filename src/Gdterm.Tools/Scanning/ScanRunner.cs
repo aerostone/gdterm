@@ -76,6 +76,16 @@ namespace Gdterm.Tools.Scanning
                     return result;
                 }
 
+                // TOCTOU 防护：信任判定发生在 Reload 时，执行时重读脚本前必须确认
+                // 文件未被替换（验签后、执行前的窗口内换入恶意脚本会绕过上面的硬拒绝）。
+                var currentHash = ScanPluginStore.ScriptSha256Hex(plugin.ScriptPath);
+                if (plugin.VerifiedScriptSha256 == null || currentHash == null
+                    || !string.Equals(currentHash, plugin.VerifiedScriptSha256, StringComparison.Ordinal))
+                {
+                    result.RuntimeError = "脚本内容在加载后被变更，与信任判定时不一致，已拒绝执行；请刷新插件列表后重试";
+                    return result;
+                }
+
                 var content = File.ReadAllText(plugin.ScriptPath);
                 var output = channel.Execute(plugin, content, manifest.TimeoutSeconds);
                 sw.Stop();

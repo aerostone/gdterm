@@ -200,6 +200,13 @@ namespace Gdterm.UI.Services
                     g.FillEllipse(fill, 6.8f, 6.8f, 2.6f, 2.6f);
                     break;
 
+                case "radar": // 扫描中心（finding-16）：同心圆+扫描线，与敏感信息扫描的眼睛区分
+                    g.DrawArc(p, 2.5f, 2.5f, 11f, 11f, 0f, 360f);
+                    g.DrawArc(p, 5.5f, 5.5f, 5f, 5f, 0f, 360f);
+                    g.FillEllipse(fill, 7.2f, 7.2f, 1.6f, 1.6f);
+                    L(g, p, 8, 8, 13, 3);
+                    break;
+
                 case "transfer": // 传输中心：上下对流箭头
                     ArrowDown(g, p, 5.5, 11, 3);
                     L(g, p, 10.5, 11.5, 10.5, 4); L(g, p, 8, 6.5, 10.5, 4); L(g, p, 13, 6.5, 10.5, 4);

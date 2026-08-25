@@ -318,6 +318,46 @@ namespace Gdterm.Tools.Modules
 
         private void OnOutput(string msg) { OutputReceived?.Invoke(this, msg); }
 
+        /// <summary>
+        /// finding-05 共用后台执行骨架：任务在 Task.Run 中跑，AppendLine 自带封送；
+        /// 完成后把状态文本封送回 UI 线程。异常落到输出区而非冻住/崩溃 UI。
+        /// </summary>
+        private static void RunBackground<T>(
+            System.Windows.Forms.RichTextBox output,
+            System.Windows.Forms.Label status,
+            Func<Task<T>> work,
+            Func<T, string> render)
+        {
+            var root = output.Parent as System.Windows.Forms.Control;
+            Action setRunning = () =>
+            {
+                status.Text = "执行中...";
+                status.ForeColor = System.Drawing.Color.FromArgb(255, 200, 80);
+            };
+            if (root != null && root.IsHandleCreated) root.BeginInvoke(setRunning); else setRunning();
+
+            Task.Run(async () =>
+            {
+                try
+                {
+                    var data = await work();
+                    var doneText = render(data);
+                    SetStatus(root, status, doneText, System.Drawing.Color.FromArgb(120, 200, 120));
+                }
+                catch (Exception ex)
+                {
+                    ToolPanelHelper.AppendLine(output, "失败: " + ex.Message);
+                    SetStatus(root, status, "失败: " + ex.Message, System.Drawing.Color.FromArgb(255, 100, 100));
+                }
+            });
+        }
+
+        private static void SetStatus(System.Windows.Forms.Control root, System.Windows.Forms.Label status, string text, System.Drawing.Color color)
+        {
+            Action ui = () => { status.Text = text; status.ForeColor = color; };
+            if (root != null && root.IsHandleCreated) root.BeginInvoke(ui); else ui();
+        }
+
         public System.Windows.Forms.Control CreatePanel()
         {
             return ToolPanelHelper.CreateActionPanel(
@@ -335,6 +375,7 @@ namespace Gdterm.Tools.Modules
                     var parts = text.Split(new[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
                     if (parts[0].Equals("dns", StringComparison.OrdinalIgnoreCase) && parts.Length > 1)
                     {
+                        // DNS 查询通常毫秒级，保留同步路径
                         var dns = QueryDns(parts[1]);
                         ToolPanelHelper.AppendLine(output,
                             (dns.IsSuccess ? "OK" : "FAIL") + " " + dns.HostName +
@@ -346,19 +387,25 @@ namespace Gdterm.Tools.Modules
                     if ((parts[0].Equals("tr", StringComparison.OrdinalIgnoreCase) ||
                          parts[0].Equals("traceroute", StringComparison.OrdinalIgnoreCase)) && parts.Length > 1)
                     {
-                        var hops = TracerouteAsync(parts[1]).GetAwaiter().GetResult();
-                        foreach (var h in hops)
-                            ToolPanelHelper.AppendLine(output,
-                                h.Hop + " " + (h.Address ?? "*") + " " + (h.HostName ?? "") + " " + h.LatencyMs + "ms");
-                        status.Text = "traceroute 完成";
+                        // finding-05：traceroute 最多 30 跳×5s，后台执行防 UI 冻结
+                        RunBackground(output, status, () => TracerouteAsync(parts[1]), hops =>
+                        {
+                            foreach (var h in hops)
+                                ToolPanelHelper.AppendLine(output,
+                                    h.Hop + " " + (h.Address ?? "*") + " " + (h.HostName ?? "") + " " + h.LatencyMs + "ms");
+                            return "traceroute 完成（" + hops.Count + " 跳）";
+                        });
                         return;
                     }
+                    // finding-05：子网扫描逐 IP ping，同样后台执行
                     var cidr = parts[0];
-                    var hosts = ScanSubnetAsync(cidr).GetAwaiter().GetResult();
-                    foreach (var h in hosts)
-                        if (h.IsAlive)
-                            ToolPanelHelper.AppendLine(output, h.IP + " " + (h.HostName ?? "") + " " + h.LatencyMs + "ms");
-                    status.Text = "存活 " + CountAlive(hosts) + " / " + hosts.Count;
+                    RunBackground(output, status, () => ScanSubnetAsync(cidr), hosts =>
+                    {
+                        foreach (var h in hosts)
+                            if (h.IsAlive)
+                                ToolPanelHelper.AppendLine(output, h.IP + " " + (h.HostName ?? "") + " " + h.LatencyMs + "ms");
+                        return "存活 " + CountAlive(hosts) + " / " + hosts.Count;
+                    });
                 });
         }
 

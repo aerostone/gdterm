@@ -20,6 +20,7 @@ gdterm 是 **Windows 绿色便携** 运维客户端，目标环境含 **Win7 / S
 - KeePass 密码库（主密码与库密码合一）
 - 审计日志 / 崩溃落盘 / 闲时锁定
 - 内置运维工具箱（证书、时间同步、仓库、端口/网络扫描）
+- 扫描中心插件体系（2026-08 起）：manifest+脚本目录加载、RSA 签名信任链、SSH/WMI/本地三通道
 
 **不做**：插件 DLL 热加载、第三方 JSON 库、高 GPU 依赖渲染。
 
@@ -177,7 +178,7 @@ ConnectionTree 双击
 |----|------|------|
 | D1 | .NET 4.6.2 + WinForms，非 .NET Core/WPF | Win7/2008；GDI 低配友好 |
 | D2 | 手写 JSON，禁止 Newtonsoft/STJ | 绿色依赖面最小 |
-| D3 | 库内置模块 `IToolModule`，非插件加载 | 无反射插件攻击面；Win7 简单 |
+| D3 | 库内置模块 `IToolModule`，非插件加载 | 无反射插件攻击面；Win7 简单。已知债（2026-08-25 审计 F11）：`IToolModule.CreatePanel()` 返回 WinForms `Control`，Gdterm.Tools 反向耦合 UI 技术栈；扫描中心已插件化（ScanPluginStore），工具箱仍内置 |
 | D4 | 手动 hop 链，非自动 ProxyJump 魔法 | 运维显式可控 |
 | D5 | 终端渲染可替换（`IRenderer`），UI 当前钉死 LightweightRenderer | 内存优先；专业库可后换 |
 | D6 | 审计与崩溃双通道 | `IAuditLogger` 业务事件；`CrashLog` 保证早期/晚期也能写 |

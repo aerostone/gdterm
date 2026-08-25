@@ -76,9 +76,9 @@ namespace Gdterm.Tools
                 };
                 inputHost.Controls.Add(flow);
 
-                // 兼容：onBuildInputs 接收第一个 textbox 与 output，工具侧自己加控件到 parent
-                var dummy = new TextBox { Visible = false };
-                onBuildInputs(dummy, output);
+                // finding-16：移除孤儿 dummy TextBox（原 new TextBox { Visible = false } 未挂到任何父容器）；
+                // 现存 5 个调用方均传 null，此分支仅保留扩展点语义（null 占位）
+                onBuildInputs(null, output);
 
                 // 简化：标准两行输入
             }

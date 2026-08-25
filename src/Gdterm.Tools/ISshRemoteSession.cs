@@ -14,6 +14,12 @@ namespace Gdterm.Tools
         /// <summary>在远端执行一条命令</summary>
         RemoteCommandResult RunCommand(string command);
 
+        /// <summary>
+        /// 在远端执行一条带超时的命令；超时后尽力中断远端命令并返回非零结果。
+        /// timeoutSeconds &lt;= 0 时等同 <see cref="RunCommand(string)"/>（不限制）。
+        /// </summary>
+        RemoteCommandResult RunCommand(string command, int timeoutSeconds);
+
         /// <summary>创建基于当前会话的临时文件传输通道（调用方负责 Dispose）</summary>
         IRemoteFileTransfer CreateFileTransfer();
     }

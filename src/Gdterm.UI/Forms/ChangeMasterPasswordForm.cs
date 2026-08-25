@@ -284,7 +284,8 @@ namespace Gdterm.UI.Forms
             }
 
             // 触发调用方处理器：重加密 kdbx + 更新 SecurityManager + 持久化 ini
-            // 处理器抛异常表示失败，UI 保留对话框
+            // 同步异常表示失败，UI 保留对话框；异步处理器（finding-06）的失败
+            // 由处理器内部接住并弹窗，此处无法感知——IsChanged 仅反映同步阶段结果。
             try
             {
                 var handler = ChangeRequested;

@@ -132,10 +132,13 @@ namespace Gdterm.Tools.Scanning
                 if (string.IsNullOrWhiteSpace(manifest.ScriptFile))
                     return BadPlugin(manifest.Id, manifest, source, "缺少 scriptFile");
 
-                // 安全约束：脚本必须落在本插件目录内，禁止 ../ 逃逸
+                // 安全约束：脚本必须落在本插件目录内，禁止 ../ 逃逸；
+                // 前缀比对必须带目录分隔符，避免同级目录 scanner-extra 之类的前缀绕过
                 var scriptPath = Path.GetFullPath(Path.Combine(pluginDir, manifest.ScriptFile));
                 var dirFull = Path.GetFullPath(pluginDir);
-                if (!scriptPath.StartsWith(dirFull, StringComparison.OrdinalIgnoreCase))
+                var dirPrefix = dirFull.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
+                    ? dirFull : dirFull + Path.DirectorySeparatorChar;
+                if (!scriptPath.StartsWith(dirPrefix, StringComparison.OrdinalIgnoreCase))
                     return BadPlugin(manifest.Id, manifest, source, "scriptFile 越出插件目录");
 
                 if (!File.Exists(scriptPath))
@@ -149,7 +152,8 @@ namespace Gdterm.Tools.Scanning
                     ScriptPath = scriptPath,
                     Source = source,
                     LoadError = null,
-                    Trust = VerifyTrust(manifestPath, scriptPath)
+                    Trust = VerifyTrust(manifestPath, scriptPath),
+                    VerifiedScriptSha256 = ScriptSha256Hex(scriptPath)
                 };
             }
             catch (Exception ex)
@@ -188,6 +192,13 @@ namespace Gdterm.Tools.Scanning
                 foreach (var b in sha.ComputeHash(data)) sb.Append(b.ToString("x2"));
                 return sb.ToString();
             }
+        }
+
+        /// <summary>计算脚本文件当前内容的 SHA256（十六进制小写）；读不到返回 null。</summary>
+        internal static string ScriptSha256Hex(string scriptPath)
+        {
+            try { return Sha256Hex(File.ReadAllBytes(scriptPath)); }
+            catch { return null; }
         }
 
         /// <summary>规范负载字节：hex(manifestSha) || 0x00 || hex(scriptSha)。批准台账复用其再散列。</summary>
@@ -363,6 +374,10 @@ namespace Gdterm.Tools.Scanning
                 if (File.Exists(bakScript)) File.Delete(bakScript);
                 File.Copy(scriptPath, bakScript, true);
 
+                var bakManifest = manifestPath + ".bak";
+                if (File.Exists(bakManifest)) File.Delete(bakManifest);
+                File.Copy(manifestPath, bakManifest, true);
+
                 File.WriteAllText(manifestPath, def.ManifestJson, new System.Text.UTF8Encoding(false));
                 File.WriteAllText(scriptPath, def.ScriptContent, new System.Text.UTF8Encoding(false));
                 WriteBuiltinSignature(def, Path.Combine(Path.GetDirectoryName(manifestPath), "plugin.sig"));
@@ -390,7 +405,7 @@ namespace Gdterm.Tools.Scanning
 
         private static bool FileMatchesContent(string path, string expected)
         {
-            try { return File.ReadAllBytes(path) == new System.Text.UTF8Encoding(false).GetBytes(expected); }
+            try { return File.ReadAllBytes(path).SequenceEqual(new System.Text.UTF8Encoding(false).GetBytes(expected)); }
             catch { return false; }
         }
 

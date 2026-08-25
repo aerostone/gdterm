@@ -142,6 +142,38 @@ namespace Gdterm.Tools.Modules
 
         private void OnOutput(string msg) { OutputReceived?.Invoke(this, msg); }
 
+        /// <summary>finding-05 共用后台执行骨架（同 NetworkScannerTool.RunBackground）。</summary>
+        private static void RunBackground<T>(
+            System.Windows.Forms.RichTextBox output,
+            System.Windows.Forms.Label status,
+            Func<T> work,
+            Func<T, string> render)
+        {
+            var root = output.Parent as System.Windows.Forms.Control;
+            Action setRunning = () => { status.Text = "执行中..."; status.ForeColor = System.Drawing.Color.FromArgb(255, 200, 80); };
+            if (root != null && root.IsHandleCreated) root.BeginInvoke(setRunning); else setRunning();
+
+            System.Threading.Tasks.Task.Run(() =>
+            {
+                try
+                {
+                    var doneText = render(work());
+                    SetStatus(root, status, doneText, System.Drawing.Color.FromArgb(120, 200, 120));
+                }
+                catch (Exception ex)
+                {
+                    ToolPanelHelper.AppendLine(output, "失败: " + ex.Message);
+                    SetStatus(root, status, "失败: " + ex.Message, System.Drawing.Color.FromArgb(255, 100, 100));
+                }
+            });
+        }
+
+        private static void SetStatus(System.Windows.Forms.Control root, System.Windows.Forms.Label status, string text, System.Drawing.Color color)
+        {
+            Action ui = () => { status.Text = text; status.ForeColor = color; };
+            if (root != null && root.IsHandleCreated) root.BeginInvoke(ui); else ui();
+        }
+
         public System.Windows.Forms.Control CreatePanel()
         {
             return ToolPanelHelper.CreateActionPanel(
@@ -156,9 +188,9 @@ namespace Gdterm.Tools.Modules
                         ToolPanelHelper.AppendLine(output, "请先在活跃 SSH 会话上使用远程工具");
                         return;
                     }
-                    var r = ListRepos();
-                    ToolPanelHelper.AppendLine(output, r.Stdout ?? r.Stderr ?? "");
-                    status.Text = r.IsSuccess ? "完成" : "失败";
+                    // finding-05：远程 apt/yum 查询可耗时，后台执行防 UI 冻结
+                    RunBackground(output, status, ListRepos,
+                        r => { ToolPanelHelper.AppendLine(output, r.Stdout ?? r.Stderr ?? ""); return r.IsSuccess ? "完成" : "失败"; });
                 });
         }
 

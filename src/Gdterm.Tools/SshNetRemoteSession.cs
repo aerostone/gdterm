@@ -36,6 +36,11 @@ namespace Gdterm.Tools
 
         public RemoteCommandResult RunCommand(string command)
         {
+            return RunCommand(command, 0);
+        }
+
+        public RemoteCommandResult RunCommand(string command, int timeoutSeconds)
+        {
             var sw = Stopwatch.StartNew();
             if (_client == null || !_client.IsConnected)
             {
@@ -51,17 +56,54 @@ namespace Gdterm.Tools
 
             try
             {
-                var cmd = _client.RunCommand(command ?? "");
-                sw.Stop();
-                return new RemoteCommandResult
+                if (timeoutSeconds <= 0)
                 {
-                    Command = command,
-                    // SSH.NET 2024: ExitStatus 为 int?
-                    ExitCode = cmd.ExitStatus.HasValue ? cmd.ExitStatus.Value : -1,
-                    Stdout = cmd.Result,
-                    Stderr = cmd.Error,
-                    Duration = sw.Elapsed
-                };
+                    var cmd = _client.RunCommand(command ?? "");
+                    sw.Stop();
+                    return new RemoteCommandResult
+                    {
+                        Command = command,
+                        // SSH.NET 2024: ExitStatus 为 int?
+                        ExitCode = cmd.ExitStatus.HasValue ? cmd.ExitStatus.Value : -1,
+                        Stdout = cmd.Result,
+                        Stderr = cmd.Error,
+                        Duration = sw.Elapsed
+                    };
+                }
+
+                // 带超时执行：SSH.NET 同步 Execute 不响应 CommandTimeout，
+                // 用 BeginExecute + WaitOne 超时后 CancelAsync 中断。
+                var scoped = _client.CreateCommand(command ?? "");
+                try
+                {
+                    var asyncResult = scoped.BeginExecute();
+                    if (!asyncResult.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(timeoutSeconds)))
+                    {
+                        try { scoped.CancelAsync(); } catch { /* 中断失败不掩盖超时本身 */ }
+                        sw.Stop();
+                        return new RemoteCommandResult
+                        {
+                            Command = command,
+                            ExitCode = -1,
+                            Stderr = "远端命令超时（" + timeoutSeconds + " 秒），已中断",
+                            Duration = sw.Elapsed
+                        };
+                    }
+                    scoped.EndExecute(asyncResult);
+                    sw.Stop();
+                    return new RemoteCommandResult
+                    {
+                        Command = command,
+                        ExitCode = scoped.ExitStatus.HasValue ? scoped.ExitStatus.Value : -1,
+                        Stdout = scoped.Result,
+                        Stderr = scoped.Error,
+                        Duration = sw.Elapsed
+                    };
+                }
+                finally
+                {
+                    try { scoped.Dispose(); } catch { /* 释放失败不影响返回 */ }
+                }
             }
             catch (Exception ex)
             {

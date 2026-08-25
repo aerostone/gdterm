@@ -77,8 +77,11 @@ namespace Gdterm.Tools
         {
             var p = "\"" + key + "\""; var idx = json.IndexOf(p); if (idx < 0) return defaultValue;
             var c = json.IndexOf(':', idx + p.Length); if (c < 0) return defaultValue;
-            if (json.IndexOf("true", c) == c + 1) return true;
-            if (json.IndexOf("false", c) == c + 1) return false;
+            // finding-10：从值起点（跳过空白）开始比较字面量——旧实现 IndexOf 从字符串头搜索，
+            // JSON 更早位置出现过 true/false 字面量时后续布尔键会误判回默认值。
+            var s = c + 1; while (s < json.Length && json[s] == ' ') s++;
+            if (string.Compare(json, s, "true", 0, 4, StringComparison.Ordinal) == 0) return true;
+            if (string.Compare(json, s, "false", 0, 5, StringComparison.Ordinal) == 0) return false;
             return defaultValue;
         }
 

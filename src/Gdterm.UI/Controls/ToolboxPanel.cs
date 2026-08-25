@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.Tools;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Controls
 {
@@ -138,7 +139,7 @@ namespace Gdterm.UI.Controls
                         remote.ClearSshSession();
                 }
             }
-            catch { }
+            catch (Exception ex) { Gdterm.UI.Diagnostics.DiagLog.Swallowed("Toolbox.SetRemoteSession", ex); }
         }
 
         /// <summary>兼容旧调用名</summary>
@@ -171,11 +172,18 @@ namespace Gdterm.UI.Controls
             {
                 panel.Dock = DockStyle.Fill;
                 _txtOutput.Visible = false;
-                // 移除旧面板
+                // finding-04：移除旧工具面板并显式 Dispose——此前只 Remove 不释放，
+                // 每次切换都在 Controls 树里残留一整棵面板子树（句柄/事件订阅）。
                 for (int i = _pnlDetail.Controls.Count - 1; i >= 0; i--)
                 {
-                    if (_pnlDetail.Controls[i] is UserControl)
+                    var old = _pnlDetail.Controls[i];
+                    // 常驻控件（标题/描述/输出区/分隔器）不在此容器内，这里只会命中工具面板；
+                    // 但仍排除本方法刚创建、即将加入的实例以防万一。
+                    if (!ReferenceEquals(old, panel) && !(old is Label))
+                    {
                         _pnlDetail.Controls.RemoveAt(i);
+                        old.Dispose();
+                    }
                 }
                 _pnlDetail.Controls.Add(panel);
                 panel.BringToFront();

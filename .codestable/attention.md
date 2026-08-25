@@ -74,7 +74,9 @@
 - 插件签名信任链（2026-08）：RSA-3072+SHA256，官方公钥 XML 钉死在 ScanPluginStore.OfficialPublicKeyXml
   （私钥 gdterm-official-1 离线保存于维护者机器，不进仓库/CI）；plugin.sig 记录 manifest/script 双哈希+签名，
   规范负载 = hex(sha256(manifest))||0x00||hex(sha256(script))；判定：无 sig/外来 keyId → Unsigned（首次运行确认，
-  按 id+内容哈希记账于 data/config/scanner-approved.json），官方 keyId 但哈希/验签不符 → Invalid（篡改信号，Runner 硬拒绝）；
+  按 id+内容哈希记账于 data\plugins\config\scanner-approved.json，即 ScanPluginStore.LedgerPath
+  = GetDirectoryName(_userRoot)\config\scanner-approved.json，_userRoot 为 <base>\data\plugins\scanner），
+  官方 keyId 但哈希/验签不符 → Invalid（篡改信号，Runner 硬拒绝）；
   内置四插件也走真实签名流程（BuiltinPlugins.SignatureJson 内嵌，物化/版本刷新/无篡改补齐三路径写 .sig）；
   改动任一 verbatim 内容必须重签（tools 流程见提交历史 python 扫描器，注意 C# verbatim "" 转义成对扫描）
 - 运维工具箱本体仍是内置模块（IToolModule），插件化仅限扫描体系

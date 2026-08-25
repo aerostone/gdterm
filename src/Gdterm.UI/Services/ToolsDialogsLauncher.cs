@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using Gdterm.AI;
 using Gdterm.KeePass;
 using Gdterm.Security;
+using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Forms;
 
 namespace Gdterm.UI.Services
@@ -19,6 +20,7 @@ namespace Gdterm.UI.Services
         private readonly DangerousCommandDetector _dangerousCmdDetector;
         private readonly Action _applyAppearanceToTerminals;
         private readonly Func<Gdterm.Tools.ISshRemoteSession> _remoteSessionFactory;
+        private readonly Gdterm.Tools.Scanning.ScanPluginStore _scanPluginStore;
 
         public ToolsDialogsLauncher(
             IWin32Window owner,
@@ -26,7 +28,8 @@ namespace Gdterm.UI.Services
             IKeePassService keepassService,
             DangerousCommandDetector dangerousCmdDetector,
             Action applyAppearanceToTerminals = null,
-            Func<Gdterm.Tools.ISshRemoteSession> remoteSessionFactory = null)
+            Func<Gdterm.Tools.ISshRemoteSession> remoteSessionFactory = null,
+            Gdterm.Tools.Scanning.ScanPluginStore scanPluginStore = null)
         {
             _owner = owner;
             _securityManager = securityManager;
@@ -34,11 +37,10 @@ namespace Gdterm.UI.Services
             _dangerousCmdDetector = dangerousCmdDetector;
             _applyAppearanceToTerminals = applyAppearanceToTerminals;
             _remoteSessionFactory = remoteSessionFactory;
+            // 组合根注入（finding-09）：不再用静态单例，生命周期由 MainForm/AppShutdownCoordinator 管理；
+            // 未注入时退回实例级 store（仅影响旧调用方，当前组合根总是传入）。
+            _scanPluginStore = scanPluginStore ?? new Gdterm.Tools.Scanning.ScanPluginStore();
         }
-
-        /// <summary>扫描插件仓库——进程级共享，扫描中心与后续功能复用。</summary>
-        public static Gdterm.Tools.Scanning.ScanPluginStore SharedScanPluginStore { get; } =
-            new Gdterm.Tools.Scanning.ScanPluginStore();
 
         public bool ReAuthenticate(string action)
         {
@@ -105,7 +107,7 @@ namespace Gdterm.UI.Services
                                 mf2.Invalidate(true);
                             }
                         }
-                        catch { }
+                        catch (Exception ex) { Gdterm.UI.Diagnostics.DiagLog.Swallowed("ToolsDialogs.ApplyTheme", ex); }
                     }
                     // UI 字体即时生效；DPI 需重启
                     try
@@ -113,7 +115,7 @@ namespace Gdterm.UI.Services
                         if (_owner is Gdterm.UI.Forms.MainForm mf)
                             mf.ApplyGlobalUIFont();
                     }
-                    catch { }
+                    catch (Exception ex) { Gdterm.UI.Diagnostics.DiagLog.Swallowed("ToolsDialogs.ApplyUIFont", ex); }
                     try { Gdterm.UI.Diagnostics.ToastNotifier.Success("外观已保存（DPI 需重启）"); }
                     catch
                     {
@@ -137,7 +139,12 @@ namespace Gdterm.UI.Services
                 _securityManager != null && !_securityManager.IsLocked
                     ? _securityManager.GetMasterPassword()
                     : null);
-            try { aiModelStore.UpgradeSecretsToMasterKey(); } catch { }
+            try { aiModelStore.UpgradeSecretsToMasterKey(); }
+            catch (Exception ex)
+            {
+                // 密钥升级失败必须留痕（finding-12）：静默失败会让后续排障无从下手
+                Gdterm.UI.Diagnostics.DiagLog.Swallowed("ToolsDialogs.UpgradeSecretsToMasterKey", ex);
+            }
             using (var form = new AiSettingsForm(aiModelStore))
                 form.ShowDialog(_owner);
         }
@@ -164,22 +171,31 @@ namespace Gdterm.UI.Services
 
             using (var form = new ChangeMasterPasswordForm(_securityManager))
             {
-                form.ChangeRequested += (s, args) =>
+                // async 事件处理器（finding-06）：重加密可能耗时数秒，禁止同步阻塞 UI 线程；
+                // 异常必须接住（async void 会直接打进消息循环）并回传给对话框展示。
+                form.ChangeRequested += async (s, args) =>
                 {
-                    // 1) 重加密 kdbx：用旧主密码解锁已存在库，再用新主密码重新加密保存
-                    if (_keepassService != null)
+                    try
                     {
-                        var ok = _keepassService.ChangeMasterPasswordAsync(args.OldPassword, args.NewPassword)
-                            .GetAwaiter().GetResult();
-                        if (!ok)
-                            throw new InvalidOperationException("密码库重加密失败：旧密码不正确或文件损坏");
+                        // 1) 重加密 kdbx：用旧主密码解锁已存在库，再用新主密码重新加密保存
+                        if (_keepassService != null)
+                        {
+                            var ok = await _keepassService.ChangeMasterPasswordAsync(args.OldPassword, args.NewPassword);
+                            if (!ok)
+                                throw new InvalidOperationException("密码库重加密失败：旧密码不正确或文件损坏");
+                        }
+
+                        // 2) 更新 SecurityManager 哈希（同时会重新强度校验）
+                        _securityManager.SetMasterPassword(args.OldPassword, args.NewPassword);
+
+                        // 3) 持久化 master-password.ini
+                        Program.PersistMasterPasswordConfig(_securityManager);
                     }
-
-                    // 2) 更新 SecurityManager 哈希（同时会重新强度校验）
-                    _securityManager.SetMasterPassword(args.OldPassword, args.NewPassword);
-
-                    // 3) 持久化 master-password.ini
-                    Program.PersistMasterPasswordConfig(_securityManager);
+                    catch (Exception ex)
+                    {
+                        Gdterm.UI.Diagnostics.DiagLog.Swallowed("ToolsDialogs.ChangeMasterPassword", ex);
+                        MessageBox.Show(form, "修改主密码失败: " + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
                 };
                 form.ShowDialog(_owner);
             }
@@ -238,7 +254,7 @@ namespace Gdterm.UI.Services
         {
             try
             {
-                var store = SharedScanPluginStore;
+                var store = _scanPluginStore;
                 store.Start(); // 幂等
                 using (var form = new ScannerCenterForm(store, _remoteSessionFactory))
                     form.ShowDialog(_owner);

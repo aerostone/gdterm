@@ -6,6 +6,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Gdterm.Tools.Scanning;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Forms
 {
@@ -222,11 +223,13 @@ namespace Gdterm.UI.Forms
         {
             if (_splittersApplied || _split == null || !_split.IsHandleCreated) return;
             _splittersApplied = true;
-            try { if (_split.Width > 640) _split.SplitterDistance = 300; } catch { }
+            try { if (_split.Width > 640) _split.SplitterDistance = 300; }
+            catch (Exception ex) { DiagLog.Swallowed("Scanner.ApplySplitters", ex); }
             var inner = _split.Panel2.Controls.OfType<SplitContainer>().FirstOrDefault();
             if (inner != null)
             {
-                try { if (inner.Height > 200) inner.SplitterDistance = Math.Max(120, inner.Height / 2); } catch { }
+                try { if (inner.Height > 200) inner.SplitterDistance = Math.Max(120, inner.Height / 2); }
+                catch (Exception ex) { DiagLog.Swallowed("Scanner.ApplySplitters.inner", ex); }
             }
         }
 
@@ -239,7 +242,7 @@ namespace Gdterm.UI.Forms
                 if (InvokeRequired) { BeginInvoke(new Action(() => { RefreshPluginList(); })); return; }
                 RefreshPluginList();
             }
-            catch { }
+            catch (Exception ex) { DiagLog.Swallowed("Scanner.OnStoreReloaded", ex); }
         }
 
         private void RefreshPluginList()
@@ -446,21 +449,34 @@ namespace Gdterm.UI.Forms
             SetFindingCount(0);
             _rawOutput.Text = "";
 
-            var results = new List<ScanRunResult>();
-            var runner = _runner;
-            await Task.Run(() =>
+            // finding-03：try/finally 保证任何路径下 _running 都能复位；
+            // 渲染前检查句柄存活性，避免批量运行中窗体被关闭后打在已释放控件上。
+            try
             {
-                foreach (var p in plugins)
+                var results = new List<ScanRunResult>();
+                var runner = _runner;
+                await Task.Run(() =>
                 {
-                    var r = runner.RunOne(p, channel);
-                    results.Add(r);
-                }
-            });
+                    foreach (var p in plugins)
+                    {
+                        var r = runner.RunOne(p, channel);
+                        results.Add(r);
+                    }
+                });
 
-            foreach (var r in results) RenderResult(r);
-
-            _running = false;
-            UpdateRunButtonState();
+                if (IsDisposed || Disposing) return;
+                foreach (var r in results) RenderResult(r);
+            }
+            catch (Exception ex)
+            {
+                if (!IsDisposed)
+                    MessageBox.Show(this, "扫描执行失败: " + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
+            {
+                _running = false;
+                if (!IsDisposed && !Disposing) UpdateRunButtonState();
+            }
         }
 
         private void RenderResult(ScanRunResult r)
@@ -488,7 +504,8 @@ namespace Gdterm.UI.Forms
             SetFindingCount(_findingList.Items.Count);
 
             if (!string.IsNullOrEmpty(r.RawOutput)) _rawOutput.AppendText(r.RawOutput + Environment.NewLine);
-            if (!string.IsNullOrEmpty(r.ErrorOutput)) _rawOutput.AppendLine("[stderr] " + r.ErrorOutput.TrimEnd());
+            // finding-16：改用 AppendRawLine，删除下方与私有方法重复的扩展类
+            if (!string.IsNullOrEmpty(r.ErrorOutput)) AppendRawLine("[stderr] " + r.ErrorOutput.TrimEnd());
         }
 
         private void AppendRawLine(string line)
@@ -525,14 +542,6 @@ namespace Gdterm.UI.Forms
                 case "low": return Color.FromArgb(160, 140, 40);
                 default: return SystemColors.GrayText;
             }
-        }
-    }
-
-    internal static class TextBoxExtensionsForScanner
-    {
-        public static void AppendLine(this TextBox box, string text)
-        {
-            box.AppendText(text + Environment.NewLine);
         }
     }
 }

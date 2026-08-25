@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
 using Gdterm.Core.Security;
 using Gdterm.Tools.Models;
 
@@ -187,6 +188,38 @@ namespace Gdterm.Tools.Modules
 
         private void OnOutput(string msg) { OutputReceived?.Invoke(this, msg); }
 
+        /// <summary>finding-05 共用后台执行骨架（同 NetworkScannerTool.RunBackground）。</summary>
+        private static void RunBackground<T>(
+            System.Windows.Forms.RichTextBox output,
+            System.Windows.Forms.Label status,
+            Func<T> work,
+            Func<T, string> render)
+        {
+            var root = output.Parent as System.Windows.Forms.Control;
+            Action setRunning = () => { status.Text = "执行中..."; status.ForeColor = System.Drawing.Color.FromArgb(255, 200, 80); };
+            if (root != null && root.IsHandleCreated) root.BeginInvoke(setRunning); else setRunning();
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    var doneText = render(work());
+                    SetStatus(root, status, doneText, System.Drawing.Color.FromArgb(120, 200, 120));
+                }
+                catch (Exception ex)
+                {
+                    ToolPanelHelper.AppendLine(output, "失败: " + ex.Message);
+                    SetStatus(root, status, "失败: " + ex.Message, System.Drawing.Color.FromArgb(255, 100, 100));
+                }
+            });
+        }
+
+        private static void SetStatus(System.Windows.Forms.Control root, System.Windows.Forms.Label status, string text, System.Drawing.Color color)
+        {
+            Action ui = () => { status.Text = text; status.ForeColor = color; };
+            if (root != null && root.IsHandleCreated) root.BeginInvoke(ui); else ui();
+        }
+
         public System.Windows.Forms.Control CreatePanel()
         {
             return ToolPanelHelper.CreateActionPanel(
@@ -201,14 +234,18 @@ namespace Gdterm.Tools.Modules
                         status.Text = "请输入证书路径";
                         return;
                     }
-                    var local = InstallLocal(path, true);
-                    ToolPanelHelper.AppendLine(output, "[本地] " + (local.Stdout ?? "") + (local.Stderr ?? ""));
-                    if (HasRemoteSession)
+                    // finding-05：certutil 外部进程 + 远程 SSH 可能耗时，后台执行防 UI 冻结
+                    RunBackground(output, status, () =>
                     {
-                        var remote = InstallRemote(path, true);
-                        ToolPanelHelper.AppendLine(output, "[远程] " + (remote.Stdout ?? "") + (remote.Stderr ?? ""));
-                    }
-                    status.Text = "完成";
+                        var local = InstallLocal(path, true);
+                        ToolPanelHelper.AppendLine(output, "[本地] " + (local.Stdout ?? "") + (local.Stderr ?? ""));
+                        if (HasRemoteSession)
+                        {
+                            var remote = InstallRemote(path, true);
+                            ToolPanelHelper.AppendLine(output, "[远程] " + (remote.Stdout ?? "") + (remote.Stderr ?? ""));
+                        }
+                        return true;
+                    }, _ => "完成");
                 });
         }
 

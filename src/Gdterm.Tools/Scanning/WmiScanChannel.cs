@@ -66,6 +66,11 @@ namespace Gdterm.Tools.Scanning
                 if (pid == 0) return output;
 
                 WaitForExit(scope, pid, timeoutSeconds, output);
+                if (output.RuntimeError != null && output.Stdout == null)
+                {
+                    // finding-14：超时/终止后不再尝试取回（远端可能未产出结果文件），保留超时提示
+                    return output;
+                }
 
                 // 取回结果（ADMIN$ 映射到 C:\Windows）
                 var uncOut = ToUnc(outPath);
@@ -164,7 +169,36 @@ namespace Gdterm.Tools.Scanning
                 }
                 if (!alive) return;
             }
-            output.RuntimeError = "执行超时（" + timeoutSeconds + "s）——远端进程可能仍在运行，请到目标机任务管理器确认 PID " + pid;
+            // finding-14：超时后尽力终止远端进程，避免残留 powershell 与临时文件
+            if (TryTerminateRemote(scope, pid))
+                output.RuntimeError = "执行超时（" + timeoutSeconds + "s），已终止远端进程 PID " + pid;
+            else
+                output.RuntimeError = "执行超时（" + timeoutSeconds + "s）——远端进程可能仍在运行，请到目标机任务管理器确认 PID " + pid;
+        }
+
+        /// <summary>best-effort 终止远端 Win32_Process；失败不抛出（超时提示已足够指导人工处理）。</summary>
+        private static bool TryTerminateRemote(ManagementScope scope, uint pid)
+        {
+            try
+            {
+                using (var searcher = new ManagementObjectSearcher(
+                    scope,
+                    new ObjectQuery("SELECT ProcessId FROM Win32_Process WHERE ProcessId=" + pid)))
+                using (var results = searcher.Get())
+                {
+                    foreach (var obj in results)
+                    using (obj)
+                    {
+                        var outParams = obj.InvokeMethod("Terminate", new object[] { 0u });
+                        return outParams != null && Convert.ToUInt32(outParams["ReturnValue"]) == 0;
+                    }
+                }
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         // ===== 结果取回 =====
@@ -184,7 +218,9 @@ namespace Gdterm.Tools.Scanning
             {
                 if (!File.Exists(uncPath))
                 {
-                    if (output.Stdout == null && uncPath.EndsWith("_o.txt", StringComparison.Ordinal))
+                    // finding-14：仅在尚无更早错误时才写取回失败——避免覆盖 stdout/stderr 阶段已有的提示
+                    if (output.Stdout == null && output.Stderr == null && output.RuntimeError == null
+                        && uncPath.EndsWith("_o.txt", StringComparison.Ordinal))
                         output.RuntimeError = "取回结果失败：文件不存在——ADMIN$ 共享可能被关闭。" + HintSuffix();
                     return null;
                 }
@@ -192,7 +228,8 @@ namespace Gdterm.Tools.Scanning
             }
             catch (Exception ex)
             {
-                output.RuntimeError = "取回结果失败: " + ex.Message + "——需开启 ADMIN$ 管理共享。" + HintSuffix();
+                if (output.RuntimeError == null)
+                    output.RuntimeError = "取回结果失败: " + ex.Message + "——需开启 ADMIN$ 管理共享。" + HintSuffix();
                 return null;
             }
         }

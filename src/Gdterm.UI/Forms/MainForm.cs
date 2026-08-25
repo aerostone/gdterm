@@ -63,6 +63,8 @@ namespace Gdterm.UI.Forms
         private SessionStateCoordinator _sessionState;
         private ViewModeController _viewMode;
         private ToolsDialogsLauncher _toolsDialogs;
+        // finding-09：扫描插件仓库由组合根（MainForm 构造）持有，经注入传递，关闭时随 AppShutdownCoordinator 释放
+        private readonly Gdterm.Tools.Scanning.ScanPluginStore _scanPluginStore = new Gdterm.Tools.Scanning.ScanPluginStore();
         private GlobalHotkeyController _hotkeys;
         private MainFormCommandRouter _cmdRouter;
         private ConnectionOpenCoordinator _openCoord;
@@ -285,7 +287,8 @@ namespace Gdterm.UI.Forms
             _toolsDialogs = new ToolsDialogsLauncher(
                 this, _securityManager, _keepassService, _dangerousCmdDetector,
                 () => _tabContainer.ApplyAppearanceToAllTerminals(),
-                () => _tabContainer.GetActiveRemoteSession());
+                () => _tabContainer.GetActiveRemoteSession(),
+                _scanPluginStore);
 
             // 状态栏可点击：把二级菜单里的高频入口提为一击直达
             _statusBar.StatusClicked += (s, key) =>
@@ -484,7 +487,8 @@ namespace Gdterm.UI.Forms
             _hotkeys.Initialize();
             _shutdown = new AppShutdownCoordinator(
                 _sessionState, _hotkeys, _tabContainer,
-                _tunnelManager, _keepassService, _securityManager);
+                _tunnelManager, _keepassService, _securityManager,
+                _scanPluginStore);
             FormClosing += MaybeCloseToTray;
             FormClosing += _shutdown.OnFormClosing;
         }

@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Text;
+using System.Threading.Tasks;
 using Gdterm.Core.Security;
 using Gdterm.Tools.Models;
 
@@ -147,6 +148,38 @@ namespace Gdterm.Tools.Modules
 
         private void OnOutput(string msg) { OutputReceived?.Invoke(this, msg); }
 
+        /// <summary>finding-05 共用后台执行骨架（同 NetworkScannerTool.RunBackground）。</summary>
+        private static void RunBackground<T>(
+            System.Windows.Forms.RichTextBox output,
+            System.Windows.Forms.Label status,
+            Func<T> work,
+            Func<T, string> render)
+        {
+            var root = output.Parent as System.Windows.Forms.Control;
+            Action setRunning = () => { status.Text = "执行中..."; status.ForeColor = System.Drawing.Color.FromArgb(255, 200, 80); };
+            if (root != null && root.IsHandleCreated) root.BeginInvoke(setRunning); else setRunning();
+
+            Task.Run(() =>
+            {
+                try
+                {
+                    var doneText = render(work());
+                    SetStatus(root, status, doneText, System.Drawing.Color.FromArgb(120, 200, 120));
+                }
+                catch (Exception ex)
+                {
+                    ToolPanelHelper.AppendLine(output, "失败: " + ex.Message);
+                    SetStatus(root, status, "失败: " + ex.Message, System.Drawing.Color.FromArgb(255, 100, 100));
+                }
+            });
+        }
+
+        private static void SetStatus(System.Windows.Forms.Control root, System.Windows.Forms.Label status, string text, System.Drawing.Color color)
+        {
+            Action ui = () => { status.Text = text; status.ForeColor = color; };
+            if (root != null && root.IsHandleCreated) root.BeginInvoke(ui); else ui();
+        }
+
         public System.Windows.Forms.Control CreatePanel()
         {
             return ToolPanelHelper.CreateActionPanel(
@@ -165,14 +198,18 @@ namespace Gdterm.Tools.Modules
                         ToolPanelHelper.AppendLine(output, "错误: " + ex.Message);
                         return;
                     }
-                    var local = SyncLocalTime(ntp);
-                    ToolPanelHelper.AppendLine(output, "[本地] exit=" + local.ExitCode + " " + local.Stdout + local.Stderr);
-                    if (HasRemoteSession)
+                    // finding-05：w32tm/远程 SSH 同步可能耗时，后台执行防 UI 冻结
+                    RunBackground(output, status, () =>
                     {
-                        var remote = SyncRemoteTime(ntp);
-                        ToolPanelHelper.AppendLine(output, "[远程] exit=" + remote.ExitCode + " " + remote.Stdout + remote.Stderr);
-                    }
-                    status.Text = "完成";
+                        var local = SyncLocalTime(ntp);
+                        ToolPanelHelper.AppendLine(output, "[本地] exit=" + local.ExitCode + " " + local.Stdout + local.Stderr);
+                        if (HasRemoteSession)
+                        {
+                            var remote = SyncRemoteTime(ntp);
+                            ToolPanelHelper.AppendLine(output, "[远程] exit=" + remote.ExitCode + " " + remote.Stdout + remote.Stderr);
+                        }
+                        return true;
+                    }, _ => "完成");
                 });
         }
 
