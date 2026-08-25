@@ -509,7 +509,7 @@ namespace Gdterm.UI.Forms
                 var tc = _tabContainer.GetActiveTerminalControl();
                 var host = tc?.Config?.Host;
                 var user = tc?.Config?.Username;
-                DiagLog.Info("MainForm.ActiveSession", "session=" + (session?.SessionId ?? "null") + " host=" + (host ?? "-") + " user=" + (user ?? "-"));
+                DiagLog.Info("MainForm.ActiveSession", "session=" + (session?.ConnectionId ?? "null") + " host=" + (host ?? "-") + " user=" + (user ?? "-"));
                 if (tc != null)
                     _quickBar?.SetActiveTerminal(tc, host, user);
                 else
