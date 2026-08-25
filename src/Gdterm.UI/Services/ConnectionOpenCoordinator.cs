@@ -4,6 +4,7 @@ using Gdterm.Connections;
 using Gdterm.Core.Models;
 using Gdterm.KeePass;
 using Gdterm.UI.Controls;
+using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Forms;
 
 namespace Gdterm.UI.Services
@@ -40,7 +41,23 @@ namespace Gdterm.UI.Services
         public void OpenConnection(ConnectionConfig config)
         {
             if (config == null) return;
-            _tabs.OpenConnection(config);
+            try
+            {
+                DiagLog.Info("ConnOpenCoordinator",
+                    "request id=" + (config.Id ?? "") + " host=" + (config.Host ?? "") +
+                    " proto=" + config.Protocol);
+            }
+            catch { }
+            try
+            {
+                _tabs.OpenConnection(config);
+            }
+            catch (Exception ex)
+            {
+                // 记录后重抛：保持原有传播行为（MainForm ThreadException 兼弹窗），但日志链不断
+                DiagLog.Swallowed("ConnOpenCoordinator.Tabs", ex);
+                throw;
+            }
             try
             {
                 _bookmarks?.AddRecentConnection(new RecentConnection
@@ -52,7 +69,7 @@ namespace Gdterm.UI.Services
                     Success = true
                 });
             }
-            catch { }
+            catch (Exception ex) { DiagLog.Swallowed("ConnOpenCoordinator.Recent", ex); }
         }
 
         public void NewConnection()

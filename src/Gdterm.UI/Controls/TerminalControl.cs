@@ -41,6 +41,7 @@ namespace Gdterm.UI.Controls
         private bool _disposed;
         private bool _connecting;
         private bool _fontMetricsLoggedWithLayout;
+        private bool _fontMetricsLoggedVisible;
         private Task _connectTask;
         private bool _mouseDown;
         private int _mouseButton;
@@ -491,6 +492,27 @@ namespace Gdterm.UI.Controls
             catch (Exception ex) { DiagLog.Swallowed("TerminalControl.CellResize", ex); }
         }
 
+        /// <summary>
+        /// 度量兑底：空闲终端可能始终无输出、永不触发 TerminalResized，导致 cell-layout
+        /// 度量永远缺失。首次变为可见且句柄就绪时补记一次（真实画布尺寸）。
+        /// </summary>
+        protected override void OnVisibleChanged(EventArgs e)
+        {
+            base.OnVisibleChanged(e);
+            try
+            {
+                if (Visible && IsHandleCreated && !_fontMetricsLoggedVisible)
+                {
+                    _fontMetricsLoggedVisible = true;
+                    BeginInvoke(new Action(() =>
+                    {
+                        try { if (!_disposed) LogFontMetrics("cell-visible"); } catch { }
+                    }));
+                }
+            }
+            catch { }
+        }
+
         private void OnCellMouseDown(object sender, MouseEventArgs e)
         {
             // 右键：Shift+右键 → VT 鼠标按钮 2（vim/less 等应用内）；裸右键 → 弹菜单。
@@ -643,7 +665,12 @@ public async void Connect()
         {
             if (_disposed) return Task.FromResult(false).ContinueWith(_ => { });
             if (_session != null && _session.IsConnected) return Task.CompletedTask;
-            if (_connectTask != null && !_connectTask.IsCompleted) return _connectTask;
+            if (_connectTask != null && !_connectTask.IsCompleted)
+            {
+                try { DiagLog.Info("TerminalControl.ConnectAsyncIfNeeded",
+                    "skip: connect already running id=" + (_config != null ? _config.Id : "")); } catch { }
+                return _connectTask;
+            }
             _connectTask = ConnectAsyncCore();
             return _connectTask;
         }
@@ -849,12 +876,27 @@ public async void Connect()
             else if (_session != null && !_session.IsConnected && _session is LocalTerminalSession local)
             {
                 // 本地终端已 Attach 但进程未起
+                try { DiagLog.Info("TerminalControl.ResumeRendering",
+                    "local-start id=" + (_config != null ? _config.Id : "")); } catch { }
                 try { local.ConnectLocal(); }
                 catch (Exception ex)
                 {
                     DiagLog.Swallowed("TerminalControl.ResumeRendering.Local", ex);
                     try { _renderer?.Write("\r\n\x1b[31m本地终端启动失败: " + ex.Message + "\x1b[0m\r\n"); } catch { }
                 }
+            }
+            else
+            {
+                // 分支未命中的原因必须可见：否则无法区分“已连上”与“状态卡死”
+                try
+                {
+                    DiagLog.Info("TerminalControl.ResumeRendering",
+                        "skip id=" + (_config != null ? _config.Id : "") +
+                        " sessionNull=" + (_session == null) +
+                        " connecting=" + _connecting +
+                        " connected=" + (_session != null && _session.IsConnected));
+                }
+                catch { }
             }
         }
 

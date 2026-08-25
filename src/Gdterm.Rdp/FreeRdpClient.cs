@@ -135,29 +135,106 @@ namespace Gdterm.Rdp
         public static bool IsAvailable() => FindExecutable() != null;
 
         /// <summary>
-        /// 启动前依赖预检：wfreerdp 所需运行库缺失时返回第一个缺失的匹配模式，全部就位返回 null。
-        /// 允许依赖经系统 PATH 提供；探测自身异常时不阻塞启动（交由进程退出码报告）。
+        /// 启动前依赖预检（PE 导入表）：解析 wfreerdp.exe 实际导入的 DLL，逐一确认
+        /// Windows 加载器能找到（exe 目录 / PATH / System32 任一）。静态构建无
+        /// freerdp/winpr DLL 属正常——只检查导入表里真实列出的依赖。
+        /// 返回第一个缺失的 DLL 文件名；全部就位或探测异常时返回 null（交由进程退出码兑底）。
         /// </summary>
         public static string FindMissingRuntimeDll(string exePath)
         {
-            var dir = Path.GetDirectoryName(exePath);
-            if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) return null;
-            // *freerdp*/*winpr* 同时兼容 2.x(libwinpr.dll/libfreerdp.dll) 与 3.x(winpr3.dll/freerdp3.dll) 命名
-            var patterns = new[] { "*freerdp*.dll", "*winpr*.dll", "libcrypto*.dll", "libssl*.dll" };
             try
             {
-                foreach (var pat in patterns)
+                if (string.IsNullOrEmpty(exePath) || !File.Exists(exePath)) return null;
+                var dir = Path.GetDirectoryName(exePath);
+                var sysDir = Environment.GetFolderPath(Environment.SpecialFolder.System);
+                foreach (var dll in ReadImportTable(exePath))
                 {
-                    if (!HasFile(dir, pat) && !ExistsOnPath(pat)) return pat;
+                    // API Set 虚拟名由加载器内部解析，磁盘上无对应文件
+                    if (dll.StartsWith("api-ms-", StringComparison.OrdinalIgnoreCase) ||
+                        dll.StartsWith("ext-ms-", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (HasFile(dir, dll) || ExistsOnPath(dll) || HasFile(sysDir, dll)) continue;
+                    return dll;
                 }
             }
             catch { return null; }
             return null;
         }
 
-        private static bool HasFile(string dir, string pattern)
+        /// <summary>解析 PE32/PE32+ 导入表中的 DLL 文件名（不含延迟导入）。</summary>
+        private static IEnumerable<string> ReadImportTable(string exePath)
         {
-            foreach (var _ in Directory.EnumerateFiles(dir, pattern)) return true;
+            using (var fs = File.OpenRead(exePath))
+            using (var br = new BinaryReader(fs))
+            {
+                if (br.ReadUInt16() != 0x5A4D) yield break;                  // 'MZ'
+                fs.Position = 0x3C;
+                int pe = br.ReadInt32();
+                fs.Position = pe;
+                if (br.ReadUInt32() != 0x00004550) yield break;              // 'PE\0\0'
+                br.ReadUInt16();                                             // Machine
+                ushort sections = br.ReadUInt16();                           // NumberOfSections
+                fs.Position += 12;                                           // TimeDateStamp/SymTable/SymCount
+                ushort optSize = br.ReadUInt16();                            // SizeOfOptionalHeader
+                fs.Position += 2;                                            // Characteristics
+                long optStart = fs.Position;
+                int ddOffset = br.ReadUInt16() == 0x20B ? 112 : 96;          // Magic: PE32+ 为 112
+                if (optSize < ddOffset + 16) yield break;
+                fs.Position = optStart + ddOffset + 8;                       // DataDirectory[1]=Import Table
+                int importRva = br.ReadInt32();
+
+                // 节表 → RVA→文件偏移映射
+                var secVaddr = new int[sections];
+                var secVsize = new int[sections];
+                var secRaw = new long[sections];
+                fs.Position = optStart + optSize;
+                for (int i = 0; i < sections; i++)
+                {
+                    fs.Position += 8;                                        // Name
+                    secVsize[i] = br.ReadInt32();
+                    secVaddr[i] = br.ReadInt32();
+                    br.ReadInt32();                                          // SizeOfRawData
+                    secRaw[i] = br.ReadInt32();                              // PointerToRawData
+                    fs.Position += 16;
+                }
+
+                long Off(int rva)
+                {
+                    for (int i = 0; i < sections; i++)
+                        if (rva >= secVaddr[i] && rva < secVaddr[i] + Math.Max(secVsize[i], 1))
+                            return rva - secVaddr[i] + secRaw[i];
+                    return -1L;
+                }
+
+                long desc = Off(importRva);
+                if (desc < 0) yield break;
+                for (int i = 0; i < 4096; i++)                               // 上限防损坏文件死循环
+                {
+                    fs.Position = desc + i * 20L + 12;                       // IMAGE_IMPORT_DESCRIPTOR.Name
+                    int nameRva = br.ReadInt32();
+                    if (nameRva == 0) yield break;                           // 全零终止项
+                    long nameOff = Off(nameRva);
+                    if (nameOff < 0) continue;
+                    fs.Position = nameOff;
+                    var sb = new System.Text.StringBuilder();
+                    for (int k = 0; k < 256; k++)
+                    {
+                        byte b = br.ReadByte();
+                        if (b == 0) break;
+                        sb.Append((char)b);
+                    }
+                    if (sb.Length > 0) yield return sb.ToString();
+                }
+            }
+        }
+
+        private static bool HasFile(string dir, string fileName)
+        {
+            if (string.IsNullOrEmpty(dir)) return false;
+            try
+            {
+                foreach (var _ in Directory.EnumerateFiles(dir, fileName)) return true;
+            }
+            catch { }
             return false;
         }
 
@@ -205,10 +282,14 @@ namespace Gdterm.Rdp
             // 导致误报 connected 后再掉线（退出码 0xC0000135）。快速失败并给出可操作提示。
             var missingDll = FindMissingRuntimeDll(exe);
             if (missingDll != null)
+            {
+                RdpLog.Info("FreeRdp.Precheck", "missing dll=" + missingDll + " exe=" + exe);
                 throw new InvalidOperationException(
                     "FreeRDP 运行库不完整：缺少 " + missingDll
                     + "（目录：" + Path.GetDirectoryName(exe) + "）。"
                     + "正常情况下发行包已自带全部运行库——请重新解压完整发行包覆盖；若被杀毒软件隔离请恢复并加白名单。");
+            }
+            try { RdpLog.Info("FreeRdp.Precheck", "ok exe=" + exe); } catch { }
 
             CurrentOptions = options ?? new RdpOptions();
 

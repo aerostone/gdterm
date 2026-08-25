@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
 using Gdterm.UI.Controls;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Services
 {
@@ -20,6 +21,13 @@ namespace Gdterm.UI.Services
             if (tabControl == null || sessions == null) return;
 
             var selected = tabControl.SelectedTab;
+            try
+            {
+                DiagLog.Info("TabSelect.OnSelectedChanged",
+                    "selected=" + (selected != null ? selected.Text : "<none>") +
+                    " sessions=" + sessions.Count);
+            }
+            catch { }
             foreach (var kvp in sessions)
             {
                 bool isSelected = kvp.Key == selected;
@@ -36,6 +44,14 @@ namespace Gdterm.UI.Services
                     else tc.PauseRendering();
                 }
 
+                try
+                {
+                    DiagLog.Info("TabSelect.OnSelectedChanged",
+                        (isSelected ? "resume" : "pause") + " proto=" + state.Protocol +
+                        " id=" + state.SessionId + " terminals=" + terminals.Count);
+                }
+                catch { }
+
                 if (state.HealthMonitor != null)
                     state.HealthMonitor.IsPaused = !isSelected;
 
@@ -44,8 +60,16 @@ namespace Gdterm.UI.Services
                 {
                     var connect = state.PendingConnect;
                     state.PendingConnect = null;
-                    try { connect(); }
-                    catch { }
+                    try
+                    {
+                        DiagLog.Info("TabSelect.RdpLazyConnect", "id=" + state.SessionId);
+                        connect();
+                    }
+                    catch (Exception ex)
+                    {
+                        // RDP 连接失败必须留痕（此前静默吞掉，用户只看到无反应）
+                        DiagLog.Swallowed("TabSelect.RdpLazyConnect", ex);
+                    }
                 }
             }
         }

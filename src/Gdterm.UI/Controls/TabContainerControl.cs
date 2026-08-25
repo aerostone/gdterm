@@ -165,13 +165,32 @@ namespace Gdterm.UI.Controls
                 if (_sessions.TryGetValue(existingTab, out var session) &&
                     session.Config?.Id == config.Id)
                 {
+                    // 重复打开同一连接：切到已有标签。仍需强制激活——若该标签上次创建后
+                    // 从未连上（懒连接未触发/中途失败），仅 SelectTab 会让它永远空白。
+                    try { DiagLog.Info("TabContainer.OpenConnection",
+                        "duplicate id=" + (config.Id ?? "") + " → activate existing tab"); } catch { }
                     _tabControl.SelectedTab = existingTab;
+                    ForceActivateSession(existingTab);
+                    ActiveSessionChanged?.Invoke(this, EventArgs.Empty);
                     return;
                 }
             }
 
+            try { DiagLog.Info("TabContainer.OpenConnection",
+                "creating id=" + (config.Id ?? "") + " host=" + (config.Host ?? "") +
+                " proto=" + config.Protocol); } catch { }
+
             var opened = _opener.CreateForConnection(config);
-            if (opened == null || opened.Page == null || opened.Session == null) return;
+            if (opened == null || opened.Page == null || opened.Session == null)
+            {
+                // 创建返回半成品：必须留痕，否则日志链在此静默断裂无法排查 SSH 失联类问题
+                try { DiagLog.Info("TabContainer.OpenConnection",
+                    "ABORT create returned incomplete id=" + (config.Id ?? "") +
+                    " opened=" + (opened != null) +
+                    " page=" + (opened != null && opened.Page != null) +
+                    " session=" + (opened != null && opened.Session != null)); } catch { }
+                return;
+            }
 
             _sessions[opened.Page] = opened.Session;
             _tabControl.TabPages.Add(opened.Page);
@@ -183,7 +202,7 @@ namespace Gdterm.UI.Controls
             try
             {
                 DiagLog.Info("TabContainer.OpenConnection",
-                    "id=" + (config.Id ?? "") + " host=" + (config.Host ?? "") +
+                    "opened id=" + (config.Id ?? "") + " host=" + (config.Host ?? "") +
                     " proto=" + config.Protocol);
             }
             catch { }
@@ -191,26 +210,39 @@ namespace Gdterm.UI.Controls
 
         public void OpenLocalTerminal(string shellPath = null)
         {
+            try { DiagLog.Info("TabContainer.OpenLocalTerminal",
+                "shellPath=" + (shellPath ?? "<default>")); } catch { }
             var opened = _opener.CreateLocal(shellPath);
-            if (opened == null) return;
+            if (opened == null)
+            {
+                try { DiagLog.Info("TabContainer.OpenLocalTerminal", "ABORT create returned null"); } catch { }
+                return;
+            }
             _sessions[opened.Page] = opened.Session;
             _tabControl.TabPages.Add(opened.Page);
             RaiseTabCountChanged();
             _tabControl.SelectedTab = opened.Page;
             ForceActivateSession(opened.Page);
             ActiveSessionChanged?.Invoke(this, EventArgs.Empty);
-            try { DiagLog.Info("TabContainer.OpenLocalTerminal", "ok"); } catch { }
+            try { DiagLog.Info("TabContainer.OpenLocalTerminal", "opened"); } catch { }
         }
 
         public void OpenSftpBrowser(ConnectionConfig config)
         {
+            try { DiagLog.Info("TabContainer.OpenSftpBrowser",
+                "id=" + (config != null ? config.Id ?? "" : "<null>")); } catch { }
             var opened = _opener.CreateSftp(config);
-            if (opened == null) return;
+            if (opened == null)
+            {
+                try { DiagLog.Info("TabContainer.OpenSftpBrowser", "ABORT create returned null"); } catch { }
+                return;
+            }
             _sessions[opened.Page] = opened.Session;
             _tabControl.TabPages.Add(opened.Page);
             RaiseTabCountChanged();
             _tabControl.SelectedTab = opened.Page;
             ActiveSessionChanged?.Invoke(this, EventArgs.Empty);
+            try { DiagLog.Info("TabContainer.OpenSftpBrowser", "opened"); } catch { }
         }
 
         private void HandleTerminalConnected(TabPage tab, TerminalControl terminalControl, ConnectionConfig config)

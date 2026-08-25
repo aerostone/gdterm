@@ -501,16 +501,23 @@ namespace Gdterm.UI.Forms
 
         private void OnActiveSessionChanged(object sender, EventArgs e)
         {
-            var session = _tabContainer.GetActiveSession();
-            var tc = _tabContainer.GetActiveTerminalControl();
-            var host = tc?.Config?.Host;
-            var user = tc?.Config?.Username;
-            if (tc != null)
-                _quickBar?.SetActiveTerminal(tc, host, user);
-            else
-                _quickBar?.SetActiveSession(session, host, user);
+            // 此事件在 TabContainer.OpenConnection 尾部触发：这里抛异常会吞掉打开链路的收尾日志，
+            // 且表现为“标签创建了但永远不连接”。任何异常都落盘但不阻断。
+            try
+            {
+                var session = _tabContainer.GetActiveSession();
+                var tc = _tabContainer.GetActiveTerminalControl();
+                var host = tc?.Config?.Host;
+                var user = tc?.Config?.Username;
+                DiagLog.Info("MainForm.ActiveSession", "session=" + (session?.SessionId ?? "null") + " host=" + (host ?? "-") + " user=" + (user ?? "-"));
+                if (tc != null)
+                    _quickBar?.SetActiveTerminal(tc, host, user);
+                else
+                    _quickBar?.SetActiveSession(session, host, user);
 
-            try { _sidePanels?.SyncMultiChannelRegistrations(); } catch { }
+                try { _sidePanels?.SyncMultiChannelRegistrations(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.SyncMultiChannel", ex); }
+            }
+            catch (Exception ex) { DiagLog.Swallowed("MainForm.OnActiveSessionChanged", ex); }
         }
 
         /// <summary>
