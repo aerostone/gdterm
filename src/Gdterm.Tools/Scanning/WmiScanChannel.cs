@@ -186,9 +186,12 @@ namespace Gdterm.Tools.Scanning
                     new ObjectQuery("SELECT ProcessId FROM Win32_Process WHERE ProcessId=" + pid)))
                 using (var results = searcher.Get())
                 {
-                    foreach (var obj in results)
-                    using (obj)
+                    foreach (var baseObj in results)
+                    using (baseObj)
                     {
+                        // CS1061：InvokeMethod 在 ManagementObject 上，而非 ManagementBaseObject
+                        var obj = baseObj as ManagementObject;
+                        if (obj == null) continue;
                         var outParams = obj.InvokeMethod("Terminate", new object[] { 0u });
                         return outParams != null && Convert.ToUInt32(outParams["ReturnValue"]) == 0;
                     }
