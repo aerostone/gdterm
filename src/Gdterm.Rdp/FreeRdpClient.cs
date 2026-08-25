@@ -134,6 +134,45 @@ namespace Gdterm.Rdp
         /// <summary>wfreerdp.exe 是否可用（决定工厂选 FreeRDP 还是回退 mstscax）。</summary>
         public static bool IsAvailable() => FindExecutable() != null;
 
+        /// <summary>
+        /// 启动前依赖预检：wfreerdp 所需运行库缺失时返回第一个缺失的匹配模式，全部就位返回 null。
+        /// 允许依赖经系统 PATH 提供；探测自身异常时不阻塞启动（交由进程退出码报告）。
+        /// </summary>
+        public static string FindMissingRuntimeDll(string exePath)
+        {
+            var dir = Path.GetDirectoryName(exePath);
+            if (string.IsNullOrEmpty(dir) || !Directory.Exists(dir)) return null;
+            // *freerdp*/*winpr* 同时兼容 2.x(libwinpr.dll/libfreerdp.dll) 与 3.x(winpr3.dll/freerdp3.dll) 命名
+            var patterns = new[] { "*freerdp*.dll", "*winpr*.dll", "libcrypto*.dll", "libssl*.dll" };
+            try
+            {
+                foreach (var pat in patterns)
+                {
+                    if (!HasFile(dir, pat) && !ExistsOnPath(pat)) return pat;
+                }
+            }
+            catch { return null; }
+            return null;
+        }
+
+        private static bool HasFile(string dir, string pattern)
+        {
+            foreach (var _ in Directory.EnumerateFiles(dir, pattern)) return true;
+            return false;
+        }
+
+        private static bool ExistsOnPath(string pattern)
+        {
+            var pathEnv = Environment.GetEnvironmentVariable("PATH");
+            if (string.IsNullOrEmpty(pathEnv)) return false;
+            foreach (var d in pathEnv.Split(';'))
+            {
+                if (string.IsNullOrWhiteSpace(d)) continue;
+                try { if (HasFile(d.Trim(), pattern)) return true; } catch { }
+            }
+            return false;
+        }
+
         /// <summary>探测 wfreerdp.exe 路径；绿色包在 freerdp\，源码运行在 lib\freerdp\。</summary>
         public static string FindExecutable()
         {
@@ -160,6 +199,15 @@ namespace Gdterm.Rdp
                     "未找到 wfreerdp.exe。请将 FreeRDP 2.x Windows 版解压到程序目录 freerdp\\ 下"
                     + "（下载：https://ci.freerdp.com/job/freerdp-nightly-windows/ 或 GitHub Releases），"
                     + "或在连接元数据设置 rdp_engine=mstscax 改用 ActiveX。");
+
+            // 启动前依赖预检：缺 DLL 时 Windows 会弹「找不到 xxx.dll」错误框且进程假活，
+            // 导致误报 connected 后再掉线（退出码 0xC0000135）。快速失败并给出可操作提示。
+            var missingDll = FindMissingRuntimeDll(exe);
+            if (missingDll != null)
+                throw new InvalidOperationException(
+                    "FreeRDP 运行库不完整：缺少 " + missingDll
+                    + "（目录：" + Path.GetDirectoryName(exe) + "）。"
+                    + "请将 FreeRDP 发布包内全部文件完整复制到该目录后重试；若被杀毒软件隔离请恢复并加白名单。");
 
             CurrentOptions = options ?? new RdpOptions();
 
@@ -353,6 +401,10 @@ namespace Gdterm.Rdp
                 case 0x0E: return "通用认证失败";
                 case 0x0F: return "KDC 不可达（域认证）";
                 default:
+                    // NTSTATUS：加载器/运行库级失败，与 ERRCONNECT_* 区分
+                    if (code == unchecked((int)0xC0000135)) return "缺少依赖 DLL（如 libcrypto-3-x.dll），请补全 freerdp\\ 目录后重试";
+                    if (code == unchecked((int)0xC000007B)) return "DLL 架构不匹配（x64/x86 混用），请换用与程序位数一致的 FreeRDP 包";
+                    if (code == unchecked((int)0xC0000142)) return "DLL 初始化失败（运行库损坏或版本不匹配）";
                     if (code == unchecked((int)0x8000FFFF)) return "未知内部错误";
                     return "连接断开（退出码 " + code + "/0x" + code.ToString("X") + "，详见日志）";
             }
