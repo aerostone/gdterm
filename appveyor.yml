@@ -92,10 +92,38 @@ install:
       cmake --build $bld --config Release -- /m /v:m
       if ($LASTEXITCODE -ne 0) { throw "FreeRDP build failed exit=$LASTEXITCODE" }
 
-      # ---- 收集产物（全静态构建 → 单个 wfreerdp.exe，无自家/第三方 DLL）----
-      $f = Get-ChildItem -Path $bld -Recurse -Filter 'wfreerdp.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
-      if ($f) { Copy-Item $f.FullName $frBin -Force; Write-Host "Collected $($f.FullName) ($([math]::Round($f.Length/1MB,1)) MB)" }
-      else { throw "Build output missing: wfreerdp.exe" }
+      # ---- 收集产物 ----
+      # OpenSSL 运行时 DLL 必须随包分发：FreeRDP 2.x 自带的 cmake/FindOpenSSL.cmake
+      # 覆盖了 CMake 内置 FindOpenSSL 模块，OPENSSL_USE_STATIC_LIBS=ON 对它无效 ——
+      # wfreerdp.exe 实际动态导入 libcrypto-1_1-x64.dll/libssl-1_1-x64.dll（0.1.92–0.1.107
+      # 全部版本 PE 导入表已验证）。放在 exe 同目录由加载器按「应用程序目录」优先命中；
+      # DLL 名称随 OpenSSL 大版本漂移（1_1 → 3-x），故递归通配收集而非硬编码文件名。
+      $osslDlls = Get-ChildItem -Path $ossl -Recurse -Include 'libcrypto*.dll','libssl*.dll' -ErrorAction SilentlyContinue
+      if (-not $osslDlls) { throw "No OpenSSL runtime DLLs found under $ossl" }
+      $seen = @{}
+      foreach ($d in $osslDlls) {
+        if ($seen.ContainsKey($d.Name)) { continue }
+        $seen[$d.Name] = $true
+        Copy-Item $d.FullName (Join-Path $frBin $d.Name) -Force
+        Write-Host "Collected $($d.Name) <- $($d.FullName)"
+      }
+
+      # ---- 冒烟测试：/version 能正常退出 ⇒ 加载器依赖完整 ----
+      # 缺 DLL 时加载器默认弹模态错误框会挂死 CI —— 先 SetErrorMode(3)，
+      # 子进程继承后缺 DLL 直接退码 STATUS_DLL_NOT_FOUND 而非弹框。
+      Add-Type -Namespace Native -Name Kernel32 -MemberDefinition '
+        [DllImport("kernel32.dll")] public static extern uint SetErrorMode(uint uMode);'
+      [Native.Kernel32]::SetErrorMode(3) | Out-Null   # SEM_FAILCRITICALERRORS|SEM_NOOPENFILEERRORBOX
+      $wfe = Join-Path $frBin 'wfreerdp.exe'
+      $pi = New-Object System.Diagnostics.ProcessStartInfo
+      $pi.FileName = $wfe; $pi.Arguments = '/version'
+      $pi.UseShellExecute = $false; $pi.CreateNoWindow = $true; $pi.RedirectStandardOutput = $true
+      $proc = [System.Diagnostics.Process]::Start($pi)
+      $verOut = $proc.StandardOutput.ReadToEnd()
+      if (-not $proc.WaitForExit(20000)) { try { $proc.Kill() } catch {}; throw "wfreerdp /version timed out (20s)" }
+      Write-Host "Smoke: wfreerdp /version => exit=$($proc.ExitCode) out=$($verOut.Trim().Substring(0, [Math]::Min(120, $verOut.Trim().Length)))"
+      if ($proc.ExitCode -ne 0) { throw "wfreerdp smoke FAIL exit=$($proc.ExitCode) — loader/runtime deps incomplete (missing DLL?)" }
+
       # Apache-2.0 许可证随分发保留
       $lic = Join-Path $root 'LICENSE'
       if (Test-Path $lic) { Copy-Item $lic (Join-Path $frBin 'LICENSE.FreeRDP.txt') -Force }
@@ -194,6 +222,19 @@ after_test:
         if ($frSrc -eq "lib\freerdp") { Copy-Item "lib\freerdp\*" $frDir -Recurse -Force }
         else { Copy-Item "$env:APPVEYOR_BUILD_FOLDER\freerdp-bin\*" $frDir -Force }
         Write-Host "Packed FreeRDP from ${frSrc}: $((Get-ChildItem $frDir -File).Count) files"
+
+        # 打包后的引擎同样必须可加载（防拷贝步骤遗漏 DLL；SetErrorMode 防缺 DLL 弹框挂死 CI）
+        Add-Type -Namespace Native -Name Kernel32 -MemberDefinition '
+          [DllImport("kernel32.dll")] public static extern uint SetErrorMode(uint uMode);'
+        [Native.Kernel32]::SetErrorMode(3) | Out-Null
+        $pi2 = New-Object System.Diagnostics.ProcessStartInfo
+        $pi2.FileName = Join-Path $frDir 'wfreerdp.exe'; $pi2.Arguments = '/version'
+        $pi2.UseShellExecute = $false; $pi2.CreateNoWindow = $true; $pi2.RedirectStandardOutput = $true
+        $proc2 = [System.Diagnostics.Process]::Start($pi2)
+        $null = $proc2.StandardOutput.ReadToEnd()
+        if (-not $proc2.WaitForExit(20000)) { try { $proc2.Kill() } catch {}; throw "packed wfreerdp /version timeout" }
+        if ($proc2.ExitCode -ne 0) { throw "packed wfreerdp cannot load (exit=$($proc2.ExitCode)) — freerdp\ 目录缺运行库 DLL" }
+        Write-Host "Packed FreeRDP smoke OK (exit=$($proc2.ExitCode))"
       } else {
         Write-Warning "No FreeRDP engine available — RDP falls back to mstscax ActiveX at runtime"
       }

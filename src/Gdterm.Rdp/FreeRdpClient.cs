@@ -196,8 +196,9 @@ namespace Gdterm.Rdp
             var exe = FindExecutable();
             if (exe == null)
                 throw new InvalidOperationException(
-                    "未找到 wfreerdp.exe。请将 FreeRDP 2.x Windows 版解压到程序目录 freerdp\\ 下"
-                    + "（下载：https://ci.freerdp.com/job/freerdp-nightly-windows/ 或 GitHub Releases），"
+                    "未找到 RDP 引擎 wfreerdp.exe。发行包 freerdp\\ 目录应自带该引擎"
+                    + "（官方已停发 2.x Windows 二进制，由本项目 CI 从源码构建打包，请勿单独下载 3.x 替换——"
+                    + "3.x 已移除 /parent-window 嵌入）。请用完整发行包重新解压；"
                     + "或在连接元数据设置 rdp_engine=mstscax 改用 ActiveX。");
 
             // 启动前依赖预检：缺 DLL 时 Windows 会弹「找不到 xxx.dll」错误框且进程假活，
@@ -207,7 +208,7 @@ namespace Gdterm.Rdp
                 throw new InvalidOperationException(
                     "FreeRDP 运行库不完整：缺少 " + missingDll
                     + "（目录：" + Path.GetDirectoryName(exe) + "）。"
-                    + "请将 FreeRDP 发布包内全部文件完整复制到该目录后重试；若被杀毒软件隔离请恢复并加白名单。");
+                    + "正常情况下发行包已自带全部运行库——请重新解压完整发行包覆盖；若被杀毒软件隔离请恢复并加白名单。");
 
             CurrentOptions = options ?? new RdpOptions();
 
