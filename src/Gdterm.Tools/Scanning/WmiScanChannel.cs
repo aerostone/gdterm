@@ -192,8 +192,9 @@ namespace Gdterm.Tools.Scanning
                         // CS1061：InvokeMethod 在 ManagementObject 上，而非 ManagementBaseObject
                         var obj = baseObj as ManagementObject;
                         if (obj == null) continue;
-                        var outParams = obj.InvokeMethod("Terminate", new object[] { 0u });
-                        return outParams != null && Convert.ToUInt32(outParams["ReturnValue"]) == 0;
+                        // 该重载（string, object[]）直接返回方法返回值（Terminate 的 uint 返回码），无 out 参数集
+                        var rc = obj.InvokeMethod("Terminate", new object[] { 0u });
+                        return rc != null && Convert.ToUInt32(rc) == 0;
                     }
                 }
                 return false;
