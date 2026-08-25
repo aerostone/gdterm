@@ -93,6 +93,10 @@ install:
       if ($LASTEXITCODE -ne 0) { throw "FreeRDP build failed exit=$LASTEXITCODE" }
 
       # ---- 收集产物 ----
+      # 主程序 exe：全静态构建产物，来自构建树 Release 目录
+      $f = Get-ChildItem -Path $bld -Recurse -Filter 'wfreerdp.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
+      if ($f) { Copy-Item $f.FullName $frBin -Force; Write-Host "Collected $($f.FullName) ($([math]::Round($f.Length/1MB,1)) MB)" }
+      else { throw "Build output missing: wfreerdp.exe" }
       # OpenSSL 运行时 DLL 必须随包分发：FreeRDP 2.x 自带的 cmake/FindOpenSSL.cmake
       # 覆盖了 CMake 内置 FindOpenSSL 模块，OPENSSL_USE_STATIC_LIBS=ON 对它无效 ——
       # wfreerdp.exe 实际动态导入 libcrypto-1_1-x64.dll/libssl-1_1-x64.dll（0.1.92–0.1.107
