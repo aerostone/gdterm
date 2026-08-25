@@ -228,11 +228,15 @@ after_test:
         Write-Host "Packed FreeRDP from ${frSrc}: $((Get-ChildItem $frDir -File).Count) files"
 
         # 打包后的引擎同样必须可加载（防拷贝步骤遗漏 DLL；SetErrorMode 防缺 DLL 弹框挂死 CI）
-        Add-Type -Namespace Native -Name Kernel32 -MemberDefinition '
-          [DllImport("kernel32.dll")] public static extern uint SetErrorMode(uint uMode);'
+        if (-not ([System.Management.Automation.PSTypeName]'Native.Kernel32').Type) {
+          Add-Type -Namespace Native -Name Kernel32 -MemberDefinition '
+            [DllImport("kernel32.dll")] public static extern uint SetErrorMode(uint uMode);'
+        }
         [Native.Kernel32]::SetErrorMode(3) | Out-Null
         $pi2 = New-Object System.Diagnostics.ProcessStartInfo
-        $pi2.FileName = Join-Path $frDir 'wfreerdp.exe'; $pi2.Arguments = '/version'
+        $pi2.FileName = Join-Path (Join-Path $env:APPVEYOR_BUILD_FOLDER 'dist\gdterm\freerdp') 'wfreerdp.exe'
+        $pi2.WorkingDirectory = $env:APPVEYOR_BUILD_FOLDER
+        $pi2.Arguments = '/version'
         $pi2.UseShellExecute = $false; $pi2.CreateNoWindow = $true; $pi2.RedirectStandardOutput = $true
         $proc2 = [System.Diagnostics.Process]::Start($pi2)
         $null = $proc2.StandardOutput.ReadToEnd()
