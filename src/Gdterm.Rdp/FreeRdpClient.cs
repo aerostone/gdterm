@@ -488,6 +488,9 @@ namespace Gdterm.Rdp
                 case 0x0E: return "通用认证失败";
                 case 0x0F: return "KDC 不可达（域认证）";
                 default:
+                    // ERRINFO_*（0x10000 段，MS-RDPBCGR 2.2.5.1.1）：服务器在会话中主动上报的错误信息
+                    if (code == 0x1000C) return "服务器主动注销了此会话（LOGOFF_BY_USER）：常见于未提供凭据被堡垒机登录超时踢出、同账号在其它客户端登录被顶号、或管理员强制注销。请在连接设置里配置用户名密码后重试";
+                    if (code == 0x10004) return "服务器强制断开（策略限制或会话被接管）";
                     // NTSTATUS：加载器/运行库级失败，与 ERRCONNECT_* 区分
                     if (code == unchecked((int)0xC0000135)) return "缺少依赖 DLL（如 libcrypto-3-x.dll），请补全 freerdp\\ 目录后重试";
                     if (code == unchecked((int)0xC000007B)) return "DLL 架构不匹配（x64/x86 混用），请换用与程序位数一致的 FreeRDP 包";
