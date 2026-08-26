@@ -309,6 +309,17 @@ namespace Gdterm.UI.Forms
             // ===== 底部按钮 =====
             var btnPanel = new Panel { Dock = DockStyle.Bottom, Height = 45, BackColor = Color.FromArgb(37, 37, 38) };
             _btnPanel = btnPanel;
+            // 按钮交给布局引擎（RightToLeft 流式：先加的靠右）。
+            // 不用绝对坐标 + Anchor.Right：在字体/DPI 缩放下会双重补偿漂出窗体右边界，
+            // 0.1.118 实测 okBtn X=1009 > ClientSize 宽 808 → “保存按钮不见了”的根因。
+            var btnFlow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false,
+                BackColor = Color.FromArgb(37, 37, 38),
+                Padding = new Padding(0, 7, 16, 0)
+            };
             var okBtn = new Button
             {
                 Text = _isNew ? "创建" : "保存",
@@ -317,8 +328,7 @@ namespace Gdterm.UI.Forms
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Size = new Size(80, 30),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(560 - 190, 8)
+                Margin = new Padding(0)
             };
             var cancelBtn = new Button
             {
@@ -328,12 +338,13 @@ namespace Gdterm.UI.Forms
                 ForeColor = Color.FromArgb(204, 204, 204),
                 FlatStyle = FlatStyle.Flat,
                 Size = new Size(80, 30),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right,
-                Location = new Point(560 - 100, 8)
+                Margin = new Padding(0, 0, 8, 0)
             };
             okBtn.Click += (s, e) => { SaveToConfig(); };
             _okBtn = okBtn;
-            btnPanel.Controls.AddRange(new Control[] { okBtn, cancelBtn });
+            btnFlow.Controls.Add(okBtn);      // RightToLeft：第一个在最右
+            btnFlow.Controls.Add(cancelBtn);
+            btnPanel.Controls.Add(btnFlow);
 
             // Dock 顺序：后添加的先布局——Top 先钉住，Bottom 再钉住，Fill 吃剩余空间
             Controls.Add(_advancedHost);
@@ -423,8 +434,11 @@ namespace Gdterm.UI.Forms
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
+            // 可见性必须同时检查横向和纵向——0.1.118 只查了纵向，按钮横向飞出时误报 true
+            bool visOk = _okBtn.Bottom <= ClientSize.Height && _okBtn.Height > 0
+                         && _okBtn.Left >= 0 && _okBtn.Right <= ClientSize.Width && _okBtn.Width > 0;
             DiagLog.Info("ConnDialog", "shown ClientSize=" + ClientSize.Width + "x" + ClientSize.Height
-                + " okBtnBounds=" + _okBtn.Bounds + " visibleInForm=" + (_okBtn.Bottom <= ClientSize.Height)
+                + " okBtnBounds=" + _okBtn.Bounds + " visibleInForm=" + visOk
                 + " btnPanelBottom=" + _btnPanel.Bottom + " workArea=" + Screen.FromControl(this).WorkingArea);
         }
 

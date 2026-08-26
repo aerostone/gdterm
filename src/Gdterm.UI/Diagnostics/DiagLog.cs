@@ -24,7 +24,35 @@ namespace Gdterm.UI.Diagnostics
         }
 
         /// <summary>
+        /// UI 相关 source 前缀：命中时额外镜像一份到 data/logs/ui.log（主日志 diag.log 仍全量保留）。
+        /// 覆盖对话框布局/字体缩放/标签页切换等界面排查场景。
+        /// </summary>
+        private static readonly string[] UiSourcePrefixes =
+        {
+            "ConnDialog",
+            "MainForm",
+            "FormFontPolicy",
+            "UIFont",
+            "KeePassEntryPicker",
+            "TerminalControl.Appearance",
+            "TerminalControl.FontMetrics",
+            "TerminalControl.ResumeRendering",
+            "TabSelect.",
+            "TabContainer."
+        };
+
+        private static bool IsUiSource(string source)
+        {
+            if (string.IsNullOrEmpty(source)) return false;
+            for (int i = 0; i < UiSourcePrefixes.Length; i++)
+                if (source.StartsWith(UiSourcePrefixes[i], StringComparison.OrdinalIgnoreCase))
+                    return true;
+            return false;
+        }
+
+        /// <summary>
         /// 试运行阶段信息日志——写入 crash.jsonl（source 前缀 info:），永不抛出。
+        /// UI 相关 source 会同时镜像到 data/logs/ui.log。
         /// </summary>
         public static void Info(string source, string message)
         {
@@ -33,7 +61,8 @@ namespace Gdterm.UI.Diagnostics
                 CrashLog.Write(
                     "info:" + (source ?? "unknown"),
                     new Exception(message ?? ""),
-                    isTerminating: false);
+                    isTerminating: false,
+                    uiFile: IsUiSource(source));
             }
             catch { }
         }

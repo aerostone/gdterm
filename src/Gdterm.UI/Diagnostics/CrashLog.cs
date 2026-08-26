@@ -13,6 +13,7 @@ namespace Gdterm.UI.Diagnostics
     {
         private static readonly object _lock = new object();
         private static string _path;
+        private static string _uiPath;
         private static int _written;
 
         public static void Initialize(string logsDirectory)
@@ -25,14 +26,18 @@ namespace Gdterm.UI.Diagnostics
                     Directory.CreateDirectory(logsDirectory);
                 // 人可读主日志；旧 crash.jsonl 不再写入
                 _path = Path.Combine(logsDirectory, "diag.log");
+                // UI 专项日志（界面/对话框/字体缩放），与主日志内容重叠，方便单独排查界面问题
+                _uiPath = Path.Combine(logsDirectory, "ui.log");
             }
             catch
             {
                 _path = null;
+                _uiPath = null;
             }
         }
 
-        public static void Write(string source, Exception ex, bool isTerminating = false)
+        /// <param name="uiFile">同时镜像到 data/logs/ui.log（UI 专项排查）。</param>
+        public static void Write(string source, Exception ex, bool isTerminating = false, bool uiFile = false)
         {
             if (ex == null && string.IsNullOrEmpty(source))
                 return;
@@ -96,30 +101,36 @@ namespace Gdterm.UI.Diagnostics
 
                 lock (_lock)
                 {
-                    var path = _path;
-                    if (string.IsNullOrEmpty(path))
-                        return;
-
-                    try
-                    {
-                        var fi = new FileInfo(path);
-                        if (fi.Exists && fi.Length > 5 * 1024 * 1024)
-                        {
-                            var bak = path + ".1";
-                            try { if (File.Exists(bak)) File.Delete(bak); } catch { }
-                            try { File.Move(path, bak); } catch { }
-                        }
-                    }
-                    catch { }
-
-                    File.AppendAllText(path, sb.ToString(), Encoding.UTF8);
                     Interlocked.Increment(ref _written);
+                    AppendWithRotate(_path, sb.ToString());
+                    if (uiFile)
+                        AppendWithRotate(_uiPath, sb.ToString());
                 }
             }
             catch
             {
                 // 绝不因日志本身再抛
             }
+        }
+
+        /// <summary>单文件追加 + 超 5MB 轮转（path 为 null/空时静默跳过）。</summary>
+        private static void AppendWithRotate(string path, string text)
+        {
+            if (string.IsNullOrEmpty(path))
+                return;
+            try
+            {
+                var fi = new FileInfo(path);
+                if (fi.Exists && fi.Length > 5 * 1024 * 1024)
+                {
+                    var bak = path + ".1";
+                    try { if (File.Exists(bak)) File.Delete(bak); } catch { }
+                    try { File.Move(path, bak); } catch { }
+                }
+            }
+            catch { }
+
+            try { File.AppendAllText(path, text, Encoding.UTF8); } catch { }
         }
 
         public static int WrittenCount => _written;
