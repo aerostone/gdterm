@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using Gdterm.Security;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Forms
 {
@@ -57,7 +58,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "修改主密码";
-            Size = new Size(500, 380);
+            Size = DpiScale.S(500, 380);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -68,19 +69,19 @@ namespace Gdterm.UI.Forms
             var titleLabel = new Label
             {
                 Text = "修改主密码",
-                Font = new Font("Microsoft YaHei", 14f, FontStyle.Bold),
+                Font = Services.FormFontPolicy.UiFont(+5f, FontStyle.Bold),
                 ForeColor = Color.White,
-                Location = new Point(20, 15),
-                Size = new Size(440, 30)
+                Location = DpiScale.P(20, 15),
+                Size = DpiScale.S(440, 30)
             };
 
             var tipLabel = new Label
             {
                 Text = "修改后，KeePass 密码库 (gdterm.kdbx) 将用新主密码重新加密。\n请妥善保管新密码，丢失将无法找回。",
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(180, 180, 180),
-                Location = new Point(20, 50),
-                Size = new Size(440, 40)
+                Location = DpiScale.P(20, 50),
+                Size = DpiScale.S(440, 40)
             };
 
             int labelX = 20;
@@ -93,10 +94,10 @@ namespace Gdterm.UI.Forms
             var oldLabel = new Label
             {
                 Text = "当前密码",
-                Font = new Font("Microsoft YaHei", 10f),
+                Font = Services.FormFontPolicy.UiFont(+1f),
                 ForeColor = Color.FromArgb(200, 200, 200),
                 Location = new Point(labelX, row1 + 5),
-                Size = new Size(85, 25),
+                Size = DpiScale.S(85, 25),
                 TextAlign = ContentAlignment.MiddleRight
             };
             _oldBox = MakePasswordBox(boxX, row1, boxWidth);
@@ -104,10 +105,10 @@ namespace Gdterm.UI.Forms
             var newLabel = new Label
             {
                 Text = "新密码",
-                Font = new Font("Microsoft YaHei", 10f),
+                Font = Services.FormFontPolicy.UiFont(+1f),
                 ForeColor = Color.FromArgb(200, 200, 200),
                 Location = new Point(labelX, row2 + 5),
-                Size = new Size(85, 25),
+                Size = DpiScale.S(85, 25),
                 TextAlign = ContentAlignment.MiddleRight
             };
             _newBox = MakePasswordBox(boxX, row2, boxWidth);
@@ -116,10 +117,10 @@ namespace Gdterm.UI.Forms
             var confirmLabel = new Label
             {
                 Text = "确认新密码",
-                Font = new Font("Microsoft YaHei", 10f),
+                Font = Services.FormFontPolicy.UiFont(+1f),
                 ForeColor = Color.FromArgb(200, 200, 200),
                 Location = new Point(labelX, row3 + 5),
-                Size = new Size(85, 25),
+                Size = DpiScale.S(85, 25),
                 TextAlign = ContentAlignment.MiddleRight
             };
             _confirmBox = MakePasswordBox(boxX, row3, boxWidth);
@@ -127,7 +128,7 @@ namespace Gdterm.UI.Forms
             _strengthLabel = new Label
             {
                 Text = "密码强度：未输入",
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(140, 140, 140),
                 Location = new Point(boxX, row3 + 40),
                 Size = new Size(boxWidth, 20)
@@ -136,19 +137,19 @@ namespace Gdterm.UI.Forms
             _errorLabel = new Label
             {
                 Text = "",
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(255, 100, 100),
-                Location = new Point(20, 290),
-                Size = new Size(440, 30)
+                Location = DpiScale.P(20, 290),
+                Size = DpiScale.S(440, 30)
             };
 
             var showPwdCheck = new CheckBox
             {
                 Text = "显示密码",
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(160, 160, 160),
-                Location = new Point(20, 255),
-                Size = new Size(120, 25)
+                Location = DpiScale.P(20, 255),
+                Size = DpiScale.S(120, 25)
             };
             showPwdCheck.CheckedChanged += (s, e) =>
             {
@@ -160,10 +161,10 @@ namespace Gdterm.UI.Forms
             _okButton = new Button
             {
                 Text = "确认修改",
-                Size = new Size(120, 34),
-                Location = new Point(245, 320),
+                Size = DpiScale.S(120, 34),
+                Location = DpiScale.P(245, 320),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Microsoft YaHei", 10f),
+                Font = Services.FormFontPolicy.UiFont(+1f),
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White
             };
@@ -172,10 +173,10 @@ namespace Gdterm.UI.Forms
             var cancelButton = new Button
             {
                 Text = "取消",
-                Size = new Size(100, 34),
-                Location = new Point(370, 320),
+                Size = DpiScale.S(100, 34),
+                Location = DpiScale.P(370, 320),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Microsoft YaHei", 10f),
+                Font = Services.FormFontPolicy.UiFont(+1f),
                 BackColor = Color.FromArgb(60, 60, 60),
                 ForeColor = Color.White,
                 DialogResult = DialogResult.Cancel

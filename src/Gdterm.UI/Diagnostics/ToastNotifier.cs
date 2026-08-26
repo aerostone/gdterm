@@ -139,7 +139,7 @@ namespace Gdterm.UI.Diagnostics
                     Dock = DockStyle.Fill,
                     Text = message,
                     ForeColor = Color.FromArgb(230, 237, 243),
-                    Font = new Font("Microsoft YaHei UI", 9f),
+                    Font = Services.FormFontPolicy.UiFont(),
                     TextAlign = ContentAlignment.MiddleLeft,
                     Padding = new Padding(12, 8, 12, 8)
                 };

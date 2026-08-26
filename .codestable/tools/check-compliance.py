@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check CodeStable project, workflow and architecture contracts.
+"""Check codestable project, workflow and architecture contracts.
 
 This is a read-only semantic checker.  It complements validate-yaml.py:
 validate-yaml checks syntax and required keys; this tool checks relationships,
@@ -8,11 +8,15 @@ state values, architecture anchors and the current git diff.
 Python: 3.9+; standard library only.  PyYAML is optional.
 """
 
+from __future__ import annotations
+
 import argparse
 import hashlib
 import fnmatch
 import json
+import os
 import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -20,11 +24,15 @@ from typing import Any, Dict, List, Optional, Tuple
 
 try:
     from yaml_support import parse_yaml as _parse_yaml
+    from yaml_support import read_text_any
     from yaml_support import split_frontmatter
+    from yaml_schemas import validate_schema
 except ImportError:  # direct import by tests or embedding tools
     sys.path.insert(0, str(Path(__file__).resolve().parent))
     from yaml_support import parse_yaml as _parse_yaml
+    from yaml_support import read_text_any
     from yaml_support import split_frontmatter
+    from yaml_schemas import validate_schema
 
 
 if sys.version_info < (3, 9):
@@ -57,16 +65,21 @@ def result(check_id: str, status: str, message: str, evidence: Optional[List[str
 
 def read_file(path: Path) -> Tuple[Dict[str, Any], str, Optional[str]]:
     try:
-        return frontmatter(path.read_text(encoding="utf-8"))
+        text, error = read_text_any(path)
     except OSError as exc:
         return {}, "", str(exc)
+    if error:
+        return {}, "", error
+    return frontmatter(text)
 
 
 def load_yaml_file(path: Path) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     try:
-        text = path.read_text(encoding="utf-8")
+        text, error = read_text_any(path)
     except OSError as exc:
         return None, str(exc)
+    if error:
+        return None, error
     return parse_yaml(text)
 
 
@@ -88,31 +101,171 @@ def load_workflow(root: Path) -> Tuple[Optional[Dict[str, Any]], Optional[str], 
 
 
 DEFAULT_MODEL_PROFILE: Dict[str, Any] = {
-    "version": 1,
-    "profile": "modern-27b-128k",
+    "version": 2,
+    "profile": "default-128k",
     "profiles": {
-        "modern-27b-128k": {"context": {"max_files": 32, "max_chars": 320000,
-                                          "output": "any", "full_reference": True}},
-        "constrained-27b-64k": {"context": {"max_files": 16, "max_chars": 160000,
-                                               "output": "compact", "full_reference": False}},
+        "default-128k": {"context": {"max_files": 32, "max_chars": 128000,
+                                        "max_input_tokens": 32000,
+                                        "output": "any", "full_reference": True}},
+        "compact-64k": {"context": {"max_files": 16, "max_chars": 60000,
+                                       "max_input_tokens": 16000,
+                                       "output": "compact", "full_reference": False}},
+    },
+    "models": {
+        "high-default": {"tier": "high", "profile": "default-128k", "default": True,
+                         "capabilities": ["file_read", "file_edit", "command_execution", "test_execution"]},
+        "low-default": {"tier": "low", "profile": "compact-64k", "default": True,
+                        "capabilities": ["file_read", "file_edit", "command_execution", "test_execution"]},
+    },
+    "routing": {
+        "confirmation_required": True,
+        "low_step_limit": {"max_files": 6, "max_chars": 40000, "max_input_tokens": 12000},
+        "low_retry_limit": 2,
     },
 }
 
+PROFILE_ALIASES = {
+    "modern-27b-128k": "default-128k",
+    "constrained-27b-64k": "compact-64k",
+}
 
-def load_model_profile(root: Path, requested: Optional[str] = None) -> Tuple[Dict[str, Any], Optional[str], str]:
-    project_path = root / ".codestable" / "model-profile.yaml"
-    path = project_path if project_path.exists() else support_file(root, "model-profile.yaml")
+MODEL_TIERS = {"high", "low"}
+MODEL_IDENTIFIER = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}$")
+CAPABILITY_IDENTIFIER = re.compile(r"[a-z][a-z0-9_-]{0,63}$")
+EXECUTION_STATE_FILE = "execution-state.json"
+
+
+def load_model_config(root: Path) -> Tuple[Dict[str, Any], Optional[str], Path]:
+    """Load the project model config once for profiles, catalog and routing."""
+    path = root / ".codestable" / "model-profile.yaml"
+    path = path if path.exists() else support_file(root, "model-profile.yaml")
     data, error = load_yaml_file(path) if path.exists() else (DEFAULT_MODEL_PROFILE, None)
     if error or not isinstance(data, dict):
-        return {}, error or "model-profile.yaml must be a mapping", str(path)
+        return {}, error or "model-profile.yaml must be a mapping", path
+    return data, None, path
+
+
+def load_model_profile(root: Path, requested: Optional[str] = None) -> Tuple[Dict[str, Any], Optional[str], str]:
+    data, error, path = load_model_config(root)
+    if error:
+        return {}, error, str(path)
     profiles = data.get("profiles")
     if not isinstance(profiles, dict):
         return {}, "model-profile.yaml needs profiles mapping", str(path)
-    name = requested or str(data.get("profile", "modern-27b-128k"))
+    requested_name = requested or str(data.get("profile", DEFAULT_MODEL_PROFILE["profile"]))
+    name = requested_name if requested_name in profiles else PROFILE_ALIASES.get(requested_name, requested_name)
     profile = profiles.get(name)
     if not isinstance(profile, dict) or not isinstance(profile.get("context"), dict):
         return {}, "unknown model profile %s" % name, str(path)
     return profile, None, name
+
+
+def load_model_catalog(root: Path) -> Tuple[Dict[str, Dict[str, Any]], Optional[str]]:
+    """Validate optional concrete model declarations without vendor allowlists."""
+    data, error, _ = load_model_config(root)
+    if error:
+        return {}, error
+    profiles = data.get("profiles")
+    models = data.get("models")
+    if models is None:
+        return {}, None
+    if not isinstance(profiles, dict) or not isinstance(models, dict):
+        return {}, "model-profile.yaml models and profiles must be mappings"
+    catalog: Dict[str, Dict[str, Any]] = {}
+    defaults: Dict[str, str] = {}
+    for raw_id, raw_model in models.items():
+        model_id = str(raw_id)
+        if not MODEL_IDENTIFIER.fullmatch(model_id):
+            return {}, "model id %s must use 1-64 letters, digits, dots, underscores or hyphens" % model_id
+        if not isinstance(raw_model, dict):
+            return {}, "model %s must be a mapping" % model_id
+        tier = raw_model.get("tier")
+        profile_name = raw_model.get("profile")
+        capabilities = raw_model.get("capabilities")
+        if tier not in MODEL_TIERS:
+            return {}, "model %s tier must be high or low" % model_id
+        if not isinstance(profile_name, str) or profile_name not in profiles:
+            return {}, "model %s profile must name an existing profile" % model_id
+        if (not isinstance(capabilities, list) or not capabilities or
+                any(not isinstance(item, str) or not CAPABILITY_IDENTIFIER.fullmatch(item)
+                    for item in capabilities) or len(set(capabilities)) != len(capabilities)):
+            return {}, "model %s capabilities must be unique capability identifiers" % model_id
+        if raw_model.get("default"):
+            if tier in defaults:
+                return {}, "models %s and %s both declare default %s tier" % (defaults[tier], model_id, tier)
+            defaults[tier] = model_id
+        catalog[model_id] = {
+            "id": model_id, "tier": tier, "profile": profile_name,
+            "capabilities": list(capabilities), "default": bool(raw_model.get("default")),
+            "declared": True,
+        }
+    return catalog, None
+
+
+def select_model(root: Path, tier: str, requested: Optional[str] = None) -> Tuple[Dict[str, Any], Optional[str]]:
+    """Resolve one declared model, or retain a compatible legacy fallback."""
+    if tier not in MODEL_TIERS:
+        return {}, "model tier must be high or low"
+    catalog, error = load_model_catalog(root)
+    if error:
+        return {}, error
+    if requested:
+        model = catalog.get(requested)
+        if model is None:
+            return {}, "unknown declared model %s" % requested
+        if model["tier"] != tier:
+            return {}, "model %s is %s tier, not required %s tier" % (requested, model["tier"], tier)
+        return model, None
+    candidates = [model for model in catalog.values() if model["tier"] == tier]
+    defaults = [model for model in candidates if model.get("default")]
+    if len(defaults) == 1:
+        return defaults[0], None
+    conventional = "%s-default" % tier
+    if conventional in catalog and catalog[conventional]["tier"] == tier:
+        return catalog[conventional], None
+    if len(candidates) == 1:
+        return candidates[0], None
+    if candidates:
+        return {}, "multiple %s-tier models are declared; set model_route.%s_model or pass --model" % (tier, tier)
+    requested_profile = "compact-64k" if tier == "low" else None
+    profile, profile_error, profile_name = load_model_profile(root, requested_profile)
+    if profile_error:
+        profile, profile_error, profile_name = load_model_profile(root)
+    if profile_error:
+        return {}, profile_error
+    return {"id": "unconfigured-%s" % tier, "tier": tier, "profile": profile_name,
+            "capabilities": [], "default": True, "declared": False}, None
+
+
+def model_for_route(root: Path, route: Dict[str, Any], tier: str,
+                    requested: Optional[str] = None) -> Tuple[Dict[str, Any], Optional[str]]:
+    route_model = route.get("%s_model" % tier)
+    if route_model is not None and (not isinstance(route_model, str) or not route_model):
+        return {}, "model_route.%s_model must be a declared model id" % tier
+    if requested and route_model and requested != route_model:
+        return {}, "--model %s conflicts with model_route.%s_model %s" % (requested, tier, route_model)
+    return select_model(root, tier, requested or route_model)
+
+
+def load_model_routing(root: Path) -> Dict[str, Any]:
+    """Load advisory handoff limits without coupling them to a context profile."""
+    data, error, _ = load_model_config(root)
+    default = DEFAULT_MODEL_PROFILE["routing"]
+    if error or not isinstance(data, dict) or not isinstance(data.get("routing"), dict):
+        return default
+    routing = data["routing"]
+    limit = routing.get("low_step_limit") if isinstance(routing.get("low_step_limit"), dict) else {}
+    max_files = limit.get("max_files", default["low_step_limit"]["max_files"])
+    max_chars = limit.get("max_chars", default["low_step_limit"]["max_chars"])
+    max_input_tokens = limit.get("max_input_tokens", default["low_step_limit"]["max_input_tokens"])
+    retries = routing.get("low_retry_limit", default["low_retry_limit"])
+    if not all(isinstance(value, int) and value > 0
+               for value in (max_files, max_chars, max_input_tokens, retries)):
+        return default
+    return {"confirmation_required": bool(routing.get("confirmation_required", True)),
+            "low_step_limit": {"max_files": max_files, "max_chars": max_chars,
+                               "max_input_tokens": max_input_tokens},
+            "low_retry_limit": retries}
 
 
 def selected_context_chars(text: str, item: Dict[str, Any]) -> int:
@@ -152,7 +305,21 @@ def unresolved_context_selectors(text: str, item: Dict[str, Any]) -> List[str]:
 
 
 def check_context_budget(root: Path, context: List[Dict[str, Any]], requested: Optional[str] = None,
-                         compact_output: bool = True) -> Tuple[Result, Dict[str, Any]]:
+                         compact_output: bool = True, model_name: Optional[str] = None,
+                         input_tokens: Optional[int] = None) -> Tuple[Result, Dict[str, Any]]:
+    model: Optional[Dict[str, Any]] = None
+    if model_name:
+        model, model_error = select_model(root, "high", model_name)
+        if model_error:
+            low_model, low_error = select_model(root, "low", model_name)
+            if low_error:
+                return result("context.model", "fail", model_error), {"model": model_name}
+            model = low_model
+        if requested and requested != model.get("profile"):
+            return result("context.model", "fail",
+                          "--model %s uses profile %s, not requested profile %s" %
+                          (model_name, model.get("profile"), requested)), {"model": model_name}
+        requested = str(model.get("profile"))
     profile, error, name = load_model_profile(root, requested)
     if error:
         return result("context.profile", "fail", error), {"profile": name}
@@ -170,7 +337,7 @@ def check_context_budget(root: Path, context: List[Dict[str, Any]], requested: O
         if not path.exists():
             continue
         try:
-            text = path.read_text(encoding="utf-8")
+            text, _read_err = read_text_any(path)
             has_selector = bool(item.get("headings") or item.get("symbols"))
             mandatory = str(relative).endswith("/change.md") or str(relative).endswith("attention.md")
             if not full_reference and len(text) > 12000 and not has_selector and not mandatory:
@@ -196,10 +363,20 @@ def check_context_budget(root: Path, context: List[Dict[str, Any]], requested: O
         violations.extend("selector not found: " + item for item in unresolved)
     if limits.get("output") == "compact" and not compact_output:
         violations.append("profile requires --agent compact output")
-    budget = {"profile": name, "files": len(files), "chars": total_chars,
-              "max_files": max_files, "max_chars": max_chars,
+    max_input_tokens = limits.get("max_input_tokens")
+    if max_input_tokens is not None and (not isinstance(max_input_tokens, int) or max_input_tokens <= 0):
+        violations.append("profile max_input_tokens must be a positive integer")
+    elif input_tokens is not None and max_input_tokens is not None and input_tokens > max_input_tokens:
+        violations.append("input_tokens=%d > max_input_tokens=%d" % (input_tokens, max_input_tokens))
+    budget = {"profile": name, "files": len(files), "measurement": "estimated_chars",
+              "estimated_chars": total_chars, "max_estimated_chars": max_chars,
+              "max_files": max_files,
+              "token_measurement": "runtime_input_tokens",
+              "input_tokens": input_tokens, "max_input_tokens": max_input_tokens,
               "output": limits.get("output", "compact"),
               "full_reference": full_reference}
+    if model is not None:
+        budget["model"] = model
     return result("context.budget", "fail" if violations else "pass",
                   "context exceeds model profile budget" if violations else "context fits model profile budget",
                   violations or ["%d files" % len(files), "%d chars" % total_chars]), budget
@@ -294,6 +471,113 @@ def file_digest(path: Path) -> str:
         return "<unreadable>"
 
 
+def resolve_change_dir(root: Path, value: str) -> Path:
+    """Accept a change directory path or a bare change slug (YYYY-MM-DD-name)."""
+    path = Path(value)
+    if not path.is_absolute():
+        path = root / path
+    if path.is_dir():
+        return path
+    if path.is_file() and path.name == "change.md":
+        return path.parent
+    # bare slug: .codestable/changes/{slug}/
+    slug_candidate = root / ".codestable" / "changes" / value
+    if slug_candidate.is_dir():
+        return slug_candidate
+    return path
+
+
+def write_baseline_to_change(change_file: Path, snapshot: Dict[str, Any],
+                             preexisting: List[str]) -> Optional[str]:
+    """Write a selected preexisting-file list and its baseline into change.md."""
+    text, error = read_text_any(change_file)
+    if error:
+        return error
+    lines = text.splitlines(keepends=True)
+    if not lines or lines[0].strip() != "---":
+        return "change.md has no frontmatter"
+    end = None
+    for index in range(1, len(lines)):
+        if lines[index].strip() == "---":
+            end = index
+            break
+    if end is None:
+        return "change.md frontmatter is not closed"
+
+    def yaml_scalar(value: Any) -> str:
+        text_value = str(value)
+        if text_value == "" or any(ch in text_value for ch in ":#{}[]&,*?|>'\"%@`") or text_value != text_value.strip():
+            return "'" + text_value.replace("'", "''") + "'"
+        return text_value
+
+    preexisting_lines = ["  preexisting_changes: [%s]\n" % ", ".join(
+        yaml_scalar(path) for path in preexisting
+    )]
+    snapshot_lines = ["  baseline:\n",
+                      "    git_head: %s\n" % yaml_scalar(snapshot.get("git_head", "unborn"))]
+    hashes = snapshot.get("dirty_hashes") or {}
+    if hashes:
+        snapshot_lines.append("    dirty_hashes:\n")
+        for path, digest in sorted(hashes.items()):
+            snapshot_lines.append("      %s: %s\n" % (yaml_scalar(path), digest))
+    else:
+        snapshot_lines.append("    dirty_hashes: {}\n")
+
+    # Locate contract block inside frontmatter, then replace both linked fields.
+    contract_start = None
+    for index in range(1, end):
+        if lines[index].rstrip("\r\n") == "contract:":
+            contract_start = index
+            break
+    if contract_start is None:
+        lines[end:end] = ["contract:\n"] + preexisting_lines + snapshot_lines
+        new_text = "".join(lines)
+    else:
+        def replace_contract_field(name: str, replacement: List[str]) -> None:
+            nonlocal end
+            marker = "  %s:" % name
+            field_start = None
+            contract_end = end
+            for index in range(contract_start + 1, end + 1):
+                stripped = lines[index].rstrip("\r\n") if index < end else ""
+                if index < end and stripped.startswith(marker):
+                    field_start = index
+                    break
+                if index == end or (stripped and not stripped.startswith((" ", "\t"))):
+                    contract_end = index
+                    break
+            if field_start is None:
+                lines[contract_end:contract_end] = replacement
+                end += len(replacement)
+                return
+            field_end = field_start + 1
+            while field_end < end and (lines[field_end].startswith("    ")
+                                       or lines[field_end].rstrip("\r\n") == ""):
+                field_end += 1
+            lines[field_start:field_end] = replacement
+            end += len(replacement) - (field_end - field_start)
+
+        replace_contract_field("preexisting_changes", preexisting_lines)
+        replace_contract_field("baseline", snapshot_lines)
+        new_text = "".join(lines)
+    try:
+        change_file.write_bytes(new_text.encode("utf-8"))
+    except OSError as exc:
+        return str(exc)
+    # verify the result still parses and contains the expected head
+    meta, _, parse_error = read_file(change_file)
+    if parse_error:
+        return "rewritten frontmatter failed to parse: %s" % parse_error
+    contract = meta.get("contract") if isinstance(meta.get("contract"), dict) else {}
+    written = contract.get("baseline") if isinstance(contract.get("baseline"), dict) else {}
+    if str(written.get("git_head")) != str(snapshot.get("git_head")):
+        return "baseline git_head mismatch after write"
+    written_preexisting = [str(path) for path in contract.get("preexisting_changes", [])]
+    if written_preexisting != preexisting:
+        return "preexisting_changes mismatch after write"
+    return None
+
+
 def baseline_snapshot(root: Path) -> Dict[str, Any]:
     changed, error = git_changed_files(root)
     return {
@@ -306,20 +590,35 @@ def baseline_snapshot(root: Path) -> Dict[str, Any]:
 def baseline_checks(root: Path, contract: Dict[str, Any]) -> List[Result]:
     preexisting = contract.get("preexisting_changes") or []
     baseline = contract.get("baseline")
-    if not preexisting:
+    if not preexisting and baseline is None:
         return []
     if not isinstance(baseline, dict):
-        return [result("baseline.required", "fail",
-                       "preexisting_changes requires a baseline snapshot; run --snapshot",
-                       [str(path) for path in preexisting])]
+        check_id = "baseline.required" if preexisting else "baseline.shape"
+        message = ("preexisting_changes requires a baseline snapshot; run --snapshot" if preexisting
+                   else "baseline must be a mapping")
+        return [result(check_id, "fail", message, [str(path) for path in preexisting])]
     expected_head = baseline.get("git_head")
     checks: List[Result] = []
     if expected_head and expected_head != "unborn" and expected_head != git_head(root):
-        checks.append(result("baseline.git_head", "fail", "git HEAD differs from task baseline",
-                             [str(expected_head), git_head(root)]))
+        verify = subprocess.run(["git", "rev-parse", "--verify", "--quiet",
+                                 str(expected_head) + "^{commit}"],
+                                cwd=str(root), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                universal_newlines=True, check=False)
+        if verify.returncode == 0:
+            # HEAD moved past a baseline commit that still exists: expected when
+            # the task's own commits landed. Diff checks use the baseline commit.
+            checks.append(result("baseline.git_head", "pass",
+                                 "git HEAD moved past the task baseline commit; diff anchored to baseline",
+                                 [str(expected_head), git_head(root)]))
+        else:
+            checks.append(result("baseline.git_head", "fail",
+                                 "task baseline commit is missing from this clone",
+                                 [str(expected_head), git_head(root)]))
     hashes = baseline.get("dirty_hashes")
     if not isinstance(hashes, dict):
         checks.append(result("baseline.hashes", "fail", "baseline.dirty_hashes must be a mapping"))
+        return checks
+    if not preexisting:
         return checks
     missing = [str(path) for path in preexisting if str(path) not in hashes]
     checks.append(result("baseline.coverage", "fail" if missing else "pass",
@@ -481,7 +780,8 @@ def check_evidence_ledger(root: Path, change_dir: Path, contract: Dict[str, Any]
                        "evidence ledger is required but missing", [str(ledger)])]
     errors: List[str] = []
     try:
-        lines = ledger.read_text(encoding="utf-8").splitlines()
+        text, _read_err = read_text_any(ledger)
+        lines = text.splitlines()
     except OSError as exc:
         return [result("evidence.ledger", "fail", str(exc), [str(ledger)])]
     for number, line in enumerate(lines, 1):
@@ -581,10 +881,23 @@ def check_attention(root: Path) -> List[Result]:
         return [result("attention.frontmatter", "warn", error, [str(path)])]
     mode = meta.get("workflow_mode")
     checks = []
-    if mode not in (None, "lean", "standard"):
+    if isinstance(mode, bool):
+        checks.append(result("attention.workflow_mode", "fail",
+                             "workflow_mode parsed as boolean %r; quote the value (e.g. workflow_mode: \"off\")" % mode))
+    elif mode not in (None, "lean", "standard"):
         checks.append(result("attention.workflow_mode", "fail", "workflow_mode must be lean or standard"))
     else:
         checks.append(result("attention.workflow_mode", "pass", "workflow_mode is valid"))
+    baseline_mode = meta.get("baseline_mode", "off")
+    if isinstance(baseline_mode, bool):
+        checks.append(result("attention.baseline_mode", "fail",
+                             "baseline_mode parsed as boolean %r; quote the value (e.g. baseline_mode: \"off\")" % baseline_mode))
+    elif baseline_mode not in {"off", "lean", "baseline", "regulated"}:
+        checks.append(result("attention.baseline_mode", "fail",
+                             "baseline_mode must be off, lean, baseline or regulated"))
+    else:
+        checks.append(result("attention.baseline_mode", "pass", "baseline mode is valid",
+                             [str(baseline_mode)]))
     standards = meta.get("standards")
     if standards is not None and not isinstance(standards, dict):
         checks.append(result("attention.standards", "fail", "standards must be a mapping"))
@@ -621,7 +934,7 @@ def check_project_standards(root: Path, standards: Dict[str, Any]) -> List[Resul
         path = root / relative
         if path.is_file():
             try:
-                contents += "\n" + path.read_text(encoding="utf-8")
+                contents += "\n" + read_text_any(path)[0]
             except OSError:
                 pass
     required_terms = standards.get("required_terms") if isinstance(standards.get("required_terms"), list) else []
@@ -665,7 +978,7 @@ def check_path_rules(root: Path, changed: List[str], rules: Dict[str, Any]) -> L
         contents: Dict[str, str] = {}
         for relative in matched:
             try:
-                contents[relative] = (root / relative).read_text(encoding="utf-8")
+                contents[relative] = read_text_any(root / relative)[0]
             except OSError:
                 contents[relative] = ""
         forbidden_terms = value.get("forbidden_terms") or []
@@ -685,7 +998,23 @@ def check_path_rules(root: Path, changed: List[str], rules: Dict[str, Any]) -> L
     return checks
 
 
-def check_checklist(root: Path, feature_dir: Path) -> List[Result]:
+def legacy_checks_ready(feature_dir: Path) -> bool:
+    checklist = find_one(feature_dir, "-checklist.yaml")
+    if checklist is None:
+        return False
+    data, error = load_yaml_file(checklist)
+    if error or not isinstance(data, dict):
+        return False
+    steps = data.get("steps")
+    checks = data.get("checks")
+    return (isinstance(steps, list) and isinstance(checks, list) and bool(steps) and bool(checks)
+            and all(isinstance(step, dict) and step.get("status") in {"done", "completed"}
+                    for step in steps)
+            and all(isinstance(item, dict) and item.get("status") in {"passed", "skipped"}
+                    for item in checks))
+
+
+def check_checklist(root: Path, feature_dir: Path, phase: Optional[str] = None) -> List[Result]:
     checks: List[Result] = []
     design = find_one(feature_dir, "-design.md")
     checklist = find_one(feature_dir, "-checklist.yaml")
@@ -755,7 +1084,13 @@ def check_checklist(root: Path, feature_dir: Path) -> List[Result]:
     else:
         checks.append(result("feature.contract", "pass", "scope contract is available"))
         checks.extend(check_diff_contract(root, contract))
-    checks.extend(check_roadmap_link(root, feature_dir, design_meta))
+    completion_ready = legacy_checks_ready(feature_dir)
+    if phase == "accept":
+        checks.append(result("feature.checks_complete", "pass" if completion_ready else "fail",
+                             "legacy feature checks are complete" if completion_ready
+                             else "legacy feature has pending steps/checks", [str(checklist)]))
+    checks.extend(check_roadmap_link(root, feature_dir, design_meta,
+                                     completion_ready=completion_ready))
     return checks
 
 
@@ -770,6 +1105,15 @@ def check_change(root: Path, change_dir: Path, phase: Optional[str], converge: b
     if error:
         checks.append(result("change.frontmatter", "fail", error, [str(change_file)]))
         return checks
+    raw_text, raw_error = read_text_any(change_file)
+    if raw_error:
+        checks.append(result("change.length", "warn", raw_error, [str(change_file)]))
+    else:
+        line_count = len(raw_text.splitlines())
+        checks.append(result("change.length", "fail" if line_count > 300 else "pass",
+                             "change.md exceeds the 300-line limit; split design, evidence or audit material"
+                             if line_count > 300 else "change.md fits the 300-line limit",
+                             [str(line_count), str(change_file)]))
     if meta.get("doc_type") != "change":
         checks.append(result("change.doc_type", "fail", "doc_type must be change", [str(change_file)]))
     else:
@@ -817,6 +1161,7 @@ def check_change(root: Path, change_dir: Path, phase: Optional[str], converge: b
     elif isinstance(contract, dict):
         checks.append(result("change.contract", "pass", "change contract is available"))
         checks.extend(check_contract_schema(contract, phase))
+        checks.extend(check_enabled_baseline_contract(root, contract, mode))
         checks.extend(baseline_checks(root, contract))
         checks.extend(check_artifact_graph(root, contract, converge=converge or archive))
         checks.extend(check_evidence_ledger(root, change_dir, contract, converge=converge or archive))
@@ -829,6 +1174,7 @@ def check_change(root: Path, change_dir: Path, phase: Optional[str], converge: b
     if phase in ("impl", "accept") and status not in {"approved", "in-progress", "accepted", "closed"}:
         checks.append(result("change.phase", "fail", "change must be approved or active before %s" % phase))
     checks_file = change_dir / "checks.yaml"
+    route_steps: List[Any] = []
     if checks_file.exists():
         data, yaml_error = load_yaml_file(checks_file)
         if yaml_error or data is None:
@@ -839,6 +1185,7 @@ def check_change(root: Path, change_dir: Path, phase: Optional[str], converge: b
             if not isinstance(steps, list) or not isinstance(items, list):
                 checks.append(result("change.checks_shape", "fail", "checks.yaml needs steps and checks lists", [str(checks_file)]))
             else:
+                route_steps = steps
                 checks.append(result("change.checks_shape", "pass", "checks.yaml shape is valid"))
                 semantic_errors = []
                 for index, step in enumerate(steps, 1):
@@ -870,6 +1217,8 @@ def check_change(root: Path, change_dir: Path, phase: Optional[str], converge: b
                     checks.append(result("change.checks_complete", "fail" if incomplete else "pass",
                                          "steps/checks are incomplete" if incomplete else "steps/checks are complete",
                                          incomplete))
+    checks.extend(check_model_route(root, meta, mode, route_steps, change_dir,
+                                    require_confirmation=phase == "impl"))
     if converge:
         checks.extend(check_embedded_task_completion(body))
     if archive:
@@ -877,6 +1226,477 @@ def check_change(root: Path, change_dir: Path, phase: Optional[str], converge: b
                              "change is ready to archive" if status == "accepted" else "only accepted changes can be archived",
                              [str(status)]))
     return checks
+
+
+MODEL_STRATEGIES = {"direct", "retain-high", "delegate-low", "mixed"}
+LOW_FORBIDDEN_RISKS = {"public_api", "migration", "security", "data_change", "cross_module", "no_tests"}
+TEST_DIRECTORY_NAMES = {"test", "tests", "__tests__", "spec", "specs"}
+TEST_FILE_SUFFIXES = ("_test.py", ".test.py", ".spec.py", ".test.js", ".spec.js",
+                      ".test.ts", ".spec.ts", ".test.tsx", ".spec.tsx", "_test.go",
+                      "_test.rs", "test.java")
+TEST_SCAN_EXCLUDES = {".git", ".codestable", "node_modules", "vendor", ".venv", "venv",
+                      "dist", "build", "target", "coverage", "__pycache__"}
+
+
+def relative_project_path(value: Any) -> bool:
+    path = Path(str(value))
+    return bool(str(value)) and not path.is_absolute() and ".." not in path.parts
+
+
+def unsafe_validation_command(command: str) -> Optional[str]:
+    """Keep low-tier validation commands local, simple and reviewable."""
+    if "\n" in command or "\r" in command:
+        return "must be a single line"
+    if re.search(r"(?<!\\)(?:&&|\|\||[;|`]|\$\(|[<>])", command):
+        return "must not use shell composition, substitution or redirection"
+    try:
+        tokens = shlex.split(command)
+    except ValueError:
+        return "has invalid shell quoting"
+    if not tokens:
+        return "must not be empty"
+    for token in tokens:
+        value = token.split("=", 1)[-1].replace("\\", "/")
+        if value.startswith(("/", "~")) or re.match(r"^[A-Za-z]:/", value):
+            return "must not use absolute or home-directory paths"
+        if re.search(r"(?:^|/)\.\.(?:/|$)", value):
+            return "must not traverse outside the project"
+    return None
+
+
+def is_test_file(path: Path) -> bool:
+    lower_name = path.name.lower()
+    lower_parts = {part.lower() for part in path.parts[:-1]}
+    return bool(lower_parts.intersection(TEST_DIRECTORY_NAMES) or
+                lower_name.startswith("test_") or lower_name.endswith(TEST_FILE_SUFFIXES) or
+                (lower_name.endswith(".java") and lower_name.endswith("test.java")))
+
+
+def test_impact(root: Path, symbols: List[str]) -> Dict[str, Any]:
+    """Find existing test files mentioning target symbols without reading non-test source."""
+    selected = list(dict.fromkeys(symbol.strip() for symbol in symbols if symbol.strip()))
+    patterns = [re.compile(r"(?<![A-Za-z0-9_])" + re.escape(symbol) + r"(?![A-Za-z0-9_])")
+                for symbol in selected]
+    matched: List[str] = []
+    scanned = 0
+    for path in root.rglob("*"):
+        if any(part in TEST_SCAN_EXCLUDES for part in path.relative_to(root).parts):
+            continue
+        if not path.is_file() or not is_test_file(path):
+            continue
+        scanned += 1
+        try:
+            if path.stat().st_size > 1024 * 1024:
+                continue
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        if any(pattern.search(text) for pattern in patterns):
+            matched.append(str(path.relative_to(root)))
+            if len(matched) >= 50:
+                break
+    count = len(matched)
+    risk = "high" if count >= 6 else "medium" if count else "none"
+    recommendation = (
+        "先为新行为建立会失败的测试，再运行命中的全部测试" if risk == "none" else
+        "先读取并在 GREEN 后运行全部命中测试" if risk == "medium" else
+        "影响面过大：读取全部命中测试，拆小当前 step 后再实施"
+    )
+    return {"measurement": "symbol_mentions_in_test_files", "symbols": selected,
+            "test_files_scanned": scanned, "matched_files": matched, "risk": risk,
+            "recommendation": recommendation}
+
+
+def execution_state_path(change_dir: Path) -> Path:
+    return change_dir / EXECUTION_STATE_FILE
+
+
+def load_execution_state(change_dir: Path) -> Tuple[Dict[str, Any], Optional[str]]:
+    """Read mutable runtime results without rewriting the declarative checks.yaml."""
+    path = execution_state_path(change_dir)
+    if not path.exists():
+        return {"schema": 1, "low_steps": {}}, None
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return {}, "invalid %s: %s" % (EXECUTION_STATE_FILE, exc)
+    if not isinstance(value, dict) or value.get("schema") != 1 or not isinstance(value.get("low_steps"), dict):
+        return {}, "%s must contain schema: 1 and low_steps mapping" % EXECUTION_STATE_FILE
+    return value, None
+
+
+def write_execution_state(change_dir: Path, state: Dict[str, Any]) -> Optional[str]:
+    path = execution_state_path(change_dir)
+    temporary = path.with_name(".%s.%d.tmp" % (path.name, os.getpid()))
+    try:
+        temporary.write_text(json.dumps(state, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        os.replace(str(temporary), str(path))
+    except OSError as exc:
+        try:
+            temporary.unlink()
+        except OSError:
+            pass
+        return str(exc)
+    return None
+
+
+def low_step_attempts(step: Dict[str, Any], state: Dict[str, Any]) -> Tuple[int, Optional[str]]:
+    configured = step.get("low_attempts", 0)
+    if not isinstance(configured, int) or configured < 0:
+        return 0, "low_attempts must be a non-negative integer"
+    record = (state.get("low_steps") or {}).get(str(step.get("id")), {})
+    if not isinstance(record, dict):
+        return configured, "runtime state for %s must be a mapping" % step.get("id")
+    observed = record.get("failures", 0)
+    if not isinstance(observed, int) or observed < 0:
+        return configured, "runtime failures for %s must be a non-negative integer" % step.get("id")
+    # Once a runtime receipt exists, failures are consecutive runtime failures;
+    # the declarative field remains a legacy starting value for first dispatch.
+    return observed if "failures" in record else configured, None
+
+
+def check_model_route(root: Path, meta: Dict[str, Any], mode: Any, steps: List[Any], change_dir: Path,
+                      require_confirmation: bool = False,
+                      allow_exhausted_attempts: bool = False) -> List[Result]:
+    """Validate optional high-to-low implementation delegation metadata."""
+    route = meta.get("model_route")
+    if route is None:
+        return [result("model.route", "pass", "model route defaults to direct")]
+    if not isinstance(route, dict):
+        return [result("model.route", "fail", "model_route must be a mapping")]
+    strategy = route.get("strategy")
+    if strategy not in MODEL_STRATEGIES:
+        return [result("model.route", "fail", "model_route.strategy must be direct, retain-high, delegate-low or mixed")]
+    if mode == "lean" and strategy != "direct":
+        return [result("model.route", "fail", "lean changes must use direct model route")]
+    if not isinstance(route.get("reason"), str) or not str(route.get("reason")).strip():
+        return [result("model.route", "fail", "model_route.reason is required")]
+    low_ids = route.get("low_steps", [])
+    if not isinstance(low_ids, list) or any(not isinstance(item, str) or not item for item in low_ids):
+        return [result("model.route", "fail", "model_route.low_steps must be a list of step ids")]
+    delegated = strategy in {"delegate-low", "mixed"}
+    if not delegated:
+        if low_ids or route.get("low_model") is not None:
+            return [result("model.route", "fail", "direct and retain-high routes cannot declare low_steps or low_model")]
+        if route.get("high_model") is not None:
+            _, model_error = model_for_route(root, route, "high")
+            if model_error:
+                return [result("model.route", "fail", model_error)]
+        return [result("model.route", "pass", "model route keeps implementation on the current or high-tier model")]
+    routing = load_model_routing(root)
+    if require_confirmation and routing["confirmation_required"] and route.get("user_confirmation") != "approved":
+        return [result("model.route", "fail", "low-tier execution requires recorded user confirmation")]
+    if not steps:
+        return [result("model.route", "fail", "delegated route requires checks.yaml steps")]
+    if len(low_ids) < 3:
+        return [result("model.route", "fail", "delegated route needs at least three low-tier steps to justify a switch")]
+    step_by_id = {str(item.get("id")): item for item in steps if isinstance(item, dict) and item.get("id")}
+    missing = [step_id for step_id in low_ids if step_id not in step_by_id]
+    if missing:
+        return [result("model.route", "fail", "model_route.low_steps are missing from checks.yaml", missing)]
+    risks = meta.get("risk") if isinstance(meta.get("risk"), dict) else {}
+    reasons = risks.get("reasons", []) if isinstance(risks.get("reasons", []), list) else []
+    blocked = sorted(LOW_FORBIDDEN_RISKS.intersection(str(reason) for reason in reasons))
+    if strategy == "delegate-low" and blocked:
+        return [result("model.route", "fail", "delegate-low cannot carry high-risk change reasons", blocked)]
+    errors: List[str] = []
+    low_model, model_error = model_for_route(root, route, "low")
+    if model_error:
+        errors.append(model_error)
+        low_model = {}
+    if route.get("high_model") is not None:
+        _, high_model_error = model_for_route(root, route, "high")
+        if high_model_error:
+            errors.append(high_model_error)
+    state, state_error = load_execution_state(change_dir)
+    if state_error:
+        errors.append(state_error)
+        state = {"schema": 1, "low_steps": {}}
+    non_low = 0
+    max_step_files = routing["low_step_limit"]["max_files"]
+    max_context_chars = routing["low_step_limit"]["max_chars"]
+    retry_limit = routing["low_retry_limit"]
+    for index, step_id in enumerate(low_ids, 1):
+        step = step_by_id[step_id]
+        if step.get("executor_tier") != "low":
+            errors.append("%s must set executor_tier: low" % step_id)
+        if step.get("instruction_level") not in {1, 2}:
+            errors.append("%s instruction_level must be 1 or 2" % step_id)
+        if step.get("risk") != "low":
+            errors.append("%s risk must be low" % step_id)
+        required_capabilities = step.get("required_capabilities", [])
+        if (not isinstance(required_capabilities, list) or
+                any(not isinstance(item, str) or not CAPABILITY_IDENTIFIER.fullmatch(item)
+                    for item in required_capabilities) or
+                len(set(required_capabilities)) != len(required_capabilities)):
+            errors.append("%s required_capabilities must be unique capability identifiers" % step_id)
+        elif low_model:
+            missing_capabilities = sorted(set(required_capabilities).difference(low_model.get("capabilities", [])))
+            if missing_capabilities:
+                if low_model.get("declared"):
+                    errors.append("%s model %s lacks capabilities: %s" %
+                                  (step_id, low_model["id"], ", ".join(missing_capabilities)))
+                else:
+                    errors.append("%s requires declared model capabilities: %s" %
+                                  (step_id, ", ".join(missing_capabilities)))
+        files = step.get("target_files")
+        if not isinstance(files, list) or not files or any(not relative_project_path(path) for path in files):
+            errors.append("%s target_files must be non-empty project-relative paths" % step_id)
+        elif len(files) > max_step_files:
+            errors.append("%s target_files must contain at most %d items" % (step_id, max_step_files))
+        refs = step.get("context_refs")
+        if not isinstance(refs, list) or not refs or len(refs) > max_step_files:
+            errors.append("%s context_refs must contain 1-%d items" % (step_id, max_step_files))
+        elif any(not relative_project_path(ref.get("path") if isinstance(ref, dict) else ref) for ref in refs):
+            errors.append("%s context_refs must be project-relative paths" % step_id)
+        else:
+            context_chars, context_errors = selected_reference_chars(root, refs)
+            if context_errors:
+                errors.extend("%s context_refs %s" % (step_id, detail) for detail in context_errors)
+            elif context_chars > max_context_chars:
+                errors.append("%s context_refs chars=%d > max_chars=%d" %
+                              (step_id, context_chars, max_context_chars))
+        commands = step.get("validation_commands")
+        if not isinstance(commands, list) or not commands or any(not isinstance(command, str) or not command.strip() for command in commands):
+            errors.append("%s validation_commands must be non-empty strings" % step_id)
+        else:
+            for command in commands:
+                violation = unsafe_validation_command(command)
+                if violation:
+                    errors.append("%s validation_commands %s: %s" % (step_id, violation, command))
+        attempts, attempts_error = low_step_attempts(step, state)
+        if attempts_error:
+            errors.append("%s %s" % (step_id, attempts_error))
+        elif attempts >= retry_limit and not allow_exhausted_attempts:
+            errors.append("%s reached %d low-tier failures; return to high-tier review" % (step_id, retry_limit))
+    for step in steps:
+        if isinstance(step, dict) and step.get("executor_tier") not in {None, "low"}:
+            non_low += 1
+    if strategy == "mixed" and non_low == 0:
+        errors.append("mixed route requires at least one non-low step")
+    return [result("model.route", "fail" if errors else "pass",
+                   "model delegation route is valid" if not errors else "model delegation route is invalid",
+                   errors or ["%d low-tier steps" % len(low_ids)])]
+
+
+def executor_card(root: Path, change_dir: Path, step_id: str,
+                  model_name: Optional[str] = None,
+                  input_tokens: Optional[int] = None) -> Tuple[Optional[Dict[str, Any]], List[Result]]:
+    """Build the small, deterministic handoff packet for one approved low-tier step."""
+    meta, _, error = read_file(change_dir / "change.md")
+    if error:
+        return None, [result("model.executor_card", "fail", error)]
+    if meta.get("status") not in {"approved", "in-progress"}:
+        return None, [result("model.executor_card", "fail", "change must be approved or in-progress before low-tier execution")]
+    data, yaml_error = load_yaml_file(change_dir / "checks.yaml")
+    steps = data.get("steps") if not yaml_error and isinstance(data, dict) and isinstance(data.get("steps"), list) else []
+    route_checks = check_model_route(root, meta, meta.get("mode"), steps, change_dir, require_confirmation=True)
+    if any(item["status"] == "fail" for item in route_checks):
+        return None, route_checks
+    route = meta.get("model_route") or {}
+    if route.get("strategy") not in {"delegate-low", "mixed"}:
+        return None, route_checks + [result("model.executor_card", "fail", "model route does not delegate to low tier")]
+    step = next((item for item in steps if isinstance(item, dict) and item.get("id") == step_id), None)
+    if step is None or step_id not in route.get("low_steps", []):
+        return None, route_checks + [result("model.executor_card", "fail", "requested step is not an approved low-tier step", [step_id])]
+    refs = [normalize_context_ref(ref) for ref in step.get("context_refs", [])]
+    required = [".codestable/attention.md", str((change_dir / "change.md").relative_to(root))]
+    context: List[Dict[str, Any]] = [{"path": path} for path in required] + refs
+    missing = [item["path"] for item in context if not (root / item["path"]).exists()]
+    if missing:
+        return None, route_checks + [result("model.executor_card", "fail", "executor card context is missing", missing)]
+    routing = load_model_routing(root)
+    max_files = routing["low_step_limit"]["max_files"]
+    max_chars = routing["low_step_limit"]["max_chars"]
+    context_chars, context_errors = selected_reference_chars(root, context)
+    if len(context) > max_files or context_errors or context_chars > max_chars:
+        evidence = list(context_errors)
+        if len(context) > max_files:
+            evidence.append("files=%d > max_files=%d" % (len(context), max_files))
+        if context_chars > max_chars:
+            evidence.append("chars=%d > max_chars=%d" % (context_chars, max_chars))
+        return None, route_checks + [result(
+            "model.executor_card", "fail", "executor card exceeds low-tier context budget", evidence
+        )]
+    route = meta.get("model_route") or {}
+    model, model_error = model_for_route(root, route, "low", model_name)
+    if model_error:
+        return None, route_checks + [result("model.executor_card", "fail", model_error)]
+    profile, profile_error, profile_name = load_model_profile(root, model.get("profile"))
+    if profile_error:
+        return None, route_checks + [result("model.executor_card", "fail", profile_error)]
+    profile_limit = (profile.get("context") or {}).get("max_input_tokens")
+    token_limit = routing["low_step_limit"].get("max_input_tokens")
+    limits = [value for value in (profile_limit, token_limit) if isinstance(value, int) and value > 0]
+    max_input_tokens = min(limits) if limits else None
+    if input_tokens is not None and max_input_tokens is not None and input_tokens > max_input_tokens:
+        return None, route_checks + [result(
+            "model.executor_card", "fail",
+            "executor card input tokens exceed model budget",
+            ["input_tokens=%d > max_input_tokens=%d" % (input_tokens, max_input_tokens)]
+        )]
+    required_capabilities = step.get("required_capabilities", [])
+    state, state_error = load_execution_state(change_dir)
+    if state_error:
+        return None, route_checks + [result("model.executor_card", "fail", state_error)]
+    attempts, attempts_error = low_step_attempts(step, state)
+    if attempts_error:
+        return None, route_checks + [result("model.executor_card", "fail", attempts_error)]
+    card = {
+        "step_id": step_id,
+        "executor_tier": "low",
+        "model": model,
+        "required_capabilities": required_capabilities,
+        "instruction_level": step["instruction_level"],
+        "action": step["action"],
+        "target_files": step["target_files"],
+        "context": context,
+        "exit_signal": step["exit_signal"],
+        "validation_commands": step["validation_commands"],
+        "attempt": attempts + 1,
+        "max_attempts": routing["low_retry_limit"],
+        "context_measurement": "estimated_chars",
+        "estimated_context_chars": context_chars,
+        "max_estimated_context_chars": max_chars,
+        "token_measurement": "runtime_input_tokens",
+        "input_tokens": input_tokens,
+        "max_input_tokens": max_input_tokens,
+        "profile": profile_name,
+        "constraints": [
+            "只修改 target_files；发现范围、接口、架构或风险偏离时停止。",
+            "验证失败时记录 low_attempts；第二次失败后请求切回高阶模型。",
+        ],
+    }
+    return card, route_checks + [result("model.executor_card", "pass", "low-tier executor card is ready", [step_id])]
+
+
+def model_token_budget(root: Path, model: Dict[str, Any], input_tokens: Optional[int]) -> Tuple[Optional[int], Optional[str]]:
+    profile, error, _ = load_model_profile(root, model.get("profile"))
+    if error:
+        return None, error
+    limit = (profile.get("context") or {}).get("max_input_tokens")
+    if limit is not None and (not isinstance(limit, int) or limit <= 0):
+        return None, "model %s profile max_input_tokens must be a positive integer" % model.get("id")
+    if input_tokens is not None and isinstance(limit, int) and input_tokens > limit:
+        return limit, "input_tokens=%d > max_input_tokens=%d" % (input_tokens, limit)
+    return limit, None
+
+
+def dispatch_plan(root: Path, change_dir: Path, model_name: Optional[str] = None,
+                  input_tokens: Optional[int] = None) -> Tuple[Optional[Dict[str, Any]], List[Result]]:
+    """Emit the vendor-neutral handoff contract consumed by runtime adapters."""
+    meta, _, error = read_file(change_dir / "change.md")
+    if error:
+        return None, [result("model.dispatch", "fail", error)]
+    if meta.get("status") not in {"approved", "in-progress"}:
+        return None, [result("model.dispatch", "fail", "change must be approved or in-progress before dispatch")]
+    data, yaml_error = load_yaml_file(change_dir / "checks.yaml")
+    steps = data.get("steps") if not yaml_error and isinstance(data, dict) and isinstance(data.get("steps"), list) else []
+    route = meta.get("model_route") or {"strategy": "direct", "reason": "default direct route", "low_steps": []}
+    route_checks = check_model_route(root, meta, meta.get("mode"), steps, change_dir,
+                                     require_confirmation=True, allow_exhausted_attempts=True)
+    if any(item["status"] == "fail" for item in route_checks):
+        return None, route_checks
+    state, state_error = load_execution_state(change_dir)
+    if state_error:
+        return None, [result("model.dispatch", "fail", state_error)]
+    routing = load_model_routing(root)
+    low_ids = [str(item) for item in route.get("low_steps", [])]
+    step_by_id = {str(item.get("id")): item for item in steps if isinstance(item, dict) and item.get("id")}
+    exhausted: List[str] = []
+    for step_id in low_ids:
+        attempts, attempts_error = low_step_attempts(step_by_id[step_id], state)
+        if attempts_error:
+            return None, [result("model.dispatch", "fail", attempts_error)]
+        if attempts >= routing["low_retry_limit"]:
+            exhausted.append(step_id)
+    delegated = route.get("strategy") in {"delegate-low", "mixed"}
+    escalated = bool(exhausted) and delegated
+    tier = "low" if delegated and not escalated else "high"
+    selected_model, model_error = model_for_route(root, route, tier, model_name)
+    if model_error:
+        return None, [result("model.dispatch", "fail", model_error)]
+    max_input_tokens, token_error = model_token_budget(root, selected_model, input_tokens)
+    if token_error:
+        return None, [result("model.dispatch", "fail", token_error)]
+    if tier == "low":
+        actions = [{"type": "executor_card", "step_id": step_id}
+                   for step_id in low_ids if step_id not in exhausted]
+        decision = "delegate-low"
+        reason = "approved low-tier steps are ready for bounded execution"
+    else:
+        actions = [{"type": "high_tier_review", "reason":
+                    "low-tier retry limit reached" if escalated else "route retains work at high tier"}]
+        decision = "escalate-high" if escalated else "retain-high"
+        reason = ("low-tier failures require high-tier review: %s" % ", ".join(exhausted)
+                  if escalated else "route is configured for high-tier execution")
+    fallback, fallback_error = model_for_route(root, route, "high")
+    if fallback_error:
+        return None, [result("model.dispatch", "fail", fallback_error)]
+    fallback_limit, fallback_token_error = model_token_budget(root, fallback, None)
+    if fallback_token_error:
+        return None, [result("model.dispatch", "fail", fallback_token_error)]
+    plan = {
+        "protocol": "codestable.model-dispatch/v1",
+        "decision": decision,
+        "reason": reason,
+        "model": selected_model,
+        "actions": actions,
+        "fallback": {"tier": "high", "model": fallback,
+                      "after_low_failures": routing["low_retry_limit"]},
+        "budget": {"profile": selected_model.get("profile"),
+                   "max_input_tokens": max_input_tokens,
+                   "input_tokens": input_tokens,
+                   "low_step_max_input_tokens": routing["low_step_limit"].get("max_input_tokens"),
+                   "fallback_max_input_tokens": fallback_limit},
+    }
+    return plan, route_checks + [result("model.dispatch", "pass", "model dispatch plan is ready", [decision])]
+
+
+def record_low_result(root: Path, change_dir: Path, step_id: str,
+                      outcome: str) -> Tuple[Optional[Dict[str, Any]], List[Result]]:
+    """Persist only a bounded success/failure receipt for automatic escalation."""
+    if outcome not in {"success", "failure"}:
+        return None, [result("model.execution_result", "fail", "outcome must be success or failure")]
+    meta, _, error = read_file(change_dir / "change.md")
+    if error:
+        return None, [result("model.execution_result", "fail", error)]
+    data, yaml_error = load_yaml_file(change_dir / "checks.yaml")
+    steps = data.get("steps") if not yaml_error and isinstance(data, dict) and isinstance(data.get("steps"), list) else []
+    route_checks = check_model_route(root, meta, meta.get("mode"), steps, change_dir,
+                                     require_confirmation=True, allow_exhausted_attempts=True)
+    if any(item["status"] == "fail" for item in route_checks):
+        return None, route_checks
+    route = meta.get("model_route") or {}
+    if step_id not in route.get("low_steps", []):
+        return None, route_checks + [result("model.execution_result", "fail",
+                                             "requested step is not an approved low-tier step", [step_id])]
+    step = next((item for item in steps if isinstance(item, dict) and str(item.get("id")) == step_id), None)
+    if step is None:
+        return None, route_checks + [result("model.execution_result", "fail", "step is missing from checks.yaml", [step_id])]
+    state, state_error = load_execution_state(change_dir)
+    if state_error:
+        return None, route_checks + [result("model.execution_result", "fail", state_error)]
+    routing = load_model_routing(root)
+    attempts, attempts_error = low_step_attempts(step, state)
+    if attempts_error:
+        return None, route_checks + [result("model.execution_result", "fail", attempts_error)]
+    if attempts >= routing["low_retry_limit"]:
+        return None, route_checks + [result("model.execution_result", "fail",
+                                             "low-tier retry limit already reached; use high-tier review", [step_id])]
+    record = state.setdefault("low_steps", {}).setdefault(step_id, {})
+    record["failures"] = attempts + 1 if outcome == "failure" else 0
+    record["last_outcome"] = outcome
+    write_error = write_execution_state(change_dir, state)
+    if write_error:
+        return None, route_checks + [result("model.execution_result", "fail", write_error)]
+    escalated = record["failures"] >= routing["low_retry_limit"]
+    receipt = {"step_id": step_id, "outcome": outcome, "low_attempts": record["failures"],
+               "max_attempts": routing["low_retry_limit"],
+               "next_tier": "high" if escalated else "low",
+               "state_file": str(execution_state_path(change_dir).relative_to(root))}
+    return receipt, route_checks + [result("model.execution_result", "pass",
+                                           "low-tier execution result recorded", [step_id, receipt["next_tier"]])]
 
 
 def check_behavior_delta(body: str, converge: bool) -> List[Result]:
@@ -970,7 +1790,8 @@ def check_required_command_evidence(root: Path, body: str) -> List[Result]:
 
 
 def check_roadmap_link(root: Path, feature_dir: Path, design_meta: Dict[str, Any],
-                       require_done: bool = False) -> List[Result]:
+                       require_done: bool = False,
+                       completion_ready: Optional[bool] = None) -> List[Result]:
     roadmap = design_meta.get("roadmap")
     item_slug = design_meta.get("roadmap_item")
     if not roadmap and not item_slug:
@@ -981,6 +1802,11 @@ def check_roadmap_link(root: Path, feature_dir: Path, design_meta: Dict[str, Any
     data, error = load_yaml_file(items_file)
     if error or data is None:
         return [result("roadmap.link", "fail", error or "roadmap items file is invalid", [str(items_file)])]
+    schema_errors = validate_schema(data, "roadmap-items",
+                                    legacy_compatible=completion_ready is not None)
+    if schema_errors:
+        return [result("roadmap.schema", "fail", "roadmap items schema is invalid",
+                       [str(items_file)] + schema_errors)]
     items = data.get("items")
     if not isinstance(items, list):
         return [result("roadmap.items", "fail", "items must be a list", [str(items_file)])]
@@ -992,18 +1818,36 @@ def check_roadmap_link(root: Path, feature_dir: Path, design_meta: Dict[str, Any
     if status not in {"planned", "in-progress", "done", "dropped"}:
         return [result("roadmap.status", "fail", "invalid roadmap item status %r" % status, [str(items_file)])]
     feature_value = item.get("feature")
-    if status in {"in-progress", "done"} and feature_value not in (None, feature_dir.name):
+    if status in {"in-progress", "done"} and feature_value != feature_dir.name:
         return [result("roadmap.feature_link", "fail", "roadmap item points to another feature", [str(feature_value), feature_dir.name])]
+    if status == "done" and completion_ready is False:
+        return [result("roadmap.evidence", "fail", "roadmap item is done but feature evidence is incomplete",
+                       [str(items_file), str(item_slug), feature_dir.name])]
+    change_status = design_meta.get("status")
+    if (status == "done" and completion_ready is None and not require_done
+            and change_status not in {"accepted", "closed"}):
+        return [result("roadmap.evidence", "fail",
+                       "roadmap item is done before the Change Package is accepted",
+                       [str(items_file), str(item_slug), str(change_status)])]
+    if status != "done" and completion_ready is True:
+        return [result("roadmap.completion", "warn", "feature evidence is complete but roadmap item is not done",
+                       [str(items_file), str(item_slug), str(status)])]
     if require_done and status != "done":
         return [result("roadmap.completion", "fail", "roadmap item must be done before converge",
                        [str(items_file), str(item_slug), str(status)])]
     return [result("roadmap.link", "pass", "roadmap item and feature link are valid", [str(items_file), str(item_slug)])]
 
 
-def git_changed_files(root: Path) -> Tuple[List[str], Optional[str]]:
+def git_changed_files(root: Path, base: Optional[str] = None) -> Tuple[List[str], Optional[str]]:
+    """List files changed relative to `base` (default HEAD), plus untracked files.
+
+    Diffing against a baseline commit (instead of HEAD) keeps checks meaningful
+    after the task's own commits move HEAD.
+    """
+    merge_base = base if base and base != "unborn" else "HEAD"
     try:
         proc = subprocess.run(
-            ["git", "diff", "HEAD", "--name-only", "--diff-filter=ACMRT"],
+            ["git", "diff", merge_base, "--name-only", "--diff-filter=ACMRT"],
             cwd=str(root), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             universal_newlines=True, check=False,
         )
@@ -1061,6 +1905,7 @@ def check_contract_schema(contract: Dict[str, Any], phase: Optional[str]) -> Lis
 
     checks.extend(check_impact_schema(contract, "architecture"))
     checks.extend(check_impact_schema(contract, "requirement"))
+    checks.extend(check_baseline_impact_schema(contract))
     context_refs = contract.get("context_refs") or {}
     if not isinstance(context_refs, dict):
         checks.append(result("contract.context_refs", "fail", "context_refs must be a mapping"))
@@ -1085,6 +1930,55 @@ def check_contract_schema(contract: Dict[str, Any], phase: Optional[str]) -> Lis
     return checks
 
 
+BASELINE_DOC_IDS = {"srs", "arch", "detail", "database", "interface", "test", "ops", "manual"}
+
+
+def check_baseline_impact_schema(contract: Dict[str, Any]) -> List[Result]:
+    impact = contract.get("baseline_impact")
+    if impact is None:
+        return []
+    if not isinstance(impact, dict):
+        return [result("baseline_impact.shape", "fail", "baseline_impact must be a mapping")]
+    docs = impact.get("docs")
+    reason = impact.get("reason")
+    if not isinstance(docs, list) or not docs:
+        return [result("baseline_impact.docs", "fail", "baseline_impact.docs must be a non-empty list")]
+    invalid = sorted({str(item) for item in docs if item not in BASELINE_DOC_IDS})
+    checks = [result("baseline_impact.docs", "fail" if invalid else "pass",
+                     "baseline_impact contains unknown document IDs" if invalid else "baseline document IDs are valid",
+                     invalid or [str(item) for item in docs])]
+    if not isinstance(reason, str) or not reason.strip():
+        checks.append(result("baseline_impact.reason", "fail", "baseline_impact.reason is required"))
+    else:
+        checks.append(result("baseline_impact.reason", "pass", "baseline impact reason is explicit"))
+    return checks
+
+
+def check_enabled_baseline_contract(root: Path, contract: Dict[str, Any], change_mode: Any) -> List[Result]:
+    attention = root / ".codestable" / "attention.md"
+    baseline_mode = "off"
+    if attention.exists():
+        meta, _, error = read_file(attention)
+        if error is None:
+            baseline_mode = str(meta.get("baseline_mode", "off"))
+    impact = contract.get("baseline_impact")
+    requires_impact = (change_mode == "standard" and baseline_mode != "off" and
+                       (contract.get("architecture_impact") == "update" or
+                        contract.get("requirement_impact") == "update"))
+    if requires_impact and impact is None:
+        return [result("baseline_impact.required", "fail",
+                       "enabled baseline requires baseline_impact when architecture or requirements change")]
+    if baseline_mode == "off" and impact is not None:
+        return [result("baseline_impact.disabled", "warn",
+                       "baseline_impact is ignored because baseline_mode is off")]
+    if baseline_mode != "off" and impact is not None:
+        state = root / "docs" / "baseline" / ".baseline-state.yaml"
+        return [result("baseline.state", "pass" if state.exists() else "fail",
+                       "baseline state is initialized" if state.exists() else
+                       "baseline_mode is enabled but .baseline-state.yaml is missing", [str(state)])]
+    return []
+
+
 def check_impact_schema(contract: Dict[str, Any], topic: str) -> List[Result]:
     impact = contract.get(topic + "_impact")
     refs = contract.get(topic + "_refs") or []
@@ -1106,18 +2000,50 @@ def check_impact_schema(contract: Dict[str, Any], topic: str) -> List[Result]:
     return checks
 
 
+def resolve_diff_base(root: Path, contract: Dict[str, Any]) -> Tuple[Optional[str], bool]:
+    """Return (base, head_drifted) for diff computation.
+
+    Prefers contract.baseline.git_head so the change set stays stable after the
+    task's own commits move HEAD. Returns (None, drifted) when the baseline
+    commit is missing from this clone (shallow checkout, rebase rewrite).
+    """
+    baseline = contract.get("baseline") if isinstance(contract.get("baseline"), dict) else {}
+    expected = str(baseline.get("git_head") or "")
+    if not expected or expected == "unborn":
+        return None, False
+    current = git_head(root)
+    if current == expected:
+        return expected, False
+    verify = subprocess.run(["git", "rev-parse", "--verify", "--quiet", expected + "^{commit}"],
+                            cwd=str(root), stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                            universal_newlines=True, check=False)
+    if verify.returncode == 0:
+        return expected, True
+    return None, True
+
+
 def check_diff_contract(root: Path, contract: Dict[str, Any], phase: Optional[str] = None) -> List[Result]:
-    changed, error = git_changed_files(root)
+    base, drifted = resolve_diff_base(root, contract)
+    changed, error = git_changed_files(root, base)
     if error:
         return [result("git.diff", "warn", error)]
+    if drifted and base is None:
+        checks = [result("git.diff.base", "warn",
+                         "baseline git_head not found in this clone; falling back to diff against HEAD")]
+    else:
+        checks = []
+        if drifted:
+            checks.append(result("git.diff.base", "pass",
+                                 "HEAD moved past the task baseline; diffing against the baseline commit",
+                                 [str(base)]))
     include = contract.get("include") or ["**"]
     exclude = contract.get("exclude") or []
     current = effective_changed_files(root, changed, contract)
     outside = [path for path in current if not any(fnmatch.fnmatch(path, pattern) for pattern in include)]
     forbidden = [path for path in current if any(fnmatch.fnmatch(path, pattern) for pattern in exclude)]
-    checks = [result("git.diff.scope", "fail" if outside else "pass",
-                     "changed files outside contract" if outside else "changed files are within contract",
-                     outside or current)]
+    checks.append(result("git.diff.scope", "fail" if outside else "pass",
+                         "changed files outside contract" if outside else "changed files are within contract",
+                         outside or current))
     checks.append(result("git.diff.exclude", "fail" if forbidden else "pass",
                          "forbidden paths changed" if forbidden else "no forbidden paths changed",
                          forbidden or []))
@@ -1128,7 +2054,7 @@ def check_diff_contract(root: Path, contract: Dict[str, Any], phase: Optional[st
         path = root / relative
         if path.is_file():
             try:
-                contents += "\n" + path.read_text(encoding="utf-8")
+                contents += "\n" + read_text_any(path)[0]
             except OSError:
                 pass
     required_terms = contract.get("required_terms") or []
@@ -1189,12 +2115,17 @@ def check_architecture(root: Path, architecture_dir: Optional[Path]) -> List[Res
     if not architecture_dir.is_dir():
         return [result("architecture.directory", "warn", "architecture directory not found", [str(architecture_dir)])]
     checks: List[Result] = []
+    legacy_layout = ((root / ".codestable" / "features").is_dir()
+                     and not (root / ".codestable" / "changes").is_dir())
     docs = sorted(architecture_dir.rglob("*.md"))
     missing_anchors: List[str] = []
     for doc in docs:
         _, body, error = read_file(doc)
         if error:
-            checks.append(result("architecture.read", "fail", error, [str(doc)]))
+            legacy_frontmatter = legacy_layout and error == "missing opening frontmatter delimiter"
+            checks.append(result("architecture.read", "warn" if legacy_frontmatter else "fail",
+                                 "legacy architecture has no frontmatter" if legacy_frontmatter else error,
+                                 [str(doc)]))
             continue
         for target, line in re.findall(r"`([^`\n]+):(\d+)`", body):
             if "://" in target:
@@ -1205,7 +2136,7 @@ def check_architecture(root: Path, architecture_dir: Optional[Path]) -> List[Res
             else:
                 try:
                     line_number = int(line)
-                    total = len(target_path.read_text(encoding="utf-8").splitlines())
+                    total = len(read_text_any(target_path)[0].splitlines())
                     if line_number < 1 or line_number > total:
                         missing_anchors.append("%s -> %s:%s (line out of range)" % (doc, target, line))
                 except (OSError, ValueError):
@@ -1226,6 +2157,31 @@ def normalize_context_ref(ref: Any) -> Dict[str, Any]:
                 item[field] = [str(value) for value in ref[field]]
         return item
     return {"path": ""}
+
+
+def selected_reference_chars(root: Path, refs: List[Any]) -> Tuple[int, List[str]]:
+    """Estimate selected reference text and report unreadable or unresolved inputs."""
+    total = 0
+    errors: List[str] = []
+    for raw in refs:
+        item = normalize_context_ref(raw)
+        path_value = str(item.get("path", ""))
+        if not relative_project_path(path_value):
+            errors.append("invalid path: %s" % path_value)
+            continue
+        path = root / path_value
+        if not path.is_file():
+            errors.append("unreadable: %s" % path_value)
+            continue
+        try:
+            text, _read_err = read_text_any(path)
+        except OSError:
+            errors.append("unreadable: %s" % path_value)
+            continue
+        errors.extend("selector not found: %s#%s" % (path_value, selector)
+                      for selector in unresolved_context_selectors(text, item))
+        total += selected_context_chars(text, item)
+    return total, errors
 
 
 def context_for_change(root: Path, change_dir: Path, phase: str) -> Tuple[List[Dict[str, Any]], List[str]]:
@@ -1251,6 +2207,36 @@ def context_for_change(root: Path, change_dir: Path, phase: str) -> Tuple[List[D
                 if relative.startswith(directory + "/"):
                     relative = relative[len(directory) + 1:]
                 refs.append(".codestable/%s/%s" % (directory, relative))
+    unique: List[Dict[str, Any]] = []
+    seen: set = set()
+    for ref in refs:
+        item = normalize_context_ref(ref)
+        path = str(Path(item.get("path", "")))
+        if not path or path in seen:
+            continue
+        item["path"] = path
+        seen.add(path)
+        unique.append(item)
+    missing = [item["path"] for item in unique if not (root / item["path"]).exists()]
+    return unique, missing
+
+
+def context_for_feature(root: Path, feature_dir: Path, phase: str) -> Tuple[List[Dict[str, Any]], List[str]]:
+    refs: List[Any] = []
+    attention = root / ".codestable" / "attention.md"
+    if attention.exists():
+        refs.append(str(attention.relative_to(root)))
+    design = find_one(feature_dir, "-design.md")
+    checklist = find_one(feature_dir, "-checklist.yaml")
+    for path in (design, checklist):
+        if path is not None:
+            refs.append(str(path.relative_to(root)))
+    if checklist is not None:
+        data, error = load_yaml_file(checklist)
+        contract = data.get("contract") if not error and isinstance(data, dict) else None
+        context_refs = contract.get("context_refs") if isinstance(contract, dict) else None
+        if isinstance(context_refs, dict) and isinstance(context_refs.get(phase), list):
+            refs.extend(context_refs[phase])
     unique: List[Dict[str, Any]] = []
     seen: set = set()
     for ref in refs:
@@ -1304,6 +2290,24 @@ def next_action(root: Path, change_dir: Path) -> Dict[str, Any]:
             "risk": risk, "standard_required": risk["level"] == "high"}
 
 
+def next_action_feature(feature_dir: Path) -> Dict[str, Any]:
+    design = find_one(feature_dir, "-design.md")
+    if design is None:
+        return {"skill": "cs-feat-design", "reason": "legacy design is missing",
+                "status": "unknown", "legacy": True}
+    meta, _, error = read_file(design)
+    if error:
+        return {"skill": "cs", "reason": error, "status": "unknown", "legacy": True}
+    status = meta.get("status")
+    if status != "approved":
+        return {"skill": "cs-feat-design", "reason": "legacy design is not approved",
+                "status": status, "legacy": True}
+    ready = legacy_checks_ready(feature_dir)
+    return {"skill": "cs-feat-accept" if ready else "cs-feat-impl",
+            "reason": "legacy checklist is complete" if ready else "legacy checklist has pending work",
+            "status": status, "ready": ready, "legacy": True}
+
+
 def build_remediation(checks: List[Result]) -> List[Dict[str, Any]]:
     hints = {
         "git.diff.scope": ("scope.restrict", "撤销越界修改，或回到 design 扩大 include"),
@@ -1316,7 +2320,7 @@ def build_remediation(checks: List[Result]) -> List[Dict[str, Any]]:
         "change.checks_complete": ("checks.complete", "完成 pending steps/checks 并记录证据"),
         "change.delta": ("delta.record", "记录 ADDED/MODIFIED/REMOVED，或明确写无"),
         "baseline.required": ("baseline.capture", "先运行 --snapshot，将结果写入 contract.baseline"),
-        "baseline.git_head": ("baseline.head", "恢复任务基线或记录新的任务包"),
+        "baseline.git_head": ("baseline.head", "基线 commit 在本克隆中缺失（变基/浅克隆）；重新捕获基线或拉取完整历史"),
     }
     remediation = []
     for item in checks:
@@ -1331,7 +2335,10 @@ def build_remediation(checks: List[Result]) -> List[Dict[str, Any]]:
 def compact_payload(status: str, root: Path, checks: List[Result],
                     next_step: Optional[Dict[str, Any]], context: List[Any],
                     remediation: List[Dict[str, Any]], waves: List[List[str]],
-                    emit: Optional[str], context_budget: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+                    emit: Optional[str], context_budget: Optional[Dict[str, Any]] = None,
+                    executor: Optional[Dict[str, Any]] = None,
+                    dispatch: Optional[Dict[str, Any]] = None,
+                    execution_result: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     failures = [{"id": item["id"], "message": item["message"],
                  "evidence": item.get("evidence", [])} for item in checks
                 if item.get("status") == "fail"]
@@ -1344,7 +2351,7 @@ def compact_payload(status: str, root: Path, checks: List[Result],
         payload["context"] = context
         if context_budget:
             payload["context_budget"] = context_budget
-    if "failures" in requested:
+    if "failures" in requested or (status == "fail" and "executor_card" in requested):
         payload["failures"] = failures
     if "warnings" in requested:
         payload["warnings"] = warnings
@@ -1352,11 +2359,27 @@ def compact_payload(status: str, root: Path, checks: List[Result],
         payload["remediation"] = remediation
     if "waves" in requested and waves:
         payload["waves"] = waves
+    if "executor_card" in requested and executor is not None:
+        payload["executor_card"] = executor
+    if "dispatch_plan" in requested and dispatch is not None:
+        payload["dispatch_plan"] = dispatch
+    if "execution_result" in requested and execution_result is not None:
+        payload["execution_result"] = execution_result
     return payload
 
 
+def nonnegative_cli_int(value: str) -> int:
+    try:
+        number = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("value must be a non-negative integer") from error
+    if number < 0:
+        raise argparse.ArgumentTypeError("value must be a non-negative integer")
+    return number
+
+
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Check CodeStable semantic compliance contracts.")
+    parser = argparse.ArgumentParser(description="Check codestable semantic compliance contracts.")
     parser.add_argument("--root", default=".", help="Project root (default: current directory)")
     parser.add_argument("--feature", help="Feature directory to check")
     parser.add_argument("--change", help="Change Package directory to check")
@@ -1371,10 +2394,21 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--scenarios", action="store_true", help="Generate acceptance scenarios from behavior delta")
     parser.add_argument("--check", action="store_true", help="Run phase/project compliance checks")
     parser.add_argument("--snapshot", action="store_true", help="Print a read-only task baseline snapshot")
-    parser.add_argument("--snapshot-files", help="Comma-separated preexisting files to hash")
+    parser.add_argument("--snapshot-files", help="Comma-separated dirty files that predate this task")
+    parser.add_argument("--write-baseline", action="store_true", dest="write_baseline",
+                        help="With --change and --snapshot: write preexisting_changes and contract.baseline")
+    parser.add_argument("--test-impact", action="store_true", help="Scan existing test files for comma-separated symbols")
+    parser.add_argument("--symbols", help="Comma-separated symbols for --test-impact")
+    parser.add_argument("--executor-card", metavar="STEP_ID", help="Emit the bounded handoff card for one low-tier step")
+    parser.add_argument("--dispatch-plan", action="store_true", help="Emit the vendor-neutral runtime model dispatch plan")
+    parser.add_argument("--record-low-result", metavar="STEP_ID=success|failure",
+                        help="Record one low-tier execution receipt and expose the next tier")
+    parser.add_argument("--model", help="Declared model id used for context or runtime dispatch")
+    parser.add_argument("--input-tokens", type=nonnegative_cli_int,
+                        help="Observed runtime input tokens for budget validation")
     parser.add_argument("--agent", action="store_true", help="Emit compact machine-oriented JSON")
-    parser.add_argument("--emit", help="Compact fields: next,context,failures,warnings,remediation,waves")
-    parser.add_argument("--profile", help="Model context profile name, e.g. constrained-27b-64k")
+    parser.add_argument("--emit", help="Compact fields: next,context,failures,warnings,remediation,waves,executor_card,dispatch_plan,execution_result")
+    parser.add_argument("--profile", help="Context budget profile name, e.g. compact-64k")
     parser.add_argument("--json", action="store_true", dest="as_json")
     parser.add_argument("--strict", action="store_true", help="Treat warnings as failures")
     return parser
@@ -1387,16 +2421,70 @@ def main() -> int:
     context: List[Any] = []
     context_budget: Dict[str, Any] = {}
     next_step: Optional[Dict[str, Any]] = None
+    executor: Optional[Dict[str, Any]] = None
+    dispatch: Optional[Dict[str, Any]] = None
+    execution_result: Optional[Dict[str, Any]] = None
     waves: List[List[str]] = []
     change_dir: Optional[Path] = None
+    feature_dir: Optional[Path] = None
+    if args.change and args.feature:
+        sys.stderr.write("--change and --feature are mutually exclusive\n")
+        return 2
+    if args.test_impact:
+        symbols = [item.strip() for item in (args.symbols or "").split(",") if item.strip()]
+        if not symbols:
+            sys.stderr.write("--test-impact requires --symbols <symbol[,symbol]>\n")
+            return 2
+        payload = {"status": "pass", "test_impact": test_impact(root, symbols)}
+        print(json.dumps(payload, ensure_ascii=False, indent=None if args.agent else 2))
+        return 0
     if args.snapshot:
+        change_file: Optional[Path] = None
+        selected: List[str] = []
+        all_dirty: Dict[str, Any] = {}
+        if args.change:
+            change_file = resolve_change_dir(root, args.change) / "change.md"
         snapshot = baseline_snapshot(root)
+        all_dirty = dict(snapshot["dirty_hashes"])
         if args.snapshot_files:
-            selected = {item.strip() for item in args.snapshot_files.split(",") if item.strip()}
+            selected = [item.strip() for item in args.snapshot_files.split(",") if item.strip()]
+            selected = list(dict.fromkeys(selected))
+            selected_set = set(selected)
             snapshot["dirty_hashes"] = {path: digest for path, digest in snapshot["dirty_hashes"].items()
-                                        if path in selected}
+                                        if path in selected_set}
         status = "warn" if snapshot.get("error") else "pass"
         payload = {"status": status, "baseline": snapshot}
+        if args.write_baseline:
+            if change_file is None:
+                sys.stderr.write("--write-baseline requires --change\n")
+                return 2
+            missing = [path for path in selected if path not in all_dirty]
+            if missing:
+                sys.stderr.write("--snapshot-files are not dirty: %s\n" % ", ".join(missing))
+                return 2
+            try:
+                change_dir = change_file.parent.resolve().relative_to(root)
+                change_prefix = str(change_dir).rstrip("/") + "/"
+            except ValueError:
+                change_prefix = ""
+            package_files = [path for path in selected if path.startswith(change_prefix)]
+            if package_files:
+                sys.stderr.write("--snapshot-files must not include Change Package files: %s\n" %
+                                 ", ".join(package_files))
+                return 2
+            unclassified = [path for path in all_dirty
+                            if path not in selected and not path.startswith(change_prefix)]
+            if unclassified:
+                sys.stderr.write("--snapshot-files must classify preexisting dirty files: %s\n" %
+                                 ", ".join(unclassified))
+                return 2
+            snapshot["dirty_hashes"] = {path: all_dirty[path] for path in selected}
+            write_error = write_baseline_to_change(change_file, snapshot, selected)
+            if write_error:
+                payload = {"status": "fail", "error": write_error}
+                print(json.dumps(payload, ensure_ascii=False, indent=None if args.agent else 2))
+                return 1
+            payload["written"] = str(change_file.relative_to(root) if change_file.is_absolute() else change_file)
         print(json.dumps(payload, ensure_ascii=False, indent=None if args.agent else 2))
         return 0 if status == "pass" else 1
     if args.index:
@@ -1410,8 +2498,20 @@ def main() -> int:
     if args.write_index:
         sys.stderr.write("--write-index requires --index\n")
         return 2
-    if (args.show_next or args.context or args.converge or args.archive or args.scenarios) and not args.change:
-        sys.stderr.write("--next, --context, --converge, --archive and --scenarios require --change\n")
+    action_flags = [bool(args.converge), bool(args.archive), bool(args.scenarios), bool(args.executor_card),
+                    bool(args.dispatch_plan), bool(args.record_low_result)]
+    if sum(action_flags) > 1:
+        sys.stderr.write("--converge, --archive, --scenarios, --executor-card, --dispatch-plan and --record-low-result are mutually exclusive\n")
+        return 2
+    if any(action_flags) and not args.change:
+        sys.stderr.write("--converge, --archive, --scenarios, --executor-card, --dispatch-plan and --record-low-result require --change\n")
+        return 2
+    if args.record_low_result and ("=" not in args.record_low_result or
+                                   not args.record_low_result.split("=", 1)[0].strip()):
+        sys.stderr.write("--record-low-result requires STEP_ID=success|failure\n")
+        return 2
+    if (args.show_next or args.context) and not (args.change or args.feature):
+        sys.stderr.write("--next and --context require --change or --feature\n")
         return 2
     if args.context and not args.phase:
         sys.stderr.write("--context requires --phase\n")
@@ -1423,7 +2523,8 @@ def main() -> int:
         sys.stderr.write("--archive requires --phase accept\n")
         return 2
     run_checks = (args.check or args.converge or args.archive or bool(args.feature)
-                  or (bool(args.change) and not args.show_next and not args.context and not args.scenarios)
+                  or (bool(args.change) and not args.show_next and not args.context and not args.scenarios
+                      and not args.executor_card and not args.dispatch_plan and not args.record_low_result)
                   or (not args.change and not args.feature and not args.show_next and not args.context))
     if run_checks:
         checks.extend(check_attention(root))
@@ -1435,7 +2536,7 @@ def main() -> int:
         feature_dir = Path(args.feature)
         if not feature_dir.is_absolute():
             feature_dir = root / feature_dir
-        feature_checks = check_checklist(root, feature_dir)
+        feature_checks = check_checklist(root, feature_dir, args.phase)
         if args.phase in ("impl", "accept"):
             design = find_one(feature_dir, "-design.md")
             if design is not None:
@@ -1443,8 +2544,22 @@ def main() -> int:
                 if meta.get("status") != "approved":
                     feature_checks.append(result("feature.phase", "fail", "design must be approved before impl/accept", [str(design)]))
         checks.extend(feature_checks)
+        if args.context:
+            context, missing_context = context_for_feature(root, feature_dir, args.phase)
+            budget_check, context_budget = check_context_budget(root, context, args.profile,
+                                                                 compact_output=args.agent, model_name=args.model,
+                                                                 input_tokens=args.input_tokens)
+            checks.append(result("context.files", "fail" if missing_context else "pass",
+                                 "context references are missing" if missing_context else "context references exist",
+                                 missing_context or [str(item) for item in context]))
+            checks.append(budget_check)
+        if args.show_next:
+            next_step = next_action_feature(feature_dir)
+            if next_step.get("status") == "unknown":
+                checks.append(result("workflow.next", "fail",
+                                     next_step.get("reason", "legacy next action unavailable")))
     if args.change:
-        change_dir = Path(args.change)
+        change_dir = resolve_change_dir(root, args.change)
         if not change_dir.is_absolute():
             change_dir = root / change_dir
         if run_checks:
@@ -1457,7 +2572,8 @@ def main() -> int:
         if args.context:
             context, missing_context = context_for_change(root, change_dir, args.phase)
             budget_check, context_budget = check_context_budget(root, context, args.profile,
-                                                                 compact_output=args.agent)
+                                                                 compact_output=args.agent, model_name=args.model,
+                                                                 input_tokens=args.input_tokens)
             if run_checks:
                 checks.append(result("context.files", "fail" if missing_context else "pass",
                                      "context references are missing" if missing_context else "context references exist",
@@ -1476,8 +2592,27 @@ def main() -> int:
             scenarios = acceptance_scenarios(body) if not error else []
         else:
             scenarios = []
+        if args.executor_card:
+            executor, card_checks = executor_card(root, change_dir, args.executor_card,
+                                                   args.model, args.input_tokens)
+            checks.extend(card_checks)
+        if args.dispatch_plan:
+            dispatch, dispatch_checks = dispatch_plan(root, change_dir, args.model, args.input_tokens)
+            checks.extend(dispatch_checks)
+        if args.record_low_result:
+            step_id, outcome = args.record_low_result.split("=", 1)
+            execution_result, result_checks = record_low_result(root, change_dir, step_id.strip(), outcome.strip())
+            checks.extend(result_checks)
     failures = [item for item in checks if item["status"] == "fail"]
     warnings = [item for item in checks if item["status"] == "warn"]
+    if args.feature and args.show_next and failures:
+        next_step = {
+            "skill": None,
+            "reason": "legacy feature compliance failed; resolve failures before routing",
+            "status": (next_step or {}).get("status", "unknown"),
+            "ready": False,
+            "legacy": True,
+        }
     status = "fail" if failures or (args.strict and warnings) else ("warn" if warnings else "pass")
     payload = {"status": status, "root": str(root), "checks": checks,
                "summary": {"total": len(checks), "failed": len(failures), "warnings": len(warnings)}}
@@ -1492,11 +2627,20 @@ def main() -> int:
         payload["archive"] = archive_plan(root, change_dir)
     if args.scenarios:
         payload["scenarios"] = scenarios
+    if args.executor_card:
+        payload["executor_card"] = executor
+    if args.dispatch_plan:
+        payload["dispatch_plan"] = dispatch
+    if args.record_low_result:
+        payload["execution_result"] = execution_result
     if args.agent:
-        compact_emit = args.emit or ("status" if args.scenarios else None)
+        compact_emit = args.emit or ("executor_card" if args.executor_card else
+                                     ("dispatch_plan" if args.dispatch_plan else
+                                      ("execution_result" if args.record_low_result else
+                                       ("status" if args.scenarios else None))))
         payload = compact_payload(status, root, checks, next_step, context,
                                    build_remediation(checks) if (args.converge or args.archive) else [], waves, compact_emit,
-                                   context_budget)
+                                   context_budget, executor, dispatch, execution_result)
         if args.scenarios:
             payload["scenarios"] = scenarios
         if args.archive and change_dir is not None:

@@ -7,7 +7,7 @@ namespace Gdterm.UI.Diagnostics
 {
     /// <summary>
     /// 轻量诊断/崩溃落盘——不依赖 AuditLogger 生命周期。
-    /// 人可读文本：data/logs/diag.log（过程审计仍可另写 jsonl）。
+    /// 人可读文本：logs/diag.log（过程审计仍可另写 jsonl）。
     /// </summary>
     internal static class CrashLog
     {
@@ -36,7 +36,7 @@ namespace Gdterm.UI.Diagnostics
             }
         }
 
-        /// <param name="uiFile">同时镜像到 data/logs/ui.log（UI 专项排查）。</param>
+        /// <param name="uiFile">同时镜像到 logs/ui.log（UI 专项排查）。</param>
         public static void Write(string source, Exception ex, bool isTerminating = false, bool uiFile = false)
         {
             if (ex == null && string.IsNullOrEmpty(source))

@@ -1,3 +1,4 @@
+# codestable:managed 受管文件——由 codestable update 维护；项目内的修改会被保留（跳过刷新），要恢复跟随更新请运行 codestable update --force。
 version: 1
 
 phases:

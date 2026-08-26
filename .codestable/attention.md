@@ -1,3 +1,15 @@
+---
+workflow_mode: standard
+baseline_mode: off
+standards:
+  required_files: []
+  forbidden_paths: []
+  required_terms: []
+  forbidden_terms: []
+  required_commands: {}
+  path_rules: {}
+---
+
 # Attention
 
 本文件是 CodeStable 技能启动必读的项目注意事项入口。所有 CodeStable 子技能开始工作前必须读取它。
@@ -19,9 +31,10 @@
 ### 编译与构建
 
 - 目标：.NET Framework 4.6.2，绿色版免安装
-- 产出：单文件夹，U盘便携；随附子目录：winpty 三件套、freerdp\（wfreerdp.exe）、
-  fzf\（v0.65.2，末代 Win7 支持）、fd\（v10.2.0，Rust 1.77 锁定构建）；
-  Program.cs 启动时把 fzf\/fd\ 追加到 PATH 末尾，本地终端直接可用
+- 产出：单文件夹，U盘便携；随附子目录：winpty 三件套、vendor\freerdp\（wfreerdp.exe）、
+  vendor\fzf\（v0.65.2，末代 Win7 支持）、vendor\fd\（v10.2.0，Rust 1.77 锁定构建）；
+  Program.cs 启动时把 vendor\fzf\/vendor\fd\ 追加到 PATH 末尾，本地终端直接可用
+- 日志/可写数据在程序根目录 logs\（diag.log、commands\、terminal\），不用 %APPDATA%（便携约定，详见 compound/trick-portable-app-local-assets-layout）
 - 当前环境无 .NET SDK，需在 Windows 上用 Visual Studio/MSBuild 编译
 - `gdterm.sln` 已含全部 13 个项目的 Build.0（含 Gdterm.Tests）
 - Terminal ProjectGuid 已修正为合法 hex（DEFA，非 DEFG）
@@ -43,7 +56,7 @@
 ### 测试
 
 - 零 NuGet 控制台 runner：`src/Gdterm.Tests`（`Gdterm.Tests.exe`）
-- 覆盖：DefaultPorts、LogSanitizer CLI 脱敏、ConnectionStoreJson 往返（无 password 字段）
+- 覆盖：DefaultPorts、LogSanitizer CLI 脱敏、ConnectionStoreJson 往返（无 password 字段；metadata+serial 磁盘 round-trip，读写必须成对实现，见 compound/decision-connections-json-read-write-symmetry）
 - Windows：`msbuild gdterm.sln /p:Configuration=Release` 后运行 Tests.exe
 
 ### 命令与脚本陷阱
@@ -117,6 +130,7 @@
 - **UI 动作一律 Ctrl+Shift+字母**（Ctrl+Shift+K/L/R/W/F/P），普通 Ctrl 组合属于 shell readline，禁止被 ProcessCmdKey/menu ShortcutKeys 抢走
 - 菜单按职责分组：文件=打开类动作+导入导出；连接=当前会话操作+书签/最近；视图=外观布局；终端=搜索/会话功能/监控；工具=独立工具+安全集群+设置集群；帮助=快捷键/日志/关于
 - 菜单/右键图标走 `MenuIconFactory`（纯 GDI+ 手绘 16x16，零资源零字体依赖，按 key 缓存）；弹窗字体统一走 `FormFontPolicy.Apply(form)`（跟随全局 UI 字体，只替换雅黑系，等宽字体不动）
+- **UI 缩放规范（2026-08，硬约束）**：文本控件禁止固定像素 Size（AutoSize+Padding）；布局用 Dock/TableLayout/Flow 禁绝对坐标；禁止硬编码雅黑字体（继承 Form.Font；标题用 Font.FontFamily+Size+N 相对写法；Consolas 等宽例外）；不可避免固定值走 `DpiScale.V/P/S/Factor`；**DpiScale 只用于子控件级固定值，禁止作用于窗体自身 Size（PerMonitorV2 已自动缩放窗体，叠加=双重缩放）**；手写窗体不设 AutoScaleMode。完整规则 docs/UI-SCALING-CONVENTIONS.md，决策记录 .codestable/compound/2026-08-26-decision-winforms-ui-scaling-convention.md
 - 弹窗遵循渐进披露：默认简洁，“更多选项”折叠进阶区（ConnectionDialog 为范本）
 - 标签导航：Ctrl+Tab/Ctrl+Shift+Tab 循环切签、Ctrl+Alt+1..9 直达、中键关标签、双击标签栏空白=新建连接；连接树支持拖拽归组（改 GroupPath 并持久化）
 - 状态栏可点击直达：隧道→端口转发、密码库→KeePass 管理、AI→AI 设置、安全→修改主密码

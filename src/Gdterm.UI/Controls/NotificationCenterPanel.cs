@@ -57,7 +57,7 @@ namespace Gdterm.UI.Controls
                 Height = 28,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(8, 0, 0, 0),
-                Font = new Font("Microsoft YaHei UI", 10f, FontStyle.Bold)
+                Font = Services.FormFontPolicy.UiFont(+1f, FontStyle.Bold)
             };
 
             Controls.Add(_list);

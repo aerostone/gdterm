@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Windows.Forms;
 using Gdterm.Security;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Forms
 {
@@ -40,6 +41,9 @@ namespace Gdterm.UI.Forms
             _securityManager = securityManager;
             InitializeComponent();
 
+            // 全局 UI 字号（规范规则⑤）：向导在主窗体之前显示，直接接入 FormFontPolicy
+            Gdterm.UI.Services.FormFontPolicy.Apply(this);
+
             // 加载应用图标
             try
             {
@@ -58,42 +62,39 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "gdterm - 首次使用设置";
-            ClientSize = new Size(560, 480);
-            MinimumSize = new Size(520, 440);
+            ClientSize = DpiScale.S(560, 480);
+            MinimumSize = DpiScale.S(520, 440);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = true;
             BackColor = Color.FromArgb(30, 30, 30);
-            // PerMonitorV2 清单已声明 DPI 感知；Font 模式按字号等比缩放，避免控件被挤扁
-            AutoScaleMode = AutoScaleMode.Font;
-            AutoScaleDimensions = new SizeF(6F, 12F);
-            Font = new Font("Microsoft YaHei", 9f);
+            // 规范见 docs/UI-SCALING-CONVENTIONS.md：手写窗体不设 AutoScaleMode，字体由 FormFontPolicy 统一注入全局 UI 字号
 
             // —— 顶部标题 ——
             var headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 78,
+                Height = DpiScale.V(this, 78),
                 BackColor = Color.FromArgb(45, 45, 45),
-                Padding = new Padding(24, 14, 24, 10)
+                Padding = new Padding(DpiScale.V(this, 24), DpiScale.V(this, 14), DpiScale.V(this, 24), DpiScale.V(this, 10))
             };
 
             var titleLabel = new Label
             {
                 Text = "欢迎使用 gdterm",
-                Font = new Font("Microsoft YaHei", 15f, FontStyle.Bold),
+                // 标题强调：相对当前字体放大加粗，不硬编码字族/磅值（规范规则③）
+                Font = new Font(Font.FontFamily, Font.Size + 6f, FontStyle.Bold),
                 ForeColor = Color.White,
                 Dock = DockStyle.Top,
-                Height = 32,
+                AutoSize = true,
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
             var subtitleLabel = new Label
             {
                 Text = "绿色运维客户端 · 首次使用请完成以下设置",
-                Font = new Font("Microsoft YaHei", 9f),
                 ForeColor = Color.FromArgb(170, 170, 170),
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.TopLeft
@@ -106,17 +107,17 @@ namespace Gdterm.UI.Forms
             var stepBar = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 36,
+                Height = DpiScale.V(this, 36),
                 BackColor = Color.FromArgb(38, 38, 38),
-                Padding = new Padding(16, 0, 16, 0)
+                Padding = new Padding(DpiScale.V(this, 16), 0, DpiScale.V(this, 16), 0)
             };
 
             _stepIndicator = new Label
             {
                 Text = BuildStepText(0),
-                Font = new Font("Microsoft YaHei", 9f),
                 ForeColor = Color.FromArgb(160, 160, 160),
                 Dock = DockStyle.Fill,
+                AutoSize = true,
                 TextAlign = ContentAlignment.MiddleCenter
             };
             stepBar.Controls.Add(_stepIndicator);
@@ -125,18 +126,26 @@ namespace Gdterm.UI.Forms
             var buttonPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 60,
+                Height = DpiScale.V(this, 60),
                 BackColor = Color.FromArgb(35, 35, 35),
-                Padding = new Padding(16, 12, 16, 12)
+                Padding = new Padding(DpiScale.V(this, 16), DpiScale.V(this, 12), DpiScale.V(this, 16), DpiScale.V(this, 12))
             };
+
+            // 右对齐按钮条：FlowLayoutPanel(RightToLeft) 自动靠右，按钮随文字自适应尺寸（规范规则①②）
+            var flow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false
+            };
+            buttonPanel.Controls.Add(flow);
 
             _nextButton = new Button
             {
                 Text = "开始设置 →",
-                Size = new Size(128, 34),
-                Anchor = AnchorStyles.Right | AnchorStyles.Top,
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 10), 0),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Microsoft YaHei", 10f),
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White,
                 Cursor = Cursors.Hand,
@@ -144,21 +153,13 @@ namespace Gdterm.UI.Forms
             };
             _nextButton.FlatAppearance.BorderSize = 0;
             _nextButton.Click += OnNextClick;
-            // 右对齐
-            _nextButton.Location = new Point(
-                buttonPanel.ClientSize.Width - _nextButton.Width - 16,
-                12);
-            buttonPanel.Resize += (s, e) =>
-            {
-                _nextButton.Left = buttonPanel.ClientSize.Width - _nextButton.Width - 16;
-            };
-            buttonPanel.Controls.Add(_nextButton);
+            flow.Controls.Add(_nextButton);
 
             // —— 步骤内容区 ——
             _stepPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(28, 20, 28, 12),
+                Padding = new Padding(DpiScale.V(this, 28), DpiScale.V(this, 20), DpiScale.V(this, 28), DpiScale.V(this, 12)),
                 BackColor = Color.FromArgb(30, 30, 30)
             };
 
@@ -210,9 +211,9 @@ namespace Gdterm.UI.Forms
                 BackColor = Color.Transparent
             };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 8f));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, DpiScale.V(this, 8)));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 8f));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, DpiScale.V(this, 8)));
 
             var infoLabel = new Label
             {
@@ -223,7 +224,6 @@ namespace Gdterm.UI.Forms
                     "    ·  密码需包含大小写字母、数字和特殊字符\r\n" +
                     "    ·  此密码用于锁定/解锁应用和加密配置\r\n\r\n" +
                     "请牢记此密码，忘记后无法恢复数据。",
-                Font = new Font("Microsoft YaHei", 10f),
                 ForeColor = Color.FromArgb(215, 215, 215),
                 Dock = DockStyle.Fill,
                 AutoSize = false,
@@ -248,21 +248,21 @@ namespace Gdterm.UI.Forms
                 BackColor = Color.Transparent,
                 Padding = new Padding(0, 4, 0, 0)
             };
-            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 64f));
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DpiScale.V(this, 64)));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            // 行高：标题 / 密码 / 确认 / 强度 / 错误 / 显示密码 / 弹性空白
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 36f));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40f));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40f));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 28f));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 72f));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 32f));
+            // 行高：标题 / 密码 / 确认 / 强度 / 错误 / 显示密码 / 弹性空白（DPI 缩放，规范规则④）
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, DpiScale.V(this, 36)));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, DpiScale.V(this, 40)));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, DpiScale.V(this, 40)));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, DpiScale.V(this, 28)));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, DpiScale.V(this, 72)));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, DpiScale.V(this, 32)));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
             var promptLabel = new Label
             {
                 Text = "请设置主密码",
-                Font = new Font("Microsoft YaHei", 11f, FontStyle.Bold),
+                Font = new Font(Font.FontFamily, Font.Size + 2f, FontStyle.Bold),
                 ForeColor = Color.White,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft
@@ -273,7 +273,6 @@ namespace Gdterm.UI.Forms
             var pwdLabel = new Label
             {
                 Text = "密码",
-                Font = new Font("Microsoft YaHei", 10f),
                 ForeColor = Color.FromArgb(200, 200, 200),
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft
@@ -281,7 +280,8 @@ namespace Gdterm.UI.Forms
             _passwordBox = new TextBox
             {
                 Dock = DockStyle.Fill,
-                Font = new Font("Consolas", 11f),
+                // 等宽语义例外（规范规则③）：密码输入用等宽字体，字号跟随全局 UI 字号
+                Font = new Font("Consolas", Program.GlobalAppearance != null ? Program.GlobalAppearance.UIFontSize : 11f),
                 UseSystemPasswordChar = true,
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.White,
@@ -295,7 +295,6 @@ namespace Gdterm.UI.Forms
             var confirmLabel = new Label
             {
                 Text = "确认",
-                Font = new Font("Microsoft YaHei", 10f),
                 ForeColor = Color.FromArgb(200, 200, 200),
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft
@@ -303,7 +302,7 @@ namespace Gdterm.UI.Forms
             _confirmBox = new TextBox
             {
                 Dock = DockStyle.Fill,
-                Font = new Font("Consolas", 11f),
+                Font = new Font("Consolas", Program.GlobalAppearance != null ? Program.GlobalAppearance.UIFontSize : 11f),
                 UseSystemPasswordChar = true,
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.White,
@@ -316,9 +315,9 @@ namespace Gdterm.UI.Forms
             _strengthLabel = new Label
             {
                 Text = "密码强度：未输入",
-                Font = new Font("Microsoft YaHei", 9f),
                 ForeColor = Color.FromArgb(140, 140, 140),
                 Dock = DockStyle.Fill,
+                AutoSize = true,
                 TextAlign = ContentAlignment.MiddleLeft
             };
             layout.SetColumnSpan(_strengthLabel, 2);
@@ -327,9 +326,9 @@ namespace Gdterm.UI.Forms
             _errorLabel = new Label
             {
                 Text = "",
-                Font = new Font("Microsoft YaHei", 9f),
                 ForeColor = Color.FromArgb(255, 100, 100),
                 Dock = DockStyle.Fill,
+                AutoSize = true,
                 TextAlign = ContentAlignment.TopLeft
             };
             layout.SetColumnSpan(_errorLabel, 2);
@@ -338,11 +337,10 @@ namespace Gdterm.UI.Forms
             var showPwdCheck = new CheckBox
             {
                 Text = "显示密码",
-                Font = new Font("Microsoft YaHei", 9f),
                 ForeColor = Color.FromArgb(160, 160, 160),
                 Dock = DockStyle.Left,
                 AutoSize = true,
-                Margin = new Padding(0, 4, 0, 0)
+                Margin = new Padding(0, DpiScale.V(this, 4), 0, 0)
             };
             showPwdCheck.CheckedChanged += (s, e) =>
             {
@@ -371,17 +369,19 @@ namespace Gdterm.UI.Forms
             };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 20f));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 48f));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, 40f));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, DpiScale.V(this, 48)));
+            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, DpiScale.V(this, 40)));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 30f));
 
             var doneLabel = new Label
             {
                 Text = "设置完成",
-                Font = new Font("Microsoft YaHei", 16f, FontStyle.Bold),
+                // 标题强调：相对当前字体放大加粗（规范规则③）
+                Font = new Font(Font.FontFamily, Font.Size + 7f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(80, 200, 120),
                 Dock = DockStyle.Fill,
+                AutoSize = true,
                 TextAlign = ContentAlignment.MiddleCenter
             };
 
@@ -393,7 +393,6 @@ namespace Gdterm.UI.Forms
                     "·  空闲 5 分钟后自动锁定\r\n" +
                     "·  Ctrl+` 全局热键可快速呼出/隐藏窗口\r\n\r\n" +
                     "点击「进入 gdterm」开始使用。",
-                Font = new Font("Microsoft YaHei", 10f),
                 ForeColor = Color.FromArgb(200, 200, 200),
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.TopCenter

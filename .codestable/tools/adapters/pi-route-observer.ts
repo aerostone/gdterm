@@ -93,7 +93,7 @@ export default function routeObserver(pi: ExtensionAPI) {
   });
 
   pi.registerCommand("route-correct", {
-    description: "Label the latest CodeStable routing result",
+    description: "Label the latest codestable routing result",
     handler: async (args, ctx) => {
       const [expected, original = "", reason = "manual"] = args.trim().split(/\s+/, 3);
       if (!latestRequest || !expected || !(expected === "none" || /^cs(?:-|$)/.test(expected))) {

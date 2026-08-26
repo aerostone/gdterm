@@ -6,6 +6,7 @@ using Gdterm.Core.Enums;
 using Gdterm.Core.Models;
 using Gdterm.KeePass;
 using Gdterm.KeePass.Models;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Forms
 {
@@ -107,7 +108,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = _isNew ? "新建连接" : $"编辑连接 — {_config.Name}";
-            ClientSize = new Size(560, 330);
+            ClientSize = DpiScale.S(560, 330);
             // 跟随字体/DPI 自动整体缩放（否则 144dpi 下控件行高变大而窗体不变，底部按钮被挤出可视区）
             AutoScaleMode = AutoScaleMode.Font;
             StartPosition = FormStartPosition.CenterParent;
@@ -115,7 +116,7 @@ namespace Gdterm.UI.Forms
             MaximizeBox = false;
             MinimizeBox = false;
             BackColor = Color.FromArgb(30, 30, 30);
-            Font = new Font("Microsoft YaHei", 9f);
+            Font = Services.FormFontPolicy.UiFont();
 
             // ===== 顶部：基本信息 + 凭据 + 更多选项开关 =====
             var topPanel = new Panel { Dock = DockStyle.Top, AutoSize = true, BackColor = Color.FromArgb(30, 30, 30), Padding = new Padding(12, 10, 12, 4) };
@@ -174,7 +175,9 @@ namespace Gdterm.UI.Forms
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White,
-                Size = new Size(96, 26),
+                // 随全局字体/DPI 自动适配尺寸：固定 Size 在 11pt@144dpi 下文字撑满按钮显得过大
+                AutoSize = true,
+                Padding = new Padding(2, 2, 2, 2),
                 Margin = new Padding(0, 2, 6, 0)
             };
             btnPickCred.Click += OnPickCredential;
@@ -184,7 +187,8 @@ namespace Gdterm.UI.Forms
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(60, 60, 60),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Size = new Size(52, 26),
+                AutoSize = true,
+                Padding = new Padding(4, 2, 4, 2),
                 Margin = new Padding(0, 2, 0, 0)
             };
             btnClearCred.Click += OnClearCredential;
@@ -199,7 +203,7 @@ namespace Gdterm.UI.Forms
             {
                 Text = "更多选项 ▾",
                 AutoSize = true,
-                Location = new Point(0, 6),
+                Location = DpiScale.P(0, 6),
                 LinkColor = Color.FromArgb(120, 180, 255),
                 ActiveLinkColor = Color.White
             };
@@ -327,7 +331,7 @@ namespace Gdterm.UI.Forms
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Size = new Size(80, 30),
+                Size = DpiScale.S(80, 30),
                 Margin = new Padding(0)
             };
             var cancelBtn = new Button
@@ -337,7 +341,7 @@ namespace Gdterm.UI.Forms
                 BackColor = Color.FromArgb(60, 60, 60),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 FlatStyle = FlatStyle.Flat,
-                Size = new Size(80, 30),
+                Size = DpiScale.S(80, 30),
                 Margin = new Padding(0, 0, 8, 0)
             };
             okBtn.Click += (s, e) => { SaveToConfig(); };
@@ -374,7 +378,7 @@ namespace Gdterm.UI.Forms
                 Text = title,
                 ForeColor = Color.FromArgb(150, 150, 155),
                 AutoSize = true,
-                Font = new Font("Microsoft YaHei", 9f, FontStyle.Bold),
+                Font = Services.FormFontPolicy.UiFont(0f, FontStyle.Bold),
                 Margin = new Padding(0, 0, 0, 3)
             }, 0, 0);
             return t;

@@ -18,6 +18,21 @@ namespace Gdterm.UI.Services
     /// </summary>
     public static class FormFontPolicy
     {
+        /// <summary>
+        /// 全局 UI 字体工厂——供面板/UserControl 等非 Form 场景在构造期使用。
+        /// 规范规则③的合法取字体方式；禁止再手写 new Font("Microsoft YaHei", …)。
+        /// </summary>
+        /// <param name="sizeDelta">相对全局字号的偏移（标题 +N，次要文字 -N）。</param>
+        public static Font UiFont(float sizeDelta = 0f, FontStyle style = FontStyle.Regular)
+        {
+            var ga = Gdterm.UI.Program.GlobalAppearance;
+            var name = ga != null && !string.IsNullOrWhiteSpace(ga.UIFontName)
+                ? ga.UIFontName : "Microsoft YaHei UI";
+            float size = ga != null && ga.UIFontSize > 0 ? ga.UIFontSize : 9f;
+            try { return new Font(name, Math.Max(6f, size + sizeDelta), style); }
+            catch { return new Font(FontFamily.GenericSansSerif, Math.Max(6f, 9f + sizeDelta), style); }
+        }
+
         public static void Apply(Form form)
         {
             if (form == null) return;
@@ -41,7 +56,8 @@ namespace Gdterm.UI.Services
                 {
                     var f = c.Font;
                     if (f != null && !string.IsNullOrEmpty(f.Name)
-                        && f.Name.StartsWith("Microsoft YaHei", StringComparison.OrdinalIgnoreCase))
+                        && (f.Name.StartsWith("Microsoft YaHei", StringComparison.OrdinalIgnoreCase)
+                            || f.Name == "微软雅黑"))
                     {
                         c.Font = new Font(name, size, f.Style);
                     }

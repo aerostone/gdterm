@@ -179,8 +179,8 @@ after_test:
         'lib\winpty\winpty.dll'       = '5d892d04b5051d998907147c514f6ae058e5d0bbbf98e2ed78cd1d30dd5d0360'
         'lib\winpty\winpty-agent.exe' = '84f6ce4535f7f3e09b2aef7d833b9a99ba675b304576d188a1db349246e41378'
         'lib\winpty\winpty.exe'       = '1a8e92e0b03f7f83aa344b0dcfd141354b5bdaf6c824edbe872a95ab996d87b6'
-        'lib\fzf\fzf.exe'             = '2c14a927c1ce5bad37e80630685e3149d442a55594a935c57548742b9dc2b9b2'
-        'lib\fd\fd.exe'               = 'c089c9ee1e412a111d65c917a95c757b4e192041f316a52535bfaa3e9e03429f'
+        'vendor\fzf\fzf.exe'             = '2c14a927c1ce5bad37e80630685e3149d442a55594a935c57548742b9dc2b9b2'
+        'vendor\fd\fd.exe'               = 'c089c9ee1e412a111d65c917a95c757b4e192041f316a52535bfaa3e9e03429f'
       }
       foreach ($k in $pins.Keys) {
         $p = Join-Path $env:APPVEYOR_BUILD_FOLDER $k
@@ -212,18 +212,18 @@ after_test:
 
       # 3b) FreeRDP（wfreerdp.exe 进程嵌入引擎 —— 许可证存储为文件，规避 MSLicensing 提权问题；
       #     放子目录 freerdp\ 以避开步骤 6 的顶层 *.dll 清理，原生 DLL 需与其 exe 同目录共存）
-      #     来源优先级：lib\freerdp\（手工放置覆盖）> freerdp-bin\（install 阶段源码构建产物）
+      #     来源优先级：vendor\freerdp\（手工放置覆盖）> freerdp-bin\（install 阶段源码构建产物）
       $frSrc = $null
-      if ((Test-Path "lib\freerdp\wfreerdp.exe") -or
-          (Get-ChildItem "lib\freerdp" -Filter *.exe -ErrorAction SilentlyContinue)) {
-        $frSrc = "lib\freerdp"
+      if ((Test-Path "vendor\freerdp\wfreerdp.exe") -or
+          (Get-ChildItem "vendor\freerdp" -Filter *.exe -ErrorAction SilentlyContinue)) {
+        $frSrc = "vendor\freerdp"
       } elseif (Test-Path "$env:APPVEYOR_BUILD_FOLDER\freerdp-bin\wfreerdp.exe") {
         $frSrc = "$env:APPVEYOR_BUILD_FOLDER\freerdp-bin"
       }
       if ($frSrc) {
         $frDir = Join-Path $out "freerdp"
         New-Item -ItemType Directory -Path $frDir -Force | Out-Null
-        if ($frSrc -eq "lib\freerdp") { Copy-Item "lib\freerdp\*" $frDir -Recurse -Force }
+        if ($frSrc -eq "vendor\freerdp") { Copy-Item "vendor\freerdp\*" $frDir -Recurse -Force }
         else { Copy-Item "$env:APPVEYOR_BUILD_FOLDER\freerdp-bin\*" $frDir -Force }
         Write-Host "Packed FreeRDP from ${frSrc}: $((Get-ChildItem $frDir -File).Count) files"
 
@@ -247,17 +247,17 @@ after_test:
         Write-Warning "No FreeRDP engine available — RDP falls back to mstscax ActiveX at runtime"
       }
 
-      # 3c) fzf / fd（本地终端随附工具——运行时加入 PATH，详见 lib\fzf\README.txt）
+      # 3c) fzf / fd（本地终端随附工具——运行时加入 PATH，详见 vendor\fzf\README.txt）
       #     均为官方 Win7 兼容版：fzf v0.65.2（末代 Win7 支持）、fd v10.2.0（Rust 1.77 锁定构建）
       foreach ($tool in @('fzf','fd')) {
-        $exe = "lib\${tool}\${tool}.exe"
+        $exe = "vendor\${tool}\${tool}.exe"
         if (Test-Path $exe) {
           $tDir = Join-Path $out ${tool}
           New-Item -ItemType Directory -Path $tDir -Force | Out-Null
-          Copy-Item "lib\${tool}\*" $tDir -Recurse -Force
+          Copy-Item "vendor\${tool}\*" $tDir -Recurse -Force
           Write-Host ("Packed {0}: {1} files" -f $tool, (Get-ChildItem $tDir -File).Count)
         } else {
-          Write-Warning "lib\${tool}\${tool}.exe missing - skipped"
+          Write-Warning "vendor\${tool}\${tool}.exe missing - skipped"
         }
       }
 

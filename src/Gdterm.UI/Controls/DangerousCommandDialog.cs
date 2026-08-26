@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.Core.Models;
 using Gdterm.Security;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Controls
 {
@@ -42,6 +43,7 @@ namespace Gdterm.UI.Controls
             _checkResult = checkResult;
             _currentConfirm = 0;
             InitializeComponent();
+            Gdterm.UI.Services.FormFontPolicy.Apply(this);
         }
 
         private void InitializeComponent()
@@ -59,30 +61,30 @@ namespace Gdterm.UI.Controls
             GetLevelStyle(_checkResult.Level, out bgColor, out accentColor, out textColor, out levelText, out levelEmoji);
 
             BackColor = bgColor;
-            Size = new Size(520, 380);
+            Size = new Size(DpiScale.V(this, 520), DpiScale.V(this, 380));
             Text = $"⚠️ 危险命令确认 - {levelText}";
 
             // 标题
             _titleLabel = new Label
             {
                 Text = $"{levelEmoji} {levelText} - 第 1/{_checkResult.ConfirmCount} 次确认",
-                Font = new Font("Microsoft YaHei", 14f, FontStyle.Bold),
+                Font = new Font(Font.FontFamily, Font.Size + 3f, FontStyle.Bold),
                 ForeColor = textColor,
                 Dock = DockStyle.Top,
-                Height = 45,
+                AutoSize = true,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Padding = new Padding(10)
             };
 
-            // 命令显示
+            // 命令显示（等宽语义例外，字号跟随全局）
             _commandLabel = new Label
             {
                 Text = _command,
-                Font = new Font("Consolas", 10f),
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 10f),
                 ForeColor = Color.White,
                 BackColor = Color.FromArgb(40, 40, 40),
                 Dock = DockStyle.Top,
-                Height = 35,
+                Height = DpiScale.V(this, 35),
                 TextAlign = ContentAlignment.MiddleCenter,
                 Padding = new Padding(5)
             };
@@ -91,25 +93,24 @@ namespace Gdterm.UI.Controls
             var infoPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 80,
+                Height = DpiScale.V(this, 80),
                 Padding = new Padding(15, 10, 15, 10)
             };
 
             var ruleNameLabel = new Label
             {
                 Text = $"规则: {_checkResult.RuleName}  |  分类: {_checkResult.Category}",
-                Font = new Font("Microsoft YaHei", 9f),
                 ForeColor = textColor,
                 Dock = DockStyle.Top,
-                Height = 25
+                AutoSize = true
             };
 
             _descriptionLabel = new Label
             {
                 Text = _checkResult.Description,
-                Font = new Font("Microsoft YaHei", 10f),
                 ForeColor = textColor,
                 Dock = DockStyle.Fill,
+                AutoSize = false,
                 TextAlign = ContentAlignment.TopLeft
             };
 
@@ -120,10 +121,10 @@ namespace Gdterm.UI.Controls
             _confirmLabel = new Label
             {
                 Text = GetConfirmText(),
-                Font = new Font("Microsoft YaHei", 11f, FontStyle.Bold),
+                Font = new Font(Font.FontFamily, Font.Size + 1.5f, FontStyle.Bold),
                 ForeColor = textColor,
                 Dock = DockStyle.Top,
-                Height = 35,
+                AutoSize = true,
                 TextAlign = ContentAlignment.MiddleCenter
             };
 
@@ -131,7 +132,7 @@ namespace Gdterm.UI.Controls
             _progressBar = new ProgressBar
             {
                 Dock = DockStyle.Top,
-                Height = 8,
+                Height = DpiScale.V(this, 8),
                 Maximum = _checkResult.ConfirmCount,
                 Value = 0,
                 Style = ProgressBarStyle.Continuous
@@ -141,18 +142,17 @@ namespace Gdterm.UI.Controls
             _rememberChoice = new CheckBox
             {
                 Text = "记住此命令，下次不再警告（加入白名单）",
-                Font = new Font("Microsoft YaHei", 9f),
                 ForeColor = textColor,
                 Dock = DockStyle.Top,
-                Height = 25,
-                Padding = new Padding(20, 0, 0, 0)
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 20), 0, 0, 0)
             };
 
             // 按钮面板
             var buttonPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Bottom,
-                Height = 50,
+                Height = DpiScale.V(this, 50),
                 FlowDirection = FlowDirection.RightToLeft,
                 Padding = new Padding(10, 8, 10, 8)
             };
@@ -160,9 +160,9 @@ namespace Gdterm.UI.Controls
             _cancelButton = new Button
             {
                 Text = "取消 (Esc)",
-                Size = new Size(100, 35),
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 6), 0, DpiScale.V(this, 6), 0),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Microsoft YaHei", 10f),
                 DialogResult = DialogResult.Cancel,
                 BackColor = Color.FromArgb(80, 80, 80),
                 ForeColor = Color.White
@@ -172,9 +172,10 @@ namespace Gdterm.UI.Controls
             _confirmButton = new Button
             {
                 Text = GetConfirmButtonText(),
-                Size = new Size(140, 35),
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 6), 0, DpiScale.V(this, 6), 0),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Microsoft YaHei", 10f, FontStyle.Bold),
+                Font = new Font(Font.FontFamily, Font.Size + 0.5f, FontStyle.Bold),
                 BackColor = accentColor,
                 ForeColor = Color.White
             };

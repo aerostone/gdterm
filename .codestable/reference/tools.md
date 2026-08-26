@@ -1,16 +1,17 @@
-# CodeStable 工具用法参考
+<!-- codestable:managed 受管文件——由 `codestable update` 维护；项目内的修改会被更新器保留（跳过刷新），要恢复跟随技能包更新请运行 `codestable update --force`。 -->
+# codestable 工具用法参考
 
-本文件由 `cs-onboard` 复制到项目的 `.codestable/reference/tools.md`，所有 CodeStable 子技能用项目相对路径 `.codestable/reference/tools.md` 引用。
+本文件由 `cs-onboard` 复制到项目的 `.codestable/reference/tools.md`，所有 codestable 子技能用项目相对路径 `.codestable/reference/tools.md` 引用。
 
 `.codestable/tools/` 下共享脚本的完整用法参考。子技能里只写本技能特有的 1-2 行典型查询；完整语法和示例看这里。
 
-`search-yaml.py`、`validate-yaml.py`、`check-compliance.py` 共用 `yaml_support.py`；不要在新脚本里复制 YAML fallback。
+`search-yaml.py`、`validate-yaml.py`、`check-compliance.py` 共用 `yaml_support.py`；不要在新脚本里复制 YAML fallback。下文标题中的裸文件名是章节索引；实际调用一律写全路径 `python .codestable/tools/<tool>.py`。
 
-升级 CodeStable 后，已有项目用 `npx codestable update` 刷新本目录和 reference；`--dry-run` 预览，`--check` 供 CI 检查。它不迁移或覆盖项目档案。
+升级 codestable 后，已有项目用 `npx codestable update` 刷新本目录和 reference；`--dry-run` 预览，`--check` 供 CI 检查。它不覆盖项目档案。历史命名迁移也由更新器完成：旧版单数讨论目录（`.codestable/brainstorm/`）在目标 `brainstorms/` 不存在时整体改名，已存在 `brainstorms/` 则保留两处不动（用户自行合并）；用户改过的旧文件永远保留原位。
 
 ---
 
-## 1. search-yaml.py
+## 1. search-yaml
 
 通用 YAML frontmatter 搜索工具。从项目根目录运行，无需安装额外依赖（PyYAML 可选，有则用，无则内建 fallback parser）。
 
@@ -91,7 +92,7 @@ python .codestable/tools/search-yaml.py --dir .codestable/guides --filter status
 
 ---
 
-## 2. validate-yaml.py
+## 2. validate-yaml
 
 YAML 语法校验工具。用于验证 frontmatter 语法和必填字段。
 
@@ -106,9 +107,9 @@ python .codestable/tools/validate-yaml.py --file {文件路径} --require doc_ty
 python .codestable/tools/validate-yaml.py --dir {目录} --require doc_type --require status
 ```
 
-## 3. check-compliance.py
+## 3. check-compliance
 
-语义遵循检查工具。Python 3.9+，只读项目文件、`git diff` 和未跟踪文件，不修改代码或文档。它不是 YAML 语法校验的替代品：先用 `validate-yaml.py`，再用本工具检查关系和范围。
+语义遵循检查工具。Python 3.9+，只读项目文件、`git diff` 和未跟踪文件，不修改代码或文档。它不是 YAML 语法校验的替代品：先用 validate-yaml，再用本工具检查关系和范围。
 
 ```bash
 # 检查项目档位、架构目录和当前工作树
@@ -117,8 +118,14 @@ python .codestable/tools/check-compliance.py --root .
 # 检查某个 feature 的 design/checklist、架构引用和 git diff contract
 python .codestable/tools/check-compliance.py --root . --feature .codestable/features/{date-slug}
 
+# 旧 feature 续作：返回最小上下文和下一技能
+python .codestable/tools/check-compliance.py --root . --feature .codestable/features/{date-slug} --phase impl --context --next --agent --emit context,failures,next
+
 # 给 agent / CI 使用机器可读结果；严格模式把 warn 视为失败
 python .codestable/tools/check-compliance.py --root . --feature {feature-dir} --json --strict
+
+# 校验 roadmap items 的字段、状态、依赖、最小闭环和 feature 链接
+python .codestable/tools/validate-yaml.py --file .codestable/roadmap/{slug}/{slug}-items.yaml --yaml-only --schema roadmap-items
 
 # standard design 完成时检查范围和架构影响契约；--agent 输出精简协议
 python .codestable/tools/check-compliance.py --root . --change .codestable/changes/{date-slug} --phase design --check --agent
@@ -133,7 +140,16 @@ python .codestable/tools/check-compliance.py --root . --change .codestable/chang
 python .codestable/tools/check-compliance.py --root . --change .codestable/changes/{date-slug} --next --agent --emit next
 
 # 返回当前阶段的最小上下文文件；缺失引用直接失败
-python .codestable/tools/check-compliance.py --root . --change .codestable/changes/{date-slug} --phase impl --context --profile constrained-27b-64k --agent --emit context,failures
+python .codestable/tools/check-compliance.py --root . --change .codestable/changes/{date-slug} --phase impl --context --profile compact-64k --agent --emit context,failures
+
+# 用户确认切到低阶模型后，输出供应商无关的分派计划
+python .codestable/tools/check-compliance.py --root . --change .codestable/changes/{date-slug} --dispatch-plan --agent
+
+# 按分派计划为一个 step 输出带模型能力和 token 门禁的实施卡
+python .codestable/tools/check-compliance.py --root . --change .codestable/changes/{date-slug} --executor-card {step-id} --model low-default --input-tokens 3200 --agent
+
+# 低阶执行结束后写入最小回执；第二次 failure 会让 dispatch-plan 返回高阶复核
+python .codestable/tools/check-compliance.py --root . --change .codestable/changes/{date-slug} --record-low-result {step-id}=success --agent
 
 # 任务开始前只生成 preexisting_changes 对应文件的基线快照
 python .codestable/tools/check-compliance.py --root . --snapshot --snapshot-files src/a.py,docs/b.md --agent
@@ -154,17 +170,39 @@ python .codestable/tools/check-compliance.py --root . --index --agent
 python .codestable/tools/check-compliance.py --root . --index --write-index --agent
 ```
 
-完整 `--json` 适合人和 CI；`--agent` 只返回 status、next、context、failures、remediation、waves，`--emit` 可进一步裁剪字段。`--context` 支持字符串或 `{path, headings, symbols}`；`--next` 不再执行整套检查；`--snapshot` 只读生成任务基线。工具不会声称测试已执行，测试命令仍需实际运行并记录。
+完整 `--json` 适合人和 CI；`--agent` 只返回 status、next、context、failures、remediation、waves、dispatch_plan、execution_result，`--emit` 可进一步裁剪字段。`--context` 支持字符串或 `{path, headings, symbols}`；`--next` 不再执行整套检查；`--snapshot` 只读生成任务基线。工具不会声称测试已执行，测试命令仍需实际运行并记录。
+
+### 机器消费口径
+
+三个工具都有稳定的 JSON 输出：search-yaml 的 `--json`（结果数组）、check-compliance 的 `--json / --agent`（结构化判定）、route-observer stats 的 `--json`。脚本化流水线、CI 门禁和跨会话工具链优先消费 JSON 字段而不是解析人读文本；search-yaml 未命中时返回空数组 `[]` 而不是报错，可直接当空结果处理。
 
 存在 `.codestable/constitution.yaml` 时，checker 同时校验长期原则结构、path_rules、required_commands 和 active compound 文档中的术语冲突。术语用 `terminology: {Term: 定义}`，或在 knowledge frontmatter 中写 `terms` mapping。
 
-上下文 profile 由 `.codestable/model-profile.yaml` 选择；checker 按文件数和字符数估算预算，不依赖特定 tokenizer。64K profile 只允许 compact output 和最小 context，不改变 workflow 语义。
+上下文 profile 由 `.codestable/model-profile.yaml` 选择；checker 输出 `estimated_chars` 作为无 tokenizer 时的保守估算，并接受 `--input-tokens` 对声明的 `max_input_tokens` 做真实运行时门禁。默认 128K/64K/低阶单步上限分别为 128K/60K/40K 字符和 32000/16000/12000 input tokens，已为系统提示、任务、工具结果和输出留出空间。64K profile 只允许 compact output 和最小 context，不改变 workflow 语义。
+
+`model_route` 由 `model-profile.yaml` 的 `models` 与 `routing` 段提供能力和门槛。`--dispatch-plan` 输出 `codestable.model-dispatch/v1`，运行时据 `decision`、`model.id` 和 `actions` 选择实际模型；checker 不绑定供应商。只有 `delegate-low` 或 `mixed` 且用户明确确认、`user_confirmation: approved` 后，才允许 `--executor-card`。低阶 step 可声明 `required_capabilities`；缺能力或 input tokens 超预算会拒绝执行。`--record-low-result` 保存不含 prompt 的回执，第二次 failure 后计划自动返回高阶模型。
+
+实现前可做只读测试影响扫描：`python .codestable/tools/check-compliance.py --test-impact --symbols SymbolA,SymbolB --agent`。它只检索既有测试文件：命中 0 个先建立新行为的 RED 测试；命中 1–5 个先读并在 GREEN 后全跑；命中 ≥6 个先拆小 step。低阶步骤的 `validation_commands` 只允许单行、项目内命令，禁止绝对路径、`..` 越界、管道、重定向、命令替换和串联。
 
 项目级路径规则放在 `attention.md` 的 `standards.path_rules` 命名 mapping 中。例如 `domain-no-ui: {files: [src/domain/**], forbidden_terms: [src/ui]}`。它适合检查可文本识别的依赖方向；复杂语义仍交给项目自身 linter/architecture test，并把命令列入 `required_commands`。accept 阶段要求这些命令原文出现在“执行证据”或“验收结果”中；仅写在计划里不算执行证据。
 
 ## 4. 路由可观测性（可选）
 
-`route-observer.py` 将 Codex 与 Pi 的路由事件写入 `.codestable/telemetry/routes.jsonl`。事件只含 request id、平台、技能和来源，不写原始 prompt、工具参数或模型输出。该目录应加入 `.gitignore`。
+`route-observer.py`（完整路径 `python .codestable/tools/route-observer.py`）用开放的 `platform` 标识把任意代理运行时的路由事件写入 `.codestable/telemetry/routes.jsonl`。事件不写原始 prompt、工具参数、模型输出或模型名；可选记录 profile/tier 与上下文字符、输入/输出 token 数值。该目录应加入 `.gitignore`。现有自动适配器覆盖 Codex 和 Pi；其他运行时使用下面的通用 CLI，或自行接入同一 JSONL 协议。
+
+### 通用运行时
+
+```bash
+python .codestable/tools/route-observer.py record-request --root . \
+  --platform claude-code --source extension --request-id req-xxx \
+  --profile compact-64k --tier low --context-chars 12000 --input-tokens 3200
+python .codestable/tools/route-observer.py record-invocation --root . \
+  --platform claude-code --request-id req-xxx --skill cs-feat --source explicit --output-tokens 600
+```
+
+`platform` 是开放的 1–64 位小写标识，可写 `claude-code`、`gemini-cli`、`opencode`、`cline`、`aider`、`cursor` 或组织自定义名称；不需要等待 codestable 为每种工具提供适配器。能否自动采集取决于该运行时是否公开稳定的 Hook/extension API。
+
+这些成本字段完全可选：只有运行时确实提供数值时才传；`stats --json` 的 `usage.observed_events` 表示带有效数值的事件数，不能把它当作全量真实账单或 token 计量。
 
 ### Codex CLI
 
@@ -199,4 +237,4 @@ python .codestable/tools/route-observer.py record-correction --root . \
   --original-skill cs-feat --reason-code existing-behavior
 ```
 
-`zero_invocation_requests` 是待审信号，不等于漏触发：普通问答本来就不需要 CodeStable 技能。只有 correction 标注后才形成确认指标：应触发但未触发进入 `confirmed_missed`，不应触发却触发进入 `confirmed_false_positive`，选错技能进入 `confirmed_misroute`；三类标注共同生成 confusion matrix。
+`zero_invocation_requests` 是待审信号，不等于漏触发：普通问答本来就不需要 codestable 技能。只有 correction 标注后才形成确认指标：应触发但未触发进入 `confirmed_missed`，不应触发却触发进入 `confirmed_false_positive`，选错技能进入 `confirmed_misroute`；三类标注共同生成 confusion matrix。

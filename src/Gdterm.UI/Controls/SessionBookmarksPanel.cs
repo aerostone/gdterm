@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows.Forms;
 using Gdterm.Connections;
 using Gdterm.Core.Models;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Controls
 {
@@ -41,7 +42,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Top,
                 Height = 28,
                 ForeColor = Color.White,
-                Font = new Font("Microsoft YaHei", 10f, FontStyle.Bold),
+                Font = Services.FormFontPolicy.UiFont(+1f, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(8, 0, 0, 0)
             };
@@ -78,7 +79,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Bottom,
                 Height = 22,
                 ForeColor = Color.FromArgb(160, 160, 160),
-                Font = new Font("Microsoft YaHei", 8.5f),
+                Font = Services.FormFontPolicy.UiFont(-0.5f),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(8, 0, 0, 0)
             };
@@ -161,7 +162,7 @@ namespace Gdterm.UI.Controls
                 ForeColor = Color.White,
                 BorderStyle = BorderStyle.None,
                 HeaderStyle = ColumnHeaderStyle.Nonclickable,
-                Font = new Font("Microsoft YaHei", 9f)
+                Font = Services.FormFontPolicy.UiFont()
             };
         }
 
@@ -272,7 +273,7 @@ namespace Gdterm.UI.Controls
             using (var dlg = new Form())
             {
                 dlg.Text = "添加书签";
-                dlg.Size = new Size(360, 200);
+                dlg.Size = DpiScale.S(360, 200);
                 dlg.StartPosition = FormStartPosition.CenterParent;
                 dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dlg.MaximizeBox = false;
@@ -281,15 +282,15 @@ namespace Gdterm.UI.Controls
 
                 var nameBox = new TextBox
                 {
-                    Location = new Point(15, 20),
-                    Size = new Size(310, 24),
+                    Location = DpiScale.P(15, 20),
+                    Size = DpiScale.S(310, 24),
                     BackColor = Color.FromArgb(50, 50, 50),
                     ForeColor = Color.White
                 };
                 var combo = new ComboBox
                 {
-                    Location = new Point(15, 55),
-                    Size = new Size(310, 24),
+                    Location = DpiScale.P(15, 55),
+                    Size = DpiScale.S(310, 24),
                     DropDownStyle = ComboBoxStyle.DropDownList,
                     BackColor = Color.FromArgb(50, 50, 50),
                     ForeColor = Color.White
@@ -302,15 +303,15 @@ namespace Gdterm.UI.Controls
                 {
                     Text = "确定",
                     DialogResult = DialogResult.OK,
-                    Location = new Point(245, 110),
-                    Size = new Size(80, 28),
+                    Location = DpiScale.P(245, 110),
+                    Size = DpiScale.S(80, 28),
                     FlatStyle = FlatStyle.Flat,
                     BackColor = Color.FromArgb(0, 122, 204),
                     ForeColor = Color.White
                 };
-                dlg.Controls.Add(new Label { Text = "名称", ForeColor = Color.Silver, Location = new Point(15, 4), AutoSize = true });
+                dlg.Controls.Add(new Label { Text = "名称", ForeColor = Color.Silver, Location = DpiScale.P(15, 4), AutoSize = true });
                 dlg.Controls.Add(nameBox);
-                dlg.Controls.Add(new Label { Text = "连接", ForeColor = Color.Silver, Location = new Point(15, 40), AutoSize = true });
+                dlg.Controls.Add(new Label { Text = "连接", ForeColor = Color.Silver, Location = DpiScale.P(15, 40), AutoSize = true });
                 dlg.Controls.Add(combo);
                 dlg.Controls.Add(ok);
                 dlg.AcceptButton = ok;

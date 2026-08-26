@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.KeePass;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Forms
 {
@@ -33,7 +34,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "解锁密码库";
-            Size = new Size(420, 260);
+            Size = DpiScale.S(420, 260);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -46,43 +47,43 @@ namespace Gdterm.UI.Forms
             {
                 Text = "🔐",
                 Font = new Font("Segoe UI Emoji", 28f),
-                Location = new Point(20, 15),
-                Size = new Size(55, 55),
+                Location = DpiScale.P(20, 15),
+                Size = DpiScale.S(55, 55),
                 TextAlign = ContentAlignment.MiddleCenter
             };
 
             var titleLabel = new Label
             {
                 Text = "密码库已锁定",
-                Font = new Font("Microsoft YaHei", 13f, FontStyle.Bold),
+                Font = Services.FormFontPolicy.UiFont(+4f, FontStyle.Bold),
                 ForeColor = Color.White,
-                Location = new Point(80, 18),
-                Size = new Size(300, 30)
+                Location = DpiScale.P(80, 18),
+                Size = DpiScale.S(300, 30)
             };
 
             _statusLabel = new Label
             {
                 Text = "请输入主密码以解锁 KeePass 密码库",
-                Font = new Font("Microsoft YaHei", 9.5f),
+                Font = Services.FormFontPolicy.UiFont(+0.5f),
                 ForeColor = Color.FromArgb(180, 180, 180),
-                Location = new Point(80, 48),
-                Size = new Size(300, 22)
+                Location = DpiScale.P(80, 48),
+                Size = DpiScale.S(300, 22)
             };
 
             // 密码输入
             var pwdLabel = new Label
             {
                 Text = "主密码：",
-                Font = new Font("Microsoft YaHei", 10f),
+                Font = Services.FormFontPolicy.UiFont(+1f),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Location = new Point(20, 90),
-                Size = new Size(70, 25)
+                Location = DpiScale.P(20, 90),
+                Size = DpiScale.S(70, 25)
             };
 
             _passwordBox = new TextBox
             {
-                Location = new Point(95, 87),
-                Size = new Size(290, 28),
+                Location = DpiScale.P(95, 87),
+                Size = DpiScale.S(290, 28),
                 Font = new Font("Consolas", 11f),
                 UseSystemPasswordChar = true,
                 BackColor = Color.FromArgb(50, 50, 50),
@@ -98,20 +99,20 @@ namespace Gdterm.UI.Forms
             _errorLabel = new Label
             {
                 Text = "",
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(255, 100, 100),
-                Location = new Point(20, 120),
-                Size = new Size(370, 25)
+                Location = DpiScale.P(20, 120),
+                Size = DpiScale.S(370, 25)
             };
 
             // 按钮
             _unlockButton = new Button
             {
                 Text = "解锁",
-                Size = new Size(100, 34),
-                Location = new Point(285, 155),
+                Size = DpiScale.S(100, 34),
+                Location = DpiScale.P(285, 155),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Microsoft YaHei", 10f),
+                Font = Services.FormFontPolicy.UiFont(+1f),
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White
             };
@@ -120,10 +121,10 @@ namespace Gdterm.UI.Forms
             var cancelButton = new Button
             {
                 Text = "取消",
-                Size = new Size(80, 34),
-                Location = new Point(195, 155),
+                Size = DpiScale.S(80, 34),
+                Location = DpiScale.P(195, 155),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Microsoft YaHei", 10f),
+                Font = Services.FormFontPolicy.UiFont(+1f),
                 BackColor = Color.FromArgb(60, 60, 60),
                 ForeColor = Color.White,
                 DialogResult = DialogResult.Cancel

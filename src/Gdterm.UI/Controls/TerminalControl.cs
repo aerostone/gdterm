@@ -93,7 +93,7 @@ namespace Gdterm.UI.Controls
                 try
                 {
                     var logDir = Path.Combine(
-                        AppDomain.CurrentDomain.BaseDirectory, "data", "logs", "terminal");
+                        AppDomain.CurrentDomain.BaseDirectory, "logs", "terminal");
                     EnableAutoLog(logDir);
                 }
                 catch { }

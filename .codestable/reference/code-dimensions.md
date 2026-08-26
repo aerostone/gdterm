@@ -1,8 +1,9 @@
+<!-- codestable:managed 受管文件——由 `codestable update` 维护；项目内的修改会被更新器保留（跳过刷新），要恢复跟随技能包更新请运行 `codestable update --force`。 -->
 # 代码维度速查
 
 写代码前先确认每个维度的档位。没明说的走默认，偏离默认的地方要标出来让用户确认。
 
-这份文档是 CodeStable 子技能共享的口径，被 design / lean 直通 / issue-fix 等阶段引用。项目内的权威副本在 `.codestable/reference/code-dimensions.md`，由 `cs-onboard` 从技能包释放。
+这份文档是 codestable 子技能共享的口径，被 design / lean 直通 / issue-fix 等阶段引用。项目内的权威副本在 `.codestable/reference/code-dimensions.md`，由 `cs-onboard` 从技能包释放。
 
 ---
 

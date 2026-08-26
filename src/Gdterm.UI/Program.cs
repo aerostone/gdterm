@@ -23,6 +23,10 @@ namespace Gdterm.UI
 {
     static class Program
     {
+        /// <summary>诊断日志根目录：程序主目录下 logs\（绿色版便携，随包携带）。</summary>
+        public static readonly string LogsDir = Path.Combine(
+            AppDomain.CurrentDomain.BaseDirectory, "logs");
+
         [STAThread]
         static void Main()
         {
@@ -44,7 +48,7 @@ namespace Gdterm.UI
             var appDir = AppDomain.CurrentDomain.BaseDirectory;
             var dataDir = Path.Combine(appDir, "data");
             var configDir = Path.Combine(dataDir, "config");
-            var logsDir = Path.Combine(dataDir, "logs");
+            var logsDir = LogsDir;
             var toolsConfigDir = Path.Combine(configDir, "tools");
 
             Directory.CreateDirectory(dataDir);
@@ -113,7 +117,7 @@ namespace Gdterm.UI
                 try
                 {
                     MessageBox.Show(
-                        "发生未处理错误，详情已写入 data/logs/diag.log\n\n" +
+                        "发生未处理错误，详情已写入 logs/diag.log\n\n" +
                         (e.Exception != null ? e.Exception.Message : ""),
                         "gdterm",
                         MessageBoxButtons.OK,

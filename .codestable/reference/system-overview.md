@@ -1,14 +1,15 @@
-# CodeStable 体系总览
+<!-- codestable:managed 受管文件——由 `codestable update` 维护；项目内的修改会被更新器保留（跳过刷新），要恢复跟随技能包更新请运行 `codestable update --force`。 -->
+# codestable 体系总览
 
-本文档介绍 CodeStable 工作流家族整体——有哪些子技能、各管什么场景、产物怎么组织。无论是 AI 在运行时读到这个文件，还是人打开来看，都能对整个体系有个完整印象。
+本文档介绍 codestable 工作流家族整体——有哪些子技能、各管什么场景、产物怎么组织。无论是 AI 在运行时读到这个文件，还是人打开来看，都能对整个体系有个完整印象。
 
 AI 辅助开发里，有几类场景会反复出现——加新功能、修 bug、遇到值得沉淀的经验、做技术选型、摸新模块的代码、接入新仓库。每种场景如果每次从零处理，都会出各自的典型问题：AI 给功能起的术语跟老代码冲突、bug 改完没人记得当时怎么诊断的、上周刚踩过的坑下周又踩一遍。
 
-CodeStable 把这几类场景各配一套子技能，产物放进统一的目录结构、带统一的 YAML frontmatter,互相之间可以检索引用。
+codestable 把这几类场景各配一套子技能，产物放进统一的目录结构、带统一的 YAML frontmatter,互相之间可以检索引用。
 
 ## 模型能力基线
 
-CodeStable 面向具备可靠工具调用、结构化输出和代码推理能力的 27B+ 现代模型，默认 profile 是 128K；64K 使用 constrained profile，只缩减上下文文件数、字符预算和 reference 读取，不改变工程门禁。9B 不作为兼容目标，也不维护独立低上下文分支。
+codestable 面向具备可靠工具调用、结构化输出和代码推理能力的 27B+ 现代模型，默认 profile 是 128K；64K 使用 constrained profile，只缩减上下文文件数、字符预算和 reference 读取，不改变工程门禁。9B 不作为兼容目标，也不维护独立低上下文分支。
 
 入口和阶段技能都保持可见、可显式或自然语言调用；触发边界由各技能 frontmatter description 声明。阶段技能的状态条件写在 description 中，避免它们抢占新任务路由。
 
@@ -24,6 +25,7 @@ CodeStable 面向具备可靠工具调用、结构化输出和代码推理能力
 - `cs-feat` — 新功能,design → implement → acceptance（想法还模糊时先走讨论层 `cs-brainstorm` 做分诊，不属于 feature 流程内部）
 - `cs-issue` — 修 bug,report → analyze → fix
 - `cs-refactor` — 代码优化(行为不变、结构/性能/可读性变),scan → design → apply
+- `cs-audit` — 主动审计指定范围，发现 bug / 安全 / 性能 / 维护性 / 架构偏离，输出带代码证据的 finding 清单；只发现不修复，修复转 issue / refactor
 
 standard 先产出 Change Package 并经 review 再实现；lean 的低风险小任务直接实现和验证，不制造过程文档。两种档位都必须遵守项目规则、范围和测试证据。
 
@@ -37,16 +39,17 @@ standard 可按风险启用 artifact graph、`evidence.jsonl`、constitution 和
 
 **讨论层**——想法还模糊时的统一入口,不直接产出设计或代码:
 
-- `cs-brainstorm` — 和用户对话做分诊:case 1(已经够清楚,直接 feature-design)、case 2(小需求,在 feature 里继续讨论并落 `{slug}-brainstorm.md`)、case 3(大需求,移交给 roadmap)
+- `cs-brainstorm` — 和用户对话做分诊:case 1(已经够清楚,直接进 feature 起草 design)、case 2(小需求,在 feature 的 Change Package 里继续讨论)、case 3(大需求,移交给 roadmap)。旧项目才单独落 `{slug}-brainstorm.md`
 
 **辅助**——围着前几类转的周边工具:
 
-- `cs-onboard` — 把新仓库接入 CodeStable 目录结构
+- `cs-onboard` — 把新仓库接入 codestable 目录结构
 - `cs-req` — 起草或刷新 `.codestable/requirements/` 下的需求文档——系统的能力愿景层，覆盖过去/现在/未来
 - `cs-arch` — 架构相关一站式:起草新架构文档 / 刷新已有文档 / 做架构体检(含 design 自洽 / design↔代码一致 / architecture 目录多份文档间一致)。architecture 只记现状
 - `cs-roadmap` — 把一块装不进单个 feature 的大需求拆成带依赖和状态的子 feature 清单,作为后续多次 feature 流程的种子和排期依据;独立于需求 / 架构档案
 - `cs-guide` — 写给外部读者的开发者指南 / 用户指南
 - `cs-libdoc` — 为库的公开 API 逐条目生成参考文档
+- 阶段子技能（`cs-feat-design` / `cs-feat-impl` / `cs-feat-accept` / `cs-issue-report` / `cs-issue-analyze` / `cs-issue-fix`）不单独列出——它们由各主流程技能按阶段接续，见对应主流程条目
 
 
 ## 场景路由
@@ -55,17 +58,20 @@ standard 可按风险启用 artifact graph、`evidence.jsonl`、constitution 和
 
 | 场景 | 子技能 |
 |---|---|
-| 想法还模糊 / "有个想法没想清楚" / "先聊聊" | `cs-brainstorm`(分诊后路由到 design / feature-brainstorm 落盘 / roadmap) |
+| 想法还模糊 / "有个想法没想清楚" / "先聊聊" | `cs-brainstorm`(分诊后路由到 feature design / Change Package 讨论 / roadmap) |
 | 新功能 / 新能力 | `cs-feat` |
 | BUG / 异常 / 文档错误 | `cs-issue` |
 | 代码优化 / 重构 / 重写(行为不变) | `cs-refactor` |
+| 审计 / 全面检查 / 找隐患(只发现不修复) | `cs-audit` |
 | 摸代码、提问调研 | `cs-explore` |
 | 补 / 更新需求文档 | `cs-req` |
 | 补 / 更新 / 检查架构文档 | `cs-arch` |
 | 大需求拆解 / 排期规划 | `cs-roadmap` |
 | 经验、技巧、技术决定与规约 | `cs-knowledge` |
+| 一两行稳定项目硬约束(构建前置、测试命令、路径禁区) | `cs-note` |
 | 开发者指南 / 用户指南 | `cs-guide` |
 | 库 API 参考 | `cs-libdoc` |
+| 把 `.codestable/` 过程证据投影成交付基线草稿(显式触发) | `cs-baseline` |
 
 完整的操作手册、退出条件、和其他工作流的关系,各子技能里讲。
 
@@ -96,7 +102,7 @@ learning / trick / decision / explore 都是存档文档类型,区别在记录�
 
 ## 阶段与快速通道
 
-standard feature 走 brainstorm(可选) → design → implement → acceptance，standard issue 走 report → analyze → fix。每个阶段有退出条件，上一个没满足，下一个不开始。
+standard feature 走 design → implement → acceptance，standard issue 走 report → analyze → fix。每个阶段有退出条件，上一个没满足，下一个不开始。（想法还模糊时先走讨论层 `cs-brainstorm` 分诊，再进对应流程。）
 
 AI 最常见的问题是一口气铺几百行代码才让人看——等发现问题已经很难中止。阶段间的人工 checkpoint 就是为了早一步中止。每个 checkpoint 具体检查什么,对应子技能里讲。
 
@@ -107,7 +113,7 @@ lean 例外：根因明确的小 issue 直接 fix；小 feature 由 `cs-feat` �
 
 - `.codestable/reference/change-package.md` — 新版 feature / issue / refactor / audit 单文档变更包规范
 - `.codestable/reference/shared-conventions.md` — 目录结构、元数据、执行计划、收尾和归档共享规则
-- `.codestable/reference/tools.md` — 校验、检索与可选 Codex/Pi 路由观测用法
+- `.codestable/reference/tools.md` — 校验、检索与可选开放运行时路由观测用法
 - `.codestable/reference/maintainer-notes.md` — 断点恢复、新增子工作流的登记
 
 目录结构（requirements / architecture / roadmap / changes / compound，以及旧版 features / issues / refactors）的权威定义在 `shared-conventions.md`。要改目录先改模板，新项目 onboard 时会带上新版本。
@@ -115,5 +121,5 @@ lean 例外：根因明确的小 issue 直接 fix；小 feature 由 `cs-feat` �
 
 ## 相关
 
-- `.codestable/attention.md` — CodeStable 技能启动必读的项目注意事项
+- `.codestable/attention.md` — codestable 技能启动必读的项目注意事项
 - `.codestable/architecture/ARCHITECTURE.md` — 项目架构总入口

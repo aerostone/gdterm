@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Gdterm.Tools.Scanning;
 using Gdterm.UI.Diagnostics;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Forms
 {
@@ -49,8 +50,8 @@ namespace Gdterm.UI.Forms
 
             Text = "扫描中心（插件）";
             StartPosition = FormStartPosition.CenterParent;
-            Size = new Size(960, 640);
-            MinimumSize = new Size(780, 520);
+            Size = DpiScale.S(960, 640);
+            MinimumSize = DpiScale.S(780, 520);
 
             BuildUi();
             Gdterm.UI.Services.FormFontPolicy.Apply(this);

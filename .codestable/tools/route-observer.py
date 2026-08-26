@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Privacy-preserving CodeStable routing telemetry for Codex and Pi (Python 3.9+)."""
+"""Privacy-preserving codestable routing telemetry for any agent runtime (Python 3.9+)."""
 
 import argparse
 import collections
@@ -17,6 +17,7 @@ from typing import Any, Dict, Iterable, List, Optional, Tuple
 SCHEMA = 1
 SKILL_PATTERN = re.compile(r"(?:^|[/\\])(?P<skill>cs(?:-[a-z0-9]+)*)[/\\]SKILL\.md(?:$|[^a-z])", re.I)
 ALLOWED_SOURCES = {"explicit", "implicit", "interactive", "rpc", "extension", "workflow", "manual"}
+PLATFORM_PATTERN = re.compile(r"[a-z0-9][a-z0-9._-]{0,63}$")
 
 
 def utc_now() -> str:
@@ -72,21 +73,51 @@ def make_request_id(session_id: str = "", turn_id: str = "") -> str:
     return "req-" + uuid.uuid4().hex
 
 
+def platform_identifier(value: str) -> str:
+    """Accept a stable, open-ended runtime identifier without vendor allowlists."""
+    platform = str(value).strip().lower()
+    if not PLATFORM_PATTERN.fullmatch(platform):
+        raise argparse.ArgumentTypeError(
+            "platform must use 1-64 lowercase letters, digits, dots, underscores or hyphens"
+        )
+    return platform
+
+
+def nonnegative_int(value: str) -> int:
+    try:
+        number = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("usage metrics must be non-negative integers") from error
+    if number < 0:
+        raise argparse.ArgumentTypeError("usage metrics must be non-negative integers")
+    return number
+
+
 def request_event(request_id: str, platform: str, session_id: str, source: str,
-                  intent_category: str = "", candidate_skills: Optional[List[str]] = None) -> Dict[str, Any]:
-    return {
+                  intent_category: str = "", candidate_skills: Optional[List[str]] = None,
+                  profile: str = "", tier: str = "", context_chars: Optional[int] = None,
+                  input_tokens: Optional[int] = None, output_tokens: Optional[int] = None) -> Dict[str, Any]:
+    event = {
         "event": "request", "request_id": request_id, "platform": platform,
         "session_id": session_id, "source": source,
         "intent_category": intent_category, "candidate_skills": candidate_skills or [],
     }
+    event.update({"profile": profile, "tier": tier, "context_chars": context_chars,
+                  "input_tokens": input_tokens, "output_tokens": output_tokens})
+    return event
 
 
 def invocation_event(request_id: str, platform: str, skill: str, source: str,
-                     session_id: str = "") -> Dict[str, Any]:
-    return {
+                     session_id: str = "", profile: str = "", tier: str = "",
+                     context_chars: Optional[int] = None, input_tokens: Optional[int] = None,
+                     output_tokens: Optional[int] = None) -> Dict[str, Any]:
+    event = {
         "event": "invocation", "request_id": request_id, "platform": platform,
         "session_id": session_id, "skill": skill.lower(), "source": source,
     }
+    event.update({"profile": profile, "tier": tier, "context_chars": context_chars,
+                  "input_tokens": input_tokens, "output_tokens": output_tokens})
+    return event
 
 
 def correction_event(request_id: str, expected_skill: str, original_skill: str = "",
@@ -125,12 +156,20 @@ def aggregate(events: Iterable[Dict[str, Any]], malformed: int = 0) -> Dict[str,
     platform_counts: collections.Counter = collections.Counter()
     invocation_seen = set()
     invocation_events = 0
+    usage = {"observed_events": 0, "context_chars": 0, "input_tokens": 0, "output_tokens": 0}
     for item in events:
         request_id = str(item.get("request_id", ""))
         if not request_id:
             malformed += 1
             continue
         kind = item.get("event")
+        values = {key: item.get(key) for key in ("context_chars", "input_tokens", "output_tokens")}
+        valid_values = {key: value for key, value in values.items()
+                        if isinstance(value, int) and not isinstance(value, bool) and value >= 0}
+        if valid_values:
+            usage["observed_events"] += 1
+            for key, value in valid_values.items():
+                usage[key] += value
         if kind == "request":
             requests.setdefault(request_id, item)
             platform_counts[str(item.get("platform", "unknown"))] += 1
@@ -198,6 +237,7 @@ def aggregate(events: Iterable[Dict[str, Any]], malformed: int = 0) -> Dict[str,
             {"selected": pair[0], "expected": pair[1], "count": count}
             for pair, count in sorted(matrix.items())
         ],
+        "usage": usage,
         "malformed_lines": malformed,
     }
 
@@ -244,26 +284,37 @@ def parser() -> argparse.ArgumentParser:
     sub = result.add_subparsers(dest="command", required=True)
     request = sub.add_parser("record-request")
     add_common(request)
-    request.add_argument("--platform", required=True, choices=["codex", "pi", "manual"])
+    request.add_argument("--platform", required=True, type=platform_identifier,
+                         help="Open runtime id, e.g. codex, claude-code, opencode or custom-agent")
     request.add_argument("--session-id", default="")
     request.add_argument("--source", default="manual", choices=sorted(ALLOWED_SOURCES))
     request.add_argument("--request-id", default="")
     request.add_argument("--intent-category", default="")
     request.add_argument("--candidate-skills", default="")
+    for argument in ("--context-chars", "--input-tokens", "--output-tokens"):
+        request.add_argument(argument, type=nonnegative_int)
+    request.add_argument("--profile", default="")
+    request.add_argument("--tier", default="")
     invocation = sub.add_parser("record-invocation")
     add_common(invocation)
     invocation.add_argument("--request-id", required=True)
-    invocation.add_argument("--platform", required=True, choices=["codex", "pi", "manual"])
+    invocation.add_argument("--platform", required=True, type=platform_identifier,
+                            help="Open runtime id, e.g. codex, claude-code, opencode or custom-agent")
     invocation.add_argument("--skill", required=True)
     invocation.add_argument("--source", default="manual", choices=sorted(ALLOWED_SOURCES))
     invocation.add_argument("--session-id", default="")
+    for argument in ("--context-chars", "--input-tokens", "--output-tokens"):
+        invocation.add_argument(argument, type=nonnegative_int)
+    invocation.add_argument("--profile", default="")
+    invocation.add_argument("--tier", default="")
     correction = sub.add_parser("record-correction")
     add_common(correction)
     correction.add_argument("--request-id", required=True)
     correction.add_argument("--expected-skill", required=True)
     correction.add_argument("--original-skill", default="")
     correction.add_argument("--reason-code", default="manual")
-    correction.add_argument("--platform", default="manual", choices=["codex", "pi", "manual"])
+    correction.add_argument("--platform", default="manual", type=platform_identifier,
+                            help="Open runtime id; defaults to manual")
     stats = sub.add_parser("stats")
     add_common(stats)
     stats.add_argument("--json", action="store_true")
@@ -278,12 +329,14 @@ def main() -> int:
         request_id = args.request_id or make_request_id(args.session_id)
         candidates = [item for item in args.candidate_skills.split(",") if item]
         append_event(args.root, request_event(
-            request_id, args.platform, args.session_id, args.source, args.intent_category, candidates
+            request_id, args.platform, args.session_id, args.source, args.intent_category, candidates,
+            args.profile, args.tier, args.context_chars, args.input_tokens, args.output_tokens
         ))
         print(json.dumps({"request_id": request_id}, separators=(",", ":")))
     elif args.command == "record-invocation":
         append_event(args.root, invocation_event(
-            args.request_id, args.platform, args.skill, args.source, args.session_id
+            args.request_id, args.platform, args.skill, args.source, args.session_id,
+            args.profile, args.tier, args.context_chars, args.input_tokens, args.output_tokens
         ))
     elif args.command == "record-correction":
         append_event(args.root, correction_event(

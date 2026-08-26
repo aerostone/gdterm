@@ -4,6 +4,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Forms
 {
@@ -46,7 +47,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "密码生成器";
-            Size = new Size(500, 520);
+            Size = DpiScale.S(500, 520);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -58,26 +59,26 @@ namespace Gdterm.UI.Forms
             var titleLabel = new Label
             {
                 Text = "🔑 密码生成器",
-                Font = new Font("Microsoft YaHei", 14f, FontStyle.Bold),
+                Font = Services.FormFontPolicy.UiFont(+5f, FontStyle.Bold),
                 ForeColor = Color.White,
-                Location = new Point(15, 12),
-                Size = new Size(200, 30)
+                Location = DpiScale.P(15, 12),
+                Size = DpiScale.S(200, 30)
             };
 
             // 密码长度
             var lengthLabel = new Label
             {
                 Text = "密码长度：",
-                Font = new Font("Microsoft YaHei", 10f),
+                Font = Services.FormFontPolicy.UiFont(+1f),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Location = new Point(15, 55),
-                Size = new Size(80, 25)
+                Location = DpiScale.P(15, 55),
+                Size = DpiScale.S(80, 25)
             };
 
             _lengthSpinner = new NumericUpDown
             {
-                Location = new Point(100, 53),
-                Size = new Size(70, 25),
+                Location = DpiScale.P(100, 53),
+                Size = DpiScale.S(70, 25),
                 Minimum = 8,
                 Maximum = 128,
                 Value = 16,
@@ -96,9 +97,9 @@ namespace Gdterm.UI.Forms
                 {
                     Text = len.ToString(),
                     Location = new Point(btnX, 52),
-                    Size = new Size(40, 26),
+                    Size = DpiScale.S(40, 26),
                     FlatStyle = FlatStyle.Flat,
-                    Font = new Font("Microsoft YaHei", 9f),
+                    Font = Services.FormFontPolicy.UiFont(),
                     BackColor = Color.FromArgb(60, 60, 60),
                     ForeColor = Color.White,
                     Tag = len
@@ -112,10 +113,10 @@ namespace Gdterm.UI.Forms
             var charsetGroup = new GroupBox
             {
                 Text = "字符集",
-                Font = new Font("Microsoft YaHei", 9.5f),
+                Font = Services.FormFontPolicy.UiFont(+0.5f),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Location = new Point(15, 90),
-                Size = new Size(455, 100)
+                Location = DpiScale.P(15, 90),
+                Size = DpiScale.S(455, 100)
             };
 
             _upperCheck = CreateCheck("大写字母 (A-Z)", 15, 25, true);
@@ -134,16 +135,16 @@ namespace Gdterm.UI.Forms
             var resultLabel = new Label
             {
                 Text = "生成结果：",
-                Font = new Font("Microsoft YaHei", 10f),
+                Font = Services.FormFontPolicy.UiFont(+1f),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Location = new Point(15, 200),
-                Size = new Size(80, 25)
+                Location = DpiScale.P(15, 200),
+                Size = DpiScale.S(80, 25)
             };
 
             _resultBox = new TextBox
             {
-                Location = new Point(15, 228),
-                Size = new Size(350, 35),
+                Location = DpiScale.P(15, 228),
+                Size = DpiScale.S(350, 35),
                 Font = new Font("Consolas", 14f, FontStyle.Bold),
                 BackColor = Color.FromArgb(25, 25, 25),
                 ForeColor = Color.FromArgb(80, 220, 80),
@@ -155,20 +156,20 @@ namespace Gdterm.UI.Forms
             _strengthLabel = new Label
             {
                 Text = "强度：—",
-                Font = new Font("Microsoft YaHei", 9.5f, FontStyle.Bold),
+                Font = Services.FormFontPolicy.UiFont(+0.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Location = new Point(15, 270),
-                Size = new Size(200, 25)
+                Location = DpiScale.P(15, 270),
+                Size = DpiScale.S(200, 25)
             };
 
             // 操作按钮
             var generateBtn = new Button
             {
                 Text = "🔄 重新生成",
-                Location = new Point(375, 226),
-                Size = new Size(95, 38),
+                Location = DpiScale.P(375, 226),
+                Size = DpiScale.S(95, 38),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Microsoft YaHei", 10f),
+                Font = Services.FormFontPolicy.UiFont(+1f),
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White
             };
@@ -177,10 +178,10 @@ namespace Gdterm.UI.Forms
             var copyBtn = new Button
             {
                 Text = "📋 复制",
-                Location = new Point(375, 268),
-                Size = new Size(95, 38),
+                Location = DpiScale.P(375, 268),
+                Size = DpiScale.S(95, 38),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Microsoft YaHei", 10f),
+                Font = Services.FormFontPolicy.UiFont(+1f),
                 BackColor = Color.FromArgb(60, 130, 60),
                 ForeColor = Color.White
             };
@@ -189,10 +190,10 @@ namespace Gdterm.UI.Forms
             var generate10Btn = new Button
             {
                 Text = "批量生成 10 个",
-                Location = new Point(15, 300),
-                Size = new Size(120, 30),
+                Location = DpiScale.P(15, 300),
+                Size = DpiScale.S(120, 30),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(60, 60, 60),
                 ForeColor = Color.White
             };
@@ -202,16 +203,16 @@ namespace Gdterm.UI.Forms
             var historyLabel = new Label
             {
                 Text = "本次生成记录（双击复制）：",
-                Font = new Font("Microsoft YaHei", 9.5f),
+                Font = Services.FormFontPolicy.UiFont(+0.5f),
                 ForeColor = Color.FromArgb(180, 180, 180),
-                Location = new Point(15, 340),
-                Size = new Size(250, 22)
+                Location = DpiScale.P(15, 340),
+                Size = DpiScale.S(250, 22)
             };
 
             _historyList = new ListBox
             {
-                Location = new Point(15, 365),
-                Size = new Size(455, 105),
+                Location = DpiScale.P(15, 365),
+                Size = DpiScale.S(455, 105),
                 Font = new Font("Consolas", 10f),
                 BackColor = Color.FromArgb(25, 25, 25),
                 ForeColor = Color.FromArgb(200, 200, 200),
@@ -235,8 +236,8 @@ namespace Gdterm.UI.Forms
             {
                 Text = text,
                 Location = new Point(x, y),
-                Size = new Size(220, 22),
-                Font = new Font("Microsoft YaHei", 9.5f),
+                Size = DpiScale.S(220, 22),
+                Font = Services.FormFontPolicy.UiFont(+0.5f),
                 ForeColor = Color.FromArgb(200, 200, 200),
                 Checked = isChecked
             };

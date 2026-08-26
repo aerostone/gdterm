@@ -16,8 +16,8 @@ gdterm 的 RDP 引擎优先使用 FreeRDP（进程嵌入），相比 mstscax Act
      故只能自建。）
 
   【可选覆盖】把现成的 FreeRDP 2.x Windows 构建解压到本目录
-    （lib\freerdp\wfreerdp.exe ...），CI 会优先采用手工放置的版本。
-    运行时探测顺序：<程序目录>\freerdp\ → <程序目录>\lib\freerdp\。
+    （vendor\freerdp\wfreerdp.exe ...），CI 会优先采用手工放置的版本。
+    运行时探测顺序：<程序目录>\freerdp\ → <程序目录>\vendor\freerdp\。
 
 技术要求：FreeRDP ≥ 2.7（含 parent-window 键盘输入修复 PR #7790）；
 必须用 2.x 构建（/parent-window 参数在 3.x 已移除）。

@@ -27,6 +27,8 @@ Usage examples:
   python codestable/tools/validate-yaml.py --file docs/api/manifest.yaml --yaml-only
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import sys
@@ -34,10 +36,12 @@ from pathlib import Path
 from typing import Optional
 
 try:
-    from yaml_support import has_pyyaml, parse_yaml
+    from yaml_support import has_pyyaml, parse_yaml, read_text_any
+    from yaml_schemas import SCHEMAS, validate_schema
 except ImportError:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from yaml_support import has_pyyaml, parse_yaml
+    from yaml_support import has_pyyaml, parse_yaml, read_text_any
+    from yaml_schemas import SCHEMAS, validate_schema
 
 if sys.version_info < (3, 9):
     sys.stderr.write("validate-yaml.py requires Python 3.9 or newer\n")
@@ -135,14 +139,18 @@ def _validate_file(
     required_fields: Optional[list[str]],
     base_dir: Optional[Path],
     mode: str,  # "markdown" | "yaml"
+    schema: Optional[str] = None,
 ) -> ValidationResult:
     display_path = str(file_path.relative_to(base_dir)) if base_dir else str(file_path)
     result = ValidationResult(display_path)
 
     try:
-        text = file_path.read_text(encoding="utf-8")
+        text, read_err = read_text_any(file_path)
     except OSError as exc:
         result.errors.append(f"Cannot read file: {exc}")
+        return result
+    if read_err:
+        result.errors.append(f"Cannot read file: {read_err}")
         return result
 
     if mode == "markdown":
@@ -160,18 +168,20 @@ def _validate_file(
 
     result.fields = list(parsed.keys()) if parsed else []
     _check_required(parsed, required_fields, result)
+    if schema and parsed is not None:
+        result.errors.extend(validate_schema(parsed, schema))
     _warn_if_builtin(result)
     return result
 
 
-def validate_markdown_file(file_path, required_fields=None, base_dir=None):
+def validate_markdown_file(file_path, required_fields=None, base_dir=None, schema=None):
     """Validate YAML frontmatter in a single markdown file."""
-    return _validate_file(file_path, required_fields, base_dir, "markdown")
+    return _validate_file(file_path, required_fields, base_dir, "markdown", schema)
 
 
-def validate_yaml_file(file_path, required_fields=None, base_dir=None):
+def validate_yaml_file(file_path, required_fields=None, base_dir=None, schema=None):
     """Validate a pure YAML file (not markdown with frontmatter)."""
-    return _validate_file(file_path, required_fields, base_dir, "yaml")
+    return _validate_file(file_path, required_fields, base_dir, "yaml", schema)
 
 
 # ---------------------------------------------------------------------------
@@ -227,20 +237,23 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--yaml-only", action="store_true",
                         help="Treat input as pure YAML (not markdown with frontmatter). "
                              "Use for .yaml/.yml files like manifest.yaml.")
+    parser.add_argument("--schema", choices=SCHEMAS,
+                        help="Apply a codestable artifact schema after YAML parsing.")
     return parser
 
 
-def _validate_single(path_str: str, require: list[str], yaml_only: bool) -> list[ValidationResult]:
+def _validate_single(path_str: str, require: list[str], yaml_only: bool,
+                     schema: Optional[str]) -> list[ValidationResult]:
     fp = Path(path_str)
     if not fp.exists():
         print(f"Error: File not found: {fp}", file=sys.stderr)
         sys.exit(2)
     if yaml_only or fp.suffix in (".yaml", ".yml"):
-        return [validate_yaml_file(fp, require)]
-    return [validate_markdown_file(fp, require)]
+        return [validate_yaml_file(fp, require, schema=schema)]
+    return [validate_markdown_file(fp, require, schema=schema)]
 
 
-def _validate_directory(dir_str: str, require: list[str]) -> list[ValidationResult]:
+def _validate_directory(dir_str: str, require: list[str], schema: Optional[str]) -> list[ValidationResult]:
     dp = Path(dir_str)
     if not dp.is_dir():
         print(f"Error: Directory not found: {dp}", file=sys.stderr)
@@ -253,8 +266,8 @@ def _validate_directory(dir_str: str, require: list[str]) -> list[ValidationResu
         print(f"No .md or .yaml files found under {dp}", file=sys.stderr)
         sys.exit(2)
 
-    results = [validate_markdown_file(md, require, dp) for md in md_files]
-    results += [validate_yaml_file(yf, require, dp) for yf in yaml_files]
+    results = [validate_markdown_file(md, require, dp, schema) for md in md_files]
+    results += [validate_yaml_file(yf, require, dp, schema) for yf in yaml_files]
     return results
 
 
@@ -262,9 +275,9 @@ def main() -> None:
     args = _build_parser().parse_args()
 
     if args.file:
-        results = _validate_single(args.file, args.require, args.yaml_only)
+        results = _validate_single(args.file, args.require, args.yaml_only, args.schema)
     else:
-        results = _validate_directory(args.dir, args.require)
+        results = _validate_directory(args.dir, args.require, args.schema)
 
     if args.json_output:
         print_json_results(results)

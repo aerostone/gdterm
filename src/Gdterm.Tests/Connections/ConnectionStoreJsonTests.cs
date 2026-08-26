@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using Gdterm.Connections;
 using Gdterm.Core.Enums;
@@ -48,6 +49,30 @@ namespace Gdterm.Tests.Connections
 
                 var byId = store.GetById(added.Id);
                 Assert.True(byId != null && byId.Host == "10.0.0.1", "GetById works");
+
+                // metadata + serial round-trip（0.1.119 前 metadata 只写不读、serial 完全不落盘）
+                added.Metadata = new Dictionary<string, string>
+                {
+                    { "notes", "备注含 \"引号\" 与 \\ 反斜杠" },
+                    { "rdp_colordepth", "32" },
+                    { "rdp_engine", "auto" }
+                };
+                added.Serial = new SerialConfig
+                {
+                    PortName = "COM3",
+                    BaudRate = 115200,
+                    DataBits = 8,
+                    StopBits = System.IO.Ports.StopBits.One,
+                    Parity = System.IO.Ports.Parity.None
+                };
+                store.Update(added);
+
+                var reloaded = store.GetById(added.Id);
+                Assert.True(reloaded != null, "reload after Update");
+                Assert.True(reloaded.Metadata != null && reloaded.Metadata.Count == 3, "metadata survives save/load");
+                Assert.Equal("32", reloaded.Metadata["rdp_colordepth"], "metadata value round-trip");
+                Assert.True(reloaded.Serial != null && reloaded.Serial.PortName == "COM3"
+                    && reloaded.Serial.BaudRate == 115200, "serial config survives save/load");
 
                 store.Delete(added.Id);
                 Assert.Equal(0, store.LoadAll().Count, "Delete removes connection");

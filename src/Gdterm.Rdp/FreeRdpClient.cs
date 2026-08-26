@@ -250,14 +250,14 @@ namespace Gdterm.Rdp
             return false;
         }
 
-        /// <summary>探测 wfreerdp.exe 路径；绿色包在 freerdp\，源码运行在 lib\freerdp\。</summary>
+        /// <summary>探测 wfreerdp.exe 路径；绿色包在 freerdp\，源码运行在 vendor\freerdp\。</summary>
         public static string FindExecutable()
         {
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
             var candidates = new[]
             {
                 Path.Combine(baseDir, "freerdp", "wfreerdp.exe"),
-                Path.Combine(baseDir, "lib", "freerdp", "wfreerdp.exe")
+                Path.Combine(baseDir, "vendor", "freerdp", "wfreerdp.exe")
             };
             foreach (var c in candidates)
             {

@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using Gdterm.Core.Models;
 using Gdterm.Terminal;
 using TerminalControl = Gdterm.UI.Controls.TerminalControl;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Controls
 {
@@ -68,7 +69,7 @@ namespace Gdterm.UI.Controls
                 Text = "输入关键词搜索快捷命令 | Enter 执行 | Esc 关闭",
                 Dock = DockStyle.Top,
                 Height = 22,
-                Font = new Font("Microsoft YaHei", 8f),
+                Font = Services.FormFontPolicy.UiFont(-1f),
                 ForeColor = Color.FromArgb(100, 100, 100),
                 BackColor = Color.FromArgb(30, 30, 30),
                 TextAlign = ContentAlignment.MiddleLeft
@@ -82,7 +83,7 @@ namespace Gdterm.UI.Controls
                 FullRowSelect = true,
                 BackColor = Color.FromArgb(30, 30, 30),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 BorderStyle = BorderStyle.None,
                 HeaderStyle = ColumnHeaderStyle.None
             };
@@ -233,15 +234,15 @@ namespace Gdterm.UI.Controls
             int y = 15;
             foreach (var ph in placeholders)
             {
-                var lbl = new Label { Text = ph + ":", Location = new Point(15, y + 3), AutoSize = true, Font = new Font("Microsoft YaHei", 9f), ForeColor = Color.FromArgb(204, 204, 204) };
-                var txt = new TextBox { Location = new Point(100, y), Size = new Size(260, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
+                var lbl = new Label { Text = ph + ":", Location = new Point(15, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = Color.FromArgb(204, 204, 204) };
+                var txt = new TextBox { Location = new Point(100, y), Size = DpiScale.S(260, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
                 form.Controls.AddRange(new Control[] { lbl, txt });
                 inputs[ph] = txt;
                 y += 36;
             }
 
-            var btnOk = new Button { Text = "执行", Size = new Size(80, 28), Location = new Point(190, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White };
-            var btnCancel = new Button { Text = "取消", Size = new Size(80, 28), Location = new Point(280, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(60, 60, 60), ForeColor = Color.FromArgb(204, 204, 204) };
+            var btnOk = new Button { Text = "执行", Size = DpiScale.S(80, 28), Location = new Point(190, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White };
+            var btnCancel = new Button { Text = "取消", Size = DpiScale.S(80, 28), Location = new Point(280, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(60, 60, 60), ForeColor = Color.FromArgb(204, 204, 204) };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
 

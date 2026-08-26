@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
 using Gdterm.Security;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Controls
 {
@@ -34,30 +35,30 @@ namespace Gdterm.UI.Controls
             _lblScore = new Label
             {
                 Text = "安全评分: --",
-                Font = new Font("Microsoft YaHei", 20f, FontStyle.Bold),
+                Font = Services.FormFontPolicy.UiFont(+11f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(78, 201, 176),
                 AutoSize = true,
-                Location = new Point(15, 15)
+                Location = DpiScale.P(15, 15)
             };
 
             _lblStats = new Label
             {
                 Text = "等待扫描...",
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(150, 150, 150),
                 AutoSize = true,
-                Location = new Point(15, 55)
+                Location = DpiScale.P(15, 55)
             };
 
             _btnScan = new Button
             {
                 Text = "开始扫描",
-                Size = new Size(100, 35),
-                Location = new Point(500, 15),
+                Size = DpiScale.S(100, 35),
+                Location = DpiScale.P(500, 15),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White,
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 Cursor = Cursors.Hand
             };
             _btnScan.FlatAppearance.BorderSize = 0;
@@ -66,12 +67,12 @@ namespace Gdterm.UI.Controls
             _btnStop = new Button
             {
                 Text = "停止",
-                Size = new Size(70, 35),
-                Location = new Point(610, 15),
+                Size = DpiScale.S(70, 35),
+                Location = DpiScale.P(610, 15),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(200, 50, 50),
                 ForeColor = Color.White,
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 Enabled = false,
                 Cursor = Cursors.Hand
             };
@@ -111,7 +112,7 @@ namespace Gdterm.UI.Controls
             _lblStatus = new Label
             {
                 Dock = DockStyle.Fill,
-                Font = new Font("Microsoft YaHei", 8f),
+                Font = Services.FormFontPolicy.UiFont(-1f),
                 ForeColor = Color.FromArgb(130, 130, 130),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(10, 0, 0, 0),
@@ -216,7 +217,7 @@ namespace Gdterm.UI.Controls
             var form = new Form
             {
                 Text = "发现详情",
-                Size = new Size(600, 400),
+                Size = DpiScale.S(600, 400),
                 StartPosition = FormStartPosition.CenterParent,
                 BackColor = Color.FromArgb(30, 30, 30),
                 ForeColor = Color.FromArgb(204, 204, 204),

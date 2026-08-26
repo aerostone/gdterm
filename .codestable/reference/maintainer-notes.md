@@ -1,6 +1,7 @@
-# CodeStable 维护者说明
+<!-- codestable:managed 受管文件——由 `codestable update` 维护；项目内的修改会被更新器保留（跳过刷新），要恢复跟随技能包更新请运行 `codestable update --force`。 -->
+# codestable 维护者说明
 
-本文件由 `cs-onboard` 复制到项目的 `.codestable/reference/maintainer-notes.md`。维护 CodeStable 技能家族时需要反复查阅、但不适合放在各子技能正文里的说明。
+本文件由 `cs-onboard` 复制到项目的 `.codestable/reference/maintainer-notes.md`。维护 codestable 技能家族时需要反复查阅、但不适合放在各子技能正文里的说明。
 
 ---
 
@@ -8,8 +9,8 @@
 
 AI 对话随时可能中断（token 超限、网络断开、用户换设备）。各阶段发现自己不是从零开始时，必须优先检查已有产物的完成度，从上次停下的地方继续：
 
-- **brainstorm**：如 `{slug}-brainstorm.md` 已有部分内容，读取后问用户"上次聊到 X，要接着聊还是推翻重来？"
-- **Change Package**：优先读取 `changes/{slug}/change.md` 的 status / phase，从第一个未完成章节继续，不拆回多文件
+- **brainstorm**：如 `.codestable/brainstorms/{slug}/brainstorm.md`（旧项目为 `{slug}-brainstorm.md`）已有部分内容，读取后问用户"上次聊到 X，要接着聊还是推翻重来？"
+- **Change Package**：先看 `.codestable/.runtime/current-package` 指针（可能过期，核对目录与 phase），再优先读取 `changes/{slug}/change.md` 的 status / phase，从第一个未完成章节继续，不拆回多文件
 - **legacy design**：如 `{slug}-design.md` 已有部分节，逐节检查完成度，补齐缺失节，不重写已完成节
 - **implement**：`{slug}-checklist.yaml` 中已 `done` 的步骤不重做，从第一个 `pending` 步骤开始
 - **legacy acceptance**：如 `{slug}-acceptance.md` 已有部分节，检查哪些节已填写，从下一个未完成节继续
@@ -36,7 +37,7 @@ AI 对话随时可能中断（token 超限、网络断开、用户换设备）�
 
 ### 共享术语表
 
-如果 CodeStable 自己形成了稳定共享术语，应优先沉淀成共享 reference，而不是散落在多个子技能里重复定义。
+如果 codestable 自己形成了稳定共享术语，应优先沉淀成共享 reference，而不是散落在多个子技能里重复定义。
 
 ### 跨工作流状态一览
 

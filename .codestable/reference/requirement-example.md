@@ -1,3 +1,4 @@
+<!-- codestable:managed 受管文件——由 `codestable update` 维护；项目内的修改会被更新器保留（跳过刷新），要恢复跟随技能包更新请运行 `codestable update --force`。 -->
 ---
 doc_type: requirement-example
 description: 一份好的 requirement doc 长什么样——供 cs-req 起草时参考，也供项目成员扫一眼对齐风格
@@ -5,7 +6,7 @@ description: 一份好的 requirement doc 长什么样——供 cs-req 起草时
 
 # requirement 文档示例
 
-下面这份示例取自 CodeStable 自己的能力（修 bug 时的探索分析流），用来展示一份好的 requirement doc 的**语气、结构、颗粒度**。新项目做 onboard 时随包落盘，之后写自己的 requirement 可以直接照着改。
+下面这份示例取自 codestable 自己的能力（修 bug 时的探索分析流），用来展示一份好的 requirement doc 的**语气、结构、颗粒度**。新项目做 onboard 时随包落盘，之后写自己的 requirement 可以直接照着改。
 
 ---
 

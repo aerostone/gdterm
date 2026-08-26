@@ -37,7 +37,7 @@ namespace Gdterm.UI.Services
                 var label = new Label
                 {
                     Text = (action ?? "操作") + "需要验证主密码：",
-                    Font = new Font("Microsoft YaHei", 10f),
+                    Font = Services.FormFontPolicy.UiFont(+1f),
                     ForeColor = Color.FromArgb(200, 200, 200),
                     Location = new Point(15, 15),
                     Size = new Size(340, 25)
@@ -55,7 +55,7 @@ namespace Gdterm.UI.Services
                 var errorLabel = new Label
                 {
                     Text = "",
-                    Font = new Font("Microsoft YaHei", 9f),
+                    Font = Services.FormFontPolicy.UiFont(),
                     ForeColor = Color.FromArgb(255, 100, 100),
                     Location = new Point(15, 78),
                     Size = new Size(335, 20)

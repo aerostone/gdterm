@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.Terminal;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Controls
 {
@@ -36,7 +37,7 @@ namespace Gdterm.UI.Controls
 
         private void InitializeComponent()
         {
-            Size = new Size(300, 400);
+            Size = DpiScale.S(300, 400);
             BackColor = SystemColors.Control;
 
             // 工具栏
@@ -48,9 +49,9 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(3)
             };
 
-            _btnSelectAll = new Button { Text = "全选就绪", Size = new Size(70, 25), FlatStyle = FlatStyle.Flat };
-            _btnDeselectAll = new Button { Text = "取消", Size = new Size(50, 25), FlatStyle = FlatStyle.Flat };
-            _btnBroadcast = new Button { Text = "广播", Size = new Size(60, 25), FlatStyle = FlatStyle.Flat, Enabled = false };
+            _btnSelectAll = new Button { Text = "全选就绪", Size = DpiScale.S(70, 25), FlatStyle = FlatStyle.Flat };
+            _btnDeselectAll = new Button { Text = "取消", Size = DpiScale.S(50, 25), FlatStyle = FlatStyle.Flat };
+            _btnBroadcast = new Button { Text = "广播", Size = DpiScale.S(60, 25), FlatStyle = FlatStyle.Flat, Enabled = false };
 
             toolbar.Controls.AddRange(new Control[] { _btnSelectAll, _btnDeselectAll, _btnBroadcast });
 

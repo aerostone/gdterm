@@ -58,7 +58,7 @@ namespace Gdterm.UI.Services
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White,
-                Font = new Font("Microsoft YaHei", 9f, FontStyle.Bold),
+                Font = Services.FormFontPolicy.UiFont(0f, FontStyle.Bold),
                 Padding = new Padding(10, 4, 10, 4),
                 Visible = false,
                 TabStop = false,

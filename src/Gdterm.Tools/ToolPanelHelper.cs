@@ -26,9 +26,16 @@ namespace Gdterm.Tools
             {
                 Text = title,
                 Dock = DockStyle.Top,
-                Height = 28,
-                Font = new Font("Microsoft YaHei", 12f, FontStyle.Bold),
+                AutoSize = true,
+                // Gdterm.Tools 不引用 Gdterm.UI（避免反向依赖），这里跟随主窗体环境字体即可；
+                // 标题强调用相对写法（规范规则③），构造时字体尚未挂到父链，延迟到 ParentChanged 生效
                 ForeColor = Color.FromArgb(220, 220, 220)
+            };
+            lblTitle.ParentChanged += (s, e) =>
+            {
+                var c = (Control)s;
+                try { c.Font = new Font(c.Font.FontFamily, c.Font.Size + 3f, FontStyle.Bold); }
+                catch { }
             };
 
             var lblDesc = new Label

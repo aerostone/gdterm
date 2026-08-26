@@ -229,11 +229,10 @@ namespace Gdterm.UI.Services
                 "快捷键", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        /// <summary>用资源管理器打开诊断日志目录（data/logs），方便排查问题。</summary>
+        /// <summary>用资源管理器打开诊断日志目录（程序主目录 logs\），方便排查问题。</summary>
         public void ShowLogsFolder()
         {
-            var logsDir = Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory, "data", "logs");
+            var logsDir = Gdterm.UI.Program.LogsDir;
             if (!Directory.Exists(logsDir))
                 Directory.CreateDirectory(logsDir);
             System.Diagnostics.Process.Start("explorer.exe", "\"" + logsDir + "\"");

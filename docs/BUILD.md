@@ -76,6 +76,7 @@ powershell -ExecutionPolicy Bypass -File tools\pack-release.ps1 -SkipTests
 
 ## 诊断日志
 
-- 未处理异常：`data/logs/crash.jsonl`
+- 位置：程序主目录 `logs\`（绿色版便携，随包携带）
+- 未处理异常：`logs/crash.jsonl`
 - 被吞异常（dispose/关签/关闭）：`swallowed:*` 源写入同一 `crash.jsonl`（`DiagLog`）
-- 业务审计：`data/logs/audit-*.jsonl`
+- 业务审计：`logs/audit-*.jsonl`

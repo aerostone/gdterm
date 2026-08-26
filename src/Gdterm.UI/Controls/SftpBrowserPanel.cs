@@ -9,6 +9,7 @@ using Gdterm.Sftp;
 using Gdterm.Sftp.Models;
 using Gdterm.Tunnel;
 using Gdterm.UI.Diagnostics;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Controls
 {
@@ -358,7 +359,7 @@ namespace Gdterm.UI.Controls
             using (var f = new Form
             {
                 Text = title,
-                Size = new Size(360, 140),
+                Size = DpiScale.S(360, 140),
                 StartPosition = FormStartPosition.CenterParent,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false,
@@ -366,9 +367,9 @@ namespace Gdterm.UI.Controls
                 BackColor = Color.FromArgb(35, 35, 35)
             })
             {
-                var lbl = new Label { Text = label, ForeColor = Color.White, Location = new Point(12, 12), AutoSize = true };
-                var box = new TextBox { Location = new Point(12, 40), Width = 320, BackColor = Color.FromArgb(50, 50, 50), ForeColor = Color.White };
-                var ok = new Button { Text = "确定", DialogResult = DialogResult.OK, Location = new Point(250, 70) };
+                var lbl = new Label { Text = label, ForeColor = Color.White, Location = DpiScale.P(12, 12), AutoSize = true };
+                var box = new TextBox { Location = DpiScale.P(12, 40), Width = 320, BackColor = Color.FromArgb(50, 50, 50), ForeColor = Color.White };
+                var ok = new Button { Text = "确定", DialogResult = DialogResult.OK, Location = DpiScale.P(250, 70) };
                 f.Controls.AddRange(new Control[] { lbl, box, ok });
                 f.AcceptButton = ok;
                 return f.ShowDialog() == DialogResult.OK ? box.Text : null;

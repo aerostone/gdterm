@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using Gdterm.Connections;
 using Gdterm.Core.Models;
 using Gdterm.UI.Diagnostics;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Controls
 {
@@ -31,7 +32,7 @@ namespace Gdterm.UI.Controls
             Dock = DockStyle.Fill;
             BackColor = GdtermColorTable.Background;
             ForeColor = GdtermColorTable.Foreground;
-            Font = new Font("Microsoft YaHei UI", 9.5f);
+            Font = Services.FormFontPolicy.UiFont(+0.5f);
 
             var root = new TableLayoutPanel
             {
@@ -183,7 +184,7 @@ namespace Gdterm.UI.Controls
                 Text = title,
                 Dock = DockStyle.Top,
                 Height = 24,
-                Font = new Font("Microsoft YaHei UI", 10f, FontStyle.Bold),
+                Font = Services.FormFontPolicy.UiFont(+1f, FontStyle.Bold),
                 ForeColor = GdtermColorTable.Foreground
             };
             host = new FlowLayoutPanel
@@ -237,7 +238,7 @@ namespace Gdterm.UI.Controls
             {
                 Text = text,
                 AutoSize = true,
-                MinimumSize = new Size(110, 32),
+                MinimumSize = DpiScale.S(110, 32),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,

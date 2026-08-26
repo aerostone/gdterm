@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
 using Gdterm.Core.Models;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Forms
 {
@@ -34,7 +35,7 @@ namespace Gdterm.UI.Forms
         private void BuildUI(QuickCommand existing, string defaultGroup)
         {
             Text = existing == null ? "添加快捷命令" : "编辑快捷命令";
-            Size = new Size(500, 480);
+            Size = DpiScale.S(500, 480);
             StartPosition = FormStartPosition.CenterParent;
             BackColor = Color.FromArgb(30, 30, 30);
             ForeColor = Color.FromArgb(204, 204, 204);
@@ -42,7 +43,7 @@ namespace Gdterm.UI.Forms
             MaximizeBox = false;
             MinimizeBox = false;
 
-            var font = new Font("Microsoft YaHei", 9f);
+            var font = Services.FormFontPolicy.UiFont();
             var smallFont = new Font("Consolas", 8.5f);
             int y = 15;
             int lblX = 15, inputX = 110, inputW = 350;
@@ -67,7 +68,7 @@ namespace Gdterm.UI.Forms
                 Text = "占位符: {host} {user} {date} {time} {datetime} {env:VAR_NAME}",
                 Location = new Point(inputX, y),
                 Size = new Size(inputW, 16),
-                Font = new Font("Microsoft YaHei", 7.5f),
+                Font = Services.FormFontPolicy.UiFont(-1.5f),
                 ForeColor = Color.FromArgb(100, 100, 100)
             };
             Controls.Add(lblHint);
@@ -78,7 +79,7 @@ namespace Gdterm.UI.Forms
             _cmbGroup = new ComboBox
             {
                 Location = new Point(inputX, y - 3),
-                Size = new Size(200, 25),
+                Size = DpiScale.S(200, 25),
                 Font = font,
                 BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -119,7 +120,7 @@ namespace Gdterm.UI.Forms
             _numSortOrder = new NumericUpDown
             {
                 Location = new Point(345, y - 3),
-                Size = new Size(60, 25),
+                Size = DpiScale.S(60, 25),
                 Font = font,
                 BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -143,7 +144,7 @@ namespace Gdterm.UI.Forms
             var btnOk = new Button
             {
                 Text = "确定",
-                Size = new Size(80, 30),
+                Size = DpiScale.S(80, 30),
                 Location = new Point(290, y),
                 DialogResult = DialogResult.OK,
                 FlatStyle = FlatStyle.Flat,
@@ -156,7 +157,7 @@ namespace Gdterm.UI.Forms
             var btnCancel = new Button
             {
                 Text = "取消",
-                Size = new Size(80, 30),
+                Size = DpiScale.S(80, 30),
                 Location = new Point(380, y),
                 DialogResult = DialogResult.Cancel,
                 FlatStyle = FlatStyle.Flat,

@@ -8,6 +8,7 @@ using Gdterm.Core.Enums;
 using Gdterm.Core.Models;
 using Gdterm.KeePass;
 using Gdterm.UI.Forms;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Controls
 {
@@ -145,7 +146,7 @@ namespace Gdterm.UI.Controls
         /// </summary>
         private void BuildImageList()
         {
-            _imageList = new ImageList { ImageSize = new Size(16, 16), ColorDepth = ColorDepth.Depth32Bit };
+            _imageList = new ImageList { ImageSize = DpiScale.S(16, 16), ColorDepth = ColorDepth.Depth32Bit };
             var names = new[] { "folder", "ssh", "rdp", "serial", "server", "group" };
             foreach (var name in names)
             {
@@ -253,7 +254,7 @@ namespace Gdterm.UI.Controls
         {
             if (string.IsNullOrEmpty(name) || size < 8 || size > 24) return;
             try { _treeView.Font = new Font(name, size, FontStyle.Regular); }
-            catch { _treeView.Font = new Font("Microsoft YaHei UI", 9f); }
+            catch { _treeView.Font = Services.FormFontPolicy.UiFont(); }
         }
 
         /// <summary>
@@ -269,7 +270,7 @@ namespace Gdterm.UI.Controls
                     return new Font(ga.UIFontName, ga.UIFontSize, FontStyle.Regular);
             }
             catch { }
-            return new Font("Microsoft YaHei UI", 9f, FontStyle.Regular);
+            return Services.FormFontPolicy.UiFont(); // 回到全局默认（含未加载 GlobalAppearance 时的安全值）
         }
 
         /// <summary>当前内部 TreeView（供 MainForm 更改字体）。</summary>

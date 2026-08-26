@@ -27,7 +27,7 @@ namespace Gdterm.UI.Controls
                 Text = "传输中心",
                 Dock = DockStyle.Top,
                 Height = 28,
-                Font = new Font("Microsoft YaHei UI", 10f, FontStyle.Bold),
+                Font = Services.FormFontPolicy.UiFont(+1f, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(8, 0, 0, 0)
             };

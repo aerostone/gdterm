@@ -35,7 +35,7 @@ namespace Gdterm.UI.Controls
                 Width = 220,
                 BackColor = Color.FromArgb(37, 37, 38),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 View = View.Details,
                 FullRowSelect = true,
                 HeaderStyle = ColumnHeaderStyle.None,
@@ -56,7 +56,7 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Top,
                 Height = 35,
-                Font = new Font("Microsoft YaHei", 14f, FontStyle.Bold),
+                Font = Services.FormFontPolicy.UiFont(+5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(220, 220, 220),
                 Text = "运维工具箱"
             };
@@ -65,7 +65,7 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Top,
                 Height = 25,
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(150, 150, 150),
                 Text = "选择左侧工具开始使用"
             };
@@ -107,7 +107,7 @@ namespace Gdterm.UI.Controls
                 // 分类头
                 var groupItem = new ListViewItem("▸ " + cat);
                 groupItem.ForeColor = Color.FromArgb(86, 156, 214);
-                groupItem.Font = new Font("Microsoft YaHei", 9f, FontStyle.Bold);
+                groupItem.Font = Services.FormFontPolicy.UiFont(0f, FontStyle.Bold);
                 _lvTools.Items.Add(groupItem);
 
                 foreach (var tool in _registry.GetByCategory(cat))

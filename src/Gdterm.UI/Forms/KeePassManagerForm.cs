@@ -31,20 +31,20 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "KeePass 密码管理器";
-            Size = new Size(700, 500);
+            Size = DpiScale.S(700, 500);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             BackColor = Color.FromArgb(30, 30, 30);
 
-            // 工具栏
+            // 工具栏（字体由 FormFontPolicy.Apply 统一替换为全局 UI 字体）
             _toolbar = new ToolStrip
             {
                 BackColor = Color.FromArgb(45, 45, 45),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 GripStyle = ToolStripGripStyle.Hidden,
                 Renderer = new DarkToolStripRenderer(),
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 Padding = new Padding(5, 2, 5, 2)
             };
 
@@ -90,22 +90,28 @@ namespace Gdterm.UI.Forms
                 BorderStyle = BorderStyle.None
             };
 
-            _entryList.Columns.Add("标题", 180);
-            _entryList.Columns.Add("用户名", 120);
-            _entryList.Columns.Add("分组路径", 150);
-            _entryList.Columns.Add("URL", 150);
-            _entryList.Columns.Add("最后修改", 120);
-
             _entryList.DoubleClick += OnCopyPasswordClick;
+
+            // 列宽随 DPI 缩放：固定像素列在 150% 下文字被裁剪
+            float dpiFactor;
+            try { using (var g = CreateGraphics()) dpiFactor = g.DpiX / 96f; }
+            catch { dpiFactor = 1f; }
+            int Scale(int v) { return Math.Max(60, (int)Math.Round(v * dpiFactor)); }
+            _entryList.Columns.Add("标题", Scale(180));
+            _entryList.Columns.Add("用户名", Scale(120));
+            _entryList.Columns.Add("分组路径", Scale(150));
+            _entryList.Columns.Add("URL", Scale(150));
+            _entryList.Columns.Add("最后修改", Scale(120));
 
             // 状态栏
             _statusLabel = new Label
             {
                 Dock = DockStyle.Bottom,
-                Height = 24,
+                AutoSize = false,
+                Height = (int)Math.Round(24 * dpiFactor),
                 BackColor = Color.FromArgb(45, 45, 45),
                 ForeColor = Color.FromArgb(160, 160, 160),
-                Font = new Font("Microsoft YaHei", 8.5f),
+                Font = Services.FormFontPolicy.UiFont(-0.5f),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(8, 0, 0, 0),
                 Text = "就绪"
@@ -399,7 +405,9 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "添加密码条目";
-            Size = new Size(420, 380);
+            ClientSize = DpiScale.S(420, 470);
+            // 跟随字体/DPI 自动整体缩放（绝对定位在 11pt@144dpi 下会重叠/溢出）
+            AutoScaleMode = AutoScaleMode.Font;
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -407,165 +415,141 @@ namespace Gdterm.UI.Forms
             ShowInTaskbar = false;
             BackColor = Color.FromArgb(30, 30, 30);
 
-            int y = 15;
-            int labelW = 70;
-            int boxX = 90;
-            int boxW = 300;
-
-            _titleBox = AddField("标题：", ref y, labelW, boxX, boxW);
-            _usernameBox = AddField("用户名：", ref y, labelW, boxX, boxW);
-
-            var pwdLabel = new Label
+            // ===== 底部按钮（流式靠右，随字体缩放）=====
+            var btnPanel = new Panel { Dock = DockStyle.Bottom, Height = 45, BackColor = Color.FromArgb(30, 30, 30) };
+            var btnFlow = new FlowLayoutPanel
             {
-                Text = "密码：",
-                Font = new Font("Microsoft YaHei", 9f),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                Location = new Point(15, y),
-                Size = new Size(labelW, 22)
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false,
+                BackColor = Color.FromArgb(30, 30, 30),
+                Padding = new Padding(0, 7, 15, 0)
             };
+            var okButton = new Button
+            {
+                Text = "确定",
+                DialogResult = DialogResult.OK,
+                AutoSize = true,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(0, 122, 204),
+                ForeColor = Color.White,
+                Margin = new Padding(0)
+            };
+            var cancelButton = new Button
+            {
+                Text = "取消",
+                DialogResult = DialogResult.Cancel,
+                AutoSize = true,
+                FlatStyle = FlatStyle.Flat,
+                BackColor = Color.FromArgb(60, 60, 60),
+                ForeColor = Color.White,
+                Margin = new Padding(0, 0, 8, 0)
+            };
+            btnFlow.Controls.Add(okButton);       // RightToLeft：第一个在最右
+            btnFlow.Controls.Add(cancelButton);
+            btnPanel.Controls.Add(btnFlow);
+
+            // ===== 字段表单 =====
+            var grid = new TableLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                ColumnCount = 2,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                BackColor = Color.FromArgb(30, 30, 30),
+                Padding = new Padding(12, 12, 12, 4)
+            };
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));   // 标签列按文字宽度自适应
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            int row = 0;
+            _titleBox = AddField(grid, ref row, "标题：", new TextBox());
+            _usernameBox = AddField(grid, ref row, "用户名：", new TextBox());
+
             _passwordBox = new TextBox
             {
-                Location = new Point(boxX, y),
-                Size = new Size(boxW - 70, 22),
-                Font = new Font("Consolas", 9.5f),
+                Font = new Font("Consolas", 9.5f),   // 等宽语义，FormFontPolicy 会保留
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 BorderStyle = BorderStyle.FixedSingle,
                 UseSystemPasswordChar = true
             };
+            var pwdCell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, AutoSize = true, Margin = new Padding(0) };
+            pwdCell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            pwdCell.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            pwdCell.Controls.Add(_passwordBox, 0, 0);
             var btnShowPwd = new Button
             {
                 Text = "显示",
-                Location = new Point(boxX + boxW - 65, y - 1),
-                Size = new Size(55, 24),
+                AutoSize = true,
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Microsoft YaHei", 8f),
                 BackColor = Color.FromArgb(60, 60, 60),
-                ForeColor = Color.FromArgb(204, 204, 204)
+                ForeColor = Color.FromArgb(204, 204, 204),
+                Margin = new Padding(6, 1, 0, 1)
             };
             btnShowPwd.Click += (s, e) =>
             {
                 _passwordBox.UseSystemPasswordChar = !_passwordBox.UseSystemPasswordChar;
                 btnShowPwd.Text = _passwordBox.UseSystemPasswordChar ? "显示" : "隐藏";
             };
-            Controls.Add(pwdLabel);
-            Controls.Add(_passwordBox);
-            Controls.Add(btnShowPwd);
-            y += 30;
+            pwdCell.Controls.Add(btnShowPwd, 1, 0);
+            AddField(grid, ref row, "密码：", pwdCell);
 
-            _urlBox = AddField("URL：", ref y, labelW, boxX, boxW);
-            _groupBox = AddField("分组：", ref y, labelW, boxX, boxW);
-            _hostBox = AddField("主机：", ref y, labelW, boxX, boxW);
-            _protocolBox = AddField("协议：", ref y, labelW, boxX, boxW);
+            _urlBox = AddField(grid, ref row, "URL：", new TextBox());
+            _groupBox = AddField(grid, ref row, "分组：", new TextBox());
+            _hostBox = AddField(grid, ref row, "主机：", new TextBox());
+            _protocolBox = AddField(grid, ref row, "协议：", new TextBox());
             if (string.IsNullOrEmpty(_protocolBox.Text)) _protocolBox.Text = "SSH";
-
-            var portLabel = new Label
+            _portBox = AddField(grid, ref row, "端口：", new NumericUpDown
             {
-                Text = "端口：",
-                Font = new Font("Microsoft YaHei", 9f),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                Location = new Point(15, y),
-                Size = new Size(labelW, 22)
-            };
-            _portBox = new NumericUpDown
-            {
-                Location = new Point(boxX, y),
-                Size = new Size(100, 22),
                 Minimum = 0,
                 Maximum = 65535,
                 Value = 22,
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204)
-            };
-            Controls.Add(portLabel);
-            Controls.Add(_portBox);
-            y += 30;
-
-            _autoTypeBox = AddField("AutoType：", ref y, labelW, boxX, boxW);
-
-            // 放大窗体以容纳新字段
-            try { Size = new Size(420, 520); } catch { }
-
-            var notesLabel = new Label
-            {
-                Text = "备注：",
-                Font = new Font("Microsoft YaHei", 9f),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                Location = new Point(15, y),
-                Size = new Size(labelW, 22)
-            };
+            });
+            _autoTypeBox = AddField(grid, ref row, "AutoType：", new TextBox());
             _notesBox = new TextBox
             {
-                Location = new Point(boxX, y),
-                Size = new Size(boxW, 60),
-                Font = new Font("Microsoft YaHei", 9f),
+                Multiline = true,
+                ScrollBars = ScrollBars.Vertical,
+                Height = 64,
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0, 4, 0, 4),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                BorderStyle = BorderStyle.FixedSingle,
-                Multiline = true,
-                ScrollBars = ScrollBars.Vertical
+                BorderStyle = BorderStyle.FixedSingle
             };
-            Controls.Add(notesLabel);
-            Controls.Add(_notesBox);
-            y += 75;
+            AddLabel(grid, row, "备注：");
+            grid.Controls.Add(_notesBox, 1, row);
+            row++;
 
-            // 按钮
-            var okButton = new Button
-            {
-                Text = "确定",
-                Size = new Size(80, 30),
-                Location = new Point(boxX + boxW - 170, y),
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Microsoft YaHei", 9f),
-                BackColor = Color.FromArgb(0, 122, 204),
-                ForeColor = Color.White,
-                DialogResult = DialogResult.OK
-            };
-
-            var cancelButton = new Button
-            {
-                Text = "取消",
-                Size = new Size(80, 30),
-                Location = new Point(boxX + boxW - 80, y),
-                FlatStyle = FlatStyle.Flat,
-                Font = new Font("Microsoft YaHei", 9f),
-                BackColor = Color.FromArgb(60, 60, 60),
-                ForeColor = Color.White,
-                DialogResult = DialogResult.Cancel
-            };
-
-            Controls.Add(okButton);
-            Controls.Add(cancelButton);
+            Controls.Add(grid);
+            Controls.Add(btnPanel);   // 后添加的先布局：Bottom 先钉住，Fill 吃剩余空间
 
             AcceptButton = okButton;
             CancelButton = cancelButton;
         }
 
-        private TextBox AddField(string labelText, ref int y, int labelW, int boxX, int boxW)
+        private static void AddLabel(TableLayoutPanel grid, int row, string text)
         {
-            var label = new Label
+            grid.Controls.Add(new Label
             {
-                Text = labelText,
-                Font = new Font("Microsoft YaHei", 9f),
+                Text = text,
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Location = new Point(15, y),
-                Size = new Size(labelW, 22)
-            };
+                AutoSize = true,
+                Anchor = AnchorStyles.Left,
+                Margin = new Padding(3, 6, 8, 0)
+            }, 0, row);
+        }
 
-            var textBox = new TextBox
-            {
-                Location = new Point(boxX, y),
-                Size = new Size(boxW, 22),
-                Font = new Font("Microsoft YaHei", 9f),
-                BackColor = Color.FromArgb(50, 50, 50),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                BorderStyle = BorderStyle.FixedSingle
-            };
-
-            Controls.Add(label);
-            Controls.Add(textBox);
-            y += 30;
-            return textBox;
+        private T AddField<T>(TableLayoutPanel grid, ref int row, string labelText, T control) where T : Control
+        {
+            AddLabel(grid, row, labelText);
+            control.Dock = DockStyle.Fill;
+            control.Margin = new Padding(0, 4, 0, 4);
+            grid.Controls.Add(control, 1, row);
+            row++;
+            return control;
         }
     }
 }

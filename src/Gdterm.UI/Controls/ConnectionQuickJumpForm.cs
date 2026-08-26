@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using Gdterm.Connections;
 using Gdterm.Core.Models;
 using Gdterm.UI.Diagnostics;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Controls
 {
@@ -27,7 +28,7 @@ namespace Gdterm.UI.Controls
             Text = "快速跳转连接 (Ctrl+Shift+K)";
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
             StartPosition = FormStartPosition.CenterParent;
-            ClientSize = new Size(520, 360);
+            ClientSize = DpiScale.S(520, 360);
             BackColor = GdtermColorTable.Background;
             ForeColor = GdtermColorTable.Foreground;
             KeyPreview = true;
@@ -40,7 +41,7 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 BorderStyle = BorderStyle.FixedSingle,
-                Font = new Font("Microsoft YaHei UI", 10f)
+                Font = Services.FormFontPolicy.UiFont(+1f)
             };
             try { WinFormsCompat.SetCueBanner(_filter, "输入名称 / 主机 / 分组…"); } catch { }
             _filter.TextChanged += (s, e) => ApplyFilter();

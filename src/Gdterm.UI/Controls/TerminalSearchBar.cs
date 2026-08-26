@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Controls
 {
@@ -21,25 +22,32 @@ namespace Gdterm.UI.Controls
         public TerminalSearchBar()
         {
             Dock = DockStyle.Top;
-            Height = 36;
+            Height = DpiScale.V(this, 36);
             BackColor = Color.FromArgb(37, 37, 38);
             Visible = false;
-            Padding = new Padding(8, 4, 8, 4);
+            Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 4), DpiScale.V(this, 8), DpiScale.V(this, 4));
             BuildUI();
         }
 
         private void BuildUI()
         {
-            var font = new Font("Microsoft YaHei", 9f);
+            // 规范规则②③：改用 FlowLayoutPanel 流式布局，控件继承面板字体；搜索框/匹配符为等宽语义例外
+            var flow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                Padding = new Padding(0)
+            };
 
             _txtSearch = new TextBox
             {
-                Location = new Point(8, 6),
-                Size = new Size(250, 24),
+                Width = DpiScale.V(this, 250),
                 BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Font = new Font("Consolas", 9f),
-                BorderStyle = BorderStyle.FixedSingle
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f),
+                BorderStyle = BorderStyle.FixedSingle,
+                Margin = new Padding(0, 2, DpiScale.V(this, 6), 0)
             };
             _txtSearch.KeyDown += (s, e) =>
             {
@@ -48,21 +56,20 @@ namespace Gdterm.UI.Controls
                 if (e.KeyCode == Keys.F3) { NavigateRequested?.Invoke(!e.Shift); }
             };
 
-            _chkCase = CreateChk("Aa", 270, "区分大小写");
-            _chkRegex = CreateChk(".*", 305, "正则表达式");
-            _chkWholeWord = CreateChk("W", 340, "全字匹配");
+            _chkCase = CreateChk("Aa", "区分大小写");
+            _chkRegex = CreateChk(".*", "正则表达式");
+            _chkWholeWord = CreateChk("W", "全字匹配");
 
-            _btnPrev = CreateBtn("▲", 380, "上一个 (Shift+F3)");
-            _btnNext = CreateBtn("▼", 408, "下一个 (F3)");
-            _btnClose = CreateBtn("✕", 440, "关闭 (Esc)");
+            _btnPrev = CreateBtn("▲", "上一个 (Shift+F3)");
+            _btnNext = CreateBtn("▼", "下一个 (F3)");
+            _btnClose = CreateBtn("✕", "关闭 (Esc)");
             _btnClose.ForeColor = Color.FromArgb(180, 180, 180);
 
             _lblCount = new Label
             {
                 Text = "",
-                Location = new Point(468, 8),
                 AutoSize = true,
-                Font = font,
+                Margin = new Padding(DpiScale.V(this, 8), 6, 3, 0),
                 ForeColor = Color.FromArgb(130, 130, 130)
             };
 
@@ -70,35 +77,37 @@ namespace Gdterm.UI.Controls
             _btnNext.Click += (s, e) => NavigateRequested?.Invoke(true);
             _btnClose.Click += (s, e) => { Hide(); CloseRequested?.Invoke(); };
 
-            Controls.AddRange(new Control[] { _txtSearch, _chkCase, _chkRegex, _chkWholeWord, _btnPrev, _btnNext, _btnClose, _lblCount });
+            flow.Controls.AddRange(new Control[] { _txtSearch, _chkCase, _chkRegex, _chkWholeWord, _btnPrev, _btnNext, _btnClose, _lblCount });
+            Controls.Add(flow);
         }
 
-        private CheckBox CreateChk(string text, int x, string tip)
+        private CheckBox CreateChk(string text, string tip)
         {
             var chk = new CheckBox
             {
                 Text = text,
-                Location = new Point(x, 7),
                 AutoSize = true,
-                Font = new Font("Consolas", 8.5f),
-                ForeColor = Color.FromArgb(150, 150, 150)
+                // 等宽语义例外：Aa/.*/W 为正则记号，字号相对当前字体缩小一号（规范规则③）
+                Font = new Font(Font.FontFamily, Font.Size - 0.5f),
+                ForeColor = Color.FromArgb(150, 150, 150),
+                Margin = new Padding(0, 4, DpiScale.V(this, 6), 0)
             };
             var t = new ToolTip();
             t.SetToolTip(chk, tip);
             return chk;
         }
 
-        private Button CreateBtn(string text, int x, string tip)
+        private Button CreateBtn(string text, string tip)
         {
             var btn = new Button
             {
                 Text = text,
-                Size = new Size(24, 24),
-                Location = new Point(x, 5),
+                AutoSize = true,
+                Padding = new Padding(1, 0, 1, 0),
+                MinimumSize = new Size(DpiScale.V(this, 26), DpiScale.V(this, 24)),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                Font = new Font("Consolas", 9f)
+                ForeColor = Color.FromArgb(204, 204, 204)
             };
             btn.FlatAppearance.BorderSize = 0;
             var t = new ToolTip();

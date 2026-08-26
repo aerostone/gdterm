@@ -33,44 +33,50 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "选择凭据";
-            Size = new Size(520, 420);
+            Size = DpiScale.S(520, 420);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
             BackColor = Color.FromArgb(30, 30, 30);
-            Font = new Font("Microsoft YaHei", 9f);
+            Font = Services.FormFontPolicy.UiFont();
 
-            // 搜索框
+            // 搜索框（Dock 布局，随字体/DPI 自适应高度）
+            var searchPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 42,
+                Padding = new Padding(12, 10, 12, 6),
+                BackColor = Color.FromArgb(30, 30, 30)
+            };
+            var searchHint = new Label
+            {
+                Text = "搜索...",
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(4, 0, 0, 0),
+                ForeColor = Color.FromArgb(100, 100, 100),
+                BackColor = Color.Transparent
+            };
             _searchBox = new TextBox
             {
-                Location = new Point(12, 12),
-                Size = new Size(300, 22),
+                Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(37, 37, 38),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 BorderStyle = BorderStyle.FixedSingle
             };
             _searchBox.TextChanged += (s, e) => ApplyFilter();
-            Controls.Add(_searchBox);
-
-            var searchHint = new Label
-            {
-                Text = "搜索...",
-                Location = new Point(16, 14),
-                ForeColor = Color.FromArgb(100, 100, 100),
-                AutoSize = true,
-                BackColor = Color.Transparent
-            };
             _searchBox.Enter += (s, e) => { searchHint.Visible = false; };
             _searchBox.Leave += (s, e) => { searchHint.Visible = string.IsNullOrEmpty(_searchBox.Text); };
-            Controls.Add(searchHint);
+            // 先加的在上层：提示文字覆盖在空文本框上方
+            searchPanel.Controls.Add(searchHint);
+            searchPanel.Controls.Add(_searchBox);
 
             // 列表
             _listView = new ListView
             {
-                Location = new Point(12, 42),
-                Size = new Size(480, 290),
+                Dock = DockStyle.Fill,
                 View = View.Details,
                 FullRowSelect = true,
                 MultiSelect = false,
@@ -88,7 +94,8 @@ namespace Gdterm.UI.Forms
             _listView.DrawColumnHeader += (s, e) =>
             {
                 e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(45, 45, 45)), e.Bounds);
-                using (var headerFont = new Font("Microsoft YaHei", 9f, FontStyle.Bold))
+                // 表头字体跟随窗体当前字体（硬编码 9f 在 11pt 全局下不协调）
+                using (var headerFont = new Font(Font.FontFamily, Font.Size, FontStyle.Bold))
                 {
                     TextRenderer.DrawText(e.Graphics, e.Header.Text, headerFont,
                         e.Bounds, Color.FromArgb(204, 204, 204),
@@ -113,51 +120,74 @@ namespace Gdterm.UI.Forms
                         TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
                 }
             };
-            Controls.Add(_listView);
 
-            // 按钮
+            // ===== 底部按钮（流式布局，随字体/DPI 自适应）=====
             var btnPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
                 Height = 45,
                 BackColor = Color.FromArgb(37, 37, 38)
             };
-
             var btnNew = new Button
             {
                 Text = "新建凭据",
-                Size = new Size(90, 30),
-                Location = new Point(12, 8),
+                AutoSize = true,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(60, 60, 60),
-                ForeColor = Color.FromArgb(204, 204, 204)
+                ForeColor = Color.FromArgb(204, 204, 204),
+                Margin = new Padding(12, 7, 0, 0)
             };
             btnNew.Click += (s, e) => CreateNewEntry();
+            var btnNewFlow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Left,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                BackColor = Color.FromArgb(37, 37, 38),
+                AutoSize = true
+            };
+            btnNewFlow.Controls.Add(btnNew);
 
+            var btnSelectFlow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Right,
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false,
+                BackColor = Color.FromArgb(37, 37, 38),
+                AutoSize = true,
+                Padding = new Padding(0, 0, 12, 0)
+            };
             var btnSelect = new Button
             {
                 Text = "选择",
-                Size = new Size(80, 30),
-                Location = new Point(Width - 210, 8),
+                DialogResult = DialogResult.OK,
+                AutoSize = true,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(0, 122, 204),
-                ForeColor = Color.White
+                ForeColor = Color.White,
+                Margin = new Padding(8, 7, 0, 0)
             };
             btnSelect.Click += (s, e) => SelectEntry();
-
             var btnCancel = new Button
             {
                 Text = "取消",
                 DialogResult = DialogResult.Cancel,
-                Size = new Size(80, 30),
-                Location = new Point(Width - 120, 8),
+                AutoSize = true,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(60, 60, 60),
-                ForeColor = Color.FromArgb(204, 204, 204)
+                ForeColor = Color.FromArgb(204, 204, 204),
+                Margin = new Padding(0, 7, 8, 0)
             };
+            btnSelectFlow.Controls.Add(btnCancel);   // RightToLeft：第一个在最右
+            btnSelectFlow.Controls.Add(btnSelect);
 
-            btnPanel.Controls.AddRange(new Control[] { btnNew, btnSelect, btnCancel });
+            btnPanel.Controls.Add(btnSelectFlow);   // 后添加的先布局：右、左互不重叠
+            btnPanel.Controls.Add(btnNewFlow);
+
+            // Dock 顺序：后添加的先布局——Top 先钉住，Bottom 再钉住，Fill 吃剩余空间
+            Controls.Add(_listView);
             Controls.Add(btnPanel);
+            Controls.Add(searchPanel);
         }
 
         private void LoadEntries()

@@ -1,6 +1,7 @@
-# CodeStable 共享口径
+<!-- codestable:managed 受管文件——由 `codestable update` 维护；项目内的修改会被更新器保留（跳过刷新），要恢复跟随技能包更新请运行 `codestable update --force`。 -->
+# codestable 共享口径
 
-由 `cs-onboard` 复制到项目的 `.codestable/reference/shared-conventions.md`。所有 CodeStable 子技能用项目相对路径 `.codestable/reference/shared-conventions.md` 引用本文件——跨子技能共享但不适合堆在单个技能里的规范的唯一权威版本。
+由 `cs-onboard` 复制到项目的 `.codestable/reference/shared-conventions.md`。所有 codestable 子技能用项目相对路径 `.codestable/reference/shared-conventions.md` 引用本文件——跨子技能共享但不适合堆在单个技能里的规范的唯一权威版本。
 
 skill 本身不共享文件系统（每个 skill 是独立安装单元），共享口径不能放在某个 skill 内部被别的 skill 引用。放在"工作项目"里对所有 skill 都可达。
 
@@ -9,6 +10,8 @@ skill 本身不共享文件系统（每个 skill 是独立安装单元），共�
 ## 工作流档位
 
 档位只在 `.codestable/attention.md` frontmatter 声明：`workflow_mode: lean | standard`。未声明时按仓库现状推断：只有 attention/少量现状文档时按 `lean`；已有多阶段 feature、roadmap、refactor 或审计要求时按 `standard`。用户显式声明优先。
+
+交付基线层是独立维度，由 `baseline_mode: off | lean | baseline | regulated` 控制（默认 `off`），与 `workflow_mode` 独立。`baseline_mode` 非 `off` 时在 `docs/baseline/` 维护对外正式设计基线，从 `.codestable/` 过程证据增量投影。完整定义见 `baseline.md`。
 
 ### lean
 
@@ -33,13 +36,21 @@ lean 任务出现任一情况，当前任务升级到 standard，不必修改项
 
 lean 的目标是“一次对齐 → 一次执行 → 一次验证汇报”：不逐步汇报、不要求用户再次触发下一技能、不为同一结论重复搬运上下文。standard 只在阶段边界、未决方案、人工验证或风险升级处停顿；同一阶段内应批量完成可独立验证的动作。
 
-Change Package 的目录、状态机和旧格式兼容规则见 `change-package.md`。feature / issue / refactor / audit 的新任务默认使用该格式；requirements / architecture / compound 仍保持独立文档。
+Change Package 的目录、状态机和旧格式兼容规则见 `change-package.md`。feature / issue / refactor 和独立 audit 的新任务使用该格式；对单一既有包的后续复查追加到原包，不另建目录。requirements / architecture / compound 仍保持独立文档。
+
+### 模型切换 ROI
+
+简单任务不为模型分工增加交接：≤2 个明确 step、低风险、少量文件时由当前模型直接完成。复杂但小的任务也保留高阶模型全程处理。只有高阶模型已写清接口、约束、测试，且至少三步低风险实现可组成连续 wave 时，才建议用户切换低阶模型。切换与回切均由用户确认，不能由技能假定已经发生。
 
 ---
 
 ## 0. 目录结构与路径命名
 
-onboard 后只保留这些职责：`attention.md` 放常驻规则；`requirements/` 放能力愿景；`architecture/` 放当前系统地图；`roadmap/` 放跨 feature 规划；`changes/` 聚合 standard 变更；`compound/` 放可检索知识；`tools/` 和 `reference/` 放共享支持文件。`brainstorm/` 只在 spike 时创建。
+onboard 后只保留这些职责：`attention.md` 放常驻规则；`requirements/` 放能力愿景；`architecture/` 放当前系统地图；`roadmap/` 放跨 feature 规划；`changes/` 聚合 standard 变更；`compound/` 放可检索知识；`tools/` 和 `reference/` 放共享支持文件。讨论层的 spike 记录用 `brainstorms/{slug}/brainstorm.md`，只在 spike 时创建（详见 `cs-brainstorm`）。
+
+`.codestable/.runtime/` 是运行时工作区，不进版本库（onboard 时写入 `.gitignore`）。目前只有一个文件：`current-package` 记录活动 Change Package 的相对路径（如 `changes/2026-02-11-login`，单行）。它是**续作加速指针，不是事实源**：创建 Change Package 的阶段写入（feat-design / issue-report / refactor design），档案关闭或归档时清除；读取前必须核对目录存在且 phase 与预期一致，对不上就忽略指针、回退到合规检查器的 `--index --agent` 模式或目录扫描。手工删除不影响任何流程正确性。
+
+交付基线层在项目根 `docs/baseline/`（不在 `.codestable/` 内），由 `codestable baseline` 命令族维护，内容从 `.codestable/` 过程证据增量投影。只有 `attention.md` 的 `baseline_mode` 非 `off` 时存在。`docs/dev/` 和 `docs/user/` 仍由 `cs-guide` 维护，不受 baseline 层影响。
 
 旧 `features/`、`issues/`、`refactors/`、`audits/` 只读兼容，不在新项目创建，也不在新任务写入。
 
@@ -50,7 +61,9 @@ onboard 后只保留这些职责：`attention.md` 放常驻规则；`requirement
 - standard 变更目录：`changes/YYYY-MM-DD-{slug}/`
 - 沉淀类：`compound/YYYY-MM-DD-{doc_type}-{slug}.md`，日期用**归档当天**
 - 架构 doc：`architecture/{type}-{slug}.md`（长效，不带日期前缀）；总入口固定 `ARCHITECTURE.md`
-- 项目注意事项入口固定为 `.codestable/attention.md`，所有 CodeStable 子技能启动前必须读取；不再兼容 `AGENTS.md` / `CLAUDE.md` 等外部入口
+- 项目注意事项入口固定为 `.codestable/attention.md`，所有 codestable 子技能启动前必须读取；不再兼容 `AGENTS.md` / `CLAUDE.md` 等外部入口
+- 讨论层目录：`.codestable/brainstorms/`（复数）；旧版单数目录由 `codestable update` 自动改名
+- 技能包资源目录约定：单参考文件用 `reference.md`，多文件用 `reference/` 目录；不用 `references/` 复数。历史偏离由更新器与维护者向此约定收敛
 
 ### 架构 doc 分组规则（同类聚合）
 
@@ -72,9 +85,9 @@ onboard 后只保留这些职责：`attention.md` 放常驻规则；`requirement
 
 ## 1. 共享元数据口径
 
-**feature spec**：brainstorm / design / acceptance 共用 `doc_type` / `feature` / `status` / `summary` / `tags`。子技能只补特有字段。`status`：brainstorm = `confirmed`（落盘即确认无 draft）；design = `draft` / `approved`；acceptance 见对应技能。
+**Change Package**：feature / issue / refactor / audit 的新任务统一使用单文档变更包——`doc_type: change`、`kind: feature | issue | refactor | audit`，状态机与落盘位置见 `change-package.md`。各阶段技能只补特有字段和阶段状态变化，不再按 brainstorm / design / acceptance 各建一份 spec。
 
-**旧版 issue spec**：report / analysis / fix-note 共用 `doc_type` / `issue` / `status` / `tags`。新任务统一使用 `doc_type: change`、`kind: issue`。
+**旧版 issue spec**：report / analysis / fix-note 共用 `doc_type` / `issue` / `status` / `tags`。新任务统一使用 Change Package 的 `kind: issue`。
 
 **归档类（compound）**：
 
@@ -111,7 +124,7 @@ in-progress → done      （cs-feat-accept 验收完成时改）
 planned  → dropped      （cs-roadmap update 模式，用户决定不做时改）
 ```
 
-`done` / `dropped` 是终态。需要回退重做的新加一条 slug 略改的条目，不改终态。
+`done` / `dropped` 是终态。`done` 只有在对应 feature 的验收证据、checklist 状态和 feature 链接同时成立时才允许。需要回退重做的新加一条 slug 略改的条目，不改终态。
 
 **cs-roadmap 的职责**：生成和维护 roadmap 主文档 + items.yaml；把 `planned` 改 `dropped`（用户放弃时）；不改 `in-progress` / `done`（feature 技能负责）。
 
@@ -169,7 +182,7 @@ acceptance / issue-fix 走完后把本次产物提交为一个 commit：
 
 子技能只描述本阶段特有提交范围，通用规则看这里。
 
-阶段技能的 frontmatter description 必须写明所需 Change Package 状态和排除条件；根入口根据 `workflow.yaml` 接续，避免 design / impl / accept 抢占彼此。
+阶段技能的 frontmatter description 必须写明所需 Change Package 状态和排除条件；根入口据此接续，避免 design / impl / accept 抢占彼此。
 
 大型项目可按需启用 `.codestable/constitution.yaml`、Change Package `artifacts`、`evidence.jsonl` 和 `changes/index.yaml`；lean 项目不预建空文件。它们是可选加速/门禁产物，不替代 `change.md`。
 
@@ -198,7 +211,7 @@ feature-design / issue-analyze / issue-fix 动手前到 `.codestable/compound/` 
 2. **宁缺毋滥**——用户说不出理由的节直接省略，不要 AI 编造
 3. **不替用户写实质内容**——AI 负责起草结构和串联语言，实质结论必须来自用户或可追溯的代码证据
 4. **attention.md 检查**——写完后若沉淀暴露出"每次启动都该知道"的一两行硬约束，提示用户用 `cs-note` 追加到 `.codestable/attention.md`；不要直接改外部 AI 入口
-5. **起草前先查重叠**——动手写前用 `search-yaml.py --query` 查语义相近的旧文档。命中就把候选列给用户在三条路径里选：
+5. **起草前先查重叠**——动手写前用 `python .codestable/tools/search-yaml.py --query` 查语义相近的旧文档。命中就把候选列给用户在三条路径里选：
    - **更新已有**（默认优先）：沿用原文件名和原创建日期，**不新建**；frontmatter 补 `updated: YYYY-MM-DD`；超出小修在文末加"YYYY-MM-DD 更新"简述
    - **supersede**：旧文档保留原文，`status: superseded` + `superseded-by: {新文件名}`，正文顶部加 `**[已取代]** 见 {新 slug}`；新文档 frontmatter 带 `supersedes: {旧文件名}`
    - **确实是不同主题**：新建，文末"相关文档"列出已有那条说明区别

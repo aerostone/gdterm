@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
 using Gdterm.Core.Models;
 using Gdterm.Logging;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Controls
 {
@@ -31,7 +32,7 @@ namespace Gdterm.UI.Controls
 
         private void InitializeComponent()
         {
-            Size = new Size(500, 400);
+            Size = DpiScale.S(500, 400);
             BackColor = SystemColors.Control;
 
             // 搜索栏
@@ -45,20 +46,20 @@ namespace Gdterm.UI.Controls
 
             _searchBox = new TextBox
             {
-                Size = new Size(150, 23)
+                Size = DpiScale.S(150, 23)
             };
             WinFormsCompat.SetCueBanner(_searchBox, "搜索命令...");
 
             _hostFilter = new ComboBox
             {
-                Size = new Size(120, 23),
+                Size = DpiScale.S(120, 23),
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
             _hostFilter.Items.Add("所有主机");
             _hostFilter.SelectedIndex = 0;
 
-            var btnRefresh = new Button { Text = "刷新", Size = new Size(50, 23), FlatStyle = FlatStyle.Flat };
-            var btnClear = new Button { Text = "清空", Size = new Size(50, 23), FlatStyle = FlatStyle.Flat };
+            var btnRefresh = new Button { Text = "刷新", Size = DpiScale.S(50, 23), FlatStyle = FlatStyle.Flat };
+            var btnClear = new Button { Text = "清空", Size = DpiScale.S(50, 23), FlatStyle = FlatStyle.Flat };
 
             searchPanel.Controls.AddRange(new Control[] { _searchBox, _hostFilter, btnRefresh, btnClear });
 

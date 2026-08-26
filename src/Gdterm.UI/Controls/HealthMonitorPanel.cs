@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.Terminal;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Controls
 {
@@ -16,8 +17,8 @@ namespace Gdterm.UI.Controls
         private Panel _graphPanel;
         private readonly List<HealthSnapshot> _recent = new List<HealthSnapshot>();
         private System.Windows.Forms.Timer _refreshTimer;
-        private static readonly Font _titleFont = new Font("Microsoft YaHei", 10f);
-        private static readonly Font _labelFont = new Font("Microsoft YaHei", 8f);
+        private static readonly Font _titleFont = Services.FormFontPolicy.UiFont(+1f);
+        private static readonly Font _labelFont = Services.FormFontPolicy.UiFont(-1f);
         private readonly Dictionary<Color, SolidBrush> _brushCache = new Dictionary<Color, SolidBrush>();
 
         private SolidBrush GetBrush(Color color)
@@ -83,7 +84,7 @@ namespace Gdterm.UI.Controls
             {
                 Location = new Point(x, 6),
                 AutoSize = false,
-                Size = new Size(140, 65),
+                Size = DpiScale.S(140, 65),
                 Font = new Font("Consolas", 14f, FontStyle.Bold),
                 ForeColor = valueColor,
                 Text = value,

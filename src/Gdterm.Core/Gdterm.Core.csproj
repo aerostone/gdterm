@@ -32,6 +32,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.IO.Ports" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Constants\DefaultPorts.cs" />

@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.Core.Models;
 using Gdterm.Tunnel;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Controls
 {
@@ -78,9 +79,9 @@ namespace Gdterm.UI.Controls
         {
             return new Button
             {
-                Text = text, Size = new Size(75, 28), Location = new Point(x, 6),
+                Text = text, Size = DpiScale.S(75, 28), Location = new Point(x, 6),
                 FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Microsoft YaHei", 8.5f)
+                ForeColor = Color.FromArgb(204, 204, 204), Font = Services.FormFontPolicy.UiFont(-0.5f)
             };
         }
 
@@ -105,13 +106,13 @@ namespace Gdterm.UI.Controls
         {
             var form = new Form
             {
-                Text = "添加端口转发规则", Size = new Size(400, 320),
+                Text = "添加端口转发规则", Size = DpiScale.S(400, 320),
                 StartPosition = FormStartPosition.CenterParent,
                 BackColor = Color.FromArgb(30, 30, 30), ForeColor = Color.FromArgb(204, 204, 204),
                 FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false
             };
-            var font = new Font("Microsoft YaHei", 9f); int y = 15;
-            var cmbType = new ComboBox { Location = new Point(110, y - 3), Size = new Size(250, 25), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), FlatStyle = FlatStyle.Flat, Font = font };
+            var font = Services.FormFontPolicy.UiFont(); int y = 15;
+            var cmbType = new ComboBox { Location = new Point(110, y - 3), Size = DpiScale.S(250, 25), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), FlatStyle = FlatStyle.Flat, Font = font };
             cmbType.Items.AddRange(new object[] { "Local（本地转发）", "Remote（远程转发）", "Dynamic（SOCKS5）" });
             cmbType.SelectedIndex = 0;
             Lbl(form, "类型:", 15, y); form.Controls.Add(cmbType); y += 32;
@@ -121,8 +122,8 @@ namespace Gdterm.UI.Controls
             var txtRemoteHost = Txt(form, 110, y, 120); txtRemoteHost.Text = "127.0.0.1"; Lbl(form, "远程地址:", 15, y);
             var txtRemotePort = Txt(form, 280, y, 80); Lbl(form, "端口:", 245, y); y += 50;
 
-            var btnOk = new Button { Text = "确定", Size = new Size(80, 28), Location = new Point(200, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White };
-            var btnCancel = new Button { Text = "取消", Size = new Size(80, 28), Location = new Point(290, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(60, 60, 60), ForeColor = Color.FromArgb(204, 204, 204) };
+            var btnOk = new Button { Text = "确定", Size = DpiScale.S(80, 28), Location = new Point(200, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White };
+            var btnCancel = new Button { Text = "取消", Size = DpiScale.S(80, 28), Location = new Point(290, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(60, 60, 60), ForeColor = Color.FromArgb(204, 204, 204) };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
 
@@ -176,7 +177,7 @@ namespace Gdterm.UI.Controls
             if (rule != null) { try { _manager.Bind(_host); } catch { } _manager.Stop(rule.Id); _rules.Remove(rule); RefreshList(); }
         }
 
-        private static void Lbl(Form f, string t, int x, int y) { f.Controls.Add(new Label { Text = t, Location = new Point(x, y + 3), AutoSize = true, Font = new Font("Microsoft YaHei", 9f), ForeColor = Color.FromArgb(204, 204, 204) }); }
+        private static void Lbl(Form f, string t, int x, int y) { f.Controls.Add(new Label { Text = t, Location = new Point(x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = Color.FromArgb(204, 204, 204) }); }
         private static TextBox Txt(Form f, int x, int y, int w) { var t = new TextBox { Location = new Point(x, y), Size = new Size(w, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle }; f.Controls.Add(t); return t; }
 
         protected override void Dispose(bool disposing)

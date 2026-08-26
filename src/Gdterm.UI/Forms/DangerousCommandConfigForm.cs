@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.Security;
 using Gdterm.Core.Models;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Forms
 {
@@ -37,7 +38,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "危险命令规则配置";
-            Size = new Size(800, 550);
+            Size = DpiScale.S(800, 550);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -50,7 +51,7 @@ namespace Gdterm.UI.Forms
                 ForeColor = Color.FromArgb(204, 204, 204),
                 GripStyle = ToolStripGripStyle.Hidden,
                 Renderer = new DarkToolStripRenderer(),
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 Padding = new Padding(5, 2, 5, 2)
             };
 
@@ -81,8 +82,8 @@ namespace Gdterm.UI.Forms
             // 规则列表
             _ruleList = new ListView
             {
-                Location = new Point(0, 28),
-                Size = new Size(784, 280),
+                Location = DpiScale.P(0, 28),
+                Size = DpiScale.S(784, 280),
                 View = View.Details,
                 FullRowSelect = true,
                 GridLines = true,
@@ -107,10 +108,10 @@ namespace Gdterm.UI.Forms
             var whitelistHeader = new Label
             {
                 Text = "白名单（豁免命令）",
-                Font = new Font("Microsoft YaHei", 9.5f, FontStyle.Bold),
+                Font = Services.FormFontPolicy.UiFont(+0.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Location = new Point(5, 315),
-                Size = new Size(200, 22),
+                Location = DpiScale.P(5, 315),
+                Size = DpiScale.S(200, 22),
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left
             };
 
@@ -118,10 +119,10 @@ namespace Gdterm.UI.Forms
             var btnAddWhitelist = new Button
             {
                 Text = "添加",
-                Size = new Size(60, 24),
-                Location = new Point(5, 340),
+                Size = DpiScale.S(60, 24),
+                Location = DpiScale.P(5, 340),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Microsoft YaHei", 8.5f),
+                Font = Services.FormFontPolicy.UiFont(-0.5f),
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White,
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left
@@ -131,10 +132,10 @@ namespace Gdterm.UI.Forms
             var btnRemoveWhitelist = new Button
             {
                 Text = "移除",
-                Size = new Size(60, 24),
-                Location = new Point(70, 340),
+                Size = DpiScale.S(60, 24),
+                Location = DpiScale.P(70, 340),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Microsoft YaHei", 8.5f),
+                Font = Services.FormFontPolicy.UiFont(-0.5f),
                 BackColor = Color.FromArgb(80, 40, 40),
                 ForeColor = Color.White,
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left
@@ -144,8 +145,8 @@ namespace Gdterm.UI.Forms
             // 白名单列表
             _whitelistBox = new ListBox
             {
-                Location = new Point(5, 370),
-                Size = new Size(770, 100),
+                Location = DpiScale.P(5, 370),
+                Size = DpiScale.S(770, 100),
                 Font = new Font("Consolas", 9.5f),
                 BackColor = Color.FromArgb(25, 25, 25),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -157,8 +158,8 @@ namespace Gdterm.UI.Forms
             var separator = new Label
             {
                 BorderStyle = BorderStyle.Fixed3D,
-                Location = new Point(5, 310),
-                Size = new Size(770, 2),
+                Location = DpiScale.P(5, 310),
+                Size = DpiScale.S(770, 2),
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
             };
 
@@ -169,7 +170,7 @@ namespace Gdterm.UI.Forms
                 Height = 24,
                 BackColor = Color.FromArgb(45, 45, 45),
                 ForeColor = Color.FromArgb(160, 160, 160),
-                Font = new Font("Microsoft YaHei", 8.5f),
+                Font = Services.FormFontPolicy.UiFont(-0.5f),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(8, 0, 0, 0),
                 Text = "就绪"
@@ -404,7 +405,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "添加自定义规则";
-            Size = new Size(450, 400);
+            Size = DpiScale.S(450, 400);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -412,10 +413,11 @@ namespace Gdterm.UI.Forms
             ShowInTaskbar = false;
             BackColor = Color.FromArgb(30, 30, 30);
 
-            int y = 15;
-            int labelW = 80;
-            int boxX = 100;
-            int boxW = 320;
+            // 布局基准值统一经 DPI 缩放（规范规则④）
+            var y = DpiScale.V(this, 15);
+            var labelW = DpiScale.V(this, 80);
+            var boxX = DpiScale.V(this, 100);
+            var boxW = DpiScale.V(this, 320);
 
             _nameBox = AddTextField("规则名称：", ref y, labelW, boxX, boxW);
             _patternBox = AddTextField("匹配模式：", ref y, labelW, boxX, boxW);
@@ -424,16 +426,16 @@ namespace Gdterm.UI.Forms
             var patternTypeLabel = new Label
             {
                 Text = "匹配类型：",
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Location = new Point(15, y),
+                Location = new Point(DpiScale.V(this, 15), y),
                 Size = new Size(labelW, 22)
             };
             _patternTypeCombo = new ComboBox
             {
                 Location = new Point(boxX, y),
-                Size = new Size(150, 22),
-                Font = new Font("Microsoft YaHei", 9f),
+                Size = DpiScale.S(150, 22),
+                Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 DropDownStyle = ComboBoxStyle.DropDownList
@@ -448,16 +450,16 @@ namespace Gdterm.UI.Forms
             var levelLabel = new Label
             {
                 Text = "危险等级：",
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Location = new Point(15, y),
+                Location = new Point(DpiScale.V(this, 15), y),
                 Size = new Size(labelW, 22)
             };
             _levelCombo = new ComboBox
             {
                 Location = new Point(boxX, y),
-                Size = new Size(150, 22),
-                Font = new Font("Microsoft YaHei", 9f),
+                Size = DpiScale.S(150, 22),
+                Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 DropDownStyle = ComboBoxStyle.DropDownList
@@ -472,16 +474,16 @@ namespace Gdterm.UI.Forms
             var categoryLabel = new Label
             {
                 Text = "分类：",
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Location = new Point(15, y),
+                Location = new Point(DpiScale.V(this, 15), y),
                 Size = new Size(labelW, 22)
             };
             _categoryCombo = new ComboBox
             {
                 Location = new Point(boxX, y),
-                Size = new Size(200, 22),
-                Font = new Font("Microsoft YaHei", 9f),
+                Size = DpiScale.S(200, 22),
+                Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 DropDownStyle = ComboBoxStyle.DropDown
@@ -501,16 +503,16 @@ namespace Gdterm.UI.Forms
             var descLabel = new Label
             {
                 Text = "描述：",
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Location = new Point(15, y),
+                Location = new Point(DpiScale.V(this, 15), y),
                 Size = new Size(labelW, 22)
             };
             _descriptionBox = new TextBox
             {
                 Location = new Point(boxX, y),
                 Size = new Size(boxW, 50),
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 BorderStyle = BorderStyle.FixedSingle,
@@ -526,8 +528,8 @@ namespace Gdterm.UI.Forms
             {
                 Text = "启用此规则",
                 Location = new Point(boxX, y),
-                Size = new Size(150, 22),
-                Font = new Font("Microsoft YaHei", 9f),
+                Size = DpiScale.S(150, 22),
+                Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 Checked = true
             };
@@ -538,10 +540,10 @@ namespace Gdterm.UI.Forms
             var okButton = new Button
             {
                 Text = "确定",
-                Size = new Size(80, 30),
+                Size = DpiScale.S(80, 30),
                 Location = new Point(boxX + boxW - 170, y),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White,
                 DialogResult = DialogResult.OK
@@ -550,10 +552,10 @@ namespace Gdterm.UI.Forms
             var cancelButton = new Button
             {
                 Text = "取消",
-                Size = new Size(80, 30),
+                Size = DpiScale.S(80, 30),
                 Location = new Point(boxX + boxW - 80, y),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(60, 60, 60),
                 ForeColor = Color.White,
                 DialogResult = DialogResult.Cancel
@@ -571,9 +573,9 @@ namespace Gdterm.UI.Forms
             var label = new Label
             {
                 Text = labelText,
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Location = new Point(15, y),
+                Location = new Point(DpiScale.V(this, 15), y),
                 Size = new Size(labelW, 22)
             };
 
@@ -581,7 +583,7 @@ namespace Gdterm.UI.Forms
             {
                 Location = new Point(boxX, y),
                 Size = new Size(boxW, 22),
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 BorderStyle = BorderStyle.FixedSingle
@@ -589,7 +591,7 @@ namespace Gdterm.UI.Forms
 
             Controls.Add(label);
             Controls.Add(textBox);
-            y += 30;
+            y += DpiScale.V(this, 30);
             return textBox;
         }
     }
@@ -606,7 +608,7 @@ namespace Gdterm.UI.Forms
         public TextInputForm(string title, string prompt)
         {
             Text = title;
-            Size = new Size(400, 160);
+            Size = DpiScale.S(400, 160);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -617,16 +619,16 @@ namespace Gdterm.UI.Forms
             var promptLabel = new Label
             {
                 Text = prompt,
-                Font = new Font("Microsoft YaHei", 9.5f),
+                Font = Services.FormFontPolicy.UiFont(+0.5f),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Location = new Point(15, 12),
-                Size = new Size(360, 22)
+                Location = DpiScale.P(15, 12),
+                Size = DpiScale.S(360, 22)
             };
 
             _inputBox = new TextBox
             {
-                Location = new Point(15, 40),
-                Size = new Size(355, 24),
+                Location = DpiScale.P(15, 40),
+                Size = DpiScale.S(355, 24),
                 Font = new Font("Consolas", 10f),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -636,10 +638,10 @@ namespace Gdterm.UI.Forms
             var okButton = new Button
             {
                 Text = "确定",
-                Size = new Size(75, 28),
-                Location = new Point(215, 75),
+                Size = DpiScale.S(75, 28),
+                Location = DpiScale.P(215, 75),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White,
                 DialogResult = DialogResult.OK
@@ -648,10 +650,10 @@ namespace Gdterm.UI.Forms
             var cancelButton = new Button
             {
                 Text = "取消",
-                Size = new Size(75, 28),
-                Location = new Point(295, 75),
+                Size = DpiScale.S(75, 28),
+                Location = DpiScale.P(295, 75),
                 FlatStyle = FlatStyle.Flat,
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(60, 60, 60),
                 ForeColor = Color.White,
                 DialogResult = DialogResult.Cancel

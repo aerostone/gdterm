@@ -209,6 +209,12 @@ namespace Gdterm.Connections
                     SerializeTunnel(sb, c.Tunnel);
                 }
 
+                if (c.Serial != null)
+                {
+                    sb.Append(", \"serial\": ");
+                    SerializeSerial(sb, c.Serial);
+                }
+
                 if (c.Metadata != null && c.Metadata.Count > 0)
                 {
                     sb.Append(", \"metadata\": {");
@@ -249,6 +255,18 @@ namespace Gdterm.Connections
         private void SerializeTunnel(StringBuilder sb, TunnelConfig tunnel)
         {
             sb.Append($"{{\"type\": \"{tunnel.Type}\", \"localPort\": {tunnel.LocalPort}, \"remoteHost\": \"{Escape(tunnel.RemoteHost)}\", \"remotePort\": {tunnel.RemotePort}}}");
+        }
+
+        private void SerializeSerial(StringBuilder sb, SerialConfig serial)
+        {
+            sb.Append("{");
+            sb.Append($"\"portName\": \"{Escape(serial.PortName)}\", ");
+            sb.Append($"\"baudRate\": {serial.BaudRate}, ");
+            sb.Append($"\"dataBits\": {serial.DataBits}, ");
+            sb.Append($"\"stopBits\": \"{serial.StopBits}\", ");
+            sb.Append($"\"parity\": \"{serial.Parity}\", ");
+            sb.Append($"\"handshake\": \"{serial.Handshake}\"");
+            sb.Append("}");
         }
 
         private string Escape(string value)
@@ -323,6 +341,30 @@ namespace Gdterm.Connections
                     };
                 }
 
+                // 串口参数（0.1.119 前从未落盘，缺失时保持 null）
+                var serialStr = ExtractObject(obj, "serial");
+                if (serialStr != null)
+                {
+                    conn.Serial = new SerialConfig
+                    {
+                        PortName = ExtractString(serialStr, "portName") ?? "COM1",
+                        BaudRate = ExtractInt(serialStr, "baudRate"),
+                        DataBits = ExtractInt(serialStr, "dataBits"),
+                        StopBits = ParseEnum<System.IO.Ports.StopBits>(ExtractString(serialStr, "stopBits")),
+                        Parity = ParseEnum<System.IO.Ports.Parity>(ExtractString(serialStr, "parity")),
+                        Handshake = ParseEnum<System.IO.Ports.Handshake>(ExtractString(serialStr, "handshake"))
+                    };
+                    if (conn.Serial.BaudRate <= 0) conn.Serial.BaudRate = 9600;
+                    if (conn.Serial.DataBits < 5 || conn.Serial.DataBits > 8) conn.Serial.DataBits = 8;
+                }
+
+                // 扩展字段（notes/RDP 选项等）——0.1.119 前写入后从不读回，导致“保存无效”
+                var metadataStr = ExtractObject(obj, "metadata");
+                if (!string.IsNullOrEmpty(metadataStr))
+                {
+                    conn.Metadata = ParseFlatStringObject(metadataStr);
+                }
+
                 result.Add(conn);
             }
 
@@ -336,6 +378,58 @@ namespace Gdterm.Connections
             if (Enum.TryParse(value, true, out result))
                 return result;
             return default(T);
+        }
+
+        /// <summary>
+        /// 解析扁平字符串对象内容（无嵌套，形如 "k1": "v1", "k2": "v2"），用于 metadata。
+        /// </summary>
+        private static Dictionary<string, string> ParseFlatStringObject(string objectContent)
+        {
+            var dict = new Dictionary<string, string>(StringComparer.Ordinal);
+            if (string.IsNullOrWhiteSpace(objectContent)) return dict;
+
+            int i = 0;
+            int len = objectContent.Length;
+            while (i < len)
+            {
+                // 跳过分隔符与空白，定位键的起始引号
+                while (i < len && (char.IsWhiteSpace(objectContent[i]) || objectContent[i] == ',')) i++;
+                if (i >= len || objectContent[i] != '"') break;
+
+                var key = ReadQuotedString(objectContent, ref i);
+
+                // 定位值
+                while (i < len && (char.IsWhiteSpace(objectContent[i]) || objectContent[i] == ':')) i++;
+                if (i >= len || objectContent[i] != '"') break;
+
+                var val = ReadQuotedString(objectContent, ref i);
+                if (!string.IsNullOrEmpty(key)) dict[key] = val ?? "";
+            }
+
+            return dict;
+        }
+
+        /// <summary>从 index 处的引号读取转义字符串，index 推进到结束引号之后。</summary>
+        private static string ReadQuotedString(string json, ref int index)
+        {
+            // 进入时 json[index] 应为 '"'
+            index++; // 跳过起始引号
+            var sb = new StringBuilder();
+            while (index < json.Length)
+            {
+                var ch = json[index];
+                if (ch == '\\' && index + 1 < json.Length)
+                {
+                    var next = json[index + 1];
+                    sb.Append(next == '"' ? "\"" : next == '\\' ? "\\" : next.ToString());
+                    index += 2;
+                    continue;
+                }
+                if (ch == '"') { index++; break; }
+                sb.Append(ch);
+                index++;
+            }
+            return sb.ToString();
         }
 
         private string ExtractString(string json, string key)

@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
 using Gdterm.Core.Models;
 using Gdterm.Connections;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Controls
 {
@@ -51,7 +52,7 @@ namespace Gdterm.UI.Controls
                 FullRowSelect = true,
                 BackColor = Color.FromArgb(30, 30, 30),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Font = new Font("Microsoft YaHei", 9f),
+                Font = Services.FormFontPolicy.UiFont(),
                 BorderStyle = BorderStyle.None,
                 GridLines = false
             };
@@ -72,9 +73,9 @@ namespace Gdterm.UI.Controls
         {
             return new Button
             {
-                Text = text, Size = new Size(70, 28), Location = new Point(x, 6),
+                Text = text, Size = DpiScale.S(70, 28), Location = new Point(x, 6),
                 FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Microsoft YaHei", 8.5f)
+                ForeColor = Color.FromArgb(204, 204, 204), Font = Services.FormFontPolicy.UiFont(-0.5f)
             };
         }
 
@@ -160,14 +161,14 @@ namespace Gdterm.UI.Controls
             var form = new Form
             {
                 Text = existing == null ? "添加高亮规则" : "编辑高亮规则",
-                Size = new Size(420, 350),
+                Size = DpiScale.S(420, 350),
                 StartPosition = FormStartPosition.CenterParent,
                 BackColor = Color.FromArgb(30, 30, 30),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false, MinimizeBox = false
             };
-            var font = new Font("Microsoft YaHei", 9f);
+            var font = Services.FormFontPolicy.UiFont();
             int y = 15;
 
             var lblName = Lbl("名称:", 15, y); var txtName = Txt(100, y, 285); y += 32;
@@ -188,8 +189,8 @@ namespace Gdterm.UI.Controls
                 chkBold.Checked = existing.Bold;
             }
 
-            var btnOk = new Button { Text = "确定", Size = new Size(80, 28), Location = new Point(220, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White };
-            var btnCancel = new Button { Text = "取消", Size = new Size(80, 28), Location = new Point(310, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(60, 60, 60), ForeColor = Color.FromArgb(204, 204, 204) };
+            var btnOk = new Button { Text = "确定", Size = DpiScale.S(80, 28), Location = new Point(220, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White };
+            var btnCancel = new Button { Text = "取消", Size = DpiScale.S(80, 28), Location = new Point(310, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(60, 60, 60), ForeColor = Color.FromArgb(204, 204, 204) };
 
             form.Controls.AddRange(new Control[] { lblName, txtName, lblPattern, txtPattern, chkRegex, chkCase, lblFg, txtFg, lblBg, txtBg, chkBold, btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
@@ -205,9 +206,9 @@ namespace Gdterm.UI.Controls
             };
         }
 
-        private Label Lbl(string t, int x, int y) => new Label { Text = t, Location = new Point(x, y + 3), AutoSize = true, Font = new Font("Microsoft YaHei", 9f), ForeColor = Color.FromArgb(204, 204, 204) };
+        private Label Lbl(string t, int x, int y) => new Label { Text = t, Location = new Point(x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = Color.FromArgb(204, 204, 204) };
         private TextBox Txt(int x, int y, int w) => new TextBox { Location = new Point(x, y), Size = new Size(w, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
-        private CheckBox Chk(string t, int x, int y) { var c = new CheckBox { Text = t, Location = new Point(x, y), AutoSize = true, Font = new Font("Microsoft YaHei", 9f), ForeColor = Color.FromArgb(204, 204, 204) }; Controls.Add(c); return c; }
+        private CheckBox Chk(string t, int x, int y) { var c = new CheckBox { Text = t, Location = new Point(x, y), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = Color.FromArgb(204, 204, 204) }; Controls.Add(c); return c; }
 
         protected override void Dispose(bool disposing) { base.Dispose(disposing); }
     }

@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Controls
 {
@@ -28,46 +29,64 @@ namespace Gdterm.UI.Controls
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
-            Size = new Size(420, 180);
             BackColor = GdtermColorTable.Background;
             ForeColor = GdtermColorTable.Foreground;
-            Font = new Font("Microsoft YaHei UI", 9f);
+
+            // 规范规则②：布局改用 Dock，禁绝对坐标；尺寸经 DpiScale（规范见 docs/UI-SCALING-CONVENTIONS.md）
 
             _titleLabel = new Label
             {
                 Text = title ?? "传输中…",
-                Location = new Point(16, 16),
-                Size = new Size(380, 22),
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 16), DpiScale.V(this, 14), DpiScale.V(this, 16), 0),
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Microsoft YaHei UI", 10f, FontStyle.Bold)
+                Font = new Font(Font.FontFamily, Font.Size + 1f, FontStyle.Bold)
             };
             _detailLabel = new Label
             {
                 Text = "准备中…",
-                Location = new Point(16, 44),
-                Size = new Size(380, 20),
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 16), DpiScale.V(this, 8), DpiScale.V(this, 16), 0),
                 ForeColor = GdtermColorTable.Muted
+            };
+            var barHost = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = DpiScale.V(this, 30),
+                Padding = new Padding(DpiScale.V(this, 16), DpiScale.V(this, 10), DpiScale.V(this, 16), 0)
             };
             _bar = new ProgressBar
             {
-                Location = new Point(16, 72),
-                Size = new Size(380, 18),
+                Dock = DockStyle.Fill,
                 Minimum = 0,
                 Maximum = 100,
                 Style = ProgressBarStyle.Continuous
             };
+            barHost.Controls.Add(_bar);
+            var bottomFlow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Bottom,
+                FlowDirection = FlowDirection.RightToLeft,
+                Height = DpiScale.V(this, 44),
+                WrapContents = false,
+                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 8), DpiScale.V(this, 16), DpiScale.V(this, 8))
+            };
             _percentLabel = new Label
             {
                 Text = "0%",
-                Location = new Point(16, 98),
-                Size = new Size(200, 18),
+                AutoSize = true,
+                Margin = new Padding(3, 0, DpiScale.V(this, 12), 0),
+                Anchor = AnchorStyles.Left,
+                TextAlign = ContentAlignment.MiddleLeft,
                 ForeColor = GdtermColorTable.Muted
             };
             _cancelButton = new Button
             {
                 Text = "取消",
-                Location = new Point(310, 110),
-                Size = new Size(86, 28),
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 8), 0, DpiScale.V(this, 8), 0),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground
@@ -80,11 +99,18 @@ namespace Gdterm.UI.Controls
                 _cancelButton.Enabled = false;
             };
 
-            Controls.Add(_titleLabel);
+            // 底部行：RightToLeft 流序使先加入的靠右 —— 取消按钮在右、百分比在其左
+            bottomFlow.Controls.Add(_percentLabel);
+            bottomFlow.Controls.Add(_cancelButton);
+
+            // WinForms Dock z-order：先加 Fill，后加边缘（Top/Bottom）
+            Controls.Add(barHost);
+            Controls.Add(bottomFlow);
             Controls.Add(_detailLabel);
-            Controls.Add(_bar);
-            Controls.Add(_percentLabel);
-            Controls.Add(_cancelButton);
+            Controls.Add(_titleLabel);
+
+            ClientSize = new Size(DpiScale.V(this, 420), DpiScale.V(this, 150));
+            Gdterm.UI.Services.FormFontPolicy.Apply(this);
         }
 
         /// <summary>更新进度（可从任意线程调用）。</summary>

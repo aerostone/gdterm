@@ -97,11 +97,12 @@ foreach ($name in $depNames) {
   }
 }
 
-# Portable data skeleton (empty — no secrets)
+# Portable logs skeleton（诊断日志在程序主目录 logs\，绿色版随包携带）
 $data = Join-Path $OutDir 'data'
 New-Item -ItemType Directory -Path (Join-Path $data 'config\tools') -Force | Out-Null
-New-Item -ItemType Directory -Path (Join-Path $data 'logs\commands') -Force | Out-Null
-New-Item -ItemType Directory -Path (Join-Path $data 'logs\terminal') -Force | Out-Null
+$logsRoot = Join-Path $OutDir 'logs'
+New-Item -ItemType Directory -Path (Join-Path $logsRoot 'commands') -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $logsRoot 'terminal') -Force | Out-Null
 
 # Sample dangerous-commands if present in repo
 $sampleDanger = Join-Path $Root 'config\dangerous-commands.json'
@@ -139,7 +140,7 @@ if (Test-Path $winptyDir) {
 gdterm portable
 ===============
 1. Run gdterm.exe
-2. First launch: set master password (also unlocks KeePass)\n3. data\\logs\\crash.jsonl + audit-*.jsonl are debug-on by default in trial builds
+2. First launch: set master password (also unlocks KeePass)\n3. Diagnostics logs live in logs\ next to the exe (diag.log + audit-*.jsonl, debug-on in trial builds)
 3. All portable state lives under data\ next to the exe
 4. Copy the whole folder to migrate machines (keep data\ private)
 

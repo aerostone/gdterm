@@ -33,6 +33,8 @@ Usage examples:
   python .codestable/tools/search-yaml.py --dir content/posts --filter tags~=python --query "asyncio"
 """
 
+from __future__ import annotations
+
 import argparse
 import json
 import sys
@@ -40,10 +42,10 @@ from pathlib import Path
 from typing import Optional
 
 try:
-    from yaml_support import split_frontmatter
+    from yaml_support import read_text_any, split_frontmatter
 except ImportError:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from yaml_support import split_frontmatter
+    from yaml_support import read_text_any, split_frontmatter
 
 if sys.version_info < (3, 9):
     sys.stderr.write("search-yaml.py requires Python 3.9 or newer\n")
@@ -66,9 +68,12 @@ def load_documents(directory: Path) -> list[dict]:
     docs = []
     for md_file in sorted(directory.rglob("*.md")):
         try:
-            text = md_file.read_text(encoding="utf-8")
+            text, read_err = read_text_any(md_file)
         except OSError as exc:
             print(f"[warn] Cannot read {md_file.name}: {exc}", file=sys.stderr)
+            continue
+        if read_err:
+            print(f"[warn] Cannot read {md_file.name}: {read_err}", file=sys.stderr)
             continue
         meta, body = parse_frontmatter(text)
         docs.append({

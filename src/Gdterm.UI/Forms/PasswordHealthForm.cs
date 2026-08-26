@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using Gdterm.KeePass;
 using Gdterm.KeePass.Models;
 using Gdterm.Security;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Forms
 {
@@ -31,7 +32,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "密码健康报告";
-            Size = new Size(700, 550);
+            Size = DpiScale.S(700, 550);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -49,19 +50,19 @@ namespace Gdterm.UI.Forms
             _scoreLabel = new Label
             {
                 Text = "健康评分：—",
-                Font = new Font("Microsoft YaHei", 18f, FontStyle.Bold),
+                Font = Services.FormFontPolicy.UiFont(+9f, FontStyle.Bold),
                 ForeColor = Color.White,
-                Location = new Point(15, 10),
-                Size = new Size(250, 35)
+                Location = DpiScale.P(15, 10),
+                Size = DpiScale.S(250, 35)
             };
 
             _summaryLabel = new Label
             {
                 Text = "正在分析...",
-                Font = new Font("Microsoft YaHei", 10f),
+                Font = Services.FormFontPolicy.UiFont(+1f),
                 ForeColor = Color.FromArgb(180, 180, 180),
-                Location = new Point(15, 48),
-                Size = new Size(650, 25)
+                Location = DpiScale.P(15, 48),
+                Size = DpiScale.S(650, 25)
             };
 
             headerPanel.Controls.AddRange(new Control[] { _scoreLabel, _summaryLabel });
@@ -70,7 +71,7 @@ namespace Gdterm.UI.Forms
             _tabControl = new TabControl
             {
                 Dock = DockStyle.Fill,
-                Font = new Font("Microsoft YaHei", 9.5f)
+                Font = Services.FormFontPolicy.UiFont(+0.5f)
             };
 
             Controls.Add(_tabControl);

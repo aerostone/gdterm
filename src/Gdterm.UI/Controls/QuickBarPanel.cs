@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using Gdterm.Core.Models;
 using Gdterm.Terminal;
 using TerminalControl = Gdterm.UI.Controls.TerminalControl;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Controls
 {
@@ -200,7 +201,7 @@ namespace Gdterm.UI.Controls
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(37, 37, 38),
                 ForeColor = Color.FromArgb(130, 130, 130),
-                Font = new Font("Microsoft YaHei", 8f),
+                Font = Services.FormFontPolicy.UiFont(-1f),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(1, 0, 1, 0),
                 Padding = new Padding(6, 3, 6, 3),
@@ -225,12 +226,12 @@ namespace Gdterm.UI.Controls
                 if (kvp.Key == name)
                 {
                     kvp.Value.ForeColor = Color.FromArgb(78, 201, 176);
-                    kvp.Value.Font = new Font("Microsoft YaHei", 8f, FontStyle.Bold);
+                    kvp.Value.Font = Services.FormFontPolicy.UiFont(-1f, FontStyle.Bold);
                 }
                 else
                 {
                     kvp.Value.ForeColor = Color.FromArgb(130, 130, 130);
-                    kvp.Value.Font = new Font("Microsoft YaHei", 8f);
+                    kvp.Value.Font = Services.FormFontPolicy.UiFont(-1f);
                 }
             }
         }
@@ -272,7 +273,7 @@ namespace Gdterm.UI.Controls
             var addBtn = new Button
             {
                 Text = "+",
-                Size = new Size(28, 26),
+                Size = DpiScale.S(28, 26),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.FromArgb(100, 100, 100),
@@ -296,7 +297,7 @@ namespace Gdterm.UI.Controls
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Font = new Font("Microsoft YaHei", 8.5f),
+                Font = Services.FormFontPolicy.UiFont(-0.5f),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(2),
                 Padding = new Padding(8, 3, 8, 3),

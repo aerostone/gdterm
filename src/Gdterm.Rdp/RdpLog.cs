@@ -4,7 +4,7 @@ namespace Gdterm.Rdp
 {
     /// <summary>
     /// RDP 诊断日志——静态 sink 模式：Gdterm.UI 启动时把 sink 接到 DiagLog/CrashLog，
-    /// RdpClient 全链路（CLSID 探测/OCX 实例化/属性设置/事件）写入 data/logs/diag.log。
+    /// RdpClient 全链路（CLSID 探测/OCX 实例化/属性设置/事件）写入 logs/diag.log。
     /// 未接线时静默丢弃（比如单元测试环境），绝不抛出。
     /// </summary>
     public static class RdpLog

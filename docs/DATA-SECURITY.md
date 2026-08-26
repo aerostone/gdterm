@@ -9,7 +9,7 @@
 ## 仍需注意
 - 便携目录整夹拷贝等于密钥材料一起带走——请加密磁盘或限制 ACL
 - 审计日志默认试运行 debug 开启，可能含主机名与命令（已脱敏密码类 CLI）
-- `data/logs/crash.jsonl` 含诊断信息，分享前请检查
+- `logs/crash.jsonl` 含诊断信息，分享前请检查
 
 ## 推荐
 - 不要把 `data/` 提交到 git 或公开网盘
@@ -18,4 +18,4 @@
 
 ## master-password.ini
 主密码校验哈希存 INI（`passwordHash`/`salt`/`algorithm`/`iterations`），兼容旧 `master-password.json`。
-诊断日志：`data/logs/diag.log` 人可读文本；审计过程仍可写 jsonl。
+诊断日志：`logs/diag.log` 人可读文本；审计过程仍可写 jsonl。

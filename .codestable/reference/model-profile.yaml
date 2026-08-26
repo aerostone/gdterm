@@ -1,16 +1,43 @@
-version: 1
-profile: modern-27b-128k
+version: 2
+profile: default-128k
 
 profiles:
-  modern-27b-128k:
+  # 字符数是中文/代码混合场景的保守估算，不是 tokenizer 得出的真实 token。
+  # 预算已为系统提示、用户任务、工具结果和输出预留空间。
+  default-128k:
     context:
       max_files: 32
-      max_chars: 320000
+      max_chars: 128000
+      max_input_tokens: 32000
       output: any
       full_reference: true
-  constrained-27b-64k:
+  compact-64k:
     context:
       max_files: 16
-      max_chars: 160000
+      max_chars: 60000
+      max_input_tokens: 16000
       output: compact
       full_reference: false
+
+# 模型 ID 是运行时适配器消费的稳定别名，不写厂商名称、版本号或凭证。
+# 项目可替换为实际部署的模型，并按实际能力/预算下调声明。
+models:
+  high-default:
+    tier: high
+    profile: default-128k
+    default: true
+    capabilities: [file_read, file_edit, command_execution, test_execution]
+  low-default:
+    tier: low
+    profile: compact-64k
+    default: true
+    capabilities: [file_read, file_edit, command_execution, test_execution]
+
+# 只定义低阶下放门槛；实际模型选择由 --dispatch-plan 输出给运行时。
+routing:
+  confirmation_required: true
+  low_step_limit:
+    max_files: 6
+    max_chars: 40000
+    max_input_tokens: 12000
+  low_retry_limit: 2
