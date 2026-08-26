@@ -87,16 +87,22 @@ iconFont = new Font(iconFamily, DpiScale.V(this, 28)); // 字号缩放
 ## 已知遗留与豁免清单
 
 - `TerminalControl`：单元格渲染自算字体度量，不走本规范；
-- `MainForm`：由 `ApplyGlobalUIFont` 单独管理；
+- `MainForm`：由 `ApplyGlobalUIFont` 单独管理；窗体自身 `Size`（如 `new Size(1200,800)`）由 PerMonitorV2 自动缩放，不套 DpiScale；
+- `SplitPaneControl`：splitter 交互条 `splitterSize=4` 与面板尺寸均为**相对 Width/Height 布局**（非固定的子控件尺寸），不走 DpiScale；
+- 临时弹出的收集窗体自身 `Size`（如 `SnippetSearchPanel` 的变量填写窗）由 PerMonitorV2 自动缩放；
 - 第三方/原生窗口嵌入区不受影响。
+
+注意：**Labels / TextBoxes / ComboBoxes 等子控件的固定高度数值**（如 `new Size(labelW, 22)`、`new Size(w, 25)`）必须走 `DpiScale.V(...)`，宽高不可整体豁免（宽度可为布局变量，高度按 DPI 缩放）。
 
 ## 自查命令（提交前运行）
 
 ```bash
 # 不应再有新增命中（存量见 git blame 豁免清单）
+# 期望命中 = 0（全部走 DpiScale 或属豁免）
 grep -rn 'Size = new Size(' src/Gdterm.UI/Forms src/Gdterm.UI/Controls \
-  | grep -v 'DpiScale\|MinimumSize\|ClientSize'
+  | grep -v 'DpiScale\|MinimumSize\|ClientSize' \
+  | grep -vE 'MainForm.cs|SplitPaneControl.cs|SnippetSearchPanel.cs'
 grep -rn 'new Font("Microsoft YaHei\|new Font("微软雅黑' src --include='*.cs' \
   | grep -v 'FormFontPolicy.cs\|MainForm.cs'
-# 命中应为 0（MainForm 由 ApplyGlobalUIFont 豁免；FormFontPolicy 是策略本身）
+# 两者命中应为 0（MainForm 由 ApplyGlobalUIFont 豁免；FormFontPolicy 是策略本身）
 ```

@@ -131,7 +131,7 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(140, 140, 140),
                 Location = new Point(boxX, row3 + 40),
-                Size = new Size(boxWidth, 20)
+                Size = new Size(boxWidth, DpiScale.V(this, 20))
             };
 
             _errorLabel = new Label
@@ -201,7 +201,7 @@ namespace Gdterm.UI.Forms
             var box = new TextBox
             {
                 Location = new Point(x, y),
-                Size = new Size(width, 28),
+                Size = new Size(width, DpiScale.V(this, 28)),
                 Font = new Font("Consolas", 11f),
                 UseSystemPasswordChar = true,
                 BackColor = Color.FromArgb(50, 50, 50),

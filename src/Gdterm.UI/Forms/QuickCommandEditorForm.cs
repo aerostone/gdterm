@@ -67,7 +67,7 @@ namespace Gdterm.UI.Forms
             {
                 Text = "占位符: {host} {user} {date} {time} {datetime} {env:VAR_NAME}",
                 Location = new Point(inputX, y),
-                Size = new Size(inputW, 16),
+                Size = new Size(inputW, DpiScale.V(this, 16)),
                 Font = Services.FormFontPolicy.UiFont(-1.5f),
                 ForeColor = Color.FromArgb(100, 100, 100)
             };
@@ -191,7 +191,7 @@ namespace Gdterm.UI.Forms
             var txt = new TextBox
             {
                 Location = new Point(x, y - 3),
-                Size = new Size(w, 25),
+                Size = new Size(w, DpiScale.V(this, 25)),
                 Font = font,
                 BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.FromArgb(204, 204, 204),

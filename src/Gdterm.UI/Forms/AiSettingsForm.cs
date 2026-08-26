@@ -83,12 +83,12 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 Location = new Point(DpiScale.V(this, 20), y),
-                Size = new Size(labelW, 22)
+                Size = new Size(labelW, DpiScale.V(this, 22))
             };
             _apiKeyBox = new TextBox
             {
                 Location = new Point(boxX, y),
-                Size = new Size(boxW - 70, 22),
+                Size = new Size(boxW - 70, DpiScale.V(this, 22)),
                 Font = new Font("Consolas", 9.5f),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -122,7 +122,7 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 Location = new Point(DpiScale.V(this, 20), y),
-                Size = new Size(labelW, 22)
+                Size = new Size(labelW, DpiScale.V(this, 22))
             };
             _maxTokensSpinner = new NumericUpDown
             {
@@ -147,7 +147,7 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 Location = new Point(DpiScale.V(this, 20), y),
-                Size = new Size(labelW, 22)
+                Size = new Size(labelW, DpiScale.V(this, 22))
             };
             _temperatureSpinner = new NumericUpDown
             {
@@ -321,13 +321,13 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 Location = new Point(DpiScale.V(this, 20), y),
-                Size = new Size(labelW, 22)
+                Size = new Size(labelW, DpiScale.V(this, 22))
             };
 
             var textBox = new TextBox
             {
                 Location = new Point(boxX, y),
-                Size = new Size(boxW, 22),
+                Size = new Size(boxW, DpiScale.V(this, 22)),
                 Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),

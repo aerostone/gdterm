@@ -256,7 +256,7 @@ namespace Gdterm.UI.Controls
         }
 
         private static Label Lbl(string t, int x, int y, Form f) { var l = new Label { Text = t, Location = new Point(x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = Color.FromArgb(204, 204, 204) }; f.Controls.Add(l); return l; }
-        private static TextBox Txt(int x, int y, int w, Form f) { var t = new TextBox { Location = new Point(x, y), Size = new Size(w, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle }; f.Controls.Add(t); return t; }
+        private static TextBox Txt(int x, int y, int w, Form f) { var t = new TextBox { Location = new Point(x, y), Size = new Size(w, DpiScale.V(f, 24)), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle }; f.Controls.Add(t); return t; }
 
         protected override void Dispose(bool disposing) { base.Dispose(disposing); }
     }

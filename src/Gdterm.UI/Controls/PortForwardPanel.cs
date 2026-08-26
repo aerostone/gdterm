@@ -178,7 +178,7 @@ namespace Gdterm.UI.Controls
         }
 
         private static void Lbl(Form f, string t, int x, int y) { f.Controls.Add(new Label { Text = t, Location = new Point(x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = Color.FromArgb(204, 204, 204) }); }
-        private static TextBox Txt(Form f, int x, int y, int w) { var t = new TextBox { Location = new Point(x, y), Size = new Size(w, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle }; f.Controls.Add(t); return t; }
+        private static TextBox Txt(Form f, int x, int y, int w) { var t = new TextBox { Location = new Point(x, y), Size = new Size(w, DpiScale.V(f, 24)), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle }; f.Controls.Add(t); return t; }
 
         protected override void Dispose(bool disposing)
         {

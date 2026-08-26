@@ -207,7 +207,7 @@ namespace Gdterm.UI.Controls
         }
 
         private Label Lbl(string t, int x, int y) => new Label { Text = t, Location = new Point(x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = Color.FromArgb(204, 204, 204) };
-        private TextBox Txt(int x, int y, int w) => new TextBox { Location = new Point(x, y), Size = new Size(w, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
+        private TextBox Txt(int x, int y, int w) => new TextBox { Location = new Point(x, y), Size = new Size(w, DpiScale.V(this, 24)), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
         private CheckBox Chk(string t, int x, int y) { var c = new CheckBox { Text = t, Location = new Point(x, y), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = Color.FromArgb(204, 204, 204) }; Controls.Add(c); return c; }
 
         protected override void Dispose(bool disposing) { base.Dispose(disposing); }
