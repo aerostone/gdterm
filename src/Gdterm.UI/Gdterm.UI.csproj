@@ -13,6 +13,7 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <TargetFrameworkVersion>v4.6.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
     <!-- 强制 x64：
          1) 嵌入式 mstscax 与系统 64 位 mstsc 共享同一份 HKLM\SOFTWARE\Microsoft\MSLicensing 许可存储，
             消解 reason=2056/ext=267（许可存储创建被拒绝）；
