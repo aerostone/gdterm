@@ -484,7 +484,6 @@ namespace Gdterm.UI.Forms
                     _rdpEngineCombo.SelectedIndex = eng == "mstscax" ? 2 : eng == "freerdp" ? 1 : 0;
             }
             if (_rdpEngineCombo.SelectedIndex < 0) _rdpEngineCombo.SelectedIndex = 0;
-            }
 
             // 配置过高级选项则自动展开，避免“明明配了却看不见”
             MaybeAutoExpand();
