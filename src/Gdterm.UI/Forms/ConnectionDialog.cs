@@ -66,6 +66,9 @@ namespace Gdterm.UI.Forms
         private TextBox _notesBox;
         private LinkLabel _moreLink;
         private bool _expanded;
+        private int _expandedDelta;   // 本次展开实际增加的高度（收起时原样减回，兼容工作区封顶）
+        private Panel _btnPanel;      // 日志用
+        private Button _okBtn;
 
         private readonly IKeePassService _keepass;
 
@@ -80,6 +83,11 @@ namespace Gdterm.UI.Forms
             // 高/低 DPI 自适应：声明设计基准 96 DPI，让 .NET 自动按当前 DPI 缩放控件。
             Gdterm.UI.Services.FormFontPolicy.Apply(this);
             LoadFromConfig();
+            DiagLog.Info("ConnDialog", "ctor isNew=" + _isNew
+                + " ClientSize=" + ClientSize.Width + "x" + ClientSize.Height
+                + " font=" + Font.Name + "/" + Font.Size.ToString("0.#") + "pt"
+                + " screen=" + Screen.FromControl(this).Bounds.Width + "x" + Screen.FromControl(this).Bounds.Height
+                + " expanded=" + _expanded);
         }
 
         /// <summary>
@@ -100,6 +108,8 @@ namespace Gdterm.UI.Forms
         {
             Text = _isNew ? "新建连接" : $"编辑连接 — {_config.Name}";
             ClientSize = new Size(560, 330);
+            // 跟随字体/DPI 自动整体缩放（否则 144dpi 下控件行高变大而窗体不变，底部按钮被挤出可视区）
+            AutoScaleMode = AutoScaleMode.Font;
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -199,7 +209,8 @@ namespace Gdterm.UI.Forms
             topPanel.Controls.Add(linkRow);
 
             // ===== 高级区：协议专属选项 + 备注（默认折叠）=====
-            _advancedHost = new Panel { Dock = DockStyle.Fill, Visible = false, BackColor = Color.FromArgb(30, 30, 30), Padding = new Padding(12, 4, 12, 4) };
+            // AutoScroll：内容超过剩余空间时出滚动条，保证保存/取消按钮永远可见
+            _advancedHost = new Panel { Dock = DockStyle.Fill, Visible = false, AutoScroll = true, BackColor = Color.FromArgb(30, 30, 30), Padding = new Padding(12, 4, 12, 4) };
             _advFlow = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
@@ -297,6 +308,7 @@ namespace Gdterm.UI.Forms
 
             // ===== 底部按钮 =====
             var btnPanel = new Panel { Dock = DockStyle.Bottom, Height = 45, BackColor = Color.FromArgb(37, 37, 38) };
+            _btnPanel = btnPanel;
             var okBtn = new Button
             {
                 Text = _isNew ? "创建" : "保存",
@@ -320,6 +332,7 @@ namespace Gdterm.UI.Forms
                 Location = new Point(560 - 100, 8)
             };
             okBtn.Click += (s, e) => { SaveToConfig(); };
+            _okBtn = okBtn;
             btnPanel.Controls.AddRange(new Control[] { okBtn, cancelBtn });
 
             // Dock 顺序：后添加的先布局——Top 先钉住，Bottom 再钉住，Fill 吃剩余空间
@@ -368,21 +381,51 @@ namespace Gdterm.UI.Forms
         private void ToggleAdvanced()
         {
             bool expand = !_expanded;
+            DiagLog.Info("ConnDialog", "ToggleAdvanced begin expand=" + expand
+                + " Height=" + Height + " advFlowPref=" + Math.Max(_advFlow.Height, _advFlow.PreferredSize.Height));
             if (expand)
             {
                 _advancedHost.Visible = true;
                 _advancedHost.PerformLayout();
                 int h = Math.Max(_advFlow.Height, _advFlow.PreferredSize.Height);
-                Height += h + 16;
+                int workH = Screen.FromControl(this).WorkingArea.Height;
+                int desired = Height + h + 16;
+                if (desired > workH - 32)
+                {
+                    // FixedDialog 不能手拉也不能滚窗体：封顶到工作区，剩余内容靠高级区滚动条
+                    Height = workH - 32;
+                    DiagLog.Info("ConnDialog", "ToggleAdvanced capped desired=" + desired + " -> " + Height + " (workArea=" + workH + ")");
+                }
+                else
+                {
+                    Height = desired;
+                }
+                _expandedDelta = h + 16; // 记账用名义值；封顶时收起也按名义值减回，保证能回到原始高度附近
                 _moreLink.Text = "收起高级选项 ▴";
             }
             else
             {
-                Height -= Math.Max(_advFlow.Height, _advFlow.PreferredSize.Height) + 16;
+                Height -= _expandedDelta > 0 ? _expandedDelta : Math.Max(_advFlow.Height, _advFlow.PreferredSize.Height) + 16;
+                if (Height < MinimumTrackingHeight()) Height = MinimumTrackingHeight();
                 _advancedHost.Visible = false;
                 _moreLink.Text = "更多选项 ▾";
             }
             _expanded = expand;
+            DiagLog.Info("ConnDialog", "ToggleAdvanced done Height=" + Height);
+        }
+
+        /// <summary>折叠态的合理最低高度：按顶部面板首选高度 + 按钮栏推算。</summary>
+        private int MinimumTrackingHeight()
+        {
+            return 330; // 设计基准值，防止异常情况下窗体塌成一条线
+        }
+
+        protected override void OnShown(EventArgs e)
+        {
+            base.OnShown(e);
+            DiagLog.Info("ConnDialog", "shown ClientSize=" + ClientSize.Width + "x" + ClientSize.Height
+                + " okBtnBounds=" + _okBtn.Bounds + " visibleInForm=" + (_okBtn.Bottom <= ClientSize.Height)
+                + " btnPanelBottom=" + _btnPanel.Bottom + " workArea=" + Screen.FromControl(this).WorkingArea);
         }
 
         /// <summary>编辑既有连接时若配置过高级选项，自动展开让用户看到当前状态。</summary>

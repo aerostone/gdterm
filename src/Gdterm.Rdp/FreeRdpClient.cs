@@ -40,7 +40,7 @@ namespace Gdterm.Rdp
         private int _errLines;
         private Timer _connectedTimer;
 
-        private const int MaxLoggedLines = 120;
+        private const int MaxLoggedLines = 400;
         private const int ConnectedProbeDelayMs = 2500;
 
         public event EventHandler<RdpStateChangedEventArgs> StateChanged;
@@ -310,6 +310,9 @@ namespace Gdterm.Rdp
                 AddArg(args, logArgs, "/size:" + w + "x" + h);
             AddArg(args, logArgs, "/bpp:" + MapBpp(CurrentOptions.ColorDepth));
             AddArg(args, logArgs, "/cert-ignore"); // 免交互证书确认（隐藏控制台下 TOFU 提示会挂起）
+            // 排障关键：wfreerdp 输出 DEBUG 级日志（TLS 协商/PDU 解析/order/重定向全链路），
+            // 由下方 stdout/stderr 采集进 diag.log。堡垒机踢线这类问题只能靠它定位。
+            AddArg(args, logArgs, "/log-level:debug");
             if (!string.IsNullOrEmpty(username)) AddArg(args, logArgs, "/u:" + Q(username));
             if (!string.IsNullOrEmpty(credential != null ? credential.Password : null))
             {
@@ -417,7 +420,10 @@ namespace Gdterm.Rdp
             var lower = line.ToLowerInvariant();
             var interesting = lower.Contains("error") || lower.Contains("warn") || lower.Contains("fail")
                 || lower.Contains("connected") || lower.Contains("disconnect") || lower.Contains("certificate")
-                || lower.Contains("authentication") || lower.Contains("license");
+                || lower.Contains("authentication") || lower.Contains("license") || lower.Contains("transport")
+                || lower.Contains("order") || lower.Contains("bitmap") || lower.Contains("redirect")
+                || lower.Contains("nego") || lower.Contains("tls") || lower.Contains("security")
+                || lower.Contains("logoff") || lower.Contains("server bug") || lower.Contains("capability");
             if (n <= MaxLoggedLines || interesting)
                 RdpLog.Info(isOut ? "FreeRdp.out" : "FreeRdp.err", line.Trim());
         }
