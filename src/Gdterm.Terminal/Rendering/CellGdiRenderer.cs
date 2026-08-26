@@ -108,8 +108,6 @@ namespace Gdterm.Terminal.Rendering
                 if (h != null) h(this, data);
             };
 
-            ApplyFont(FontName, FontSize);
-
             _canvas = new DoubleBufferedPanel
             {
                 Dock = DockStyle.Fill,
@@ -119,6 +117,9 @@ namespace Gdterm.Terminal.Rendering
             _canvas.Paint += OnPaint;
             _canvas.Resize += OnResize;
             _canvas.Disposed += OnCanvasDisposed;
+
+            // 必须在 _canvas 创建之后：ApplyFont 尾部会 RecomputeGrid 访问 _canvas.ClientSize
+            ApplyFont(FontName, FontSize);
 
             _redrawTimer = new Timer { Interval = MinRedrawIntervalMs };
             _redrawTimer.Tick += OnRedrawTimerTick;
@@ -549,7 +550,9 @@ namespace Gdterm.Terminal.Rendering
         /// </summary>
         private void RecomputeGrid()
         {
-            if (_disposed || _canvas.ClientSize.Width <= 0 || _canvas.ClientSize.Height <= 0) return;
+            // _canvas 在构造函数尾部才创建；ApplyFont 可能在其之前被调用（ctor 内），此时跳过，
+            // 等首次 OnResize 再算网格 —— 否则 NRE 杀死整个渲染器构造链（SSH/本地终端全部打不开）
+            if (_disposed || _canvas == null || _canvas.ClientSize.Width <= 0 || _canvas.ClientSize.Height <= 0) return;
             // 减去两侧 padding 再计算 cols/rows — 否则右侧/底部边缘会有半截字被裁
             int cols = Math.Max(2, (int)((_canvas.ClientSize.Width - PadX * 2) / _charWidth));
             int rows = Math.Max(1, (int)((_canvas.ClientSize.Height - PadY * 2) / _charHeight));

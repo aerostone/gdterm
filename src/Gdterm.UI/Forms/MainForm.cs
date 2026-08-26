@@ -462,7 +462,7 @@ namespace Gdterm.UI.Forms
             _connectionTree.ConnectionDoubleClicked += (s, cfg) => _openCoord.OpenConnection(cfg);
             _connectionTree.OpenLocalTerminalRequested += () =>
             {
-                try { _tabContainer?.OpenLocalTerminal(); UpdateWelcomeVisibility(); } catch { }
+                try { _tabContainer?.OpenLocalTerminal(); UpdateWelcomeVisibility(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.OpenLocalTerminal(tree)", ex); }
             };
             _securityManager.LockStateChanged += (s, e) => _lockCoord.Handle(s, e);
             MouseMove += (s, e) => _securityManager.ResetIdleTimer();
@@ -575,7 +575,7 @@ namespace Gdterm.UI.Forms
             };
             _welcomePanel.OpenLocalTerminalRequested += () =>
             {
-                try { _tabContainer?.OpenLocalTerminal(); UpdateWelcomeVisibility(); } catch { }
+                try { _tabContainer?.OpenLocalTerminal(); UpdateWelcomeVisibility(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.OpenLocalTerminal(welcome)", ex); }
             };
             _welcomePanel.OpenBookmarksRequested += () =>
             {
@@ -645,7 +645,7 @@ namespace Gdterm.UI.Forms
             menu.Items.Add("本地终端", null, (s, e) =>
             {
                 RestoreFromTray();
-                try { _tabContainer?.OpenLocalTerminal(); } catch { }
+                try { _tabContainer?.OpenLocalTerminal(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.OpenLocalTerminal(tray)", ex); }
             });
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add("退出", null, (s, e) =>

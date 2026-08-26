@@ -336,6 +336,11 @@ namespace Gdterm.Rdp
             AddArg(args, logArgs, CurrentOptions.EnableMenuAnimations ? "+menu-anims" : "-menu-anims");
             if (!CurrentOptions.EnableNLA) AddArg(args, logArgs, "/sec:tls"); // 默认自动协商含 NLA
             if (CurrentOptions.AutoReconnectCount > 0) AddArg(args, logArgs, "/auto-reconnect");
+            // 旧版堡垒机/RDP 代理常发送未在能力协商中声明的绘图指令（Cache Bitmap V2 等），
+            // wfreerdp 会直接断链："SERVER BUG: The support for this feature was not announced!"
+            // relax-order-checks 跳过严格校验，bitmap-cache 按 FreeRDP 提示缓解同类问题。
+            AddArg(args, logArgs, "/relax-order-checks");
+            AddArg(args, logArgs, "+bitmap-cache");
 
             var psi = new ProcessStartInfo
             {
