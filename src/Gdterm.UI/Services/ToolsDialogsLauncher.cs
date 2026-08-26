@@ -241,9 +241,18 @@ namespace Gdterm.UI.Services
 
         public void ShowAbout()
         {
+            // 版本与 git/CI 联动：构建时由 tools/gen-version.ps1 注入（CI=AppVeyor 版本，本地=git describe）
+            var asm = typeof(ToolsDialogsLauncher).Assembly;
+            var v = asm.GetName().Version;
+            var info = Attribute.GetCustomAttribute(asm, typeof(System.Reflection.AssemblyInformationalVersionAttribute))
+                       as System.Reflection.AssemblyInformationalVersionAttribute;
+            var verLine = "版本 " + (v != null ? v.ToString(3) : "?");
+            if (!string.IsNullOrEmpty(info != null ? info.InformationalVersion : null)
+                && info.InformationalVersion != (v != null ? v.ToString() : null))
+                verLine += "\r\ngit: " + info.InformationalVersion;
             MessageBox.Show(
                 _owner,
-                "gdterm - 绿色运维客户端\n版本 1.0.0\n\nSSH / RDP / SFTP / 串口 / 本地终端 / 运维工具箱",
+                "gdterm - 绿色运维客户端\n" + verLine + "\n\nSSH / RDP / SFTP / 串口 / 本地终端 / 运维工具箱",
                 "关于", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 

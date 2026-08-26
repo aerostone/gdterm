@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Gdterm.AI;
 using Gdterm.Connections;
+using Gdterm.Core.Enums;
 using Gdterm.Core.Models;
 using Gdterm.KeePass;
 using Gdterm.Logging;
@@ -170,6 +171,18 @@ namespace Gdterm.UI.Controls
                     try { DiagLog.Info("TabContainer.OpenConnection",
                         "duplicate id=" + (config.Id ?? "") + " → activate existing tab"); } catch { }
                     _tabControl.SelectedTab = existingTab;
+
+                    // 已断开的 RDP 标签（服务器踢下线/掉线后重开同一连接）：
+                    // 走完整重连路径（关旧标签→重新 OpenConnection→CompleteAfterOpen），
+                    // 而不是激活一个死标签让用户手动关掉再开。
+                    if (session.Protocol == ProtocolType.RDP && !session.IsConnected && session.PendingConnect == null)
+                    {
+                        try { DiagLog.Info("TabContainer.OpenConnection", "duplicate disconnected RDP → reconnect id=" + (config.Id ?? "")); }
+                        catch { }
+                        var _ = ReconnectByIdAsync(config.Id);
+                        return;
+                    }
+
                     ForceActivateSession(existingTab);
                     ActiveSessionChanged?.Invoke(this, EventArgs.Empty);
                     return;

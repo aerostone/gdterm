@@ -43,6 +43,8 @@ namespace Gdterm.UI.Forms
         private NumericUpDown _rdpColorDepth;
         private CheckBox _rdpFullScreenCheck;
         private CheckBox _rdpNlaCheck;
+        /// <summary>RDP 渲染引擎：0=自动（优先 FreeRDP） 1=FreeRDP 2=系统 mstsc（ActiveX）。旧堡垒机对 mstsc 兼容性最好。</summary>
+        private ComboBox _rdpEngineCombo;
 
         // Serial
         private ComboBox _serialPortCombo;
@@ -241,6 +243,14 @@ namespace Gdterm.UI.Forms
             depthPanel.Controls.Add(_rdpColorDepth);
             rdpGrid.Controls.Add(rdpChecks, 1, 1);
             rdpGrid.Controls.Add(depthPanel, 1, 2);
+            // 引擎选择：旧堡垒机/代理常与 FreeRDP 不兼容（重定向 PDU 处理差异），
+            // 系统自带 mstsc（ActiveX 嵌入）是微软自家实现，兼容性最好
+            var enginePanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 4) };
+            enginePanel.Controls.Add(new Label { Text = "渲染引擎:", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true });
+            _rdpEngineCombo = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 170 };
+            _rdpEngineCombo.Items.AddRange(new object[] { "自动（优先 FreeRDP）", "FreeRDP 进程嵌入", "系统 mstsc（兼容模式）" });
+            enginePanel.Controls.Add(_rdpEngineCombo);
+            rdpGrid.Controls.Add(enginePanel, 1, 3);
             SectionContent(_secRdp, rdpGrid);
             _advFlow.Controls.Add(_secRdp);
 
@@ -383,7 +393,8 @@ namespace Gdterm.UI.Forms
                 || (_config.Metadata != null &&
                     (_config.Metadata.ContainsKey("rdp_drives") || _config.Metadata.ContainsKey("rdp_fullscreen")
                      || (_config.Metadata.ContainsKey("rdp_nla") && _config.Metadata["rdp_nla"] == "false")
-                     || (_config.Metadata.ContainsKey("rdp_clipboard") && _config.Metadata["rdp_clipboard"] == "false")))
+                     || (_config.Metadata.ContainsKey("rdp_clipboard") && _config.Metadata["rdp_clipboard"] == "false")
+                     || (_config.Metadata.ContainsKey("rdp_engine") && _config.Metadata["rdp_engine"] != "auto")))
                 || _config.Serial != null
                 || (_config.Metadata != null && _config.Metadata.ContainsKey("notes")
                     && !string.IsNullOrEmpty(_config.Metadata["notes"]));
@@ -468,6 +479,11 @@ namespace Gdterm.UI.Forms
                     _rdpColorDepth.Value = int.Parse(_config.Metadata["rdp_colordepth"]);
                 _rdpFullScreenCheck.Checked = _config.Metadata.ContainsKey("rdp_fullscreen") && _config.Metadata["rdp_fullscreen"] == "true";
                 _rdpNlaCheck.Checked = !_config.Metadata.ContainsKey("rdp_nla") || _config.Metadata["rdp_nla"] != "false";
+                string eng;
+                if (_config.Metadata.TryGetValue("rdp_engine", out eng))
+                    _rdpEngineCombo.SelectedIndex = eng == "mstscax" ? 2 : eng == "freerdp" ? 1 : 0;
+            }
+            if (_rdpEngineCombo.SelectedIndex < 0) _rdpEngineCombo.SelectedIndex = 0;
             }
 
             // 配置过高级选项则自动展开，避免“明明配了却看不见”
@@ -496,6 +512,8 @@ namespace Gdterm.UI.Forms
             _config.Metadata["rdp_colordepth"] = _rdpColorDepth.Value.ToString();
             _config.Metadata["rdp_fullscreen"] = _rdpFullScreenCheck.Checked.ToString().ToLower();
             _config.Metadata["rdp_nla"] = _rdpNlaCheck.Checked.ToString().ToLower();
+            _config.Metadata["rdp_engine"] = _rdpEngineCombo.SelectedIndex == 2 ? "mstscax"
+                                           : _rdpEngineCombo.SelectedIndex == 1 ? "freerdp" : "auto";
 
             // JumpChain hop (SSH jump host UI)
             if (_tunnelCheck.Checked && !string.IsNullOrWhiteSpace(_tunnelHostBox.Text))

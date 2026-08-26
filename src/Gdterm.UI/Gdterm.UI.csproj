@@ -230,4 +230,14 @@
     </ItemGroup>
     <Copy SourceFiles="@(_PkgDlls)" DestinationFolder="$(OutputPath)" SkipUnchangedFiles="true" Condition="'@(_PkgDlls)' != ''" />
   </Target>
+
+  <!-- 版本号注入：CI=APPVEYOR_BUILD_VERSION，本地=git describe（详见 tools/gen-version.ps1）。
+       生成的 VersionInfo.g.cs 在 CoreCompile 前加入编译，AssemblyInfo.cs 不再声明版本特性。 -->
+  <Target Name="GenerateVersionInfo" BeforeTargets="CoreCompile">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildProjectDirectory)\..\..\tools\gen-version.ps1&quot; -OutFile &quot;$(IntermediateOutputPath)VersionInfo.g.cs&quot; -CiVersion &quot;$(APPVEYOR_BUILD_VERSION)&quot;" />
+    <ItemGroup>
+      <Compile Include="$(IntermediateOutputPath)VersionInfo.g.cs" />
+      <FileWrites Include="$(IntermediateOutputPath)VersionInfo.g.cs" />
+    </ItemGroup>
+  </Target>
 </Project>

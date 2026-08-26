@@ -11,5 +11,5 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCulture("")]
 [assembly: ComVisible(false)]
 [assembly: Guid("e1f2a3b4-c5d6-7890-ef01-234567890123")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+// 版本号由构建时 tools/gen-version.ps1 生成的 VersionInfo.g.cs 注入（CI=AppVeyor 版本，本地=git describe）——
+// 此处不能重复声明 AssemblyVersion/AssemblyFileVersion，否则 CS0579 重复特性错误

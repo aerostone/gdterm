@@ -216,7 +216,8 @@ namespace Gdterm.UI
             };
             var auditLogger = new AuditLogger(logsDir, auditConfig);
             GlobalExceptionBridge.Attach(auditLogger);
-            DiagLog.Info("Program.Main", "audit debug defaults enabled; logsDir=" + logsDir);
+            DiagLog.Info("Program.Main", "gdterm v" + (typeof(Program).Assembly.GetName().Version)
+                + "; audit debug defaults enabled; logsDir=" + logsDir);
             var aiConfig = new AiConfiguration
             {
                 ApiEndpoint = "https://api.openai.com/v1",
