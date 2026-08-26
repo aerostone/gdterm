@@ -16,6 +16,7 @@ using Gdterm.Tools;
 using Gdterm.Tunnel;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Diagnostics;
+using Gdterm.UI.Services;
 using TerminalControl = Gdterm.UI.Controls.TerminalControl;
 
 namespace Gdterm.UI.Forms
