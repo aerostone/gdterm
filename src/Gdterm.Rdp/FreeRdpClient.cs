@@ -44,7 +44,9 @@ namespace Gdterm.Rdp
         private const int ConnectedProbeDelayMs = 2500;
 
         public event EventHandler<RdpStateChangedEventArgs> StateChanged;
-        public event EventHandler<FileTransferEventArgs> FileTransferred; // 驱动器重定向由系统完成，无逐文件事件
+#pragma warning disable 0067 // 接口 IRdpClient.FileTransferred 契约要求声明，但 FreeRDP 驱动器重定向由系统完成，无逐文件事件
+        public event EventHandler<FileTransferEventArgs> FileTransferred;
+#pragma warning restore 0067
 
         public FreeRdpClient()
         {

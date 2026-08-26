@@ -33,7 +33,6 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.IO.Ports" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Drawing" />
     <Reference Include="VtNetCore">
@@ -42,7 +41,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="SSH.NET" Version="2024.1.0">
+    <PackageReference Include="SSH.NET" Version="2026.0.0">
       <PrivateAssets>none</PrivateAssets>
     </PackageReference>
   </ItemGroup>
