@@ -32,7 +32,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "密码健康报告";
-            Size = DpiScale.S(700, 550);
+            Size = DpiScale.S(this, 700, 550);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -52,8 +52,8 @@ namespace Gdterm.UI.Forms
                 Text = "健康评分：—",
                 Font = Services.FormFontPolicy.UiFont(+9f, FontStyle.Bold),
                 ForeColor = Color.White,
-                Location = DpiScale.P(15, 10),
-                Size = DpiScale.S(250, 35)
+                Location = DpiScale.P(this, 15, 10),
+                Size = DpiScale.S(this, 250, 35)
             };
 
             _summaryLabel = new Label
@@ -61,8 +61,8 @@ namespace Gdterm.UI.Forms
                 Text = "正在分析...",
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 ForeColor = Color.FromArgb(180, 180, 180),
-                Location = DpiScale.P(15, 48),
-                Size = DpiScale.S(650, 25)
+                Location = DpiScale.P(this, 15, 48),
+                Size = DpiScale.S(this, 650, 25)
             };
 
             headerPanel.Controls.AddRange(new Control[] { _scoreLabel, _summaryLabel });

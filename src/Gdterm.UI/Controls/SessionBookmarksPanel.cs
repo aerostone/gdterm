@@ -273,7 +273,7 @@ namespace Gdterm.UI.Controls
             using (var dlg = new Form())
             {
                 dlg.Text = "添加书签";
-                dlg.Size = DpiScale.S(360, 200);
+                dlg.Size = DpiScale.S(this, 360, 200);
                 dlg.StartPosition = FormStartPosition.CenterParent;
                 dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dlg.MaximizeBox = false;
@@ -282,15 +282,15 @@ namespace Gdterm.UI.Controls
 
                 var nameBox = new TextBox
                 {
-                    Location = DpiScale.P(15, 20),
-                    Size = DpiScale.S(310, 24),
+                    Location = DpiScale.P(this, 15, 20),
+                    Size = DpiScale.S(this, 310, 24),
                     BackColor = Color.FromArgb(50, 50, 50),
                     ForeColor = Color.White
                 };
                 var combo = new ComboBox
                 {
-                    Location = DpiScale.P(15, 55),
-                    Size = DpiScale.S(310, 24),
+                    Location = DpiScale.P(this, 15, 55),
+                    Size = DpiScale.S(this, 310, 24),
                     DropDownStyle = ComboBoxStyle.DropDownList,
                     BackColor = Color.FromArgb(50, 50, 50),
                     ForeColor = Color.White
@@ -303,15 +303,15 @@ namespace Gdterm.UI.Controls
                 {
                     Text = "确定",
                     DialogResult = DialogResult.OK,
-                    Location = DpiScale.P(245, 110),
-                    Size = DpiScale.S(80, 28),
+                    Location = DpiScale.P(this, 245, 110),
+                    Size = DpiScale.S(this, 80, 28),
                     FlatStyle = FlatStyle.Flat,
                     BackColor = Color.FromArgb(0, 122, 204),
                     ForeColor = Color.White
                 };
-                dlg.Controls.Add(new Label { Text = "名称", ForeColor = Color.Silver, Location = DpiScale.P(15, 4), AutoSize = true });
+                dlg.Controls.Add(new Label { Text = "名称", ForeColor = Color.Silver, Location = DpiScale.P(this, 15, 4), AutoSize = true });
                 dlg.Controls.Add(nameBox);
-                dlg.Controls.Add(new Label { Text = "连接", ForeColor = Color.Silver, Location = DpiScale.P(15, 40), AutoSize = true });
+                dlg.Controls.Add(new Label { Text = "连接", ForeColor = Color.Silver, Location = DpiScale.P(this, 15, 40), AutoSize = true });
                 dlg.Controls.Add(combo);
                 dlg.Controls.Add(ok);
                 dlg.AcceptButton = ok;

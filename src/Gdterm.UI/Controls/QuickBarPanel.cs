@@ -273,7 +273,7 @@ namespace Gdterm.UI.Controls
             var addBtn = new Button
             {
                 Text = "+",
-                Size = DpiScale.S(28, 26),
+                Size = DpiScale.S(this, 28, 26),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.FromArgb(100, 100, 100),

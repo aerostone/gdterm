@@ -108,7 +108,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = _isNew ? "新建连接" : $"编辑连接 — {_config.Name}";
-            ClientSize = DpiScale.S(560, 330);
+            ClientSize = DpiScale.S(this, 560, 330);
             // 跟随字体/DPI 自动整体缩放（否则 144dpi 下控件行高变大而窗体不变，底部按钮被挤出可视区）
             AutoScaleMode = AutoScaleMode.Font;
             StartPosition = FormStartPosition.CenterParent;
@@ -203,7 +203,7 @@ namespace Gdterm.UI.Forms
             {
                 Text = "更多选项 ▾",
                 AutoSize = true,
-                Location = DpiScale.P(0, 6),
+                Location = DpiScale.P(this, 0, 6),
                 LinkColor = Color.FromArgb(120, 180, 255),
                 ActiveLinkColor = Color.White
             };
@@ -331,7 +331,7 @@ namespace Gdterm.UI.Forms
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
-                Size = DpiScale.S(80, 30),
+                Size = DpiScale.S(this, 80, 30),
                 Margin = new Padding(0)
             };
             var cancelBtn = new Button
@@ -341,7 +341,7 @@ namespace Gdterm.UI.Forms
                 BackColor = Color.FromArgb(60, 60, 60),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 FlatStyle = FlatStyle.Flat,
-                Size = DpiScale.S(80, 30),
+                Size = DpiScale.S(this, 80, 30),
                 Margin = new Padding(0, 0, 8, 0)
             };
             okBtn.Click += (s, e) => { SaveToConfig(); };

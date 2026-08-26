@@ -137,8 +137,8 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 DrawMode = TabDrawMode.OwnerDrawFixed,
                 SizeMode = TabSizeMode.Fixed,
-                ItemSize = DpiScale.S(120, 24),
-                Padding = DpiScale.P(10, 3)
+                ItemSize = DpiScale.S(this, 120, 24),
+                Padding = DpiScale.P(this, 10, 3)
             };
             _tabControl.DrawItem += OnDrawTab;
             _tabControl.MouseDown += OnTabMouseDown;

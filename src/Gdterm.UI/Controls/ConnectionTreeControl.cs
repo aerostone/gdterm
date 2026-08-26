@@ -146,7 +146,7 @@ namespace Gdterm.UI.Controls
         /// </summary>
         private void BuildImageList()
         {
-            _imageList = new ImageList { ImageSize = DpiScale.S(16, 16), ColorDepth = ColorDepth.Depth32Bit };
+            _imageList = new ImageList { ImageSize = DpiScale.S(this, 16, 16), ColorDepth = ColorDepth.Depth32Bit };
             var names = new[] { "folder", "ssh", "rdp", "serial", "server", "group" };
             foreach (var name in names)
             {

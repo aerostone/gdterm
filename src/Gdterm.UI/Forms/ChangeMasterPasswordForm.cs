@@ -58,7 +58,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "修改主密码";
-            Size = DpiScale.S(500, 380);
+            Size = DpiScale.S(this, 500, 380);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -71,8 +71,8 @@ namespace Gdterm.UI.Forms
                 Text = "修改主密码",
                 Font = Services.FormFontPolicy.UiFont(+5f, FontStyle.Bold),
                 ForeColor = Color.White,
-                Location = DpiScale.P(20, 15),
-                Size = DpiScale.S(440, 30)
+                Location = DpiScale.P(this, 20, 15),
+                Size = DpiScale.S(this, 440, 30)
             };
 
             var tipLabel = new Label
@@ -80,8 +80,8 @@ namespace Gdterm.UI.Forms
                 Text = "修改后，KeePass 密码库 (gdterm.kdbx) 将用新主密码重新加密。\n请妥善保管新密码，丢失将无法找回。",
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(180, 180, 180),
-                Location = DpiScale.P(20, 50),
-                Size = DpiScale.S(440, 40)
+                Location = DpiScale.P(this, 20, 50),
+                Size = DpiScale.S(this, 440, 40)
             };
 
             int labelX = 20;
@@ -97,7 +97,7 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 ForeColor = Color.FromArgb(200, 200, 200),
                 Location = new Point(labelX, row1 + 5),
-                Size = DpiScale.S(85, 25),
+                Size = DpiScale.S(this, 85, 25),
                 TextAlign = ContentAlignment.MiddleRight
             };
             _oldBox = MakePasswordBox(boxX, row1, boxWidth);
@@ -108,7 +108,7 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 ForeColor = Color.FromArgb(200, 200, 200),
                 Location = new Point(labelX, row2 + 5),
-                Size = DpiScale.S(85, 25),
+                Size = DpiScale.S(this, 85, 25),
                 TextAlign = ContentAlignment.MiddleRight
             };
             _newBox = MakePasswordBox(boxX, row2, boxWidth);
@@ -120,7 +120,7 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 ForeColor = Color.FromArgb(200, 200, 200),
                 Location = new Point(labelX, row3 + 5),
-                Size = DpiScale.S(85, 25),
+                Size = DpiScale.S(this, 85, 25),
                 TextAlign = ContentAlignment.MiddleRight
             };
             _confirmBox = MakePasswordBox(boxX, row3, boxWidth);
@@ -139,8 +139,8 @@ namespace Gdterm.UI.Forms
                 Text = "",
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(255, 100, 100),
-                Location = DpiScale.P(20, 290),
-                Size = DpiScale.S(440, 30)
+                Location = DpiScale.P(this, 20, 290),
+                Size = DpiScale.S(this, 440, 30)
             };
 
             var showPwdCheck = new CheckBox
@@ -148,8 +148,8 @@ namespace Gdterm.UI.Forms
                 Text = "显示密码",
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(160, 160, 160),
-                Location = DpiScale.P(20, 255),
-                Size = DpiScale.S(120, 25)
+                Location = DpiScale.P(this, 20, 255),
+                Size = DpiScale.S(this, 120, 25)
             };
             showPwdCheck.CheckedChanged += (s, e) =>
             {
@@ -161,8 +161,8 @@ namespace Gdterm.UI.Forms
             _okButton = new Button
             {
                 Text = "确认修改",
-                Size = DpiScale.S(120, 34),
-                Location = DpiScale.P(245, 320),
+                Size = DpiScale.S(this, 120, 34),
+                Location = DpiScale.P(this, 245, 320),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 BackColor = Color.FromArgb(0, 122, 204),
@@ -173,8 +173,8 @@ namespace Gdterm.UI.Forms
             var cancelButton = new Button
             {
                 Text = "取消",
-                Size = DpiScale.S(100, 34),
-                Location = DpiScale.P(370, 320),
+                Size = DpiScale.S(this, 100, 34),
+                Location = DpiScale.P(this, 370, 320),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 BackColor = Color.FromArgb(60, 60, 60),

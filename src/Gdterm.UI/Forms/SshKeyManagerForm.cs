@@ -32,7 +32,7 @@ namespace Gdterm.UI.Forms
             StartPosition = FormStartPosition.CenterParent;
             MaximizeBox = false;
             MinimizeBox = false;
-            ClientSize = DpiScale.S(560, 420);
+            ClientSize = DpiScale.S(this, 560, 420);
             BackColor = GdtermColorTable.Background;
             ForeColor = GdtermColorTable.Foreground;
             Font = Services.FormFontPolicy.UiFont();
@@ -44,9 +44,9 @@ namespace Gdterm.UI.Forms
             _passphrase = Labeled(ref y, "密钥口令", "");
             _passphrase.UseSystemPasswordChar = true;
 
-            var pathLbl = new Label { Text = "私钥文件", Location = new Point(16, y), Size = DpiScale.S(90, 22), ForeColor = GdtermColorTable.Muted, TextAlign = ContentAlignment.MiddleRight };
-            _keyPath = new TextBox { Location = new Point(116, y), Size = DpiScale.S(320, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, BorderStyle = BorderStyle.FixedSingle };
-            var browse = new Button { Text = "浏览…", Location = new Point(444, y), Size = DpiScale.S(80, 24), FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+            var pathLbl = new Label { Text = "私钥文件", Location = new Point(16, y), Size = DpiScale.S(this, 90, 22), ForeColor = GdtermColorTable.Muted, TextAlign = ContentAlignment.MiddleRight };
+            _keyPath = new TextBox { Location = new Point(116, y), Size = DpiScale.S(this, 320, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, BorderStyle = BorderStyle.FixedSingle };
+            var browse = new Button { Text = "浏览…", Location = new Point(444, y), Size = DpiScale.S(this, 80, 24), FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
             browse.FlatAppearance.BorderColor = GdtermColorTable.Border;
             browse.Click += (s, e) =>
             {
@@ -67,11 +67,11 @@ namespace Gdterm.UI.Forms
             Controls.Add(pathLbl); Controls.Add(_keyPath); Controls.Add(browse);
             y += 34;
 
-            var prevLbl = new Label { Text = "预览", Location = new Point(16, y), Size = DpiScale.S(90, 22), ForeColor = GdtermColorTable.Muted, TextAlign = ContentAlignment.MiddleRight };
+            var prevLbl = new Label { Text = "预览", Location = new Point(16, y), Size = DpiScale.S(this, 90, 22), ForeColor = GdtermColorTable.Muted, TextAlign = ContentAlignment.MiddleRight };
             _preview = new TextBox
             {
                 Location = new Point(116, y),
-                Size = DpiScale.S(408, 180),
+                Size = DpiScale.S(this, 408, 180),
                 Multiline = true,
                 ScrollBars = ScrollBars.Vertical,
                 ReadOnly = true,
@@ -82,10 +82,10 @@ namespace Gdterm.UI.Forms
             };
             Controls.Add(prevLbl); Controls.Add(_preview);
 
-            var ok = new Button { Text = "导入到密码库", Location = DpiScale.P(300, 380), Size = DpiScale.S(120, 28), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0,120,50), ForeColor = Color.White };
+            var ok = new Button { Text = "导入到密码库", Location = DpiScale.P(this, 300, 380), Size = DpiScale.S(this, 120, 28), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0,120,50), ForeColor = Color.White };
             ok.FlatAppearance.BorderSize = 0;
             ok.Click += OnImport;
-            var cancel = new Button { Text = "关闭", DialogResult = DialogResult.Cancel, Location = DpiScale.P(430, 380), Size = DpiScale.S(90, 28), FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+            var cancel = new Button { Text = "关闭", DialogResult = DialogResult.Cancel, Location = DpiScale.P(this, 430, 380), Size = DpiScale.S(this, 90, 28), FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
             cancel.FlatAppearance.BorderColor = GdtermColorTable.Border;
             Controls.Add(ok); Controls.Add(cancel);
             CancelButton = cancel;
@@ -134,8 +134,8 @@ namespace Gdterm.UI.Forms
 
         private TextBox Labeled(ref int y, string label, string value)
         {
-            var lb = new Label { Text = label, Location = new Point(16, y), Size = DpiScale.S(90, 22), ForeColor = GdtermColorTable.Muted, TextAlign = ContentAlignment.MiddleRight };
-            var tb = new TextBox { Location = new Point(116, y), Size = DpiScale.S(408, 24), Text = value ?? "", BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, BorderStyle = BorderStyle.FixedSingle };
+            var lb = new Label { Text = label, Location = new Point(16, y), Size = DpiScale.S(this, 90, 22), ForeColor = GdtermColorTable.Muted, TextAlign = ContentAlignment.MiddleRight };
+            var tb = new TextBox { Location = new Point(116, y), Size = DpiScale.S(this, 408, 24), Text = value ?? "", BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, BorderStyle = BorderStyle.FixedSingle };
             Controls.Add(lb); Controls.Add(tb);
             y += 34;
             return tb;

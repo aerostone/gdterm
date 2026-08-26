@@ -38,7 +38,7 @@ namespace Gdterm.UI.Controls
                 Font = Services.FormFontPolicy.UiFont(+11f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(78, 201, 176),
                 AutoSize = true,
-                Location = DpiScale.P(15, 15)
+                Location = DpiScale.P(this, 15, 15)
             };
 
             _lblStats = new Label
@@ -47,14 +47,14 @@ namespace Gdterm.UI.Controls
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(150, 150, 150),
                 AutoSize = true,
-                Location = DpiScale.P(15, 55)
+                Location = DpiScale.P(this, 15, 55)
             };
 
             _btnScan = new Button
             {
                 Text = "开始扫描",
-                Size = DpiScale.S(100, 35),
-                Location = DpiScale.P(500, 15),
+                Size = DpiScale.S(this, 100, 35),
+                Location = DpiScale.P(this, 500, 15),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White,
@@ -67,8 +67,8 @@ namespace Gdterm.UI.Controls
             _btnStop = new Button
             {
                 Text = "停止",
-                Size = DpiScale.S(70, 35),
-                Location = DpiScale.P(610, 15),
+                Size = DpiScale.S(this, 70, 35),
+                Location = DpiScale.P(this, 610, 15),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(200, 50, 50),
                 ForeColor = Color.White,
@@ -217,7 +217,7 @@ namespace Gdterm.UI.Controls
             var form = new Form
             {
                 Text = "发现详情",
-                Size = DpiScale.S(600, 400),
+                Size = DpiScale.S(this, 600, 400),
                 StartPosition = FormStartPosition.CenterParent,
                 BackColor = Color.FromArgb(30, 30, 30),
                 ForeColor = Color.FromArgb(204, 204, 204),

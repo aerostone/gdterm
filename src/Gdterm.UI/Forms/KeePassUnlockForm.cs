@@ -34,7 +34,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "解锁密码库";
-            Size = DpiScale.S(420, 260);
+            Size = DpiScale.S(this, 420, 260);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -47,8 +47,8 @@ namespace Gdterm.UI.Forms
             {
                 Text = "🔐",
                 Font = new Font("Segoe UI Emoji", 28f),
-                Location = DpiScale.P(20, 15),
-                Size = DpiScale.S(55, 55),
+                Location = DpiScale.P(this, 20, 15),
+                Size = DpiScale.S(this, 55, 55),
                 TextAlign = ContentAlignment.MiddleCenter
             };
 
@@ -57,8 +57,8 @@ namespace Gdterm.UI.Forms
                 Text = "密码库已锁定",
                 Font = Services.FormFontPolicy.UiFont(+4f, FontStyle.Bold),
                 ForeColor = Color.White,
-                Location = DpiScale.P(80, 18),
-                Size = DpiScale.S(300, 30)
+                Location = DpiScale.P(this, 80, 18),
+                Size = DpiScale.S(this, 300, 30)
             };
 
             _statusLabel = new Label
@@ -66,8 +66,8 @@ namespace Gdterm.UI.Forms
                 Text = "请输入主密码以解锁 KeePass 密码库",
                 Font = Services.FormFontPolicy.UiFont(+0.5f),
                 ForeColor = Color.FromArgb(180, 180, 180),
-                Location = DpiScale.P(80, 48),
-                Size = DpiScale.S(300, 22)
+                Location = DpiScale.P(this, 80, 48),
+                Size = DpiScale.S(this, 300, 22)
             };
 
             // 密码输入
@@ -76,14 +76,14 @@ namespace Gdterm.UI.Forms
                 Text = "主密码：",
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Location = DpiScale.P(20, 90),
-                Size = DpiScale.S(70, 25)
+                Location = DpiScale.P(this, 20, 90),
+                Size = DpiScale.S(this, 70, 25)
             };
 
             _passwordBox = new TextBox
             {
-                Location = DpiScale.P(95, 87),
-                Size = DpiScale.S(290, 28),
+                Location = DpiScale.P(this, 95, 87),
+                Size = DpiScale.S(this, 290, 28),
                 Font = new Font("Consolas", 11f),
                 UseSystemPasswordChar = true,
                 BackColor = Color.FromArgb(50, 50, 50),
@@ -101,16 +101,16 @@ namespace Gdterm.UI.Forms
                 Text = "",
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(255, 100, 100),
-                Location = DpiScale.P(20, 120),
-                Size = DpiScale.S(370, 25)
+                Location = DpiScale.P(this, 20, 120),
+                Size = DpiScale.S(this, 370, 25)
             };
 
             // 按钮
             _unlockButton = new Button
             {
                 Text = "解锁",
-                Size = DpiScale.S(100, 34),
-                Location = DpiScale.P(285, 155),
+                Size = DpiScale.S(this, 100, 34),
+                Location = DpiScale.P(this, 285, 155),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 BackColor = Color.FromArgb(0, 122, 204),
@@ -121,8 +121,8 @@ namespace Gdterm.UI.Forms
             var cancelButton = new Button
             {
                 Text = "取消",
-                Size = DpiScale.S(80, 34),
-                Location = DpiScale.P(195, 155),
+                Size = DpiScale.S(this, 80, 34),
+                Location = DpiScale.P(this, 195, 155),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 BackColor = Color.FromArgb(60, 60, 60),

@@ -235,14 +235,14 @@ namespace Gdterm.UI.Controls
             foreach (var ph in placeholders)
             {
                 var lbl = new Label { Text = ph + ":", Location = new Point(15, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = Color.FromArgb(204, 204, 204) };
-                var txt = new TextBox { Location = new Point(100, y), Size = DpiScale.S(260, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
+                var txt = new TextBox { Location = new Point(100, y), Size = DpiScale.S(this, 260, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
                 form.Controls.AddRange(new Control[] { lbl, txt });
                 inputs[ph] = txt;
                 y += 36;
             }
 
-            var btnOk = new Button { Text = "执行", Size = DpiScale.S(80, 28), Location = new Point(190, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White };
-            var btnCancel = new Button { Text = "取消", Size = DpiScale.S(80, 28), Location = new Point(280, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(60, 60, 60), ForeColor = Color.FromArgb(204, 204, 204) };
+            var btnOk = new Button { Text = "执行", Size = DpiScale.S(this, 80, 28), Location = new Point(190, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White };
+            var btnCancel = new Button { Text = "取消", Size = DpiScale.S(this, 80, 28), Location = new Point(280, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(60, 60, 60), ForeColor = Color.FromArgb(204, 204, 204) };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
 

@@ -28,7 +28,7 @@ namespace Gdterm.UI.Controls
             Text = "快速跳转连接 (Ctrl+Shift+K)";
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
             StartPosition = FormStartPosition.CenterParent;
-            ClientSize = DpiScale.S(520, 360);
+            ClientSize = DpiScale.S(this, 520, 360);
             BackColor = GdtermColorTable.Background;
             ForeColor = GdtermColorTable.Foreground;
             KeyPreview = true;

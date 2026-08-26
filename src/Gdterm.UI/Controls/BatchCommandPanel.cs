@@ -51,15 +51,15 @@ namespace Gdterm.UI.Controls
             // ── 顶部：命令输入 ──
             var topPanel = new Panel { Dock = DockStyle.Top, Height = 70, BackColor = Color.FromArgb(37, 37, 38), Padding = new Padding(8) };
 
-            var lblCmd = new Label { Text = "命令:", Location = DpiScale.P(8, 8), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204) };
-            _txtCommand = new TextBox { Location = DpiScale.P(8, 28), Size = DpiScale.S(500, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
+            var lblCmd = new Label { Text = "命令:", Location = DpiScale.P(this, 8, 8), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204) };
+            _txtCommand = new TextBox { Location = DpiScale.P(this, 8, 28), Size = DpiScale.S(this, 500, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
             _txtCommand.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { ExecuteCommand(); e.SuppressKeyPress = true; } };
 
-            _btnExecute = new Button { Text = "▶ 执行", Location = DpiScale.P(520, 26), Size = DpiScale.S(80, 28), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White, Font = font };
+            _btnExecute = new Button { Text = "▶ 执行", Location = DpiScale.P(this, 520, 26), Size = DpiScale.S(this, 80, 28), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White, Font = font };
             _btnExecute.FlatAppearance.BorderSize = 0;
             _btnExecute.Click += (s, e) => ExecuteCommand();
 
-            _lblStatus = new Label { Text = "", Location = DpiScale.P(610, 30), AutoSize = true, Font = font, ForeColor = Color.FromArgb(130, 130, 130) };
+            _lblStatus = new Label { Text = "", Location = DpiScale.P(this, 610, 30), AutoSize = true, Font = font, ForeColor = Color.FromArgb(130, 130, 130) };
 
             topPanel.Controls.AddRange(new Control[] { lblCmd, _txtCommand, _btnExecute, _lblStatus });
 
@@ -67,10 +67,10 @@ namespace Gdterm.UI.Controls
             var leftPanel = new Panel { Dock = DockStyle.Left, Width = 250, BackColor = Color.FromArgb(37, 37, 38), Padding = new Padding(4) };
 
             var leftHeader = new Panel { Dock = DockStyle.Top, Height = 32, BackColor = Color.FromArgb(37, 37, 38) };
-            _btnSelectAll = new Button { Text = "全选", Location = DpiScale.P(4, 4), AutoSize = true, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = Services.FormFontPolicy.UiFont(-1f) };
+            _btnSelectAll = new Button { Text = "全选", Location = DpiScale.P(this, 4, 4), AutoSize = true, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = Services.FormFontPolicy.UiFont(-1f) };
             _btnSelectAll.FlatAppearance.BorderSize = 0;
             _btnSelectAll.Click += (s, e) => { foreach (ListViewItem item in _lvSessions.Items) item.Checked = true; };
-            var btnDeselect = new Button { Text = "取消", Location = DpiScale.P(64, 4), AutoSize = true, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = Services.FormFontPolicy.UiFont(-1f) };
+            var btnDeselect = new Button { Text = "取消", Location = DpiScale.P(this, 64, 4), AutoSize = true, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = Services.FormFontPolicy.UiFont(-1f) };
             btnDeselect.FlatAppearance.BorderSize = 0;
             btnDeselect.Click += (s, e) => { foreach (ListViewItem item in _lvSessions.Items) item.Checked = false; };
             leftHeader.Controls.AddRange(new Control[] { _btnSelectAll, btnDeselect });

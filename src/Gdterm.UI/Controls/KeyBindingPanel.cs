@@ -50,13 +50,13 @@ namespace Gdterm.UI.Controls
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 AutoSize = true,
-                Location = DpiScale.P(10, 13)
+                Location = DpiScale.P(this, 10, 13)
             };
 
             _cmbPreset = new ComboBox
             {
-                Location = DpiScale.P(55, 10),
-                Size = DpiScale.S(200, 25),
+                Location = DpiScale.P(this, 55, 10),
+                Size = DpiScale.S(this, 200, 25),
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -73,7 +73,7 @@ namespace Gdterm.UI.Controls
                 Font = Services.FormFontPolicy.UiFont(-1f),
                 ForeColor = Color.FromArgb(130, 130, 130),
                 AutoSize = true,
-                Location = DpiScale.P(270, 13)
+                Location = DpiScale.P(this, 270, 13)
             };
 
             _chkIntercept = new CheckBox
@@ -82,7 +82,7 @@ namespace Gdterm.UI.Controls
                 Font = Services.FormFontPolicy.UiFont(-1f),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 AutoSize = true,
-                Location = DpiScale.P(480, 12),
+                Location = DpiScale.P(this, 480, 12),
                 Checked = _config.InterceptMode
             };
             _chkIntercept.CheckedChanged += (s, e) => { _config.InterceptMode = _chkIntercept.Checked; _store.Save(); };
@@ -145,7 +145,7 @@ namespace Gdterm.UI.Controls
             return new Button
             {
                 Text = text,
-                Size = DpiScale.S(70, 30),
+                Size = DpiScale.S(this, 70, 30),
                 Location = new Point(x, 5),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(45, 45, 48),
@@ -293,7 +293,7 @@ namespace Gdterm.UI.Controls
             var form = new Form
             {
                 Text = existing == null ? "添加快捷键" : "编辑快捷键",
-                Size = DpiScale.S(450, 380),
+                Size = DpiScale.S(this, 450, 380),
                 StartPosition = FormStartPosition.CenterParent,
                 BackColor = Color.FromArgb(30, 30, 30),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -306,28 +306,28 @@ namespace Gdterm.UI.Controls
             var font = Services.FormFontPolicy.UiFont();
 
             var lblName = new Label { Text = "名称:", Location = new Point(15, y), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204) };
-            var txtName = new TextBox { Location = new Point(100, y - 3), Size = DpiScale.S(310, 25), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = font };
+            var txtName = new TextBox { Location = new Point(100, y - 3), Size = DpiScale.S(this, 310, 25), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = font };
             y += 35;
 
             var lblCombo = new Label { Text = "按键组合:", Location = new Point(15, y), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204) };
             var chkCtrl = new CheckBox { Text = "Ctrl", Location = new Point(100, y - 2), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204) };
             var chkAlt = new CheckBox { Text = "Alt", Location = new Point(160, y - 2), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204) };
             var chkShift = new CheckBox { Text = "Shift", Location = new Point(210, y - 2), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204) };
-            var cmbKey = new ComboBox { Location = new Point(270, y - 3), Size = DpiScale.S(140, 25), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = font, FlatStyle = FlatStyle.Flat };
+            var cmbKey = new ComboBox { Location = new Point(270, y - 3), Size = DpiScale.S(this, 140, 25), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = font, FlatStyle = FlatStyle.Flat };
             FillKeyCombo(cmbKey);
             y += 35;
 
             var lblType = new Label { Text = "类型:", Location = new Point(15, y), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204) };
-            var cmbType = new ComboBox { Location = new Point(100, y - 3), Size = DpiScale.S(140, 25), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = font, FlatStyle = FlatStyle.Flat };
+            var cmbType = new ComboBox { Location = new Point(100, y - 3), Size = DpiScale.S(this, 140, 25), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = font, FlatStyle = FlatStyle.Flat };
             cmbType.Items.AddRange(new object[] { "Sequence (转义序列)", "Text (字面文本)", "Action (内置动作)" });
             y += 35;
 
             var lblValue = new Label { Text = "发送内容:", Location = new Point(15, y), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204) };
-            var txtValue = new TextBox { Location = new Point(100, y - 3), Size = DpiScale.S(310, 25), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f) };
+            var txtValue = new TextBox { Location = new Point(100, y - 3), Size = DpiScale.S(this, 310, 25), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f) };
             y += 35;
 
             var lblDesc = new Label { Text = "描述:", Location = new Point(15, y), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204) };
-            var txtDesc = new TextBox { Location = new Point(100, y - 3), Size = DpiScale.S(310, 25), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = font };
+            var txtDesc = new TextBox { Location = new Point(100, y - 3), Size = DpiScale.S(this, 310, 25), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = font };
             y += 10;
 
             // 提示
@@ -335,7 +335,7 @@ namespace Gdterm.UI.Controls
             {
                 Text = "Sequence 示例: \\x1b[1;5A (Ctrl+Up)\nText 示例: ls -la\\r\nAction: copy/paste/clear/scroll_up/scroll_down/find",
                 Location = new Point(15, y),
-                Size = DpiScale.S(400, 40),
+                Size = DpiScale.S(this, 400, 40),
                 Font = Services.FormFontPolicy.UiFont(-1f),
                 ForeColor = Color.FromArgb(100, 100, 100)
             };
@@ -344,7 +344,7 @@ namespace Gdterm.UI.Controls
             var btnOk = new Button
             {
                 Text = "确定",
-                Size = DpiScale.S(80, 30),
+                Size = DpiScale.S(this, 80, 30),
                 Location = new Point(250, y),
                 DialogResult = DialogResult.OK,
                 FlatStyle = FlatStyle.Flat,
@@ -355,7 +355,7 @@ namespace Gdterm.UI.Controls
             var btnCancel = new Button
             {
                 Text = "取消",
-                Size = DpiScale.S(80, 30),
+                Size = DpiScale.S(this, 80, 30),
                 Location = new Point(340, y),
                 DialogResult = DialogResult.Cancel,
                 FlatStyle = FlatStyle.Flat,

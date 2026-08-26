@@ -73,7 +73,7 @@ namespace Gdterm.UI.Controls
         {
             return new Button
             {
-                Text = text, Size = DpiScale.S(70, 28), Location = new Point(x, 6),
+                Text = text, Size = DpiScale.S(this, 70, 28), Location = new Point(x, 6),
                 FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.FromArgb(204, 204, 204), Font = Services.FormFontPolicy.UiFont(-0.5f)
             };
@@ -161,7 +161,7 @@ namespace Gdterm.UI.Controls
             var form = new Form
             {
                 Text = existing == null ? "添加高亮规则" : "编辑高亮规则",
-                Size = DpiScale.S(420, 350),
+                Size = DpiScale.S(this, 420, 350),
                 StartPosition = FormStartPosition.CenterParent,
                 BackColor = Color.FromArgb(30, 30, 30),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -189,8 +189,8 @@ namespace Gdterm.UI.Controls
                 chkBold.Checked = existing.Bold;
             }
 
-            var btnOk = new Button { Text = "确定", Size = DpiScale.S(80, 28), Location = new Point(220, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White };
-            var btnCancel = new Button { Text = "取消", Size = DpiScale.S(80, 28), Location = new Point(310, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(60, 60, 60), ForeColor = Color.FromArgb(204, 204, 204) };
+            var btnOk = new Button { Text = "确定", Size = DpiScale.S(this, 80, 28), Location = new Point(220, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White };
+            var btnCancel = new Button { Text = "取消", Size = DpiScale.S(this, 80, 28), Location = new Point(310, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(60, 60, 60), ForeColor = Color.FromArgb(204, 204, 204) };
 
             form.Controls.AddRange(new Control[] { lblName, txtName, lblPattern, txtPattern, chkRegex, chkCase, lblFg, txtFg, lblBg, txtBg, chkBold, btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;

@@ -47,7 +47,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "密码生成器";
-            Size = DpiScale.S(500, 520);
+            Size = DpiScale.S(this, 500, 520);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -61,8 +61,8 @@ namespace Gdterm.UI.Forms
                 Text = "🔑 密码生成器",
                 Font = Services.FormFontPolicy.UiFont(+5f, FontStyle.Bold),
                 ForeColor = Color.White,
-                Location = DpiScale.P(15, 12),
-                Size = DpiScale.S(200, 30)
+                Location = DpiScale.P(this, 15, 12),
+                Size = DpiScale.S(this, 200, 30)
             };
 
             // 密码长度
@@ -71,14 +71,14 @@ namespace Gdterm.UI.Forms
                 Text = "密码长度：",
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Location = DpiScale.P(15, 55),
-                Size = DpiScale.S(80, 25)
+                Location = DpiScale.P(this, 15, 55),
+                Size = DpiScale.S(this, 80, 25)
             };
 
             _lengthSpinner = new NumericUpDown
             {
-                Location = DpiScale.P(100, 53),
-                Size = DpiScale.S(70, 25),
+                Location = DpiScale.P(this, 100, 53),
+                Size = DpiScale.S(this, 70, 25),
                 Minimum = 8,
                 Maximum = 128,
                 Value = 16,
@@ -97,7 +97,7 @@ namespace Gdterm.UI.Forms
                 {
                     Text = len.ToString(),
                     Location = new Point(btnX, 52),
-                    Size = DpiScale.S(40, 26),
+                    Size = DpiScale.S(this, 40, 26),
                     FlatStyle = FlatStyle.Flat,
                     Font = Services.FormFontPolicy.UiFont(),
                     BackColor = Color.FromArgb(60, 60, 60),
@@ -115,8 +115,8 @@ namespace Gdterm.UI.Forms
                 Text = "字符集",
                 Font = Services.FormFontPolicy.UiFont(+0.5f),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Location = DpiScale.P(15, 90),
-                Size = DpiScale.S(455, 100)
+                Location = DpiScale.P(this, 15, 90),
+                Size = DpiScale.S(this, 455, 100)
             };
 
             _upperCheck = CreateCheck("大写字母 (A-Z)", 15, 25, true);
@@ -137,14 +137,14 @@ namespace Gdterm.UI.Forms
                 Text = "生成结果：",
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Location = DpiScale.P(15, 200),
-                Size = DpiScale.S(80, 25)
+                Location = DpiScale.P(this, 15, 200),
+                Size = DpiScale.S(this, 80, 25)
             };
 
             _resultBox = new TextBox
             {
-                Location = DpiScale.P(15, 228),
-                Size = DpiScale.S(350, 35),
+                Location = DpiScale.P(this, 15, 228),
+                Size = DpiScale.S(this, 350, 35),
                 Font = new Font("Consolas", 14f, FontStyle.Bold),
                 BackColor = Color.FromArgb(25, 25, 25),
                 ForeColor = Color.FromArgb(80, 220, 80),
@@ -158,16 +158,16 @@ namespace Gdterm.UI.Forms
                 Text = "强度：—",
                 Font = Services.FormFontPolicy.UiFont(+0.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Location = DpiScale.P(15, 270),
-                Size = DpiScale.S(200, 25)
+                Location = DpiScale.P(this, 15, 270),
+                Size = DpiScale.S(this, 200, 25)
             };
 
             // 操作按钮
             var generateBtn = new Button
             {
                 Text = "🔄 重新生成",
-                Location = DpiScale.P(375, 226),
-                Size = DpiScale.S(95, 38),
+                Location = DpiScale.P(this, 375, 226),
+                Size = DpiScale.S(this, 95, 38),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 BackColor = Color.FromArgb(0, 122, 204),
@@ -178,8 +178,8 @@ namespace Gdterm.UI.Forms
             var copyBtn = new Button
             {
                 Text = "📋 复制",
-                Location = DpiScale.P(375, 268),
-                Size = DpiScale.S(95, 38),
+                Location = DpiScale.P(this, 375, 268),
+                Size = DpiScale.S(this, 95, 38),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 BackColor = Color.FromArgb(60, 130, 60),
@@ -190,8 +190,8 @@ namespace Gdterm.UI.Forms
             var generate10Btn = new Button
             {
                 Text = "批量生成 10 个",
-                Location = DpiScale.P(15, 300),
-                Size = DpiScale.S(120, 30),
+                Location = DpiScale.P(this, 15, 300),
+                Size = DpiScale.S(this, 120, 30),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(60, 60, 60),
@@ -205,14 +205,14 @@ namespace Gdterm.UI.Forms
                 Text = "本次生成记录（双击复制）：",
                 Font = Services.FormFontPolicy.UiFont(+0.5f),
                 ForeColor = Color.FromArgb(180, 180, 180),
-                Location = DpiScale.P(15, 340),
-                Size = DpiScale.S(250, 22)
+                Location = DpiScale.P(this, 15, 340),
+                Size = DpiScale.S(this, 250, 22)
             };
 
             _historyList = new ListBox
             {
-                Location = DpiScale.P(15, 365),
-                Size = DpiScale.S(455, 105),
+                Location = DpiScale.P(this, 15, 365),
+                Size = DpiScale.S(this, 455, 105),
                 Font = new Font("Consolas", 10f),
                 BackColor = Color.FromArgb(25, 25, 25),
                 ForeColor = Color.FromArgb(200, 200, 200),
@@ -236,7 +236,7 @@ namespace Gdterm.UI.Forms
             {
                 Text = text,
                 Location = new Point(x, y),
-                Size = DpiScale.S(220, 22),
+                Size = DpiScale.S(this, 220, 22),
                 Font = Services.FormFontPolicy.UiFont(+0.5f),
                 ForeColor = Color.FromArgb(200, 200, 200),
                 Checked = isChecked

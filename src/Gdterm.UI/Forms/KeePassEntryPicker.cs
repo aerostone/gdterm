@@ -33,7 +33,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "选择凭据";
-            Size = DpiScale.S(520, 420);
+            Size = DpiScale.S(this, 520, 420);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;

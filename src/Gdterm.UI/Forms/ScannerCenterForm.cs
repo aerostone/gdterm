@@ -50,8 +50,8 @@ namespace Gdterm.UI.Forms
 
             Text = "扫描中心（插件）";
             StartPosition = FormStartPosition.CenterParent;
-            Size = DpiScale.S(960, 640);
-            MinimumSize = DpiScale.S(780, 520);
+            Size = DpiScale.S(this, 960, 640);
+            MinimumSize = DpiScale.S(this, 780, 520);
 
             BuildUi();
             Gdterm.UI.Services.FormFontPolicy.Apply(this);

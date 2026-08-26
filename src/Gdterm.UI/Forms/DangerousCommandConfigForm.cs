@@ -38,7 +38,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "危险命令规则配置";
-            Size = DpiScale.S(800, 550);
+            Size = DpiScale.S(this, 800, 550);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -82,8 +82,8 @@ namespace Gdterm.UI.Forms
             // 规则列表
             _ruleList = new ListView
             {
-                Location = DpiScale.P(0, 28),
-                Size = DpiScale.S(784, 280),
+                Location = DpiScale.P(this, 0, 28),
+                Size = DpiScale.S(this, 784, 280),
                 View = View.Details,
                 FullRowSelect = true,
                 GridLines = true,
@@ -110,8 +110,8 @@ namespace Gdterm.UI.Forms
                 Text = "白名单（豁免命令）",
                 Font = Services.FormFontPolicy.UiFont(+0.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Location = DpiScale.P(5, 315),
-                Size = DpiScale.S(200, 22),
+                Location = DpiScale.P(this, 5, 315),
+                Size = DpiScale.S(this, 200, 22),
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left
             };
 
@@ -119,8 +119,8 @@ namespace Gdterm.UI.Forms
             var btnAddWhitelist = new Button
             {
                 Text = "添加",
-                Size = DpiScale.S(60, 24),
-                Location = DpiScale.P(5, 340),
+                Size = DpiScale.S(this, 60, 24),
+                Location = DpiScale.P(this, 5, 340),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(-0.5f),
                 BackColor = Color.FromArgb(0, 122, 204),
@@ -132,8 +132,8 @@ namespace Gdterm.UI.Forms
             var btnRemoveWhitelist = new Button
             {
                 Text = "移除",
-                Size = DpiScale.S(60, 24),
-                Location = DpiScale.P(70, 340),
+                Size = DpiScale.S(this, 60, 24),
+                Location = DpiScale.P(this, 70, 340),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(-0.5f),
                 BackColor = Color.FromArgb(80, 40, 40),
@@ -145,8 +145,8 @@ namespace Gdterm.UI.Forms
             // 白名单列表
             _whitelistBox = new ListBox
             {
-                Location = DpiScale.P(5, 370),
-                Size = DpiScale.S(770, 100),
+                Location = DpiScale.P(this, 5, 370),
+                Size = DpiScale.S(this, 770, 100),
                 Font = new Font("Consolas", 9.5f),
                 BackColor = Color.FromArgb(25, 25, 25),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -158,8 +158,8 @@ namespace Gdterm.UI.Forms
             var separator = new Label
             {
                 BorderStyle = BorderStyle.Fixed3D,
-                Location = DpiScale.P(5, 310),
-                Size = DpiScale.S(770, 2),
+                Location = DpiScale.P(this, 5, 310),
+                Size = DpiScale.S(this, 770, 2),
                 Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
             };
 
@@ -405,7 +405,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "添加自定义规则";
-            Size = DpiScale.S(450, 400);
+            Size = DpiScale.S(this, 450, 400);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -434,7 +434,7 @@ namespace Gdterm.UI.Forms
             _patternTypeCombo = new ComboBox
             {
                 Location = new Point(boxX, y),
-                Size = DpiScale.S(150, 22),
+                Size = DpiScale.S(this, 150, 22),
                 Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -458,7 +458,7 @@ namespace Gdterm.UI.Forms
             _levelCombo = new ComboBox
             {
                 Location = new Point(boxX, y),
-                Size = DpiScale.S(150, 22),
+                Size = DpiScale.S(this, 150, 22),
                 Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -482,7 +482,7 @@ namespace Gdterm.UI.Forms
             _categoryCombo = new ComboBox
             {
                 Location = new Point(boxX, y),
-                Size = DpiScale.S(200, 22),
+                Size = DpiScale.S(this, 200, 22),
                 Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -528,7 +528,7 @@ namespace Gdterm.UI.Forms
             {
                 Text = "启用此规则",
                 Location = new Point(boxX, y),
-                Size = DpiScale.S(150, 22),
+                Size = DpiScale.S(this, 150, 22),
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 Checked = true
@@ -540,7 +540,7 @@ namespace Gdterm.UI.Forms
             var okButton = new Button
             {
                 Text = "确定",
-                Size = DpiScale.S(80, 30),
+                Size = DpiScale.S(this, 80, 30),
                 Location = new Point(boxX + boxW - 170, y),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(),
@@ -552,7 +552,7 @@ namespace Gdterm.UI.Forms
             var cancelButton = new Button
             {
                 Text = "取消",
-                Size = DpiScale.S(80, 30),
+                Size = DpiScale.S(this, 80, 30),
                 Location = new Point(boxX + boxW - 80, y),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(),
@@ -608,7 +608,7 @@ namespace Gdterm.UI.Forms
         public TextInputForm(string title, string prompt)
         {
             Text = title;
-            Size = DpiScale.S(400, 160);
+            Size = DpiScale.S(this, 400, 160);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -621,14 +621,14 @@ namespace Gdterm.UI.Forms
                 Text = prompt,
                 Font = Services.FormFontPolicy.UiFont(+0.5f),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Location = DpiScale.P(15, 12),
-                Size = DpiScale.S(360, 22)
+                Location = DpiScale.P(this, 15, 12),
+                Size = DpiScale.S(this, 360, 22)
             };
 
             _inputBox = new TextBox
             {
-                Location = DpiScale.P(15, 40),
-                Size = DpiScale.S(355, 24),
+                Location = DpiScale.P(this, 15, 40),
+                Size = DpiScale.S(this, 355, 24),
                 Font = new Font("Consolas", 10f),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -638,8 +638,8 @@ namespace Gdterm.UI.Forms
             var okButton = new Button
             {
                 Text = "确定",
-                Size = DpiScale.S(75, 28),
-                Location = DpiScale.P(215, 75),
+                Size = DpiScale.S(this, 75, 28),
+                Location = DpiScale.P(this, 215, 75),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(0, 122, 204),
@@ -650,8 +650,8 @@ namespace Gdterm.UI.Forms
             var cancelButton = new Button
             {
                 Text = "取消",
-                Size = DpiScale.S(75, 28),
-                Location = DpiScale.P(295, 75),
+                Size = DpiScale.S(this, 75, 28),
+                Location = DpiScale.P(this, 295, 75),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(60, 60, 60),

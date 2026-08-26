@@ -31,7 +31,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "KeePass 密码管理器";
-            Size = DpiScale.S(700, 500);
+            Size = DpiScale.S(this, 700, 500);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -405,7 +405,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "添加密码条目";
-            ClientSize = DpiScale.S(420, 470);
+            ClientSize = DpiScale.S(this, 420, 470);
             // 跟随字体/DPI 自动整体缩放（绝对定位在 11pt@144dpi 下会重叠/溢出）
             AutoScaleMode = AutoScaleMode.Font;
             StartPosition = FormStartPosition.CenterParent;

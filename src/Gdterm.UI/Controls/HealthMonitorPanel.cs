@@ -84,7 +84,7 @@ namespace Gdterm.UI.Controls
             {
                 Location = new Point(x, 6),
                 AutoSize = false,
-                Size = DpiScale.S(140, 65),
+                Size = DpiScale.S(this, 140, 65),
                 Font = new Font("Consolas", 14f, FontStyle.Bold),
                 ForeColor = valueColor,
                 Text = value,

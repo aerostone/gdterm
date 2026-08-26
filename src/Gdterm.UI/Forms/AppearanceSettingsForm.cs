@@ -44,7 +44,7 @@ namespace Gdterm.UI.Forms
             MinimizeBox = false;
             ShowInTaskbar = false;
             // 高/低 DPI 自适应
-            ClientSize = DpiScale.S(440, 492);
+            ClientSize = DpiScale.S(this, 440, 492);
             BackColor = Color.FromArgb(32, 32, 34);
             ForeColor = Color.FromArgb(220, 220, 220);
             Font = Services.FormFontPolicy.UiFont();
@@ -248,7 +248,7 @@ namespace Gdterm.UI.Forms
             {
                 Text = "AaBbCc 0123 预览 Preview",
                 Location = new Point(16, y),
-                Size = DpiScale.S(400, 60),
+                Size = DpiScale.S(this, 400, 60),
                 BackColor = Color.FromArgb(12, 12, 12),
                 ForeColor = Color.FromArgb(0, 255, 128),
                 TextAlign = ContentAlignment.MiddleCenter,
@@ -265,7 +265,7 @@ namespace Gdterm.UI.Forms
                 Text = "保存",
                 DialogResult = DialogResult.OK,
                 Location = new Point(240, y),
-                Size = DpiScale.S(88, 30),
+                Size = DpiScale.S(this, 88, 30),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White
@@ -301,7 +301,7 @@ namespace Gdterm.UI.Forms
                 Text = "取消",
                 DialogResult = DialogResult.Cancel,
                 Location = new Point(336, y),
-                Size = DpiScale.S(88, 30),
+                Size = DpiScale.S(this, 88, 30),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(60, 60, 64),
                 ForeColor = Color.White

@@ -65,7 +65,7 @@ namespace Gdterm.UI.Controls
         {
             return new Button
             {
-                Text = text, Size = DpiScale.S(75, 28), Location = new Point(x, 6),
+                Text = text, Size = DpiScale.S(this, 75, 28), Location = new Point(x, 6),
                 FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.FromArgb(204, 204, 204), Font = Services.FormFontPolicy.UiFont(-0.5f)
             };
@@ -131,7 +131,7 @@ namespace Gdterm.UI.Controls
             var form = new Form
             {
                 Text = existing == null ? "添加登录脚本" : "编辑登录脚本",
-                Size = DpiScale.S(550, 450),
+                Size = DpiScale.S(this, 550, 450),
                 StartPosition = FormStartPosition.CenterParent,
                 BackColor = Color.FromArgb(30, 30, 30),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -151,7 +151,7 @@ namespace Gdterm.UI.Controls
             var lblSteps = Lbl("步骤:", 12, y, form); y += 3;
             var lvSteps = new ListView
             {
-                Location = new Point(100, y), Size = DpiScale.S(410, 200),
+                Location = new Point(100, y), Size = DpiScale.S(this, 410, 200),
                 View = View.Details, FullRowSelect = true,
                 BackColor = Color.FromArgb(37, 37, 38), ForeColor = Color.FromArgb(204, 204, 204),
                 Font = new Font("Consolas", 8.5f), BorderStyle = BorderStyle.FixedSingle
@@ -164,13 +164,13 @@ namespace Gdterm.UI.Controls
             y += 210;
 
             // 步骤操作按钮
-            var btnAddStep = new Button { Text = "+", Location = new Point(100, y), Size = DpiScale.S(28, 24), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(78, 201, 176) };
+            var btnAddStep = new Button { Text = "+", Location = new Point(100, y), Size = DpiScale.S(this, 28, 24), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(78, 201, 176) };
             btnAddStep.FlatAppearance.BorderSize = 0;
-            var btnDelStep = new Button { Text = "−", Location = new Point(132, y), Size = DpiScale.S(28, 24), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(255, 80, 80) };
+            var btnDelStep = new Button { Text = "−", Location = new Point(132, y), Size = DpiScale.S(this, 28, 24), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(255, 80, 80) };
             btnDelStep.FlatAppearance.BorderSize = 0;
-            var btnUp = new Button { Text = "↑", Location = new Point(170, y), Size = DpiScale.S(28, 24), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204) };
+            var btnUp = new Button { Text = "↑", Location = new Point(170, y), Size = DpiScale.S(this, 28, 24), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204) };
             btnUp.FlatAppearance.BorderSize = 0;
-            var btnDown = new Button { Text = "↓", Location = new Point(202, y), Size = DpiScale.S(28, 24), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204) };
+            var btnDown = new Button { Text = "↓", Location = new Point(202, y), Size = DpiScale.S(this, 28, 24), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204) };
             btnDown.FlatAppearance.BorderSize = 0;
             form.Controls.AddRange(new Control[] { btnAddStep, btnDelStep, btnUp, btnDown });
 
@@ -202,8 +202,8 @@ namespace Gdterm.UI.Controls
             };
             y += 40;
 
-            var btnOk = new Button { Text = "确定", Size = DpiScale.S(80, 28), Location = new Point(340, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White };
-            var btnCancel = new Button { Text = "取消", Size = DpiScale.S(80, 28), Location = new Point(430, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(60, 60, 60), ForeColor = Color.FromArgb(204, 204, 204) };
+            var btnOk = new Button { Text = "确定", Size = DpiScale.S(this, 80, 28), Location = new Point(340, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White };
+            var btnCancel = new Button { Text = "取消", Size = DpiScale.S(this, 80, 28), Location = new Point(430, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(60, 60, 60), ForeColor = Color.FromArgb(204, 204, 204) };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
 
@@ -228,21 +228,21 @@ namespace Gdterm.UI.Controls
         {
             var form = new Form
             {
-                Text = "添加步骤", Size = DpiScale.S(350, 220),
+                Text = "添加步骤", Size = DpiScale.S(this, 350, 220),
                 StartPosition = FormStartPosition.CenterParent,
                 BackColor = Color.FromArgb(30, 30, 30), ForeColor = Color.FromArgb(204, 204, 204),
                 FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false
             };
             var font = Services.FormFontPolicy.UiFont();
-            var cmbType = new ComboBox { Location = DpiScale.P(100, 12), Size = DpiScale.S(220, 25), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), FlatStyle = FlatStyle.Flat, Font = font };
+            var cmbType = new ComboBox { Location = DpiScale.P(this, 100, 12), Size = DpiScale.S(this, 220, 25), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), FlatStyle = FlatStyle.Flat, Font = font };
             cmbType.Items.AddRange(new object[] { "Send（发送文本）", "Wait（等待关键词）", "Delay（延时）" });
             cmbType.SelectedIndex = 0;
             Lbl("类型:", 12, 15, form); form.Controls.Add(cmbType);
             var txtValue = Txt(100, 48, 220, form); Lbl("内容:", 12, 51, form);
-            var numTimeout = new NumericUpDown { Location = DpiScale.P(100, 82), Size = DpiScale.S(100, 25), Maximum = 60000, Value = 10000, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = font }; Lbl("超时:", 12, 85, form); form.Controls.Add(numTimeout);
+            var numTimeout = new NumericUpDown { Location = DpiScale.P(this, 100, 82), Size = DpiScale.S(this, 100, 25), Maximum = 60000, Value = 10000, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = font }; Lbl("超时:", 12, 85, form); form.Controls.Add(numTimeout);
 
-            var btnOk = new Button { Text = "确定", Size = DpiScale.S(70, 26), Location = DpiScale.P(170, 140), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White };
-            var btnCancel = new Button { Text = "取消", Size = DpiScale.S(70, 26), Location = DpiScale.P(250, 140), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(60, 60, 60), ForeColor = Color.FromArgb(204, 204, 204) };
+            var btnOk = new Button { Text = "确定", Size = DpiScale.S(this, 70, 26), Location = DpiScale.P(this, 170, 140), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White };
+            var btnCancel = new Button { Text = "取消", Size = DpiScale.S(this, 70, 26), Location = DpiScale.P(this, 250, 140), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(60, 60, 60), ForeColor = Color.FromArgb(204, 204, 204) };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
 

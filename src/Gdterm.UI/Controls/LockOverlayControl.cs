@@ -30,7 +30,7 @@ namespace Gdterm.UI.Controls
             // 中心面板
             var centerPanel = new Panel
             {
-                Size = DpiScale.S(300, 150),
+                Size = DpiScale.S(this, 300, 150),
                 BackColor = Color.White,
                 Location = new Point(
                     (Width - 300) / 2,
@@ -42,8 +42,8 @@ namespace Gdterm.UI.Controls
             _messageLabel = new Label
             {
                 Text = "应用已锁定，请输入主密码解锁",
-                Location = DpiScale.P(20, 20),
-                Size = DpiScale.S(260, 20),
+                Location = DpiScale.P(this, 20, 20),
+                Size = DpiScale.S(this, 260, 20),
                 TextAlign = ContentAlignment.MiddleCenter
             };
             centerPanel.Controls.Add(_messageLabel);
@@ -51,8 +51,8 @@ namespace Gdterm.UI.Controls
             // 密码输入框
             _passwordBox = new TextBox
             {
-                Location = DpiScale.P(20, 60),
-                Size = DpiScale.S(260, 25),
+                Location = DpiScale.P(this, 20, 60),
+                Size = DpiScale.S(this, 260, 25),
                 UseSystemPasswordChar = true
             };
             _passwordBox.KeyDown += (s, e) =>
@@ -68,8 +68,8 @@ namespace Gdterm.UI.Controls
             _unlockButton = new Button
             {
                 Text = "解锁",
-                Location = DpiScale.P(100, 100),
-                Size = DpiScale.S(100, 30)
+                Location = DpiScale.P(this, 100, 100),
+                Size = DpiScale.S(this, 100, 30)
             };
             _unlockButton.Click += (s, e) => OnUnlock();
             centerPanel.Controls.Add(_unlockButton);

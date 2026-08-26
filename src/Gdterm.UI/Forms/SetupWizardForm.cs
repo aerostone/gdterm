@@ -62,8 +62,8 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "gdterm - 首次使用设置";
-            ClientSize = DpiScale.S(560, 480);
-            MinimumSize = DpiScale.S(520, 440);
+            ClientSize = DpiScale.S(this, 560, 480);
+            MinimumSize = DpiScale.S(this, 520, 440);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;

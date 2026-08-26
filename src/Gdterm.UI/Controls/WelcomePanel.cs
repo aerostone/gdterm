@@ -238,7 +238,7 @@ namespace Gdterm.UI.Controls
             {
                 Text = text,
                 AutoSize = true,
-                MinimumSize = DpiScale.S(110, 32),
+                MinimumSize = DpiScale.S(this, 110, 32),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,

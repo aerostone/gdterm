@@ -38,7 +38,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "AI 设置";
-            Size = DpiScale.S(500, 400);
+            Size = DpiScale.S(this, 500, 400);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -52,8 +52,8 @@ namespace Gdterm.UI.Forms
                 Text = "AI 模型配置",
                 Font = Services.FormFontPolicy.UiFont(+4f, FontStyle.Bold),
                 ForeColor = Color.White,
-                Location = DpiScale.P(20, 12),
-                Size = DpiScale.S(200, 30)
+                Location = DpiScale.P(this, 20, 12),
+                Size = DpiScale.S(this, 200, 30)
             };
 
             var subtitleLabel = new Label
@@ -61,8 +61,8 @@ namespace Gdterm.UI.Forms
                 Text = "配置 OpenAI 兼容 API 端点和模型参数",
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(160, 160, 160),
-                Location = DpiScale.P(20, 42),
-                Size = DpiScale.S(400, 20)
+                Location = DpiScale.P(this, 20, 42),
+                Size = DpiScale.S(this, 400, 20)
             };
 
             // 表单区域
@@ -99,7 +99,7 @@ namespace Gdterm.UI.Forms
             {
                 Text = "显示",
                 Location = new Point(boxX + boxW - 60, y),
-                Size = DpiScale.S(55, 22),
+                Size = DpiScale.S(this, 55, 22),
                 Font = Services.FormFontPolicy.UiFont(-0.5f),
                 ForeColor = Color.FromArgb(160, 160, 160)
             };
@@ -127,7 +127,7 @@ namespace Gdterm.UI.Forms
             _maxTokensSpinner = new NumericUpDown
             {
                 Location = new Point(boxX, y),
-                Size = DpiScale.S(120, 22),
+                Size = DpiScale.S(this, 120, 22),
                 Font = new Font("Consolas", 9.5f),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -152,7 +152,7 @@ namespace Gdterm.UI.Forms
             _temperatureSpinner = new NumericUpDown
             {
                 Location = new Point(boxX, y),
-                Size = DpiScale.S(120, 22),
+                Size = DpiScale.S(this, 120, 22),
                 Font = new Font("Consolas", 9.5f),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -171,7 +171,7 @@ namespace Gdterm.UI.Forms
             {
                 BorderStyle = BorderStyle.Fixed3D,
                 Location = new Point(20, y),
-                Size = DpiScale.S(440, 2)
+                Size = DpiScale.S(this, 440, 2)
             };
             Controls.Add(separator);
             y += 15;
@@ -183,7 +183,7 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.UiFont(-0.5f),
                 ForeColor = Color.FromArgb(160, 160, 160),
                 Location = new Point(20, y),
-                Size = DpiScale.S(300, 20)
+                Size = DpiScale.S(this, 300, 20)
             };
             Controls.Add(_statusLabel);
             y += 25;
@@ -192,7 +192,7 @@ namespace Gdterm.UI.Forms
             var saveButton = new Button
             {
                 Text = "保存",
-                Size = DpiScale.S(90, 32),
+                Size = DpiScale.S(this, 90, 32),
                 Location = new Point(boxX + boxW - 190, y),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(+0.5f),
@@ -204,7 +204,7 @@ namespace Gdterm.UI.Forms
             var cancelButton = new Button
             {
                 Text = "取消",
-                Size = DpiScale.S(90, 32),
+                Size = DpiScale.S(this, 90, 32),
                 Location = new Point(boxX + boxW - 90, y),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(+0.5f),
