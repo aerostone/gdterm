@@ -81,8 +81,8 @@ namespace Gdterm.UI.Services
             try
             {
                 _exitFocusButton.Location = new Point(
-                    Math.Max(8, _host.ClientSize.Width - _exitFocusButton.Width - 12),
-                    8);
+                    Math.Max(DpiScale.V(_host, 8), _host.ClientSize.Width - _exitFocusButton.Width - DpiScale.V(_host, 12)),
+                    DpiScale.V(_host, 8));
                 _exitFocusButton.BringToFront();
             }
             catch { }

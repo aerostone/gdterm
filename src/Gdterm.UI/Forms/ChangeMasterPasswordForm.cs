@@ -96,7 +96,7 @@ namespace Gdterm.UI.Forms
                 Text = "当前密码",
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Location = new Point(labelX, row1 + 5),
+                Location = DpiScale.P(this, labelX, row1 + 5),
                 Size = DpiScale.S(this, 85, 25),
                 TextAlign = ContentAlignment.MiddleRight
             };
@@ -107,7 +107,7 @@ namespace Gdterm.UI.Forms
                 Text = "新密码",
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Location = new Point(labelX, row2 + 5),
+                Location = DpiScale.P(this, labelX, row2 + 5),
                 Size = DpiScale.S(this, 85, 25),
                 TextAlign = ContentAlignment.MiddleRight
             };
@@ -119,7 +119,7 @@ namespace Gdterm.UI.Forms
                 Text = "确认新密码",
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Location = new Point(labelX, row3 + 5),
+                Location = DpiScale.P(this, labelX, row3 + 5),
                 Size = DpiScale.S(this, 85, 25),
                 TextAlign = ContentAlignment.MiddleRight
             };
@@ -130,8 +130,8 @@ namespace Gdterm.UI.Forms
                 Text = "密码强度：未输入",
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(140, 140, 140),
-                Location = new Point(boxX, row3 + 40),
-                Size = new Size(boxWidth, DpiScale.V(this, 20))
+                Location = DpiScale.P(this, boxX, row3 + 40),
+                Size = DpiScale.S(this, boxWidth, 20)
             };
 
             _errorLabel = new Label
@@ -200,8 +200,8 @@ namespace Gdterm.UI.Forms
         {
             var box = new TextBox
             {
-                Location = new Point(x, y),
-                Size = new Size(width, DpiScale.V(this, 28)),
+                Location = DpiScale.P(this, x, y),
+                Size = DpiScale.S(this, width, 28),
                 Font = new Font("Consolas", 11f),
                 UseSystemPasswordChar = true,
                 BackColor = Color.FromArgb(50, 50, 50),

@@ -96,7 +96,7 @@ namespace Gdterm.UI.Forms
                 var btn = new Button
                 {
                     Text = len.ToString(),
-                    Location = new Point(btnX, 52),
+                    Location = DpiScale.P(this, btnX, 52),
                     Size = DpiScale.S(this, 40, 26),
                     FlatStyle = FlatStyle.Flat,
                     Font = Services.FormFontPolicy.UiFont(),
@@ -235,7 +235,7 @@ namespace Gdterm.UI.Forms
             var cb = new CheckBox
             {
                 Text = text,
-                Location = new Point(x, y),
+                Location = DpiScale.P(this, x, y),
                 Size = DpiScale.S(this, 220, 22),
                 Font = Services.FormFontPolicy.UiFont(+0.5f),
                 ForeColor = Color.FromArgb(200, 200, 200),
