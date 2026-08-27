@@ -222,13 +222,13 @@ namespace Gdterm.UI.Controls
             var form = new Form
             {
                 Text = "填写变量 — " + cmd.Name,
-                Size = DpiScale.S(form, 400, 40 + placeholders.Count * 40 + 60),
                 StartPosition = FormStartPosition.CenterParent,
                 BackColor = Color.FromArgb(30, 30, 30),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false, MinimizeBox = false
             };
+            form.Size = DpiScale.S(form, 400, 40 + placeholders.Count * 40 + 60);
 
             var inputs = new Dictionary<string, TextBox>();
             int y = 15;
