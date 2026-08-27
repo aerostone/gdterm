@@ -49,6 +49,7 @@ namespace Gdterm.Rdp
         private ConnectionConfig _startConfig;
         private volatile string _detectedLoadBalanceInfo;
         private int _lbRetried;
+        private bool _lbReconnectInProgress;
 
         // hex dump 形式的 routing token 累加器：FreeRDP 把 `Cookie: msts=...` 的 ASCII
         // 拆到每行 dump 末尾，需跨行拼接直到遇到 CR/LF 结束。
@@ -296,6 +297,7 @@ namespace Gdterm.Rdp
             _startDomain = domain;
             _detectedLoadBalanceInfo = null;
             _lbRetried = 0;
+            _lbReconnectInProgress = false;
             _hexTokenAccumulating = false;
             _hexTokenBuffer = null;
 
@@ -389,13 +391,17 @@ namespace Gdterm.Rdp
             AddArg(args, logArgs, CurrentOptions.EnableDesktopComposition ? "+aero" : "-aero");
             AddArg(args, logArgs, CurrentOptions.EnableWallpaper ? "+wallpaper" : "-wallpaper");
             AddArg(args, logArgs, CurrentOptions.EnableMenuAnimations ? "+menu-anims" : "-menu-anims");
-            // 安全层：显式锁定 NLA，禁止 FreeRDP 降级到 legacy RDP security。
-            // NetScaler/LB 堡垒机只认 NLA/TLS（日志铁证：降级后即刻 LOGOFF_BY_USER /
-            // ERRCONNECT_CONNECT_TRANSPORT_FAILED）。仅当用户显式禁用 NLA 时才指定 /sec:tls。
-            if (CurrentOptions.EnableNLA || CurrentOptions.ForceNLA)
+            // 安全层决策（三叉修复核心）：
+            // 1) 已拿到 LB token（预协商捕获或重连中）：直接 /sec:nla + /load-balance-info。
+            //    token 到手说明 LB 环境已确认，无需再降级 legacy RDP 被踢一次。
+            // 2) 用户显式启用 NLA：传 /sec:nla（普通非 LB 环境）。
+            // 3) 其余（无 LB token 且未勾 NLA）：不传 /sec:xxx，自动协商含 legacy RDP，
+            //    让 NetScaler 首连 li==6 时走 legacy RDP security 连到登录界面。
+            // ForceNLA 不再单独触发 /sec:nla（修复「取消 NLA 勾选仍强制 nla」的 bug）。
+            bool haveLbToken = !string.IsNullOrEmpty(CurrentOptions.LoadBalanceInfo);
+            if (haveLbToken || _lbReconnectInProgress || CurrentOptions.EnableNLA)
                 AddArg(args, logArgs, "/sec:nla");
-            else
-                AddArg(args, logArgs, "/sec:tls");
+            // 否则不传任何 /sec:xxx，由 wfreerdp 自动协商（含 legacy RDP）
             if (CurrentOptions.AutoReconnectCount > 0) AddArg(args, logArgs, "/auto-reconnect");
             // 旧版堡垒机/RDP 代理常发送未在能力协商中声明的绘图指令（Cache Bitmap V2 等），
             // wfreerdp 会直接断链："SERVER BUG: The support for this feature was not announced!"
@@ -669,6 +675,9 @@ namespace Gdterm.Rdp
             }
             catch (Exception ex) { RdpLog.Swallowed("FreeRdp.LB", ex); }
             RdpLog.Info("FreeRdp.LB", "auto-reconnect with token, retried=" + _lbRetried);
+            // 重连时必须 /sec:nla，因为首连走 legacy RDP 拿到了 token，
+            // 重连需强制 NLA + /load-balance-info 完成 sticky session 绑定。
+            _lbReconnectInProgress = true;
 
             // 回到 UI 线程重启（Start 会访问控件句柄）
             Action restart = () =>

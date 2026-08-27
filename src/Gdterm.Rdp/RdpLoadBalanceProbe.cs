@@ -31,8 +31,12 @@ namespace Gdterm.Rdp
     {
         private const int DefaultTimeoutMs = 3000;
         private const byte TypeRdpNegReq = 0x01;
-        private const uint ProtoSsl = 0x00000001;
-        private const uint ProtoHybrid = 0x00000002;
+        // wire requestedProtocols 是「位掩码」而非 FreeRDP 内部 enum 值（见 nego.h）。
+        // MS-RDPBCGR 2.2.1.1.1：bit0=RDP(0x01)、bit1=SSL/TLS(0x02)、bit2=HYBRID/NLA(0x04)。
+        // 请求 NLA+TLS+RDP 三路兜底，让 NetScaler 网关按标准协商返回带 routing token 的 CC。
+        private const uint ProtoRdp = 0x00000001;
+        private const uint ProtoSsl = 0x00000002;
+        private const uint ProtoHybrid = 0x00000004;
 
         private static readonly byte[] RoutingTokenPrefix = Encoding.ASCII.GetBytes("Cookie: msts=");
         private static readonly byte[] CookiePrefix = Encoding.ASCII.GetBytes("Cookie: mstshash=");
@@ -167,7 +171,10 @@ namespace Gdterm.Rdp
         {
             const byte li = 6 + 8;           // 固定头(6) + rdpNegData(8)
             const byte tpktLen = 4 + 1 + li; // TPKT 头(4) + LI(1) + 变长(14) = 19
-            const uint requestedProtocols = ProtoHybrid | ProtoSsl;
+            // 三路兜底：RDP(0x01) | TLS(0x02) | NLA(0x04) = 0x07。
+            // 旧代码误用 FreeRDP 内部 enum 值（Hybrid|Ssl=0x03），在 wire 上丢失了 RDP 位，
+            // 且与 NetScaler 预期的位掩码语义不符，导致预协商拿不到 routing token（loadBalanceInfo=<none>）。
+            const uint requestedProtocols = ProtoRdp | ProtoSsl | ProtoHybrid;
 
             var req = new byte[tpktLen];
             req[0] = 0x03;                    // TPKT version
