@@ -42,6 +42,10 @@ namespace Gdterm.UI.Services
 
         public void OnFormClosing(object sender, FormClosingEventArgs e)
         {
+            // 关闭被取消（如退出二次确认用户选了「否」）时不得执行清理，
+            // 否则会把热键/标签/隧道/KeePass/SecurityManager 全部 Dispose，应用随即瘫痪。
+            if (e.Cancel) return;
+
             DiagLog.Try("AppShutdown.SaveSession", () => _sessionState?.Save());
             DiagLog.Try("AppShutdown.Hotkeys", () => _hotkeys?.Dispose());
             DiagLog.Try("AppShutdown.CloseTabs", () => _tabs?.CloseAllTabs());

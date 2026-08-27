@@ -76,7 +76,7 @@ namespace Gdterm.UI.Forms
         private QuickBarPanel _quickBar;
         private WelcomePanel _welcomePanel;
         private NotifyIcon _trayIcon;
-        private bool _closeToTray = true;
+        private bool _confirmExitPending;
 
         public MainForm(
             IConnectionStore connectionStore,
@@ -312,7 +312,7 @@ namespace Gdterm.UI.Forms
                 NewConnection = (s, e) => _openCoord.NewConnection(),
                 ImportConnections = (s, e) => ConnectionImportExportUi.Import(this, _connectionStore, () => _connectionTree.LoadConnections()),
                 ExportConnections = (s, e) => ConnectionImportExportUi.Export(this, _connectionStore),
-                Exit = (s, e) => Close(),
+                Exit = (s, e) => { _confirmExitPending = true; Close(); },
                 OpenLocalTerminal = (s, e) => _tabContainer.OpenLocalTerminal(),
                 OpenSftp = (s, e) => _openCoord.OpenSftpFromActive(),
                 ReconnectActive = (s, e) => _tabContainer.ReconnectActiveTab(),
@@ -428,7 +428,8 @@ namespace Gdterm.UI.Forms
 
             _lockCoord = new LockStateCoordinator(
                 this, _securityManager, _keepassService, _lockOverlay,
-                _tabContainer, _reconnectWatchdog, _auditLogger);
+                _tabContainer, _reconnectWatchdog, _auditLogger,
+                _menuStrip, _statusBar);
         }
 
         public void ApplyGlobalUIFont()
@@ -651,7 +652,7 @@ namespace Gdterm.UI.Forms
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add("退出", null, (s, e) =>
             {
-                _closeToTray = false;
+                _confirmExitPending = true;
                 try { _trayIcon.Visible = false; } catch { }
                 Close();
             });
@@ -695,10 +696,34 @@ namespace Gdterm.UI.Forms
 
         private void MaybeCloseToTray(object sender, FormClosingEventArgs e)
         {
-            if (!_closeToTray || e.CloseReason != CloseReason.UserClosing || _trayIcon == null)
+            // 菜单/托盘「退出」已明确意图，直接放行；用户点标题栏 X 才弹二次确认。
+            if (e.CloseReason != CloseReason.UserClosing)
                 return;
+            if (_confirmExitPending)
+            {
+                // 二次确认通过后放行
+                e.Cancel = false;
+                return;
+            }
+
             e.Cancel = true;
-            WindowState = FormWindowState.Minimized;
+            try
+            {
+                var result = MessageBox.Show(this,
+                    "确定要退出 gdterm 吗？\n\n所有打开的连接会话将被关闭。",
+                    "退出确认",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Question,
+                    MessageBoxDefaultButton.Button2);
+                if (result != DialogResult.Yes)
+                    return;
+            }
+            catch { return; }
+
+            // 用户确认退出：标记后重新 Close，绕过再次确认
+            _confirmExitPending = true;
+            try { if (_trayIcon != null) _trayIcon.Visible = false; } catch { }
+            Close();
         }
 
         /// <summary>Ctrl+Shift+K 快速跳转连接。</summary>

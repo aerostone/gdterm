@@ -23,6 +23,7 @@ namespace Gdterm.UI.Services
         private readonly TabContainerControl _tabs;
         private readonly AutoReconnectWatchdog _watchdog;
         private readonly IAuditLogger _audit;
+        private readonly Control[] _lockableStrips;
 
         public LockStateCoordinator(
             Control uiSync,
@@ -31,7 +32,8 @@ namespace Gdterm.UI.Services
             LockOverlayControl overlay,
             TabContainerControl tabs = null,
             AutoReconnectWatchdog watchdog = null,
-            IAuditLogger audit = null)
+            IAuditLogger audit = null,
+            params Control[] lockableStrips)
         {
             _uiSync = uiSync ?? throw new ArgumentNullException(nameof(uiSync));
             _security = security ?? throw new ArgumentNullException(nameof(security));
@@ -40,6 +42,7 @@ namespace Gdterm.UI.Services
             _tabs = tabs;
             _watchdog = watchdog;
             _audit = audit;
+            _lockableStrips = lockableStrips ?? new Control[0];
         }
 
         public void Handle(object sender, LockStateChangedEventArgs e)
@@ -58,6 +61,8 @@ namespace Gdterm.UI.Services
 
             if (e.IsLocked)
             {
+                SetStripsEnabled(false);
+
                 DiagLog.Try("LockState.KeePassLock", () => _keepass?.Lock());
                 DiagLog.Try("LockState.ClearCreds", () => _tabs?.ClearCachedCredentials());
                 DiagLog.Try("LockState.PauseWatchdog", () => _watchdog?.PauseAll());
@@ -99,6 +104,18 @@ namespace Gdterm.UI.Services
 
                 if (_overlay != null)
                     _overlay.Visible = false;
+
+                SetStripsEnabled(true);
+            }
+        }
+
+        /// <summary>锁定态禁用菜单栏/状态栏（遮罩只盖 ClientArea，ToolStrip 顶栏需单独禁用）。</summary>
+        private void SetStripsEnabled(bool enabled)
+        {
+            foreach (var strip in _lockableStrips)
+            {
+                if (strip == null || strip.IsDisposed) continue;
+                try { strip.Enabled = enabled; } catch (Exception ex) { DiagLog.Swallowed("LockState.Strip", ex); }
             }
         }
     }
