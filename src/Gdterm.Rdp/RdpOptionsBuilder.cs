@@ -24,6 +24,10 @@ namespace Gdterm.Rdp
                 opts.FullScreen = config.Metadata["rdp_fullscreen"] == "true";
             if (config.Metadata.ContainsKey("rdp_nla"))
                 opts.EnableNLA = config.Metadata["rdp_nla"] != "false";
+            if (config.Metadata.ContainsKey("rdp_force_nla"))
+                opts.ForceNLA = config.Metadata["rdp_force_nla"] == "true";
+            if (config.Metadata.ContainsKey("rdp_loadbalance"))
+                opts.LoadBalanceInfo = config.Metadata["rdp_loadbalance"];
 
             return opts;
         }

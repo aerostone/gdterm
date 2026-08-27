@@ -40,6 +40,16 @@ namespace Gdterm.Rdp
         private int _errLines;
         private Timer _connectedTimer;
 
+        // 自动重连上下文：首次连接被 LB 踢掉后，捕获 LB_LOAD_BALANCE_INFO token 并带它重启
+        private string _startHost;
+        private int _startPort;
+        private CredentialPayload _startCredential;
+        private string _startUsername;
+        private string _startDomain;
+        private ConnectionConfig _startConfig;
+        private volatile string _detectedLoadBalanceInfo;
+        private int _lbRetried;
+
         private const int MaxLoggedLines = 400;
         private const int ConnectedProbeDelayMs = 2500;
 
@@ -76,6 +86,7 @@ namespace Gdterm.Rdp
         public void Connect(ConnectionConfig config, CredentialPayload credential, RdpOptions options = null)
         {
             if (config == null) throw new ArgumentNullException("config");
+            _startConfig = config;
             Start(config.Host, config.Port > 0 ? config.Port : 3389, credential, options,
                 credential != null ? credential.Username : config.Username, config.Domain);
         }
@@ -84,6 +95,7 @@ namespace Gdterm.Rdp
         {
             if (config == null) throw new ArgumentNullException("config");
             if (tunnelEndpoint == null) throw new ArgumentNullException("tunnelEndpoint");
+            _startConfig = config;
             Start(tunnelEndpoint.LocalHost ?? "127.0.0.1", tunnelEndpoint.LocalPort > 0 ? tunnelEndpoint.LocalPort : 3389,
                 credential, options,
                 credential != null ? credential.Username : config.Username, config.Domain);
@@ -272,6 +284,14 @@ namespace Gdterm.Rdp
 
         private void Start(string host, int port, CredentialPayload credential, RdpOptions options, string username, string domain)
         {
+            _startHost = host;
+            _startPort = port;
+            _startCredential = credential;
+            _startUsername = username;
+            _startDomain = domain;
+            _detectedLoadBalanceInfo = null;
+            _lbRetried = 0;
+
             var exe = FindExecutable();
             if (exe == null)
                 throw new InvalidOperationException(
@@ -295,6 +315,26 @@ namespace Gdterm.Rdp
 
             CurrentOptions = options ?? new RdpOptions();
 
+            // 连接流程第一步：负载均衡预协商。若用户/元数据未显式提供 routing token，
+            // 则先做一次 X.224 预协商从网关的 Connection Confirm 变长部分取回 token，
+            // 首连即带 /load-balance-info，避免「首次被踢再重连」的中间状态。
+            // 预协商失败（非 LB 环境 / 超时 / 网络拒绝）返回 null，不影响普通连接。
+            if (string.IsNullOrEmpty(CurrentOptions.LoadBalanceInfo))
+            {
+                var probed = RdpLoadBalanceProbe.Probe(host, port);
+                if (!string.IsNullOrEmpty(probed))
+                {
+                    CurrentOptions.LoadBalanceInfo = probed;
+                    try
+                    {
+                        if (_startConfig != null && _startConfig.Metadata != null)
+                            _startConfig.Metadata["rdp_loadbalance"] = probed;
+                    }
+                    catch (Exception ex) { RdpLog.Swallowed("FreeRdp.LB", ex); }
+                    RdpLog.Info("FreeRdp.LB", "pre-negotiation captured token, target=" + host + ":" + port);
+                }
+            }
+
             // 面板句柄必须先创建（PendingConnect 在 tab 可见后触发，通常已就绪）
             if (!_surface.IsHandleCreated)
             {
@@ -315,6 +355,9 @@ namespace Gdterm.Rdp
             // 排障关键：wfreerdp 输出 DEBUG 级日志（TLS 协商/PDU 解析/order/重定向全链路），
             // 由下方 stdout/stderr 采集进 diag.log。堡垒机踢线这类问题只能靠它定位。
             AddArg(args, logArgs, "/log-level:debug");
+            // 负载均衡：预协商阶段已把 routing token 写入 CurrentOptions，这里作为协议字段传给 wfreerdp
+            if (!string.IsNullOrEmpty(CurrentOptions.LoadBalanceInfo))
+                AddArg(args, logArgs, "/load-balance-info:" + Q(CurrentOptions.LoadBalanceInfo));
             if (!string.IsNullOrEmpty(username)) AddArg(args, logArgs, "/u:" + Q(username));
             if (!string.IsNullOrEmpty(credential != null ? credential.Password : null))
             {
@@ -339,7 +382,8 @@ namespace Gdterm.Rdp
             AddArg(args, logArgs, CurrentOptions.EnableDesktopComposition ? "+aero" : "-aero");
             AddArg(args, logArgs, CurrentOptions.EnableWallpaper ? "+wallpaper" : "-wallpaper");
             AddArg(args, logArgs, CurrentOptions.EnableMenuAnimations ? "+menu-anims" : "-menu-anims");
-            if (!CurrentOptions.EnableNLA) AddArg(args, logArgs, "/sec:tls"); // 默认自动协商含 NLA
+            if (!CurrentOptions.EnableNLA || CurrentOptions.ForceNLA)
+                AddArg(args, logArgs, CurrentOptions.EnableNLA ? "/sec:nla" : "/sec:tls"); // 显式锁定安全层，避免对 LB 网关协商降级到 legacy RDP security
             if (CurrentOptions.AutoReconnectCount > 0) AddArg(args, logArgs, "/auto-reconnect");
             // 旧版堡垒机/RDP 代理常发送未在能力协商中声明的绘图指令（Cache Bitmap V2 等），
             // wfreerdp 会直接断链："SERVER BUG: The support for this feature was not announced!"
@@ -365,6 +409,11 @@ namespace Gdterm.Rdp
             _errLines = 0;
             RdpLog.Info("FreeRdp.Start", "exe=" + exe + " target=" + host + ":" + port
                 + " user=" + (username ?? "") + (domain != null ? " domain=" + domain : ""));
+            // 连接意图诊断：NLA/LB 决策集中打点，配合 wfreerdp DEBUG 日志定位堡垒机踢线
+            RdpLog.Info("FreeRdp.Start", "security intent: nla=" + CurrentOptions.EnableNLA
+                + " forceNla=" + CurrentOptions.ForceNLA
+                + " loadBalanceInfo=" + (string.IsNullOrEmpty(CurrentOptions.LoadBalanceInfo) ? "<none>" : CurrentOptions.LoadBalanceInfo)
+                + " autoReconnect=" + CurrentOptions.AutoReconnectCount);
             RdpLog.Info("FreeRdp.Start", "args=" + string.Join(" ", logArgs.ToArray()));
 
             _proc = Process.Start(psi);
@@ -425,9 +474,31 @@ namespace Gdterm.Rdp
                 || lower.Contains("authentication") || lower.Contains("license") || lower.Contains("transport")
                 || lower.Contains("order") || lower.Contains("bitmap") || lower.Contains("redirect")
                 || lower.Contains("nego") || lower.Contains("tls") || lower.Contains("security")
+                || lower.Contains("load-balance") || lower.Contains("loadbalance") || lower.Contains("routing")
                 || lower.Contains("logoff") || lower.Contains("server bug") || lower.Contains("capability");
             if (n <= MaxLoggedLines || interesting)
                 RdpLog.Info(isOut ? "FreeRdp.out" : "FreeRdp.err", line.Trim());
+
+            // 捕获负载均衡路由 token：NetScaler 等 LB 网关在首次握手时下发
+            // LB_LOAD_BALANCE_INFO '<token>'，客户端必须回传 token 才能通过重连。
+            if (_detectedLoadBalanceInfo == null)
+            {
+                var idx = lower.IndexOf("lb_load_balance_info");
+                if (idx >= 0)
+                {
+                    var rest = line.Substring(idx + "lb_load_balance_info".Length);
+                    var q1 = rest.IndexOf('\'');
+                    if (q1 >= 0)
+                    {
+                        var q2 = rest.IndexOf('\'', q1 + 1);
+                        if (q2 > q1)
+                        {
+                            _detectedLoadBalanceInfo = rest.Substring(q1 + 1, q2 - q1 - 1).Trim();
+                            RdpLog.Info("FreeRdp.LB", "detected load-balance token: " + _detectedLoadBalanceInfo);
+                        }
+                    }
+                }
+            }
         }
 
         private void OnConnectedProbe(object state)
@@ -459,7 +530,8 @@ namespace Gdterm.Rdp
                     + " userInitiated=" + _userInitiatedDisconnect
                     + " outLines=" + _outLines + " errLines=" + _errLines);
 
-                if (!_disposed && Interlocked.Exchange(ref _disconnectedRaised, 1) == 0)
+                if (!_disposed && Interlocked.Exchange(ref _disconnectedRaised, 1) == 0
+                    && !TryAutoReconnectWithToken(code))
                 {
                     var normal = code == 0 || _userInitiatedDisconnect;
                     var msg = normal ? "连接已关闭" : DescribeExitCode(code);
@@ -472,6 +544,43 @@ namespace Gdterm.Rdp
             {
                 RdpLog.Swallowed("FreeRdp.OnProcExited", ex);
             }
+        }
+
+        /// <summary>
+        /// 负载均衡自动重连：首次连接被 LB 网关踢掉（未回传 token）时，
+        /// 用从 wfreerdp 输出捕获的 LB_LOAD_BALANCE_INFO token 带上 /load-balance-info 重启，
+        /// 并把 token 回写配置元数据。用户无需手动操作。
+        /// 返回 true 表示已接管并触发重连（不再上报 disconnected）。
+        /// </summary>
+        private bool TryAutoReconnectWithToken(int exitCode)
+        {
+            if (exitCode == 0 || _userInitiatedDisconnect || _disposed) return false;
+            if (string.IsNullOrEmpty(_detectedLoadBalanceInfo)) return false;
+            if (string.Equals(_detectedLoadBalanceInfo, CurrentOptions.LoadBalanceInfo, StringComparison.Ordinal)) return false;
+            if (Interlocked.Exchange(ref _lbRetried, 1) != 0) return false;
+
+            CurrentOptions.LoadBalanceInfo = _detectedLoadBalanceInfo;
+            try
+            {
+                if (_startConfig != null && _startConfig.Metadata != null)
+                    _startConfig.Metadata["rdp_loadbalance"] = _detectedLoadBalanceInfo;
+            }
+            catch (Exception ex) { RdpLog.Swallowed("FreeRdp.LB", ex); }
+            RdpLog.Info("FreeRdp.LB", "auto-reconnect with token, retried=" + _lbRetried);
+
+            // 回到 UI 线程重启（Start 会访问控件句柄）
+            Action restart = () =>
+            {
+                try { Start(_startHost, _startPort, _startCredential, CurrentOptions, _startUsername, _startDomain); }
+                catch (Exception ex) { RdpLog.Swallowed("FreeRdp.LB", ex); }
+            };
+            try
+            {
+                if (_surface.IsHandleCreated && _surface.InvokeRequired) _surface.BeginInvoke(restart);
+                else restart();
+            }
+            catch (Exception ex) { RdpLog.Swallowed("FreeRdp.LB", ex); }
+            return true;
         }
 
         /// <summary>FreeRDP ERRCONNECT_* 退出码翻译（freerdp/error.h）。</summary>

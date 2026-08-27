@@ -108,6 +108,22 @@ namespace Gdterm.Rdp.Models
         public bool EnableNLA { get; set; } = true;
 
         /// <summary>
+        /// 强制 NLA（进程外 wfreerdp 不再允许降级到 legacy RDP security）。
+        /// 堡垒机/Citrix NetScaler 等 LB 网关在 NLA 协商失败后常直接踢线（ERRINFO_LOGOFF_BY_USER），
+        /// 显式 /sec:nla（或 /sec:tls）可避免 FreeRDP 静默降级到 PROTOCOL_RDP。
+        /// 默认开启：现代服务器（Win2008+/Vista+）均支持 NLA，强制后更安全且避免协商降级；
+        /// 若目标为不支持 NLA 的极老服务器导致连不上，取消勾选"强制 NLA"即可恢复协商。
+        /// </summary>
+        public bool ForceNLA { get; set; } = true;
+
+        /// <summary>
+        /// 负载均衡路由 token（/load-balance-info）。
+        /// 堡垒机/NetScaler 首次下发 LB_LOAD_BALANCE_INFO Cookie（如 tsv://... 或 Cookie: msts=NSFVERIFYHASH=...），
+        /// 客户端需在重连时回传该 token，否则 LB 反复踢线。可在连接设置的“负载均衡 token”填入。
+        /// </summary>
+        public string LoadBalanceInfo { get; set; }
+
+        /// <summary>
         /// 启用 CredSSP 支持
         /// </summary>
         public bool EnableCredSSP { get; set; } = false;
