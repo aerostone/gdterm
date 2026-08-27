@@ -382,8 +382,12 @@ namespace Gdterm.Rdp
             AddArg(args, logArgs, CurrentOptions.EnableDesktopComposition ? "+aero" : "-aero");
             AddArg(args, logArgs, CurrentOptions.EnableWallpaper ? "+wallpaper" : "-wallpaper");
             AddArg(args, logArgs, CurrentOptions.EnableMenuAnimations ? "+menu-anims" : "-menu-anims");
-            if (!CurrentOptions.EnableNLA || CurrentOptions.ForceNLA)
-                AddArg(args, logArgs, CurrentOptions.EnableNLA ? "/sec:nla" : "/sec:tls"); // 显式锁定安全层，避免对 LB 网关协商降级到 legacy RDP security
+            // 安全层：默认不传 /sec 参数，让 FreeRDP 自动协商（NLA → TLS → RDP 逐级降级）。
+            // 老式 RDP 网关/堡垒机不支持协商请求（li==6 的裸 CC），强制 /sec:nla 会关掉
+            // RDP security 降级通路，导致 NEGO_STATE_FAIL（0x0002000C）。
+            // 仅当用户显式禁用 NLA 时才指定 /sec:tls；启用 NLA 时靠 FreeRDP 自身协商。
+            if (!CurrentOptions.EnableNLA)
+                AddArg(args, logArgs, "/sec:tls");
             if (CurrentOptions.AutoReconnectCount > 0) AddArg(args, logArgs, "/auto-reconnect");
             // 旧版堡垒机/RDP 代理常发送未在能力协商中声明的绘图指令（Cache Bitmap V2 等），
             // wfreerdp 会直接断链："SERVER BUG: The support for this feature was not announced!"
@@ -413,7 +417,8 @@ namespace Gdterm.Rdp
             RdpLog.Info("FreeRdp.Start", "security intent: nla=" + CurrentOptions.EnableNLA
                 + " forceNla=" + CurrentOptions.ForceNLA
                 + " loadBalanceInfo=" + (string.IsNullOrEmpty(CurrentOptions.LoadBalanceInfo) ? "<none>" : CurrentOptions.LoadBalanceInfo)
-                + " autoReconnect=" + CurrentOptions.AutoReconnectCount);
+                + " autoReconnect=" + CurrentOptions.AutoReconnectCount
+                + " negotiated=" + (CurrentOptions.EnableNLA ? "auto" : "tls-only"));
             RdpLog.Info("FreeRdp.Start", "args=" + string.Join(" ", logArgs.ToArray()));
 
             _proc = Process.Start(psi);
