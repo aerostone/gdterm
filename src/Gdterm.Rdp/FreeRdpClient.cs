@@ -391,15 +391,14 @@ namespace Gdterm.Rdp
             AddArg(args, logArgs, CurrentOptions.EnableDesktopComposition ? "+aero" : "-aero");
             AddArg(args, logArgs, CurrentOptions.EnableWallpaper ? "+wallpaper" : "-wallpaper");
             AddArg(args, logArgs, CurrentOptions.EnableMenuAnimations ? "+menu-anims" : "-menu-anims");
-            // 安全层决策（三叉修复核心）：
+            // 安全层决策（核心）：
             // 1) 已拿到 LB token（预协商捕获或重连中）：直接 /sec:nla + /load-balance-info。
-            //    token 到手说明 LB 环境已确认，无需再降级 legacy RDP 被踢一次。
-            // 2) 用户显式启用 NLA：传 /sec:nla（普通非 LB 环境）。
-            // 3) 其余（无 LB token 且未勾 NLA）：不传 /sec:xxx，自动协商含 legacy RDP，
-            //    让 NetScaler 首连 li==6 时走 legacy RDP security 连到登录界面。
-            // ForceNLA 不再单独触发 /sec:nla（修复「取消 NLA 勾选仍强制 nla」的 bug）。
+            // 2) 用户勾选「强制 NLA」：硬传 /sec:nla 禁止降级（现代服务器默认）。
+            // 3) 其余（未强制 NLA）：不传 /sec:xxx，由 wfreerdp 自由协商（NLA/TLS/RDP 三路），
+            //    NetScaler 只支持 legacy RDP security（li==6）时自动降级连上，不再 0x2000C。
+            // 「NLA 认证」只是偏好，不再用它硬传 /sec:nla（否则取消「强制 NLA」勾选不生效）。
             bool haveLbToken = !string.IsNullOrEmpty(CurrentOptions.LoadBalanceInfo);
-            if (haveLbToken || _lbReconnectInProgress || CurrentOptions.EnableNLA)
+            if (haveLbToken || _lbReconnectInProgress || CurrentOptions.ForceNLA)
                 AddArg(args, logArgs, "/sec:nla");
             // 否则不传任何 /sec:xxx，由 wfreerdp 自动协商（含 legacy RDP）
             if (CurrentOptions.AutoReconnectCount > 0) AddArg(args, logArgs, "/auto-reconnect");
@@ -432,7 +431,7 @@ namespace Gdterm.Rdp
                 + " forceNla=" + CurrentOptions.ForceNLA
                 + " loadBalanceInfo=" + (string.IsNullOrEmpty(CurrentOptions.LoadBalanceInfo) ? "<none>" : CurrentOptions.LoadBalanceInfo)
                 + " autoReconnect=" + CurrentOptions.AutoReconnectCount
-                + " negotiated=" + (CurrentOptions.EnableNLA ? "auto" : "tls-only"));
+                + " sec=" + (CurrentOptions.ForceNLA || _lbReconnectInProgress ? "nla-forced" : "negotiate"));
             RdpLog.Info("FreeRdp.Start", "args=" + string.Join(" ", logArgs.ToArray()));
 
             _proc = Process.Start(psi);

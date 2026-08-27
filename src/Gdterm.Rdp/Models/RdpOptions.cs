@@ -103,16 +103,17 @@ namespace Gdterm.Rdp.Models
         public int AutoReconnectCount { get; set; } = 3;
 
         /// <summary>
-        /// 启用网络级别认证（NLA）
+        /// 偏好启用网络级别认证（NLA）。
+        /// 仅表示“愿意用 NLA”，不硬性强制；是否硬传 /sec:nla 由 ForceNLA 决定。
+        /// 取消本勾选 = 不尝试 NLA（针对只认 legacy RDP security 的旧堡垒机）。
         /// </summary>
         public bool EnableNLA { get; set; } = true;
 
         /// <summary>
-        /// 强制 NLA（进程外 wfreerdp 不再允许降级到 legacy RDP security）。
-        /// 堡垒机/Citrix NetScaler 等 LB 网关在 NLA 协商失败后常直接踢线（ERRINFO_LOGOFF_BY_USER），
-        /// 显式 /sec:nla（或 /sec:tls）可避免 FreeRDP 静默降级到 PROTOCOL_RDP。
-        /// 默认开启：现代服务器（Win2008+/Vista+）均支持 NLA，强制后更安全且避免协商降级；
-        /// 若目标为不支持 NLA 的极老服务器导致连不上，取消勾选"强制 NLA"即可恢复协商。
+        /// 强制 NLA（进程外 wfreerdp 硬传 /sec:nla，禁止降级 legacy RDP security）。
+        /// 默认开启：现代服务器（Win2008+/Vista+）均支持 NLA，强制后更安全且避免协商降级。
+        /// 若目标为不支持 NLA 的旧堡垒机/NetScaler（只回 li==6，无 rdpNegData），
+        /// 取消“强制 NLA”勾选即可让 wfreerdp 自由协商，自动降级 legacy RDP 连上。
         /// </summary>
         public bool ForceNLA { get; set; } = true;
 
