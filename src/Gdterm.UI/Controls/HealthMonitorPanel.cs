@@ -82,7 +82,7 @@ namespace Gdterm.UI.Controls
         {
             var lbl = new Label
             {
-                Location = new Point(x, 6),
+                Location = DpiScale.P(this, x, 6),
                 AutoSize = false,
                 Size = DpiScale.S(this, 140, 65),
                 Font = new Font("Consolas", 14f, FontStyle.Bold),

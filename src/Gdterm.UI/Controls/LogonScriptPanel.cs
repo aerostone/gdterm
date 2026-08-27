@@ -65,7 +65,7 @@ namespace Gdterm.UI.Controls
         {
             return new Button
             {
-                Text = text, Size = DpiScale.S(this, 75, 28), Location = new Point(x, 6),
+                Text = text, Size = DpiScale.S(this, 75, 28), Location = DpiScale.P(this, x, 6),
                 FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.FromArgb(204, 204, 204), Font = Services.FormFontPolicy.UiFont(-0.5f)
             };
@@ -143,7 +143,7 @@ namespace Gdterm.UI.Controls
             int y = 12;
 
             var lblName = Lbl("名称:", 12, y, form); var txtName = Txt(100, y, 200, form);
-            var chkEnabled = new CheckBox { Text = "启用", Location = new Point(320, y + 2), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204), Checked = true }; form.Controls.Add(chkEnabled);
+            var chkEnabled = new CheckBox { Text = "启用", Location = DpiScale.P(form, 320, y + 2), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204), Checked = true }; form.Controls.Add(chkEnabled);
             y += 30;
 
             var lblDesc = Lbl("说明:", 12, y, form); var txtDesc = Txt(100, y, 410, form); y += 30;
@@ -151,7 +151,7 @@ namespace Gdterm.UI.Controls
             var lblSteps = Lbl("步骤:", 12, y, form); y += 3;
             var lvSteps = new ListView
             {
-                Location = new Point(100, y), Size = DpiScale.S(this, 410, 200),
+                Location = DpiScale.P(form, 100, y), Size = DpiScale.S(this, 410, 200),
                 View = View.Details, FullRowSelect = true,
                 BackColor = Color.FromArgb(37, 37, 38), ForeColor = Color.FromArgb(204, 204, 204),
                 Font = new Font("Consolas", 8.5f), BorderStyle = BorderStyle.FixedSingle
@@ -164,13 +164,13 @@ namespace Gdterm.UI.Controls
             y += 210;
 
             // 步骤操作按钮
-            var btnAddStep = new Button { Text = "+", Location = new Point(100, y), Size = DpiScale.S(this, 28, 24), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(78, 201, 176) };
+            var btnAddStep = new Button { Text = "+", Location = DpiScale.P(form, 100, y), Size = DpiScale.S(this, 28, 24), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(78, 201, 176) };
             btnAddStep.FlatAppearance.BorderSize = 0;
-            var btnDelStep = new Button { Text = "−", Location = new Point(132, y), Size = DpiScale.S(this, 28, 24), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(255, 80, 80) };
+            var btnDelStep = new Button { Text = "−", Location = DpiScale.P(form, 132, y), Size = DpiScale.S(this, 28, 24), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(255, 80, 80) };
             btnDelStep.FlatAppearance.BorderSize = 0;
-            var btnUp = new Button { Text = "↑", Location = new Point(170, y), Size = DpiScale.S(this, 28, 24), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204) };
+            var btnUp = new Button { Text = "↑", Location = DpiScale.P(form, 170, y), Size = DpiScale.S(this, 28, 24), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204) };
             btnUp.FlatAppearance.BorderSize = 0;
-            var btnDown = new Button { Text = "↓", Location = new Point(202, y), Size = DpiScale.S(this, 28, 24), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204) };
+            var btnDown = new Button { Text = "↓", Location = DpiScale.P(form, 202, y), Size = DpiScale.S(this, 28, 24), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204) };
             btnDown.FlatAppearance.BorderSize = 0;
             form.Controls.AddRange(new Control[] { btnAddStep, btnDelStep, btnUp, btnDown });
 
@@ -202,8 +202,8 @@ namespace Gdterm.UI.Controls
             };
             y += 40;
 
-            var btnOk = new Button { Text = "确定", Size = DpiScale.S(this, 80, 28), Location = new Point(340, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White };
-            var btnCancel = new Button { Text = "取消", Size = DpiScale.S(this, 80, 28), Location = new Point(430, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(60, 60, 60), ForeColor = Color.FromArgb(204, 204, 204) };
+            var btnOk = new Button { Text = "确定", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(form, 340, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White };
+            var btnCancel = new Button { Text = "取消", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(form, 430, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(60, 60, 60), ForeColor = Color.FromArgb(204, 204, 204) };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
 
@@ -255,8 +255,8 @@ namespace Gdterm.UI.Controls
             };
         }
 
-        private static Label Lbl(string t, int x, int y, Form f) { var l = new Label { Text = t, Location = new Point(x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = Color.FromArgb(204, 204, 204) }; f.Controls.Add(l); return l; }
-        private static TextBox Txt(int x, int y, int w, Form f) { var t = new TextBox { Location = new Point(x, y), Size = new Size(w, DpiScale.V(f, 24)), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle }; f.Controls.Add(t); return t; }
+        private static Label Lbl(string t, int x, int y, Form f) { var l = new Label { Text = t, Location = DpiScale.P(f, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = Color.FromArgb(204, 204, 204) }; f.Controls.Add(l); return l; }
+        private static TextBox Txt(int x, int y, int w, Form f) { var t = new TextBox { Location = DpiScale.P(f, x, y), Size = DpiScale.S(f, w, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle }; f.Controls.Add(t); return t; }
 
         protected override void Dispose(bool disposing) { base.Dispose(disposing); }
     }

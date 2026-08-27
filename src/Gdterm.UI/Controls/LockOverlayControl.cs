@@ -31,11 +31,11 @@ namespace Gdterm.UI.Controls
             var centerPanel = new Panel
             {
                 Size = DpiScale.S(this, 300, 150),
-                BackColor = Color.White,
-                Location = new Point(
-                    (Width - 300) / 2,
-                    (Height - 150) / 2)
+                BackColor = Color.White
             };
+            centerPanel.Location = new Point(
+                (Width - centerPanel.Width) / 2,
+                (Height - centerPanel.Height) / 2);
             Controls.Add(centerPanel);
 
             // 消息标签
