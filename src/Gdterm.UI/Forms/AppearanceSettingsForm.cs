@@ -56,13 +56,13 @@ namespace Gdterm.UI.Forms
 
         private void BuildUi()
         {
-            int y = 16;
+            int y = DpiScale.V(this, 16);
             Controls.Add(MakeLabel("终端字体", 16, y));
             _fontCombo = new ComboBox
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Location = new Point(120, y - 2),
-                Width = 280,
+                Location = DpiScale.P(this, 120, y - 2),
+                Width = DpiScale.V(this, 280),
                 BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
@@ -92,13 +92,13 @@ namespace Gdterm.UI.Forms
             }
             if (_fontCombo.Items.Count == 0) _fontCombo.Items.Add("Consolas");
             Controls.Add(_fontCombo);
-            y += 36;
+            y += DpiScale.V(this, 36);
 
             Controls.Add(MakeLabel("字号 (pt)", 16, y));
             _sizeNum = new NumericUpDown
             {
-                Location = new Point(120, y - 2),
-                Width = 80,
+                Location = DpiScale.P(this, 120, y - 2),
+                Width = DpiScale.V(this, 80),
                 Minimum = 8,
                 Maximum = 36,
                 Value = 12,
@@ -106,14 +106,14 @@ namespace Gdterm.UI.Forms
                 ForeColor = Color.White
             };
             Controls.Add(_sizeNum);
-            y += 36;
+            y += DpiScale.V(this, 36);
 
             Controls.Add(MakeLabel("配色方案", 16, y));
             _schemeCombo = new ComboBox
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Location = new Point(120, y - 2),
-                Width = 200,
+                Location = DpiScale.P(this, 120, y - 2),
+                Width = DpiScale.V(this, 200),
                 BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
@@ -124,15 +124,15 @@ namespace Gdterm.UI.Forms
             })
                 _schemeCombo.Items.Add(name);
             Controls.Add(_schemeCombo);
-            y += 36;
+            y += DpiScale.V(this, 36);
 
             // —— 中日韩补充字体（非 ASCII 内容，Xshell 风格双字体）——
             Controls.Add(MakeLabel("中日韩字体", 16, y));
             _cjkFontCombo = new ComboBox
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Location = new Point(120, y - 2),
-                Width = 200,
+                Location = DpiScale.P(this, 120, y - 2),
+                Width = DpiScale.V(this, 200),
                 BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
@@ -164,15 +164,15 @@ namespace Gdterm.UI.Forms
             }
             catch { }
             Controls.Add(_cjkFontCombo);
-            y += 36;
+            y += DpiScale.V(this, 36);
 
             // —— UI 外壳主题（与终端 ColorScheme 独立）——
             Controls.Add(MakeLabel("界面主题", 16, y));
             _uiThemeCombo = new ComboBox
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Location = new Point(120, y - 2),
-                Width = 200,
+                Location = DpiScale.P(this, 120, y - 2),
+                Width = DpiScale.V(this, 200),
                 BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
@@ -187,7 +187,7 @@ namespace Gdterm.UI.Forms
                 AutoSize = true,
                 Location = new Point(332, y)
             });
-            y += 36;
+            y += DpiScale.V(this, 36);
 
             _dpiAwareCheck = new CheckBox
             {
@@ -198,15 +198,15 @@ namespace Gdterm.UI.Forms
                 Checked = true
             };
             Controls.Add(_dpiAwareCheck);
-            y += 36;
+            y += DpiScale.V(this, 36);
 
             // —— 界面字体（非等宽，菜单/树/状态栏/对话框）——
             Controls.Add(MakeLabel("界面字体", 16, y));
             _uiFontCombo = new ComboBox
             {
                 DropDownStyle = ComboBoxStyle.DropDownList,
-                Location = new Point(120, y - 2),
-                Width = 220,
+                Location = DpiScale.P(this, 120, y - 2),
+                Width = DpiScale.V(this, 220),
                 BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat
@@ -233,8 +233,8 @@ namespace Gdterm.UI.Forms
 
             _uiSizeNum = new NumericUpDown
             {
-                Location = new Point(350, y - 2),
-                Width = 56,
+                Location = DpiScale.P(this, 350, y - 2),
+                Width = DpiScale.V(this, 56),
                 Minimum = 8,
                 Maximum = 24,
                 Value = 9,
@@ -242,12 +242,12 @@ namespace Gdterm.UI.Forms
                 ForeColor = Color.White
             };
             Controls.Add(_uiSizeNum);
-            y += 36;
+            y += DpiScale.V(this, 36);
 
             _preview = new Label
             {
                 Text = "AaBbCc 0123 预览 Preview",
-                Location = new Point(16, y),
+                Location = DpiScale.P(this, 16, y),
                 Size = DpiScale.S(this, 400, 60),
                 BackColor = Color.FromArgb(12, 12, 12),
                 ForeColor = Color.FromArgb(0, 255, 128),
@@ -255,7 +255,7 @@ namespace Gdterm.UI.Forms
                 BorderStyle = BorderStyle.FixedSingle
             };
             Controls.Add(_preview);
-            y += 72;
+            y += DpiScale.V(this, 72);
 
             _fontCombo.SelectedIndexChanged += (s, e) => UpdatePreview();
             _sizeNum.ValueChanged += (s, e) => UpdatePreview();
@@ -264,7 +264,7 @@ namespace Gdterm.UI.Forms
             {
                 Text = "保存",
                 DialogResult = DialogResult.OK,
-                Location = new Point(240, y),
+                Location = DpiScale.P(this, 240, y),
                 Size = DpiScale.S(this, 88, 30),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(0, 122, 204),
@@ -300,7 +300,7 @@ namespace Gdterm.UI.Forms
             {
                 Text = "取消",
                 DialogResult = DialogResult.Cancel,
-                Location = new Point(336, y),
+                Location = DpiScale.P(this, 336, y),
                 Size = DpiScale.S(this, 88, 30),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(60, 60, 64),
