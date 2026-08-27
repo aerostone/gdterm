@@ -78,7 +78,7 @@ namespace Gdterm.UI.Forms
             AddLabel("分组:", lblX, y, font);
             _cmbGroup = new ComboBox
             {
-                Location = new Point(inputX, y - 3),
+                Location = DpiScale.P(this, inputX, y - 3),
                 Size = DpiScale.S(this, 200, 25),
                 Font = font,
                 BackColor = Color.FromArgb(45, 45, 48),
@@ -116,10 +116,10 @@ namespace Gdterm.UI.Forms
             };
             Controls.Add(_chkRequiresRoot);
 
-            AddLabel("排序:", 300, y, font);
+            AddLabel("排序:", DpiScale.V(this, 300), y, font);
             _numSortOrder = new NumericUpDown
             {
-                Location = new Point(345, y - 3),
+                Location = DpiScale.P(this, 345, y - 3),
                 Size = DpiScale.S(this, 60, 25),
                 Font = font,
                 BackColor = Color.FromArgb(45, 45, 48),
@@ -145,7 +145,7 @@ namespace Gdterm.UI.Forms
             {
                 Text = "确定",
                 Size = DpiScale.S(this, 80, 30),
-                Location = new Point(290, y),
+                Location = DpiScale.P(this, 290, y),
                 DialogResult = DialogResult.OK,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(0, 122, 204),
@@ -158,7 +158,7 @@ namespace Gdterm.UI.Forms
             {
                 Text = "取消",
                 Size = DpiScale.S(this, 80, 30),
-                Location = new Point(380, y),
+                Location = DpiScale.P(this, 380, y),
                 DialogResult = DialogResult.Cancel,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(60, 60, 60),
@@ -190,8 +190,8 @@ namespace Gdterm.UI.Forms
         {
             var txt = new TextBox
             {
-                Location = new Point(x, y - 3),
-                Size = new Size(w, DpiScale.V(this, 25)),
+                Location = DpiScale.P(this, x, y - 3),
+                Size = DpiScale.S(this, w, 25),
                 Font = font,
                 BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.FromArgb(204, 204, 204),

@@ -170,7 +170,7 @@ namespace Gdterm.UI.Forms
             var separator = new Label
             {
                 BorderStyle = BorderStyle.Fixed3D,
-                Location = new Point(20, y),
+                Location = new Point(DpiScale.V(this, 20), y),
                 Size = DpiScale.S(this, 440, 2)
             };
             Controls.Add(separator);
@@ -182,7 +182,7 @@ namespace Gdterm.UI.Forms
                 Text = "",
                 Font = Services.FormFontPolicy.UiFont(-0.5f),
                 ForeColor = Color.FromArgb(160, 160, 160),
-                Location = new Point(20, y),
+                Location = new Point(DpiScale.V(this, 20), y),
                 Size = DpiScale.S(this, 300, 20)
             };
             Controls.Add(_statusLabel);

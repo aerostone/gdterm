@@ -122,7 +122,7 @@ namespace Gdterm.UI.Diagnostics
                 ShowInTaskbar = false;
                 TopMost = true;
                 StartPosition = FormStartPosition.Manual;
-                Size = new Size(320, 64);
+                Size = DpiScale.S(this, 320, 64);
                 DoubleBuffered = true;
                 BackColor = ColorFor(level);
                 Opacity = 0.96;

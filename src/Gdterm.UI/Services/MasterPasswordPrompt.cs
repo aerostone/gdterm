@@ -27,7 +27,7 @@ namespace Gdterm.UI.Services
             using (var dialog = new Form())
             {
                 dialog.Text = "安全验证";
-                dialog.Size = new Size(380, 180);
+                dialog.Size = DpiScale.S(dialog, 380, 180);
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dialog.MaximizeBox = false;
@@ -39,14 +39,14 @@ namespace Gdterm.UI.Services
                     Text = (action ?? "操作") + "需要验证主密码：",
                     Font = Services.FormFontPolicy.UiFont(+1f),
                     ForeColor = Color.FromArgb(200, 200, 200),
-                    Location = new Point(15, 15),
-                    Size = new Size(340, 25)
+                    Location = DpiScale.P(dialog, 15, 15),
+                    Size = DpiScale.S(dialog, 340, 25)
                 };
                 var pwdBox = new TextBox
                 {
-                    Location = new Point(15, 45),
-                    Size = new Size(335, 28),
-                    Font = new Font("Consolas", 11f),
+                    Location = DpiScale.P(dialog, 15, 45),
+                    Size = DpiScale.S(dialog, 335, 28),
+                    Font = new Font("Consolas", DpiScale.Factor(dialog) * 11f),
                     UseSystemPasswordChar = true,
                     BackColor = Color.FromArgb(50, 50, 50),
                     ForeColor = Color.White,
@@ -57,14 +57,14 @@ namespace Gdterm.UI.Services
                     Text = "",
                     Font = Services.FormFontPolicy.UiFont(),
                     ForeColor = Color.FromArgb(255, 100, 100),
-                    Location = new Point(15, 78),
-                    Size = new Size(335, 20)
+                    Location = DpiScale.P(dialog, 15, 78),
+                    Size = DpiScale.S(dialog, 335, 20)
                 };
                 var okBtn = new Button
                 {
                     Text = "验证",
-                    Size = new Size(80, 32),
-                    Location = new Point(270, 105),
+                    Size = DpiScale.S(dialog, 80, 32),
+                    Location = DpiScale.P(dialog, 270, 105),
                     FlatStyle = FlatStyle.Flat,
                     BackColor = Color.FromArgb(0, 122, 204),
                     ForeColor = Color.White
