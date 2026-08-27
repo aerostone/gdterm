@@ -134,7 +134,7 @@ namespace Gdterm.UI.Forms
 
         private TextBox Labeled(ref int y, string label, string value)
         {
-            var lb = new Label { Text = label, Location = new Point(16, y), Size = DpiScale.S(this, 90, 22), ForeColor = GdtermColorTable.Muted, TextAlign = ContentAlignment.MiddleRight };
+            var lb = new Label { Text = label, Location = DpiScale.P(this, 16, y), Size = DpiScale.S(this, 90, 22), ForeColor = GdtermColorTable.Muted, TextAlign = ContentAlignment.MiddleRight };
             var tb = new TextBox { Location = DpiScale.P(this, 116, y), Size = DpiScale.S(this, 408, 24), Text = value ?? "", BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, BorderStyle = BorderStyle.FixedSingle };
             Controls.Add(lb); Controls.Add(tb);
             y += 34;
