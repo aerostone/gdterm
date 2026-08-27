@@ -191,6 +191,29 @@ namespace Gdterm.UI.Services
                 SessionId = config.Id ?? Guid.NewGuid().ToString("N")
             };
 
+            // FreeRDP 无 Windows SSO，必须有凭据才能连 load-balanced 服务器。
+            // 若 KeePass 未解锁或无匹配条目，自动回退 mstsc（走当前 Windows 用户 SSO）。
+            bool useFreeRdp = rdp is FreeRdpClient;
+            bool hasCreds = credential != null && !string.IsNullOrEmpty(credential.Username) && !string.IsNullOrEmpty(credential.Password);
+            if (useFreeRdp && !hasCreds)
+            {
+                try
+                {
+                    DiagLog.Info("RdpTab.Connect", "FreeRDP needs credentials, falling back to mstsc");
+                    rdp.Dispose();
+                    rdp = new RdpClient();
+                    rdp.Control.Dock = DockStyle.Fill;
+                    tab.Controls.Clear();
+                    tab.Controls.Add(rdp.Control);
+                    session.Control = rdp.Control;
+                    session.RdpClient = rdp;
+                }
+                catch (Exception ex)
+                {
+                    DiagLog.Swallowed("RdpTab.FallbackMstsc", ex);
+                }
+            }
+
             // 订阅状态事件：断开/致命错误时更新 tab 状态并向用户报错（旧代码从不订阅，
             // 导致断开后 tab 假死空白）。事件来自 COM 连接点，稳妥起见弹回 UI 线程。
             rdp.StateChanged += (sender, ev) =>
@@ -208,7 +231,7 @@ namespace Gdterm.UI.Services
                         }
                         session.IsConnected = false;
                         DiagLog.Info("RdpTab.StateChanged", "disconnected reason=" + ev.Reason + " msg=" + ev.ErrorMessage);
-                        if (ev.Reason == "closed") return; // 用户/服务器正常断开，不弹窗
+                        if (ev.Reason == "closed") return;
                         if (tab.IsDisposed) return;
                         MessageBox.Show("RDP 已断开: " + (ev.ErrorMessage ?? ev.Reason), "远程桌面",
                             MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -229,7 +252,7 @@ namespace Gdterm.UI.Services
             {
                 try
                 {
-                    DiagLog.Info("RdpTab.Connect", "host=" + config.Host + " tunnel=" + (config.Tunnel != null));
+                    DiagLog.Info("RdpTab.Connect", "host=" + config.Host + " tunnel=" + (config.Tunnel != null) + " useFreeRdp=" + (rdp is FreeRdpClient));
                     if (config.Tunnel != null && _tunnelManager != null)
                     {
                         var tunnel = _tunnelManager.EstablishAsync(config, credential,

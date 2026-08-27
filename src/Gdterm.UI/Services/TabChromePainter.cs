@@ -9,11 +9,12 @@ namespace Gdterm.UI.Services
     /// </summary>
     public sealed class TabChromePainter
     {
-        public const int CloseButtonWidth = 18;
-        public const int CloseButtonHeight = 16;
+        public const int CloseButtonWidth = 16;
+        public const int CloseButtonHeight = 18;
         public const int CloseButtonRightMargin = 18;
-        public const int CloseButtonTopOffset = 4;
+        public const int CloseButtonTopOffset = 2;
 
+        /// <summary>按 DPI 缩放绘制标签页与关闭按钮。</summary>
         public void DrawTab(DrawItemEventArgs e, TabControl tabControl)
         {
             if (e == null || tabControl == null) return;
@@ -21,18 +22,30 @@ namespace Gdterm.UI.Services
 
             var tab = tabControl.TabPages[e.Index];
             var rect = e.Bounds;
+            var dpi = DpiScale.Factor(tabControl);
 
             bool isSelected = (e.Index == tabControl.SelectedIndex);
             using (var brush = new SolidBrush(isSelected ? SystemColors.ControlLight : SystemColors.Control))
                 e.Graphics.FillRectangle(brush, rect);
 
-            var textRect = new Rectangle(rect.X + 4, rect.Y + 2, rect.Width - 24, rect.Height - 4);
+            var closeW = (int)Math.Round(CloseButtonWidth * dpi);
+            var closeH = (int)Math.Round(CloseButtonHeight * dpi);
+            var closeR = (int)Math.Round(CloseButtonRightMargin * dpi);
+            var closeT = (int)Math.Round(CloseButtonTopOffset * dpi);
+
+            var textRect = new Rectangle(rect.X + 4, rect.Y + 2, rect.Width - closeR - 4, rect.Height - 4);
             TextRenderer.DrawText(e.Graphics, tab.Text, e.Font, textRect, SystemColors.ControlText,
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
 
-            var closeRect = GetCloseRect(rect);
-            using (var brush = new SolidBrush(Color.DarkGray))
-                e.Graphics.DrawString("×", e.Font, brush, closeRect);
+            var closeRect = new Rectangle(
+                rect.Right - closeR,
+                rect.Y + closeT,
+                closeW,
+                closeH);
+            using (var brush = new SolidBrush(isSelected ? Color.Black : Color.Gray))
+                e.Graphics.DrawString("×", e.Font, brush,
+                    closeRect.X + (closeW - 8) / 2,
+                    closeRect.Y + (closeH - e.Font.Height) / 2);
         }
 
         /// <summary>
@@ -41,11 +54,12 @@ namespace Gdterm.UI.Services
         public TabPage HitTestClose(TabControl tabControl, Point location)
         {
             if (tabControl == null) return null;
+            var dpi = DpiScale.Factor(tabControl);
 
             for (int i = 0; i < tabControl.TabPages.Count; i++)
             {
                 var rect = tabControl.GetTabRect(i);
-                var closeRect = GetCloseRect(rect);
+                var closeRect = GetCloseRect(rect, dpi);
                 if (closeRect.Contains(location))
                     return tabControl.TabPages[i];
             }
@@ -57,8 +71,22 @@ namespace Gdterm.UI.Services
             return new Rectangle(
                 tabRect.Right - CloseButtonRightMargin,
                 tabRect.Y + CloseButtonTopOffset,
-                14,
+                CloseButtonWidth,
                 CloseButtonHeight);
+        }
+
+        /// <summary>按 DPI 缩放后的关闭按钮矩形（供 HitTestClose 使用）。</summary>
+        public static Rectangle GetCloseRect(Rectangle tabRect, float dpi)
+        {
+            var closeW = (int)Math.Round(CloseButtonWidth * dpi);
+            var closeH = (int)Math.Round(CloseButtonHeight * dpi);
+            var closeR = (int)Math.Round(CloseButtonRightMargin * dpi);
+            var closeT = (int)Math.Round(CloseButtonTopOffset * dpi);
+            return new Rectangle(
+                tabRect.Right - closeR,
+                tabRect.Y + closeT,
+                closeW,
+                closeH);
         }
     }
 }
