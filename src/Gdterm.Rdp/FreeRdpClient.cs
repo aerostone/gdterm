@@ -50,6 +50,11 @@ namespace Gdterm.Rdp
         private volatile string _detectedLoadBalanceInfo;
         private int _lbRetried;
 
+        // hex dump 形式的 routing token 累加器：FreeRDP 把 `Cookie: msts=...` 的 ASCII
+        // 拆到每行 dump 末尾，需跨行拼接直到遇到 CR/LF 结束。
+        private bool _hexTokenAccumulating;
+        private string _hexTokenBuffer;
+
         private const int MaxLoggedLines = 400;
         private const int ConnectedProbeDelayMs = 2500;
 
@@ -291,6 +296,8 @@ namespace Gdterm.Rdp
             _startDomain = domain;
             _detectedLoadBalanceInfo = null;
             _lbRetried = 0;
+            _hexTokenAccumulating = false;
+            _hexTokenBuffer = null;
 
             var exe = FindExecutable();
             if (exe == null)
@@ -382,11 +389,12 @@ namespace Gdterm.Rdp
             AddArg(args, logArgs, CurrentOptions.EnableDesktopComposition ? "+aero" : "-aero");
             AddArg(args, logArgs, CurrentOptions.EnableWallpaper ? "+wallpaper" : "-wallpaper");
             AddArg(args, logArgs, CurrentOptions.EnableMenuAnimations ? "+menu-anims" : "-menu-anims");
-            // 安全层：默认不传 /sec 参数，让 FreeRDP 自动协商（NLA → TLS → RDP 逐级降级）。
-            // 老式 RDP 网关/堡垒机不支持协商请求（li==6 的裸 CC），强制 /sec:nla 会关掉
-            // RDP security 降级通路，导致 NEGO_STATE_FAIL（0x0002000C）。
-            // 仅当用户显式禁用 NLA 时才指定 /sec:tls；启用 NLA 时靠 FreeRDP 自身协商。
-            if (!CurrentOptions.EnableNLA)
+            // 安全层：显式锁定 NLA，禁止 FreeRDP 降级到 legacy RDP security。
+            // NetScaler/LB 堡垒机只认 NLA/TLS（日志铁证：降级后即刻 LOGOFF_BY_USER /
+            // ERRCONNECT_CONNECT_TRANSPORT_FAILED）。仅当用户显式禁用 NLA 时才指定 /sec:tls。
+            if (CurrentOptions.EnableNLA || CurrentOptions.ForceNLA)
+                AddArg(args, logArgs, "/sec:nla");
+            else
                 AddArg(args, logArgs, "/sec:tls");
             if (CurrentOptions.AutoReconnectCount > 0) AddArg(args, logArgs, "/auto-reconnect");
             // 旧版堡垒机/RDP 代理常发送未在能力协商中声明的绘图指令（Cache Bitmap V2 等），
@@ -485,7 +493,10 @@ namespace Gdterm.Rdp
                 RdpLog.Info(isOut ? "FreeRdp.out" : "FreeRdp.err", line.Trim());
 
             // 捕获负载均衡路由 token：NetScaler 等 LB 网关在首次握手时下发
-            // LB_LOAD_BALANCE_INFO '<token>'，客户端必须回传 token 才能通过重连。
+            // LB_LOAD_BALANCE_INFO '<token>'（或 hex dump 形式），客户端必须回传 token
+            // 才能通过 redirect 重连。两种格式都兼容：
+            // 1) 单引号直接包裹：LB_LOAD_BALANCE_INFO 'Cookie: msts=...'
+            // 2) hex dump 行：`0048 62 32 37 35 ...         b2757a90da1..`（ASCII 列拼接）
             if (_detectedLoadBalanceInfo == null)
             {
                 var idx = lower.IndexOf("lb_load_balance_info");
@@ -504,6 +515,92 @@ namespace Gdterm.Rdp
                     }
                 }
             }
+
+            // redirect 后 FreeRDP 输出的 hex dump 会把 routing token 的 ASCII 拆到每行末尾。
+            // 累加 `Cookie: msts=...` 直到遇到 CR/LF 结束的 token，再完整回传。
+            AccumulateHexRoutingToken(line);
+        }
+
+        /// <summary>
+        /// 从 redirect hex dump 行中累加 routing token。
+        /// FreeRDP 的 redirection 日志形如：
+        ///   0048 62 32 37 35 37 61 39 30 64 61 31 0d 0a          b2757a90da1..
+        /// 即每行末尾的 ASCII 列是 token 的一段，多行拼接，最后以 `0d 0a`（CR/LF）结束。
+        /// 我们只追 `Cookie: msts=...` 前缀开始的 token。
+        /// </summary>
+        private void AccumulateHexRoutingToken(string line)
+        {
+            if (_detectedLoadBalanceInfo != null) return;
+
+            // 定位 hex dump 行的 ASCII 列：FreeRDP 用多个空格分隔 hex 区与 ASCII 区，
+            // 且 ASCII 区至少 2 列空白。找到 "00 " 之后较宽的空白起始即可。
+            int colon = line.IndexOf("Cookie:", StringComparison.OrdinalIgnoreCase);
+            if (colon < 0) colon = line.IndexOf("Cookie:", StringComparison.Ordinal);
+
+            string ascii = null;
+            if (colon >= 0)
+            {
+                // 直接命中行内已含 "Cookie:"（单行 dump 或已按 ASCII 拼接）
+                ascii = line.Substring(colon);
+            }
+            else if (_hexTokenAccumulating)
+            {
+                // 累加中的后续行：只取 ASCII 列（行尾空白右侧的文本）
+                ascii = ExtractHexAsciiColumn(line);
+            }
+            else
+            {
+                // 尚未开始累加：探测本行 ASCII 列是否以 "Cookie:" 开头
+                var probe = ExtractHexAsciiColumn(line);
+                if (probe != null && probe.StartsWith("Cookie:", StringComparison.OrdinalIgnoreCase))
+                {
+                    _hexTokenAccumulating = true;
+                    _hexTokenBuffer = probe;
+                }
+                return;
+            }
+
+            if (ascii == null) return;
+
+            _hexTokenAccumulating = true;
+            _hexTokenBuffer += ascii;
+
+            // token 以 CR/LF 结束（ASCII 里看不到 0d 0a，但 hex dump 行尾的 `..` 或
+            // 明确的换行代表结束）。更稳妥：当行尾 ASCII 不含 ".." 且不含明显截断时收尾。
+            // 但 FreeRDP 用 `..` 表示不可打印字节（0d 0a），故遇到含 ".." 的收尾行即可完成。
+            if (ascii.EndsWith("..") || ascii.IndexOf("..", StringComparison.Ordinal) >= 0)
+            {
+                TrimHexTokenAndCommit();
+            }
+        }
+
+        /// <summary>提取 hex dump 行的 ASCII 列（hex 区与 ASCII 区之间用 >=2 空格分隔），无则返回 null。</summary>
+        private static string ExtractHexAsciiColumn(string line)
+        {
+            if (string.IsNullOrEmpty(line)) return null;
+            // FreeRDP hex dump：`0000 43 6f ... 6e 2e  Cookie: msts=...`
+            // hex 字节间用单空格分隔，ASCII 列前有 >=2 空格。从行尾向左找双空格即可。
+            for (int i = line.Length - 1; i >= 1; i--)
+            {
+                if (line[i] == ' ' && line[i - 1] == ' ')
+                    return line.Substring(i + 1).TrimEnd();
+            }
+            return null;
+        }
+
+        private void TrimHexTokenAndCommit()
+        {
+            string token = _hexTokenBuffer;
+            _hexTokenBuffer = null;
+            _hexTokenAccumulating = false;
+            if (string.IsNullOrEmpty(token)) return;
+            // 去掉末尾的 ".." 及其后的部分
+            int d = token.IndexOf("..", StringComparison.Ordinal);
+            if (d >= 0) token = token.Substring(0, d);
+            token = token.Trim();
+            if (token.Length == 0) return;
+            _detectedLoadBalanceInfo = token;
+            RdpLog.Info("FreeRdp.LB", "detected load-balance token (hex): " + _detectedLoadBalanceInfo);
         }
 
         private void OnConnectedProbe(object state)
