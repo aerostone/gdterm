@@ -50,6 +50,18 @@ install:
       Expand-Archive -Path $zipFile -DestinationPath $srcDir
       $root = Get-ChildItem $srcDir | Select-Object -First 1 -ExpandProperty FullName
 
+      # ---- 应用本地 FreeRDP 补丁（修复 NetScaler LB redirect 下 /sec:nla 被降级为 legacy RDP security）----
+      $patchFile = Join-Path $env:APPVEYOR_BUILD_FOLDER 'vendor\freerdp\0001-nego-dont-downgrade-to-rdp-security-on-lb-redirect.patch'
+      if (Test-Path $patchFile) {
+        git -C $root apply --check $patchFile
+        if ($LASTEXITCODE -ne 0) { throw "pre-apply check failed exit=$LASTEXITCODE" }
+        git -C $root apply $patchFile
+        if ($LASTEXITCODE -ne 0) { throw "patch apply failed exit=$LASTEXITCODE" }
+        Write-Host "Applied FreeRDP patch: $patchFile"
+      } else {
+        throw "FreeRDP patch not found: $patchFile"
+      }
+
       # ---- OpenSSL 开发库（探测预装路径，否则 choco 安装；2.x 强制依赖 OpenSSL）----
       function Find-OpenSslRoot {
         foreach ($p in @('C:\OpenSSL-Win64','C:\Program Files\OpenSSL-Win64','C:\Program Files\OpenSSL',
