@@ -53,6 +53,8 @@ namespace Gdterm.Rdp
         // 每轮下发不同 token，若只看 _lbRetried 会形成无限重连循环。
         private int _lbRetryTotal;
         private const int MaxLbRetryTotal = 2;
+        // 排障开关：默认丢弃 wfreerdp 的 [DEBUG] 行；rdp_debug_log=true 时保留全量。
+        private bool _debugLogEnabled;
 
         // hex dump 形式的 routing token 累加器：FreeRDP 把 `Cookie: msts=...` 的 ASCII
         // 拆到每行 dump 末尾，需跨行拼接直到遇到 CR/LF 结束。
@@ -363,8 +365,18 @@ namespace Gdterm.Rdp
                 AddArg(args, logArgs, "/size:" + w + "x" + h);
             AddArg(args, logArgs, "/bpp:" + MapBpp(CurrentOptions.ColorDepth));
             AddArg(args, logArgs, "/cert-ignore"); // 免交互证书确认（隐藏控制台下 TOFU 提示会挂起）
-            // 排障关键：wfreerdp 输出 DEBUG 级日志（TLS 协商/PDU 解析/order/重定向全链路），
-            // 由下方 stdout/stderr 采集进 diag.log。堡垒机踢线这类问题只能靠它定位。
+            // 日志级别：进程始终开 debug（redirect token 的 hex dump 捕获依赖 DEBUG 级输出），
+            // 但默认只在落盘时丢弃 [DEBUG] 行（见 LogStreamLine）；连接元数据 rdp_debug_log=true
+            // 时全量落盘，供堡垒机踢线等问题排障。
+            bool debugLog = false;
+            try
+            {
+                debugLog = _startConfig != null && _startConfig.Metadata != null
+                    && _startConfig.Metadata.ContainsKey("rdp_debug_log")
+                    && _startConfig.Metadata["rdp_debug_log"] == "true";
+            }
+            catch { }
+            _debugLogEnabled = debugLog;
             AddArg(args, logArgs, "/log-level:debug");
             // 负载均衡：预协商阶段已把 routing token 写入 CurrentOptions，这里作为协议字段传给 wfreerdp
             if (!string.IsNullOrEmpty(CurrentOptions.LoadBalanceInfo))
@@ -489,15 +501,22 @@ namespace Gdterm.Rdp
             if (string.IsNullOrEmpty(line)) return;
             var n = isOut ? Interlocked.Increment(ref _outLines) : Interlocked.Increment(ref _errLines);
             var lower = line.ToLowerInvariant();
-            var interesting = lower.Contains("error") || lower.Contains("warn") || lower.Contains("fail")
-                || lower.Contains("connected") || lower.Contains("disconnect") || lower.Contains("certificate")
-                || lower.Contains("authentication") || lower.Contains("license") || lower.Contains("transport")
-                || lower.Contains("order") || lower.Contains("bitmap") || lower.Contains("redirect")
-                || lower.Contains("nego") || lower.Contains("tls") || lower.Contains("security")
-                || lower.Contains("load-balance") || lower.Contains("loadbalance") || lower.Contains("routing")
-                || lower.Contains("logoff") || lower.Contains("server bug") || lower.Contains("capability");
-            if (n <= MaxLoggedLines || interesting)
-                RdpLog.Info(isOut ? "FreeRdp.out" : "FreeRdp.err", line.Trim());
+            // 日志瘦身：默认丢弃 [DEBUG] 行不落盘（nego 状态机逐行、hex dump 等）；
+            // 连接元数据 rdp_debug_log=true 时全量落盘供排障。
+            // 注意：下方 token 捕获逻辑对包括 DEBUG 行在内的所有行都要执行。
+            bool isDebugLevel = lower.Contains("[debug]");
+            if (!isDebugLevel || _debugLogEnabled)
+            {
+                var interesting = lower.Contains("error") || lower.Contains("warn") || lower.Contains("fail")
+                    || lower.Contains("connected") || lower.Contains("disconnect") || lower.Contains("certificate")
+                    || lower.Contains("authentication") || lower.Contains("license") || lower.Contains("transport")
+                    || lower.Contains("order") || lower.Contains("bitmap") || lower.Contains("redirect")
+                    || lower.Contains("nego") || lower.Contains("tls") || lower.Contains("security")
+                    || lower.Contains("load-balance") || lower.Contains("loadbalance") || lower.Contains("routing")
+                    || lower.Contains("logoff") || lower.Contains("server bug") || lower.Contains("capability");
+                if (n <= MaxLoggedLines || interesting)
+                    RdpLog.Info(isOut ? "FreeRdp.out" : "FreeRdp.err", line.Trim());
+            }
 
             // 捕获负载均衡路由 token：NetScaler 等 LB 网关在首次握手时下发
             // LB_LOAD_BALANCE_INFO '<token>'（或 hex dump 形式），客户端必须回传 token
@@ -672,18 +691,8 @@ namespace Gdterm.Rdp
             if (string.Equals(_detectedLoadBalanceInfo, CurrentOptions.LoadBalanceInfo, StringComparison.Ordinal)) return false;
             if (Interlocked.Exchange(ref _lbRetried, 1) != 0) return false;
 
-            // 凭据守卫：无密码时服务器（堡垒机）必然在登录阶段注销会话
-            // （ERRINFO_LOGOFF_BY_USER → 0x1000C），带 token 重启只会被再次踢掉。
-            // 不再盲目重连，把「请在连接设置里配置用户名密码」的提示交给上层。
-            bool hasCredential = _startCredential != null
-                && !string.IsNullOrEmpty(_startCredential.Password);
-            if (!hasCredential)
-            {
-                RdpLog.Info("FreeRdp.LB", "skip auto-reconnect: no credential configured "
-                    + "(server logs off unauthenticated session)");
-                return false;
-            }
-
+            // 凭据说明：堡垒机多为带内认证（密码在堡垒机自己的登录页输入），
+            // 连接配置里没有密码是正常形态，不作为禁止重连的理由。
             // 总次数守卫：_lbRetried 每次 Start() 会复位，且 LB 网关每轮下发不同 token
             // 会让「新 token != 当前 token」恒成立。用独立的累计计数封顶，防无限循环。
             if (Interlocked.Increment(ref _lbRetryTotal) > MaxLbRetryTotal)
@@ -741,7 +750,7 @@ namespace Gdterm.Rdp
                 case 0x0F: return "KDC 不可达（域认证）";
                 default:
                     // ERRINFO_*（0x10000 段，MS-RDPBCGR 2.2.5.1.1）：服务器在会话中主动上报的错误信息
-                    if (code == 0x1000C) return "服务器主动注销了此会话（LOGOFF_BY_USER）：常见于未提供凭据被堡垒机登录超时踢出、同账号在其它客户端登录被顶号、或管理员强制注销。请在连接设置里配置用户名密码后重试";
+                    if (code == 0x1000C) return "服务器主动注销了此会话（LOGOFF_BY_USER）：常见于堡垒机会话超时/被顶号/管理员强制注销；若在堡垒机登录页输入密码后仍断开，请检查堡垒机单会话限制或账号在其它客户端登录";
                     if (code == 0x10004) return "服务器强制断开（策略限制或会话被接管）";
                     // NTSTATUS：加载器/运行库级失败，与 ERRCONNECT_* 区分
                     if (code == unchecked((int)0xC0000135)) return "缺少依赖 DLL（如 libcrypto-3-x.dll），请补全 freerdp\\ 目录后重试";
