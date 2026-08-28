@@ -49,6 +49,10 @@ namespace Gdterm.Rdp
         private ConnectionConfig _startConfig;
         private volatile string _detectedLoadBalanceInfo;
         private int _lbRetried;
+        // 跨重启累计的 LB 重连次数：_lbRetried 会在 Start() 中重置，但 NetScaler
+        // 每轮下发不同 token，若只看 _lbRetried 会形成无限重连循环。
+        private int _lbRetryTotal;
+        private const int MaxLbRetryTotal = 2;
 
         // hex dump 形式的 routing token 累加器：FreeRDP 把 `Cookie: msts=...` 的 ASCII
         // 拆到每行 dump 末尾，需跨行拼接直到遇到 CR/LF 结束。
@@ -667,6 +671,26 @@ namespace Gdterm.Rdp
             if (string.IsNullOrEmpty(_detectedLoadBalanceInfo)) return false;
             if (string.Equals(_detectedLoadBalanceInfo, CurrentOptions.LoadBalanceInfo, StringComparison.Ordinal)) return false;
             if (Interlocked.Exchange(ref _lbRetried, 1) != 0) return false;
+
+            // 凭据守卫：无密码时服务器（堡垒机）必然在登录阶段注销会话
+            // （ERRINFO_LOGOFF_BY_USER → 0x1000C），带 token 重启只会被再次踢掉。
+            // 不再盲目重连，把「请在连接设置里配置用户名密码」的提示交给上层。
+            bool hasCredential = _startCredential != null
+                && !string.IsNullOrEmpty(_startCredential.Password);
+            if (!hasCredential)
+            {
+                RdpLog.Info("FreeRdp.LB", "skip auto-reconnect: no credential configured "
+                    + "(server logs off unauthenticated session)");
+                return false;
+            }
+
+            // 总次数守卫：_lbRetried 每次 Start() 会复位，且 LB 网关每轮下发不同 token
+            // 会让「新 token != 当前 token」恒成立。用独立的累计计数封顶，防无限循环。
+            if (Interlocked.Increment(ref _lbRetryTotal) > MaxLbRetryTotal)
+            {
+                RdpLog.Info("FreeRdp.LB", "lb auto-reconnect budget exhausted, total=" + _lbRetryTotal);
+                return false;
+            }
 
             CurrentOptions.LoadBalanceInfo = _detectedLoadBalanceInfo;
             try
