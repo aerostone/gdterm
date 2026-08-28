@@ -545,8 +545,8 @@ namespace Gdterm.Rdp
             var decoded = DecodeHexLineAscii(line);
             if (decoded == null) return;
 
-            bool isTokenStart = decoded.Contains("Cookie: msts=", StringComparison.OrdinalIgnoreCase)
-                || decoded.Contains("Cookie: mstshash=", StringComparison.OrdinalIgnoreCase);
+            bool isTokenStart = decoded.IndexOf("Cookie: msts=", StringComparison.OrdinalIgnoreCase) >= 0
+                || decoded.IndexOf("Cookie: mstshash=", StringComparison.OrdinalIgnoreCase) >= 0;
             if (!_hexTokenAccumulating && !isTokenStart)
                 return; // 尚未开始且本行不是 token 开头，忽略
 
@@ -554,7 +554,7 @@ namespace Gdterm.Rdp
             _hexTokenBuffer += decoded;
 
             // token 以 CR/LF (0d0a) 结束，解码时已保留为实际 CR/LF，遇之即可收尾。
-            if (decoded.Contains('\r') || decoded.Contains('\n'))
+            if (decoded.IndexOf('\r') >= 0 || decoded.IndexOf('\n') >= 0)
                 TrimHexTokenAndCommit();
         }
 
