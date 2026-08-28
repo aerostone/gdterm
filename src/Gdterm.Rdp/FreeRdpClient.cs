@@ -55,6 +55,8 @@ namespace Gdterm.Rdp
         private const int MaxLbRetryTotal = 2;
         // 排障开关：默认丢弃 wfreerdp 的 [DEBUG] 行；rdp_debug_log=true 时保留全量。
         private bool _debugLogEnabled;
+        // 「未解析 PDU」hex dump 采集状态：见到 "not properly parsed" 后开启，遇非 hex 行关闭。
+        private bool _unhandledPduDumping;
 
         // hex dump 形式的 routing token 累加器：FreeRDP 把 `Cookie: msts=...` 的 ASCII
         // 拆到每行 dump 末尾，需跨行拼接直到遇到 CR/LF 结束。
@@ -335,6 +337,8 @@ namespace Gdterm.Rdp
             if (string.IsNullOrEmpty(CurrentOptions.LoadBalanceInfo))
             {
                 var probed = RdpLoadBalanceProbe.Probe(host, port);
+                RdpLog.Info("FreeRdp.LB", "probe result=" + (probed == null ? "<null>" : "token")
+                    + " detail=" + RdpLoadBalanceProbe.LastProbeDetail);
                 if (!string.IsNullOrEmpty(probed))
                 {
                     CurrentOptions.LoadBalanceInfo = probed;
@@ -518,6 +522,23 @@ namespace Gdterm.Rdp
                     RdpLog.Info(isOut ? "FreeRdp.out" : "FreeRdp.err", line.Trim());
             }
 
+            // 未解析 PDU 落盘："PDU_TYPE_DATA not properly parsed, N bytes remaining" 是
+            // 服务器（堡垒机）发送了 FreeRDP 2.x 不认识的 PDU 的唯一线索，其内容很可能
+            // 就是踢出原因（如 logonErrorInfo 变体）。遇到时把随后的 hex dump 行落盘，
+            // 直到遇到非 hex 行（dump 结束）。此类 dump 极少且短，不担心刷屏。
+            if (_unhandledPduDumping)
+            {
+                if (IsHexDumpLine(line))
+                    RdpLog.Info(isOut ? "FreeRdp.pdu" : "FreeRdp.pdu", line.Trim());
+                else
+                    _unhandledPduDumping = false;
+            }
+            if (lower.Contains("not properly parsed"))
+            {
+                RdpLog.Info("FreeRdp.pdu", line.Trim());
+                _unhandledPduDumping = true; // FreeRDP 随后用 winpr_HexLogDump 输出该 PDU 内容
+            }
+
             // 捕获负载均衡路由 token：NetScaler 等 LB 网关在首次握手时下发
             // LB_LOAD_BALANCE_INFO '<token>'（或 hex dump 形式），客户端必须回传 token
             // 才能通过 redirect 重连。两种格式都兼容：
@@ -585,6 +606,15 @@ namespace Gdterm.Rdp
         {
             return line.Length >= 5 && IsHex(line[0]) && IsHex(line[1]) && IsHex(line[2])
                 && IsHex(line[3]) && line[4] == ' ';
+        }
+
+        /// <summary>FreeRDP winpr_HexLogDump 行：offset(4 hex) + 空格 + hex 字节列（可能带 ASCII 列）。</summary>
+        private static bool IsHexDumpLine(string line)
+        {
+            var t = line.Trim();
+            if (t.Length < 7) return false;
+            return IsHex(t[0]) && IsHex(t[1]) && IsHex(t[2]) && IsHex(t[3]) && t[4] == ' '
+                && IsHex(t[5]) && IsHex(t[6]);
         }
 
         private static bool IsHex(char c)

@@ -42,17 +42,28 @@ namespace Gdterm.Rdp
         private static readonly byte[] CookiePrefix = Encoding.ASCII.GetBytes("Cookie: mstshash=");
 
         /// <summary>
+        /// 最近一次 Probe 的失败原因（"ok:token" / "cc:no-token" / "timeout" / …），
+        /// 供上层落盘诊断探针时灵时不灵的问题；无诊断意义时不记录。
+        /// </summary>
+        public static string LastProbeDetail = "not-run";
+
+        /// <summary>
         /// 对 host:port 执行一次 X.224 预协商并返回 routing token；无 token / 失败返回 null。
         /// </summary>
         public static string Probe(string host, int port, int timeoutMs = DefaultTimeoutMs)
         {
-            if (string.IsNullOrEmpty(host) || port <= 0 || port > 65535) return null;
+            if (string.IsNullOrEmpty(host) || port <= 0 || port > 65535)
+            {
+                LastProbeDetail = "bad-endpoint";
+                return null;
+            }
             try
             {
                 return ProbeCore(host, port, timeoutMs);
             }
-            catch
+            catch (Exception ex)
             {
+                LastProbeDetail = "exception:" + ex.GetType().Name;
                 return null; // 预协商失败不阻断正常连接
             }
         }
@@ -62,7 +73,11 @@ namespace Gdterm.Rdp
             using (var client = new TcpClient())
             {
                 var connectTask = client.ConnectAsync(host, port);
-                if (!connectTask.Wait(timeoutMs) || !client.Connected) return null;
+                if (!connectTask.Wait(timeoutMs) || !client.Connected)
+                {
+                    LastProbeDetail = "connect-timeout";
+                    return null;
+                }
 
                 using (var stream = client.GetStream())
                 {
@@ -76,16 +91,34 @@ namespace Gdterm.Rdp
 
                     // 读 TPKT 头（version + length），再按长度读完整 PDU。
                     var head = new byte[4];
-                    if (!ReadExactly(stream, head, 0, 4)) return null;
-                    if (head[0] != 0x03) return null; // TPKT version 3
+                    if (!ReadExactly(stream, head, 0, 4))
+                    {
+                        LastProbeDetail = "read-head-eof";
+                        return null;
+                    }
+                    if (head[0] != 0x03)
+                    {
+                        LastProbeDetail = "not-tpkt:" + head[0];
+                        return null;
+                    } // TPKT version 3
                     int length = (head[2] << 8) | head[3];
-                    if (length < 5 || length > 0x4000) return null; // 合理边界，防畸形长度
+                    if (length < 5 || length > 0x4000)
+                    {
+                        LastProbeDetail = "bad-length:" + length;
+                        return null;
+                    } // 合理边界，防畸形长度
 
                     var pdu = new byte[length];
                     head.CopyTo(pdu, 0);
-                    if (!ReadExactly(stream, pdu, 4, length - 4)) return null;
+                    if (!ReadExactly(stream, pdu, 4, length - 4))
+                    {
+                        LastProbeDetail = "read-pdu-eof";
+                        return null;
+                    }
 
-                    return ExtractRoutingToken(pdu);
+                    var token = ExtractRoutingToken(pdu);
+                    LastProbeDetail = token != null ? "ok:token-len-" + token.Length : "cc:no-token";
+                    return token;
                 }
             }
         }
