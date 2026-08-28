@@ -164,7 +164,13 @@ namespace Gdterm.UI.Services
                 ToolTipText = "RDP: " + config.Host + ":" + config.Port
             };
 
-            if (credential != null && !string.IsNullOrEmpty(credential.Password))
+            // 堡垒机带内认证：账号密码在堡垒机自己的登录页输入，不注入 Windows 凭据管理器
+            // （否则 mstsc 回退/后续连接会把保存凭据带到转发目标，与带内认证冲突）。
+            bool inbandAuth = config.Metadata != null
+                && config.Metadata.ContainsKey("rdp_inband_auth")
+                && config.Metadata["rdp_inband_auth"] == "true";
+
+            if (!inbandAuth && credential != null && !string.IsNullOrEmpty(credential.Password))
             {
                 try
                 {
@@ -193,9 +199,10 @@ namespace Gdterm.UI.Services
 
             // FreeRDP 无 Windows SSO，必须有凭据才能连 load-balanced 服务器。
             // 若 KeePass 未解锁或无匹配条目，自动回退 mstsc（走当前 Windows 用户 SSO）。
+            // 带内认证模式下无凭据是正常形态（密码在堡垒机登录页输入），不回退。
             bool useFreeRdp = rdp is FreeRdpClient;
             bool hasCreds = credential != null && !string.IsNullOrEmpty(credential.Username) && !string.IsNullOrEmpty(credential.Password);
-            if (useFreeRdp && !hasCreds)
+            if (useFreeRdp && !hasCreds && !inbandAuth)
             {
                 try
                 {
