@@ -505,11 +505,32 @@ namespace Gdterm.Rdp
             if (string.IsNullOrEmpty(line)) return;
             var n = isOut ? Interlocked.Increment(ref _outLines) : Interlocked.Increment(ref _errLines);
             var lower = line.ToLowerInvariant();
+
+            // 未解析 PDU 专项落盘（FreeRdp.pdu 标签）：服务器（堡垒机）发送了 FreeRDP 2.x
+            // 不认识的 PDU 时，“not properly parsed, N bytes remaining” 是唯一线索，
+            // 其内容很可能就是踢出原因（如 logonErrorInfo 变体）。该行及其随后的 hex dump
+            // 行只走 pdu 通道，避免与下方常规 interesting 过滤重复落盘。hex dump 极少且短。
+            bool unhandledPdu = lower.Contains("not properly parsed");
+            bool isPduHexDump = _unhandledPduDumping && IsHexDumpLine(line);
+            bool routedToPdu = unhandledPdu || isPduHexDump;
+            if (unhandledPdu)
+            {
+                RdpLog.Info("FreeRdp.pdu", line.Trim());
+                _unhandledPduDumping = true;
+            }
+            else if (_unhandledPduDumping)
+            {
+                if (isPduHexDump)
+                    RdpLog.Info("FreeRdp.pdu", line.Trim());
+                else
+                    _unhandledPduDumping = false; // hex dump 区结束
+            }
+
             // 日志瘦身：默认丢弃 [DEBUG] 行不落盘（nego 状态机逐行、hex dump 等）；
             // 连接元数据 rdp_debug_log=true 时全量落盘供排障。
             // 注意：下方 token 捕获逻辑对包括 DEBUG 行在内的所有行都要执行。
             bool isDebugLevel = lower.Contains("[debug]");
-            if (!isDebugLevel || _debugLogEnabled)
+            if ((!isDebugLevel || _debugLogEnabled) && !routedToPdu)
             {
                 var interesting = lower.Contains("error") || lower.Contains("warn") || lower.Contains("fail")
                     || lower.Contains("connected") || lower.Contains("disconnect") || lower.Contains("certificate")
@@ -520,23 +541,6 @@ namespace Gdterm.Rdp
                     || lower.Contains("logoff") || lower.Contains("server bug") || lower.Contains("capability");
                 if (n <= MaxLoggedLines || interesting)
                     RdpLog.Info(isOut ? "FreeRdp.out" : "FreeRdp.err", line.Trim());
-            }
-
-            // 未解析 PDU 落盘："PDU_TYPE_DATA not properly parsed, N bytes remaining" 是
-            // 服务器（堡垒机）发送了 FreeRDP 2.x 不认识的 PDU 的唯一线索，其内容很可能
-            // 就是踢出原因（如 logonErrorInfo 变体）。遇到时把随后的 hex dump 行落盘，
-            // 直到遇到非 hex 行（dump 结束）。此类 dump 极少且短，不担心刷屏。
-            if (_unhandledPduDumping)
-            {
-                if (IsHexDumpLine(line))
-                    RdpLog.Info(isOut ? "FreeRdp.pdu" : "FreeRdp.pdu", line.Trim());
-                else
-                    _unhandledPduDumping = false;
-            }
-            if (lower.Contains("not properly parsed"))
-            {
-                RdpLog.Info("FreeRdp.pdu", line.Trim());
-                _unhandledPduDumping = true; // FreeRDP 随后用 winpr_HexLogDump 输出该 PDU 内容
             }
 
             // 捕获负载均衡路由 token：NetScaler 等 LB 网关在首次握手时下发
@@ -608,13 +612,18 @@ namespace Gdterm.Rdp
                 && IsHex(line[3]) && line[4] == ' ';
         }
 
-        /// <summary>FreeRDP winpr_HexLogDump 行：offset(4 hex) + 空格 + hex 字节列（可能带 ASCII 列）。</summary>
+        /// <summary>FreeRDP winpr_HexDump 行：经 WLog 输出，带「[time] [pid:tid] [LEVEL][comp] - 」前缀，
+        /// message 部分形如「0048 62 32 37 35 ...  ascii」。识别前缀后的 hex 内容。</summary>
         private static bool IsHexDumpLine(string line)
         {
-            var t = line.Trim();
-            if (t.Length < 7) return false;
-            return IsHex(t[0]) && IsHex(t[1]) && IsHex(t[2]) && IsHex(t[3]) && t[4] == ' '
-                && IsHex(t[5]) && IsHex(t[6]);
+            // WLog 行格式：... [LEVEL][component] - <message>，用最后一个 "] - " 切分
+            int sep = line.LastIndexOf("] - ");
+            if (sep < 0) return false;
+            int m = sep + 4; // message 起点
+            if (m + 7 > line.Length) return false;
+            // offset 4 hex + 空格 + 至少 1 字节（2 hex）
+            return IsHex(line[m]) && IsHex(line[m + 1]) && IsHex(line[m + 2]) && IsHex(line[m + 3])
+                && line[m + 4] == ' ' && IsHex(line[m + 5]) && IsHex(line[m + 6]);
         }
 
         private static bool IsHex(char c)

@@ -50,7 +50,25 @@ install:
       Expand-Archive -Path $zipFile -DestinationPath $srcDir
       $root = Get-ChildItem $srcDir | Select-Object -First 1 -ExpandProperty FullName
 
-      # ---- FreeRDP 补丁已移除 ----
+      # ---- 补丁：未解析 PDU 落盘 hex dump ----
+      # 背景堡垒机常发送 FreeRDP 2.x 不认识的 PDU（logonErrorInfo 变体等），
+      # rdp.c 只打一句 "not properly parsed, N bytes remaining" 就跳过，
+      # 客户端看不到内容，无法判断踢出原因。在 WARN 后追加 winpr_HexDump，
+      # 输出剩余字节（随 FreeRdp.pdu 标签进 diag.log）。
+      # 定位锚点为 rdp.c 中 WLog_WARN(... "pduType %s not properly parsed ...") 块。
+      $rdpC = Join-Path $root 'libfreerdp\core\rdp.c'
+      $src = Get-Content $rdpC -Raw
+      $anchor = 'pdu_type_to_str(pduType), diff);'
+      if ($src -notlike "*$anchor*") { throw "patch anchor not found in rdp.c" }
+      $patched = $src -replace [regex]::Escape($anchor),
+        "$anchor`n`t`t`t`t  winpr_HexDump(TAG, WLOG_WARN, Stream_Pointer(&sub), diff);"
+      # 补 winpr/print.h：winpr_HexDump 声明所在头文件，rdp.c 默认未包含
+      $patched = $patched -replace '#include <winpr/crt.h>',
+        "#include <winpr/crt.h>`n#include <winpr/print.h>"
+      Set-Content -Path $rdpC -Value $patched -NoNewline
+      Write-Host "Patched rdp.c: unhandled PDU hex dump enabled"
+
+      # ---- FreeRDP 旧补丁已移除 ----
       # 原补丁在 nego_recv li==6 分支强制 redirect 重连 FAIL（RoutingToken>0 && HYBRID），
       # 但 NetScaler 只支持 legacy RDP（li==6 是常态），补丁阻止了唯一可行的 legacy RDP 路径。
       # C# 层已改：/sec:nla 仅 ForceNLA=true 时传，redirect 重连走自由协商（li==6 → FINAL）。
