@@ -61,6 +61,9 @@ namespace Gdterm.UI.Forms
         private SidePanelFactory _sidePanels;
         private SidePanelHost _sidePanelHost;
         private SessionStateCoordinator _sessionState;
+        /// <summary>会话已恢复标志：闲时锁定验证前不恢复会话（否则持久化的 RDP tab 启动即自动连接/
+        /// 弹凭据框，键盘输入会透到凭据页而非锁定页）。解锁后由 LockStateChanged 恢复一次。</summary>
+        private bool _sessionRestored;
         private ViewModeController _viewMode;
         private ToolsDialogsLauncher _toolsDialogs;
         // finding-09：扫描插件仓库由组合根（MainForm 构造）持有，经注入传递，关闭时随 AppShutdownCoordinator 释放
@@ -155,7 +158,15 @@ namespace Gdterm.UI.Forms
 
             Shown += (s, e) =>
             {
-                try { _sessionState?.Restore(); } catch { }
+                // 闲时锁定最高优先：未解锁前不恢复会话（否则持久化的 RDP tab 启动即自动连接/
+                // 弹凭据框，键盘输入会透到凭据页而非锁定页）。解锁后由 LockStateChanged 恢复。
+                if (_securityManager.IsLocked) return;
+                try
+                {
+                    _sessionState?.Restore();
+                    _sessionRestored = true;
+                }
+                catch (Exception ex) { DiagLog.Swallowed("MainForm.Shown.Restore", ex); }
             };
         }
 
@@ -466,7 +477,21 @@ namespace Gdterm.UI.Forms
             {
                 try { _tabContainer?.OpenLocalTerminal(); UpdateWelcomeVisibility(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.OpenLocalTerminal(tree)", ex); }
             };
-            _securityManager.LockStateChanged += (s, e) => _lockCoord.Handle(s, e);
+            _securityManager.LockStateChanged += (s, e) =>
+            {
+                _lockCoord.Handle(s, e);
+                // 解锁后恢复启动时被跳过的会话（仅一次；运行中闲时锁定/解锁不重复恢复，
+                // 会话仍在，重复 Restore 会重复建连/弹凭据框）。
+                if (e != null && !e.IsLocked && !_sessionRestored)
+                {
+                    try
+                    {
+                        _sessionState?.Restore();
+                        _sessionRestored = true;
+                    }
+                    catch (Exception ex) { DiagLog.Swallowed("MainForm.RestoreAfterUnlock", ex); }
+                }
+            };
             MouseMove += (s, e) => _securityManager.ResetIdleTimer();
             KeyDown += (s, e) =>
             {

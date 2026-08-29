@@ -71,14 +71,26 @@ namespace Gdterm.UI
             // 全局未处理异常：落盘 diag.log + 审计（audit 就绪后补写）
             CrashLog.Initialize(logsDir);
 
-            // 随附终端工具加入 PATH：本地终端子进程（ConPTY/winpty/cmd/PowerShell）直接敲 fzf/fd 即可用。
-            // 追加在末尾：系统里若已装更新版本则优先用系统的。
+            // 原生 DLL 搜索目录：winpty.dll 等集中放 lib\（DllImport 默认只搜 exe 目录，
+            // 集中分类后需 SetDllDirectory 让 Windows 加载器也搜 lib\；lib\ 不存在则跳过，
+            // 开发构建态 winpty.dll 仍在 exe 目录照样可加载）。
             try
             {
+                var libDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "lib");
+                if (Directory.Exists(libDir))
+                    SetDllDirectory(libDir);
+            }
+            catch { }
+            // 随附终端工具加入 PATH：本地终端子进程（ConPTY/winpty/cmd/PowerShell）直接敲 fzf/fd 即可用。
+            // 业界布局 bin\ 放 CLI 工具；保留 fzf\/fd\ 兑容旧发行包布局。追加在末尾，系统里若已装更新版本优先用系统的。
+            try
+            {
+                var baseDir = AppDomain.CurrentDomain.BaseDirectory;
                 var toolDirs = new[]
                 {
-                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "fzf"),
-                    Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "fd")
+                    Path.Combine(baseDir, "bin"),
+                    Path.Combine(baseDir, "fzf"),
+                    Path.Combine(baseDir, "fd")
                 };
                 var existing = Environment.GetEnvironmentVariable("PATH") ?? "";
                 var add = new System.Text.StringBuilder();
@@ -453,6 +465,11 @@ namespace Gdterm.UI
                 plain => ProtectHostField(securityManager, plain),
                 stored => UnprotectHostField(securityManager, stored));
         }
+
+        [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true,
+            CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        [return: System.Runtime.InteropServices.MarshalAs(System.Runtime.InteropServices.UnmanagedType.Bool)]
+        private static extern bool SetDllDirectory(string lpPathName);
 
         private const string HostSecretKey = "gdterm-conn-host-key-v1";
 

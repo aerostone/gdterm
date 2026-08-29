@@ -84,7 +84,7 @@ install:
       $anchor2 = "status = rdp_client_connect(rdp);`n`n`tif (status)`n`t`tstatus = rdp_client_reconnect_channels(rdp, TRUE);"
       if ($src2 -notlike "*$anchor2*") { throw "patch anchor not found in connection.c" }
       $clearBlock = @"
-`t/* gdterm patch: bastion forwarding - clear saved credentials before`n`t * reconnecting to the redirected target so the target negotiates its own login`n`t * instead of receiving the stale keepass /u /p from the bastion connection. */`n`tif (!(settings->RedirectionFlags & LB_LOAD_BALANCE_INFO))`n`t{`n`t`tif (!(settings->RedirectionFlags & LB_USERNAME))`n`t`t{`n`t`t`tfree(settings->Username);`n`t`t`tsettings->Username = NULL;`n`t`t}`n`t`tif (!(settings->RedirectionFlags & LB_DOMAIN))`n`t`t{`n`t`t`tfree(settings->Domain);`n`t`t`tsettings->Domain = NULL;`n`t`t}`n`t`tfree(settings->Password);`n`t`tsettings->Password = NULL;`n`t`tsettings->AutoLogonEnabled = FALSE;`n`t}`n
+`t/* gdterm patch: MS-RDPBCGR 2.2.13.1 - on server redirection to a new target,`n`t * only fields the server flagged (LB_USERNAME/LB_DOMAIN/LB_PASSWORD) are`n`t * authoritative target credentials; unflagged fields MUST NOT be reused.`n`t * FreeRDP bug: rdp_client_redirect never clears Password, so the stale`n`t * first-connect /u /p reaches the redirected target and gets it kicked`n`t * (LOGOFF_BY_USER). Clear unflagged credential fields so the target self-`n`t * negotiates its login (mstsc behavior). LB_LOAD_BALANCE_INFO routing reconnects`n`t * to the same gateway and keeps credentials. */`n`tif (!(settings->RedirectionFlags & LB_LOAD_BALANCE_INFO))`n`t{`n`t`tif (!(settings->RedirectionFlags & LB_USERNAME))`n`t`t{`n`t`t`tfree(settings->Username);`n`t`t`tsettings->Username = NULL;`n`t`t}`n`t`tif (!(settings->RedirectionFlags & LB_DOMAIN))`n`t`t{`n`t`t`tfree(settings->Domain);`n`t`t`tsettings->Domain = NULL;`n`t`t}`n`t`tif (!(settings->RedirectionFlags & LB_PASSWORD))`n`t`t{`n`t`t`tfree(settings->Password);`n`t`t`tsettings->Password = NULL;`n`t`t}`n`t`tsettings->AutoLogonEnabled = FALSE;`n`t}`n
 "@
       $patched2 = $src2 -replace [regex]::Escape($anchor2), ($clearBlock + $anchor2)
       Set-Content -Path $connC -Value $patched2 -NoNewline
@@ -248,15 +248,19 @@ after_test:
         Copy-Item "lib\VtNetCore.dll" $out -Force
       }
 
-      # 3) winpty（Win7/Server2008 本地终端 PTY fallback —— 原生二进制，必须单文件留存）
+      # 3) winpty（Win7/Server2008 本地终端 PTY fallback）—— 原生二进制集中放 lib\，
+      #     winpty.dll 与 winpty-agent.exe 必须同目录（dll 启动 agent）；
+      #     运行时 Program.cs 已 SetDllDirectory(lib) 让 DllImport(winpty.dll) 定位 lib\。
       if (Test-Path "lib\winpty") {
-        Copy-Item "lib\winpty\winpty.dll"      $out -Force
-        Copy-Item "lib\winpty\winpty-agent.exe" $out -Force
-        Copy-Item "lib\winpty\winpty.exe"     $out -Force
+        $libDir = Join-Path $out "lib"
+        New-Item -ItemType Directory -Path $libDir -Force | Out-Null
+        Copy-Item "lib\winpty\winpty.dll"      $libDir -Force
+        Copy-Item "lib\winpty\winpty-agent.exe" $libDir -Force
+        Copy-Item "lib\winpty\winpty.exe"     $libDir -Force
       }
 
-      # 3b) FreeRDP（wfreerdp.exe 进程嵌入引擎 —— 许可证存储为文件，规避 MSLicensing 提权问题；
-      #     放子目录 freerdp\ 以避开步骤 6 的顶层 *.dll 清理，原生 DLL 需与其 exe 同目录共存）
+      # 3b) FreeRDP（wfreerdp.exe 进程嵌入引擎）—— 集中放 lib\freerdp\（业界 bin/lib 分类），
+      #     原生 DLL 需与 exe 同目录共存；许可证文件随子目录保留（Apache-2.0 要求）。
       #     来源优先级：vendor\freerdp\（手工放置覆盖）> freerdp-bin\（install 阶段源码构建产物）
       $frSrc = $null
       if ((Test-Path "vendor\freerdp\wfreerdp.exe") -or
@@ -266,7 +270,7 @@ after_test:
         $frSrc = "$env:APPVEYOR_BUILD_FOLDER\freerdp-bin"
       }
       if ($frSrc) {
-        $frDir = Join-Path $out "freerdp"
+        $frDir = Join-Path $out "lib\freerdp"
         New-Item -ItemType Directory -Path $frDir -Force | Out-Null
         if ($frSrc -eq "vendor\freerdp") { Copy-Item "vendor\freerdp\*" $frDir -Recurse -Force }
         else { Copy-Item "$env:APPVEYOR_BUILD_FOLDER\freerdp-bin\*" $frDir -Force }
@@ -279,28 +283,29 @@ after_test:
         }
         [Native.Kernel32]::SetErrorMode(3) | Out-Null
         $pi2 = New-Object System.Diagnostics.ProcessStartInfo
-        $pi2.FileName = Join-Path (Join-Path $env:APPVEYOR_BUILD_FOLDER 'dist\gdterm\freerdp') 'wfreerdp.exe'
+        $pi2.FileName = Join-Path (Join-Path $env:APPVEYOR_BUILD_FOLDER 'dist\gdterm\lib\freerdp') 'wfreerdp.exe'
         $pi2.WorkingDirectory = $env:APPVEYOR_BUILD_FOLDER
         $pi2.Arguments = '/version'
         $pi2.UseShellExecute = $false; $pi2.CreateNoWindow = $true; $pi2.RedirectStandardOutput = $true
         $proc2 = [System.Diagnostics.Process]::Start($pi2)
         $null = $proc2.StandardOutput.ReadToEnd()
         if (-not $proc2.WaitForExit(20000)) { try { $proc2.Kill() } catch {}; throw "packed wfreerdp /version timeout" }
-        if ($proc2.ExitCode -ne 0) { throw "packed wfreerdp cannot load (exit=$($proc2.ExitCode)) — freerdp\ 目录缺运行库 DLL" }
+        if ($proc2.ExitCode -ne 0) { throw "packed wfreerdp cannot load (exit=$($proc2.ExitCode)) — lib\freerdp\ 目录缺运行库 DLL" }
         Write-Host "Packed FreeRDP smoke OK (exit=$($proc2.ExitCode))"
       } else {
         Write-Warning "No FreeRDP engine available — RDP falls back to mstscax ActiveX at runtime"
       }
 
-      # 3c) fzf / fd（本地终端随附工具——运行时加入 PATH，详见 vendor\fzf\README.txt）
+      # 3c) fzf / fd（本地终端随附 CLI 工具）—— 业界布局 bin\ 放可执行；运行时 Program.cs
+      #     把 bin\ 加入 PATH，终端子进程直接敲 fzf/fd 即可用。
       #     均为官方 Win7 兼容版：fzf v0.65.2（末代 Win7 支持）、fd v10.2.0（Rust 1.77 锁定构建）
+      $binDir = Join-Path $out "bin"
+      New-Item -ItemType Directory -Path $binDir -Force | Out-Null
       foreach ($tool in @('fzf','fd')) {
         $exe = "vendor\${tool}\${tool}.exe"
         if (Test-Path $exe) {
-          $tDir = Join-Path $out ${tool}
-          New-Item -ItemType Directory -Path $tDir -Force | Out-Null
-          Copy-Item "vendor\${tool}\*" $tDir -Recurse -Force
-          Write-Host ("Packed {0}: {1} files" -f $tool, (Get-ChildItem $tDir -File).Count)
+          Copy-Item "vendor\${tool}\*" $binDir -Recurse -Force
+          Write-Host ("Packed {0} into bin\" -f $tool)
         } else {
           Write-Warning "vendor\${tool}\${tool}.exe missing - skipped"
         }
@@ -357,7 +362,7 @@ after_test:
       & $ilrepack $argsArr
       if ($LASTEXITCODE -ne 0) { throw "ILRepack failed exit=$LASTEXITCODE" }
 
-      # 6) 合并完成后删除被合并进 exe 的所有托管 DLL（winpty.dll 是原生保留）
+      # 6) 合并完成后删除被合并进 exe 的所有托管 DLL（原生 winpty.dll 已在 lib\ 不受影响）
       foreach ($n in (Get-ChildItem -Path $out -Filter *.dll | Where-Object { $_.Name -ne 'winpty.dll' } | Select-Object -ExpandProperty Name)) {
         Remove-Item (Join-Path $out $n) -Force
       }
@@ -365,18 +370,22 @@ after_test:
       # 7) 删除噪声文件：.pdb / .xml / .config / .txt（含 LICENSE.winpty.txt、README 等）
       #    排除 freerdp\ 子目录：Apache-2.0 要求随分发保留许可证文本
       Get-ChildItem -Path $out -Recurse -File |
-        Where-Object { $_.Extension -in '.pdb','.xml','.config','.txt' -and $_.FullName -notmatch '\\freerdp\\' } |
+        Where-Object { $_.Extension -in '.pdb','.xml','.config','.txt' -and $_.FullName -notmatch '\\lib\\freerdp\\' } |
         ForEach-Object { Remove-Item $_.FullName -Force; Write-Host "Removed noise: $($_.Name)" }
 
       # 8) 便携数据骨架（空 —— 无密钥）
       New-Item -ItemType Directory -Path (Join-Path $out "data\config\tools") -Force | Out-Null
       New-Item -ItemType Directory -Path (Join-Path $out "data\logs") -Force | Out-Null
 
-      # 9) 最终产物清单（应该只剩个位数文件）
+      # 9) 最终产物清单：顶层仅 gdterm.exe + SHA256SUMS.txt，原生依赖分类入 bin\lib\
       Write-Host ""
       Write-Host "===== Portable layout (final) ====="
       Get-ChildItem $out -File | ForEach-Object { Write-Host ("  {0,-25} {1,8:N0} bytes" -f $_.Name, $_.Length) }
-      Write-Host "===== Total files: $((Get-ChildItem $out -File).Count) ====="
+      foreach ($sub in @('bin','lib','data')) {
+        $sd = Join-Path $out $sub
+        if (Test-Path $sd) { Write-Host ("  [{0}\\] {1} files" -f $sub, (Get-ChildItem $sd -Recurse -File).Count) }
+      }
+      Write-Host "===== Top-level files: $((Get-ChildItem $out -File).Count) ====="
       Write-Host "Portable layout ready: $out"
 
       # 10) 发布校验和：SHA256SUMS.txt 随包分发（用户可逐文件核验），

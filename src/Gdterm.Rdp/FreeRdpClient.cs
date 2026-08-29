@@ -283,6 +283,9 @@ namespace Gdterm.Rdp
             var baseDir = AppDomain.CurrentDomain.BaseDirectory;
             var candidates = new[]
             {
+                // 新布局：lib\freerdp\（业界 bin/lib 分类后引擎集中放 lib\）
+                Path.Combine(baseDir, "lib", "freerdp", "wfreerdp.exe"),
+                // 兑容旧发行包布局
                 Path.Combine(baseDir, "freerdp", "wfreerdp.exe"),
                 Path.Combine(baseDir, "vendor", "freerdp", "wfreerdp.exe")
             };
