@@ -68,6 +68,28 @@ install:
       Set-Content -Path $rdpC -Value $patched -NoNewline
       Write-Host "Patched rdp.c: unhandled PDU hex dump enabled"
 
+      # ---- 补丁：转发到目标服务器时清空凭据（默认自协商，零配置）----
+      # 堡垒机场景：首连用 keepass 凭据自动登录；但 FreeRDP 内部 redirect 重连
+      # （rdp_client_redirect）会把命令行 /u /p 原样带到转发目标服务器——
+      # rdp.c 只对 Username/Domain 做 LB_ 标志替换，Password 永不变，
+      # 目标收到旧的自动登录凭据 → LOGOFF_BY_USER 踢线。
+      # 补丁：仅在真正转发到新目标（非 LB_LOAD_BALANCE_INFO 路由 token）时，
+      # 重连前清空 Username/Password/Domain 并关闭 AutoLogonEnabled，目标自协商显示自己的登录界面
+      # （与 mstsc 行为一致）；LB token 路由重连到同一网关体系时保留凭据；
+      # 网关通过 LB_USERNAME/LB_DOMAIN 标志下发的权威新用户名/域则保留。
+      # 锚点：rdp_client_redirect 内 `status = rdp_client_connect(rdp);`
+      # （后随 reconnect_channels(rdp, TRUE) 的只有 redirect，reconnect 用 FALSE）。
+      $connC = Join-Path $root 'libfreerdp\core\connection.c'
+      $src2 = Get-Content $connC -Raw
+      $anchor2 = "status = rdp_client_connect(rdp);`n`n`tif (status)`n`t`tstatus = rdp_client_reconnect_channels(rdp, TRUE);"
+      if ($src2 -notlike "*$anchor2*") { throw "patch anchor not found in connection.c" }
+      $clearBlock = @"
+`t/* gdterm patch: bastion forwarding - clear saved credentials before`n`t * reconnecting to the redirected target so the target negotiates its own login`n`t * instead of receiving the stale keepass /u /p from the bastion connection. */`n`tif (!(settings->RedirectionFlags & LB_LOAD_BALANCE_INFO))`n`t{`n`t`tif (!(settings->RedirectionFlags & LB_USERNAME))`n`t`t{`n`t`t`tfree(settings->Username);`n`t`t`tsettings->Username = NULL;`n`t`t}`n`t`tif (!(settings->RedirectionFlags & LB_DOMAIN))`n`t`t{`n`t`t`tfree(settings->Domain);`n`t`t`tsettings->Domain = NULL;`n`t`t}`n`t`tfree(settings->Password);`n`t`tsettings->Password = NULL;`n`t`tsettings->AutoLogonEnabled = FALSE;`n`t}`n
+"@
+      $patched2 = $src2 -replace [regex]::Escape($anchor2), ($clearBlock + $anchor2)
+      Set-Content -Path $connC -Value $patched2 -NoNewline
+      Write-Host "Patched connection.c: redirect clears credentials for target self-negotiation"
+
       # ---- FreeRDP 旧补丁已移除 ----
       # 原补丁在 nego_recv li==6 分支强制 redirect 重连 FAIL（RoutingToken>0 && HYBRID），
       # 但 NetScaler 只支持 legacy RDP（li==6 是常态），补丁阻止了唯一可行的 legacy RDP 路径。

@@ -385,33 +385,18 @@ namespace Gdterm.Rdp
             // 负载均衡：预协商阶段已把 routing token 写入 CurrentOptions，这里作为协议字段传给 wfreerdp
             if (!string.IsNullOrEmpty(CurrentOptions.LoadBalanceInfo))
                 AddArg(args, logArgs, "/load-balance-info:" + Q(CurrentOptions.LoadBalanceInfo));
-            // 堡垒机带内认证：账号密码在堡垒机自己的登录页输入。
-            // 绝不把保存的凭据传给 wfreerdp——FreeRDP 内部 redirect 重连（rdp_client_redirect）
-            // 会把命令行 /u /p 原样带到转发目标服务器（只有 Username/Domain 可被 LB_ 标志替换，
-            // Password 永远不变），导致目标收到旧的自动登录凭据被 LOGOFF_BY_USER 踢线。
-            // 带内模式全跳过 /u /p /d，转发重连时目标服务器显示自己的登录界面。
-            bool inbandAuth = false;
-            try
+            // 凭据始终随首连传递（keepass 自动登录）；FreeRDP 内部转发重连
+            // （rdp_client_redirect，见 appveyor.yml 补丁）会清空 Username/Domain/Password/
+            // AutoLogonEnabled（网关 LB_USERNAME/LB_DOMAIN 下发的权威新值除外），目标服务器
+            // 自协商显示登录界面——与 mstsc 行为一致，不再把保存的旧凭据带到转发目标
+            // （避免目标收到旧自动登录凭据被 LOGOFF_BY_USER 踢线）。
+            if (!string.IsNullOrEmpty(username)) AddArg(args, logArgs, "/u:" + Q(username));
+            if (!string.IsNullOrEmpty(credential != null ? credential.Password : null))
             {
-                inbandAuth = _startConfig != null && _startConfig.Metadata != null
-                    && _startConfig.Metadata.ContainsKey("rdp_inband_auth")
-                    && _startConfig.Metadata["rdp_inband_auth"] == "true";
+                args.Add("/p:" + Q(credential.Password));
+                logArgs.Add("/p:***");
             }
-            catch { }
-            if (inbandAuth)
-            {
-                RdpLog.Info("FreeRdp.Auth", "inband-auth mode: skipping /u /p /d (credentials entered on bastion login page)");
-            }
-            else
-            {
-                if (!string.IsNullOrEmpty(username)) AddArg(args, logArgs, "/u:" + Q(username));
-                if (!string.IsNullOrEmpty(credential != null ? credential.Password : null))
-                {
-                    args.Add("/p:" + Q(credential.Password));
-                    logArgs.Add("/p:***");
-                }
-                if (!string.IsNullOrEmpty(domain)) AddArg(args, logArgs, "/d:" + Q(domain));
-            }
+            if (!string.IsNullOrEmpty(domain)) AddArg(args, logArgs, "/d:" + Q(domain));
             if (CurrentOptions.RedirectClipboard) AddArg(args, logArgs, "/clipboard");
             if (CurrentOptions.RedirectDrives)
             {

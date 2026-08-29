@@ -46,9 +46,6 @@ namespace Gdterm.UI.Forms
         private CheckBox _rdpNlaCheck;
         /// <summary>强制 NLA（FreeRDP 下加 /sec:nla，禁止降级 legacy security）</summary>
         private CheckBox _rdpForceNlaCheck;
-        /// <summary>堡垒机带内认证：不把保存的账号密码传给 RDP 引擎（/u /p /d 全跳过），
-        /// 由堡垒机自己的登录页带内输入。防止转发/重定向到目标服务器时仍携带旧凭据。</summary>
-        private CheckBox _rdpInbandAuthCheck;
         /// <summary>负载均衡路由 token（FreeRDP 下加 /load-balance-info）</summary>
         private TextBox _rdpLoadBalanceBox;
         /// <summary>RDP 渲染引擎：0=自动（优先 FreeRDP） 1=FreeRDP 2=系统 mstsc（ActiveX）。旧堡垒机对 mstsc 兼容性最好。</summary>
@@ -258,9 +255,8 @@ namespace Gdterm.UI.Forms
             _rdpPrinterCheck = new CheckBox { Text = "打印机", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true };
             _rdpFullScreenCheck = new CheckBox { Text = "全屏", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true };
             _rdpNlaCheck = new CheckBox { Text = "NLA 认证", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true, Checked = true };
-            _rdpForceNlaCheck = new CheckBox { Text = "强制 NLA", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true, Checked = true };
-            _rdpInbandAuthCheck = new CheckBox { Text = "堡垒机带内认证（不发送保存凭据）", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true };
-            rdpChecks.Controls.AddRange(new Control[] { _rdpDriveCheck, _rdpClipboardCheck, _rdpPrinterCheck, _rdpFullScreenCheck, _rdpNlaCheck, _rdpForceNlaCheck, _rdpInbandAuthCheck });
+            _rdpForceNlaCheck = new CheckBox { Text = "强制 NLA", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true, Checked = false };
+            rdpChecks.Controls.AddRange(new Control[] { _rdpDriveCheck, _rdpClipboardCheck, _rdpPrinterCheck, _rdpFullScreenCheck, _rdpNlaCheck, _rdpForceNlaCheck });
             var depthPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 4) };
             depthPanel.Controls.Add(new Label { Text = "色深:", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true });
             _rdpColorDepth = new NumericUpDown { Minimum = 8, Maximum = 32, Value = 32, Increment = 8, Width = 60 };
@@ -473,8 +469,7 @@ namespace Gdterm.UI.Forms
                      || (_config.Metadata.ContainsKey("rdp_force_nla") && _config.Metadata["rdp_force_nla"] == "true")
                      || (_config.Metadata.ContainsKey("rdp_loadbalance") && !string.IsNullOrEmpty(_config.Metadata["rdp_loadbalance"]))
                      || (_config.Metadata.ContainsKey("rdp_clipboard") && _config.Metadata["rdp_clipboard"] == "false")
-                     || (_config.Metadata.ContainsKey("rdp_engine") && _config.Metadata["rdp_engine"] != "auto")
-                     || (_config.Metadata.ContainsKey("rdp_inband_auth") && _config.Metadata["rdp_inband_auth"] == "true")))
+                     || (_config.Metadata.ContainsKey("rdp_engine") && _config.Metadata["rdp_engine"] != "auto")))
                 || _config.Serial != null
                 || (_config.Metadata != null && _config.Metadata.ContainsKey("notes")
                     && !string.IsNullOrEmpty(_config.Metadata["notes"]));
@@ -559,8 +554,7 @@ namespace Gdterm.UI.Forms
                     _rdpColorDepth.Value = int.Parse(_config.Metadata["rdp_colordepth"]);
                 _rdpFullScreenCheck.Checked = _config.Metadata.ContainsKey("rdp_fullscreen") && _config.Metadata["rdp_fullscreen"] == "true";
                 _rdpNlaCheck.Checked = !_config.Metadata.ContainsKey("rdp_nla") || _config.Metadata["rdp_nla"] != "false";
-                _rdpForceNlaCheck.Checked = !_config.Metadata.ContainsKey("rdp_force_nla") || _config.Metadata["rdp_force_nla"] == "true";
-                _rdpInbandAuthCheck.Checked = _config.Metadata.ContainsKey("rdp_inband_auth") && _config.Metadata["rdp_inband_auth"] == "true";
+                _rdpForceNlaCheck.Checked = _config.Metadata.ContainsKey("rdp_force_nla") && _config.Metadata["rdp_force_nla"] == "true";
                 if (_config.Metadata.ContainsKey("rdp_loadbalance"))
                     _rdpLoadBalanceBox.Text = _config.Metadata["rdp_loadbalance"];
                 string eng;
@@ -596,7 +590,6 @@ namespace Gdterm.UI.Forms
             _config.Metadata["rdp_fullscreen"] = _rdpFullScreenCheck.Checked.ToString().ToLower();
             _config.Metadata["rdp_nla"] = _rdpNlaCheck.Checked.ToString().ToLower();
             _config.Metadata["rdp_force_nla"] = _rdpForceNlaCheck.Checked.ToString().ToLower();
-            _config.Metadata["rdp_inband_auth"] = _rdpInbandAuthCheck.Checked.ToString().ToLower();
             _config.Metadata["rdp_loadbalance"] = _rdpLoadBalanceBox.Text?.Trim() ?? "";
             _config.Metadata["rdp_engine"] = _rdpEngineCombo.SelectedIndex == 2 ? "mstscax"
                                            : _rdpEngineCombo.SelectedIndex == 1 ? "freerdp" : "auto";
