@@ -83,10 +83,24 @@ install:
       $src2 = Get-Content $connC -Raw
       $anchor2 = "status = rdp_client_connect(rdp);`n`n`tif (status)`n`t`tstatus = rdp_client_reconnect_channels(rdp, TRUE);"
       if ($src2 -notlike "*$anchor2*") { throw "patch anchor not found in connection.c" }
-      $clearBlock = "`t/* gdterm patch: MS-RDPBCGR 2.2.13.1 - on server redirection to a new target,`n`t * only fields the server flagged (LB_USERNAME/LB_DOMAIN/LB_PASSWORD) are`n`t * authoritative target credentials; unflagged fields MUST NOT be reused.`n`t * FreeRDP bug: rdp_client_redirect never clears Password, so the stale`n`t * first-connect /u /p reaches the redirected target and gets it kicked`n`t * (LOGOFF_BY_USER). Clear unflagged credential fields so the target self-`n`t * negotiates its login (mstsc behavior). LB_LOAD_BALANCE_INFO routing reconnects`n`t * to the same gateway and keeps credentials. */`n`tif (!(settings->RedirectionFlags & LB_LOAD_BALANCE_INFO))`n`t{`n`t`tif (!(settings->RedirectionFlags & LB_USERNAME))`n`t`t{`n`t`t`tfree(settings->Username);`n`t`t`tsettings->Username = NULL;`n`t`t}`n`t`tif (!(settings->RedirectionFlags & LB_DOMAIN))`n`t`t{`n`t`t`tfree(settings->Domain);`n`t`t`tsettings->Domain = NULL;`n`t`t}`n`t`tif (!(settings->RedirectionFlags & LB_PASSWORD))`n`t`t{`n`t`t`tfree(settings->Password);`n`t`t`tsettings->Password = NULL;`n`t`t}`n`t`tsettings->AutoLogonEnabled = FALSE;`n`t}`n`n"
+      $clearBlock = "`t/* gdterm patch: MS-RDPBCGR 2.2.13.1 - on server redirection to a new target,`n`t * only fields the server flagged (LB_USERNAME/LB_DOMAIN/LB_PASSWORD) are`n`t * authoritative target credentials; unflagged fields MUST NOT be reused.`n`t * FreeRDP bug: rdp_client_redirect never clears Password, so the stale`n`t * first-connect /u /p reaches the redirected target and gets it kicked`n`t * (LOGOFF_BY_USER). Clear unflagged credential fields so the target self-`n`t * negotiates its login (mstsc behavior). LB_LOAD_BALANCE_INFO routing reconnects`n`t * to the same gateway and keeps credentials. */`n`tWLog_INFO(TAG, `"gdterm redirect: flags=0x%x LB=%d USER=%d DOMAIN=%d PASS=%d AutoLogon=%d`", (unsigned)settings->RedirectionFlags, !!(settings->RedirectionFlags & LB_LOAD_BALANCE_INFO), !!(settings->RedirectionFlags & LB_USERNAME), !!(settings->RedirectionFlags & LB_DOMAIN, !!(settings->RedirectionFlags & LB_PASSWORD, (int)settings->AutoLogonEnabled);`n`tif (!(settings->RedirectionFlags & LB_LOAD_BALANCE_INFO))`n`t{`n`t`tif (!(settings->RedirectionFlags & LB_USERNAME))`n`t`t{`n`t`t`tfree(settings->Username);`n`t`t`tsettings->Username = NULL;`n`t`t}`n`t`tif (!(settings->RedirectionFlags & LB_DOMAIN))`n`t`t{`n`t`t`tfree(settings->Domain);`n`t`t`tsettings->Domain = NULL;`n`t`t}`n`t`tif (!(settings->RedirectionFlags & LB_PASSWORD))`n`t`t{`n`t`t`tfree(settings->Password);`n`t`t`tsettings->Password = NULL;`n`t`t}`n`t`tsettings->AutoLogonEnabled = FALSE;`n`t}`n`n"
       $patched2 = $src2 -replace [regex]::Escape($anchor2), ($clearBlock + $anchor2)
       Set-Content -Path $connC -Value $patched2 -NoNewline
       Write-Host "Patched connection.c: redirect clears credentials for target self-negotiation"
+
+      # ---- info.c: 重连（redirect）后 Client Info Packet 实际内容诊断 ----
+      # FreeRDP 重连时 info_send_client_info_packet 会把 settings->Username/Password 写进包；
+      # 我们的 connection.c patch 已清空凭据；这里打印实际写入包的 flags/cbUser/cbPass 验证。
+      $infC = Join-Path $root 'libfreerdp\core\info.c'
+      $src3 = Get-Content $infC -Raw
+      $anchor3 = "cbWorkingDir = cbWorkingDir >= 2 ? cbWorkingDir - 2 : cbWorkingDir;`n`tStream_Write_UINT32(s, settings->KeyboardCodePage); /* CodePage (4 bytes) */"
+      if ($src3 -notlike "*$anchor3*") { throw "patch anchor not found in info.c" }
+      $infoLog = "`tWLog_INFO(TAG, `"gdterm redirect client info: flags=0x%x AUTOLOGON=%d cbUser=%d cbPass=%d user=%s usedCookie=%d`", flags, !!(flags & INFO_AUTOLOGON), cbUserName, cbPassword, settings->Username ? settings->Username : `"(null)`", usedPasswordCookie);"
+      $patched3 = $src3 -replace [regex]::Escape($anchor3), ($infoLog + $anchor3)
+      Set-Content -Path $infC -Value $patched3 -NoNewline
+
+      Write-Host "Patched info.c: client info diagnostics"
+
 
       # ---- FreeRDP 旧补丁已移除 ----
       # 原补丁在 nego_recv li==6 分支强制 redirect 重连 FAIL（RoutingToken>0 && HYBRID），
