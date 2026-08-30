@@ -260,7 +260,7 @@ namespace Gdterm.UI.Forms
             _rdpNlaCheck = new CheckBox { Text = "NLA 认证", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true, Checked = true };
             _rdpForceNlaCheck = new CheckBox { Text = "强制 NLA", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true, Checked = false };
             _rdpTcpDumpCheck = new CheckBox { Text = "抓包（TCP dump）", ForeColor = Color.FromArgb(255, 180, 60), AutoSize = true, Checked = false,
-                Visible = Program.GlobalAppearance != null && Program.GlobalAppearance.DebugMode };
+                Visible = Program.DebugConfig != null && Program.DebugConfig.Enabled };
             rdpChecks.Controls.AddRange(new Control[] { _rdpDriveCheck, _rdpClipboardCheck, _rdpPrinterCheck, _rdpFullScreenCheck, _rdpNlaCheck, _rdpForceNlaCheck, _rdpTcpDumpCheck });
             var depthPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 4) };
             depthPanel.Controls.Add(new Label { Text = "色深:", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true });

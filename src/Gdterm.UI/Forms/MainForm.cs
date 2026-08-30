@@ -76,6 +76,7 @@ namespace Gdterm.UI.Forms
         private StatusBarControl _statusBar;
         private LockOverlayControl _lockOverlay;
         private MenuStrip _menuStrip;
+        private ToolStripMenuItem _debugModeMenuItem;
         private QuickBarPanel _quickBar;
         private WelcomePanel _welcomePanel;
         private NotifyIcon _trayIcon;
@@ -369,6 +370,7 @@ namespace Gdterm.UI.Forms
                 DangerousCmdSettings = (s, e) => _toolsDialogs.OpenDangerousCmdSettings(),
                 ShowHotkeys = (s, e) => _toolsDialogs.ShowHotkeysHelp(),
                 ShowLogsFolder = (s, e) => { try { _toolsDialogs.ShowLogsFolder(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.LogsFolder", ex); } },
+                ToggleDebugMode = (s, e) => ToggleDebugMode(),
                 About = (s, e) => _toolsDialogs.ShowAbout(),
                 SshKeyManager = (s, e) => { try { _toolsDialogs?.OpenSshKeyManager(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.SshKey", ex); } },
                 ShowTransferCenter = (s, e) => { try { _sidePanelHost?.Show(_sidePanels?.CreateTransferCenterPanel()); } catch { } },
@@ -376,6 +378,7 @@ namespace Gdterm.UI.Forms
                 QuickJump = (s, e) => OpenQuickJump()
             });
             _menuStrip = menuBuilt.Menu;
+            _debugModeMenuItem = menuBuilt.DebugModeItem;
             MainMenuStrip = _menuStrip;
             // ManagerRenderMode 让 ToolStripManager.Renderer 生效（全局 GdtermToolStripRenderer）。
             try
@@ -749,6 +752,23 @@ namespace Gdterm.UI.Forms
             _confirmExitPending = true;
             try { if (_trayIcon != null) _trayIcon.Visible = false; } catch { }
             Close();
+        }
+
+        /// <summary>切换调试模式——即时生效，写入 data/config/debug.ini。</summary>
+        private void ToggleDebugMode()
+        {
+            try
+            {
+                if (Program.DebugConfig == null)
+                    Program.DebugConfig = new DebugConfig();
+                // CheckOnClick=true 时 WinForms 已先翻转菜单勾选，以菜单项为事实来源。
+                Program.DebugConfig.Enabled = _debugModeMenuItem != null
+                    ? _debugModeMenuItem.Checked
+                    : !Program.DebugConfig.Enabled;
+                Program.DebugConfig.Save(DebugConfig.DefaultPath);
+                DiagLog.Info("MainForm.Debug", "调试模式: " + (Program.DebugConfig.Enabled ? "ON" : "OFF"));
+            }
+            catch (Exception ex) { DiagLog.Swallowed("MainForm.ToggleDebug", ex); }
         }
 
         /// <summary>Ctrl+Shift+K 快速跳转连接。</summary>

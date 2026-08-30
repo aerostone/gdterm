@@ -67,6 +67,7 @@ namespace Gdterm.UI.Services
             public EventHandler ShowNotificationCenter { get; set; }
             public EventHandler QuickJump { get; set; }
             public EventHandler ShowLogsFolder { get; set; }
+            public EventHandler ToggleDebugMode { get; set; }
         }
 
         public sealed class Result
@@ -75,6 +76,7 @@ namespace Gdterm.UI.Services
             public ToolStripMenuItem ViewStandardItem { get; set; }
             public ToolStripMenuItem ViewFocusItem { get; set; }
             public ToolStripMenuItem ViewCompactItem { get; set; }
+            public ToolStripMenuItem DebugModeItem { get; set; }
         }
 
         public Result Build(Callbacks cb)
@@ -188,6 +190,15 @@ namespace Gdterm.UI.Services
             toolsMenu.DropDownItems.Add(Mk("AI 助手设置(&I)", cb.AiSettings, "ai"));
             toolsMenu.DropDownItems.Add(Mk("危险命令规则(&D)", cb.DangerousCmdSettings, "warning"));
             toolsMenu.DropDownItems.Add(Mk("快捷键绑定", cb.ShowKeyBinding, "keyboard"));
+            toolsMenu.DropDownItems.Add(new ToolStripSeparator());
+            var debugItem = new ToolStripMenuItem("调试模式(&D)")
+            {
+                CheckOnClick = true,
+                Checked = Gdterm.UI.Program.DebugConfig != null && Gdterm.UI.Program.DebugConfig.Enabled
+            };
+            debugItem.Click += cb.ToggleDebugMode;
+            AttachIcon(debugItem, "scaneye");
+            toolsMenu.DropDownItems.Add(debugItem);
             menu.Items.Add(toolsMenu);
 
             // ===== 帮助 =====
@@ -203,7 +214,8 @@ namespace Gdterm.UI.Services
                 Menu = menu,
                 ViewStandardItem = viewStandard,
                 ViewFocusItem = viewFocus,
-                ViewCompactItem = viewCompact
+                ViewCompactItem = viewCompact,
+                DebugModeItem = debugItem
             };
         }
 

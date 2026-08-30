@@ -67,6 +67,14 @@ namespace Gdterm.UI
             // 初始外壳主题（与终端 ColorScheme 独立）
             try { Gdterm.UI.Diagnostics.GdtermColorTable.ApplyTheme(GlobalAppearance.UiTheme); } catch { }
 
+            // 调试配置（控制连接对话框抓包等调试选项显隐）
+            try
+            {
+                DebugConfig = Gdterm.UI.DebugConfig.Load(
+                    Path.Combine(configDir, "debug.ini"));
+            }
+            catch { DebugConfig = new Gdterm.UI.DebugConfig(); }
+
 
             // 全局未处理异常：落盘 diag.log + 审计（audit 就绪后补写）
             CrashLog.Initialize(logsDir);
@@ -577,6 +585,9 @@ namespace Gdterm.UI
 
         /// <summary>全局外观，供新开终端读取。</summary>
         internal static Gdterm.UI.Forms.AppearanceSettings GlobalAppearance { get; set; }
+
+        /// <summary>调试配置，供连接对话框等读取（即时生效，无需重启）。</summary>
+        internal static Gdterm.UI.DebugConfig DebugConfig { get; set; }
     }
 
     /// <summary>
