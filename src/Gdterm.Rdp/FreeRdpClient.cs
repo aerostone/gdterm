@@ -389,10 +389,11 @@ namespace Gdterm.Rdp
             if (!string.IsNullOrEmpty(CurrentOptions.LoadBalanceInfo))
                 AddArg(args, logArgs, "/load-balance-info:" + Q(CurrentOptions.LoadBalanceInfo));
             // 凭据始终随首连传递（keepass 自动登录）；FreeRDP 内部转发重连
-            // （rdp_client_redirect，见 appveyor.yml 补丁）会清空 Username/Domain/Password/
-            // AutoLogonEnabled（网关 LB_USERNAME/LB_DOMAIN 下发的权威新值除外），目标服务器
-            // 自协商显示登录界面——与 mstsc 行为一致，不再把保存的旧凭据带到转发目标
-            // （避免目标收到旧自动登录凭据被 LOGOFF_BY_USER 踢线）。
+            // （rdp_client_redirect，见 appveyor.yml 补丁）会无条件清空未被网关
+            // LB_USERNAME/LB_DOMAIN/LB_PASSWORD 标志确认的 Username/Domain/Password
+            // 并关闭 AutoLogonEnabled，目标服务器自协商显示登录界面——与 mstsc 行为
+            // 一致，不再把保存的旧凭据带到转发目标（v0.1.149 实测：LB token 重连
+            // 若仍带旧自动登录凭据，0.1s 内即被 LOGOFF_BY_USER 踢线）。
             if (!string.IsNullOrEmpty(username)) AddArg(args, logArgs, "/u:" + Q(username));
             if (!string.IsNullOrEmpty(credential != null ? credential.Password : null))
             {
