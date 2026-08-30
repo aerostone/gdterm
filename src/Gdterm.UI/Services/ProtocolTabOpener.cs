@@ -164,8 +164,65 @@ namespace Gdterm.UI.Services
                 ToolTipText = "RDP: " + config.Host + ":" + config.Port
             };
 
+            // --- 抓包代理：连接级自动 dump ---
+            // 用户配置的 Host/Port 一律不动（那是用户设置的）；开启抓包时仅在内部
+            // 把本次 RDP 连接路由到本地代理：connectConfig 是内部副本（Host/Port 换成
+            // 127.0.0.1:代理端口，Metadata 仍共享引用以便运行期元数据回写），
+            // session.Config / 审计 / 重连全部继续使用原配置。
+            // 注：隧道连接已有本地端点，不再叠加代理。
+            ConnectionConfig connectConfig = config;
+            bool tcpDump = config != null && config.Metadata != null
+                && config.Metadata.TryGetValue("rdp_tcp_dump", out var dumpVal)
+                && dumpVal == "true";
+            if (tcpDump && config.Tunnel != null)
+            {
+                DiagLog.Info("RdpTab.Proxy", "连接使用隧道，跳过抓包代理");
+                tcpDump = false;
+            }
+            if (tcpDump)
+            {
+                try
+                {
+                    if (RdpDumpProxy.IsRunning)
+                    {
+                        try { RdpDumpProxy.Stop(); } catch { }
+                    }
+                    var dumpDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs", "rdp-dump");
+                    var proxyPort = RdpDumpProxy.StartFor(
+                        config.Host, config.Port > 0 ? config.Port : 3389, dumpDir);
+                    connectConfig = new ConnectionConfig
+                    {
+                        Id = config.Id,
+                        Name = config.Name,
+                        Protocol = config.Protocol,
+                        Host = "127.0.0.1",
+                        Port = proxyPort,
+                        Username = config.Username,
+                        Domain = config.Domain,
+                        GroupPath = config.GroupPath,
+                        JumpChain = config.JumpChain,
+                        Tunnel = config.Tunnel,
+                        CredentialRefId = config.CredentialRefId,
+                        Serial = config.Serial,
+                        Metadata = config.Metadata
+                    };
+                    DiagLog.Info("RdpTab.Proxy",
+                        string.Format("抓包代理已启动 127.0.0.1:{0} → {1}:{2}, dump → {3}",
+                            proxyPort, config.Host, config.Port, dumpDir));
+                }
+                catch (Exception ex)
+                {
+                    DiagLog.Swallowed("RdpTab.Proxy.Start", ex);
+                    // 代理启动失败时回退到直连（用户配置未动，直接用原配置连）
+                    connectConfig = config;
+                    tcpDump = false;
+                }
+            }
+
             // mstsc 引擎才需要 Windows 凭据（TERMSRV/<host>，供 mstscax 自动登录）。
             // 显式 rdp_engine=freerdp 时不注入：走无凭据首连（mstsc 仿真，堡垒机自渲染登录页）。
+            // 抓包时用 connectConfig.Host（127.0.0.1）——mstscax 实际连接的地址，
+            // 否则凭据目标 TERMSRV/<原host> 与连接目标不匹配，自动登录不生效。
             bool explicitFreeRdp = config != null && config.Metadata != null
                 && config.Metadata.TryGetValue("rdp_engine", out var engMeta)
                 && (engMeta ?? "").Trim().ToLowerInvariant() == "freerdp";
@@ -174,44 +231,12 @@ namespace Gdterm.UI.Services
                 try
                 {
                     _keepassService?.InjectRdpCredential(
-                        config.Host, credential.Username, credential.Password);
+                        connectConfig.Host, credential.Username, credential.Password);
                 }
                 catch { }
             }
 
-            // --- 抓包代理：连接级自动 dump ---
-            // 当 metadata rdp_tcp_dump=true 时，自动启动本地 TCP 代理，
-            // 把 RDP 流量中转后 hex dump 到 logs/rdp-dump/。
-            string originalHost = null;
-            int originalPort = 0;
-            bool tcpDump = config != null && config.Metadata != null
-                && config.Metadata.TryGetValue("rdp_tcp_dump", out var dumpVal)
-                && dumpVal == "true";
-            if (tcpDump)
-            {
-                originalHost = config.Host;
-                originalPort = config.Port;
-                try
-                {
-                    var dumpDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs", "rdp-dump");
-                    var proxyPort = RdpDumpProxy.StartFor(originalHost, originalPort, dumpDir);
-                    config.Host = "127.0.0.1";
-                    config.Port = proxyPort;
-                    DiagLog.Info("RdpTab.Proxy",
-                        string.Format("抓包代理已启动 127.0.0.1:{0} → {1}:{2}, dump → {3}",
-                            proxyPort, originalHost, originalPort, dumpDir));
-                }
-                catch (Exception ex)
-                {
-                    DiagLog.Swallowed("RdpTab.Proxy.Start", ex);
-                    // 代理启动失败时回退到直连（不 blocking 用户）
-                    config.Host = originalHost;
-                    config.Port = originalPort;
-                    originalHost = null;
-                }
-            }
-
-            var rdp = _rdpFactory.CreateFor(config);
+            var rdp = _rdpFactory.CreateFor(connectConfig);
             rdp.Control.Dock = DockStyle.Fill;
             tab.Controls.Add(rdp.Control);
 
@@ -299,11 +324,13 @@ namespace Gdterm.UI.Services
                     {
                         var tunnel = _tunnelManager.EstablishAsync(config, credential,
                             System.Threading.CancellationToken.None).GetAwaiter().GetResult();
-                        rdp.ConnectViaTunnel(config, credential, tunnel, options);
+                        rdp.ConnectViaTunnel(connectConfig, credential, tunnel, options);
                     }
                     else
                     {
-                        rdp.Connect(config, credential, options);
+                        // 抓包时 connectConfig 指向本地代理；FreeRDP 的 /load-balance-info
+                        // 等选项已在 options（RdpOptionsBuilder.FromConnection(config)）里，不受影响
+                        rdp.Connect(connectConfig, credential, options);
                     }
                     DiagLog.Info("RdpTab.Connect", "Connect() returned, connected=" + SafeIsConnected(rdp));
                     OnRdpConnected?.Invoke(tab);

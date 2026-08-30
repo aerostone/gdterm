@@ -120,12 +120,12 @@ namespace Gdterm.Rdp
 
                 if (!_running) { try { client?.Dispose(); } catch { } break; }
 
-                var local = ((IPEndPoint)client.Client.LocalEndPoint).Port;
+                var listenPort = ((IPEndPoint)client.Client.LocalEndPoint).Port;
                 var remote = ((IPEndPoint)client.Client.RemoteEndPoint).ToString();
                 RdpLog.Info("RdpTcpProxy.Accept",
-                    string.Format("新连接: {0} → :{1}", remote, local));
+                    string.Format("新连接: {0} → 监听端口 :{1}", remote, listenPort));
 
-                var forwardTask = ForwardAsync(client, local);
+                var forwardTask = ForwardAsync(client);
                 lock (_lock)
                 {
                     _activeForwards.Add(forwardTask);
@@ -134,7 +134,7 @@ namespace Gdterm.Rdp
             }
         }
 
-        private async Task ForwardAsync(TcpClient client, int localPort)
+        private async Task ForwardAsync(TcpClient client)
         {
             TcpClient target = null;
             try
@@ -143,8 +143,11 @@ namespace Gdterm.Rdp
                 await target.ConnectAsync(TargetHost, TargetPort).ConfigureAwait(false);
 
                 var timestamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+                // 文件名用客户端临时端口（remotePort）区分同代理的并发连接（如 LB probe
+                // + wfreerdp 本体同秒接入）：LocalEndPoint 是同一监听端口，会互相覆盖。
+                var remotePort = ((IPEndPoint)client.Client.RemoteEndPoint).Port;
                 var dumpPath = Path.Combine(_dumpDir,
-                    string.Format("rdp-dump-{0}-port{1}.hex", timestamp, localPort));
+                    string.Format("rdp-dump-{0}-c{1}.hex", timestamp, remotePort));
 
                 RdpLog.Info("RdpTcpProxy.Forward",
                     string.Format("开始转发，dump → {0}", dumpPath));
@@ -165,8 +168,8 @@ namespace Gdterm.Rdp
 
                     var dir = Path.Combine(_dumpDir, "raw");
                     if (!Directory.Exists(dir)) Directory.CreateDirectory(dir);
-                    var rawClientPath = Path.Combine(dir, string.Format("rdp-dump-{0}-port{1}-c2s.bin", timestamp, localPort));
-                    var rawTargetPath = Path.Combine(dir, string.Format("rdp-dump-{0}-port{1}-s2c.bin", timestamp, localPort));
+                    var rawClientPath = Path.Combine(dir, string.Format("rdp-dump-{0}-c{1}-c2s.bin", timestamp, remotePort));
+                    var rawTargetPath = Path.Combine(dir, string.Format("rdp-dump-{0}-c{1}-s2c.bin", timestamp, remotePort));
 
                     using (var rawClient = new FileStream(rawClientPath, FileMode.Create, FileAccess.Write, FileShare.Read))
                     using (var rawTarget = new FileStream(rawTargetPath, FileMode.Create, FileAccess.Write, FileShare.Read))

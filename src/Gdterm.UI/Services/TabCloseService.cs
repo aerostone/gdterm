@@ -57,10 +57,20 @@ namespace Gdterm.UI.Services
             if (session.Protocol == ProtocolType.RDP)
             {
                 DiagLog.Try("TabClose.RdpDispose", () => session.RdpClient?.Dispose());
+                // 抓包代理兑底：未触发 StateChanged 的关闭路径（首连前关标签）也要停掉，
+                // 否则 dump 文件句柄泄漏、端口占用直到下次抓包（调试功能，全局单例，无副作用）
+                DiagLog.Try("TabClose.RdpDumpProxy", () => Gdterm.Rdp.RdpDumpProxy.Stop());
                 DiagLog.Try("TabClose.CleanupRdpCredential", () =>
                 {
                     var host = session.Config != null ? session.Config.Host : null;
                     _keepassService?.CleanupRdpCredential(host);
+                    // 抓包时凭据注入到 TERMSRV/127.0.0.1（mstscax 实连地址），需一并清理
+                    if (session.Config != null && session.Config.Metadata != null
+                        && session.Config.Metadata.TryGetValue("rdp_tcp_dump", out var dumpFlag)
+                        && dumpFlag == "true")
+                    {
+                        _keepassService?.CleanupRdpCredential("127.0.0.1");
+                    }
                 });
             }
 
