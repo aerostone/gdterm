@@ -153,7 +153,7 @@ namespace Gdterm.Rdp
                 using (var dumpWriter = new StreamWriter(dumpStream))
                 {
                     dumpWriter.NewLine = "\n";
-                    dumpWriter.WriteLine(string.Format("# RDP TCP Proxy dump");
+                    dumpWriter.WriteLine(string.Format("# RDP TCP Proxy dump"));
                     dumpWriter.WriteLine(string.Format("# Time: {0:yyyy-MM-dd HH:mm:ss}", DateTime.Now));
                     dumpWriter.WriteLine(string.Format("# Client: {0}", ((IPEndPoint)client.Client.RemoteEndPoint).ToString()));
                     dumpWriter.WriteLine(string.Format("# Target: {0}:{1}", TargetHost, TargetPort));
