@@ -430,8 +430,11 @@ namespace Gdterm.Rdp
             // 否则不传任何 /sec:xxx，由 wfreerdp 自动协商（含 legacy RDP）
             if (CurrentOptions.AutoReconnectCount > 0)
             {
-                // 显式传次数，避免 FreeRDP 默认 20 轮重试对堡垒机形成连接风暴（触发限流/拉黑）
-                AddArg(args, logArgs, "/auto-reconnect:" + CurrentOptions.AutoReconnectCount);
+                // 显式传次数，避免 FreeRDP 默认重试次数对堡垒机形成连接风暴（触发限流/拉黑）。
+                // 注意 FreeRDP 2.x CLI 语法：/auto-reconnect:3 是非法的（Invalid sigil），
+                // 必须用 +auto-reconnect 启用 + /auto-reconnect-max-retries:<n> 限次。
+                AddArg(args, logArgs, "+auto-reconnect");
+                AddArg(args, logArgs, "/auto-reconnect-max-retries:" + CurrentOptions.AutoReconnectCount);
             }
             // 旧版堡垒机/RDP 代理常发送未在能力协商中声明的绘图指令（Cache Bitmap V2 等），
             // wfreerdp 会直接断链："SERVER BUG: The support for this feature was not announced!"
