@@ -112,6 +112,18 @@ install:
       $patched3 = $patched3.Replace($anchor7, ($anchor7 + "`n" + $leLog))
       Set-Content -Path $infC -Value $patched3 -NoNewline
       Write-Host "Patched info.c: client info + save-session-info + LogonErrorInfo diagnostics"
+      # ---- info.c: hex dump full Client Info PDU (before rdp_send) ----
+      # rdp_send_client_info builds the stream via rdp_write_info_packet (basic) +
+      # rdp_write_extended_info_packet (extraInfo). Dump the full PDU before sending.
+      $anchor11 = "return rdp_send(rdp, s, MCS_GLOBAL_CHANNEL_ID);"
+      if ($patched3.Contains($anchor11) -eq $false) { throw "patch anchor11 not found in info.c" }
+      $ciDump = "`tWLog_INFO(TAG, `"gdterm redirect client info pdu (%d bytes) (gdterm hexdump):`", (int)Stream_Length(s));`n`twinpr_HexDump(TAG, WLOG_INFO, Stream_Buffer(s), (int)Stream_Length(s));`n"
+      $patched3 = $patched3.Replace($anchor11, ($ciDump + $anchor11))
+      # winpr/print.h for winpr_HexDump in info.c
+      $patched3 = $patched3 -replace '#include <winpr/crt.h>', "#include <winpr/crt.h>`n#include <winpr/print.h>"
+      Set-Content -Path $infC -Value $patched3 -NoNewline
+      Write-Host "Patched info.c: client info PDU hex dump"
+
 
       # ---- negotiation.c: X.224 请求实际携带的 routing token / cookie 诊断 ----
       $negoC = Join-Path $root 'libfreerdp\core\nego.c'
@@ -124,6 +136,21 @@ install:
       $patched4 = $patched4 -replace '#include <winpr/crt.h>', "#include <winpr/crt.h>`n#include <winpr/print.h>"
       Set-Content -Path $negoC -Value $patched4 -NoNewline
       Write-Host "Patched nego.c: x224 routing token diagnostics"
+      # ---- nego.c: hex dump full X.224 CR (before transport_write) + X.224 CC (after receive) ----
+      # X.224 CR dump: stream is fully built (tpkt_write_header, tpdu_write_connection_request,
+      # cookie/token, RDP_NEG_REQ) — sealed and ready to transmit. Dump BEFORE transport_write.
+      $anchor9 = "rc = (transport_write(nego->transport, s) >= 0);"
+      if ($patched4.Contains($anchor9) -eq $false) { throw "patch anchor9 not found in nego.c" }
+      $x224CrDump = "`tWLog_INFO(TAG, `"gdterm redirect x224 cr (%d bytes) (gdterm hexdump):`", (int)Stream_Length(s));`n`twinpr_HexDump(TAG, WLOG_INFO, Stream_Buffer(s), (int)Stream_Length(s));`n"
+      $patched4 = $patched4.Replace($anchor9, ($x224CrDump + $anchor9))
+      # X.224 CC dump: stream has just been read via transport_read_pdu, before nego_recv parses it.
+      $anchor10 = "status = nego_recv(nego->transport, s, nego);"
+      if ($patched4.Contains($anchor10) -eq $false) { throw "patch anchor10 not found in nego.c" }
+      $x224CcDump = "`tWLog_INFO(TAG, `"gdterm redirect x224 cc (%d bytes) (gdterm hexdump):`", (int)Stream_Length(s));`n`twinpr_HexDump(TAG, WLOG_INFO, Stream_Buffer(s), (int)Stream_Length(s));`n"
+      $patched4 = $patched4.Replace($anchor10, ($x224CcDump + $anchor10))
+      Set-Content -Path $negoC -Value $patched4 -NoNewline
+      Write-Host "Patched nego.c: full X.224 CR + CC hex dumps"
+
 
       # ---- connection.c: auto-reconnect 循环重挂 routing token（rdp_reset 释放 nego 会丢 token）----
       $anchor5 = "`tstatus = rdp_client_connect(rdp);`n`n`tif (status)`n`t`tstatus = rdp_client_reconnect_channels(rdp, FALSE);"
