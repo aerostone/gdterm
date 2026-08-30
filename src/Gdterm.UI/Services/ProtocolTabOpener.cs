@@ -179,6 +179,38 @@ namespace Gdterm.UI.Services
                 catch { }
             }
 
+            // --- 抓包代理：连接级自动 dump ---
+            // 当 metadata rdp_tcp_dump=true 时，自动启动本地 TCP 代理，
+            // 把 RDP 流量中转后 hex dump 到 logs/rdp-dump/。
+            string originalHost = null;
+            int originalPort = 0;
+            bool tcpDump = config != null && config.Metadata != null
+                && config.Metadata.TryGetValue("rdp_tcp_dump", out var dumpVal)
+                && dumpVal == "true";
+            if (tcpDump)
+            {
+                originalHost = config.Host;
+                originalPort = config.Port;
+                try
+                {
+                    var dumpDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs", "rdp-dump");
+                    var proxyPort = RdpDumpProxy.StartFor(originalHost, originalPort, dumpDir);
+                    config.Host = "127.0.0.1";
+                    config.Port = proxyPort;
+                    DiagLog.Info("RdpTab.Proxy",
+                        string.Format("抓包代理已启动 127.0.0.1:{0} → {1}:{2}, dump → {3}",
+                            proxyPort, originalHost, originalPort, dumpDir));
+                }
+                catch (Exception ex)
+                {
+                    DiagLog.Swallowed("RdpTab.Proxy.Start", ex);
+                    // 代理启动失败时回退到直连（不 blocking 用户）
+                    config.Host = originalHost;
+                    config.Port = originalPort;
+                    originalHost = null;
+                }
+            }
+
             var rdp = _rdpFactory.CreateFor(config);
             rdp.Control.Dock = DockStyle.Fill;
             tab.Controls.Add(rdp.Control);
@@ -239,6 +271,8 @@ namespace Gdterm.UI.Services
                         }
                         session.IsConnected = false;
                         DiagLog.Info("RdpTab.StateChanged", "disconnected reason=" + ev.Reason + " msg=" + ev.ErrorMessage);
+                        // 抓包代理：连接断开时自动停止
+                        if (tcpDump) { try { RdpDumpProxy.Stop(); } catch { } }
                         if (ev.Reason == "closed") return;
                         if (tab.IsDisposed) return;
                         MessageBox.Show("RDP 已断开: " + (ev.ErrorMessage ?? ev.Reason), "远程桌面",

@@ -20,6 +20,7 @@ namespace Gdterm.UI.Forms
         private ComboBox _cjkFontCombo;
         private ComboBox _schemeCombo;
         private CheckBox _dpiAwareCheck;
+        private CheckBox _debugModeCheck;
         private Label _preview;
         private Button _btnOk;
         private Button _btnCancel;
@@ -44,7 +45,7 @@ namespace Gdterm.UI.Forms
             MinimizeBox = false;
             ShowInTaskbar = false;
             // 高/低 DPI 自适应
-            ClientSize = DpiScale.S(this, 440, 492);
+            ClientSize = DpiScale.S(this, 440, 528);
             BackColor = Color.FromArgb(32, 32, 34);
             ForeColor = Color.FromArgb(220, 220, 220);
             Font = Services.FormFontPolicy.UiFont();
@@ -200,6 +201,17 @@ namespace Gdterm.UI.Forms
             Controls.Add(_dpiAwareCheck);
             y += DpiScale.V(this, 36);
 
+            _debugModeCheck = new CheckBox
+            {
+                Text = "调试模式（连接对话框显示「抓包」等调试选项）",
+                Location = new Point(16, y),
+                AutoSize = true,
+                ForeColor = Color.FromArgb(200, 200, 200),
+                Checked = false
+            };
+            Controls.Add(_debugModeCheck);
+            y += DpiScale.V(this, 36);
+
             // —— 界面字体（非等宽，菜单/树/状态栏/对话框）——
             Controls.Add(MakeLabel("界面字体", 16, y));
             _uiFontCombo = new ComboBox
@@ -281,6 +293,7 @@ namespace Gdterm.UI.Forms
                     ColorScheme = _schemeCombo.SelectedItem != null ? _schemeCombo.SelectedItem.ToString() : "Classic",
                     UiTheme = _uiThemeCombo.SelectedItem != null ? _uiThemeCombo.SelectedItem.ToString() : "Dark",
                     DpiAware = _dpiAwareCheck.Checked,
+                    DebugMode = _debugModeCheck.Checked,
                     UIFontName = _uiFontCombo.SelectedItem != null ? _uiFontCombo.SelectedItem.ToString() : "Microsoft YaHei UI",
                     UIFontSize = (int)_uiSizeNum.Value
                 };
@@ -343,6 +356,7 @@ namespace Gdterm.UI.Forms
             SelectCombo(_cjkFontCombo, string.IsNullOrEmpty(s.CjkFontName) ? "" : s.CjkFontName);
             SelectCombo(_uiThemeCombo, string.IsNullOrEmpty(s.UiTheme) ? "Dark" : s.UiTheme);
             _dpiAwareCheck.Checked = s.DpiAware;
+            _debugModeCheck.Checked = s.DebugMode;
             SelectCombo(_uiFontCombo, s.UIFontName ?? "Microsoft YaHei UI");
             _uiSizeNum.Value = Math.Max(_uiSizeNum.Minimum, Math.Min(_uiSizeNum.Maximum, s.UIFontSize > 0 ? s.UIFontSize : 9));
             UpdatePreview();
@@ -400,6 +414,8 @@ namespace Gdterm.UI.Forms
         public string UIFontName { get; set; } = "Microsoft YaHei UI";
         /// <summary>界面字号。</summary>
         public int UIFontSize { get; set; } = 9;
+        /// <summary>调试模式：开启后连接对话框显示"抓包"等调试选项。</summary>
+        public bool DebugMode { get; set; } = false;
 
         public static AppearanceSettings Load(string path)
         {
@@ -438,6 +454,8 @@ namespace Gdterm.UI.Forms
                         int n;
                         if (int.TryParse(val, out n) && n >= 8 && n <= 24) s.UIFontSize = n;
                     }
+                    else if (string.Equals(key, "debugMode", StringComparison.OrdinalIgnoreCase))
+                        s.DebugMode = val == "1" || string.Equals(val, "true", StringComparison.OrdinalIgnoreCase);
                 }
             }
             catch { }
@@ -457,7 +475,8 @@ namespace Gdterm.UI.Forms
                 "uiTheme=" + (UiTheme ?? "Dark") + "\r\n" +
                 "dpiAware=" + (DpiAware ? "1" : "0") + "\r\n" +
                 "uiFontName=" + (UIFontName ?? "Microsoft YaHei UI") + "\r\n" +
-                "uiFontSize=" + UIFontSize + "\r\n");
+                "uiFontSize=" + UIFontSize + "\r\n" +
+                "debugMode=" + (DebugMode ? "1" : "0") + "\r\n");
         }
 
         public static string DefaultPath

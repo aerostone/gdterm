@@ -52,6 +52,7 @@
     <Compile Include="RdpLog.cs" />
     <Compile Include="FreeRdpClient.cs" />
     <Compile Include="RdpLoadBalanceProbe.cs" />
+    <Compile Include="RdpTcpProxy.cs" />
     <Compile Include="RdpOptionsBuilder.cs" />
     <Compile Include="Models\FileTransferEventArgs.cs" />
     <Compile Include="Models\RdpOptions.cs" />
