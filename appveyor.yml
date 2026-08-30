@@ -134,6 +134,19 @@ install:
       Set-Content -Path $connC -Value $patched2b -NoNewline
       Write-Host "Patched connection.c: auto-reconnect re-attaches LB routing token"
 
+      # ---- client.c: LOGOFF_BY_USER 也走 auto-reconnect（mstsc 被踢后静默重连的仿真）----
+      # 堡垒机对 token 重连的处理是注销被路由的会话并发 LOGOFF_BY_USER；
+      # mstsc 不看错误码照样静默重连（第二次全新连接重新拿登录页），
+      # FreeRDP 的 client_auto_reconnect_ex 对 LOGOFF_BY_USER 走 default: return FALSE 直接退出。
+      $clientC = Join-Path $root 'client\common\client.c'
+      $src5 = Get-Content $clientC -Raw
+      $anchor8 = "`t`tdefault:`n`t`t`treturn FALSE;`n`t}`n`n`tif (!settings->AutoReconnectionEnabled)"
+      if ($src5.Contains($anchor8) -eq $false) { throw "patch anchor8 not found in client.c" }
+      $logoffCase = "`t`tcase ERRINFO_LOGOFF_BY_USER:`n`t`t`t/* gdterm: bastion gateways log off the parked LB-token session when the`n`t`t`tredirect reconnect arrives; mstsc recovers by silently reconnecting. Drop`n`t`t`tthe routing token so retries open a fresh session, and let the retry loop run. */`n`t`t`tsettings->LoadBalanceInfoLength = 0;`n`t`t`tWLog_WARN(TAG, `"gdterm redirect: LOGOFF_BY_USER - dropped routing token, retrying`");`n`t`t`tbreak;`n"
+      $patched5 = $src5.Replace($anchor8, ($logoffCase + $anchor8))
+      Set-Content -Path $clientC -Value $patched5 -NoNewline
+      Write-Host "Patched client.c: auto-reconnect retries on LOGOFF_BY_USER (mstsc-like)"
+
 
       # ---- FreeRDP 旧补丁已移除 ----
       # 原补丁在 nego_recv li==6 分支强制 redirect 重连 FAIL（RoutingToken>0 && HYBRID），
