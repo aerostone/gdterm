@@ -164,7 +164,12 @@ namespace Gdterm.UI.Services
                 ToolTipText = "RDP: " + config.Host + ":" + config.Port
             };
 
-            if (credential != null && !string.IsNullOrEmpty(credential.Password))
+            // mstsc 引擎才需要 Windows 凭据（TERMSRV/<host>，供 mstscax 自动登录）。
+            // 显式 rdp_engine=freerdp 时不注入：走无凭据首连（mstsc 仿真，堡垒机自渲染登录页）。
+            bool explicitFreeRdp = config != null && config.Metadata != null
+                && config.Metadata.TryGetValue("rdp_engine", out var engMeta)
+                && (engMeta ?? "").Trim().ToLowerInvariant() == "freerdp";
+            if (!explicitFreeRdp && credential != null && !string.IsNullOrEmpty(credential.Password))
             {
                 try
                 {
@@ -193,11 +198,12 @@ namespace Gdterm.UI.Services
 
             // FreeRDP 无 Windows SSO，必须有凭据才能连 load-balanced 服务器。
             // 若 KeePass 未解锁或无匹配条目，自动回退 mstsc（走当前 Windows 用户 SSO）。
-            // 注：堡垒机带内认证（密码在堡垒机登录页输入）由 FreeRDP 层 patch 保证——
-            // 转发重连时清空凭据（rdp_client_redirect），目标服务器自协商显示登录界面。
+            // 例外：显式 rdp_engine=freerdp 时尊重用户选择，不回退——用于堡垒机零凭据
+            // 首连实验（mstsc 仿真：不送 /u /p，AUTOLOGON=0，堡垒机自渲染登录页，密码带内输入）。
+            // 注：显式 freerdp 已在 RdpClientFactory 处理 exe 缺失（直接抛错），不会静默换引擎。
             bool useFreeRdp = rdp is FreeRdpClient;
             bool hasCreds = credential != null && !string.IsNullOrEmpty(credential.Username) && !string.IsNullOrEmpty(credential.Password);
-            if (useFreeRdp && !hasCreds)
+            if (useFreeRdp && !hasCreds && !explicitFreeRdp)
             {
                 try
                 {
