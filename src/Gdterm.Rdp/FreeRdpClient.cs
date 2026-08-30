@@ -519,7 +519,9 @@ namespace Gdterm.Rdp
             // 不认识的 PDU 时，“not properly parsed, N bytes remaining” 是唯一线索，
             // 其内容很可能就是踢出原因（如 logonErrorInfo 变体）。该行及其随后的 hex dump
             // 行只走 pdu 通道，避免与下方常规 interesting 过滤重复落盘。hex dump 极少且短。
-            bool unhandledPdu = lower.Contains("not properly parsed");
+            // The gdterm hexdump line (FreeRDP patch diagnostic) is followed by winpr_HexDump output,
+            // which likewise goes through the pdu channel for complete persistence.
+            bool unhandledPdu = lower.Contains("not properly parsed") || lower.Contains("gdterm hexdump");
             bool isPduHexDump = _unhandledPduDumping && IsHexDumpLine(line);
             bool routedToPdu = unhandledPdu || isPduHexDump;
             if (unhandledPdu)

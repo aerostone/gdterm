@@ -84,8 +84,10 @@ install:
       $src2 = Get-Content $connC -Raw
       $anchor2 = "status = rdp_client_connect(rdp);`n`n`tif (status)`n`t`tstatus = rdp_client_reconnect_channels(rdp, TRUE);"
       if ($src2 -notlike "*$anchor2*") { throw "patch anchor not found in connection.c" }
-      $clearBlock = "`t/* gdterm patch: MS-RDPBCGR 2.2.13.1 - on server redirection,`n`t * only fields the server flagged (LB_USERNAME/LB_DOMAIN/LB_PASSWORD) are`n`t * authoritative; unflagged fields MUST NOT be reused. FreeRDP bug:`n`t * rdp_client_redirect never clears Password, so the stale first-connect`n`t * /u /p reaches the redirect reconnect and gets LOGOFF_BY_USER (verified`n`t * 2026-08-30: with LB_LOAD_BALANCE_INFO token the reconnect re-sent the`n`t * old autologon credentials and was kicked in 0.1s). Clear unflagged`n`t * credential fields unconditionally so the target self-negotiates its`n`t * login (mstsc behavior); session routing is carried by the LB token. */`n`tWLog_INFO(TAG, `"gdterm redirect: flags=0x%x LB=%d USER=%d DOMAIN=%d PASS=%d AutoLogon=%d LBI=%d`", (unsigned)settings->RedirectionFlags, !!(settings->RedirectionFlags & LB_LOAD_BALANCE_INFO), !!(settings->RedirectionFlags & LB_USERNAME), !!(settings->RedirectionFlags & LB_DOMAIN), !!(settings->RedirectionFlags & LB_PASSWORD), (int)settings->AutoLogonEnabled, (int)settings->LoadBalanceInfoLength);`n`tif (!(settings->RedirectionFlags & LB_USERNAME))`n`t{`n`t`tfree(settings->Username);`n`t`tsettings->Username = NULL;`n`t}`n`tif (!(settings->RedirectionFlags & LB_DOMAIN))`n`t{`n`t`tfree(settings->Domain);`n`t`tsettings->Domain = NULL;`n`t}`n`tif (!(settings->RedirectionFlags & LB_PASSWORD))`n`t{`n`t`tfree(settings->Password);`n`t`tsettings->Password = NULL;`n`t}`n`tsettings->AutoLogonEnabled = FALSE;`n`n"
+      $clearBlock = "`t/* gdterm patch: MS-RDPBCGR 2.2.13.1 - on server redirection,`n`t * only fields the server flagged (LB_USERNAME/LB_DOMAIN/LB_PASSWORD) are`n`t * authoritative; unflagged fields MUST NOT be reused. FreeRDP bug:`n`t * rdp_client_redirect never clears Password, so the stale first-connect`n`t * /u /p reaches the redirect reconnect and gets LOGOFF_BY_USER (verified`n`t * 2026-08-30: with LB_LOAD_BALANCE_INFO token the reconnect re-sent the`n`t * old autologon credentials and was kicked in 0.1s). Clear unflagged`n`t * credential fields unconditionally so the target self-negotiates its`n`t * login (mstsc behavior); session routing is carried by the LB token. */`n`tWLog_INFO(TAG, `"gdterm redirect: flags=0x%x LB=%d USER=%d DOMAIN=%d PASS=%d AutoLogon=%d LBI=%d`", (unsigned)settings->RedirectionFlags, !!(settings->RedirectionFlags & LB_LOAD_BALANCE_INFO), !!(settings->RedirectionFlags & LB_USERNAME), !!(settings->RedirectionFlags & LB_DOMAIN), !!(settings->RedirectionFlags & LB_PASSWORD), (int)settings->AutoLogonEnabled, (int)settings->LoadBalanceInfoLength);`n`tif (settings->LoadBalanceInfo && (settings->LoadBalanceInfoLength > 0))`n`t{`n`t`tWLog_INFO(TAG, `"gdterm redirect LB token bytes (gdterm hexdump):`");`n`t`twinpr_HexDump(TAG, WLOG_INFO, settings->LoadBalanceInfo, (int)settings->LoadBalanceInfoLength);`n`t}`n`tif (!(settings->RedirectionFlags & LB_USERNAME))`n`t{`n`t`tfree(settings->Username);`n`t`tsettings->Username = NULL;`n`t}`n`tif (!(settings->RedirectionFlags & LB_DOMAIN))`n`t{`n`t`tfree(settings->Domain);`n`t`tsettings->Domain = NULL;`n`t}`n`tif (!(settings->RedirectionFlags & LB_PASSWORD))`n`t{`n`t`tfree(settings->Password);`n`t`tsettings->Password = NULL;`n`t}`n`tsettings->AutoLogonEnabled = FALSE;`n`n"
       $patched2 = $src2 -replace [regex]::Escape($anchor2), ($clearBlock + $anchor2)
+      # winpr/print.h: winpr_HexDump declaration, connection.c does not include it
+      $patched2 = $patched2 -replace '#include <winpr/crt.h>', "#include <winpr/crt.h>`n#include <winpr/print.h>"
       Set-Content -Path $connC -Value $patched2 -NoNewline
       Write-Host "Patched connection.c: redirect clears unflagged credentials unconditionally"
 
@@ -96,18 +98,30 @@ install:
       $src3 = Get-Content $infC -Raw
       $anchor3 = "cbWorkingDir = cbWorkingDir >= 2 ? cbWorkingDir - 2 : cbWorkingDir;`n`tStream_Write_UINT32(s, settings->KeyboardCodePage); /* CodePage (4 bytes) */"
       if ($src3 -notlike "*$anchor3*") { throw "patch anchor not found in info.c" }
-      $infoLog = "`tWLog_INFO(TAG, `"gdterm redirect client info: flags=0x%x AUTOLOGON=%d cbUser=%d cbPass=%d user=%s usedCookie=%d cbArc=%d`", flags, !!(flags & INFO_AUTOLOGON), cbUserName, cbPassword, settings->Username ? settings->Username : `"(null)`", usedPasswordCookie, (int)settings->ServerAutoReconnectCookie->cbLen);"
+      $infoLog = "`tWLog_INFO(TAG, `"gdterm redirect client info: flags=0x%x AUTOLOGON=%d cbUser=%d cbPass=%d user=%s usedCookie=%d cbArc=%d dom=%d`", flags, !!(flags & INFO_AUTOLOGON), cbUserName, cbPassword, settings->Username ? settings->Username : `"(null)`", usedPasswordCookie, (int)settings->ServerAutoReconnectCookie->cbLen, (int)cbDomain);"
       $patched3 = $src3.Replace($anchor3, $infoLog + $anchor3)
+      # ---- info.c: SAVE_SESSION_INFO infoType (does the bastion send an ARC cookie) ----
+      $anchor6 = "Stream_Read_UINT32(s, infoType); /* infoType (4 bytes) */"
+      if ($src3.Contains($anchor6) -eq $false) { throw "patch anchor6 not found in info.c" }
+      $ssLog = "`tWLog_INFO(TAG, `"gdterm redirect save session info: type=0x%x`", infoType);`n"
+      $patched3 = $patched3.Replace($anchor6, ($anchor6 + "`n" + $ssLog))
+      # ---- info.c: LogonErrorInfo (server-side logon error notification) ----
+      $anchor7 = "Stream_Read_UINT32(s, errorNotificationData); /* errorNotificationData (4 bytes) */"
+      if ($src3.Contains($anchor7) -eq $false) { throw "patch anchor7 not found in info.c" }
+      $leLog = "`tWLog_INFO(TAG, `"gdterm redirect logon error info: type=0x%x data=0x%x`", errorNotificationType, errorNotificationData);`n"
+      $patched3 = $patched3.Replace($anchor7, ($anchor7 + "`n" + $leLog))
       Set-Content -Path $infC -Value $patched3 -NoNewline
-      Write-Host "Patched info.c: client info diagnostics (flags/creds/ARC cookie)"
+      Write-Host "Patched info.c: client info + save-session-info + LogonErrorInfo diagnostics"
 
       # ---- negotiation.c: X.224 请求实际携带的 routing token / cookie 诊断 ----
       $negoC = Join-Path $root 'libfreerdp\core\nego.c'
       $src4 = Get-Content $negoC -Raw
       $anchor4 = "`tif (nego->RoutingToken)`n`t{`n`t`tStream_Write(s, nego->RoutingToken, nego->RoutingTokenLength);"
       if ($src4 -notlike "*$anchor4*") { throw "patch anchor not found in nego.c" }
-      $negoLog = "`tWLog_INFO(TAG, `"gdterm redirect nego x224: token=%d cookie=%d`", (int)nego->RoutingTokenLength, nego->cookie ? (int)strlen(nego->cookie) : 0);`n"
+      $negoLog = "`tWLog_INFO(TAG, `"gdterm redirect x224: token=%d cookie=%s proto=0x%x`", (int)nego->RoutingTokenLength, nego->cookie ? nego->cookie : `"(null)`", (unsigned)nego->RequestedProtocols);`n`tif (nego->RoutingToken)`n`t{`n`t`tWLog_INFO(TAG, `"gdterm redirect x224 token bytes (gdterm hexdump):`");`n`t`twinpr_HexDump(TAG, WLOG_INFO, nego->RoutingToken, (int)nego->RoutingTokenLength);`n`t}`n"
       $patched4 = $src4.Replace($anchor4, $negoLog + $anchor4)
+      # winpr/print.h for nego.c (winpr_HexDump)
+      $patched4 = $patched4 -replace '#include <winpr/crt.h>', "#include <winpr/crt.h>`n#include <winpr/print.h>"
       Set-Content -Path $negoC -Value $patched4 -NoNewline
       Write-Host "Patched nego.c: x224 routing token diagnostics"
 
@@ -115,7 +129,8 @@ install:
       $anchor5 = "`tstatus = rdp_client_connect(rdp);`n`n`tif (status)`n`t`tstatus = rdp_client_reconnect_channels(rdp, FALSE);"
       if ($src2.Contains($anchor5) -eq $false) { throw "patch anchor5 not found in connection.c" }
       $tokenFix = "`tif ((rdp->settings->RedirectionFlags & LB_LOAD_BALANCE_INFO) && rdp->settings->LoadBalanceInfo &&`n`t    (rdp->settings->LoadBalanceInfoLength > 0))`n`t{`n`t`tWLog_INFO(TAG, `"gdterm redirect: auto-reconnect re-attaching routing token (%d bytes)`", (int)rdp->settings->LoadBalanceInfoLength);`n`t`tnego_set_routing_token(rdp->nego, rdp->settings->LoadBalanceInfo, rdp->settings->LoadBalanceInfoLength);`n`t}`n"
-      $patched2b = $patched2.Replace($anchor5, ($tokenFix + $anchor5))
+      $reconDiag = "`tWLog_INFO(TAG, `"gdterm redirect: reconnect status=%d proto=0x%x`", status, (unsigned)nego_get_selected_protocol(rdp->nego));`n"
+      $patched2b = $patched2.Replace($anchor5, ($tokenFix + $anchor5 + "`n" + $reconDiag))
       Set-Content -Path $connC -Value $patched2b -NoNewline
       Write-Host "Patched connection.c: auto-reconnect re-attaches LB routing token"
 
