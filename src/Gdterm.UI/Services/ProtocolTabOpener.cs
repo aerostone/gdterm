@@ -220,13 +220,18 @@ namespace Gdterm.UI.Services
             }
 
             // mstsc 引擎才需要 Windows 凭据（TERMSRV/<host>，供 mstscax 自动登录）。
-            // 显式 rdp_engine=freerdp 时不注入：走无凭据首连（mstsc 仿真，堡垒机自渲染登录页）。
             // 抓包时用 connectConfig.Host（127.0.0.1）——mstscax 实际连接的地址，
             // 否则凭据目标 TERMSRV/<原host> 与连接目标不匹配，自动登录不生效。
-            bool explicitFreeRdp = config != null && config.Metadata != null
-                && config.Metadata.TryGetValue("rdp_engine", out var engMeta)
-                && (engMeta ?? "").Trim().ToLowerInvariant() == "freerdp";
-            if (!explicitFreeRdp && credential != null && !string.IsNullOrEmpty(credential.Password))
+            // FreeRDP 引擎（含默认 auto）不注入：有凭据走 /u /p，无凭据走零凭据首连
+            // （mstsc 仿真，堡垒机自渲染登录页）。
+            // auto + wfreerdp.exe 缺失时工厂会静默回退 mstscax，仍需注入。
+            string engineMeta = null;
+            if (config != null && config.Metadata != null)
+                config.Metadata.TryGetValue("rdp_engine", out engineMeta);
+            string engineSel = (engineMeta ?? "").Trim().ToLowerInvariant();
+            bool willUseMstscax = engineSel == "mstscax"
+                || (engineSel != "freerdp" && FreeRdpClient.FindExecutable() == null);
+            if (willUseMstscax && credential != null && !string.IsNullOrEmpty(credential.Password))
             {
                 try
                 {
@@ -253,31 +258,11 @@ namespace Gdterm.UI.Services
                 SessionId = config.Id ?? Guid.NewGuid().ToString("N")
             };
 
-            // FreeRDP 无 Windows SSO，必须有凭据才能连 load-balanced 服务器。
-            // 若 KeePass 未解锁或无匹配条目，自动回退 mstsc（走当前 Windows 用户 SSO）。
-            // 例外：显式 rdp_engine=freerdp 时尊重用户选择，不回退——用于堡垒机零凭据
-            // 首连实验（mstsc 仿真：不送 /u /p，AUTOLOGON=0，堡垒机自渲染登录页，密码带内输入）。
+            // 零凭据不再回退 mstsc（v0.1.154 实证）：无 /u /p 时 wfreerdp 发 AUTOLOGON=0
+            // 空凭据 client info（mstsc 仿真），堡垒机自渲染带内登录页，密码在页内输入。
+            // 这是「零配置自协商」原则的一部分：凭据有无不应决定引擎选择。
+            // 显式 rdp_engine=mstscax 时 RdpClientFactory 已直接返回 ActiveX，不至此分支。
             // 注：显式 freerdp 已在 RdpClientFactory 处理 exe 缺失（直接抛错），不会静默换引擎。
-            bool useFreeRdp = rdp is FreeRdpClient;
-            bool hasCreds = credential != null && !string.IsNullOrEmpty(credential.Username) && !string.IsNullOrEmpty(credential.Password);
-            if (useFreeRdp && !hasCreds && !explicitFreeRdp)
-            {
-                try
-                {
-                    DiagLog.Info("RdpTab.Connect", "FreeRDP needs credentials, falling back to mstsc");
-                    rdp.Dispose();
-                    rdp = new RdpClient();
-                    rdp.Control.Dock = DockStyle.Fill;
-                    tab.Controls.Clear();
-                    tab.Controls.Add(rdp.Control);
-                    session.Control = rdp.Control;
-                    session.RdpClient = rdp;
-                }
-                catch (Exception ex)
-                {
-                    DiagLog.Swallowed("RdpTab.FallbackMstsc", ex);
-                }
-            }
 
             // 订阅状态事件：断开/致命错误时更新 tab 状态并向用户报错（旧代码从不订阅，
             // 导致断开后 tab 假死空白）。事件来自 COM 连接点，稳妥起见弹回 UI 线程。

@@ -53,6 +53,9 @@ namespace Gdterm.Rdp
         // 若照默认 TLS|NLA(0x3) 请求会被网关 DPU 踢（v0.1.161 实证），
         // 故重启时携带 /sec:rdp 重放同样的 0x0 请求（mstsc 重连行为）。
         private int _negotiatedProtocol = -1;
+        // LB 预协商进程级禁用：本网关 CC 从不下发 token（恒 cc:no-token），
+        // 首次确认后本进程不再探测，避免每连多一条 X.224 噪音连接（加重限流）。
+        private static bool _lbProbeDisabled;
         private int _lbRetried;
         // 跨重启累计的 LB 重连次数：_lbRetried 会在 Start() 中重置，但 NetScaler
         // 每轮下发不同 token，若只看 _lbRetried 会形成无限重连循环。
@@ -342,7 +345,9 @@ namespace Gdterm.Rdp
             // 则先做一次 X.224 预协商从网关的 Connection Confirm 变长部分取回 token，
             // 首连即带 /load-balance-info，避免「首次被踢再重连」的中间状态。
             // 预协商失败（非 LB 环境 / 超时 / 网络拒绝）返回 null，不影响普通连接。
-            if (string.IsNullOrEmpty(CurrentOptions.LoadBalanceInfo))
+            // 进程级禁用：本网关 CC 从不下发 token（恒 cc:no-token），probe 纯属多余连接，
+            // 还会加重网关限流。首次 no-token 后本进程不再探测（重启后重试一次）。
+            if (string.IsNullOrEmpty(CurrentOptions.LoadBalanceInfo) && !_lbProbeDisabled)
             {
                 var probed = RdpLoadBalanceProbe.Probe(host, port);
                 RdpLog.Info("FreeRdp.LB", "probe result=" + (probed == null ? "<null>" : "token")
@@ -350,13 +355,16 @@ namespace Gdterm.Rdp
                 if (!string.IsNullOrEmpty(probed))
                 {
                     CurrentOptions.LoadBalanceInfo = probed;
-                    try
-                    {
-                        if (_startConfig != null && _startConfig.Metadata != null)
-                            _startConfig.Metadata["rdp_loadbalance"] = probed;
-                    }
-                    catch (Exception ex) { RdpLog.Swallowed("FreeRdp.LB", ex); }
+                    // 会话级内存即可：token 是网关会话产物（NSFVERIFYHASH 每 redirect 换新值、
+                    // 会话结束即死），绝不能写回 _startConfig.Metadata —— 那是用户存储的共享
+                    // 配置对象，写入会随连接库落盘，下次开新连接重放死 token。
+                    // 用户手填的 rdp_loadbalance（ConnectionDialog）仍走持久化路径。
                     RdpLog.Info("FreeRdp.LB", "pre-negotiation captured token, target=" + host + ":" + port);
+                }
+                else if (RdpLoadBalanceProbe.LastProbeDetail == "cc:no-token")
+                {
+                    _lbProbeDisabled = true;
+                    RdpLog.Info("FreeRdp.LB", "probe disabled for this process (gateway never issues CC token)");
                 }
             }
 
@@ -437,25 +445,11 @@ namespace Gdterm.Rdp
             // 模式的重连——token CR 若请求 TLS|NLA(0x3) 会在 client info 后被 DPU 踢；
             // 请求 legacy RDP(0x0) 则整段会话存活（mstsc 黄金样本 c57179）。
             // 进程内 redirect/auto-reconnect 重连由 FreeRDP 补丁锁定（见 appveyor.yml），
-            // 这里覆盖进程级重启（TryAutoReconnectWithToken 新起 wfreerdp）。
-            // 首连时若元数据已记录 rdp_negotiated_proto=0（上次会话协商为 legacy RDP）
-            // 且本次携带旧 token（rdp_loadbalance 持久化），直接预置协商结果。
+            // 这里覆盖进程级重启（TryAutoReconnectWithToken 新起 wfreerdp）：
+            // _negotiatedProtocol 在本客户端实例生命周期内已捕获首段协商结果，
+            // 跨会话不重放（协商结果是网关会话级产物，不做持久化记忆）。
             else if (_negotiatedProtocol == 0 && !string.IsNullOrEmpty(CurrentOptions.LoadBalanceInfo))
                 AddArg(args, logArgs, "/sec:rdp");
-            else if (_negotiatedProtocol < 0 && !string.IsNullOrEmpty(CurrentOptions.LoadBalanceInfo))
-            {
-                try
-                {
-                    if (_startConfig != null && _startConfig.Metadata != null
-                        && _startConfig.Metadata.ContainsKey("rdp_negotiated_proto")
-                        && _startConfig.Metadata["rdp_negotiated_proto"] == "0")
-                    {
-                        _negotiatedProtocol = 0;
-                        AddArg(args, logArgs, "/sec:rdp");
-                    }
-                }
-                catch { }
-            }
             // 否则不传任何 /sec:xxx，由 wfreerdp 自动协商（含 legacy RDP）
             if (CurrentOptions.AutoReconnectCount > 0)
             {
@@ -631,12 +625,9 @@ namespace Gdterm.Rdp
                         {
                             _negotiatedProtocol = sel;
                             RdpLog.Info("FreeRdp.nego", "negotiated protocol: legacy RDP (0x0) — token restart will use /sec:rdp");
-                            try
-                            {
-                                if (_startConfig != null && _startConfig.Metadata != null)
-                                    _startConfig.Metadata["rdp_negotiated_proto"] = "0";
-                            }
-                            catch { }
+                            // 不写 rdp_negotiated_proto 到元数据：/sec:rdp 属本网关会话级协商
+                            // 结果，持久化后配置若指向 NLA 网关会直接 0x2000C 连不上。
+                            // 进程内状态 _negotiatedProtocol 已覆盖同客户端重启场景。
                         }
                     }
                 }
@@ -816,12 +807,8 @@ namespace Gdterm.Rdp
             }
 
             CurrentOptions.LoadBalanceInfo = _detectedLoadBalanceInfo;
-            try
-            {
-                if (_startConfig != null && _startConfig.Metadata != null)
-                    _startConfig.Metadata["rdp_loadbalance"] = _detectedLoadBalanceInfo;
-            }
-            catch (Exception ex) { RdpLog.Swallowed("FreeRdp.LB", ex); }
+            // 不写 _startConfig.Metadata（rdp_loadbalance）：token 会话级产物，跨会话重放
+            // 必然死 token（见上方 probe 处注释）。客户端内重启由 CurrentOptions 携带。
             RdpLog.Info("FreeRdp.LB", "auto-reconnect with token, retried=" + _lbRetried);
             // 重连带上新 token（/load-balance-info），但不强制 /sec:nla：
             // NetScaler redirect 重连仍回 li==6（仅 legacy RDP），继续走自由协商。
