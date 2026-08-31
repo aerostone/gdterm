@@ -48,6 +48,11 @@ namespace Gdterm.Rdp
         private string _startDomain;
         private ConnectionConfig _startConfig;
         private volatile string _detectedLoadBalanceInfo;
+        // 首段会话实际协商出的协议（nego done: sel=0x0 = 网关只接受 legacy RDP）。
+        // token 进程级重启（TryAutoReconnectWithToken）的新进程不知道协商历史，
+        // 若照默认 TLS|NLA(0x3) 请求会被网关 DPU 踢（v0.1.161 实证），
+        // 故重启时携带 /sec:rdp 重放同样的 0x0 请求（mstsc 重连行为）。
+        private int _negotiatedProtocol = -1;
         private int _lbRetried;
         // 跨重启累计的 LB 重连次数：_lbRetried 会在 Start() 中重置，但 NetScaler
         // 每轮下发不同 token，若只看 _lbRetried 会形成无限重连循环。
@@ -427,6 +432,30 @@ namespace Gdterm.Rdp
             // 「NLA 认证」仅是偏好，「已有 LB token / 重连中」也不该触发 /sec:nla。
             if (CurrentOptions.ForceNLA)
                 AddArg(args, logArgs, "/sec:nla");
+            // token 重启且首段会话协商为 legacy RDP（sel=0x0）时重放同样的请求。
+            // 实证（v0.1.161 抓包）：网关 NSFVERIFYHASH token 续会只接受首段协商
+            // 模式的重连——token CR 若请求 TLS|NLA(0x3) 会在 client info 后被 DPU 踢；
+            // 请求 legacy RDP(0x0) 则整段会话存活（mstsc 黄金样本 c57179）。
+            // 进程内 redirect/auto-reconnect 重连由 FreeRDP 补丁锁定（见 appveyor.yml），
+            // 这里覆盖进程级重启（TryAutoReconnectWithToken 新起 wfreerdp）。
+            // 首连时若元数据已记录 rdp_negotiated_proto=0（上次会话协商为 legacy RDP）
+            // 且本次携带旧 token（rdp_loadbalance 持久化），直接预置协商结果。
+            else if (_negotiatedProtocol == 0 && !string.IsNullOrEmpty(CurrentOptions.LoadBalanceInfo))
+                AddArg(args, logArgs, "/sec:rdp");
+            else if (_negotiatedProtocol < 0 && !string.IsNullOrEmpty(CurrentOptions.LoadBalanceInfo))
+            {
+                try
+                {
+                    if (_startConfig != null && _startConfig.Metadata != null
+                        && _startConfig.Metadata.ContainsKey("rdp_negotiated_proto")
+                        && _startConfig.Metadata["rdp_negotiated_proto"] == "0")
+                    {
+                        _negotiatedProtocol = 0;
+                        AddArg(args, logArgs, "/sec:rdp");
+                    }
+                }
+                catch { }
+            }
             // 否则不传任何 /sec:xxx，由 wfreerdp 自动协商（含 legacy RDP）
             if (CurrentOptions.AutoReconnectCount > 0)
             {
@@ -585,7 +614,35 @@ namespace Gdterm.Rdp
                 }
             }
 
-            // redirect 后 FreeRDP 输出的 hex dump 会把 routing token 的 ASCII 拆到每行末尾。
+            // 捕获首段会话协商出的协议（gdterm FreeRDP 补丁输出）:
+            //   "gdterm redirect nego done: req=0x0 sel=0x0"
+            // sel=0x0 表示网关只接受 legacy RDP；token 进程级重启时需 /sec:rdp 重放。
+            if (_negotiatedProtocol < 0 && lower.Contains("nego done"))
+            {
+                var si = lower.IndexOf("sel=0x");
+                if (si >= 0)
+                {
+                    int sel;
+                    var hex = lower.Substring(si + 6, Math.Min(8, lower.Length - si - 6)).Split(' ', '\t')[0];
+                    if (int.TryParse(hex.TrimEnd(';'), System.Globalization.NumberStyles.HexNumber,
+                            System.Globalization.CultureInfo.InvariantCulture, out sel))
+                    {
+                        if (sel == 0)
+                        {
+                            _negotiatedProtocol = sel;
+                            RdpLog.Info("FreeRdp.nego", "negotiated protocol: legacy RDP (0x0) — token restart will use /sec:rdp");
+                            try
+                            {
+                                if (_startConfig != null && _startConfig.Metadata != null)
+                                    _startConfig.Metadata["rdp_negotiated_proto"] = "0";
+                            }
+                            catch { }
+                        }
+                    }
+                }
+            }
+
+            // redirect 后 FreeRDP 输出的 hex dump 会把 routing token 的 ASCII 拼到每行末尾。
             // 累加 `Cookie: msts=...` 直到遇到 CR/LF 结束的 token，再完整回传。
             AccumulateHexRoutingToken(line);
         }
