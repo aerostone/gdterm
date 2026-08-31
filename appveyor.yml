@@ -222,6 +222,25 @@ install:
       }
       Set-Content -Path $connC2 -Value $srcC -NoNewline
       Write-Host "Patched rdp.h+connection.c: identity snapshot/restore on redirect"
+      # ---- gdterm: redirect 前先向旧会话发 MCS ultimatum（mstsc 行为，ver165 实证根因）----
+      # 抓包实证（tmp/rdp-dump/ver165 vs 08:03 mstsc 黄金样本）：
+      #   mstsc 首连收 redirect 后先发 9 字节 MCS DisconnectProviderUltimatum
+      #   (02f0802180) 再 token 重连 → 被接受；wfreerdp 静默关 TCP 直接重连
+      #   → 0.05s 内 LOGOFF_BY_USER。X.224/CS_CORE 已对齐 mstsc 后仍被踢，
+      #   唯一剩余行为差异就是旧会话收尾方式。
+      # rdp_client_redirect 入口处旧 transport/mcs 仍存活（rdp.c:1728 同步调用），
+      # 在 disconnect_and_clear 之前补发 ultimatum（FreeRDP 现成函数 mcs.c:1219）。
+      $connC3 = Join-Path $root 'libfreerdp\core\connection.c'
+      $srcU = Get-Content $connC3 -Raw
+      $aUlt = "`tsettings = rdp->settings;`n`n`tif (!rdp_client_disconnect_and_clear(rdp))"
+      if ($srcU.Contains($aUlt) -eq $false) { throw "ultimatum anchor not found in connection.c" }
+      if ($srcU.Contains('ultimatum before redirect') -eq $false) {
+        $ultBlock = "`t/* gdterm patch: send MCS DisconnectProviderUltimatum on the OLD session`n`t * before tearing it down for the redirect reconnect (mstsc does this;`n`t * ver165 wire proof: without it the gateway LOGOFF_BY_USERs the token`n`t * reconnect 0.05s after client info). mcs_write_domain_mcspdu_header +`n`t * per_write_enumerated(0x80) = 02f0802180, identical to mstsc bytes. */`n`tif (rdp->mcs && rdp->mcs->transport)`n`t{`n`t`tWLog_INFO(TAG, `"gdterm redirect: ultimatum before redirect reconnect`");`n`t`tmcs_send_disconnect_provider_ultimatum(rdp->mcs);`n`t}`n"
+        $srcU = $srcU.Replace($aUlt, $ultBlock + $aUlt)
+      }
+      Set-Content -Path $connC3 -Value $srcU -NoNewline
+      Write-Host "Patched connection.c: ultimatum before redirect reconnect"
+
 
 
 
