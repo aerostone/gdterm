@@ -217,7 +217,7 @@ install:
       $aRest = "status = rdp_client_connect(rdp);`n`n`tif (status)`n`t`tstatus = rdp_client_reconnect_channels(rdp, TRUE);"
       if ($srcC.Contains($aRest) -eq $false) { throw "restore anchor not found in connection.c" }
       if ($srcC.Contains('restore identity') -eq $false) {
-        $restC = "`tif (rdp->gds_SnapValid) {`n`t`tWLog_INFO(TAG, `"gdterm redirect: restore identity w=%u h=%u ver=0x%08x depth=%u enc=0x%08x`", rdp->gds_Width, rdp->gds_Height, rdp->gds_RdpVersion, rdp->gds_ColorDepth, rdp->gds_EncMethods);`n`t`tsettings->RdpVersion = rdp->gds_RdpVersion; settings->DesktopWidth = rdp->gds_Width;`n`t`tsettings->DesktopHeight = rdp->gds_Height; settings->ColorDepth = rdp->gds_ColorDepth;`n`t`tsettings->EncryptionMethods = rdp->gds_EncMethods;`n`t}`n"
+        $restC = "`tif (rdp->gds_SnapValid) {`n`t`tWLog_INFO(TAG, `"gdterm redirect: restore identity w=%u h=%u ver=0x%08x depth=%u enc=0x%08x`", rdp->gds_Width, rdp->gds_Height, rdp->gds_RdpVersion, rdp->gds_ColorDepth, rdp->gds_EncMethods);`n`t`tsettings->RdpVersion = rdp->gds_RdpVersion; settings->DesktopWidth = rdp->gds_Width;`n`t`tsettings->DesktopHeight = rdp->gds_Height; settings->ColorDepth = rdp->gds_ColorDepth;`n`t`tsettings->EncryptionMethods = rdp->gds_EncMethods;`n`t`t/* gdterm: restore mstsc identity (gcc_read_client_core_data clobbers these) */`n`t`tsettings->ClientBuild = 19041;`n`t`tfree(settings->ClientProductId);`n`t`tsettings->ClientProductId = _strdup(`"b87232e6-fe1b-44a2-9802-02b5a49`");`n`t`tWLog_INFO(TAG, `"gdterm restore: build=%u productId=%s`", settings->ClientBuild, settings->ClientProductId);`n`t}`n"
         $srcC = $srcC.Replace($aRest, $restC + $aRest)
       }
       Set-Content -Path $connC2 -Value $srcC -NoNewline
@@ -254,6 +254,50 @@ install:
       }
       Set-Content -Path $gccC -Value $srcG -NoNewline
       Write-Host "Patched gcc.c: STRONG_ASYMMETRIC_KEYS + identity diag"
+
+      # ---- gdterm: gcc.c CS_CLUSTER flags 对齐 mstsc（REDIRECTION_VERSION5 + 0x04）----
+      # 抓包差异：wfreerdp 写 0x0d/0x0f（V4），mstsc 写 0x15/0x17（V5 + 0x04）。
+      # 0x04 = REDIRECTED_VERSION，mstsc 的额外标志位。
+      $gccC2 = Join-Path $root 'libfreerdp\core\gcc.c'
+      $srcG2 = Get-Content $gccC2 -Raw
+      $aCluster = "flags = REDIRECTION_SUPPORTED | (REDIRECTION_VERSION4 << 2);"
+      if ($srcG2.Contains($aCluster) -eq $false) { throw "gcc cluster anchor not found in gcc.c" }
+      if ($srcG2.Contains('gdterm cluster') -eq $false) {
+        $clusterBlock = "/* gdterm patch: mstsc CS_CLUSTER flags (VERSION5 + 0x04 REDIRECTED_VERSION) */`n`tflags = REDIRECTION_SUPPORTED | (REDIRECTION_VERSION5 << 2) | 0x04;`n`tWLog_INFO(TAG, `"gdterm cluster: flags=0x%08x sessionId=%u`", flags, settings->RedirectedSessionId);"
+        $srcG2 = $srcG2.Replace($aCluster, $clusterBlock)
+      }
+      Set-Content -Path $gccC2 -Value $srcG2 -NoNewline
+      Write-Host "Patched gcc.c: CS_CLUSTER flags -> mstsc style"
+
+      # ---- gdterm: rdpdr 通道选项对齐 mstsc（去掉 CHANNEL_OPTION_ENCRYPT_RDP）----
+      # 抓包差异：wfreerdp 写 0xc0800000（INITIALIZED|ENCRYPT_RDP|COMPRESS_RDP），
+      # mstsc 写 0x80800000（INITIALIZED|COMPRESS_RDP）。去掉 ENCRYPT_RDP 位，
+      # 通道数据退回到 MCS 层加密（默认行为），不影响功能。
+      $rdpdrC = Join-Path $root 'channels\rdpdr\client\rdpdr_main.c'
+      $srcR = Get-Content $rdpdrC -Raw
+      $aRdpdr = "CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_ENCRYPT_RDP | CHANNEL_OPTION_COMPRESS_RDP;"
+      if ($srcR.Contains($aRdpdr) -eq $false) { throw "rdpdr anchor not found in rdpdr_main.c" }
+      if ($srcR.Contains('gdterm rdpdr') -eq $false) {
+        $rdpdrBlock = "/* gdterm patch: drop ENCRYPT_RDP to match mstsc (0x80800000) */`n`t    CHANNEL_OPTION_INITIALIZED | CHANNEL_OPTION_COMPRESS_RDP;"
+        $srcR = $srcR.Replace($aRdpdr, $rdpdrBlock)
+      }
+      Set-Content -Path $rdpdrC -Value $srcR -NoNewline
+      Write-Host "Patched rdpdr_main.c: channel options -> mstsc style"
+
+      # ---- gdterm: ber.c BER 整数编码最小化（匹配 mstsc 的 02 02 ff ff）----
+      # 抓包差异：wfreerdp 写 02 03 00 ff ff（3 字节），mstsc 写 02 02 ff ff（2 字节）。
+      # FreeRDP 的 ber_write_integer 对值 >= 0x8000 保守地加前导零字节以保证正数，
+      # 但 MCS 域参解码器视为无符号整数，2 字节编码（MSB=1）同样正确且与 mstsc 一致。
+      $berC = Join-Path $root 'libfreerdp\crypto\ber.c'
+      $srcB = Get-Content $berC -Raw
+      $aBer = "else if (value < 0x800000)`n`t{`n`t`tber_write_universal_tag(s, BER_TAG_INTEGER, FALSE);`n`t`tber_write_length(s, 3);`n`t`tStream_Write_UINT8(s, (value >> 16));`n`t`tStream_Write_UINT16_BE(s, (value & 0xFFFF));`n`t`treturn 5;`n`t}"
+      if ($srcB.Contains($aBer) -eq $false) { throw "ber anchor not found in ber.c" }
+      if ($srcB.Contains('gdterm ber') -eq $false) {
+        $berBlock = "/* gdterm patch: minimal BER encoding for values 0x8000-0xFFFF (2 bytes, MSB=1) */`n`telse if (value < 0x10000)`n`t{`n`t`tber_write_universal_tag(s, BER_TAG_INTEGER, FALSE);`n`t`tber_write_length(s, 2);`n`t`tStream_Write_UINT16_BE(s, value);`n`t`treturn 4;`n`t}`n`telse if (value < 0x800000)`n`t{`n`t`tber_write_universal_tag(s, BER_TAG_INTEGER, FALSE);`n`t`tber_write_length(s, 3);`n`t`tStream_Write_UINT8(s, (value >> 16));`n`t`tStream_Write_UINT16_BE(s, (value & 0xFFFF));`n`t`treturn 5;`n`t}"
+        $srcB = $srcB.Replace($aBer, $berBlock)
+      }
+      Set-Content -Path $berC -Value $srcB -NoNewline
+      Write-Host "Patched ber.c: minimal BER integer encoding -> mstsc style"
 
 
       # ---- FreeRDP 旧补丁已移除 ----
