@@ -210,7 +210,7 @@ install:
       $aSnap = "`tif (settings->FIPSMode || winpr_FIPSMode())"
       if ($srcC.Contains($aSnap) -eq $false) { throw "snapshot anchor not found in connection.c" }
       if ($srcC.Contains('gds_SnapValid') -eq $false) {
-        $snapC = "/* gdterm: snapshot original client identity before first negotiation */`n`tif ((settings->RedirectionFlags == 0) && !rdp->gds_SnapValid) {`n`t`t/* gdterm: spoof mstsc-like client identity (ver165 golden proof) */`n`t`tsettings->ClientBuild = 19041;`n`t`tsettings->ConnectionType = 7; /* CONNECTION_TYPE_AUTODETECT */`n`t`tsettings->SupportStatusInfoPdu = TRUE;`n`t`tsettings->SupportMonitorLayoutPdu = TRUE;`n`t`tsettings->SupportGraphicsPipeline = TRUE;`n`t`tsettings->SupportDynamicTimeZone = TRUE;`n`t`tsettings->RdpVersion = 0x0008000D;`n`t`tfree(settings->ClientProductId);`n`t`tsettings->ClientProductId = _strdup(`"b87232e6-fe1b-44a2-9802-02b5a49`");`n`t`trdp->gds_RdpVersion = settings->RdpVersion; rdp->gds_Width = settings->DesktopWidth;`n`t`trdp->gds_Height = settings->DesktopHeight; rdp->gds_ColorDepth = settings->ColorDepth;`n`t`trdp->gds_EncMethods = settings->EncryptionMethods; rdp->gds_SnapValid = 1;`n`t}`n"
+        $snapC = "/* gdterm: snapshot original client identity before first negotiation */`n`tif ((settings->RedirectionFlags == 0) && !rdp->gds_SnapValid) {`n`t`t/* gdterm: spoof mstsc-like client identity (ver165 golden proof) */`n`t`tsettings->ClientBuild = 19041;`n`t`tsettings->ConnectionType = 7; /* CONNECTION_TYPE_AUTODETECT */`n`t`tsettings->SupportStatusInfoPdu = TRUE;`n`t`tsettings->SupportGraphicsPipeline = TRUE;`n`t`tsettings->SupportDynamicTimeZone = TRUE;`n`t`tsettings->RdpVersion = 0x0008000D;`n`t`tfree(settings->ClientProductId);`n`t`tsettings->ClientProductId = _strdup(`"b87232e6-fe1b-44a2-9802-02b5a49`");`n`t`trdp->gds_RdpVersion = settings->RdpVersion; rdp->gds_Width = settings->DesktopWidth;`n`t`trdp->gds_Height = settings->DesktopHeight; rdp->gds_ColorDepth = settings->ColorDepth;`n`t`trdp->gds_EncMethods = settings->EncryptionMethods; rdp->gds_SnapValid = 1;`n`t}`n"
         $srcC = $srcC.Replace($aSnap, $snapC + $aSnap)
       }
       # b) 恢复：rdp_client_redirect 的 rdp_client_connect 之前（锚点=已被 credential-clear 补丁改写后的块）
@@ -241,7 +241,19 @@ install:
       Set-Content -Path $connC3 -Value $srcU -NoNewline
       Write-Host "Patched connection.c: ultimatum before redirect reconnect"
 
-
+      # ---- gdterm: gcc.c earlyCapabilityFlags 补 0x0008 (STRONG_ASYMMETRIC_KEYS) ----
+      # mstsc 黄金样本早期标志位包含 0x0008，FreeRDP 2.11.7 没有 settings 布尔值控制它，
+      # 必须直接在 gcc_write_client_core_data 的 earlyCapabilityFlags 构建后 OR 入。
+      $gccC = Join-Path $root 'libfreerdp\core\gcc.c'
+      $srcG = Get-Content $gccC -Raw
+      $aGcc = "`t`tearlyCapabilityFlags |= RNS_UD_CS_SUPPORT_STATUSINFO_PDU;`n`n`tStream_Write_UINT16(s, highColorDepth);"
+      if ($srcG.Contains($aGcc) -eq $false) { throw "gcc patch anchor not found in gcc.c" }
+      if ($srcG.Contains('STRONG_ASYMMETRIC_KEYS') -eq $false) {
+        $gccBlock = "`t`tearlyCapabilityFlags |= RNS_UD_CS_SUPPORT_STATUSINFO_PDU;`n`t`t/* gdterm patch: OR in STRONG_ASYMMETRIC_KEYS (0x0008) to match mstsc identity */`n`t`tearlyCapabilityFlags |= RNS_UD_CS_STRONG_ASYMMETRIC_KEYS;`n`t`tWLog_INFO(TAG, `"gdterm identity: earlyCaps=0x%04x build=%u connType=%u`", earlyCapabilityFlags, settings->ClientBuild, settings->ConnectionType);`n`n`tStream_Write_UINT16(s, highColorDepth);"
+        $srcG = $srcG.Replace($aGcc, $gccBlock)
+      }
+      Set-Content -Path $gccC -Value $srcG -NoNewline
+      Write-Host "Patched gcc.c: STRONG_ASYMMETRIC_KEYS + identity diag"
 
 
       # ---- FreeRDP 旧补丁已移除 ----
