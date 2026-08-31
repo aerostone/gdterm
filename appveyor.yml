@@ -210,7 +210,7 @@ install:
       $aSnap = "`tif (settings->FIPSMode || winpr_FIPSMode())"
       if ($srcC.Contains($aSnap) -eq $false) { throw "snapshot anchor not found in connection.c" }
       if ($srcC.Contains('gds_SnapValid') -eq $false) {
-        $snapC = "/* gdterm: snapshot original client identity before first negotiation */`n`tif ((settings->RedirectionFlags == 0) && !rdp->gds_SnapValid) {`n`t`trdp->gds_RdpVersion = settings->RdpVersion; rdp->gds_Width = settings->DesktopWidth;`n`t`trdp->gds_Height = settings->DesktopHeight; rdp->gds_ColorDepth = settings->ColorDepth;`n`t`trdp->gds_EncMethods = settings->EncryptionMethods; rdp->gds_SnapValid = 1;`n`t}`n"
+        $snapC = "/* gdterm: snapshot original client identity before first negotiation */`n`tif ((settings->RedirectionFlags == 0) && !rdp->gds_SnapValid) {`n`t`t/* gdterm: spoof mstsc-like client identity (ver165 golden proof) */`n`t`tsettings->ClientBuild = 19041;`n`t`tsettings->ConnectionType = 7; /* CONNECTION_TYPE_AUTODETECT */`n`t`tsettings->SupportStatusInfoPdu = TRUE;`n`t`tsettings->SupportMonitorLayoutPdu = TRUE;`n`t`tsettings->SupportGraphicsPipeline = TRUE;`n`t`tsettings->SupportDynamicTimeZone = TRUE;`n`t`tsettings->RdpVersion = 0x0008000D;`n`t`tfree(settings->ClientProductId);`n`t`tsettings->ClientProductId = _strdup(`"b87232e6-fe1b-44a2-9802-02b5a49`");`n`t`trdp->gds_RdpVersion = settings->RdpVersion; rdp->gds_Width = settings->DesktopWidth;`n`t`trdp->gds_Height = settings->DesktopHeight; rdp->gds_ColorDepth = settings->ColorDepth;`n`t`trdp->gds_EncMethods = settings->EncryptionMethods; rdp->gds_SnapValid = 1;`n`t}`n"
         $srcC = $srcC.Replace($aSnap, $snapC + $aSnap)
       }
       # b) 恢复：rdp_client_redirect 的 rdp_client_connect 之前（锚点=已被 credential-clear 补丁改写后的块）
@@ -221,7 +221,7 @@ install:
         $srcC = $srcC.Replace($aRest, $restC + $aRest)
       }
       Set-Content -Path $connC2 -Value $srcC -NoNewline
-      Write-Host "Patched rdp.h+connection.c: identity snapshot/restore on redirect"
+      Write-Host "Patched rdp.h+connection.c: identity snapshot/restore on redirect + mstsc UA spoof"
       # ---- gdterm: redirect 前先向旧会话发 MCS ultimatum（mstsc 行为，ver165 实证根因）----
       # 抓包实证（tmp/rdp-dump/ver165 vs 08:03 mstsc 黄金样本）：
       #   mstsc 首连收 redirect 后先发 9 字节 MCS DisconnectProviderUltimatum
