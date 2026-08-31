@@ -200,7 +200,7 @@ install:
         $srcC = $srcC.Replace($aSnap, $snapC + $aSnap)
       }
       # b) 恢复：rdp_client_redirect 的 rdp_client_connect 之前（锚点=已被 credential-clear 补丁改写后的块）
-      $aRest = "`tstatus = rdp_client_connect(rdp);`n`n`tif (status)`n`t`tstatus = rdp_client_reconnect_channels(rdp, TRUE);"
+      $aRest = "status = rdp_client_connect(rdp);`n`n`tif (status)`n`t`tstatus = rdp_client_reconnect_channels(rdp, TRUE);"
       if ($srcC.Contains($aRest) -eq $false) { throw "restore anchor not found in connection.c" }
       if ($srcC.Contains('restore identity') -eq $false) {
         $restC = "`tif (rdp->gds_SnapValid) {`n`t`tWLog_INFO(TAG, `"gdterm redirect: restore identity w=%u h=%u ver=0x%08x depth=%u enc=0x%08x`", rdp->gds_Width, rdp->gds_Height, rdp->gds_RdpVersion, rdp->gds_ColorDepth, rdp->gds_EncMethods);`n`t`tsettings->RdpVersion = rdp->gds_RdpVersion; settings->DesktopWidth = rdp->gds_Width;`n`t`tsettings->DesktopHeight = rdp->gds_Height; settings->ColorDepth = rdp->gds_ColorDepth;`n`t`tsettings->EncryptionMethods = rdp->gds_EncMethods;`n`t}`n"
