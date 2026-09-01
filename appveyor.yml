@@ -217,8 +217,8 @@ install:
       $aRest = "status = rdp_client_connect(rdp);`n`n`tif (status)`n`t`tstatus = rdp_client_reconnect_channels(rdp, TRUE);"
       if ($srcC.Contains($aRest) -eq $false) { throw "restore anchor not found in connection.c" }
       if ($srcC.Contains('restore identity') -eq $false) {
-        $restC = "`tif (rdp->gds_SnapValid) {`n`t`tWLog_INFO(TAG, `"gdterm redirect: restore identity w=%u h=%u ver=0x%08x depth=%u enc=0x%08x`", rdp->gds_Width, rdp->gds_Height, rdp->gds_RdpVersion, rdp->gds_ColorDepth, rdp->gds_EncMethods);`n`t`tsettings->RdpVersion = rdp->gds_RdpVersion; settings->DesktopWidth = rdp->gds_Width;`n`t`tsettings->DesktopHeight = rdp->gds_Height; settings->ColorDepth = rdp->gds_ColorDepth;`n`t`tsettings->EncryptionMethods = rdp->gds_EncMethods;`n`t`t/* gdterm: restore mstsc identity (gcc_read_client_core_data clobbers these) */`n`t`tsettings->ClientBuild = 19041;`n`t`tfree(settings->ClientProductId);`n`t`tsettings->ClientProductId = _strdup(`"b87232e6-fe1b-44a2-9802-02b5a49`");`n`t`tWLog_INFO(TAG, `"gdterm restore: build=%u productId=%s`", settings->ClientBuild, settings->ClientProductId);`n`t}`n"
-        $srcC = $srcC.Replace($aRest, $restC + $aRest)
+        $restC = "`tif (rdp->gds_SnapValid) {`n`t`tWLog_INFO(TAG, `"gdterm redirect: restore identity w=%u h=%u ver=0x%08x depth=%u enc=0x%08x`", rdp->gds_Width, rdp->gds_Height, rdp->gds_RdpVersion, rdp->gds_ColorDepth, rdp->gds_EncMethods);`n`t`tsettings->RdpVersion = rdp->gds_RdpVersion; settings->DesktopWidth = rdp->gds_Width;`n`t`tsettings->DesktopHeight = rdp->gds_Height; settings->ColorDepth = rdp->gds_ColorDepth;`n`t`tsettings->EncryptionMethods = rdp->gds_EncMethods;`n`t`t/* gdterm: restore mstsc identity (gcc_read_client_core_data clobbers these) */`n`t`tsettings->ClientBuild = 19041;`n`t`tfree(settings->ClientProductId);`n`t`tsettings->ClientProductId = _strdup(`"b87232e6-fe1b-44a2-9802-02b5a49`");`n`t`tWLog_INFO(TAG, `"gdterm restore: build=%u productId=%s`", settings->ClientBuild, settings->ClientProductId);`n`t}`n`t/* gdterm: pre-connect GCC settings diagnostic */`n`tWLog_INFO(TAG, `"gdterm redirect: pre-connect enc=0x%08x useRdpSec=%d local=%s host=%s:%d rdpVer=0x%08x earlyCaps=0x%04x build=%u w=%u h=%u depth=%u connType=%u`",`n`t          settings->EncryptionMethods, settings->UseRdpSecurityLayer, settings->LocalConnection ? `"yes`" : `"no`",`n`t          settings->ServerHostname, settings->ServerPort, settings->RdpVersion, settings->EarlyCapabilityFlags,`n`t          settings->ClientBuild, settings->DesktopWidth, settings->DesktopHeight, settings->ColorDepth, settings->ConnectionType);`n`t/* gdterm: pre-connect productId productId=%s */`n`tWLog_INFO(TAG, `"gdterm redirect: pre-connect productId=%s`", settings->ClientProductId ? settings->ClientProductId : `"(null)`");`n`t/* gdterm: post-connect GCC settings diagnostic */`n`tstatus = rdp_client_connect(rdp);`n`tif (status)`n`t{`n`t`tWLog_INFO(TAG, `"gdterm redirect: post-connect enc=0x%08x useRdpSec=%d encLevel=%d local=%s selProto=0x%x`",`n`t`t          settings->EncryptionMethods, settings->UseRdpSecurityLayer, settings->EncryptionLevel,`n`t`t          settings->LocalConnection ? `"yes`" : `"no`", settings->SelectedProtocol);`n`t`t/* gdterm: post-connect server encryption method + level */`n`t`tWLog_INFO(TAG, `"gdterm redirect: post-connect serverEncMethod=0x%08x serverEncLevel=%d`",`n`t`t          settings->EncryptionMethods, settings->EncryptionLevel);`n`t}`n`n`tif (status)`n`t`tstatus = rdp_client_reconnect_channels(rdp, TRUE);`n"
+        $srcC = $srcC.Replace($aRest, $restC)
       }
       Set-Content -Path $connC2 -Value $srcC -NoNewline
       Write-Host "Patched rdp.h+connection.c: identity snapshot/restore on redirect + mstsc UA spoof"
@@ -268,6 +268,37 @@ install:
       }
       Set-Content -Path $gccC2 -Value $srcG2 -NoNewline
       Write-Host "Patched gcc.c: CS_CLUSTER flags -> mstsc style"
+
+      # ---- gdterm: gcc.c gcc_write_client_data_blocks 完整 GCC 数据块 hex dump ----
+      # 重连路径的 GCC 交换（MCS Connect Initial → GCC CS_CORE/CS_SEC/CS_CLUSTER/CS_NET）
+      # 在 diag.log 中没有任何日志，无法判断服务器看到的是否与首次连接一致。
+      # 在 gcc_write_client_data_blocks 末尾添加 stream buffer hex dump，
+      # 捕获客户端发送给服务器的完整 GCC 数据块内容。
+      $gccC3 = Join-Path $root 'libfreerdp\core\gcc.c'
+      $srcG3 = Get-Content $gccC3 -Raw
+      $aGccDump = "`treturn TRUE;`n}`n`nBOOL gcc_read_server_data_blocks"
+      if ($srcG3.Contains($aGccDump) -eq $false) { throw "gcc dump anchor not found in gcc.c" }
+      if ($srcG3.Contains('gdterm gcc data blocks') -eq $false) {
+        $gccDumpBlock = "`t/* gdterm patch: hex dump complete GCC client data blocks before sending */`n`tWLog_INFO(TAG, `"gdterm gcc data blocks (%d bytes) (gdterm hexdump):`", (int)Stream_Length(s));`n`twinpr_HexDump(TAG, WLOG_INFO, Stream_Buffer(s), (int)Stream_Length(s));`n`treturn TRUE;`n}`n`nBOOL gcc_read_server_data_blocks"
+        $srcG3 = $srcG3.Replace($aGccDump, $gccDumpBlock)
+      }
+      # winpr/print.h for gcc.c (winpr_HexDump)
+      $srcG3 = $srcG3 -replace '#include <winpr/crt.h>', "#include <winpr/crt.h>`n#include <winpr/print.h>"
+      Set-Content -Path $gccC3 -Value $srcG3 -NoNewline
+      Write-Host "Patched gcc.c: GCC data blocks hex dump"
+
+      # ---- gdterm: gcc.c gcc_read_server_security_data 服务器加密方法诊断 ----
+      # 记录服务器实际选择的加密方法和级别，特别关注重连时的 "non-advertised" 警告。
+      $gccC4 = Join-Path $root 'libfreerdp\core\gcc.c'
+      $srcG4 = Get-Content $gccC4 -Raw
+      $aGccSec = "`tsettings->EncryptionMethods = serverEncryptionMethod;`n`n`t/* Verify encryption level/method combinations"
+      if ($srcG4.Contains($aGccSec) -eq $false) { throw "gcc security anchor not found in gcc.c" }
+      if ($srcG4.Contains('gdterm server encryption') -eq $false) {
+        $gccSecBlock = "`t/* gdterm patch: log server-selected encryption method and level */`n`tWLog_INFO(TAG, `"gdterm server encryption: method=0x%08x level=%d`", serverEncryptionMethod, settings->EncryptionLevel);`n`tsettings->EncryptionMethods = serverEncryptionMethod;`n`n`t/* Verify encryption level/method combinations"
+        $srcG4 = $srcG4.Replace($aGccSec, $gccSecBlock)
+      }
+      Set-Content -Path $gccC4 -Value $srcG4 -NoNewline
+      Write-Host "Patched gcc.c: server encryption method diagnostic"
 
       # ---- gdterm: rdpdr 通道选项对齐 mstsc（去掉 CHANNEL_OPTION_ENCRYPT_RDP）----
       # 抓包差异：wfreerdp 写 0xc0800000（INITIALIZED|ENCRYPT_RDP|COMPRESS_RDP），
