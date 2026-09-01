@@ -17,8 +17,9 @@ install:
   - ps: |
       # ===== FreeRDP 2.11.7 源码构建（从独立脚本运行，避免内联脚本超长触发
       # Windows 事件日志 32766 字符上限 =====
-      powershell -ExecutionPolicy Bypass -File "$env:APPVEYOR_BUILD_FOLDER\tools\build-freerdp.ps1"
-      if ($LASTEXITCODE -ne 0) { throw "build-freerdp.ps1 failed exit=$LASTEXITCODE" }
+      # 脚本内部使用 $ErrorActionPreference='Stop'，任一步失败会直接 throw
+      # （与旧内联块相同的执行模型），故无需额外检查退出码
+      & "$env:APPVEYOR_BUILD_FOLDER\tools\build-freerdp.ps1"
 before_build:
   - ps: |
       Write-Host "Restoring NuGet packages..."
