@@ -18,13 +18,18 @@ wire 数据，对比 mstsc 黄金样本（成功连接）与 wfreerdp 问题连�
 ## 指导原则
 
 1. **重定向重连的 TCP 连接是独立的**，不通过抓包代理。
-2. **kick 决策在 SEC_EXCHANGE 之前**：服务器在 token 重连的 SEC_EXCHANGE 后约 0.1s
-   发送 MCS 断开 ultimatum，所以 kick 决策只基于 X.224 CR + Connect Initial CS_CORE +
-   SEC_EXCHANGE，不涉及 Client Info 内容。
+2. **踢点随修复推进**（2026-09-02 更新）：v0.1.169 前服务器在 SEC_EXCHANGE 阶段即踢
+   （DPU ultimatum）；补丁集对齐 GCC 数据后，v0.1.174+ 已能通过 X.224/MCS/GCC/
+   SEC_EXCHANGE，踢点推进到 **Client Info 发送后 ~52ms**（目标服务器 LOGOFF_BY_USER），
+   因此早期“kick 决策不涉及 Client Info 内容”的原则已失效——当前判别维度就在
+   Client Info 的线缆 SEC 标志位（见 pitfall
+   `compound/2026-09-02-learning-pitfall-freerdp-do-secure-checksum-persists-redirect.md`）。
 3. **Client Info 内容被 RC4 加密**，无法从 wire dump 直接比较，依赖 FreeRDP 的
-   `info.c` 预加密 hex dump 诊断。
+   `info.c` 预加密 hex dump 诊断（注意该 dump 在 rdp_send 前，SEC 头尚未写入，
+   明文起点在 stream buffer 偏移 27 = 15B TPKT/TPDU/MCS + 4B flags + 8B MAC）。
 4. **身份差异必须全局一致**：首段连接和重连的 CS_CORE、CS_SEC、CS_CLUSTER、CS_NET
    身份字段必须相同，因为堡垒机做的是**绝对校验**而非**前后一致性校验**。
+   （该层已在 v0.1.175 逐字节对齐，不再是被踢原因。）
 
 ## 已确认的明文差异（wfreerdp vs mstsc）
 
@@ -81,7 +86,13 @@ wfreerdp 额外设置了 `CHANNEL_OPTION_ENCRYPT_RDP` (0x40000000) 位。去掉�
 
 - **X.224 CR 大小与形状**：80 字节，61 字节 token + 8 字节 RDP_NEG_REQ proto=0x0
 - **CS_SEC 加密方法**：0x1b 全套，字节一致
-- **ClientInfo 安全头**：flags 0x02015080（wfreerdp 常数）vs 0x00020150（mstsc 常数），但都是客户端常数且首连/重连一致
+- **ClientInfo 线缆 SEC 安全头标志（2026-09-02 定稿）**：gdterm = `0x0848`
+  （`SEC_INFO_PKT|SEC_ENCRYPT|SEC_SECURE_CHECKSUM`，sec_flags 由 `rdp_security_stream_init`
+  在发送前写入），mstsc = `0x0048`（无 `SEC_SECURE_CHECKSUM`）。这是最终定位的
+  LOGOFF_BY_USER 判别维度——根因是 FreeRDP `rdp->do_secure_checksum` 在 redirect 重连
+  时持久化 TRUE（详见 `compound/2026-09-02-learning-pitfall-freerdp-do-secure-checksum-persists-redirect.md`）。
+  两者 MAC 均为 8 字节，帧大小差异（gdterm 327B vs mstsc 331B）完全来自信息包明文
+  （gdterm 300B vs mstsc 304B，差 4 字节，非 ARC cookie；ARC 至少 +32B）。
 - **ClientAddress**：通过代理时都是 127.0.0.1，不通过代理时都是真实 IP
 - **首段连接结束序列**：wfreerdp 和 mstsc 都是 42B 指针 PDU + 重定向 PDU + S2C ultimatum + C2S ultimatum
 
