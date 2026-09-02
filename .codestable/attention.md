@@ -22,6 +22,16 @@ standards:
 
 - **框架：** .NET Framework 4.6.2 + WinForms（Win7/Server 2008 原生支持）；**主程序强制 x64**（PlatformTarget=x64，修 RDP 许可存储错位与 winpty 加载）
 - **RDP：** 双引擎——默认 **FreeRDP 进程嵌入**（wfreerdp.exe /parent-window，CI 自建 2.11.7 免 MSLicensing 提权）；元数据 rdp_engine=mstscax 可切回 AxHost 零 interop 承载 mstscax（编译不依赖 AxMsTscLib.dll）
+- **RDP 重定向重连排查（2026-09-02 定稿）**：NSFOCUS 堡垒机 LOGOFF_BY_USER 根因=FreeRDP
+  `rdp->do_secure_checksum` 在 redirect 重连时持久化 TRUE，致 Client Info 线缆 SEC flags=0x0848
+  （含 SEC_SECURE_CHECKSUM），mstsc 为 0x0048；修复=清除块置 `do_secure_checksum=FALSE;
+  SaltedChecksum=FALSE`（commit 5544989，CI v0.1.178 已成功，待实测）。排查顺序
+  X.224→GCC 四块→SEC_EXCHANGE→Client Info SEC 标志；GCC 四块已逐字节对齐非根因。
+  详见 compound/2026-09-02-learning-pitfall-freerdp-do-secure-checksum-persists-redirect.md
+- **RDP 二重连机制并存（进程重启 + 进程内 redirect）**：C# FreeRdpClient.cs TryAutoReconnectWithToken
+  用新 wfreerdp 进程重启并锁 /sec:rdp；进程内 redirect 走 FreeRDP rdp_client_redirect；
+  diag.log 分析需注意 C# LogStreamLine 关键字过滤（'encryption'/'identity' 非关键字会在
+  MaxLoggedLines 后丢弃，需用 'gdterm redirect:'/'security' 前缀或 [WARN] 才能捕获）
 - **终端：** 成熟持续演进的 .NET 终端模拟库（v1 引入库，后期评估自研）
 - **SSH 隧道：** SSH.NET（Renci.SshNet）纯托管，无 native 依赖
 - **KeePass：** KeePassLib，.kdbx 读写

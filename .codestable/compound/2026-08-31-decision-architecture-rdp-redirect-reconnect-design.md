@@ -114,6 +114,34 @@ token 即失效。持久化死 token 只会让重连被踢。
 **原因**：该堡垒机不在 Connection Confirm 中发放路由 token（只在重定向 PDU 中发），
 所以每次 probe 都是无用的额外连接，且会触发堡垒机速率限制。
 
+### 8. 清除 salted-checksum 标志（connection.c:rdp_client_redirect）
+
+在 `rdp_client_redirect` 的清除块末尾，`rdp_client_connect` 之前：
+
+- `rdp->do_secure_checksum = FALSE;`
+- `settings->SaltedChecksum = FALSE;`
+
+**原理**：FreeRDP 的 `rdp->do_secure_checksum` 在首次连接时被设为 TRUE（因
+`SaltedChecksum` 默认 TRUE），但 `rdp_reset`（redirect 重连时调用）从不重置它，
+而 `rdp_client_establish_keys` 只在 `SaltedChecksum` 为 TRUE 时设置、从不清除。
+首次连接能力协商后 `SaltedChecksum` 已为 FALSE，故 redirect 重连的 `SEC_EXCHANGE`
+跳过条件设置，`do_secure_checksum` 保留 TRUE 值不变。结果：redirect 重连的
+Client Info 线缆 SEC flags 为 `0x0848 = SEC_INFO_PKT|SEC_ENCRYPT|SEC_SECURE_CHECKSUM`，
+而 mstsc 为 `0x0048`（无 `SEC_SECURE_CHECKSUM`）。目标服务器若不支持
+`ENC_SALTED_CHECKSUM`，使用标准 MAC 校验，与 gdterm 的 salted MAC 不匹配，
+在 Client Info 发送后约 52ms 以 `ERRINFO_LOGOFF_BY_USER` 踢出。
+
+此清除确保 `rdp_security_stream_init`（rdp.c:273-275）不会在 `sec_flags` 中添加
+`SEC_SECURE_CHECKSUM`，使 Client Info 线缆 SEC flags 与 mstsc 一致。
+
+**诊断**：清除块中打印 `gdterm redirect: clear do_secure_checksum=%d do_crypt=%d
+SaltedChecksum=%d` 以确认修复前持久化 TRUE 状态；`rdp_send_client_info` 中打印
+`gdterm redirect client info sec: wire=0x%04x do_crypt=%d do_secure_checksum=%d
+SaltedChecksum=%d clientAddr=%s` 以直接验证线缆 SEC flags。
+
+**参考**：commit `5544989`、`tools/build-freerdp.ps1` 的 `$clearBlock` 末尾。
+完整分析见 `compound/2026-09-02-learning-pitfall-freerdp-do-secure-checksum-persists-redirect.md`。
+
 ## 考虑过的替代方案
 
 | 替代方案 | 否决原因 |
