@@ -2,6 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Net;
+using System.Net.NetworkInformation;
+using System.Net.Sockets;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
@@ -481,6 +485,13 @@ namespace Gdterm.Rdp
             _disconnectedRaised = 0;
             _outLines = 0;
             _errLines = 0;
+            var realIp = GetRealClientIp();
+            if (!string.IsNullOrEmpty(realIp))
+            {
+                psi.EnvironmentVariables["GDTERM_CLIENT_ADDR"] = realIp;
+                RdpLog.Info("FreeRdp.Start", "realClientIp=" + realIp);
+            }
+
             RdpLog.Info("FreeRdp.Start", "exe=" + exe + " target=" + host + ":" + port
                 + " user=" + (username ?? "") + (domain != null ? " domain=" + domain : ""));
             // 连接意图诊断：NLA/LB 决策集中打点，配合 wfreerdp DEBUG 日志定位堡垒机踢线
@@ -508,6 +519,25 @@ namespace Gdterm.Rdp
         {
             args.Add(arg);
             logArgs.Add(arg);
+        }
+
+        /// <summary>
+        /// 获取本机第一个非 loopback 的 IPv4 地址，用于覆盖 Redirect 重连的 ClientAddress
+        /// 避免 target 服务器收到 127.0.0.1 做 IP 指纹/白名单检查时踢出。
+        /// </summary>
+        private static string GetRealClientIp()
+        {
+            try
+            {
+                var first = NetworkInterface.GetAllNetworkInterfaces()
+                    .Where(n => n.OperationalStatus == OperationalStatus.Up
+                        && n.NetworkInterfaceType != NetworkInterfaceType.Loopback)
+                    .SelectMany(n => n.GetIPProperties().UnicastAddresses)
+                    .FirstOrDefault(a => a.Address.AddressFamily == AddressFamily.InterNetwork
+                        && !IPAddress.IsLoopback(a.Address));
+                return first?.Address.ToString();
+            }
+            catch { return null; }
         }
 
         private static int MapBpp(int depth)
