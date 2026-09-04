@@ -18,7 +18,7 @@ namespace Gdterm.UI.Forms
     /// 加一行凭据；协议专属选项（SSH 隧道 / RDP 选项 / 串口参数）和备注收进
     /// 「更多选项」折叠区，点开才出现。编辑已有连接且配置过高级选项时自动展开。
     /// </summary>
-    public class ConnectionDialog : Form
+    public class ConnectionDialog : AntdUI.Window
     {
         private readonly ConnectionConfig _config;
         private readonly bool _isNew;

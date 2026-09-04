@@ -11,7 +11,7 @@ namespace Gdterm.UI.Forms
     /// 危险命令规则配置对话框
     /// 显示所有检测规则（按危险等级颜色标注），支持增删改、启用/禁用、白名单管理
     /// </summary>
-    public class DangerousCommandConfigForm : Form
+    public class DangerousCommandConfigForm : AntdUI.Window
     {
         private readonly DangerousCommandDetector _detector;
         private ListView _ruleList;
@@ -392,289 +392,188 @@ namespace Gdterm.UI.Forms
     /// <summary>
     /// 规则编辑对话框
     /// </summary>
-    internal class DangerousCommandRuleEditForm : Form
+    internal class DangerousCommandRuleEditForm : AntdUI.Window
     {
-        private TextBox _nameBox;
-        private TextBox _patternBox;
-        private ComboBox _patternTypeCombo;
-        private ComboBox _levelCombo;
-        private ComboBox _categoryCombo;
-        private TextBox _descriptionBox;
-        private CheckBox _enabledCheck;
+        private readonly AntdUI.Input _nameBox;
+        private readonly AntdUI.Input _patternBox;
+        private readonly AntdUI.Select _patternTypeCombo;
+        private readonly AntdUI.Select _levelCombo;
+        private readonly AntdUI.Select _categoryCombo;
+        private readonly AntdUI.Input _descriptionBox;
+        private readonly AntdUI.Checkbox _enabledCheck;
 
         public DangerousCommandRuleEditForm()
         {
             InitializeComponent();
-            Gdterm.UI.Services.FormFontPolicy.Apply(this);
         }
 
         private void InitializeComponent()
         {
             Text = "添加自定义规则";
-            {
-                float grow = FormFontPolicy.UiFontSize / 9f;
-                Size = DpiScale.S(this, 450, (int)(400 * Math.Max(1f, grow)));
-            }
+            Size = new Size(470, 560);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
-            BackColor = Color.FromArgb(30, 30, 30);
 
-            // 布局基准值统一经 DPI 缩放（规范规则④）
-            var y = DpiScale.V(this, 15);
-            var labelW = DpiScale.V(this, 80);
-            var boxX = DpiScale.V(this, 100);
-            var boxW = DpiScale.V(this, 320);
+            int labelX = 18;
+            int boxX = 110;
+            int boxW = 320;
+            int rowH = 48;
+            int y = 20;
 
-            _nameBox = AddTextField("规则名称：", ref y, labelW, boxX, boxW);
-            _patternBox = AddTextField("匹配模式：", ref y, labelW, boxX, boxW);
+            _nameBox = AddTextField("规则名称", labelX, boxX, ref y, boxW, rowH);
+            _patternBox = AddTextField("匹配模式", labelX, boxX, ref y, boxW, rowH);
 
             // 匹配类型
-            var patternTypeLabel = new Label
-            {
-                Text = "匹配类型：",
-                Font = Services.FormFontPolicy.UiFont(),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                Location = new Point(DpiScale.V(this, 15), y),
-                AutoSize = true
-            };
-            _patternTypeCombo = new ComboBox
-            {
-                Location = new Point(boxX, y),
-                Width = DpiScale.V(this, 150),
-                Font = Services.FormFontPolicy.UiFont(),
-                BackColor = Color.FromArgb(50, 50, 50),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            _patternTypeCombo.Items.AddRange(new object[] { "Regex", "Contains", "Equals" });
+            Controls.Add(MakeLabel("匹配类型", labelX, y));
+            _patternTypeCombo = new AntdUI.Select { Location = new Point(boxX, y), Size = new Size(160, 38) };
+            foreach (var v in new[] { "Regex", "Contains", "Equals" }) _patternTypeCombo.Items.Add(v);
             _patternTypeCombo.SelectedIndex = 0;
-            Controls.Add(patternTypeLabel);
             Controls.Add(_patternTypeCombo);
-            y += FormFontPolicy.RowStep(this);
+            y += rowH;
 
             // 危险等级
-            var levelLabel = new Label
-            {
-                Text = "危险等级：",
-                Font = Services.FormFontPolicy.UiFont(),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                Location = new Point(DpiScale.V(this, 15), y),
-                AutoSize = true
-            };
-            _levelCombo = new ComboBox
-            {
-                Location = new Point(boxX, y),
-                Width = DpiScale.V(this, 150),
-                Font = Services.FormFontPolicy.UiFont(),
-                BackColor = Color.FromArgb(50, 50, 50),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                DropDownStyle = ComboBoxStyle.DropDownList
-            };
-            _levelCombo.Items.AddRange(new object[] { "Medium", "High", "Critical" });
+            Controls.Add(MakeLabel("危险等级", labelX, y));
+            _levelCombo = new AntdUI.Select { Location = new Point(boxX, y), Size = new Size(160, 38) };
+            foreach (var v in new[] { "Medium", "High", "Critical" }) _levelCombo.Items.Add(v);
             _levelCombo.SelectedIndex = 0;
-            Controls.Add(levelLabel);
             Controls.Add(_levelCombo);
-            y += FormFontPolicy.RowStep(this);
+            y += rowH;
 
             // 分类
-            var categoryLabel = new Label
-            {
-                Text = "分类：",
-                Font = Services.FormFontPolicy.UiFont(),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                Location = new Point(DpiScale.V(this, 15), y),
-                AutoSize = true
-            };
-            _categoryCombo = new ComboBox
-            {
-                Location = new Point(boxX, y),
-                Width = DpiScale.V(this, 200),
-                Font = Services.FormFontPolicy.UiFont(),
-                BackColor = Color.FromArgb(50, 50, 50),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                DropDownStyle = ComboBoxStyle.DropDown
-            };
-            _categoryCombo.Items.AddRange(new object[]
+            Controls.Add(MakeLabel("分类", labelX, y));
+            _categoryCombo = new AntdUI.Select { Location = new Point(boxX, y), Size = new Size(200, 38) };
+            foreach (var v in new[]
             {
                 "filesystem", "disk", "system", "process", "firewall",
                 "network", "privilege", "service", "config", "git",
                 "docker", "package", "audit", "user", "ssh"
-            });
+            })
+                _categoryCombo.Items.Add(v);
             _categoryCombo.SelectedIndex = 0;
-            Controls.Add(categoryLabel);
             Controls.Add(_categoryCombo);
-            y += FormFontPolicy.RowStep(this);
+            y += rowH;
 
             // 描述
-            var descLabel = new Label
-            {
-                Text = "描述：",
-                Font = Services.FormFontPolicy.UiFont(),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                Location = new Point(DpiScale.V(this, 15), y),
-                AutoSize = true
-            };
-            _descriptionBox = new TextBox
+            Controls.Add(MakeLabel("描述", labelX, y));
+            _descriptionBox = new AntdUI.Input
             {
                 Location = new Point(boxX, y),
-                Size = new Size(boxW, DpiScale.V(this, 50)),
-                Font = Services.FormFontPolicy.UiFont(),
-                BackColor = Color.FromArgb(50, 50, 50),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                BorderStyle = BorderStyle.FixedSingle,
-                Multiline = true,
-                ScrollBars = ScrollBars.Vertical
+                Size = new Size(boxW, 56),
+                Multiline = true
             };
-            Controls.Add(descLabel);
             Controls.Add(_descriptionBox);
-            y += FormFontPolicy.RowStep(this) + 35; // 预览框(高度独立)后
+            y += rowH + 22;
 
             // 启用
-            _enabledCheck = new CheckBox
+            _enabledCheck = new AntdUI.Checkbox
             {
                 Text = "启用此规则",
-                Location = new Point(boxX, y),
-                Width = DpiScale.V(this, 150),
-                Font = Services.FormFontPolicy.UiFont(),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                Location = new Point(boxX, y + 6),
+                AutoSize = true,
                 Checked = true
             };
             Controls.Add(_enabledCheck);
-            y += FormFontPolicy.RowStep(this);
+            y += rowH;
 
-            // 按钮
-            var okButton = new Button
+            // 按钮（主按钮最右）
+            var okButton = new AntdUI.Button
             {
                 Text = "确定",
-                Size = DpiScale.S(this, 80, 30),
-                Location = new Point(boxX + boxW - 170, y),
-                FlatStyle = FlatStyle.Flat,
-                Font = Services.FormFontPolicy.UiFont(),
-                BackColor = Color.FromArgb(0, 122, 204),
-                ForeColor = Color.White,
-                DialogResult = DialogResult.OK
+                Type = AntdUI.TTypeMini.Primary,
+                Size = new Size(84, 38),
+                Location = new Point(boxX + boxW - 176, y)
             };
+            okButton.Click += (s, e) => { DialogResult = DialogResult.OK; Close(); };
+            Controls.Add(okButton);
 
-            var cancelButton = new Button
+            var cancelButton = new AntdUI.Button
             {
                 Text = "取消",
-                Size = DpiScale.S(this, 80, 30),
-                Location = new Point(boxX + boxW - 80, y),
-                FlatStyle = FlatStyle.Flat,
-                Font = Services.FormFontPolicy.UiFont(),
-                BackColor = Color.FromArgb(60, 60, 60),
-                ForeColor = Color.White,
-                DialogResult = DialogResult.Cancel
+                Size = new Size(84, 38),
+                Location = new Point(boxX + boxW - 84, y)
             };
-
-            Controls.Add(okButton);
+            cancelButton.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
             Controls.Add(cancelButton);
 
             AcceptButton = okButton;
             CancelButton = cancelButton;
         }
 
-        private TextBox AddTextField(string labelText, ref int y, int labelW, int boxX, int boxW)
+        private static AntdUI.Label MakeLabel(string text, int x, int y)
         {
-            var label = new Label
-            {
-                Text = labelText,
-                Font = Services.FormFontPolicy.UiFont(),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                Location = new Point(DpiScale.V(this, 15), y),
-                AutoSize = true
-            };
+            return new AntdUI.Label { Text = text, AutoSize = true, Location = new Point(x, y + 10) };
+        }
 
-            var textBox = new TextBox
+        private AntdUI.Input AddTextField(string labelText, int labelX, int boxX, ref int y, int boxW, int rowH)
+        {
+            Controls.Add(MakeLabel(labelText, labelX, y));
+            var textBox = new AntdUI.Input
             {
                 Location = new Point(boxX, y),
-                Size = new Size(boxW, DpiScale.V(this, 22)),
-                Font = Services.FormFontPolicy.UiFont(),
-                BackColor = Color.FromArgb(50, 50, 50),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                BorderStyle = BorderStyle.FixedSingle
+                Size = new Size(boxW, 38)
             };
-
-            Controls.Add(label);
             Controls.Add(textBox);
-            y += FormFontPolicy.RowStep(this);
+            y += rowH;
             return textBox;
         }
     }
 
     /// <summary>
-    /// 通用文本输入对话框（用于白名单添加等场景）
+    /// 通用文本输入对话框（AntdUI 版，用于白名单添加等场景）
     /// </summary>
-    internal class TextInputForm : Form
+    internal class TextInputForm : AntdUI.Window
     {
-        private TextBox _inputBox;
+        private readonly AntdUI.Input _inputBox;
 
         public string InputText { get { return _inputBox.Text; } }
 
         public TextInputForm(string title, string prompt)
         {
             Text = title;
-            {
-                float grow = FormFontPolicy.UiFontSize / 9f;
-                Size = DpiScale.S(this, 400, (int)(160 * Math.Max(1f, grow)));
-            }
+            Size = new Size(420, 190);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
-            BackColor = Color.FromArgb(30, 30, 30);
 
-            var promptLabel = new Label
+            var promptLabel = new AntdUI.Label
             {
                 Text = prompt,
-                Font = Services.FormFontPolicy.UiFont(+0.5f),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                Location = DpiScale.P(this, 15, 12),
                 AutoSize = true,
-                MaximumSize = new Size(DpiScale.V(this, 360), 0)
+                Location = new Point(18, 18)
             };
+            Controls.Add(promptLabel);
 
-            _inputBox = new TextBox
+            _inputBox = new AntdUI.Input
             {
-                Location = DpiScale.P(this, 15, 40),
-                Width = DpiScale.V(this, 355),
-                Font = new Font("Consolas", 10f),
-                BackColor = Color.FromArgb(50, 50, 50),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                BorderStyle = BorderStyle.FixedSingle
+                Location = new Point(18, 48),
+                Size = new Size(420 - 36, 38),
+                Font = new Font("Consolas", 10f)
             };
+            Controls.Add(_inputBox);
 
-            var okButton = new Button
+            var okButton = new AntdUI.Button
             {
                 Text = "确定",
-                AutoSize = true,
-                MinimumSize = new Size(DpiScale.V(this, 75), 0),
-                Location = DpiScale.P(this, 215, 75),
-                FlatStyle = FlatStyle.Flat,
-                Font = Services.FormFontPolicy.UiFont(),
-                BackColor = Color.FromArgb(0, 122, 204),
-                ForeColor = Color.White,
-                DialogResult = DialogResult.OK
+                Type = AntdUI.TTypeMini.Primary,
+                Size = new Size(84, 38),
+                Location = new Point(420 - 20 - 84 - 8 - 84, 104)
             };
+            okButton.Click += (s, e) => { DialogResult = DialogResult.OK; Close(); };
+            Controls.Add(okButton);
 
-            var cancelButton = new Button
+            var cancelButton = new AntdUI.Button
             {
                 Text = "取消",
-                AutoSize = true,
-                MinimumSize = new Size(DpiScale.V(this, 75), 0),
-                Location = DpiScale.P(this, 295, 75),
-                FlatStyle = FlatStyle.Flat,
-                Font = Services.FormFontPolicy.UiFont(),
-                BackColor = Color.FromArgb(60, 60, 60),
-                ForeColor = Color.White,
-                DialogResult = DialogResult.Cancel
+                Size = new Size(84, 38),
+                Location = new Point(420 - 20 - 84, 104)
             };
-
-            Controls.AddRange(new Control[] { promptLabel, _inputBox, okButton, cancelButton });
+            cancelButton.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
+            Controls.Add(cancelButton);
 
             AcceptButton = okButton;
             CancelButton = cancelButton;

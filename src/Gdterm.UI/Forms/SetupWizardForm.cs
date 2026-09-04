@@ -12,7 +12,7 @@ namespace Gdterm.UI.Forms
     /// 首次使用向导——强制设置主密码
     /// 三步流程：欢迎 → 设置密码 → 确认完成
     /// </summary>
-    public class SetupWizardForm : Form
+    public class SetupWizardForm : AntdUI.Window
     {
         private readonly ISecurityManager _securityManager;
         private Panel _stepPanel;

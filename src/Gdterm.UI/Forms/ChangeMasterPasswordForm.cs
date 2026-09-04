@@ -3,27 +3,27 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using Gdterm.Security;
-using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Forms
 {
     /// <summary>
-    /// 修改主密码对话框。
+    /// 修改主密码对话框（AntdUI 版）。
     /// 流程：旧密码验证 -> 新密码强度校验 -> 确认 -> 触发 <see cref="ChangeRequested"/>。
     /// 调用方在事件里负责：(1) KeePass 重加密 kdbx (2) SecurityManager.SetMasterPassword
     /// (3) 持久化 master-password.ini (4) 更新内存主密码
     /// 任一步失败需 throw，由本对话框捕获并回滚 UI。
     /// </summary>
-    public class ChangeMasterPasswordForm : Form
+    public class ChangeMasterPasswordForm : AntdUI.Window
     {
         private readonly ISecurityManager _securityManager;
 
-        private TextBox _oldBox;
-        private TextBox _newBox;
-        private TextBox _confirmBox;
-        private Label _strengthLabel;
-        private Label _errorLabel;
-        private Button _okButton;
+        private AntdUI.Input _oldBox;
+        private AntdUI.Input _newBox;
+        private AntdUI.Input _confirmBox;
+        private AntdUI.Label _strengthLabel;
+        private AntdUI.Label _errorLabel;
+        private AntdUI.Checkbox _showPwdCheck;
+        private AntdUI.Button _okButton;
 
         /// <summary>
         /// 用户点击确定且本地校验通过时触发。
@@ -39,8 +39,6 @@ namespace Gdterm.UI.Forms
         {
             _securityManager = securityManager;
             InitializeComponent();
-            // 高/低 DPI 自适应：声明设计基准 96 DPI，让 .NET 自动按当前 DPI 缩放控件。
-            Gdterm.UI.Services.FormFontPolicy.Apply(this);
 
             try
             {
@@ -48,7 +46,7 @@ namespace Gdterm.UI.Forms
                     .GetManifestResourceStream("Gdterm.UI.Resources.gdterm.ico");
                 if (iconStream != null)
                 {
-                    this.Icon = new Icon(iconStream);
+                    Icon = new Icon(iconStream);
                     iconStream.Dispose();
                 }
             }
@@ -58,165 +56,120 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "修改主密码";
-            {
-                float grow = FormFontPolicy.UiFontSize / 9f;
-                Size = DpiScale.S(this, 500, (int)(372 * Math.Max(1f, grow)));
-            }
+            Size = new Size(500, 470);
+            StartPosition = FormStartPosition.CenterParent;
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            ShowInTaskbar = false;
 
             int labelX = 20;
-            int boxX = 110;
-            int boxWidth = 350;
-            var step = FormFontPolicy.RowStep(this);
-            int y = 12;
+            int boxX = 120;
+            int boxWidth = 340;
+            int rowH = 46;
+            int y = 20;
 
-            var titleLabel = new Label
+            var titleLabel = new AntdUI.Label
             {
                 Text = "修改主密码",
-                Font = Services.FormFontPolicy.UiFont(+5f, FontStyle.Bold),
-                ForeColor = Color.White,
+                Font = new Font("Segoe UI", 15F, FontStyle.Bold),
                 AutoSize = true,
-                Location = DpiScale.P(this, labelX, y)
+                Location = new Point(labelX, y)
             };
-            y += (int)(step * 1.15);
+            y += 46;
 
-            var tipLabel = new Label
+            var tipLabel = new AntdUI.Label
             {
                 Text = "修改后，KeePass 密码库 (gdterm.kdbx) 将用新主密码重新加密。\n请妥善保管新密码，丢失将无法找回。",
-                Font = Services.FormFontPolicy.UiFont(),
-                ForeColor = Color.FromArgb(180, 180, 180),
                 AutoSize = true,
-                MaximumSize = new Size(DpiScale.V(this, 440), 0),
-                Location = DpiScale.P(this, labelX, y)
+                Location = new Point(labelX, y)
             };
-            y += step * 2 + 8; // 提示占两行
+            y += 58;
 
-            var oldLabel = MakeFieldLabel("当前密码", labelX, y);
+            Controls.Add(MakeFieldLabel("当前密码", labelX, y));
             _oldBox = MakePasswordBox(boxX, y, boxWidth);
-            y += step;
+            y += rowH;
 
-            var newLabel = MakeFieldLabel("新密码", labelX, y);
+            Controls.Add(MakeFieldLabel("新密码", labelX, y));
             _newBox = MakePasswordBox(boxX, y, boxWidth);
             _newBox.TextChanged += OnNewPasswordChanged;
-            y += step;
+            y += rowH;
 
-            var confirmLabel = MakeFieldLabel("确认新密码", labelX, y);
+            Controls.Add(MakeFieldLabel("确认新密码", labelX, y));
             _confirmBox = MakePasswordBox(boxX, y, boxWidth);
-            y += step + 4;
+            y += rowH + 2;
 
-            _strengthLabel = new Label
+            _strengthLabel = new AntdUI.Label
             {
                 Text = "密码强度：未输入",
-                Font = Services.FormFontPolicy.UiFont(),
-                ForeColor = Color.FromArgb(140, 140, 140),
                 AutoSize = true,
-                Location = DpiScale.P(this, boxX, y)
+                Location = new Point(boxX, y)
             };
-            y += step;
+            Controls.Add(_strengthLabel);
+            y += rowH;
 
-            _errorLabel = new Label
+            _errorLabel = new AntdUI.Label
             {
                 Text = "",
-                Font = Services.FormFontPolicy.UiFont(),
-                ForeColor = Color.FromArgb(255, 100, 100),
                 AutoSize = true,
-                MaximumSize = new Size(DpiScale.V(this, 440), 0),
-                Location = DpiScale.P(this, labelX, y)
+                ForeColor = Color.FromArgb(255, 100, 100),
+                Location = new Point(labelX, y)
             };
-            y += step;
+            Controls.Add(_errorLabel);
+            y += rowH;
 
-            var showPwdCheck = new CheckBox
+            _showPwdCheck = new AntdUI.Checkbox
             {
                 Text = "显示密码",
-                Font = Services.FormFontPolicy.UiFont(),
-                ForeColor = Color.FromArgb(160, 160, 160),
                 AutoSize = true,
-                Location = DpiScale.P(this, labelX, y)
+                Location = new Point(labelX, y)
             };
-            showPwdCheck.CheckedChanged += (s, e) =>
+            _showPwdCheck.CheckedChanged += (s, e) =>
             {
-                _oldBox.UseSystemPasswordChar = !showPwdCheck.Checked;
-                _newBox.UseSystemPasswordChar = !showPwdCheck.Checked;
-                _confirmBox.UseSystemPasswordChar = !showPwdCheck.Checked;
+                _oldBox.UseSystemPasswordChar = !_showPwdCheck.Checked;
+                _newBox.UseSystemPasswordChar = !_showPwdCheck.Checked;
+                _confirmBox.UseSystemPasswordChar = !_showPwdCheck.Checked;
             };
-            y += step + 6;
+            Controls.Add(_showPwdCheck);
+            y += rowH + 4;
 
-            _okButton = new Button
+            _okButton = new AntdUI.Button
             {
                 Text = "确认修改",
-                FlatStyle = FlatStyle.Flat,
-                Font = Services.FormFontPolicy.UiFont(+1f),
-                BackColor = Color.FromArgb(0, 122, 204),
-                ForeColor = Color.White,
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 10), 0)
+                Type = AntdUI.TTypeMini.Primary,
+                Size = new Size(100, 38),
+                Location = new Point(500 - 20 - 100 - 8 - 90, y)
             };
             _okButton.Click += OnOkClick;
+            Controls.Add(_okButton);
 
-            var cancelButton = new Button
+            var cancelButton = new AntdUI.Button
             {
                 Text = "取消",
-                FlatStyle = FlatStyle.Flat,
-                Font = Services.FormFontPolicy.UiFont(+1f),
-                BackColor = Color.FromArgb(60, 60, 60),
-                ForeColor = Color.White,
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 10), 0),
-                DialogResult = DialogResult.Cancel
+                Size = new Size(90, 38),
+                Location = new Point(500 - 20 - 90, y)
             };
-            _okButton.FlatAppearance.BorderSize = 0;
-            cancelButton.FlatAppearance.BorderSize = 0;
-
-            // 按钮行：右对齐（主按钮最右）
-            var btnRow = new FlowLayoutPanel
-            {
-                Location = DpiScale.P(this, 0, y),
-                Size = new Size(DpiScale.V(this, 484), step + 10),
-                FlowDirection = FlowDirection.RightToLeft,
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
-            };
-            btnRow.Controls.Add(_okButton);
-            btnRow.Controls.Add(cancelButton);
-            btnRow.Controls.Add(new Label { AutoSize = true }); // 占位推右
-
-            Controls.AddRange(new Control[]
-            {
-                titleLabel, tipLabel,
-                oldLabel, _oldBox,
-                newLabel, _newBox,
-                confirmLabel, _confirmBox,
-                _strengthLabel, _errorLabel, showPwdCheck, btnRow
-            });
+            cancelButton.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
+            Controls.Add(cancelButton);
 
             AcceptButton = _okButton;
             CancelButton = cancelButton;
         }
 
-        private Label MakeFieldLabel(string text, int x, int y)
+        private static AntdUI.Label MakeFieldLabel(string text, int x, int y)
         {
-            return new Label
-            {
-                Text = text,
-                Font = Services.FormFontPolicy.UiFont(+1f),
-                ForeColor = Color.FromArgb(200, 200, 200),
-                AutoSize = true,
-                Location = new Point(x, y + DpiScale.V(this, 6)),
-                TextAlign = ContentAlignment.MiddleRight
-            };
+            return new AntdUI.Label { Text = text, AutoSize = true, Location = new Point(x, y + 10) };
         }
 
-        private TextBox MakePasswordBox(int x, int y, int width)
+        private AntdUI.Input MakePasswordBox(int x, int y, int width)
         {
-            var box = new TextBox
+            return new AntdUI.Input
             {
-                Location = DpiScale.P(this, x, y),
-                Size = DpiScale.S(this, width, 28),
+                Location = new Point(x, y),
+                Size = new Size(width, 38),
                 Font = new Font("Consolas", 11f),
-                UseSystemPasswordChar = true,
-                BackColor = Color.FromArgb(50, 50, 50),
-                ForeColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle
+                UseSystemPasswordChar = true
             };
-            return box;
         }
 
         private void OnNewPasswordChanged(object sender, EventArgs e)
@@ -266,7 +219,6 @@ namespace Gdterm.UI.Forms
             if (_securityManager != null && !_securityManager.VerifyMasterPassword(oldPw))
             {
                 _errorLabel.Text = "当前密码不正确";
-                _oldBox.SelectAll();
                 _oldBox.Focus();
                 return;
             }

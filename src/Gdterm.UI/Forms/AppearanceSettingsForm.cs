@@ -11,24 +11,25 @@ namespace Gdterm.UI.Forms
 {
     /// <summary>
     /// 外观设置：字体/字号/配色/行距提示。保存到 data/config/appearance.ini。
-    /// 2026-09 重构：TableLayoutPanel 流式布局（字号任意调不重叠）+ 恢复默认按钮。
+    /// 2026-09 AntdUI 版：AntdUI.Window + Input/Select/InputNumber/Checkbox。
+    /// 布局：手工 y 流式（AntdUI 控件固定行高，本窗体 FixedDialog 不随字号伸缩）。
     /// </summary>
-    public sealed class AppearanceSettingsForm : Form
+    public sealed class AppearanceSettingsForm : AntdUI.Window
     {
         private readonly string _iniPath;
-        private ComboBox _fontCombo;
-        private NumericUpDown _sizeNum;
-        private ComboBox _cjkFontCombo;
-        private ComboBox _schemeCombo;
-        private CheckBox _dpiAwareCheck;
-        private Label _preview;
-        private Button _btnOk;
-        private Button _btnCancel;
-        private Button _btnReset;
+        private AntdUI.Select _fontCombo;
+        private AntdUI.InputNumber _sizeNum;
+        private AntdUI.Select _cjkFontCombo;
+        private AntdUI.Select _schemeCombo;
+        private AntdUI.Checkbox _dpiAwareCheck;
+        private AntdUI.Input _preview;
+        private AntdUI.Button _btnOk;
+        private AntdUI.Button _btnCancel;
+        private AntdUI.Button _btnReset;
         // 界面字体（菜单/树/状态栏）
-        private ComboBox _uiFontCombo;
-        private NumericUpDown _uiSizeNum;
-        private ComboBox _uiThemeCombo;
+        private AntdUI.Select _uiFontCombo;
+        private AntdUI.InputNumber _uiSizeNum;
+        private AntdUI.Select _uiThemeCombo;
 
         public AppearanceSettings Result { get; private set; }
 
@@ -39,61 +40,56 @@ namespace Gdterm.UI.Forms
             Directory.CreateDirectory(configDir);
             _iniPath = Path.Combine(configDir, "appearance.ini");
 
-            DialogStyle.ApplyChrome(this, 460, 492);
             BuildUi();
             LoadCurrent();
-            Gdterm.UI.Services.FormFontPolicy.Apply(this); // 全局 UI 字体传导（含显式雅黑硬编码子控件）
         }
 
         private void BuildUi()
         {
-            // ── 主体：TableLayoutPanel 流式布局，字号任意调整不重叠 ──
-            // 结构：row0 终端字体 | row1 字号 | row2 配色 | row3 CJK | row4 界面主题
-            //       row5 界面字体+字号 | row6 DPI | row7 预览（跨两列）
-            var grid = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 3,
-                RowCount = 9,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                BackColor = GdtermColorTable.Background,
-                Padding = new Padding(DpiScale.V(this, 12))
-            };
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));       // 标签列
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));  // 值列
-            grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));       // 附属列（字号框等）
+            Text = "外观设置";
+            Size = new Size(520, 560);
+            StartPosition = FormStartPosition.CenterParent;
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            ShowInTaskbar = false;
 
-            int row = 0;
+            int pad = 20;
+            int colLabel = pad;
+            int colValue = pad + 110;
+            int valueW = 220;
+            int rowH = 44;
+            int y = 22;
 
             // —— 终端字体 ——
-            grid.Controls.Add(DialogStyle.FieldLabel("终端字体"), 0, row);
-            _fontCombo = MakeCombo(FillTerminalFonts);
-            grid.Controls.Add(_fontCombo, 1, row);
-            grid.SetColumnSpan(_fontCombo, 2);
-            row++;
+            Controls.Add(MakeLabel("终端字体", colLabel, y));
+            _fontCombo = MakeSelect(valueW, FillTerminalFonts);
+            _fontCombo.Location = new Point(colValue, y);
+            Controls.Add(_fontCombo);
+            y += rowH;
 
             // —— 字号 ——
-            grid.Controls.Add(DialogStyle.FieldLabel("字号 (pt)"), 0, row);
-            _sizeNum = MakeNumeric(8, 36, 12);
-            grid.Controls.Add(_sizeNum, 1, row);
-            row++;
+            Controls.Add(MakeLabel("字号 (pt)", colLabel, y));
+            _sizeNum = MakeNumber(8, 36, 12);
+            _sizeNum.Location = new Point(colValue, y);
+            Controls.Add(_sizeNum);
+            y += rowH;
 
             // —— 配色方案 ——
-            grid.Controls.Add(DialogStyle.FieldLabel("配色方案"), 0, row);
-            _schemeCombo = MakeCombo(null);
+            Controls.Add(MakeLabel("配色方案", colLabel, y));
+            _schemeCombo = MakeSelect(valueW, null);
             foreach (var name in new[]
             {
                 "Classic", "HighContrast", "SolarizedDark", "Monokai", "Dracula", "GreenTerminal", "Light"
             })
                 _schemeCombo.Items.Add(name);
-            grid.Controls.Add(_schemeCombo, 1, row);
-            grid.SetColumnSpan(_schemeCombo, 2);
-            row++;
+            _schemeCombo.Location = new Point(colValue, y);
+            Controls.Add(_schemeCombo);
+            y += rowH;
 
             // —— 中日韩补充字体（Xshell 风格双字体）——
-            grid.Controls.Add(DialogStyle.FieldLabel("中日韩字体"), 0, row);
-            _cjkFontCombo = MakeCombo(null);
+            Controls.Add(MakeLabel("中日韩字体", colLabel, y));
+            _cjkFontCombo = MakeSelect(valueW, null);
             _cjkFontCombo.Items.Add(""); // 空表示跟随主字体
             _cjkFontCombo.Items.Add("Microsoft YaHei Mono");
             _cjkFontCombo.Items.Add("Sarasa Mono SC");
@@ -120,29 +116,139 @@ namespace Gdterm.UI.Forms
                 }
             }
             catch { }
-            grid.Controls.Add(_cjkFontCombo, 1, row);
-            grid.SetColumnSpan(_cjkFontCombo, 2);
-            row++;
+            _cjkFontCombo.Location = new Point(colValue, y);
+            Controls.Add(_cjkFontCombo);
+            y += rowH;
 
             // —— UI 外壳主题（与终端 ColorScheme 独立）——
-            grid.Controls.Add(DialogStyle.FieldLabel("界面主题"), 0, row);
-            _uiThemeCombo = MakeCombo(null);
+            Controls.Add(MakeLabel("界面主题", colLabel, y));
+            _uiThemeCombo = MakeSelect(valueW, null);
             foreach (var name in new[] { "Dark", "Darker", "OLED" })
                 _uiThemeCombo.Items.Add(name);
-            grid.Controls.Add(_uiThemeCombo, 1, row);
-            var themeHint = new Label
-            {
-                Text = "Dark/Darker/OLED 配暗色终端方案，Light 配 Light",
-                AutoSize = true,
-                ForeColor = GdtermColorTable.Muted,
-                Margin = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 8), 3, 0)
-            };
-            grid.Controls.Add(themeHint, 2, row);
-            row++;
+            _uiThemeCombo.Location = new Point(colValue, y);
+            Controls.Add(_uiThemeCombo);
+            var themeHint = MakeLabel("Dark/Darker/OLED 配暗色终端方案", colValue + valueW + 10, y + 8);
+            Controls.Add(themeHint);
+            y += rowH;
 
             // —— 界面字体 + 字号（同行）——
-            grid.Controls.Add(DialogStyle.FieldLabel("界面字体"), 0, row);
-            _uiFontCombo = MakeCombo(null);
+            Controls.Add(MakeLabel("界面字体", colLabel, y));
+            _uiFontCombo = MakeSelect(valueW, FillUiFonts);
+            _uiFontCombo.Location = new Point(colValue, y);
+            Controls.Add(_uiFontCombo);
+            _uiSizeNum = MakeNumber(8, 24, 9);
+            _uiSizeNum.Location = new Point(colValue + valueW + 10, y);
+            _uiSizeNum.Size = new Size(70, 38);
+            Controls.Add(_uiSizeNum);
+            y += rowH;
+
+            // —— DPI ——
+            _dpiAwareCheck = new AntdUI.Checkbox
+            {
+                Text = "启用 DPI 感知（需重启，减轻菜单模糊）",
+                Location = new Point(colLabel, y),
+                AutoSize = true,
+                Checked = true
+            };
+            Controls.Add(_dpiAwareCheck);
+            y += rowH + 2;
+
+            // —— 预览（ReadOnly Input 展示）——
+            _preview = new AntdUI.Input
+            {
+                Text = "AaBbCc 0123 预览 Preview",
+                Location = new Point(colLabel, y),
+                Size = new Size(520 - pad * 2, 64),
+                ReadOnly = true,
+                Multiline = true,
+                BorderWidth = 1F
+            };
+            Controls.Add(_preview);
+            y += 78;
+
+            var resetHint = new AntdUI.Label
+            {
+                Text = "字体或界面错乱时，点「恢复默认」一键还原全部外观设置",
+                AutoSize = true,
+                Location = new Point(colLabel, y)
+            };
+            Controls.Add(resetHint);
+            y += 36;
+
+            // ── 底部按钮条：主(保存) + 恢复默认 + 取消 ──
+            _btnOk = new AntdUI.Button { Text = "保存", Type = AntdUI.TTypeMini.Primary, Size = new Size(88, 38) };
+            _btnOk.Click += (s, e) => SaveResult();
+
+            _btnReset = new AntdUI.Button { Text = "恢复默认", Size = new Size(96, 38) };
+            _btnReset.Click += (s, e) => ResetToDefaults();
+
+            _btnCancel = new AntdUI.Button { Text = "取消", Size = new Size(88, 38) };
+            _btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
+
+            int btnTotal = 88 + 8 + 96 + 8 + 88;
+            int bx = 520 - 20 - btnTotal;
+            _btnOk.Location = new Point(bx, y);
+            _btnReset.Location = new Point(bx + 96, y);
+            _btnCancel.Location = new Point(bx + 96 + 104, y);
+            Controls.Add(_btnOk);
+            Controls.Add(_btnReset);
+            Controls.Add(_btnCancel);
+
+            AcceptButton = _btnOk;
+            CancelButton = _btnCancel;
+        }
+
+        private static AntdUI.Label MakeLabel(string text, int x, int y)
+        {
+            return new AntdUI.Label { Text = text, AutoSize = true, Location = new Point(x, y + 10) };
+        }
+
+        private AntdUI.Select MakeSelect(int width, Action<AntdUI.Select> fill)
+        {
+            var cb = new AntdUI.Select { Size = new Size(width, 38) };
+            if (fill != null) fill(cb);
+            return cb;
+        }
+
+        private AntdUI.InputNumber MakeNumber(int min, int max, int value)
+        {
+            return new AntdUI.InputNumber
+            {
+                Size = new Size(86, 38),
+                Minimum = min,
+                Maximum = max,
+                Value = value,
+                Increment = 1
+            };
+        }
+
+        private static void FillTerminalFonts(AntdUI.Select cb)
+        {
+            try
+            {
+                using (var fonts = new InstalledFontCollection())
+                {
+                    foreach (var f in fonts.Families)
+                    {
+                        if (IsLikelyMono(f.Name)) cb.Items.Add(f.Name);
+                    }
+                    foreach (var f in fonts.Families)
+                    {
+                        if (!IsLikelyMono(f.Name) && cb.Items.Count < 80) cb.Items.Add(f.Name);
+                    }
+                }
+            }
+            catch
+            {
+                cb.Items.Add("Consolas");
+                cb.Items.Add("Cascadia Mono");
+                cb.Items.Add("Courier New");
+            }
+            if (cb.Items.Count == 0) cb.Items.Add("Consolas");
+        }
+
+        private static void FillUiFonts(AntdUI.Select cb)
+        {
             try
             {
                 using (var fonts = new InstalledFontCollection())
@@ -151,106 +257,42 @@ namespace Gdterm.UI.Forms
                     var prefer = new[] { "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", "PingFang SC", "Noto Sans CJK SC", "Source Han Sans SC" };
                     foreach (var p in prefer)
                         if (Array.Exists(fonts.Families, ff => string.Equals(ff.Name, p, StringComparison.OrdinalIgnoreCase)))
-                            _uiFontCombo.Items.Add(p);
+                            cb.Items.Add(p);
                     foreach (var f in fonts.Families)
                     {
-                        if (!IsLikelyMono(f.Name) && _uiFontCombo.Items.Count < 60 && !_uiFontCombo.Items.Contains(f.Name))
-                            _uiFontCombo.Items.Add(f.Name);
+                        if (!IsLikelyMono(f.Name) && cb.Items.Count < 60 && !cb.Items.Contains(f.Name))
+                            cb.Items.Add(f.Name);
                     }
                 }
             }
-            catch { _uiFontCombo.Items.Add(FormFontPolicy.UiFontName); }
-            if (_uiFontCombo.Items.Count == 0) _uiFontCombo.Items.Add(FormFontPolicy.UiFontName);
-            grid.Controls.Add(_uiFontCombo, 1, row);
-            _uiSizeNum = MakeNumeric(8, 24, 9);
-            grid.Controls.Add(_uiSizeNum, 2, row);
-            row++;
-
-            // —— DPI ——
-            _dpiAwareCheck = new CheckBox
-            {
-                Text = "启用 DPI 感知（需重启，减轻菜单模糊）",
-                AutoSize = true,
-                ForeColor = GdtermColorTable.Foreground,
-                Checked = true,
-                Margin = new Padding(3, DpiScale.V(this, 8), 3, 0)
-            };
-            grid.Controls.Add(_dpiAwareCheck, 0, row);
-            grid.SetColumnSpan(_dpiAwareCheck, 3);
-            row++;
-
-            // —— 预览 ——
-            _preview = new Label
-            {
-                Text = "AaBbCc 0123 预览 Preview",
-                Dock = DockStyle.Fill,
-                MinimumSize = new Size(0, DpiScale.V(this, 56)),
-                Margin = new Padding(3, DpiScale.V(this, 10), 3, 3),
-                BackColor = Color.FromArgb(12, 12, 12),
-                ForeColor = Color.FromArgb(0, 255, 128),
-                TextAlign = ContentAlignment.MiddleCenter,
-                BorderStyle = BorderStyle.FixedSingle
-            };
-            grid.Controls.Add(_preview, 0, row);
-            grid.SetColumnSpan(_preview, 3);
-            row++;
-
-            // —— 重置提示（可跨两列）——
-            var resetHint = new Label
-            {
-                Text = "字体或界面错乱时，可点“恢复默认”一键还原全部外观设置",
-                AutoSize = true,
-                ForeColor = GdtermColorTable.Muted,
-                Margin = new Padding(3, DpiScale.V(this, 4), 3, 0)
-            };
-            grid.Controls.Add(resetHint, 0, row);
-            grid.SetColumnSpan(resetHint, 3);
-
-            Controls.Add(grid);
-
-            _fontCombo.SelectedIndexChanged += (s, e) => UpdatePreview();
-            _sizeNum.ValueChanged += (s, e) => UpdatePreview();
-
-            // ── 底部按钮条：主(保存) + 恢复默认 + 取消 ──
-            _btnOk = new Button { Text = "保存", DialogResult = DialogResult.OK };
-            DialogStyle.MakePrimary(_btnOk);
-            _btnOk.Click += (s, e) => SaveResult();
-
-            _btnReset = new Button { Text = "恢复默认" };
-            DialogStyle.MakeSecondary(_btnReset);
-            _btnReset.Click += (s, e) => ResetToDefaults();
-
-            _btnCancel = new Button { Text = "取消", DialogResult = DialogResult.Cancel };
-            DialogStyle.MakeSecondary(_btnCancel);
-
-            Controls.Add(DialogStyle.ButtonStrip(_btnOk, _btnReset, _btnCancel));
-
-            AcceptButton = _btnOk;
-            CancelButton = _btnCancel;
+            catch { cb.Items.Add(FormFontPolicy.UiFontName); }
+            if (cb.Items.Count == 0) cb.Items.Add(FormFontPolicy.UiFontName);
         }
 
         private void SaveResult()
         {
             Result = new AppearanceSettings
             {
-                FontName = _fontCombo.SelectedItem != null ? _fontCombo.SelectedItem.ToString() : "Consolas",
+                FontName = _fontCombo.SelectedValue != null ? _fontCombo.SelectedValue.ToString() : "Consolas",
                 FontSize = (int)_sizeNum.Value,
-                CjkFontName = _cjkFontCombo.SelectedItem != null ? (_cjkFontCombo.SelectedItem.ToString() ?? "") : "",
-                ColorScheme = _schemeCombo.SelectedItem != null ? _schemeCombo.SelectedItem.ToString() : "Classic",
-                UiTheme = _uiThemeCombo.SelectedItem != null ? _uiThemeCombo.SelectedItem.ToString() : "Dark",
+                CjkFontName = _cjkFontCombo.SelectedValue != null ? (_cjkFontCombo.SelectedValue.ToString() ?? "") : "",
+                ColorScheme = _schemeCombo.SelectedValue != null ? _schemeCombo.SelectedValue.ToString() : "Classic",
+                UiTheme = _uiThemeCombo.SelectedValue != null ? _uiThemeCombo.SelectedValue.ToString() : "Dark",
                 DpiAware = _dpiAwareCheck.Checked,
-                UIFontName = _uiFontCombo.SelectedItem != null ? _uiFontCombo.SelectedItem.ToString() : FormFontPolicy.UiFontName,
+                UIFontName = _uiFontCombo.SelectedValue != null ? _uiFontCombo.SelectedValue.ToString() : FormFontPolicy.UiFontName,
                 UIFontSize = (int)_uiSizeNum.Value
             };
             try
             {
                 Result.Save(_iniPath);
-                // 可观测性：用户选了什么（终端字体/字号/CJK/UI 字体）——排查“字号不匹配”时与 FontMetrics 对照
+                // 可观测性：用户选了什么（终端字体/字号/CJK/UI 字体）——排查"字号不匹配"时与 FontMetrics 对照
                 DiagLog.Info("Appearance.Save",
                     "font=" + Result.FontName + "/" + Result.FontSize + "pt cjk=" + (string.IsNullOrEmpty(Result.CjkFontName) ? "-" : Result.CjkFontName) +
                     " scheme=" + Result.ColorScheme + " uiFont=" + Result.UIFontName + "/" + Result.UIFontSize + "pt dpiAware=" + Result.DpiAware);
             }
             catch (Exception ex) { DiagLog.Swallowed("Appearance.Save", ex); }
+            DialogResult = DialogResult.OK;
+            Close();
         }
 
         /// <summary>
@@ -259,12 +301,13 @@ namespace Gdterm.UI.Forms
         /// </summary>
         private void ResetToDefaults()
         {
-            if (MessageBox.Show(this,
-                    "将恢复以下默认值：\n" +
-                    "  终端字体 Consolas 12pt / 配色 Classic\n" +
-                    "  界面字体 " + FormFontPolicy.UiFontName + " 9pt / 界面主题 Dark\n" +
-                    "  DPI 感知 开启\n\n确定恢复？",
-                    "恢复默认外观", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+            var dr = AntdUI.Modal.open(this, "恢复默认外观",
+                "将恢复以下默认值：\n" +
+                "  终端字体 Consolas 12pt / 配色 Classic\n" +
+                "  界面字体 " + FormFontPolicy.UiFontName + " 9pt / 界面主题 Dark\n" +
+                "  DPI 感知 开启\n\n确定恢复？",
+                TType.Warn);
+            if (dr != DialogResult.Yes && dr != DialogResult.OK)
                 return;
 
             var d = new AppearanceSettings(); // 出厂默认
@@ -285,63 +328,6 @@ namespace Gdterm.UI.Forms
             SelectCombo(_uiFontCombo, FormFontPolicy.UiFontName);
             _uiSizeNum.Value = Math.Max(_uiSizeNum.Minimum, Math.Min(_uiSizeNum.Maximum, d.UIFontSize));
             UpdatePreview();
-        }
-
-        private ComboBox MakeCombo(Action<ComboBox> fill)
-        {
-            var cb = new ComboBox
-            {
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Width = DpiScale.V(this, 220),
-                FlatStyle = FlatStyle.Flat,
-                Margin = new Padding(3, DpiScale.V(this, 6), 3, 0)
-            };
-            DialogStyle.ApplyInput(cb);
-            cb.BackColor = GdtermColorTable.Surface;
-            if (fill != null) fill(cb);
-            return cb;
-        }
-
-        private static void FillTerminalFonts(ComboBox cb)
-        {
-            try
-            {
-                using (var fonts = new InstalledFontCollection())
-                {
-                    foreach (var f in fonts.Families)
-                    {
-                        // 优先等宽
-                        if (IsLikelyMono(f.Name))
-                            cb.Items.Add(f.Name);
-                    }
-                    foreach (var f in fonts.Families)
-                    {
-                        if (!IsLikelyMono(f.Name) && cb.Items.Count < 80)
-                            cb.Items.Add(f.Name);
-                    }
-                }
-            }
-            catch
-            {
-                cb.Items.Add("Consolas");
-                cb.Items.Add("Cascadia Mono");
-                cb.Items.Add("Courier New");
-            }
-            if (cb.Items.Count == 0) cb.Items.Add("Consolas");
-        }
-
-        private NumericUpDown MakeNumeric(int min, int max, int value)
-        {
-            var n = new NumericUpDown
-            {
-                Minimum = min,
-                Maximum = max,
-                Value = value,
-                Width = DpiScale.V(this, 64),
-                Margin = new Padding(3, DpiScale.V(this, 6), 3, 0)
-            };
-            DialogStyle.ApplyInput(n);
-            return n;
         }
 
         private static bool IsLikelyMono(string name)
@@ -368,7 +354,7 @@ namespace Gdterm.UI.Forms
             UpdatePreview();
         }
 
-        private static void SelectCombo(ComboBox box, string value)
+        private static void SelectCombo(AntdUI.Select box, string value)
         {
             if (box == null) return;
             if (string.IsNullOrEmpty(value))
@@ -392,7 +378,7 @@ namespace Gdterm.UI.Forms
         {
             try
             {
-                var name = _fontCombo.SelectedItem != null ? _fontCombo.SelectedItem.ToString() : "Consolas";
+                var name = _fontCombo.SelectedValue != null ? _fontCombo.SelectedValue.ToString() : "Consolas";
                 var size = (float)_sizeNum.Value;
                 _preview.Font = new Font(name, size, FontStyle.Regular, GraphicsUnit.Point);
             }

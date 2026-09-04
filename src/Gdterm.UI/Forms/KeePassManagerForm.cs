@@ -12,7 +12,7 @@ namespace Gdterm.UI.Forms
     /// KeePass 密码管理器对话框
     /// 显示密码条目列表，支持增删改查、复制密码/用户名
     /// </summary>
-    public class KeePassManagerForm : Form
+    public class KeePassManagerForm : AntdUI.Window
     {
         private readonly IKeePassService _keepassService;
         private ListView _entryList;
@@ -355,7 +355,7 @@ namespace Gdterm.UI.Forms
     /// <summary>
     /// 条目编辑对话框（用于添加/编辑 KeePass 条目）
     /// </summary>
-    internal class KeePassEntryEditForm : Form
+    internal class KeePassEntryEditForm : AntdUI.Window
     {
         private TextBox _titleBox;
         private TextBox _usernameBox;
@@ -407,7 +407,6 @@ namespace Gdterm.UI.Forms
             Text = "添加密码条目";
             ClientSize = DpiScale.S(this, 420, 470);
             // 跟随字体/DPI 自动整体缩放（绝对定位在 11pt@144dpi 下会重叠/溢出）
-            AutoScaleMode = AutoScaleMode.Font;
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;

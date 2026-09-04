@@ -1,230 +1,181 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
-using Gdterm.UI.Diagnostics;
 using Gdterm.AI;
 using Gdterm.AI.Models;
-using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Forms
 {
     /// <summary>
-    /// AI 设置对话框——配置 API 端点、密钥、模型参数
-    /// 从 AiModelStore 加载默认模型配置，保存后回写
+    /// AI 设置对话框（AntdUI 版）——配置 API 端点、密钥、模型参数。
+    /// 从 AiModelStore 加载默认模型配置，保存后回写。
     /// </summary>
-    public class AiSettingsForm : Form
+    public class AiSettingsForm : AntdUI.Window
     {
         private readonly AiModelStore _modelStore;
         private AiModelConfig _currentConfig;
 
-        private TextBox _nameBox;
-        private TextBox _endpointBox;
-        private TextBox _apiKeyBox;
-        private TextBox _modelBox;
-        private NumericUpDown _maxTokensSpinner;
-        private NumericUpDown _temperatureSpinner;
-        private Label _statusLabel;
-        private CheckBox _showKeyCheck;
+        private AntdUI.Input _nameBox;
+        private AntdUI.Input _endpointBox;
+        private AntdUI.Input _apiKeyBox;
+        private AntdUI.Input _modelBox;
+        private AntdUI.InputNumber _maxTokensSpinner;
+        private AntdUI.InputNumber _temperatureSpinner;
+        private AntdUI.Label _statusLabel;
+        private AntdUI.Checkbox _showKeyCheck;
 
         public AiSettingsForm(AiModelStore modelStore)
         {
             _modelStore = modelStore;
             InitializeComponent();
-            // 高/低 DPI 自适应：声明设计基准 96 DPI，让 .NET 自动按当前 DPI 缩放控件。
-            Gdterm.UI.Services.FormFontPolicy.Apply(this);
             LoadCurrentConfig();
         }
 
         private void InitializeComponent()
         {
             Text = "AI 设置";
-            // 客户区高度随全局字号增长（行距已是字体驱动）
-            {
-                float grow = FormFontPolicy.UiFontSize / 9f;
-                Size = DpiScale.S(this, 500, (int)(400 * Math.Max(1f, grow)));
-            }
+            Size = new Size(520, 500);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
-            BackColor = Color.FromArgb(30, 30, 30);
 
-            // 标题
-            var titleLabel = new Label
+            int pad = 20;
+            int labelX = pad;
+            int boxX = pad + 110;
+            int boxW = 350;
+            int rowH = 48;
+            int y = 18;
+
+            var titleLabel = new AntdUI.Label
             {
                 Text = "AI 模型配置",
-                Font = Services.FormFontPolicy.UiFont(+4f, FontStyle.Bold),
-                ForeColor = Color.White,
-                Location = DpiScale.P(this, 20, 12),
-                Size = DpiScale.S(this, 200, 30)
+                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
+                AutoSize = true,
+                Location = new Point(pad, y)
             };
+            y += 36;
 
-            var subtitleLabel = new Label
+            var subtitleLabel = new AntdUI.Label
             {
                 Text = "配置 OpenAI 兼容 API 端点和模型参数",
-                Font = Services.FormFontPolicy.UiFont(),
-                ForeColor = Color.FromArgb(160, 160, 160),
-                Location = DpiScale.P(this, 20, 42),
-                Size = DpiScale.S(this, 400, 20)
+                AutoSize = true,
+                Location = new Point(pad, y)
             };
+            y += 36;
 
-            // 表单区域
-            // 布局基准值统一经 DPI 缩放（规范规则④），下游 new Size/new Point 直接使用
-            var y = DpiScale.V(this, 75);
-            var labelW = DpiScale.V(this, 90);
-            var boxX = DpiScale.V(this, 120);
-            var boxW = DpiScale.V(this, 340);
+            _nameBox = AddField("配置名称", labelX, boxX, y, boxW, false);
+            y += rowH;
+            _endpointBox = AddField("端点 URL", labelX, boxX, y, boxW, false);
+            _endpointBox.PlaceholderText = "https://api.openai.com/v1";
+            y += rowH;
 
-            _nameBox = AddField("配置名称：", ref y, labelW, boxX, boxW);
-            _endpointBox = AddField("端点 URL：", ref y, labelW, boxX, boxW);
-            WinFormsCompat.SetCueBanner(_endpointBox, "https://api.openai.com/v1");
-
-            // API Key（带掩码）
-            var apiKeyLabel = new Label
-            {
-                Text = "API Key：",
-                Font = Services.FormFontPolicy.UiFont(),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                Location = new Point(DpiScale.V(this, 20), y),
-                AutoSize = true
-            };
-            _apiKeyBox = new TextBox
+            // API Key（带掩码 + 显示切换）
+            Controls.Add(MakeLabel("API Key", labelX, y));
+            _apiKeyBox = new AntdUI.Input
             {
                 Location = new Point(boxX, y),
-                Width = boxW - 70,
+                Size = new Size(boxW - 76, 38),
                 Font = new Font("Consolas", 9.5f),
-                BackColor = Color.FromArgb(50, 50, 50),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                BorderStyle = BorderStyle.FixedSingle,
                 UseSystemPasswordChar = true
             };
-            _showKeyCheck = new CheckBox
+            _showKeyCheck = new AntdUI.Checkbox
             {
                 Text = "显示",
-                Location = new Point(boxX + boxW - 60, y),
-                Size = DpiScale.S(this, 55, 22),
-                Font = Services.FormFontPolicy.UiFont(-0.5f),
-                ForeColor = Color.FromArgb(160, 160, 160)
+                AutoSize = true,
+                Location = new Point(boxX + boxW - 66, y + 10)
             };
             _showKeyCheck.CheckedChanged += (s, e) =>
             {
                 _apiKeyBox.UseSystemPasswordChar = !_showKeyCheck.Checked;
             };
-            Controls.Add(apiKeyLabel);
             Controls.Add(_apiKeyBox);
             Controls.Add(_showKeyCheck);
-            y += FormFontPolicy.RowStep(this);
+            y += rowH;
 
-            _modelBox = AddField("模型名称：", ref y, labelW, boxX, boxW);
-            WinFormsCompat.SetCueBanner(_modelBox, "gpt-4");
+            _modelBox = AddField("模型名称", labelX, boxX, y, boxW, false);
+            _modelBox.PlaceholderText = "gpt-4";
+            y += rowH;
 
             // Max Tokens
-            var maxTokensLabel = new Label
-            {
-                Text = "最大Token：",
-                Font = Services.FormFontPolicy.UiFont(),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                Location = new Point(DpiScale.V(this, 20), y),
-                AutoSize = true
-            };
-            _maxTokensSpinner = new NumericUpDown
+            Controls.Add(MakeLabel("最大 Token", labelX, y));
+            _maxTokensSpinner = new AntdUI.InputNumber
             {
                 Location = new Point(boxX, y),
-                Width = DpiScale.V(this, 120),
-                Font = new Font("Consolas", 9.5f),
-                BackColor = Color.FromArgb(50, 50, 50),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                Size = new Size(140, 38),
                 Minimum = 1,
                 Maximum = 128000,
                 Value = 2048,
                 Increment = 256
             };
-            Controls.Add(maxTokensLabel);
             Controls.Add(_maxTokensSpinner);
-            y += FormFontPolicy.RowStep(this);
+            y += rowH;
 
             // Temperature
-            var tempLabel = new Label
-            {
-                Text = "温度：",
-                Font = Services.FormFontPolicy.UiFont(),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                Location = new Point(DpiScale.V(this, 20), y),
-                AutoSize = true
-            };
-            _temperatureSpinner = new NumericUpDown
+            Controls.Add(MakeLabel("温度", labelX, y));
+            _temperatureSpinner = new AntdUI.InputNumber
             {
                 Location = new Point(boxX, y),
-                Width = DpiScale.V(this, 120),
-                Font = new Font("Consolas", 9.5f),
-                BackColor = Color.FromArgb(50, 50, 50),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                Size = new Size(140, 38),
                 Minimum = 0m,
                 Maximum = 2m,
                 Value = 0.7m,
-                DecimalPlaces = 1,
-                Increment = 0.1m
+                Increment = 0.1m,
+                DecimalPlaces = 1
             };
-            Controls.Add(tempLabel);
             Controls.Add(_temperatureSpinner);
-            y += FormFontPolicy.RowStep(this);
-
-            // 分隔线
-            var separator = new Label
-            {
-                BorderStyle = BorderStyle.Fixed3D,
-                Location = new Point(DpiScale.V(this, 20), y),
-                Size = DpiScale.S(this, 440, 2)
-            };
-            Controls.Add(separator);
-            y += FormFontPolicy.RowStep(this) - 14; // 分隔线紧凑
+            y += rowH + 4;
 
             // 状态栏
-            _statusLabel = new Label
+            _statusLabel = new AntdUI.Label
             {
                 Text = "",
-                Font = Services.FormFontPolicy.UiFont(-0.5f),
-                ForeColor = Color.FromArgb(160, 160, 160),
-                Location = new Point(DpiScale.V(this, 20), y),
-                Size = DpiScale.S(this, 300, 20)
+                AutoSize = true,
+                Location = new Point(pad, y)
             };
             Controls.Add(_statusLabel);
-            y += FormFontPolicy.RowStep(this) - 6; // 状态行小字
+            y += 40;
 
-            // 按钮
-            var saveButton = new Button
+            // 按钮（主按钮最右）
+            var saveButton = new AntdUI.Button
             {
                 Text = "保存",
-                Size = DpiScale.S(this, 90, 32),
-                Location = new Point(boxX + boxW - 190, y),
-                FlatStyle = FlatStyle.Flat,
-                Font = Services.FormFontPolicy.UiFont(+0.5f),
-                BackColor = Color.FromArgb(0, 122, 204),
-                ForeColor = Color.White
+                Type = AntdUI.TTypeMini.Primary,
+                Size = new Size(90, 38),
+                Location = new Point(boxX + boxW - 190, y)
             };
             saveButton.Click += OnSaveClick;
+            Controls.Add(saveButton);
 
-            var cancelButton = new Button
+            var cancelButton = new AntdUI.Button
             {
                 Text = "取消",
-                Size = DpiScale.S(this, 90, 32),
-                Location = new Point(boxX + boxW - 90, y),
-                FlatStyle = FlatStyle.Flat,
-                Font = Services.FormFontPolicy.UiFont(+0.5f),
-                BackColor = Color.FromArgb(60, 60, 60),
-                ForeColor = Color.White,
-                DialogResult = DialogResult.Cancel
+                Size = new Size(90, 38),
+                Location = new Point(boxX + boxW - 90, y)
             };
-
-            Controls.AddRange(new Control[]
-            {
-                titleLabel, subtitleLabel,
-                saveButton, cancelButton
-            });
+            cancelButton.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
+            Controls.Add(cancelButton);
 
             AcceptButton = saveButton;
             CancelButton = cancelButton;
+        }
+
+        private static AntdUI.Label MakeLabel(string text, int x, int y)
+        {
+            return new AntdUI.Label { Text = text, AutoSize = true, Location = new Point(x, y + 10) };
+        }
+
+        private AntdUI.Input AddField(string labelText, int labelX, int boxX, int y, int boxW, bool password)
+        {
+            Controls.Add(MakeLabel(labelText, labelX, y));
+            var box = new AntdUI.Input
+            {
+                Location = new Point(boxX, y),
+                Size = new Size(boxW, 38)
+            };
+            Controls.Add(box);
+            return box;
         }
 
         private void LoadCurrentConfig()
@@ -315,33 +266,6 @@ namespace Gdterm.UI.Forms
                 _statusLabel.Text = $"保存失败：{ex.Message}";
                 _statusLabel.ForeColor = Color.FromArgb(255, 100, 100);
             }
-        }
-
-        private TextBox AddField(string labelText, ref int y, int labelW, int boxX, int boxW)
-        {
-            var label = new Label
-            {
-                Text = labelText,
-                Font = Services.FormFontPolicy.UiFont(),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                Location = new Point(DpiScale.V(this, 20), y),
-                AutoSize = true
-            };
-
-            var textBox = new TextBox
-            {
-                Location = new Point(boxX, y),
-                Width = boxW,
-                Font = Services.FormFontPolicy.UiFont(),
-                BackColor = Color.FromArgb(50, 50, 50),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                BorderStyle = BorderStyle.FixedSingle
-            };
-
-            Controls.Add(label);
-            Controls.Add(textBox);
-            y += FormFontPolicy.RowStep(this);
-            return textBox;
         }
     }
 }

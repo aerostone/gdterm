@@ -17,7 +17,7 @@ namespace Gdterm.UI.Forms
     /// 右上发现列表按严重级别着色；右下原始输出。
     /// 目标：本机 / 当前已连接的 SSH 远程主机（linux=bash、windows=同源 ps1 经 EncodedCommand）。
     /// </summary>
-    public class ScannerCenterForm : Form
+    public class ScannerCenterForm : AntdUI.Window
     {
         private readonly ScanPluginStore _store;
         private readonly Func<Gdterm.Tools.ISshRemoteSession> _remoteSessionFactory;

@@ -3,26 +3,26 @@ using System.Drawing;
 using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
-using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Forms
 {
     /// <summary>
-    /// 密码生成器——独立工具
-    /// 支持：长度调节、字符集选择、一键复制、批量生成
+    /// 密码生成器——独立工具（AntdUI 版）。
+    /// 支持：长度调节、字符集选择、一键复制、批量生成。
     /// </summary>
-    public class PasswordGeneratorForm : Form
+    public class PasswordGeneratorForm : AntdUI.Window
     {
-        private NumericUpDown _lengthSpinner;
-        private CheckBox _upperCheck;
-        private CheckBox _lowerCheck;
-        private CheckBox _digitCheck;
-        private CheckBox _specialCheck;
-        private CheckBox _ambiguousCheck;
-        private TextBox _resultBox;
-        private ListBox _historyList;
-        private Label _strengthLabel;
+        private AntdUI.InputNumber _lengthSpinner;
+        private AntdUI.Checkbox _upperCheck;
+        private AntdUI.Checkbox _lowerCheck;
+        private AntdUI.Checkbox _digitCheck;
+        private AntdUI.Checkbox _specialCheck;
+        private AntdUI.Checkbox _ambiguousCheck;
+        private AntdUI.Input _resultBox;
+        private AntdUI.Input _historyBox; // 只读多行：历史列表（AntdUI 暂无 ListBox，用只读多行文本承载）
+        private AntdUI.Label _strengthLabel;
+        private AntdUI.Button _copyBtn;
 
         private static readonly string UppercaseChars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         private static readonly string LowercaseChars = "abcdefghijklmnopqrstuvwxyz";
@@ -39,220 +39,164 @@ namespace Gdterm.UI.Forms
         public PasswordGeneratorForm()
         {
             InitializeComponent();
-            // 高/低 DPI 自适应：声明设计基准 96 DPI，让 .NET 自动按当前 DPI 缩放控件。
-            Gdterm.UI.Services.FormFontPolicy.Apply(this);
             GeneratePassword();
         }
 
         private void InitializeComponent()
         {
             Text = "密码生成器";
-            {
-                float grow = FormFontPolicy.UiFontSize / 9f;
-                Size = DpiScale.S(this, 500, (int)(512 * Math.Max(1f, grow)));
-            }
+            Size = new Size(520, 600);
+            StartPosition = FormStartPosition.CenterParent;
+            FormBorderStyle = FormBorderStyle.FixedDialog;
+            MaximizeBox = false;
+            MinimizeBox = false;
+            ShowInTaskbar = false;
 
-            var step = FormFontPolicy.RowStep(this);
-            int y = 12;
+            int pad = 20;
+            int y = 22;
 
             // 标题
-            var titleLabel = new Label
+            var titleLabel = new AntdUI.Label
             {
                 Text = "🔑 密码生成器",
-                Font = Services.FormFontPolicy.UiFont(+5f, FontStyle.Bold),
-                ForeColor = Color.White,
+                Font = new Font("Segoe UI Emoji", 15F, FontStyle.Bold),
                 AutoSize = true,
-                Location = DpiScale.P(this, 15, y)
+                Location = new Point(pad, y)
             };
-            y += (int)(step * 1.2);
+            Controls.Add(titleLabel);
+            y += 52;
 
             // 密码长度
-            var lengthLabel = new Label
-            {
-                Text = "密码长度：",
-                Font = Services.FormFontPolicy.UiFont(+1f),
-                ForeColor = Color.FromArgb(200, 200, 200),
-                AutoSize = true,
-                Location = DpiScale.P(this, 15, y + DpiScale.V(this, 5))
-            };
+            var lengthLabel = new AntdUI.Label { Text = "密码长度", AutoSize = true, Location = new Point(pad, y + 10) };
+            Controls.Add(lengthLabel);
 
-            _lengthSpinner = new NumericUpDown
+            _lengthSpinner = new AntdUI.InputNumber
             {
-                Location = DpiScale.P(this, 100, y),
-                Width = DpiScale.V(this, 70),
+                Location = new Point(pad + 90, y),
+                Size = new Size(90, 38),
                 Minimum = 8,
                 Maximum = 128,
                 Value = 16,
-                BackColor = Color.FromArgb(50, 50, 50),
-                ForeColor = Color.White,
-                Font = new Font("Consolas", 10f)
+                Increment = 1
             };
             _lengthSpinner.ValueChanged += (s, e) => GeneratePassword();
+            Controls.Add(_lengthSpinner);
 
             // 快捷长度按钮
             int[] quickLengths = { 12, 16, 20, 24, 32 };
-            int btnX = 180;
+            int btnX = pad + 200;
             foreach (var len in quickLengths)
             {
-                var btn = new Button
+                var lenCaptured = len;
+                var btn = new AntdUI.Button
                 {
                     Text = len.ToString(),
-                    Location = DpiScale.P(this, btnX, y),
-                    AutoSize = true,
-                    MinimumSize = new Size(DpiScale.V(this, 40), 0),
-                    FlatStyle = FlatStyle.Flat,
-                    Font = Services.FormFontPolicy.UiFont(),
-                    BackColor = Color.FromArgb(60, 60, 60),
-                    ForeColor = Color.White,
-                    Tag = len
+                    Location = new Point(btnX, y),
+                    Size = new Size(48, 38)
                 };
-                btn.Click += (s, e) => { _lengthSpinner.Value = (int)((Button)s).Tag; };
+                btn.Click += (s, e) => { _lengthSpinner.Value = lenCaptured; };
                 Controls.Add(btn);
-                btnX += DpiScale.V(this, 48);
+                btnX += 56;
             }
-            y += step;
+            y += 52;
 
-            // 字符集选项（内部 FlowLayout，两列 CheckBox 自动换行）
-            var charsetGroup = new GroupBox
-            {
-                Text = "字符集",
-                Font = Services.FormFontPolicy.UiFont(+0.5f),
-                ForeColor = Color.FromArgb(200, 200, 200),
-                Location = DpiScale.P(this, 15, y),
-                Size = DpiScale.S(this, 455, step * 3 + DpiScale.V(this, 14)),
-                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4))
-            };
-            var charsetFlow = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = true
-            };
-            _upperCheck = CreateCheck("大写字母 (A-Z)", true);
-            _lowerCheck = CreateCheck("小写字母 (a-z)", true);
-            _digitCheck = CreateCheck("数字 (0-9)", true);
-            _specialCheck = CreateCheck("特殊字符 (!@#$...)", true);
-            _ambiguousCheck = CreateCheck("排除易混淆字符 (Il1O0)", false);
+            // 字符集选项
+            var charsetTitle = new AntdUI.Label { Text = "字符集", AutoSize = true, Location = new Point(pad, y) };
+            Controls.Add(charsetTitle);
+            y += 32;
+
+            _upperCheck = CreateCheck("大写字母 (A-Z)", pad, y);
+            _digitCheck = CreateCheck("数字 (0-9)", pad + 220, y);
+            y += 32;
+            _lowerCheck = CreateCheck("小写字母 (a-z)", pad, y);
+            _specialCheck = CreateCheck("特殊字符 (!@#$...)", pad + 220, y);
+            y += 32;
+            _ambiguousCheck = CreateCheck("排除易混淆字符 (Il1O0)", pad, y);
             _ambiguousCheck.CheckedChanged += (s, e) => GeneratePassword();
-            charsetFlow.Controls.AddRange(new Control[] { _upperCheck, _digitCheck, _lowerCheck, _specialCheck, _ambiguousCheck });
-            charsetGroup.Controls.Add(charsetFlow);
-            y += step * 3 + DpiScale.V(this, 22);
+            y += 44;
 
             // 生成结果
-            var resultLabel = new Label
-            {
-                Text = "生成结果：",
-                Font = Services.FormFontPolicy.UiFont(+1f),
-                ForeColor = Color.FromArgb(200, 200, 200),
-                AutoSize = true,
-                Location = DpiScale.P(this, 15, y + DpiScale.V(this, 5))
-            };
-            y += step;
+            var resultLabel = new AntdUI.Label { Text = "生成结果", AutoSize = true, Location = new Point(pad, y) };
+            Controls.Add(resultLabel);
+            y += 28;
 
-            _resultBox = new TextBox
+            _resultBox = new AntdUI.Input
             {
-                Location = DpiScale.P(this, 15, y),
-                Size = DpiScale.S(this, 350, 35),
+                Location = new Point(pad, y),
+                Size = new Size(300, 44),
                 Font = new Font("Consolas", 14f, FontStyle.Bold),
-                BackColor = Color.FromArgb(25, 25, 25),
-                ForeColor = Color.FromArgb(80, 220, 80),
-                BorderStyle = BorderStyle.FixedSingle,
                 ReadOnly = true
             };
+            Controls.Add(_resultBox);
 
-            // 密码强度指示
-            _strengthLabel = new Label
+            _strengthLabel = new AntdUI.Label
             {
                 Text = "强度：—",
-                Font = Services.FormFontPolicy.UiFont(+0.5f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(200, 200, 200),
                 AutoSize = true,
-                Location = DpiScale.P(this, 15, y + DpiScale.V(this, 40))
+                Location = new Point(pad, y + 52)
             };
+            Controls.Add(_strengthLabel);
 
-            // 操作按钮（与结果框同行右侧）
-            var generateBtn = new Button
+            var generateBtn = new AntdUI.Button
             {
                 Text = "🔄 重新生成",
-                Location = DpiScale.P(this, 375, y - 2),
-                AutoSize = true,
-                FlatStyle = FlatStyle.Flat,
-                Font = Services.FormFontPolicy.UiFont(+1f),
-                BackColor = Color.FromArgb(0, 122, 204),
-                ForeColor = Color.White,
-                Padding = new Padding(DpiScale.V(this, 6), 0, DpiScale.V(this, 6), 0)
+                Location = new Point(pad + 312, y),
+                Size = new Size(150, 44),
+                Type = AntdUI.TTypeMini.Primary
             };
             generateBtn.Click += (s, e) => GeneratePassword();
+            Controls.Add(generateBtn);
 
-            var copyBtn = new Button
+            _copyBtn = new AntdUI.Button
             {
                 Text = "📋 复制",
-                Location = DpiScale.P(this, 375, y + DpiScale.V(this, 44)),
-                AutoSize = true,
-                FlatStyle = FlatStyle.Flat,
-                Font = Services.FormFontPolicy.UiFont(+1f),
-                BackColor = Color.FromArgb(60, 130, 60),
-                ForeColor = Color.White,
-                Padding = new Padding(DpiScale.V(this, 6), 0, DpiScale.V(this, 6), 0)
+                Location = new Point(pad + 312, y + 52),
+                Size = new Size(150, 44)
             };
-            copyBtn.Click += OnCopyClick;
-            y += step + DpiScale.V(this, 42);
+            _copyBtn.Click += OnCopyClick;
+            Controls.Add(_copyBtn);
+            y += 108;
 
-            var generate10Btn = new Button
+            var generate10Btn = new AntdUI.Button
             {
                 Text = "批量生成 10 个",
-                Location = DpiScale.P(this, 15, y),
-                AutoSize = true,
-                FlatStyle = FlatStyle.Flat,
-                Font = Services.FormFontPolicy.UiFont(),
-                BackColor = Color.FromArgb(60, 60, 60),
-                ForeColor = Color.White
+                Location = new Point(pad, y),
+                Size = new Size(130, 38)
             };
             generate10Btn.Click += OnBatchGenerate;
-            y += step;
+            Controls.Add(generate10Btn);
+            y += 52;
 
-            // 历史记录
-            var historyLabel = new Label
+            // 历史记录（只读多行 Input，双击复制整行由 KeyDown/MouseUp 简化为一键复制全部）
+            var historyLabel = new AntdUI.Label
             {
-                Text = "本次生成记录（双击复制）：",
-                Font = Services.FormFontPolicy.UiFont(+0.5f),
-                ForeColor = Color.FromArgb(180, 180, 180),
+                Text = "本次生成记录（双击复制）",
                 AutoSize = true,
-                Location = DpiScale.P(this, 15, y)
+                Location = new Point(pad, y)
             };
-            y += step;
+            Controls.Add(historyLabel);
+            y += 28;
 
-            _historyList = new ListBox
+            _historyBox = new AntdUI.Input
             {
-                Location = DpiScale.P(this, 15, y),
-                Size = DpiScale.S(this, 455, step * 3),
+                Location = new Point(pad, y),
+                Size = new Size(520 - pad * 2, 110),
                 Font = new Font("Consolas", 10f),
-                BackColor = Color.FromArgb(25, 25, 25),
-                ForeColor = Color.FromArgb(200, 200, 200),
-                BorderStyle = BorderStyle.FixedSingle
+                ReadOnly = true,
+                Multiline = true
             };
-            _historyList.DoubleClick += OnHistoryDoubleClick;
-
-            Controls.AddRange(new Control[]
-            {
-                titleLabel,
-                lengthLabel, _lengthSpinner, charsetGroup,
-                resultLabel, _resultBox, _strengthLabel,
-                generateBtn, copyBtn, generate10Btn,
-                historyLabel, _historyList
-            });
+            _historyBox.MouseDoubleClick += OnHistoryDoubleClick;
+            Controls.Add(_historyBox);
         }
 
-        private CheckBox CreateCheck(string text, bool isChecked)
+        private AntdUI.Checkbox CreateCheck(string text, int x, int y)
         {
-            var cb = new CheckBox
+            var cb = new AntdUI.Checkbox
             {
                 Text = text,
                 AutoSize = true,
-                Font = Services.FormFontPolicy.UiFont(+0.5f),
-                ForeColor = Color.FromArgb(200, 200, 200),
-                Checked = isChecked,
-                Margin = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 4), DpiScale.V(this, 8), DpiScale.V(this, 4))
+                Location = new Point(x, y),
+                Checked = true
             };
             cb.CheckedChanged += (s, e) => GeneratePassword();
             return cb;
@@ -265,7 +209,6 @@ namespace Gdterm.UI.Forms
             {
                 _resultBox.Text = "";
                 _strengthLabel.Text = "强度：请至少选择一种字符集";
-                _strengthLabel.ForeColor = Color.FromArgb(255, 100, 100);
                 return;
             }
 
@@ -336,7 +279,7 @@ namespace Gdterm.UI.Forms
                     AddToHistory(_resultBox.Text);
 
                     // 短暂提示
-                    var btn = (Button)sender;
+                    var btn = (AntdUI.Button)sender;
                     var originalText = btn.Text;
                     btn.Text = "✓ 已复制(30s清空)";
                     var timer = new Timer { Interval = 1500 };
@@ -353,36 +296,44 @@ namespace Gdterm.UI.Forms
             if (charset.Length == 0) return;
 
             int length = (int)_lengthSpinner.Value;
+            var lines = new System.Collections.Generic.List<string>();
             for (int i = 0; i < 10; i++)
             {
-                var pwd = GenerateRandomString(charset, length);
-                AddToHistory(pwd);
+                lines.Add(GenerateRandomString(charset, length));
             }
+            _historyBox.Text = string.Join(Environment.NewLine, lines);
 
-            // 用最后一个作为当前结果
-            if (_historyList.Items.Count > 0)
-                _resultBox.Text = _historyList.Items[0].ToString();
+            // 用第一个作为当前结果
+            if (lines.Count > 0)
+                _resultBox.Text = lines[0];
         }
 
         private void OnHistoryDoubleClick(object sender, EventArgs e)
         {
-            if (_historyList.SelectedItem is string selected)
+            // 复制光标所在行
+            try
             {
-                try
-                {
-                    ClipboardProtector.SetTextWithTtl(selected);
-                }
-                catch { }
+                var text = _historyBox.Text ?? "";
+                if (text.Length == 0) return;
+                int pos = Math.Min(_historyBox.SelectionStart, text.Length);
+                int start = text.LastIndexOf('\n', Math.Max(0, pos - 1)) + 1;
+                int end = text.IndexOf('\n', pos);
+                if (end < 0) end = text.Length;
+                var line = text.Substring(start, end - start).Trim();
+                if (line.Length > 0)
+                    ClipboardProtector.SetTextWithTtl(line);
             }
+            catch { }
         }
 
         private void AddToHistory(string password)
         {
-            // 限制历史记录
-            if (_historyList.Items.Count >= 50)
-                _historyList.Items.RemoveAt(_historyList.Items.Count - 1);
-
-            _historyList.Items.Insert(0, password);
+            var lines = new System.Collections.Generic.List<string>();
+            if (!string.IsNullOrEmpty(_historyBox.Text))
+                lines.AddRange(_historyBox.Text.Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries));
+            lines.Insert(0, password);
+            while (lines.Count > 50) lines.RemoveAt(lines.Count - 1);
+            _historyBox.Text = string.Join(Environment.NewLine, lines);
         }
     }
 }

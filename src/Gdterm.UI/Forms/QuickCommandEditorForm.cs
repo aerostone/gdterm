@@ -1,206 +1,161 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
-using Gdterm.UI.Diagnostics;
 using Gdterm.Core.Models;
-using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Forms
 {
     /// <summary>
-    /// 快捷命令编辑对话框——添加/编辑 QuickCommand
+    /// 快捷命令编辑对话框（AntdUI 版）——添加/编辑 QuickCommand。
     /// </summary>
-    public class QuickCommandEditorForm : Form
+    public class QuickCommandEditorForm : AntdUI.Window
     {
-        private TextBox _txtName;
-        private TextBox _txtCommand;
-        private ComboBox _cmbGroup;
-        private TextBox _txtDescription;
-        private CheckBox _chkRequiresRoot;
-        private TextBox _txtPreCommand;
-        private TextBox _txtPostCommand;
-        private TextBox _txtShortcut;
-        private NumericUpDown _numSortOrder;
+        private AntdUI.Input _txtName;
+        private AntdUI.Input _txtCommand;
+        private AntdUI.Select _cmbGroup;
+        private AntdUI.Input _txtDescription;
+        private AntdUI.Checkbox _chkRequiresRoot;
+        private AntdUI.Input _txtPreCommand;
+        private AntdUI.Input _txtPostCommand;
+        private AntdUI.Input _txtShortcut;
+        private AntdUI.InputNumber _numSortOrder;
 
         public QuickCommand Result { get; private set; }
 
         public QuickCommandEditorForm(QuickCommand existing = null, string defaultGroup = null)
         {
-            // 高/低 DPI 自适应
             BuildUI(existing, defaultGroup);
             if (existing != null) FillFrom(existing);
-            Gdterm.UI.Services.FormFontPolicy.Apply(this);
         }
 
         private void BuildUI(QuickCommand existing, string defaultGroup)
         {
             Text = existing == null ? "添加快捷命令" : "编辑快捷命令";
-            // 客户区高度随全局字号增长（行距已是字体驱动，防大字号把按钮推出底边）
-            {
-                float grow = FormFontPolicy.UiFontSize / 9f;
-                Size = DpiScale.S(this, 500, (int)(480 * Math.Max(1f, grow)));
-            }
+            Size = new Size(520, 560);
             StartPosition = FormStartPosition.CenterParent;
-            BackColor = Color.FromArgb(30, 30, 30);
-            ForeColor = Color.FromArgb(204, 204, 204);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
+            ShowInTaskbar = false;
 
-            var font = Services.FormFontPolicy.UiFont();
-            var smallFont = new Font("Consolas", 8.5f);
-            int y = 15;
-            int lblX = 15, inputX = 110, inputW = 350;
+            int y = 20;
+            int lblX = 20, inputX = 115, inputW = 365;
+            int rowH = 46;
 
             // 名称
-            AddLabel("名称:", lblX, y, font);
-            _txtName = AddTextBox(inputX, y, inputW, font);
-            _txtName.Text = "";
-            y += FormFontPolicy.RowStep(this);
+            AddLabel("名称", lblX, y);
+            _txtName = AddInput(inputX, y, inputW, false);
+            y += rowH;
 
-            // 命令
-            AddLabel("命令:", lblX, y, font);
-            _txtCommand = AddTextBox(inputX, y, inputW, smallFont);
+            // 命令（多行）
+            AddLabel("命令", lblX, y);
+            _txtCommand = AddInput(inputX, y, inputW, false);
             _txtCommand.Multiline = true;
-            _txtCommand.ScrollBars = ScrollBars.Vertical;
-            var cmdH = FormFontPolicy.RowStep(this) * 2 - 8; // ~3 行文本（字体驱动）
-            _txtCommand.Height = cmdH;
-            y += cmdH + 8;
+            _txtCommand.Size = new Size(inputW, 76);
+            y += 84;
 
             // 占位符提示
-            var lblHint = new Label
+            var lblHint = new AntdUI.Label
             {
                 Text = "占位符: {host} {user} {date} {time} {datetime} {env:VAR_NAME}",
                 Location = new Point(inputX, y),
-                AutoSize = true,
-                Font = Services.FormFontPolicy.UiFont(-1.5f),
-                ForeColor = Color.FromArgb(100, 100, 100)
+                AutoSize = true
             };
             Controls.Add(lblHint);
-            y += FormFontPolicy.RowStep(this) - 8; // 小字提示行，比主行距略窄
+            y += 32;
 
             // 分组
-            AddLabel("分组:", lblX, y, font);
-            _cmbGroup = new ComboBox
+            AddLabel("分组", lblX, y);
+            _cmbGroup = new AntdUI.Select
             {
-                Location = DpiScale.P(this, inputX, y - 3),
-                Size = DpiScale.S(this, 200, 25),
-                Font = font,
-                BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                FlatStyle = FlatStyle.Flat,
-                DropDownStyle = ComboBoxStyle.DropDown
+                Location = new Point(inputX, y),
+                Size = new Size(200, 38)
             };
-            // 内置分组
-            _cmbGroup.Items.AddRange(new object[] { "网络", "磁盘", "进程", "系统", "安全", "Docker", "自定义" });
-            if (!string.IsNullOrEmpty(defaultGroup)) _cmbGroup.Text = defaultGroup;
-            else _cmbGroup.Text = "自定义";
+            foreach (var g in new[] { "网络", "磁盘", "进程", "系统", "安全", "Docker", "自定义" })
+                _cmbGroup.Items.Add(g);
+            _cmbGroup.Text = !string.IsNullOrEmpty(defaultGroup) ? defaultGroup : "自定义";
             Controls.Add(_cmbGroup);
-            y += FormFontPolicy.RowStep(this);
+            y += rowH;
 
             // 执行前命令
-            AddLabel("前置命令:", lblX, y, font);
-            _txtPreCommand = AddTextBox(inputX, y, inputW, smallFont);
-            WinFormsCompat.SetCueBanner(_txtPreCommand, "如: sudo -i");
-            y += FormFontPolicy.RowStep(this);
+            AddLabel("前置命令", lblX, y);
+            _txtPreCommand = AddInput(inputX, y, inputW, false);
+            _txtPreCommand.PlaceholderText = "如: sudo -i";
+            y += rowH;
 
             // 执行后命令
-            AddLabel("后置命令:", lblX, y, font);
-            _txtPostCommand = AddTextBox(inputX, y, inputW, smallFont);
-            WinFormsCompat.SetCueBanner(_txtPostCommand, "如: cleanup (可选)");
-            y += FormFontPolicy.RowStep(this);
+            AddLabel("后置命令", lblX, y);
+            _txtPostCommand = AddInput(inputX, y, inputW, false);
+            _txtPostCommand.PlaceholderText = "如: cleanup (可选)";
+            y += rowH;
 
             // 需要 root + 排序
-            _chkRequiresRoot = new CheckBox
+            _chkRequiresRoot = new AntdUI.Checkbox
             {
                 Text = "需要 root 权限",
-                Location = new Point(inputX, y),
-                AutoSize = true,
-                Font = font,
-                ForeColor = Color.FromArgb(204, 204, 204)
+                Location = new Point(inputX, y + 8),
+                AutoSize = true
             };
             Controls.Add(_chkRequiresRoot);
 
-            AddLabel("排序:", DpiScale.V(this, 300), y, font);
-            _numSortOrder = new NumericUpDown
+            AddLabel("排序", 300, y);
+            _numSortOrder = new AntdUI.InputNumber
             {
-                Location = DpiScale.P(this, 345, y - 3),
-                Size = DpiScale.S(this, 60, 25),
-                Font = font,
-                BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                Maximum = 999
+                Location = new Point(345, y),
+                Size = new Size(80, 38),
+                Maximum = 999,
+                Value = 0,
+                Increment = 1
             };
             Controls.Add(_numSortOrder);
-            y += FormFontPolicy.RowStep(this);
+            y += rowH;
 
             // 快捷键
-            AddLabel("快捷键:", lblX, y, font);
-            _txtShortcut = AddTextBox(inputX, y, 150, font);
-            WinFormsCompat.SetCueBanner(_txtShortcut, "如: Ctrl+Shift+1");
-            y += FormFontPolicy.RowStep(this);
+            AddLabel("快捷键", lblX, y);
+            _txtShortcut = AddInput(inputX, y, 160, false);
+            _txtShortcut.PlaceholderText = "如: Ctrl+Shift+1";
+            y += rowH;
 
             // 描述
-            AddLabel("描述:", lblX, y, font);
-            _txtDescription = AddTextBox(inputX, y, inputW, font);
-            y += FormFontPolicy.RowStep(this);
+            AddLabel("描述", lblX, y);
+            _txtDescription = AddInput(inputX, y, inputW, false);
+            y += rowH + 4;
 
-            // 按钮
-            var btnOk = new Button
+            // 按钮（主按钮最右）
+            var btnOk = new AntdUI.Button
             {
                 Text = "确定",
-                Size = DpiScale.S(this, 80, 30),
-                Location = DpiScale.P(this, 290, y),
-                DialogResult = DialogResult.OK,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(0, 122, 204),
-                ForeColor = Color.White,
-                Font = font
+                Type = AntdUI.TTypeMini.Primary,
+                Size = new Size(84, 38),
+                Location = new Point(520 - 20 - 84 - 8 - 84, y)
             };
-            btnOk.FlatAppearance.BorderSize = 0;
+            btnOk.Click += (s, e) => TryCloseOk();
+            Controls.Add(btnOk);
 
-            var btnCancel = new Button
+            var btnCancel = new AntdUI.Button
             {
                 Text = "取消",
-                Size = DpiScale.S(this, 80, 30),
-                Location = DpiScale.P(this, 380, y),
-                DialogResult = DialogResult.Cancel,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(60, 60, 60),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                Font = font
+                Size = new Size(84, 38),
+                Location = new Point(520 - 20 - 84, y)
             };
-            btnCancel.FlatAppearance.BorderSize = 0;
+            btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
+            Controls.Add(btnCancel);
 
-            Controls.AddRange(new Control[] { btnOk, btnCancel });
             AcceptButton = btnOk;
             CancelButton = btnCancel;
         }
 
-        private Label AddLabel(string text, int x, int y, Font font)
+        private void AddLabel(string text, int x, int y)
         {
-            var lbl = new Label
-            {
-                Text = text,
-                Location = new Point(x, y),
-                AutoSize = true,
-                Font = font,
-                ForeColor = Color.FromArgb(204, 204, 204)
-            };
-            Controls.Add(lbl);
-            return lbl;
+            Controls.Add(new AntdUI.Label { Text = text, AutoSize = true, Location = new Point(x, y + 10) });
         }
 
-        private TextBox AddTextBox(int x, int y, int w, Font font)
+        private AntdUI.Input AddInput(int x, int y, int w, bool password)
         {
-            var txt = new TextBox
+            var txt = new AntdUI.Input
             {
-                Location = DpiScale.P(this, x, y - 3),
-                Width = DpiScale.V(this, w),
-                Font = font,
-                BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.FromArgb(204, 204, 204),
-                BorderStyle = BorderStyle.FixedSingle
+                Location = new Point(x, y),
+                Size = new Size(w, 38)
             };
             Controls.Add(txt);
             return txt;
@@ -219,32 +174,29 @@ namespace Gdterm.UI.Forms
             _numSortOrder.Value = cmd.SortOrder;
         }
 
-        protected override void OnFormClosing(FormClosingEventArgs e)
+        private void TryCloseOk()
         {
-            if (DialogResult == DialogResult.OK)
+            if (string.IsNullOrWhiteSpace(_txtName.Text) || string.IsNullOrWhiteSpace(_txtCommand.Text))
             {
-                if (string.IsNullOrWhiteSpace(_txtName.Text) || string.IsNullOrWhiteSpace(_txtCommand.Text))
-                {
-                    MessageBox.Show("请填写名称和命令", "gdterm", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    e.Cancel = true;
-                    return;
-                }
-
-                Result = new QuickCommand
-                {
-                    Id = Guid.NewGuid().ToString("N").Substring(0, 8),
-                    Name = _txtName.Text.Trim(),
-                    Command = _txtCommand.Text.Trim(),
-                    Group = string.IsNullOrWhiteSpace(_cmbGroup.Text) ? "自定义" : _cmbGroup.Text.Trim(),
-                    Description = _txtDescription.Text.Trim(),
-                    RequiresRoot = _chkRequiresRoot.Checked,
-                    PreCommand = string.IsNullOrWhiteSpace(_txtPreCommand.Text) ? null : _txtPreCommand.Text.Trim(),
-                    PostCommand = string.IsNullOrWhiteSpace(_txtPostCommand.Text) ? null : _txtPostCommand.Text.Trim(),
-                    Shortcut = string.IsNullOrWhiteSpace(_txtShortcut.Text) ? null : _txtShortcut.Text.Trim(),
-                    SortOrder = (int)_numSortOrder.Value
-                };
+                AntdUI.Message.warn(this, "请填写名称和命令");
+                return;
             }
-            base.OnFormClosing(e);
+
+            Result = new QuickCommand
+            {
+                Id = Guid.NewGuid().ToString("N").Substring(0, 8),
+                Name = _txtName.Text.Trim(),
+                Command = _txtCommand.Text.Trim(),
+                Group = string.IsNullOrWhiteSpace(_cmbGroup.Text) ? "自定义" : _cmbGroup.Text.Trim(),
+                Description = _txtDescription.Text.Trim(),
+                RequiresRoot = _chkRequiresRoot.Checked,
+                PreCommand = string.IsNullOrWhiteSpace(_txtPreCommand.Text) ? null : _txtPreCommand.Text.Trim(),
+                PostCommand = string.IsNullOrWhiteSpace(_txtPostCommand.Text) ? null : _txtPostCommand.Text.Trim(),
+                Shortcut = string.IsNullOrWhiteSpace(_txtShortcut.Text) ? null : _txtShortcut.Text.Trim(),
+                SortOrder = (int)_numSortOrder.Value
+            };
+            DialogResult = DialogResult.OK;
+            Close();
         }
 
         protected override void Dispose(bool disposing)

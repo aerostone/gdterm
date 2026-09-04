@@ -6,23 +6,22 @@ using System.Windows.Forms;
 using Gdterm.KeePass;
 using Gdterm.KeePass.Models;
 using Gdterm.UI.Diagnostics;
-using Gdterm.UI.Controls;
 using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Forms
 {
     /// <summary>
-    /// SSH 私钥导入并写入 KeePass 附件。
+    /// SSH 私钥导入并写入 KeePass 附件（AntdUI 版）。
     /// </summary>
-    public sealed class SshKeyManagerForm : Form
+    public sealed class SshKeyManagerForm : AntdUI.Window
     {
         private readonly IKeePassService _keepass;
-        private readonly TextBox _title;
-        private readonly TextBox _user;
-        private readonly TextBox _host;
-        private readonly TextBox _passphrase;
-        private readonly TextBox _keyPath;
-        private readonly TextBox _preview;
+        private readonly AntdUI.Input _title;
+        private readonly AntdUI.Input _user;
+        private readonly AntdUI.Input _host;
+        private readonly AntdUI.Input _passphrase;
+        private readonly AntdUI.Input _keyPath;
+        private readonly AntdUI.Input _preview;
 
         public SshKeyManagerForm(IKeePassService keepass)
         {
@@ -32,26 +31,29 @@ namespace Gdterm.UI.Forms
             StartPosition = FormStartPosition.CenterParent;
             MaximizeBox = false;
             MinimizeBox = false;
-            // 客户区高度随全局字号增长（行距已是字体驱动）
-            {
-                float grow = FormFontPolicy.UiFontSize / 9f;
-                ClientSize = DpiScale.S(this, 560, (int)(420 * Math.Max(1f, grow)));
-            }
-            BackColor = GdtermColorTable.Background;
-            ForeColor = GdtermColorTable.Foreground;
-            Font = Services.FormFontPolicy.UiFont();
+            ShowInTaskbar = false;
+            Size = new Size(600, 520);
 
-            int y = 16;
+            int y = 20;
             _title = Labeled(ref y, "条目标题", "SSH Key");
             _user = Labeled(ref y, "用户名", "root");
             _host = Labeled(ref y, "主机名", "");
             _passphrase = Labeled(ref y, "密钥口令", "");
             _passphrase.UseSystemPasswordChar = true;
 
-            var pathLbl = new Label { Text = "私钥文件", Location = DpiScale.P(this, 16, y), AutoSize = true, ForeColor = GdtermColorTable.Muted, TextAlign = ContentAlignment.MiddleRight };
-            _keyPath = new TextBox { Location = DpiScale.P(this, 116, y), Width = DpiScale.V(this, 320), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, BorderStyle = BorderStyle.FixedSingle };
-            var browse = new Button { Text = "浏览…", Location = DpiScale.P(this, 444, y), AutoSize = true, MinimumSize = new Size(DpiScale.V(this, 80), 0), FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
-            browse.FlatAppearance.BorderColor = GdtermColorTable.Border;
+            Controls.Add(MakeLabel("私钥文件", 20, y));
+            _keyPath = new AntdUI.Input
+            {
+                Location = new Point(120, y),
+                Size = new Size(330, 38)
+            };
+            Controls.Add(_keyPath);
+            var browse = new AntdUI.Button
+            {
+                Text = "浏览…",
+                Location = new Point(460, y),
+                Size = new Size(90, 38)
+            };
             browse.Click += (s, e) =>
             {
                 using (var dlg = new OpenFileDialog { Title = "选择 PEM 私钥", Filter = "密钥文件|*.pem;*.key;id_rsa;id_ed25519;*.*|所有|*.*" })
@@ -68,44 +70,56 @@ namespace Gdterm.UI.Forms
                     }
                 }
             };
-            Controls.Add(pathLbl); Controls.Add(_keyPath); Controls.Add(browse);
-            y += FormFontPolicy.RowStep(this);
+            Controls.Add(browse);
+            y += 50;
 
-            var prevLbl = new Label { Text = "预览", Location = DpiScale.P(this, 16, y), AutoSize = true, ForeColor = GdtermColorTable.Muted, TextAlign = ContentAlignment.MiddleRight };
-            _preview = new TextBox
+            Controls.Add(MakeLabel("预览", 20, y));
+            _preview = new AntdUI.Input
             {
-                Location = DpiScale.P(this, 116, y),
-                Size = DpiScale.S(this, 408, 180),
+                Location = new Point(120, y),
+                Size = new Size(430, 190),
                 Multiline = true,
-                ScrollBars = ScrollBars.Vertical,
                 ReadOnly = true,
-                Font = new Font("Consolas", 8.5f),
-                BackColor = GdtermColorTable.Surface,
-                ForeColor = GdtermColorTable.Muted,
-                BorderStyle = BorderStyle.FixedSingle
+                Font = new Font("Consolas", 8.5f)
             };
-            Controls.Add(prevLbl); Controls.Add(_preview);
+            Controls.Add(_preview);
 
-            var ok = new Button { Text = "导入到密码库", Location = DpiScale.P(this, 300, 380), Size = DpiScale.S(this, 120, 28), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0,120,50), ForeColor = Color.White };
-            ok.FlatAppearance.BorderSize = 0;
+            var ok = new AntdUI.Button
+            {
+                Text = "导入到密码库",
+                Type = AntdUI.TTypeMini.Primary,
+                Location = new Point(300, 440),
+                Size = new Size(130, 38)
+            };
             ok.Click += OnImport;
-            var cancel = new Button { Text = "关闭", DialogResult = DialogResult.Cancel, Location = DpiScale.P(this, 430, 380), Size = DpiScale.S(this, 90, 28), FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
-            cancel.FlatAppearance.BorderColor = GdtermColorTable.Border;
-            Controls.Add(ok); Controls.Add(cancel);
+            Controls.Add(ok);
+
+            var cancel = new AntdUI.Button
+            {
+                Text = "关闭",
+                Location = new Point(442, 440),
+                Size = new Size(88, 38)
+            };
+            cancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
+            Controls.Add(cancel);
             CancelButton = cancel;
-            Gdterm.UI.Services.FormFontPolicy.Apply(this); 
+        }
+
+        private static AntdUI.Label MakeLabel(string text, int x, int y)
+        {
+            return new AntdUI.Label { Text = text, AutoSize = true, Location = new Point(x, y + 10) };
         }
 
         private void OnImport(object sender, EventArgs e)
         {
             if (_keepass == null || !_keepass.IsUnlocked)
             {
-                MessageBox.Show(this, "请先解锁密码库。", "SSH 密钥", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                AntdUI.Message.warn(this, "请先解锁密码库。");
                 return;
             }
             if (string.IsNullOrWhiteSpace(_keyPath.Text) || !File.Exists(_keyPath.Text))
             {
-                MessageBox.Show(this, "请选择有效的私钥文件。", "SSH 密钥", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                AntdUI.Message.warn(this, "请选择有效的私钥文件。");
                 return;
             }
             try
@@ -132,16 +146,21 @@ namespace Gdterm.UI.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "导入失败: " + ex.Message, "SSH 密钥", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AntdUI.Message.error(this, "导入失败: " + ex.Message);
             }
         }
 
-        private TextBox Labeled(ref int y, string label, string value)
+        private AntdUI.Input Labeled(ref int y, string label, string value)
         {
-            var lb = new Label { Text = label, Location = DpiScale.P(this, 16, y), AutoSize = true, ForeColor = GdtermColorTable.Muted, TextAlign = ContentAlignment.MiddleRight };
-            var tb = new TextBox { Location = DpiScale.P(this, 116, y), Width = DpiScale.V(this, 408), Text = value ?? "", BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, BorderStyle = BorderStyle.FixedSingle };
-            Controls.Add(lb); Controls.Add(tb);
-            y += FormFontPolicy.RowStep(this);
+            Controls.Add(MakeLabel(label, 20, y));
+            var tb = new AntdUI.Input
+            {
+                Location = new Point(120, y),
+                Size = new Size(430, 38),
+                Text = value ?? ""
+            };
+            Controls.Add(tb);
+            y += 50;
             return tb;
         }
     }

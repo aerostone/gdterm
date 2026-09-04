@@ -13,7 +13,7 @@ namespace Gdterm.UI.Forms
     /// 显示：弱密码/重复密码/空密码/过期密码/健康评分
     /// 需要主密码二次验证才能打开
     /// </summary>
-    public class PasswordHealthForm : Form
+    public class PasswordHealthForm : AntdUI.Window
     {
         private readonly IKeePassService _keepassService;
         private Label _scoreLabel;

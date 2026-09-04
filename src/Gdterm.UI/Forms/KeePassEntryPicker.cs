@@ -12,7 +12,7 @@ namespace Gdterm.UI.Forms
     /// <summary>
     /// KeePass 凭据选择器——在连接设置中浏览/选择/新建凭据
     /// </summary>
-    public sealed class KeePassEntryPicker : Form
+    public sealed class KeePassEntryPicker : AntdUI.Window
     {
         private readonly IKeePassService _keepass;
         private TextBox _searchBox;
