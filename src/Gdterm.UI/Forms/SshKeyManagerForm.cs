@@ -32,7 +32,11 @@ namespace Gdterm.UI.Forms
             StartPosition = FormStartPosition.CenterParent;
             MaximizeBox = false;
             MinimizeBox = false;
-            ClientSize = DpiScale.S(this, 560, 420);
+            // 客户区高度随全局字号增长（行距已是字体驱动）
+            {
+                float grow = FormFontPolicy.UiFontSize / 9f;
+                ClientSize = DpiScale.S(this, 560, (int)(420 * Math.Max(1f, grow)));
+            }
             BackColor = GdtermColorTable.Background;
             ForeColor = GdtermColorTable.Foreground;
             Font = Services.FormFontPolicy.UiFont();
@@ -44,9 +48,9 @@ namespace Gdterm.UI.Forms
             _passphrase = Labeled(ref y, "密钥口令", "");
             _passphrase.UseSystemPasswordChar = true;
 
-            var pathLbl = new Label { Text = "私钥文件", Location = DpiScale.P(this, 16, y), Size = DpiScale.S(this, 90, 22), ForeColor = GdtermColorTable.Muted, TextAlign = ContentAlignment.MiddleRight };
-            _keyPath = new TextBox { Location = DpiScale.P(this, 116, y), Size = DpiScale.S(this, 320, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, BorderStyle = BorderStyle.FixedSingle };
-            var browse = new Button { Text = "浏览…", Location = DpiScale.P(this, 444, y), Size = DpiScale.S(this, 80, 24), FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+            var pathLbl = new Label { Text = "私钥文件", Location = DpiScale.P(this, 16, y), AutoSize = true, ForeColor = GdtermColorTable.Muted, TextAlign = ContentAlignment.MiddleRight };
+            _keyPath = new TextBox { Location = DpiScale.P(this, 116, y), Width = DpiScale.V(this, 320), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, BorderStyle = BorderStyle.FixedSingle };
+            var browse = new Button { Text = "浏览…", Location = DpiScale.P(this, 444, y), AutoSize = true, MinimumSize = new Size(DpiScale.V(this, 80), 0), FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
             browse.FlatAppearance.BorderColor = GdtermColorTable.Border;
             browse.Click += (s, e) =>
             {
@@ -65,9 +69,9 @@ namespace Gdterm.UI.Forms
                 }
             };
             Controls.Add(pathLbl); Controls.Add(_keyPath); Controls.Add(browse);
-            y += 34;
+            y += FormFontPolicy.RowStep(this);
 
-            var prevLbl = new Label { Text = "预览", Location = DpiScale.P(this, 16, y), Size = DpiScale.S(this, 90, 22), ForeColor = GdtermColorTable.Muted, TextAlign = ContentAlignment.MiddleRight };
+            var prevLbl = new Label { Text = "预览", Location = DpiScale.P(this, 16, y), AutoSize = true, ForeColor = GdtermColorTable.Muted, TextAlign = ContentAlignment.MiddleRight };
             _preview = new TextBox
             {
                 Location = DpiScale.P(this, 116, y),
@@ -134,10 +138,10 @@ namespace Gdterm.UI.Forms
 
         private TextBox Labeled(ref int y, string label, string value)
         {
-            var lb = new Label { Text = label, Location = DpiScale.P(this, 16, y), Size = DpiScale.S(this, 90, 22), ForeColor = GdtermColorTable.Muted, TextAlign = ContentAlignment.MiddleRight };
-            var tb = new TextBox { Location = DpiScale.P(this, 116, y), Size = DpiScale.S(this, 408, 24), Text = value ?? "", BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, BorderStyle = BorderStyle.FixedSingle };
+            var lb = new Label { Text = label, Location = DpiScale.P(this, 16, y), AutoSize = true, ForeColor = GdtermColorTable.Muted, TextAlign = ContentAlignment.MiddleRight };
+            var tb = new TextBox { Location = DpiScale.P(this, 116, y), Width = DpiScale.V(this, 408), Text = value ?? "", BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, BorderStyle = BorderStyle.FixedSingle };
             Controls.Add(lb); Controls.Add(tb);
-            y += 34;
+            y += FormFontPolicy.RowStep(this);
             return tb;
         }
     }

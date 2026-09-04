@@ -58,98 +58,79 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "修改主密码";
-            Size = DpiScale.S(this, 500, 380);
-            StartPosition = FormStartPosition.CenterParent;
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false;
-            MinimizeBox = false;
-            ShowInTaskbar = false;
-            BackColor = Color.FromArgb(35, 35, 35);
+            {
+                float grow = FormFontPolicy.UiFontSize / 9f;
+                Size = DpiScale.S(this, 500, (int)(372 * Math.Max(1f, grow)));
+            }
+
+            int labelX = 20;
+            int boxX = 110;
+            int boxWidth = 350;
+            var step = FormFontPolicy.RowStep(this);
+            int y = 12;
 
             var titleLabel = new Label
             {
                 Text = "修改主密码",
                 Font = Services.FormFontPolicy.UiFont(+5f, FontStyle.Bold),
                 ForeColor = Color.White,
-                Location = DpiScale.P(this, 20, 15),
-                Size = DpiScale.S(this, 440, 30)
+                AutoSize = true,
+                Location = DpiScale.P(this, labelX, y)
             };
+            y += (int)(step * 1.15);
 
             var tipLabel = new Label
             {
                 Text = "修改后，KeePass 密码库 (gdterm.kdbx) 将用新主密码重新加密。\n请妥善保管新密码，丢失将无法找回。",
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(180, 180, 180),
-                Location = DpiScale.P(this, 20, 50),
-                Size = DpiScale.S(this, 440, 40)
+                AutoSize = true,
+                MaximumSize = new Size(DpiScale.V(this, 440), 0),
+                Location = DpiScale.P(this, labelX, y)
             };
+            y += step * 2 + 8; // 提示占两行
 
-            int labelX = 20;
-            int boxX = 110;
-            int row1 = 100;
-            int row2 = 140;
-            int row3 = 180;
-            int boxWidth = 350;
+            var oldLabel = MakeFieldLabel("当前密码", labelX, y);
+            _oldBox = MakePasswordBox(boxX, y, boxWidth);
+            y += step;
 
-            var oldLabel = new Label
-            {
-                Text = "当前密码",
-                Font = Services.FormFontPolicy.UiFont(+1f),
-                ForeColor = Color.FromArgb(200, 200, 200),
-                Location = DpiScale.P(this, labelX, row1 + 5),
-                Size = DpiScale.S(this, 85, 25),
-                TextAlign = ContentAlignment.MiddleRight
-            };
-            _oldBox = MakePasswordBox(boxX, row1, boxWidth);
-
-            var newLabel = new Label
-            {
-                Text = "新密码",
-                Font = Services.FormFontPolicy.UiFont(+1f),
-                ForeColor = Color.FromArgb(200, 200, 200),
-                Location = DpiScale.P(this, labelX, row2 + 5),
-                Size = DpiScale.S(this, 85, 25),
-                TextAlign = ContentAlignment.MiddleRight
-            };
-            _newBox = MakePasswordBox(boxX, row2, boxWidth);
+            var newLabel = MakeFieldLabel("新密码", labelX, y);
+            _newBox = MakePasswordBox(boxX, y, boxWidth);
             _newBox.TextChanged += OnNewPasswordChanged;
+            y += step;
 
-            var confirmLabel = new Label
-            {
-                Text = "确认新密码",
-                Font = Services.FormFontPolicy.UiFont(+1f),
-                ForeColor = Color.FromArgb(200, 200, 200),
-                Location = DpiScale.P(this, labelX, row3 + 5),
-                Size = DpiScale.S(this, 85, 25),
-                TextAlign = ContentAlignment.MiddleRight
-            };
-            _confirmBox = MakePasswordBox(boxX, row3, boxWidth);
+            var confirmLabel = MakeFieldLabel("确认新密码", labelX, y);
+            _confirmBox = MakePasswordBox(boxX, y, boxWidth);
+            y += step + 4;
 
             _strengthLabel = new Label
             {
                 Text = "密码强度：未输入",
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(140, 140, 140),
-                Location = DpiScale.P(this, boxX, row3 + 40),
-                Size = DpiScale.S(this, boxWidth, 20)
+                AutoSize = true,
+                Location = DpiScale.P(this, boxX, y)
             };
+            y += step;
 
             _errorLabel = new Label
             {
                 Text = "",
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(255, 100, 100),
-                Location = DpiScale.P(this, 20, 290),
-                Size = DpiScale.S(this, 440, 30)
+                AutoSize = true,
+                MaximumSize = new Size(DpiScale.V(this, 440), 0),
+                Location = DpiScale.P(this, labelX, y)
             };
+            y += step;
 
             var showPwdCheck = new CheckBox
             {
                 Text = "显示密码",
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(160, 160, 160),
-                Location = DpiScale.P(this, 20, 255),
-                Size = DpiScale.S(this, 120, 25)
+                AutoSize = true,
+                Location = DpiScale.P(this, labelX, y)
             };
             showPwdCheck.CheckedChanged += (s, e) =>
             {
@@ -157,30 +138,45 @@ namespace Gdterm.UI.Forms
                 _newBox.UseSystemPasswordChar = !showPwdCheck.Checked;
                 _confirmBox.UseSystemPasswordChar = !showPwdCheck.Checked;
             };
+            y += step + 6;
 
             _okButton = new Button
             {
                 Text = "确认修改",
-                Size = DpiScale.S(this, 120, 34),
-                Location = DpiScale.P(this, 245, 320),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 BackColor = Color.FromArgb(0, 122, 204),
-                ForeColor = Color.White
+                ForeColor = Color.White,
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 10), 0)
             };
             _okButton.Click += OnOkClick;
 
             var cancelButton = new Button
             {
                 Text = "取消",
-                Size = DpiScale.S(this, 100, 34),
-                Location = DpiScale.P(this, 370, 320),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 BackColor = Color.FromArgb(60, 60, 60),
                 ForeColor = Color.White,
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 10), 0),
                 DialogResult = DialogResult.Cancel
             };
+            _okButton.FlatAppearance.BorderSize = 0;
+            cancelButton.FlatAppearance.BorderSize = 0;
+
+            // 按钮行：右对齐（主按钮最右）
+            var btnRow = new FlowLayoutPanel
+            {
+                Location = DpiScale.P(this, 0, y),
+                Size = new Size(DpiScale.V(this, 484), step + 10),
+                FlowDirection = FlowDirection.RightToLeft,
+                Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
+            };
+            btnRow.Controls.Add(_okButton);
+            btnRow.Controls.Add(cancelButton);
+            btnRow.Controls.Add(new Label { AutoSize = true }); // 占位推右
 
             Controls.AddRange(new Control[]
             {
@@ -188,12 +184,24 @@ namespace Gdterm.UI.Forms
                 oldLabel, _oldBox,
                 newLabel, _newBox,
                 confirmLabel, _confirmBox,
-                _strengthLabel, _errorLabel, showPwdCheck,
-                cancelButton, _okButton
+                _strengthLabel, _errorLabel, showPwdCheck, btnRow
             });
 
             AcceptButton = _okButton;
             CancelButton = cancelButton;
+        }
+
+        private Label MakeFieldLabel(string text, int x, int y)
+        {
+            return new Label
+            {
+                Text = text,
+                Font = Services.FormFontPolicy.UiFont(+1f),
+                ForeColor = Color.FromArgb(200, 200, 200),
+                AutoSize = true,
+                Location = new Point(x, y + DpiScale.V(this, 6)),
+                TextAlign = ContentAlignment.MiddleRight
+            };
         }
 
         private TextBox MakePasswordBox(int x, int y, int width)

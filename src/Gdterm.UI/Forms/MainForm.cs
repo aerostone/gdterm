@@ -134,7 +134,7 @@ namespace Gdterm.UI.Forms
             SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
             BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Background;
             ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Foreground;
-            Font = new Font("Microsoft YaHei UI", 9f, FontStyle.Regular, GraphicsUnit.Point, 134);
+            Font = Services.FormFontPolicy.UiFont(); // Win7 无 YaHei UI，走探测回退链
 
             if (_reconnectWatchdog != null)
             {
@@ -468,12 +468,12 @@ namespace Gdterm.UI.Forms
         {
             var ga = Gdterm.UI.Program.GlobalAppearance;
             if (ga == null) return;
-            var name = !string.IsNullOrWhiteSpace(ga.UIFontName) ? ga.UIFontName : "Microsoft YaHei UI";
+            var name = Services.FormFontPolicy.UiFontName; // 探测 + Win7 回退链
             var size = ga.UIFontSize > 0 ? ga.UIFontSize : 9;
             // manifest PerMonitorV2 已经按 DPI 自动放大字号；这里直接用用户设置的 pt 值，不要再手工 scale。
             Font font;
             try { font = new Font(name, size, FontStyle.Regular); }
-            catch { font = new Font("Microsoft YaHei UI", size); }
+            catch { font = new Font(SystemFonts.DefaultFont.FontFamily, size); }
             // 可观测性：外壳 UI 字体与终端字体是两套度量，出问题先对照这条与 FontMetrics
             try
             {

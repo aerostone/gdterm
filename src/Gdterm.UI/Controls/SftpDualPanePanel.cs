@@ -6,11 +6,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Gdterm.UI.Services;
 using Gdterm.Core.Models;
 using Gdterm.Sftp;
 using Gdterm.Tunnel;
 using Gdterm.UI.Diagnostics;
-using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Controls
 {
@@ -114,12 +114,13 @@ namespace Gdterm.UI.Controls
             var header = new Label
             {
                 Dock = DockStyle.Top,
-                Height = 22,
+                Height = FormFontPolicy.RowStep(this) - 9,
+                AutoEllipsis = true,
                 Text = "  " + title,
                 ForeColor = titleColor,
                 BackColor = GdtermColorTable.Surface,
                 TextAlign = ContentAlignment.MiddleLeft,
-                Font = new Font("Microsoft YaHei UI", 9f, FontStyle.Bold)
+                Font = Services.FormFontPolicy.UiFont(0f, FontStyle.Bold)
             };
             host.Controls.Add(pane);
             host.Controls.Add(header);

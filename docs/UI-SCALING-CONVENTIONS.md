@@ -78,6 +78,33 @@ iconFont = new Font(iconFamily, DpiScale.V(this, 28)); // 字号缩放
 注意：`CreateGraphics()` 在句柄创建前后均可调用；每个窗体/面板构造开头取一次
 `float dpi = DpiScale.Factor(this)` 存局部变量循环使用，避免反复取。
 
+### 规则 4b：表单行距必须字体驱动（RowStep）
+
+手写 `y += 35` 固定步进是"字体重叠"的直接根因——步进按 9pt 设计，字号调到 12pt
+后行高超过步进，上下控件互相叠压。改法：
+
+```csharp
+// ✗ 错误：固定步进，9pt 设计基准
+y += 35;
+
+// ✓ 正确：行距 = 当前字体实测行高 + 9 间距（保底 30）
+y += FormFontPolicy.RowStep(this);
+```
+
+窗体自身高度同步按字号比例放大：
+
+```csharp
+float grow = FormFontPolicy.UiFontSize / 9f;
+Size = DpiScale.S(this, 500, (int)(480 * Math.Max(1f, grow)));
+```
+
+### 规则 4c：Win7/2008R2 字体兼容（禁用裸 "Microsoft YaHei UI"）
+
+`Microsoft YaHei UI` 字族 Win8 才引入。Win7 上 `new Font(...)` 不抛异常而是静默
+回退宋体，中文度量失控 → 挤压/重叠。所有 UI 字体获取必须走
+`FormFontPolicy.UiFont()/UiFontName`（内置安装探测回退链：
+YaHei UI → YaHei → Segoe UI → 系统默认），禁止再手写字体名构造。
+
 ### 规则 5：Form 统一收口
 
 - 构造末尾调用 `Gdterm.UI.Services.FormFontPolicy.Apply(this)`（现有约定，保持）；

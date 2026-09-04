@@ -38,7 +38,11 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "危险命令规则配置";
-            Size = DpiScale.S(this, 800, 550);
+            {
+                float grow = FormFontPolicy.UiFontSize / 9f;
+                // Dock 布局：白名单区/工具栏高度已字体驱动，窗体只需适度增长保证列表可视高度
+                Size = DpiScale.S(this, 800, (int)(520 * Math.Max(1f, grow)));
+            }
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -79,11 +83,10 @@ namespace Gdterm.UI.Forms
             btnRefresh.Click += (s, e) => { LoadRules(); LoadWhitelist(); };
             _toolbar.Items.Add(btnRefresh);
 
-            // 规则列表
+            // 规则列表（Dock 布局：工具栏下、白名单上，随窗体伸缩）
             _ruleList = new ListView
             {
-                Location = DpiScale.P(this, 0, 28),
-                Size = DpiScale.S(this, 784, 280),
+                Dock = DockStyle.Fill,
                 View = View.Details,
                 FullRowSelect = true,
                 GridLines = true,
@@ -104,63 +107,67 @@ namespace Gdterm.UI.Forms
 
             _ruleList.DoubleClick += OnEditRuleClick;
 
-            // 白名单区域标题
+            // —— 白名单区（底部组合面板，Dock=Bottom，字体驱动高度）——
+            var wlPanel = new Panel { Dock = DockStyle.Bottom, BackColor = Color.FromArgb(30, 30, 30) };
+            var wlHeaderRow = FormFontPolicy.RowStep(this);
+            var wlBtnRow = wlHeaderRow + DpiScale.V(this, 24) + 4;
+            wlPanel.Height = wlBtnRow + DpiScale.V(this, 96) + DpiScale.V(this, 8);
+
             var whitelistHeader = new Label
             {
                 Text = "白名单（豁免命令）",
-                Font = Services.FormFontPolicy.UiFont(+0.5f, FontStyle.Bold),
+                Font = Services.FormFontPolicy.UiFont(0.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                Location = DpiScale.P(this, 5, 315),
-                Size = DpiScale.S(this, 200, 22),
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Left
+                Location = DpiScale.P(this, 5, 2),
+                AutoSize = true
             };
 
             // 白名单按钮
             var btnAddWhitelist = new Button
             {
                 Text = "添加",
-                Size = DpiScale.S(this, 60, 24),
-                Location = DpiScale.P(this, 5, 340),
+                AutoSize = true,
+                MinimumSize = new Size(DpiScale.V(this, 60), 0),
+                Location = DpiScale.P(this, 5, wlHeaderRow),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(-0.5f),
                 BackColor = Color.FromArgb(0, 122, 204),
-                ForeColor = Color.White,
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Left
+                ForeColor = Color.White
             };
             btnAddWhitelist.Click += OnAddWhitelistClick;
 
             var btnRemoveWhitelist = new Button
             {
                 Text = "移除",
-                Size = DpiScale.S(this, 60, 24),
-                Location = DpiScale.P(this, 70, 340),
+                AutoSize = true,
+                MinimumSize = new Size(DpiScale.V(this, 60), 0),
+                Location = DpiScale.P(this, 70, wlHeaderRow),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(-0.5f),
                 BackColor = Color.FromArgb(80, 40, 40),
-                ForeColor = Color.White,
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Left
+                ForeColor = Color.White
             };
             btnRemoveWhitelist.Click += OnRemoveWhitelistClick;
 
-            // 白名单列表
+            // 白名单列表（铺满面板剩余高度）
             _whitelistBox = new ListBox
             {
-                Location = DpiScale.P(this, 5, 370),
-                Size = DpiScale.S(this, 770, 100),
+                Location = DpiScale.P(this, 5, wlBtnRow),
+                Size = new Size(0, 0),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
                 Font = new Font("Consolas", 9.5f),
                 BackColor = Color.FromArgb(25, 25, 25),
                 ForeColor = Color.FromArgb(204, 204, 204),
-                BorderStyle = BorderStyle.FixedSingle,
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
+                BorderStyle = BorderStyle.FixedSingle
             };
-
-            // 白名单分隔线
-            var separator = new Label
+            wlPanel.Controls.Add(_whitelistBox);
+            wlPanel.Controls.Add(whitelistHeader);
+            wlPanel.Controls.Add(btnAddWhitelist);
+            wlPanel.Controls.Add(btnRemoveWhitelist);
+            wlPanel.Resize += (s, e) =>
             {
-                BorderStyle = BorderStyle.Fixed3D,
-                Location = DpiScale.P(this, 5, 310),
-                Size = DpiScale.S(this, 770, 2),
-                Anchor = AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right
+                _whitelistBox.Width = wlPanel.ClientSize.Width - DpiScale.V(this, 10);
+                _whitelistBox.Height = wlPanel.ClientSize.Height - wlBtnRow - DpiScale.V(this, 4);
             };
 
             // 状态栏
@@ -176,12 +183,11 @@ namespace Gdterm.UI.Forms
                 Text = "就绪"
             };
 
-            Controls.AddRange(new Control[]
-            {
-                _ruleList, separator,
-                whitelistHeader, btnAddWhitelist, btnRemoveWhitelist, _whitelistBox,
-                _toolbar, _statusLabel
-            });
+            // Dock 装配（WinForms 按添加逆序分配边缘，Fill 必须最后添加）
+            Controls.Add(_statusLabel);   // Bottom：最底状态条
+            Controls.Add(wlPanel);        // Bottom：白名单区（在状态条之上）
+            Controls.Add(_toolbar);       // Top：工具栏
+            Controls.Add(_ruleList);      // Fill：规则列表拿剩余全部空间
         }
 
         private void LoadRules()
@@ -405,7 +411,10 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "添加自定义规则";
-            Size = DpiScale.S(this, 450, 400);
+            {
+                float grow = FormFontPolicy.UiFontSize / 9f;
+                Size = DpiScale.S(this, 450, (int)(400 * Math.Max(1f, grow)));
+            }
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -429,12 +438,12 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 Location = new Point(DpiScale.V(this, 15), y),
-                Size = new Size(labelW, DpiScale.V(this, 22))
+                AutoSize = true
             };
             _patternTypeCombo = new ComboBox
             {
                 Location = new Point(boxX, y),
-                Size = DpiScale.S(this, 150, 22),
+                Width = DpiScale.V(this, 150),
                 Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -444,7 +453,7 @@ namespace Gdterm.UI.Forms
             _patternTypeCombo.SelectedIndex = 0;
             Controls.Add(patternTypeLabel);
             Controls.Add(_patternTypeCombo);
-            y += 30;
+            y += FormFontPolicy.RowStep(this);
 
             // 危险等级
             var levelLabel = new Label
@@ -453,12 +462,12 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 Location = new Point(DpiScale.V(this, 15), y),
-                Size = new Size(labelW, DpiScale.V(this, 22))
+                AutoSize = true
             };
             _levelCombo = new ComboBox
             {
                 Location = new Point(boxX, y),
-                Size = DpiScale.S(this, 150, 22),
+                Width = DpiScale.V(this, 150),
                 Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -468,7 +477,7 @@ namespace Gdterm.UI.Forms
             _levelCombo.SelectedIndex = 0;
             Controls.Add(levelLabel);
             Controls.Add(_levelCombo);
-            y += 30;
+            y += FormFontPolicy.RowStep(this);
 
             // 分类
             var categoryLabel = new Label
@@ -477,12 +486,12 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 Location = new Point(DpiScale.V(this, 15), y),
-                Size = new Size(labelW, DpiScale.V(this, 22))
+                AutoSize = true
             };
             _categoryCombo = new ComboBox
             {
                 Location = new Point(boxX, y),
-                Size = DpiScale.S(this, 200, 22),
+                Width = DpiScale.V(this, 200),
                 Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -497,7 +506,7 @@ namespace Gdterm.UI.Forms
             _categoryCombo.SelectedIndex = 0;
             Controls.Add(categoryLabel);
             Controls.Add(_categoryCombo);
-            y += 30;
+            y += FormFontPolicy.RowStep(this);
 
             // 描述
             var descLabel = new Label
@@ -506,7 +515,7 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 Location = new Point(DpiScale.V(this, 15), y),
-                Size = new Size(labelW, DpiScale.V(this, 22))
+                AutoSize = true
             };
             _descriptionBox = new TextBox
             {
@@ -521,20 +530,20 @@ namespace Gdterm.UI.Forms
             };
             Controls.Add(descLabel);
             Controls.Add(_descriptionBox);
-            y += 65;
+            y += FormFontPolicy.RowStep(this) + 35; // 预览框(高度独立)后
 
             // 启用
             _enabledCheck = new CheckBox
             {
                 Text = "启用此规则",
                 Location = new Point(boxX, y),
-                Size = DpiScale.S(this, 150, 22),
+                Width = DpiScale.V(this, 150),
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 Checked = true
             };
             Controls.Add(_enabledCheck);
-            y += 35;
+            y += FormFontPolicy.RowStep(this);
 
             // 按钮
             var okButton = new Button
@@ -576,7 +585,7 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 Location = new Point(DpiScale.V(this, 15), y),
-                Size = new Size(labelW, DpiScale.V(this, 22))
+                AutoSize = true
             };
 
             var textBox = new TextBox
@@ -591,7 +600,7 @@ namespace Gdterm.UI.Forms
 
             Controls.Add(label);
             Controls.Add(textBox);
-            y += DpiScale.V(this, 30);
+            y += FormFontPolicy.RowStep(this);
             return textBox;
         }
     }
@@ -608,7 +617,10 @@ namespace Gdterm.UI.Forms
         public TextInputForm(string title, string prompt)
         {
             Text = title;
-            Size = DpiScale.S(this, 400, 160);
+            {
+                float grow = FormFontPolicy.UiFontSize / 9f;
+                Size = DpiScale.S(this, 400, (int)(160 * Math.Max(1f, grow)));
+            }
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -622,13 +634,14 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.UiFont(+0.5f),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 Location = DpiScale.P(this, 15, 12),
-                Size = DpiScale.S(this, 360, 22)
+                AutoSize = true,
+                MaximumSize = new Size(DpiScale.V(this, 360), 0)
             };
 
             _inputBox = new TextBox
             {
                 Location = DpiScale.P(this, 15, 40),
-                Size = DpiScale.S(this, 355, 24),
+                Width = DpiScale.V(this, 355),
                 Font = new Font("Consolas", 10f),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -638,7 +651,8 @@ namespace Gdterm.UI.Forms
             var okButton = new Button
             {
                 Text = "确定",
-                Size = DpiScale.S(this, 75, 28),
+                AutoSize = true,
+                MinimumSize = new Size(DpiScale.V(this, 75), 0),
                 Location = DpiScale.P(this, 215, 75),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(),
@@ -650,7 +664,8 @@ namespace Gdterm.UI.Forms
             var cancelButton = new Button
             {
                 Text = "取消",
-                Size = DpiScale.S(this, 75, 28),
+                AutoSize = true,
+                MinimumSize = new Size(DpiScale.V(this, 75), 0),
                 Location = DpiScale.P(this, 295, 75),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(),

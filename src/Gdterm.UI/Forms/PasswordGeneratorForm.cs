@@ -47,13 +47,13 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "密码生成器";
-            Size = DpiScale.S(this, 500, 520);
-            StartPosition = FormStartPosition.CenterParent;
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false;
-            MinimizeBox = false;
-            ShowInTaskbar = false;
-            BackColor = Color.FromArgb(35, 35, 35);
+            {
+                float grow = FormFontPolicy.UiFontSize / 9f;
+                Size = DpiScale.S(this, 500, (int)(512 * Math.Max(1f, grow)));
+            }
+
+            var step = FormFontPolicy.RowStep(this);
+            int y = 12;
 
             // 标题
             var titleLabel = new Label
@@ -61,9 +61,10 @@ namespace Gdterm.UI.Forms
                 Text = "🔑 密码生成器",
                 Font = Services.FormFontPolicy.UiFont(+5f, FontStyle.Bold),
                 ForeColor = Color.White,
-                Location = DpiScale.P(this, 15, 12),
-                Size = DpiScale.S(this, 200, 30)
+                AutoSize = true,
+                Location = DpiScale.P(this, 15, y)
             };
+            y += (int)(step * 1.2);
 
             // 密码长度
             var lengthLabel = new Label
@@ -71,14 +72,14 @@ namespace Gdterm.UI.Forms
                 Text = "密码长度：",
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Location = DpiScale.P(this, 15, 55),
-                Size = DpiScale.S(this, 80, 25)
+                AutoSize = true,
+                Location = DpiScale.P(this, 15, y + DpiScale.V(this, 5))
             };
 
             _lengthSpinner = new NumericUpDown
             {
-                Location = DpiScale.P(this, 100, 53),
-                Size = DpiScale.S(this, 70, 25),
+                Location = DpiScale.P(this, 100, y),
+                Width = DpiScale.V(this, 70),
                 Minimum = 8,
                 Maximum = 128,
                 Value = 16,
@@ -96,8 +97,9 @@ namespace Gdterm.UI.Forms
                 var btn = new Button
                 {
                     Text = len.ToString(),
-                    Location = DpiScale.P(this, btnX, 52),
-                    Size = DpiScale.S(this, 40, 26),
+                    Location = DpiScale.P(this, btnX, y),
+                    AutoSize = true,
+                    MinimumSize = new Size(DpiScale.V(this, 40), 0),
                     FlatStyle = FlatStyle.Flat,
                     Font = Services.FormFontPolicy.UiFont(),
                     BackColor = Color.FromArgb(60, 60, 60),
@@ -106,30 +108,35 @@ namespace Gdterm.UI.Forms
                 };
                 btn.Click += (s, e) => { _lengthSpinner.Value = (int)((Button)s).Tag; };
                 Controls.Add(btn);
-                btnX += 45;
+                btnX += DpiScale.V(this, 48);
             }
+            y += step;
 
-            // 字符集选项
+            // 字符集选项（内部 FlowLayout，两列 CheckBox 自动换行）
             var charsetGroup = new GroupBox
             {
                 Text = "字符集",
                 Font = Services.FormFontPolicy.UiFont(+0.5f),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Location = DpiScale.P(this, 15, 90),
-                Size = DpiScale.S(this, 455, 100)
+                Location = DpiScale.P(this, 15, y),
+                Size = DpiScale.S(this, 455, step * 3 + DpiScale.V(this, 14)),
+                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4))
             };
-
-            _upperCheck = CreateCheck("大写字母 (A-Z)", 15, 25, true);
-            _lowerCheck = CreateCheck("小写字母 (a-z)", 15, 50, true);
-            _digitCheck = CreateCheck("数字 (0-9)", 250, 25, true);
-            _specialCheck = CreateCheck("特殊字符 (!@#$...)", 250, 50, true);
-            _ambiguousCheck = CreateCheck("排除易混淆字符 (Il1O0)", 15, 75, false);
-            _ambiguousCheck.CheckedChanged += (s, e) => GeneratePassword();
-
-            charsetGroup.Controls.AddRange(new Control[]
+            var charsetFlow = new FlowLayoutPanel
             {
-                _upperCheck, _lowerCheck, _digitCheck, _specialCheck, _ambiguousCheck
-            });
+                Dock = DockStyle.Fill,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = true
+            };
+            _upperCheck = CreateCheck("大写字母 (A-Z)", true);
+            _lowerCheck = CreateCheck("小写字母 (a-z)", true);
+            _digitCheck = CreateCheck("数字 (0-9)", true);
+            _specialCheck = CreateCheck("特殊字符 (!@#$...)", true);
+            _ambiguousCheck = CreateCheck("排除易混淆字符 (Il1O0)", false);
+            _ambiguousCheck.CheckedChanged += (s, e) => GeneratePassword();
+            charsetFlow.Controls.AddRange(new Control[] { _upperCheck, _digitCheck, _lowerCheck, _specialCheck, _ambiguousCheck });
+            charsetGroup.Controls.Add(charsetFlow);
+            y += step * 3 + DpiScale.V(this, 22);
 
             // 生成结果
             var resultLabel = new Label
@@ -137,13 +144,14 @@ namespace Gdterm.UI.Forms
                 Text = "生成结果：",
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Location = DpiScale.P(this, 15, 200),
-                Size = DpiScale.S(this, 80, 25)
+                AutoSize = true,
+                Location = DpiScale.P(this, 15, y + DpiScale.V(this, 5))
             };
+            y += step;
 
             _resultBox = new TextBox
             {
-                Location = DpiScale.P(this, 15, 228),
+                Location = DpiScale.P(this, 15, y),
                 Size = DpiScale.S(this, 350, 35),
                 Font = new Font("Consolas", 14f, FontStyle.Bold),
                 BackColor = Color.FromArgb(25, 25, 25),
@@ -158,46 +166,50 @@ namespace Gdterm.UI.Forms
                 Text = "强度：—",
                 Font = Services.FormFontPolicy.UiFont(+0.5f, FontStyle.Bold),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Location = DpiScale.P(this, 15, 270),
-                Size = DpiScale.S(this, 200, 25)
+                AutoSize = true,
+                Location = DpiScale.P(this, 15, y + DpiScale.V(this, 40))
             };
 
-            // 操作按钮
+            // 操作按钮（与结果框同行右侧）
             var generateBtn = new Button
             {
                 Text = "🔄 重新生成",
-                Location = DpiScale.P(this, 375, 226),
-                Size = DpiScale.S(this, 95, 38),
+                Location = DpiScale.P(this, 375, y - 2),
+                AutoSize = true,
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 BackColor = Color.FromArgb(0, 122, 204),
-                ForeColor = Color.White
+                ForeColor = Color.White,
+                Padding = new Padding(DpiScale.V(this, 6), 0, DpiScale.V(this, 6), 0)
             };
             generateBtn.Click += (s, e) => GeneratePassword();
 
             var copyBtn = new Button
             {
                 Text = "📋 复制",
-                Location = DpiScale.P(this, 375, 268),
-                Size = DpiScale.S(this, 95, 38),
+                Location = DpiScale.P(this, 375, y + DpiScale.V(this, 44)),
+                AutoSize = true,
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 BackColor = Color.FromArgb(60, 130, 60),
-                ForeColor = Color.White
+                ForeColor = Color.White,
+                Padding = new Padding(DpiScale.V(this, 6), 0, DpiScale.V(this, 6), 0)
             };
             copyBtn.Click += OnCopyClick;
+            y += step + DpiScale.V(this, 42);
 
             var generate10Btn = new Button
             {
                 Text = "批量生成 10 个",
-                Location = DpiScale.P(this, 15, 300),
-                Size = DpiScale.S(this, 120, 30),
+                Location = DpiScale.P(this, 15, y),
+                AutoSize = true,
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(60, 60, 60),
                 ForeColor = Color.White
             };
             generate10Btn.Click += OnBatchGenerate;
+            y += step;
 
             // 历史记录
             var historyLabel = new Label
@@ -205,14 +217,15 @@ namespace Gdterm.UI.Forms
                 Text = "本次生成记录（双击复制）：",
                 Font = Services.FormFontPolicy.UiFont(+0.5f),
                 ForeColor = Color.FromArgb(180, 180, 180),
-                Location = DpiScale.P(this, 15, 340),
-                Size = DpiScale.S(this, 250, 22)
+                AutoSize = true,
+                Location = DpiScale.P(this, 15, y)
             };
+            y += step;
 
             _historyList = new ListBox
             {
-                Location = DpiScale.P(this, 15, 365),
-                Size = DpiScale.S(this, 455, 105),
+                Location = DpiScale.P(this, 15, y),
+                Size = DpiScale.S(this, 455, step * 3),
                 Font = new Font("Consolas", 10f),
                 BackColor = Color.FromArgb(25, 25, 25),
                 ForeColor = Color.FromArgb(200, 200, 200),
@@ -230,16 +243,16 @@ namespace Gdterm.UI.Forms
             });
         }
 
-        private CheckBox CreateCheck(string text, int x, int y, bool isChecked)
+        private CheckBox CreateCheck(string text, bool isChecked)
         {
             var cb = new CheckBox
             {
                 Text = text,
-                Location = DpiScale.P(this, x, y),
-                Size = DpiScale.S(this, 220, 22),
+                AutoSize = true,
                 Font = Services.FormFontPolicy.UiFont(+0.5f),
                 ForeColor = Color.FromArgb(200, 200, 200),
-                Checked = isChecked
+                Checked = isChecked,
+                Margin = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 4), DpiScale.V(this, 8), DpiScale.V(this, 4))
             };
             cb.CheckedChanged += (s, e) => GeneratePassword();
             return cb;

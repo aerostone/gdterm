@@ -11,6 +11,7 @@ namespace Gdterm.UI.Forms
 {
     /// <summary>
     /// 外观设置：字体/字号/配色/行距提示。保存到 data/config/appearance.ini。
+    /// 2026-09 重构：TableLayoutPanel 流式布局（字号任意调不重叠）+ 恢复默认按钮。
     /// </summary>
     public sealed class AppearanceSettingsForm : Form
     {
@@ -23,6 +24,7 @@ namespace Gdterm.UI.Forms
         private Label _preview;
         private Button _btnOk;
         private Button _btnCancel;
+        private Button _btnReset;
         // 界面字体（菜单/树/状态栏）
         private ComboBox _uiFontCombo;
         private NumericUpDown _uiSizeNum;
@@ -37,18 +39,7 @@ namespace Gdterm.UI.Forms
             Directory.CreateDirectory(configDir);
             _iniPath = Path.Combine(configDir, "appearance.ini");
 
-            Text = "外观设置";
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            StartPosition = FormStartPosition.CenterParent;
-            MaximizeBox = false;
-            MinimizeBox = false;
-            ShowInTaskbar = false;
-            // 高/低 DPI 自适应
-            ClientSize = DpiScale.S(this, 440, 492);
-            BackColor = Color.FromArgb(32, 32, 34);
-            ForeColor = Color.FromArgb(220, 220, 220);
-            Font = Services.FormFontPolicy.UiFont();
-
+            DialogStyle.ApplyChrome(this, 460, 492);
             BuildUi();
             LoadCurrent();
             Gdterm.UI.Services.FormFontPolicy.Apply(this); // 全局 UI 字体传导（含显式雅黑硬编码子控件）
@@ -56,87 +47,53 @@ namespace Gdterm.UI.Forms
 
         private void BuildUi()
         {
-            int y = DpiScale.V(this, 16);
-            Controls.Add(MakeLabel("终端字体", 16, y));
-            _fontCombo = new ComboBox
+            // ── 主体：TableLayoutPanel 流式布局，字号任意调整不重叠 ──
+            // 结构：row0 终端字体 | row1 字号 | row2 配色 | row3 CJK | row4 界面主题
+            //       row5 界面字体+字号 | row6 DPI | row7 预览（跨两列）
+            var grid = new TableLayoutPanel
             {
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Location = DpiScale.P(this, 120, y - 2),
-                Width = DpiScale.V(this, 280),
-                BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
+                Dock = DockStyle.Fill,
+                ColumnCount = 3,
+                RowCount = 9,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                BackColor = GdtermColorTable.Background,
+                Padding = new Padding(DpiScale.V(this, 12))
             };
-            try
-            {
-                using (var fonts = new InstalledFontCollection())
-                {
-                    foreach (var f in fonts.Families)
-                    {
-                        // 优先等宽
-                        if (IsLikelyMono(f.Name))
-                            _fontCombo.Items.Add(f.Name);
-                    }
-                    foreach (var f in fonts.Families)
-                    {
-                        if (!IsLikelyMono(f.Name) && _fontCombo.Items.Count < 80)
-                            _fontCombo.Items.Add(f.Name);
-                    }
-                }
-            }
-            catch
-            {
-                _fontCombo.Items.Add("Consolas");
-                _fontCombo.Items.Add("Cascadia Mono");
-                _fontCombo.Items.Add("Courier New");
-            }
-            if (_fontCombo.Items.Count == 0) _fontCombo.Items.Add("Consolas");
-            Controls.Add(_fontCombo);
-            y += DpiScale.V(this, 36);
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));       // 标签列
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));  // 值列
+            grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));       // 附属列（字号框等）
 
-            Controls.Add(MakeLabel("字号 (pt)", 16, y));
-            _sizeNum = new NumericUpDown
-            {
-                Location = DpiScale.P(this, 120, y - 2),
-                Width = DpiScale.V(this, 80),
-                Minimum = 8,
-                Maximum = 36,
-                Value = 12,
-                BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.White
-            };
-            Controls.Add(_sizeNum);
-            y += DpiScale.V(this, 36);
+            int row = 0;
 
-            Controls.Add(MakeLabel("配色方案", 16, y));
-            _schemeCombo = new ComboBox
-            {
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Location = DpiScale.P(this, 120, y - 2),
-                Width = DpiScale.V(this, 200),
-                BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
-            };
+            // —— 终端字体 ——
+            grid.Controls.Add(DialogStyle.FieldLabel("终端字体"), 0, row);
+            _fontCombo = MakeCombo(FillTerminalFonts);
+            grid.Controls.Add(_fontCombo, 1, row);
+            grid.SetColumnSpan(_fontCombo, 2);
+            row++;
+
+            // —— 字号 ——
+            grid.Controls.Add(DialogStyle.FieldLabel("字号 (pt)"), 0, row);
+            _sizeNum = MakeNumeric(8, 36, 12);
+            grid.Controls.Add(_sizeNum, 1, row);
+            row++;
+
+            // —— 配色方案 ——
+            grid.Controls.Add(DialogStyle.FieldLabel("配色方案"), 0, row);
+            _schemeCombo = MakeCombo(null);
             foreach (var name in new[]
             {
                 "Classic", "HighContrast", "SolarizedDark", "Monokai", "Dracula", "GreenTerminal", "Light"
             })
                 _schemeCombo.Items.Add(name);
-            Controls.Add(_schemeCombo);
-            y += DpiScale.V(this, 36);
+            grid.Controls.Add(_schemeCombo, 1, row);
+            grid.SetColumnSpan(_schemeCombo, 2);
+            row++;
 
-            // —— 中日韩补充字体（非 ASCII 内容，Xshell 风格双字体）——
-            Controls.Add(MakeLabel("中日韩字体", 16, y));
-            _cjkFontCombo = new ComboBox
-            {
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Location = DpiScale.P(this, 120, y - 2),
-                Width = DpiScale.V(this, 200),
-                BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
-            };
+            // —— 中日韩补充字体（Xshell 风格双字体）——
+            grid.Controls.Add(DialogStyle.FieldLabel("中日韩字体"), 0, row);
+            _cjkFontCombo = MakeCombo(null);
             _cjkFontCombo.Items.Add(""); // 空表示跟随主字体
             _cjkFontCombo.Items.Add("Microsoft YaHei Mono");
             _cjkFontCombo.Items.Add("Sarasa Mono SC");
@@ -145,7 +102,7 @@ namespace Gdterm.UI.Forms
             _cjkFontCombo.Items.Add("Source Han Mono SC");
             try
             {
-                using (var fonts = new System.Drawing.Text.InstalledFontCollection())
+                using (var fonts = new InstalledFontCollection())
                 {
                     foreach (var f in fonts.Families)
                     {
@@ -163,59 +120,34 @@ namespace Gdterm.UI.Forms
                 }
             }
             catch { }
-            Controls.Add(_cjkFontCombo);
-            y += DpiScale.V(this, 36);
+            grid.Controls.Add(_cjkFontCombo, 1, row);
+            grid.SetColumnSpan(_cjkFontCombo, 2);
+            row++;
 
             // —— UI 外壳主题（与终端 ColorScheme 独立）——
-            Controls.Add(MakeLabel("界面主题", 16, y));
-            _uiThemeCombo = new ComboBox
-            {
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Location = DpiScale.P(this, 120, y - 2),
-                Width = DpiScale.V(this, 200),
-                BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
-            };
+            grid.Controls.Add(DialogStyle.FieldLabel("界面主题"), 0, row);
+            _uiThemeCombo = MakeCombo(null);
             foreach (var name in new[] { "Dark", "Darker", "OLED" })
                 _uiThemeCombo.Items.Add(name);
-            Controls.Add(_uiThemeCombo);
-            Controls.Add(new Label
+            grid.Controls.Add(_uiThemeCombo, 1, row);
+            var themeHint = new Label
             {
-                Text = "← 搭配建议：Dark/Darker/OLED 配 Solarized Dark / Dracula / Monokai，Light 配 Light",
-                ForeColor = Color.FromArgb(120, 120, 125),
+                Text = "Dark/Darker/OLED 配暗色终端方案，Light 配 Light",
                 AutoSize = true,
-                Location = new Point(332, y)
-            });
-            y += DpiScale.V(this, 36);
-
-            _dpiAwareCheck = new CheckBox
-            {
-                Text = "启用 DPI 感知（需重启，减轻菜单模糊）",
-                Location = new Point(16, y),
-                AutoSize = true,
-                ForeColor = Color.FromArgb(200, 200, 200),
-                Checked = true
+                ForeColor = GdtermColorTable.Muted,
+                Margin = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 8), 3, 0)
             };
-            Controls.Add(_dpiAwareCheck);
-            y += DpiScale.V(this, 36);
+            grid.Controls.Add(themeHint, 2, row);
+            row++;
 
-            // —— 界面字体（非等宽，菜单/树/状态栏/对话框）——
-            Controls.Add(MakeLabel("界面字体", 16, y));
-            _uiFontCombo = new ComboBox
-            {
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                Location = DpiScale.P(this, 120, y - 2),
-                Width = DpiScale.V(this, 220),
-                BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat
-            };
+            // —— 界面字体 + 字号（同行）——
+            grid.Controls.Add(DialogStyle.FieldLabel("界面字体"), 0, row);
+            _uiFontCombo = MakeCombo(null);
             try
             {
                 using (var fonts = new InstalledFontCollection())
                 {
-                    // 中文界面优先 Sans
+                    // 中文界面优先 Sans；Win7 无 "Microsoft YaHei UI"，探测链交给 FormFontPolicy
                     var prefer = new[] { "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", "PingFang SC", "Noto Sans CJK SC", "Source Han Sans SC" };
                     foreach (var p in prefer)
                         if (Array.Exists(fonts.Families, ff => string.Equals(ff.Name, p, StringComparison.OrdinalIgnoreCase)))
@@ -227,101 +159,189 @@ namespace Gdterm.UI.Forms
                     }
                 }
             }
-            catch { _uiFontCombo.Items.Add("Microsoft YaHei UI"); }
-            if (_uiFontCombo.Items.Count == 0) _uiFontCombo.Items.Add("Microsoft YaHei UI");
-            Controls.Add(_uiFontCombo);
+            catch { _uiFontCombo.Items.Add(FormFontPolicy.UiFontName); }
+            if (_uiFontCombo.Items.Count == 0) _uiFontCombo.Items.Add(FormFontPolicy.UiFontName);
+            grid.Controls.Add(_uiFontCombo, 1, row);
+            _uiSizeNum = MakeNumeric(8, 24, 9);
+            grid.Controls.Add(_uiSizeNum, 2, row);
+            row++;
 
-            _uiSizeNum = new NumericUpDown
+            // —— DPI ——
+            _dpiAwareCheck = new CheckBox
             {
-                Location = DpiScale.P(this, 350, y - 2),
-                Width = DpiScale.V(this, 56),
-                Minimum = 8,
-                Maximum = 24,
-                Value = 9,
-                BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.White
+                Text = "启用 DPI 感知（需重启，减轻菜单模糊）",
+                AutoSize = true,
+                ForeColor = GdtermColorTable.Foreground,
+                Checked = true,
+                Margin = new Padding(3, DpiScale.V(this, 8), 3, 0)
             };
-            Controls.Add(_uiSizeNum);
-            y += DpiScale.V(this, 36);
+            grid.Controls.Add(_dpiAwareCheck, 0, row);
+            grid.SetColumnSpan(_dpiAwareCheck, 3);
+            row++;
 
+            // —— 预览 ——
             _preview = new Label
             {
                 Text = "AaBbCc 0123 预览 Preview",
-                Location = DpiScale.P(this, 16, y),
-                Size = DpiScale.S(this, 400, 60),
+                Dock = DockStyle.Fill,
+                MinimumSize = new Size(0, DpiScale.V(this, 56)),
+                Margin = new Padding(3, DpiScale.V(this, 10), 3, 3),
                 BackColor = Color.FromArgb(12, 12, 12),
                 ForeColor = Color.FromArgb(0, 255, 128),
                 TextAlign = ContentAlignment.MiddleCenter,
                 BorderStyle = BorderStyle.FixedSingle
             };
-            Controls.Add(_preview);
-            y += DpiScale.V(this, 72);
+            grid.Controls.Add(_preview, 0, row);
+            grid.SetColumnSpan(_preview, 3);
+            row++;
+
+            // —— 重置提示（可跨两列）——
+            var resetHint = new Label
+            {
+                Text = "字体或界面错乱时，可点“恢复默认”一键还原全部外观设置",
+                AutoSize = true,
+                ForeColor = GdtermColorTable.Muted,
+                Margin = new Padding(3, DpiScale.V(this, 4), 3, 0)
+            };
+            grid.Controls.Add(resetHint, 0, row);
+            grid.SetColumnSpan(resetHint, 3);
+
+            Controls.Add(grid);
 
             _fontCombo.SelectedIndexChanged += (s, e) => UpdatePreview();
             _sizeNum.ValueChanged += (s, e) => UpdatePreview();
 
-            _btnOk = new Button
-            {
-                Text = "保存",
-                DialogResult = DialogResult.OK,
-                Location = DpiScale.P(this, 240, y),
-                Size = DpiScale.S(this, 88, 30),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(0, 122, 204),
-                ForeColor = Color.White
-            };
-            _btnOk.FlatAppearance.BorderSize = 0;
-            _btnOk.Click += (s, e) =>
-            {
-                Result = new AppearanceSettings
-                {
-                    FontName = _fontCombo.SelectedItem != null ? _fontCombo.SelectedItem.ToString() : "Consolas",
-                    FontSize = (int)_sizeNum.Value,
-                    CjkFontName = _cjkFontCombo.SelectedItem != null ? (_cjkFontCombo.SelectedItem.ToString() ?? "") : "",
-                    ColorScheme = _schemeCombo.SelectedItem != null ? _schemeCombo.SelectedItem.ToString() : "Classic",
-                    UiTheme = _uiThemeCombo.SelectedItem != null ? _uiThemeCombo.SelectedItem.ToString() : "Dark",
-                    DpiAware = _dpiAwareCheck.Checked,
-                    UIFontName = _uiFontCombo.SelectedItem != null ? _uiFontCombo.SelectedItem.ToString() : "Microsoft YaHei UI",
-                    UIFontSize = (int)_uiSizeNum.Value
-                };
-                try
-                {
-                    Result.Save(_iniPath);
-                    // 可观测性：用户选了什么（终端字体/字号/CJK/UI 字体）——排查“字号不匹配”时与 FontMetrics 对照
-                    DiagLog.Info("Appearance.Save",
-                        "font=" + Result.FontName + "/" + Result.FontSize + "pt cjk=" + (string.IsNullOrEmpty(Result.CjkFontName) ? "-" : Result.CjkFontName) +
-                        " scheme=" + Result.ColorScheme + " uiFont=" + Result.UIFontName + "/" + Result.UIFontSize + "pt dpiAware=" + Result.DpiAware);
-                }
-                catch (Exception ex) { DiagLog.Swallowed("Appearance.Save", ex); }
-            };
-            Controls.Add(_btnOk);
+            // ── 底部按钮条：主(保存) + 恢复默认 + 取消 ──
+            _btnOk = new Button { Text = "保存", DialogResult = DialogResult.OK };
+            DialogStyle.MakePrimary(_btnOk);
+            _btnOk.Click += (s, e) => SaveResult();
 
-            _btnCancel = new Button
-            {
-                Text = "取消",
-                DialogResult = DialogResult.Cancel,
-                Location = DpiScale.P(this, 336, y),
-                Size = DpiScale.S(this, 88, 30),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(60, 60, 64),
-                ForeColor = Color.White
-            };
-            _btnCancel.FlatAppearance.BorderSize = 0;
-            Controls.Add(_btnCancel);
+            _btnReset = new Button { Text = "恢复默认" };
+            DialogStyle.MakeSecondary(_btnReset);
+            _btnReset.Click += (s, e) => ResetToDefaults();
+
+            _btnCancel = new Button { Text = "取消", DialogResult = DialogResult.Cancel };
+            DialogStyle.MakeSecondary(_btnCancel);
+
+            Controls.Add(DialogStyle.ButtonStrip(_btnOk, _btnReset, _btnCancel));
 
             AcceptButton = _btnOk;
             CancelButton = _btnCancel;
         }
 
-        private static Label MakeLabel(string text, int x, int y)
+        private void SaveResult()
         {
-            return new Label
+            Result = new AppearanceSettings
             {
-                Text = text,
-                Location = new Point(x, y),
-                AutoSize = true,
-                ForeColor = Color.FromArgb(200, 200, 200)
+                FontName = _fontCombo.SelectedItem != null ? _fontCombo.SelectedItem.ToString() : "Consolas",
+                FontSize = (int)_sizeNum.Value,
+                CjkFontName = _cjkFontCombo.SelectedItem != null ? (_cjkFontCombo.SelectedItem.ToString() ?? "") : "",
+                ColorScheme = _schemeCombo.SelectedItem != null ? _schemeCombo.SelectedItem.ToString() : "Classic",
+                UiTheme = _uiThemeCombo.SelectedItem != null ? _uiThemeCombo.SelectedItem.ToString() : "Dark",
+                DpiAware = _dpiAwareCheck.Checked,
+                UIFontName = _uiFontCombo.SelectedItem != null ? _uiFontCombo.SelectedItem.ToString() : FormFontPolicy.UiFontName,
+                UIFontSize = (int)_uiSizeNum.Value
             };
+            try
+            {
+                Result.Save(_iniPath);
+                // 可观测性：用户选了什么（终端字体/字号/CJK/UI 字体）——排查“字号不匹配”时与 FontMetrics 对照
+                DiagLog.Info("Appearance.Save",
+                    "font=" + Result.FontName + "/" + Result.FontSize + "pt cjk=" + (string.IsNullOrEmpty(Result.CjkFontName) ? "-" : Result.CjkFontName) +
+                    " scheme=" + Result.ColorScheme + " uiFont=" + Result.UIFontName + "/" + Result.UIFontSize + "pt dpiAware=" + Result.DpiAware);
+            }
+            catch (Exception ex) { DiagLog.Swallowed("Appearance.Save", ex); }
+        }
+
+        /// <summary>
+        /// 恢复出厂外观——用户把字号调得过大/字体换得离谱导致界面错乱时的自救出口。
+        /// 只重置外观相关字段，落盘后立即把表单各控件回显为默认值（用户可再微调后保存）。
+        /// </summary>
+        private void ResetToDefaults()
+        {
+            if (MessageBox.Show(this,
+                    "将恢复以下默认值：\n" +
+                    "  终端字体 Consolas 12pt / 配色 Classic\n" +
+                    "  界面字体 " + FormFontPolicy.UiFontName + " 9pt / 界面主题 Dark\n" +
+                    "  DPI 感知 开启\n\n确定恢复？",
+                    "恢复默认外观", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                return;
+
+            var d = new AppearanceSettings(); // 出厂默认
+            try
+            {
+                d.Save(_iniPath);
+                DiagLog.Info("Appearance.Reset", "restored factory appearance defaults");
+            }
+            catch (Exception ex) { DiagLog.Swallowed("Appearance.Reset", ex); }
+
+            // 表单回显默认值（不关窗，用户可继续微调）
+            SelectCombo(_fontCombo, d.FontName);
+            _sizeNum.Value = Math.Max(_sizeNum.Minimum, Math.Min(_sizeNum.Maximum, d.FontSize));
+            SelectCombo(_schemeCombo, d.ColorScheme);
+            SelectCombo(_cjkFontCombo, "");
+            SelectCombo(_uiThemeCombo, d.UiTheme);
+            _dpiAwareCheck.Checked = d.DpiAware;
+            SelectCombo(_uiFontCombo, FormFontPolicy.UiFontName);
+            _uiSizeNum.Value = Math.Max(_uiSizeNum.Minimum, Math.Min(_uiSizeNum.Maximum, d.UIFontSize));
+            UpdatePreview();
+        }
+
+        private ComboBox MakeCombo(Action<ComboBox> fill)
+        {
+            var cb = new ComboBox
+            {
+                DropDownStyle = ComboBoxStyle.DropDownList,
+                Width = DpiScale.V(this, 220),
+                FlatStyle = FlatStyle.Flat,
+                Margin = new Padding(3, DpiScale.V(this, 6), 3, 0)
+            };
+            DialogStyle.ApplyInput(cb);
+            cb.BackColor = GdtermColorTable.Surface;
+            if (fill != null) fill(cb);
+            return cb;
+        }
+
+        private static void FillTerminalFonts(ComboBox cb)
+        {
+            try
+            {
+                using (var fonts = new InstalledFontCollection())
+                {
+                    foreach (var f in fonts.Families)
+                    {
+                        // 优先等宽
+                        if (IsLikelyMono(f.Name))
+                            cb.Items.Add(f.Name);
+                    }
+                    foreach (var f in fonts.Families)
+                    {
+                        if (!IsLikelyMono(f.Name) && cb.Items.Count < 80)
+                            cb.Items.Add(f.Name);
+                    }
+                }
+            }
+            catch
+            {
+                cb.Items.Add("Consolas");
+                cb.Items.Add("Cascadia Mono");
+                cb.Items.Add("Courier New");
+            }
+            if (cb.Items.Count == 0) cb.Items.Add("Consolas");
+        }
+
+        private NumericUpDown MakeNumeric(int min, int max, int value)
+        {
+            var n = new NumericUpDown
+            {
+                Minimum = min,
+                Maximum = max,
+                Value = value,
+                Width = DpiScale.V(this, 64),
+                Margin = new Padding(3, DpiScale.V(this, 6), 3, 0)
+            };
+            DialogStyle.ApplyInput(n);
+            return n;
         }
 
         private static bool IsLikelyMono(string name)
@@ -343,7 +363,7 @@ namespace Gdterm.UI.Forms
             SelectCombo(_cjkFontCombo, string.IsNullOrEmpty(s.CjkFontName) ? "" : s.CjkFontName);
             SelectCombo(_uiThemeCombo, string.IsNullOrEmpty(s.UiTheme) ? "Dark" : s.UiTheme);
             _dpiAwareCheck.Checked = s.DpiAware;
-            SelectCombo(_uiFontCombo, s.UIFontName ?? "Microsoft YaHei UI");
+            SelectCombo(_uiFontCombo, s.UIFontName ?? FormFontPolicy.UiFontName);
             _uiSizeNum.Value = Math.Max(_uiSizeNum.Minimum, Math.Min(_uiSizeNum.Maximum, s.UIFontSize > 0 ? s.UIFontSize : 9));
             UpdatePreview();
         }

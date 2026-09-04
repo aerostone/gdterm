@@ -35,7 +35,11 @@ namespace Gdterm.UI.Forms
         private void BuildUI(QuickCommand existing, string defaultGroup)
         {
             Text = existing == null ? "添加快捷命令" : "编辑快捷命令";
-            Size = DpiScale.S(this, 500, 480);
+            // 客户区高度随全局字号增长（行距已是字体驱动，防大字号把按钮推出底边）
+            {
+                float grow = FormFontPolicy.UiFontSize / 9f;
+                Size = DpiScale.S(this, 500, (int)(480 * Math.Max(1f, grow)));
+            }
             StartPosition = FormStartPosition.CenterParent;
             BackColor = Color.FromArgb(30, 30, 30);
             ForeColor = Color.FromArgb(204, 204, 204);
@@ -52,27 +56,28 @@ namespace Gdterm.UI.Forms
             AddLabel("名称:", lblX, y, font);
             _txtName = AddTextBox(inputX, y, inputW, font);
             _txtName.Text = "";
-            y += 35;
+            y += FormFontPolicy.RowStep(this);
 
             // 命令
             AddLabel("命令:", lblX, y, font);
             _txtCommand = AddTextBox(inputX, y, inputW, smallFont);
-            _txtCommand.Height = 50;
             _txtCommand.Multiline = true;
             _txtCommand.ScrollBars = ScrollBars.Vertical;
-            y += 58;
+            var cmdH = FormFontPolicy.RowStep(this) * 2 - 8; // ~3 行文本（字体驱动）
+            _txtCommand.Height = cmdH;
+            y += cmdH + 8;
 
             // 占位符提示
             var lblHint = new Label
             {
                 Text = "占位符: {host} {user} {date} {time} {datetime} {env:VAR_NAME}",
                 Location = new Point(inputX, y),
-                Size = new Size(inputW, DpiScale.V(this, 16)),
+                AutoSize = true,
                 Font = Services.FormFontPolicy.UiFont(-1.5f),
                 ForeColor = Color.FromArgb(100, 100, 100)
             };
             Controls.Add(lblHint);
-            y += 22;
+            y += FormFontPolicy.RowStep(this) - 8; // 小字提示行，比主行距略窄
 
             // 分组
             AddLabel("分组:", lblX, y, font);
@@ -91,19 +96,19 @@ namespace Gdterm.UI.Forms
             if (!string.IsNullOrEmpty(defaultGroup)) _cmbGroup.Text = defaultGroup;
             else _cmbGroup.Text = "自定义";
             Controls.Add(_cmbGroup);
-            y += 35;
+            y += FormFontPolicy.RowStep(this);
 
             // 执行前命令
             AddLabel("前置命令:", lblX, y, font);
             _txtPreCommand = AddTextBox(inputX, y, inputW, smallFont);
             WinFormsCompat.SetCueBanner(_txtPreCommand, "如: sudo -i");
-            y += 35;
+            y += FormFontPolicy.RowStep(this);
 
             // 执行后命令
             AddLabel("后置命令:", lblX, y, font);
             _txtPostCommand = AddTextBox(inputX, y, inputW, smallFont);
             WinFormsCompat.SetCueBanner(_txtPostCommand, "如: cleanup (可选)");
-            y += 35;
+            y += FormFontPolicy.RowStep(this);
 
             // 需要 root + 排序
             _chkRequiresRoot = new CheckBox
@@ -127,18 +132,18 @@ namespace Gdterm.UI.Forms
                 Maximum = 999
             };
             Controls.Add(_numSortOrder);
-            y += 35;
+            y += FormFontPolicy.RowStep(this);
 
             // 快捷键
             AddLabel("快捷键:", lblX, y, font);
             _txtShortcut = AddTextBox(inputX, y, 150, font);
             WinFormsCompat.SetCueBanner(_txtShortcut, "如: Ctrl+Shift+1");
-            y += 35;
+            y += FormFontPolicy.RowStep(this);
 
             // 描述
             AddLabel("描述:", lblX, y, font);
             _txtDescription = AddTextBox(inputX, y, inputW, font);
-            y += 50;
+            y += FormFontPolicy.RowStep(this);
 
             // 按钮
             var btnOk = new Button
@@ -191,7 +196,7 @@ namespace Gdterm.UI.Forms
             var txt = new TextBox
             {
                 Location = DpiScale.P(this, x, y - 3),
-                Size = DpiScale.S(this, w, 25),
+                Width = DpiScale.V(this, w),
                 Font = font,
                 BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.FromArgb(204, 204, 204),

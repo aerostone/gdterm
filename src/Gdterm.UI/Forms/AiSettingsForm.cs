@@ -38,7 +38,11 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "AI 设置";
-            Size = DpiScale.S(this, 500, 400);
+            // 客户区高度随全局字号增长（行距已是字体驱动）
+            {
+                float grow = FormFontPolicy.UiFontSize / 9f;
+                Size = DpiScale.S(this, 500, (int)(400 * Math.Max(1f, grow)));
+            }
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -83,12 +87,12 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 Location = new Point(DpiScale.V(this, 20), y),
-                Size = new Size(labelW, DpiScale.V(this, 22))
+                AutoSize = true
             };
             _apiKeyBox = new TextBox
             {
                 Location = new Point(boxX, y),
-                Size = new Size(boxW - 70, DpiScale.V(this, 22)),
+                Width = boxW - 70,
                 Font = new Font("Consolas", 9.5f),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -110,7 +114,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(apiKeyLabel);
             Controls.Add(_apiKeyBox);
             Controls.Add(_showKeyCheck);
-            y += 30;
+            y += FormFontPolicy.RowStep(this);
 
             _modelBox = AddField("模型名称：", ref y, labelW, boxX, boxW);
             WinFormsCompat.SetCueBanner(_modelBox, "gpt-4");
@@ -122,12 +126,12 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 Location = new Point(DpiScale.V(this, 20), y),
-                Size = new Size(labelW, DpiScale.V(this, 22))
+                AutoSize = true
             };
             _maxTokensSpinner = new NumericUpDown
             {
                 Location = new Point(boxX, y),
-                Size = DpiScale.S(this, 120, 22),
+                Width = DpiScale.V(this, 120),
                 Font = new Font("Consolas", 9.5f),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -138,7 +142,7 @@ namespace Gdterm.UI.Forms
             };
             Controls.Add(maxTokensLabel);
             Controls.Add(_maxTokensSpinner);
-            y += 30;
+            y += FormFontPolicy.RowStep(this);
 
             // Temperature
             var tempLabel = new Label
@@ -147,12 +151,12 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 Location = new Point(DpiScale.V(this, 20), y),
-                Size = new Size(labelW, DpiScale.V(this, 22))
+                AutoSize = true
             };
             _temperatureSpinner = new NumericUpDown
             {
                 Location = new Point(boxX, y),
-                Size = DpiScale.S(this, 120, 22),
+                Width = DpiScale.V(this, 120),
                 Font = new Font("Consolas", 9.5f),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -164,7 +168,7 @@ namespace Gdterm.UI.Forms
             };
             Controls.Add(tempLabel);
             Controls.Add(_temperatureSpinner);
-            y += 40;
+            y += FormFontPolicy.RowStep(this);
 
             // 分隔线
             var separator = new Label
@@ -174,7 +178,7 @@ namespace Gdterm.UI.Forms
                 Size = DpiScale.S(this, 440, 2)
             };
             Controls.Add(separator);
-            y += 15;
+            y += FormFontPolicy.RowStep(this) - 14; // 分隔线紧凑
 
             // 状态栏
             _statusLabel = new Label
@@ -186,7 +190,7 @@ namespace Gdterm.UI.Forms
                 Size = DpiScale.S(this, 300, 20)
             };
             Controls.Add(_statusLabel);
-            y += 25;
+            y += FormFontPolicy.RowStep(this) - 6; // 状态行小字
 
             // 按钮
             var saveButton = new Button
@@ -321,13 +325,13 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = Color.FromArgb(204, 204, 204),
                 Location = new Point(DpiScale.V(this, 20), y),
-                Size = new Size(labelW, DpiScale.V(this, 22))
+                AutoSize = true
             };
 
             var textBox = new TextBox
             {
                 Location = new Point(boxX, y),
-                Size = new Size(boxW, DpiScale.V(this, 22)),
+                Width = boxW,
                 Font = Services.FormFontPolicy.UiFont(),
                 BackColor = Color.FromArgb(50, 50, 50),
                 ForeColor = Color.FromArgb(204, 204, 204),
@@ -336,7 +340,7 @@ namespace Gdterm.UI.Forms
 
             Controls.Add(label);
             Controls.Add(textBox);
-            y += DpiScale.V(this, 30);
+            y += FormFontPolicy.RowStep(this);
             return textBox;
         }
     }

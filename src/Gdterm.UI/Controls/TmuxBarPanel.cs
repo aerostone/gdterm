@@ -230,7 +230,7 @@ namespace Gdterm.UI.Controls
                     FlatStyle = FlatStyle.Flat,
                     BackColor = GdtermColorTable.Background,
                     ForeColor = GdtermColorTable.Foreground,
-                    Font = new Font("Microsoft YaHei UI", 8.25f),
+                    Font = Services.FormFontPolicy.UiFont(-0.75f),
                     Margin = new Padding(1, 2, 1, 2),
                     TabStop = false,
                     Tag = k
