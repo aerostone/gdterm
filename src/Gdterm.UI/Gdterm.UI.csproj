@@ -148,6 +148,9 @@
     <Compile Include="Controls\MultiChannelPanel.cs" />
     <Compile Include="Controls\CommandHistoryPanel.cs" />
     <Compile Include="Controls\SftpBrowserPanel.cs" />
+    <Compile Include="Controls\SftpDualPanePanel.cs" />
+    <Compile Include="Controls\FilePaneModel.cs" />
+    <Compile Include="Controls\FilePaneControl.cs" />
     <Compile Include="Controls\SessionBookmarksPanel.cs" />
     <Compile Include="Controls\TerminalControl.cs" />
     <Compile Include="Controls\TerminalControl.Keyboard.cs" />

@@ -425,7 +425,7 @@ namespace Gdterm.UI.Services
                 ToolTipText = "sftp://" + config.Host
             };
 
-            var panel = new SftpBrowserPanel(config, credential, _sftpFactory, _tunnelManager);
+            var panel = new SftpDualPanePanel(config, credential, _sftpFactory, _tunnelManager);
             panel.Dock = DockStyle.Fill;
             tab.Controls.Add(panel);
 
