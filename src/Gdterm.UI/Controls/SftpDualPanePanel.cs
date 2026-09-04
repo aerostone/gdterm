@@ -114,7 +114,7 @@ namespace Gdterm.UI.Controls
             var header = new Label
             {
                 Dock = DockStyle.Top,
-                Height = FormFontPolicy.RowStep(this) - 9,
+                Height = FormFontPolicy.RowStep(pane) - 9,
                 AutoEllipsis = true,
                 Text = "  " + title,
                 ForeColor = titleColor,

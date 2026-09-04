@@ -155,7 +155,8 @@ namespace Gdterm.UI.Services
             if (input == null) return;
             input.BackColor = GdtermColorTable.Surface;
             input.ForeColor = GdtermColorTable.Foreground;
-            input.BorderStyle = BorderStyle.FixedSingle;
+            var tb = input as TextBoxBase;
+            if (tb != null) tb.BorderStyle = BorderStyle.FixedSingle;
         }
 
         /// <summary>分组标题——全局字号 +0.5 粗体。</summary>
