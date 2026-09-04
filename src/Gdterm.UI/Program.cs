@@ -35,6 +35,15 @@ namespace Gdterm.UI
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
+            // AntdUI 全局初始化：暗色模式 + 终端绿主色（与 GdtermColorTable.Accent 对齐）。
+            // 新 UI 逐步接入 AntdUI 控件；存量原生窗体不受影响（两套体系分区共存）。
+            try
+            {
+                AntdUI.Config.IsDark = true;
+                AntdUI.Style.SetPrimary(System.Drawing.Color.FromArgb(0x00, 0xB8, 0x4A)); // 终端绿调暗一档保对比度，见 DESIGN-LANGUAGE.md
+            }
+            catch { }
+
             // 统一 ToolStrip / MenuStrip / StatusStrip 渲染：暗色专业主题。
             // 默认的 SystemRenderer 在自定义暗色 BackColor 上会留灰边;
             // ProfessionalRenderer 跟随系统主题色彩表格，没有突兑。

@@ -1,6 +1,9 @@
 # gdterm 设计语言（C/S 客户端 · WinForms）
 
-> 版本：1.0（2026-09-05）
+> 版本：1.1（2026-09-05）—— v1.1 决议：引入 **AntdUI 2.4.8**（Apache-2.0，net40+，纯 GDI）作为组件底座，
+> 与本设计语言对齐使用（`Config.IsDark=true` + `Style.SetPrimary(终端绿)`，见 §9）。
+
+
 > 约束前提：.NET Framework 4.6.2 WinForms、Windows 7 / Server 2008 R2 起步、单 EXE、无第三方 UI 框架。
 > 执行规则：本文是唯一视觉事实来源（SSOT）。代码以 `GdtermColorTable` + `DialogStyle` + `FormFontPolicy`
 > 三个类为实现载体；**写新 UI 前先读本文，评审 UI 代码时以本文为准。**
@@ -230,3 +233,42 @@ git diff -U0 | grep "^+" | grep -v "^+++" | grep "y += 3[0-9]"
 | DPI 换算 | `DpiScale.V/P/S` |
 
 **一句话标准：颜色找 ColorTable、字体找 FontPolicy、组件找 DialogStyle、坐标找 DpiScale——四者之外无样式。**
+
+---
+
+## 9. AntdUI 接入规范（v1.1 起）
+
+### 9.1 为什么是 AntdUI
+
+| 硬约束 | 结果 |
+|---|---|
+| net462 | ✅ 最低 net40（lib/AntdUI.dll 用 net40 版，兼容 4.6.2） |
+| Win7/2008R2 | ✅ 纯 GDI 绘图、零图片依赖、无 Win8+ API |
+| 可商用 | ✅ Apache-2.0（对比 SunnyUI：GPL-3 + 商用授权，禁用） |
+| 单 EXE 便携 | ✅ 单 DLL ~3.2MB 随包 |
+
+落选者：SunnyUI（协议）、ReaLTaiizor（要 net48）、Krypton 新版（要 4.7.2，旧 LTS 才 4.6.2）、
+DarkUI（作者离世停更）、AcrylicUI/Beep（net Core/net8，Win7 出局）。
+
+### 9.2 共存策略（分区渐进）
+
+1. **存量原生窗体不动**——Terminal/MainForm/连接树等核心区保持 GdtermColorTable 体系；
+2. **新窗体/重构窗体默认 AntdUI**——继承 `AntdUI.Window`，用 Button/Input/Label/Table/Tabs；
+3. **新旧视觉对齐**：AntdUI 初始化已钉死 `IsDark=true` + `SetPrimary(终端绿调暗档 #00B84A)`
+   （纯 #00FF41 在暗底上做大面积按钮底色对比度不足）；
+4. **改到哪迁到哪**：触碰旧窗体时如果该窗体布局要大改，直接迁 AntdUI；小修小补维持原生；
+5. **设计 Token 映射**：§1 色彩/§2 字体的语义不变，实现载体从 DialogStyle 逐场景过渡到 AntdUI 控件
+   （Primary=Type.Primary、Muted=AntdUI 默认次级色、RowStep 仅存留于原生窗体）。
+
+### 9.3 代码规范
+
+- AntdUI 窗体基类：`AntdUI.Window`（自带暗色边框/自绘拖拽/圆角阴影）；**不要**再叠 FormFontPolicy.Apply
+  （AntdUI 控件自带 DPI/字体处理，Config.Font 全局设置）；
+- 消息提示用 `AntdUI.Message.success/error/warn(form, text)` 取代 MessageBox（窗体内非阻断提示）；
+  阻断式确认仍用 MessageBox；
+- AntdUI 控件属性名与本设计语言 Token 的对应关系写在 PR 描述里，评审按 §1-§4 语义审。
+
+### 9.4 首个试点
+
+- `KeePassUnlockForm`（2026-09-05）：AntdUI.Window + Input + Button + Message；
+  验证点：Win7 下窗体边框/拖拽、Input 密码框回车提交、Message 提示样式、高 DPI 缩放。

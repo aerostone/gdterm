@@ -88,6 +88,10 @@ after_test:
       if (Test-Path "lib\VtNetCore.dll") {
         Copy-Item "lib\VtNetCore.dll" $out -Force
       }
+      # 2b) AntdUI.dll 同样补齐（Private=True 时第 1 步已拷，此步兑底）
+      if (Test-Path "lib\AntdUI.dll") {
+        Copy-Item "lib\AntdUI.dll" $out -Force
+      }
 
       # 3) winpty（Win7/Server2008 本地终端 PTY fallback）—— 原生二进制集中放 lib\，
       #     winpty.dll 与 winpty-agent.exe 必须同目录（dll 启动 agent）；
