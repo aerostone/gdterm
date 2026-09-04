@@ -136,6 +136,7 @@
     <Compile Include="Controls\SecretScanPanel.cs" />
     <Compile Include="Controls\KeyBindingPanel.cs" />
     <Compile Include="Controls\QuickBarPanel.cs" />
+    <Compile Include="Controls\TmuxBarPanel.cs" />
     <Compile Include="Forms\QuickCommandEditorForm.cs" />
     <Compile Include="Controls\HighlightRulePanel.cs" />
     <Compile Include="Controls\TerminalSearchBar.cs" />

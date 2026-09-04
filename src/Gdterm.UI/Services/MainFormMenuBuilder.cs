@@ -39,6 +39,7 @@ namespace Gdterm.UI.Services
             public EventHandler SplitHorizontal { get; set; }
             public EventHandler SplitVertical { get; set; }
             public EventHandler ToggleQuickBar { get; set; }
+            public EventHandler ToggleTmuxBar { get; set; }
             public EventHandler ShowSearch { get; set; }
             public EventHandler ShowSnippet { get; set; }
             public EventHandler ShowHighlight { get; set; }
@@ -153,6 +154,14 @@ namespace Gdterm.UI.Services
             viewMenu.DropDownItems.Add(Mk("垂直分割", cb.SplitVertical, "splitv"));
             viewMenu.DropDownItems.Add(new ToolStripSeparator());
             viewMenu.DropDownItems.Add(Mk("快捷命令栏", cb.ToggleQuickBar, "batch"));
+            var toggleTmux = new ToolStripMenuItem("tmux 快捷面板")
+            {
+                // Ctrl+Shift+M：与现有 UI 动作约定一致（Ctrl+Shift+字母）
+                ShortcutKeys = Keys.Control | Keys.Shift | Keys.M
+            };
+            toggleTmux.Click += cb.ToggleTmuxBar;
+            AttachIcon(toggleTmux, "splith");
+            viewMenu.DropDownItems.Add(toggleTmux);
             menu.Items.Add(viewMenu);
 
             // ===== 终端：终端内搜索 + 会话功能 =====

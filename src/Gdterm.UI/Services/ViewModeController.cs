@@ -16,12 +16,14 @@ namespace Gdterm.UI.Services
         private readonly StatusBarControl _statusBar;
         private readonly MenuStrip _menuStrip;
         private readonly QuickBarPanel _quickBar;
+        private readonly TmuxBarPanel _tmuxBar;
         private readonly Action _hideSidePanel;
         private readonly ToolStripMenuItem _viewStandardItem;
         private readonly ToolStripMenuItem _viewFocusItem;
         private readonly ToolStripMenuItem _viewCompactItem;
         private readonly Control _host;
         private Button _exitFocusButton;
+        private bool _tmuxBarWasVisible;
 
         private ViewMode _current = ViewMode.Standard;
 
@@ -34,12 +36,14 @@ namespace Gdterm.UI.Services
             ToolStripMenuItem viewStandardItem,
             ToolStripMenuItem viewFocusItem,
             ToolStripMenuItem viewCompactItem,
-            Control host = null)
+            Control host = null,
+            TmuxBarPanel tmuxBar = null)
         {
             _connectionTree = connectionTree;
             _statusBar = statusBar;
             _menuStrip = menuStrip;
             _quickBar = quickBar;
+            _tmuxBar = tmuxBar;
             _hideSidePanel = hideSidePanel;
             _viewStandardItem = viewStandardItem;
             _viewFocusItem = viewFocusItem;
@@ -126,6 +130,7 @@ namespace Gdterm.UI.Services
                     if (_statusBar != null) _statusBar.Visible = true;
                     if (_menuStrip != null) _menuStrip.Visible = true;
                     if (_quickBar != null) _quickBar.Visible = true;
+                    if (_tmuxBar != null) _tmuxBar.Visible = _tmuxBarWasVisible; // 恢复用户偏好（默认隐藏）
                     SetExitButtonVisible(false);
                     break;
                 case ViewMode.Focus:
@@ -133,6 +138,11 @@ namespace Gdterm.UI.Services
                     if (_statusBar != null) _statusBar.Visible = false;
                     if (_menuStrip != null) _menuStrip.Visible = false;
                     if (_quickBar != null) _quickBar.Visible = false;
+                    if (_tmuxBar != null)
+                    {
+                        _tmuxBarWasVisible = _tmuxBar.Visible; // 记住用户偏好，Standard 恢复
+                        _tmuxBar.Visible = false;
+                    }
                     try { _hideSidePanel?.Invoke(); } catch { }
                     SetExitButtonVisible(true);
                     break;

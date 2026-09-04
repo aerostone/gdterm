@@ -78,6 +78,7 @@ namespace Gdterm.UI.Forms
         private MenuStrip _menuStrip;
         private ToolStripMenuItem _debugModeMenuItem;
         private QuickBarPanel _quickBar;
+        private TmuxBarPanel _tmuxBar;
         private WelcomePanel _welcomePanel;
         private NotifyIcon _trayIcon;
         private bool _confirmExitPending;
@@ -293,6 +294,17 @@ namespace Gdterm.UI.Forms
                 tc.SendInput(line);
             };
 
+            // tmux 快捷面板：参考 webtmux 工具栏分组，PC 版两行布局 + 前缀选择器。
+            // 发送走 TrySendInput(raw)——tmux 控制序列不是 shell 命令行，绕过危险命令闸门。
+            _tmuxBar = new TmuxBarPanel(raw =>
+            {
+                var tc = _tabContainer.GetActiveTerminalControl();
+                if (tc == null) return;
+                tc.TrySendInput(raw);
+            });
+            // 默认隐藏：只占用 tmux 用户的垂直空间；视图菜单 / Ctrl+Shift+M 开启。
+            _tmuxBar.Visible = false;
+
             _lockOverlay = new LockOverlayControl(_securityManager);
             _lockOverlay.Dock = DockStyle.Fill;
             _lockOverlay.Visible = _securityManager.IsLocked;
@@ -343,6 +355,10 @@ namespace Gdterm.UI.Forms
                 ToggleQuickBar = (s, e) =>
                 {
                     if (_quickBar != null) _quickBar.Visible = !_quickBar.Visible;
+                },
+                ToggleTmuxBar = (s, e) =>
+                {
+                    if (_tmuxBar != null) _tmuxBar.Visible = !_tmuxBar.Visible;
                 },
                 ShowSearch = (s, e) => _sidePanels?.AttachSearchBar(_tabContainer),
                 ShowSnippet = (s, e) => _sidePanelHost?.ShowSnippetSearch(_sidePanels, _tabContainer),
@@ -398,7 +414,8 @@ namespace Gdterm.UI.Forms
                 menuBuilt.ViewStandardItem,
                 menuBuilt.ViewFocusItem,
                 menuBuilt.ViewCompactItem,
-                host: this);
+                host: this,
+                tmuxBar: _tmuxBar);
 
             _cmdRouter = new MainFormCommandRouter(
                 _tabContainer, _sidePanels, _sidePanelHost, _viewMode);
@@ -422,6 +439,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(mainSplitter);
             Controls.Add(_connectionTree);
             Controls.Add(_quickBar);
+            Controls.Add(_tmuxBar);
             Controls.Add(_statusBar);
             Controls.Add(_lockOverlay);
             Controls.Add(_menuStrip);
@@ -471,6 +489,7 @@ namespace Gdterm.UI.Forms
             if (_statusBar != null) try { _statusBar.Font = font; } catch { }
             if (_connectionTree != null) try { _connectionTree.ApplyUIFont(name, size); } catch { }
             if (_quickBar != null) try { _quickBar.Font = font; } catch { }
+            if (_tmuxBar != null) try { _tmuxBar.Font = font; } catch { }
         }
 
         private void SetupEventHandlers()
