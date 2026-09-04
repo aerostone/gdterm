@@ -49,6 +49,36 @@ $patched = $src -replace [regex]::Escape($anchor),
 # 补 winpr/print.h：winpr_HexDump 声明所在头文件，rdp.c 默认未包含
 $patched = $patched -replace '#include <winpr/crt.h>',
   "#include <winpr/crt.h>`n#include <winpr/print.h>"
+# ---- 补丁：rdp_write_header 使用标准 PER 长度编码（SEC_EXCHANGE 帧大小对齐 mstsc）----
+# mstsc 对 MCS SendData 的 userData (OCTET_STRING) PER 长度在 <=0x7F 时用 1 字节，
+# 而 FreeRDP 注释明说 "always encode length in two bytes"。
+# Wire 证据（2026-09-04 五人 full parse）：
+#   mstsc golden reconnect c57179: SEC_EXCHANGE = 94B, PER len = 0x50 (1B)
+#   gdterm redirect c64267: SEC_EXCHANGE = 95B, PER len = 0x8050 (2B)
+#   内部 SEC data 逐字节相同（flags=0x0201 key_len=72 + 64B RSA ClientRandom + 8B tail）
+# 目标 Windows Server 对 2 字节 PER 长度解析错位，在 SEC_EXCHANGE 后立即
+# DisconnectProviderUltimatum（c64267 F#21），Client Info 没机会发送。
+$perAnchorPre = 'mcs_write_domain_mcspdu_header(s, MCSPDU, length, 0);'
+if ($patched.Contains($perAnchorPre) -eq $false) { throw "perAnchorPre not found in rdp.c" }
+$perFixPrefix = "`tint perUserDataLen = (int)(length - RDP_PACKET_HEADER_MAX_LENGTH);`n" +
+  "`tif (perUserDataLen <= 0x7F)`n" +
+  "`t`tlength--;`n`t"
+$patched = $patched.Replace($perAnchorPre, $perFixPrefix + $perAnchorPre)
+$perAnchorFull = "`t/*`n" +
+  "`t * We always encode length in two bytes, even though we could use`n" +
+  "`t * only one byte if length <= 0x7F. It is just easier that way,`n" +
+  "`t * because we can leave room for fixed-length header, store all`n" +
+  "`t * the data first and then store the header.`n" +
+  "`t */`n" +
+  "`tlength = (length - RDP_PACKET_HEADER_MAX_LENGTH) | 0x8000;`n" +
+  "`tStream_Write_UINT16_BE(s, length); /* userData (OCTET_STRING) */"
+if ($patched.Contains($perAnchorFull) -eq $false) { throw "perAnchorFull not found in rdp.c" }
+$perFixFull = "`t/* gdterm patch: standard PER length encoding - 1 byte if <= 0x7F.`n" +
+  "`t * Wire proof (2026-09-04): mstsc golden SEC_EXCHANGE=94B (1B PER len`n" +
+  "`t * 0x50), gdterm was 95B (2B 0x8050); target server rejects the 2B`n" +
+  "`t * form with DisconnectProviderUltimatum on SEC_EXCHANGE. */`n" +
+  "`tper_write_length(s, perUserDataLen); /* userData (OCTET_STRING) */"
+$patched = $patched.Replace($perAnchorFull, $perFixFull)
 Set-Content -Path $rdpC -Value $patched -NoNewline
 Write-Host "Patched rdp.c: unhandled PDU hex dump enabled"
 
