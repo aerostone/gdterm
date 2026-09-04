@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
+using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Forms

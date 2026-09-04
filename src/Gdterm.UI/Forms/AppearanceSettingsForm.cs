@@ -306,7 +306,7 @@ namespace Gdterm.UI.Forms
                 "  终端字体 Consolas 12pt / 配色 Classic\n" +
                 "  界面字体 " + FormFontPolicy.UiFontName + " 9pt / 界面主题 Dark\n" +
                 "  DPI 感知 开启\n\n确定恢复？",
-                TType.Warn);
+                AntdUI.TType.Warn);
             if (dr != DialogResult.Yes && dr != DialogResult.OK)
                 return;
 
@@ -320,14 +320,22 @@ namespace Gdterm.UI.Forms
 
             // 表单回显默认值（不关窗，用户可继续微调）
             SelectCombo(_fontCombo, d.FontName);
-            _sizeNum.Value = Math.Max(_sizeNum.Minimum, Math.Min(_sizeNum.Maximum, d.FontSize));
+            _sizeNum.Value = ClampNum(_sizeNum, d.FontSize);
             SelectCombo(_schemeCombo, d.ColorScheme);
             SelectCombo(_cjkFontCombo, "");
             SelectCombo(_uiThemeCombo, d.UiTheme);
             _dpiAwareCheck.Checked = d.DpiAware;
             SelectCombo(_uiFontCombo, FormFontPolicy.UiFontName);
-            _uiSizeNum.Value = Math.Max(_uiSizeNum.Minimum, Math.Min(_uiSizeNum.Maximum, d.UIFontSize));
+            _uiSizeNum.Value = ClampNum(_uiSizeNum, d.UIFontSize);
             UpdatePreview();
+        }
+
+        private static decimal ClampNum(AntdUI.InputNumber num, int v)
+        {
+            decimal value = v;
+            if (num.Minimum.HasValue && value < num.Minimum.Value) value = num.Minimum.Value;
+            if (num.Maximum.HasValue && value > num.Maximum.Value) value = num.Maximum.Value;
+            return value;
         }
 
         private static bool IsLikelyMono(string name)
@@ -344,13 +352,13 @@ namespace Gdterm.UI.Forms
         {
             var s = AppearanceSettings.Load(_iniPath);
             SelectCombo(_fontCombo, s.FontName);
-            _sizeNum.Value = Math.Max(_sizeNum.Minimum, Math.Min(_sizeNum.Maximum, s.FontSize));
+            _sizeNum.Value = ClampNum(_sizeNum, s.FontSize);
             SelectCombo(_schemeCombo, s.ColorScheme);
             SelectCombo(_cjkFontCombo, string.IsNullOrEmpty(s.CjkFontName) ? "" : s.CjkFontName);
             SelectCombo(_uiThemeCombo, string.IsNullOrEmpty(s.UiTheme) ? "Dark" : s.UiTheme);
             _dpiAwareCheck.Checked = s.DpiAware;
             SelectCombo(_uiFontCombo, s.UIFontName ?? FormFontPolicy.UiFontName);
-            _uiSizeNum.Value = Math.Max(_uiSizeNum.Minimum, Math.Min(_uiSizeNum.Maximum, s.UIFontSize > 0 ? s.UIFontSize : 9));
+            _uiSizeNum.Value = ClampNum(_uiSizeNum, s.UIFontSize > 0 ? s.UIFontSize : 9);
             UpdatePreview();
         }
 

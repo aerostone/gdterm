@@ -5,6 +5,7 @@ using System.Text;
 using System.Windows.Forms;
 using Gdterm.KeePass;
 using Gdterm.KeePass.Models;
+using Gdterm.UI.Controls;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
 

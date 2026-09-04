@@ -394,13 +394,13 @@ namespace Gdterm.UI.Forms
     /// </summary>
     internal class DangerousCommandRuleEditForm : AntdUI.Window
     {
-        private readonly AntdUI.Input _nameBox;
-        private readonly AntdUI.Input _patternBox;
-        private readonly AntdUI.Select _patternTypeCombo;
-        private readonly AntdUI.Select _levelCombo;
-        private readonly AntdUI.Select _categoryCombo;
-        private readonly AntdUI.Input _descriptionBox;
-        private readonly AntdUI.Checkbox _enabledCheck;
+        private AntdUI.Input _nameBox;
+        private AntdUI.Input _patternBox;
+        private AntdUI.Select _patternTypeCombo;
+        private AntdUI.Select _levelCombo;
+        private AntdUI.Select _categoryCombo;
+        private AntdUI.Input _descriptionBox;
+        private AntdUI.Checkbox _enabledCheck;
 
         public DangerousCommandRuleEditForm()
         {
