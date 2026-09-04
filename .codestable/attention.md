@@ -22,12 +22,27 @@ standards:
 
 - **框架：** .NET Framework 4.6.2 + WinForms（Win7/Server 2008 原生支持）；**主程序强制 x64**（PlatformTarget=x64，修 RDP 许可存储错位与 winpty 加载）
 - **RDP：** 双引擎——默认 **FreeRDP 进程嵌入**（wfreerdp.exe /parent-window，CI 自建 2.11.7 免 MSLicensing 提权）；元数据 rdp_engine=mstscax 可切回 AxHost 零 interop 承载 mstscax（编译不依赖 AxMsTscLib.dll）
-- **RDP 重定向重连排查（2026-09-02 定稿）**：NSFOCUS 堡垒机 LOGOFF_BY_USER 根因=FreeRDP
-  `rdp->do_secure_checksum` 在 redirect 重连时持久化 TRUE，致 Client Info 线缆 SEC flags=0x0848
-  （含 SEC_SECURE_CHECKSUM），mstsc 为 0x0048；修复=清除块置 `do_secure_checksum=FALSE;
-  SaltedChecksum=FALSE`（commit 5544989，CI v0.1.178 已成功，待实测）。排查顺序
-  X.224→GCC 四块→SEC_EXCHANGE→Client Info SEC 标志；GCC 四块已逐字节对齐非根因。
-  详见 compound/2026-09-02-learning-pitfall-freerdp-do-secure-checksum-persists-redirect.md
+- **RDP 重定向重连排查（2026-09-04 根因更新）**：NSFOCUS 堡垒机 token 重连
+  LOGOFF_BY_USER 的最终根因是 **FreeRDP rdp_write_header 恒用 2 字节 PER 长度**
+  （`length|0x8000`），致 SEC_EXCHANGE 帧 95B vs mstsc 1 字节 94B。
+  目标 Windows Server 要求严格 PER 编码，在 SEC_EXCHANGE 后即时 DPU 踢线
+  （Client Info 从未上 wire，之前 "Client Info 后 ~52ms" 是发送前 hexdump 误导）。
+  修复：`rdp_write_header` 改 `per_write_length`（commit `fade82d`，CI 待测）。
+  
+  2026-09-02 定稿的 salted-checksum 结论（commit `5544989`）已由 v0.1.178 实测否定：
+  wire=0x0048 对齐 mstsc 后仍被踢。该发现文档已标 superseded。
+  
+  排雷顺序：
+  1. X.224 CR/CC → 字节对齐
+  2. GCC 四块（CS_CORE/CS_CLUSTER/CS_SEC/CS_NET）→ 逐字节对齐
+  3. SEC_EXCHANGE 内部数据 → 内容一致（仅 PER 长度不同）
+  4. ~~Client Info SEC 标志 0x0848 vs 0x0048~~ → 已排除
+  5. ~~clientAddress 127.0.0.1 vs 真实 IP~~ → 已排除
+  6. ~~CS_CLUSTER 0x15/0 vs 0x17/1~~ → 已排除
+  7. **MCS SendData userData PER 长度编码** → 当前候选（commit `fade82d`）
+  
+  详见 compound/2026-09-04-learning-pitfall-freerdp-per-length-encoding-sec-exchange.md
+  （旧 salted-checksum 文档：compound/2026-09-02-learning-pitfall-freerdp-do-secure-checksum-persists-redirect.md，已标 superseded）
 - **RDP 二重连机制并存（进程重启 + 进程内 redirect）**：C# FreeRdpClient.cs TryAutoReconnectWithToken
   用新 wfreerdp 进程重启并锁 /sec:rdp；进程内 redirect 走 FreeRDP rdp_client_redirect；
   diag.log 分析需注意 C# LogStreamLine 关键字过滤（'encryption'/'identity' 非关键字会在

@@ -5,8 +5,22 @@ date: 2026-09-02
 slug: freerdp-do-secure-checksum-persists-redirect
 component: FreeRDP 2.11.7 libfreerdp/core 重连状态机
 tags: [rdp, freerdp, redirect, reconnect, salted-checksum, sec_secure_checksum, do_secure_checksum, bug]
-status: active
+status: superseded
+superseded-by: 2026-09-04-learning-pitfall-freerdp-per-length-encoding-sec-exchange
 ---
+
+> **2026-09-04：本文结论已被否定并标记 superseded。** v0.1.178 实测证明清除
+> `do_secure_checksum`+`SaltedChecksum` 后 Client Info 线缆 SEC flags=0x0048 与 mstsc
+> 完全一致，**仍被 LOGOFF_BY_USER 踢线**。这不是 LOGOFF_BY_USER 的根因。
+>
+> 真正根因请见 `compound/2026-09-04-learning-pitfall-freerdp-per-length-encoding-sec-exchange.md`：
+> **MCS SendData userData PER 长度编码**（FreeRDP 恒 2 字节使 SEC_EXCHANGE 95B，
+> mstsc 1 字节 94B，目标服务器在 SEC_EXCHANGE 后即时 DPU）。
+>
+> 本文保留的**有价值硬事实**：FreeRDP `rdp->do_secure_checksum` 确实在 redirect 重连时
+> 持久化 TRUE、确实让 Client Info 发 salted MAC（0x0848）；但该差异不影响踢线判定，
+> 因为收到 0x0048 的实机仍被踢。这个状态机 bug 依然存在、依然影响线缆行为，
+> 只是不是本次 LOGOFF_BY_USER 的成因。保留上述内容供参考。
 
 # FreeRDP `rdp->do_secure_checksum` 在 redirect 重连时持久化 TRUE 导致 SEC_SECURE_CHECKSUM 误发
 
