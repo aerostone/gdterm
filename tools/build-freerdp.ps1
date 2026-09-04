@@ -79,6 +79,47 @@ $perFixFull = "`t/* gdterm patch: standard PER length encoding - 1 byte if <= 0x
   "`t * form with DisconnectProviderUltimatum on SEC_EXCHANGE. */`n" +
   "`tper_write_length(s, perUserDataLen); /* userData (OCTET_STRING) */"
 $patched = $patched.Replace($perAnchorFull, $perFixFull)
+
+# ---- 补丁：rdp_write_header 1字节PER 的调用者长度核算修复 ----
+# PER 补丁把小帧(userData<=0x7F)的 MCS 头从 15 字节缩到 14 字节(TPKT 同步-1)，
+# 但 4 个发送调用者(rdp_send/rdp_send_pdu/rdp_send_data_pdu/rdp_send_message_channel_pdu)
+# 在 rdp_write_header 之后仍用【旧 length】做两件事，导致 v0.1.183 首连回归：
+#   1) rdp_security_stream_out(旧length) -> body 长度多算 1 -> MAC/加密多覆盖
+#      1 个陈旧缓冲字节 -> 服务器 MAC 校验失败(堡垒机 level=1 校验客户端 MAC)
+#   2) Stream_SetPosition(旧length) -> transport_write 多写 1 个垃圾字节
+#      -> 线上流失步(wire 证据 c60454: F#15 后多出 1 个 0x03 字节)
+# 修复：security_stream_out 之前重算实际线上帧长
+#   length = Stream_GetPosition(s)[头实际字节数 14/15] + (旧length - 15)[userData]
+# 注意：rdp_write_share_control_header / rdp_write_share_data_header 两行
+# 保留旧 length——其内部 -RDP_PACKET_HEADER_MAX_LENGTH 与流预留 15 恰好
+# 抵消，语义(share 层 totalLength)不随 MCS 头编码变化。
+# wire 依据：mstsc c57136/c57179 成功会话全程小帧 1B-PER(48B/52B/60B)，
+# SEC_EXCHANGE 路径(connection.c rdp_client_establish_keys 用 SealLength 封口)
+# 不经这 4 个调用者，v0.1.183 已验证其 94B 帧正确。
+# 锚A: send_pdu/send_data_pdu 共 2 处(sec_hold 恢复后)，Replace 全替换正是所需。
+$perCallerA = "`tStream_SetPosition(s, sec_hold);`n`n" +
+  "`tif (!rdp_security_stream_out(rdp, s, length, 0, &pad))"
+if ($patched.Contains($perCallerA) -eq $false) { throw "perCallerA not found in rdp.c" }
+$perCallerAFix = "`tStream_SetPosition(s, sec_hold);`n" +
+  "`tlength = Stream_GetPosition(s) + (length - RDP_PACKET_HEADER_MAX_LENGTH); /* gdterm: actual wire length after 1B PER */`n`n" +
+  "`tif (!rdp_security_stream_out(rdp, s, length, 0, &pad))"
+$patched = $patched.Replace($perCallerA, $perCallerAFix)
+# 锚B: rdp_send(channel_id 变量名唯一)
+$perCallerB = "`trdp_write_header(rdp, s, length, channel_id);`n`n" +
+  "`tif (!rdp_security_stream_out(rdp, s, length, 0, &pad))"
+if ($patched.Contains($perCallerB) -eq $false) { throw "perCallerB not found in rdp.c" }
+$perCallerBFix = "`trdp_write_header(rdp, s, length, channel_id);`n" +
+  "`tlength = Stream_GetPosition(s) + (length - RDP_PACKET_HEADER_MAX_LENGTH); /* gdterm: actual wire length after 1B PER */`n`n" +
+  "`tif (!rdp_security_stream_out(rdp, s, length, 0, &pad))"
+$patched = $patched.Replace($perCallerB, $perCallerBFix)
+# 锚C: rdp_send_message_channel_pdu(messageChannelId 唯一)
+$perCallerC = "`trdp_write_header(rdp, s, length, rdp->mcs->messageChannelId);`n`n" +
+  "`tif (!rdp_security_stream_out(rdp, s, length, sec_flags, &pad))"
+if ($patched.Contains($perCallerC) -eq $false) { throw "perCallerC not found in rdp.c" }
+$perCallerCFix = "`trdp_write_header(rdp, s, length, rdp->mcs->messageChannelId);`n" +
+  "`tlength = Stream_GetPosition(s) + (length - RDP_PACKET_HEADER_MAX_LENGTH); /* gdterm: actual wire length after 1B PER */`n`n" +
+  "`tif (!rdp_security_stream_out(rdp, s, length, sec_flags, &pad))"
+$patched = $patched.Replace($perCallerC, $perCallerCFix)
 Set-Content -Path $rdpC -Value $patched -NoNewline
 Write-Host "Patched rdp.c: unhandled PDU hex dump enabled"
 
