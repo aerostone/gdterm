@@ -279,7 +279,22 @@ DarkUI（作者离世停更）、AcrylicUI/Beep（net Core/net8，Win7 出局）
 - `KeePassUnlockForm`（2026-09-05）：AntdUI.Window + Input + Button + Message；
   验证点：Win7 下窗体边框/拖拽、Input 密码框回车提交、Message 提示样式、高 DPI 缩放。
 
-### 9.5 迁移完成状态（v1.2，2026-09-05）
+### 9.5 迁移完成状态（v1.2，2026-09-05；v1.3 全控件化更新）
+
+**v1.3 决议（2026-09-05）：UI 控件全面 AntdUI 化**——除下列边界外，所有 new Button/Label/TextBox/
+ComboBox/CheckBox/NumericUpDown/TabControl 均已替换为 AntdUI 控件：
+
+1. **核心区豁免（永久原生）**：MainForm、TerminalControl、SplitPaneControl、ConnectionTreeControl
+   （含其原生 TextBox 筛选框）、TabContainerControl（主标签容器）、ToastNotifier.ToastForm（角落弹窗）；
+2. **数据列表类保留原生**（13×ListView / 3×ListBox）：侧边板的数据列表（Toolbox/KeyBinding/PortForward/
+   LogonScript 等）与通知/传输中心条目列表。AntdUI.Table 是 DataSource 绑定模型，对单列/轻量列表过重，
+   统一经 `NativeTheme.Dark()` 获得暗色外观。若未来迁 Table 需整体重写数据加载逻辑，单独立项；
+3. **ListViewItem/集合类型** 随所属 ListView 保留原生。
+
+**窗体级替换完成的表格**：KeePassManager 条目表、ScannerCenter 插件/发现表、PasswordHealth 四张
+问题表、DangerousCommandConfig 规则表、KeyBindingPanel 绑定表（AntdUI.Table + AntList<EntryRow> 模式）。
+
+
 
 **A 类完整迁移（AntdUI 控件体系）16 个**：KeePassUnlock、AppearanceSettings、PasswordGenerator、
 ChangeMasterPassword、AiSettings、QuickCommandEditor、SshKeyManager、DangerousCommandRuleEdit、

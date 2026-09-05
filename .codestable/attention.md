@@ -31,6 +31,12 @@ standards:
   状态色只用于文字与图标。全仓裸 FromArgb 字面量已清零（例外：连接树自绘、MenuIconFactory.Ink）。
 - **原生控件过渡层**：Services/NativeTheme.cs —— .Dark()/.DarkPrimary()/.DarkDanger() 扩展，
   侧边板 ListView 交互面板统一暗色入口，不要在面板里再写裸背景/前景色。
+- **v1.3 全控件化（2026-09-05）**：除豁免区与数据列表（13 ListView/3 ListBox 保留原生经
+  NativeTheme 暗色）外，所有按钮/输入框/选择器/复选框/标签页均为 AntdUI 控件。
+  新代码禁止 new 原生控件；表格用 AntdUI.Table + AntList<Row> 模式（参考 KeePassManagerForm）。
+  AntdUI API 备忘：Select 无 SelectedItem（用 SelectedValue/SelectedIndex）、无 GridLines；
+  TabPage 无参构造（Text 属性赋值）；Divider 用 Thickness 非 Size；Input 有 PlaceholderText
+  （不要用 SetCueBanner）。
 - **裸 0,122,204 品牌蓝禁用**：主操作色是终端绿（AntdUI SetPrimary #00B84A / 原生按钮 GdtermColorTable.Accent）。
 
 ### 技术栈与选型
