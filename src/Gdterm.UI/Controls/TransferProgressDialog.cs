@@ -9,13 +9,13 @@ namespace Gdterm.UI.Controls
     /// <summary>
     /// SFTP/Zmodem 传输进度对话框。支持取消与百分比更新。
     /// </summary>
-    public sealed class TransferProgressDialog : Form
+    public sealed class TransferProgressDialog : AntdUI.Window
     {
-        private readonly Label _titleLabel;
-        private readonly Label _detailLabel;
+        private readonly AntdUI.Label _titleLabel;
+        private readonly AntdUI.Label _detailLabel;
         private readonly ProgressBar _bar;
-        private readonly Label _percentLabel;
-        private readonly Button _cancelButton;
+        private readonly AntdUI.Label _percentLabel;
+        private readonly AntdUI.Button _cancelButton;
         private bool _completed;
         private bool _cancelled;
 
@@ -29,27 +29,23 @@ namespace Gdterm.UI.Controls
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
-            BackColor = GdtermColorTable.Background;
-            ForeColor = GdtermColorTable.Foreground;
 
             // 规范规则②：布局改用 Dock，禁绝对坐标；尺寸经 DpiScale（规范见 docs/UI-SCALING-CONVENTIONS.md）
 
-            _titleLabel = new Label
+            _titleLabel = new AntdUI.Label
             {
                 Text = title ?? "传输中…",
                 Dock = DockStyle.Top,
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 16), DpiScale.V(this, 14), DpiScale.V(this, 16), 0),
-                ForeColor = GdtermColorTable.Foreground,
                 Font = new Font(Font.FontFamily, Font.Size + 1f, FontStyle.Bold)
             };
-            _detailLabel = new Label
+            _detailLabel = new AntdUI.Label
             {
                 Text = "准备中…",
                 Dock = DockStyle.Top,
                 AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 16), DpiScale.V(this, 8), DpiScale.V(this, 16), 0),
-                ForeColor = GdtermColorTable.Muted
+                Padding = new Padding(DpiScale.V(this, 16), DpiScale.V(this, 8), DpiScale.V(this, 16), 0)
             };
             var barHost = new Panel
             {
@@ -73,25 +69,19 @@ namespace Gdterm.UI.Controls
                 WrapContents = false,
                 Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 8), DpiScale.V(this, 16), DpiScale.V(this, 8))
             };
-            _percentLabel = new Label
+            _percentLabel = new AntdUI.Label
             {
                 Text = "0%",
                 AutoSize = true,
                 Margin = new Padding(3, 0, DpiScale.V(this, 12), 0),
-                Anchor = AnchorStyles.Left,
-                TextAlign = ContentAlignment.MiddleLeft,
-                ForeColor = GdtermColorTable.Muted
+                Anchor = AnchorStyles.Left
             };
-            _cancelButton = new Button
+            _cancelButton = new AntdUI.Button
             {
                 Text = "取消",
                 AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 8), 0, DpiScale.V(this, 8), 0),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = GdtermColorTable.Surface,
-                ForeColor = GdtermColorTable.Foreground
+                Type = AntdUI.TTypeMini.Default
             };
-            _cancelButton.FlatAppearance.BorderColor = GdtermColorTable.Border;
             _cancelButton.Click += (s, e) =>
             {
                 _cancelled = true;

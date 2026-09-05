@@ -13,10 +13,10 @@ namespace Gdterm.UI.Controls
     /// <summary>
     /// Ctrl+Shift+K 全局连接快速跳转（普通 Ctrl+K 是 shell kill-line，不占用）。
     /// </summary>
-    public sealed class ConnectionQuickJumpForm : Form
+    public sealed class ConnectionQuickJumpForm : AntdUI.Window
     {
         private readonly IConnectionStore _store;
-        private readonly TextBox _filter;
+        private readonly AntdUI.Input _filter;
         private readonly ListBox _list;
         private List<ConnectionConfig> _all = new List<ConnectionConfig>();
 
@@ -34,16 +34,13 @@ namespace Gdterm.UI.Controls
             KeyPreview = true;
             ShowInTaskbar = false;
 
-            _filter = new TextBox
+            _filter = new AntdUI.Input
             {
                 Dock = DockStyle.Top,
-                Height = 28,
-                BackColor = GdtermColorTable.Surface,
-                ForeColor = GdtermColorTable.Foreground,
-                BorderStyle = BorderStyle.FixedSingle,
+                PlaceholderText = "输入名称 / 主机 / 分组…",
+                AllowClear = true,
                 Font = Services.FormFontPolicy.UiFont(+1f)
             };
-            try { WinFormsCompat.SetCueBanner(_filter, "输入名称 / 主机 / 分组…"); } catch { }
             _filter.TextChanged += (s, e) => ApplyFilter();
             _filter.KeyDown += OnFilterKey;
 

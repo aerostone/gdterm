@@ -13,19 +13,19 @@ namespace Gdterm.UI.Controls
     /// High: 橙色，确认 2 次
     /// Medium: 黄色，确认 1 次
     /// </summary>
-    public class DangerousCommandDialog : Form
+    public class DangerousCommandDialog : AntdUI.Window
     {
         private readonly string _command;
         private readonly CommandCheckResult _checkResult;
         private int _currentConfirm;
-        private Label _titleLabel;
-        private Label _commandLabel;
-        private Label _descriptionLabel;
-        private Label _confirmLabel;
-        private Button _confirmButton;
-        private Button _cancelButton;
-        private ProgressBar _progressBar;
-        private CheckBox _rememberChoice;
+        private AntdUI.Label _titleLabel;
+        private AntdUI.Input _commandLabel;
+        private AntdUI.Label _descriptionLabel;
+        private AntdUI.Label _confirmLabel;
+        private AntdUI.Button _confirmButton;
+        private AntdUI.Button _cancelButton;
+        private ProgressBar _progressBar;   // 原生 ProgressBar：确认次数进度语义简单
+        private AntdUI.Checkbox _rememberChoice;
 
         /// <summary>
         /// 用户是否确认执行
@@ -43,7 +43,6 @@ namespace Gdterm.UI.Controls
             _checkResult = checkResult;
             _currentConfirm = 0;
             InitializeComponent();
-            Gdterm.UI.Services.FormFontPolicy.Apply(this);
         }
 
         private void InitializeComponent()
@@ -65,7 +64,7 @@ namespace Gdterm.UI.Controls
             Text = $"⚠️ 危险命令确认 - {levelText}";
 
             // 标题
-            _titleLabel = new Label
+            _titleLabel = new AntdUI.Label
             {
                 Text = $"{levelEmoji} {levelText} - 第 1/{_checkResult.ConfirmCount} 次确认",
                 Font = new Font(Font.FontFamily, Font.Size + 3f, FontStyle.Bold),
@@ -77,16 +76,14 @@ namespace Gdterm.UI.Controls
             };
 
             // 命令显示（等宽语义例外，字号跟随全局）
-            _commandLabel = new Label
+            _commandLabel = new AntdUI.Input
             {
                 Text = _command,
                 Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 10f),
-                ForeColor = Color.White,
-                BackColor = Color.FromArgb(40, 40, 40),
+                ReadOnly = true,
                 Dock = DockStyle.Top,
                 Height = DpiScale.V(this, 35),
-                TextAlign = ContentAlignment.MiddleCenter,
-                Padding = new Padding(5)
+                TextAlign = HorizontalAlignment.Center
             };
 
             // 规则信息
@@ -97,7 +94,7 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(15, 10, 15, 10)
             };
 
-            var ruleNameLabel = new Label
+            var ruleNameLabel = new AntdUI.Label
             {
                 Text = $"规则: {_checkResult.RuleName}  |  分类: {_checkResult.Category}",
                 ForeColor = textColor,
@@ -105,7 +102,7 @@ namespace Gdterm.UI.Controls
                 AutoSize = true
             };
 
-            _descriptionLabel = new Label
+            _descriptionLabel = new AntdUI.Label
             {
                 Text = _checkResult.Description,
                 ForeColor = textColor,
@@ -118,7 +115,7 @@ namespace Gdterm.UI.Controls
             infoPanel.Controls.Add(ruleNameLabel);
 
             // 确认进度
-            _confirmLabel = new Label
+            _confirmLabel = new AntdUI.Label
             {
                 Text = GetConfirmText(),
                 Font = new Font(Font.FontFamily, Font.Size + 1.5f, FontStyle.Bold),
@@ -139,7 +136,7 @@ namespace Gdterm.UI.Controls
             };
 
             // 记住选择
-            _rememberChoice = new CheckBox
+            _rememberChoice = new AntdUI.Checkbox
             {
                 Text = "记住此命令，下次不再警告（加入白名单）",
                 ForeColor = textColor,
@@ -157,27 +154,20 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(10, 8, 10, 8)
             };
 
-            _cancelButton = new Button
+            _cancelButton = new AntdUI.Button
             {
                 Text = "取消 (Esc)",
                 AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 6), 0, DpiScale.V(this, 6), 0),
-                FlatStyle = FlatStyle.Flat,
-                DialogResult = DialogResult.Cancel,
-                BackColor = Color.FromArgb(80, 80, 80),
-                ForeColor = Color.White
+                Type = AntdUI.TTypeMini.Default
             };
             _cancelButton.Click += (s, e) => { IsConfirmed = false; DialogResult = DialogResult.Cancel; };
 
-            _confirmButton = new Button
+            _confirmButton = new AntdUI.Button
             {
                 Text = GetConfirmButtonText(),
                 AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 6), 0, DpiScale.V(this, 6), 0),
-                FlatStyle = FlatStyle.Flat,
                 Font = new Font(Font.FontFamily, Font.Size + 0.5f, FontStyle.Bold),
-                BackColor = accentColor,
-                ForeColor = Color.White
+                Type = AccentToTType(accentColor)
             };
             _confirmButton.Click += OnConfirmClick;
 
@@ -218,7 +208,7 @@ namespace Gdterm.UI.Controls
                 // 最后一次确认时按钮变红
                 if (_currentConfirm == _checkResult.ConfirmCount - 1)
                 {
-                    _confirmButton.BackColor = Color.Red;
+                    _confirmButton.Type = AntdUI.TTypeMini.Error;
                     _confirmButton.Text = "⚠ 确认执行 ⚠";
                 }
             }
@@ -237,6 +227,14 @@ namespace Gdterm.UI.Controls
             var remaining = _checkResult.ConfirmCount - _currentConfirm;
             if (remaining == 1) return "⚠ 最终确认 ⚠";
             return $"确认 ({_currentConfirm + 1}/{_checkResult.ConfirmCount})";
+        }
+
+        /// <summary>危险等级主色 → AntdUI 按钮语义类型（Critical红/High橙→Warn/Medium黄→Warn）。</summary>
+        private static AntdUI.TTypeMini AccentToTType(Color accent)
+        {
+            // Critical: 深红 → Error；High/Medium 橙黄 → Warn
+            if (accent.R > 190 && accent.G < 80) return AntdUI.TTypeMini.Error;
+            return AntdUI.TTypeMini.Warn;
         }
 
         private static void GetLevelStyle(DangerLevel level, out Color bg, out Color accent, out Color text, out string levelText, out string emoji)
