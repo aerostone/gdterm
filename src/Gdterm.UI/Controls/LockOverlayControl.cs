@@ -89,7 +89,6 @@ namespace Gdterm.UI.Controls
                 Size = DpiScale.S(this, 100, 32),
                 BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Accent,
                 ForeColor = Color.Black,
-                FlatAppearance = { BorderSize = 0 }
             };
             _unlockButton.Click += (s, e) => OnUnlock();
             _centerPanel.Controls.Add(_unlockButton);

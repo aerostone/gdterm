@@ -193,7 +193,7 @@ namespace Gdterm.UI.Controls
             }
         }
 
-        private Button CreateGroupButton(string text)
+        private AntdUI.Button CreateGroupButton(string text)
         {
             var btn = new AntdUI.Button {
                 Text = text,
@@ -280,7 +280,7 @@ namespace Gdterm.UI.Controls
             _buttonPanel.Controls.Add(addBtn);
         }
 
-        private Button CreateCommandButton(QuickCommand cmd)
+        private AntdUI.Button CreateCommandButton(QuickCommand cmd)
         {
             var btn = new AntdUI.Button {
                 Text = cmd.Name,
@@ -392,7 +392,7 @@ namespace Gdterm.UI.Controls
 
         // ── 视觉反馈 ──
 
-        private void FlashButton(Button btn, Color flashColor)
+        private void FlashButton(AntdUI.Button btn, Color flashColor)
         {
             var original = btn.BackColor;
             btn.BackColor = flashColor;

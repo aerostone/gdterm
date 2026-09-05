@@ -94,7 +94,7 @@ namespace Gdterm.UI.Controls
             return chk;
         }
 
-        private Button CreateBtn(string text, string tip)
+        private AntdUI.Button CreateBtn(string text, string tip)
         {
             var btn = new AntdUI.Button {
                 Text = text,

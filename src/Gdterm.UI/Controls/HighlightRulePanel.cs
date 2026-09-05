@@ -68,9 +68,9 @@ namespace Gdterm.UI.Controls
             Controls.Add(toolbar);
         }
 
-        private Button CreateBtn(string text, int x)
+        private AntdUI.Button CreateBtn(string text, int x)
         {
-            return new Button
+            return new AntdUI.Button
             {
                 Text = text, Size = DpiScale.S(this, 70, 28), Location = DpiScale.P(this, x, 6), BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-0.5f)
@@ -204,9 +204,9 @@ namespace Gdterm.UI.Controls
             };
         }
 
-        private Label Lbl(string t, int x, int y) => new Label { Text = t, Location = DpiScale.P(this, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground };
-        private TextBox Txt(int x, int y, int w) => new AntdUI.Input { Location = DpiScale.P(this, x, y), Size = DpiScale.S(this, w, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f)};
-        private CheckBox Chk(string t, int x, int y) { var c = new AntdUI.Checkbox { Text = t, Location = DpiScale.P(this, x, y), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }; Controls.Add(c); return c; }
+        private AntdUI.Label Lbl(string t, int x, int y) => new AntdUI.Label { Text = t, Location = DpiScale.P(this, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground };
+        private AntdUI.Input Txt(int x, int y, int w) => new AntdUI.Input { Location = DpiScale.P(this, x, y), Size = DpiScale.S(this, w, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f)};
+        private AntdUI.Checkbox Chk(string t, int x, int y) { var c = new AntdUI.Checkbox { Text = t, Location = DpiScale.P(this, x, y), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }; Controls.Add(c); return c; }
 
         protected override void Dispose(bool disposing) { base.Dispose(disposing); }
     }

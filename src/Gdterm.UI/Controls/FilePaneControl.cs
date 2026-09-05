@@ -191,7 +191,7 @@ namespace Gdterm.UI.Controls
 
         private readonly ToolTip _tips = new ToolTip();
 
-        private Button MakeBtn(string text, string tip, EventHandler onClick)
+        private AntdUI.Button MakeBtn(string text, string tip, EventHandler onClick)
         {
             var b = new AntdUI.Button {
                 Text = text,

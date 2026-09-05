@@ -131,7 +131,7 @@ namespace Gdterm.UI.Controls
             Controls.Add(top);
         }
 
-        private Button MakeBtn(string text, EventHandler onClick)
+        private AntdUI.Button MakeBtn(string text, EventHandler onClick)
         {
             var b = new AntdUI.Button {
                 Text = text,

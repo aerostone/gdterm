@@ -225,7 +225,7 @@ namespace Gdterm.UI.Controls
             });
         }
 
-        private Button MakeAction(string text, Action onClick)
+        private AntdUI.Button MakeAction(string text, Action onClick)
         {
             var b = new AntdUI.Button {
                 Text = text,
