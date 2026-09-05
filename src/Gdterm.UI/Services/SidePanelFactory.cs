@@ -299,10 +299,9 @@ namespace Gdterm.UI.Services
 
         private static Control Unavailable(string text)
         {
-            return new Label
+            return new AntdUI.Label
             {
                 Text = text,
-                ForeColor = Color.White,
                 Dock = DockStyle.Fill
             };
         }
