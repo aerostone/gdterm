@@ -65,7 +65,7 @@ namespace Gdterm.UI.Forms
             {
                 Dock = DockStyle.Fill,
                 BorderWidth = 0,
-                GridLines = true,
+
                 RowHeight = 28
             };
             _table.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left));

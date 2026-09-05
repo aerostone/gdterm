@@ -47,10 +47,10 @@ namespace Gdterm.UI.Forms
             toolbar.Controls.Add(MakeToolBtn("添加", OnAddClick));
             toolbar.Controls.Add(MakeToolBtn("编辑", OnEditClick));
             toolbar.Controls.Add(MakeToolBtn("删除", OnDeleteClick));
-            toolbar.Controls.Add(new AntdUI.Divider { Orientation = AntdUI.TOrientation.FromVert, Size = 8 });
+            toolbar.Controls.Add(new AntdUI.Divider { Orientation = AntdUI.TOrientation.Left, Thickness = 1f, Margin = new Padding(4) });
             toolbar.Controls.Add(MakeToolBtn("复制密码", OnCopyPasswordClick));
             toolbar.Controls.Add(MakeToolBtn("复制用户名", OnCopyUsernameClick));
-            toolbar.Controls.Add(new AntdUI.Divider { Orientation = AntdUI.TOrientation.FromVert, Size = 8 });
+            toolbar.Controls.Add(new AntdUI.Divider { Orientation = AntdUI.TOrientation.Left, Thickness = 1f, Margin = new Padding(4) });
             toolbar.Controls.Add(MakeToolBtn("刷新", (s, e) => LoadEntries()));
 
             // 条目表（AntdUI.Table）
@@ -59,7 +59,7 @@ namespace Gdterm.UI.Forms
                 Dock = DockStyle.Fill,
                 Font = new Font("Consolas", 9.5f),
                 BorderWidth = 0,
-                GridLines = true,
+
                 RowHeight = 30
             };
             _entryTable.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left));

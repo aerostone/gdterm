@@ -131,7 +131,7 @@ namespace Gdterm.UI.Forms
             {
                 Dock = DockStyle.Fill,
                 BorderWidth = 0,
-                GridLines = true,
+
                 RowHeight = 28
             };
             _pluginTable.Columns.Add(new AntdUI.Column("Name", "插件", AntdUI.ColumnAlign.Left));
@@ -142,7 +142,7 @@ namespace Gdterm.UI.Forms
             _pluginTable.Columns.Add(new AntdUI.Column("Version", "版本", AntdUI.ColumnAlign.Left));
             _pluginTable.CheckedChanged += (s, ev) => UpdateRunButtonState();
             _pluginTable.CellDoubleClick += (s, ev) => { if (!_running && SelectedRunnablePlugins().Count > 0) OnRunClicked(null, null); };
-            pluginPanel.Controls.Add(_pluginList);
+            pluginPanel.Controls.Add(_pluginTable);
             var pluginHint = new AntdUI.Label
             {
                 Dock = DockStyle.Bottom,
@@ -165,13 +165,13 @@ namespace Gdterm.UI.Forms
             {
                 Dock = DockStyle.Fill,
                 BorderWidth = 0,
-                GridLines = true,
+
                 RowHeight = 28
             };
             _findingTable.Columns.Add(new AntdUI.Column("Severity", "级别", AntdUI.ColumnAlign.Left));
             _findingTable.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left));
             _findingTable.Columns.Add(new AntdUI.Column("Detail", "详情", AntdUI.ColumnAlign.Left));
-            findingPanel.Controls.Add(_findingList);
+            findingPanel.Controls.Add(_findingTable);
             var findingHeader = new AntdUI.Label
             {
                 Dock = DockStyle.Top,

@@ -71,7 +71,7 @@ namespace Gdterm.UI.Forms
                 Dock = DockStyle.Fill,
                 Font = new Font("Consolas", 9f),
                 BorderWidth = 0,
-                GridLines = true,
+
                 RowHeight = 28
             };
             _ruleTable.Columns.Add(new AntdUI.Column("Name", "名称", AntdUI.ColumnAlign.Left));
@@ -205,7 +205,6 @@ namespace Gdterm.UI.Forms
 
         private void LoadWhitelist()
         {
-            _whitelistBox.Items.Clear();
             try
             {
                 // 通过反射或公开接口获取白名单
@@ -245,9 +244,8 @@ namespace Gdterm.UI.Forms
 
         private void OnEditRuleClick(object sender, EventArgs e)
         {
-            if (_ruleList.SelectedItems.Count == 0) return;
-
-            var rule = (DangerousCommandRule)_ruleList.SelectedItems[0].Tag;
+            var rule = SelectedRule();
+            if (rule == null) return;
             AntdUI.Message.info(this,
                 $"编辑规则 \"{rule.Name}\" 的功能需要配置文件支持。\n" +
                 $"当前规则：{rule.Pattern}\n" +

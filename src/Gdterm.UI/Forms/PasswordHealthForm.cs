@@ -132,14 +132,14 @@ namespace Gdterm.UI.Forms
 
         private void AddIssueTab(string name, System.Collections.Generic.IList<PasswordIssue> issues, Color color)
         {
-            var tab = new AntdUI.TabPage($"  {name} ({(issues != null ? issues.Count : 0)})  ");
+            var tab = new AntdUI.TabPage { Text = $"  {name} ({(issues != null ? issues.Count : 0)})  " };
 
             var table = new AntdUI.Table
             {
                 Dock = DockStyle.Fill,
                 Font = new Font("Consolas", 9.5f),
                 BorderWidth = 0,
-                GridLines = true,
+
                 RowHeight = 28
             };
             table.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left));
@@ -179,14 +179,14 @@ namespace Gdterm.UI.Forms
 
         private void AddDuplicateTab(string name, System.Collections.Generic.IList<DuplicatePasswordGroup> groups)
         {
-            var tab = new AntdUI.TabPage($"  {name} ({groups.Count} 组)  ");
+            var tab = new AntdUI.TabPage { Text = $"  {name} ({groups.Count} 组)  " };
 
             var listView = new AntdUI.Table
             {
                 Dock = DockStyle.Fill,
                 Font = new Font("Consolas", 9.5f),
                 BorderWidth = 0,
-                GridLines = true,
+
                 RowHeight = 28
             };
             listView.Columns.Add(new AntdUI.Column("Hash", "密码哈希", AntdUI.ColumnAlign.Left));
