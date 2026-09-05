@@ -427,7 +427,7 @@ namespace Gdterm.UI.Forms
                     }
                     break;
 
-                case 2:,
+                case 2:
                     IsCompleted = true;
                     DialogResult = DialogResult.OK;
                     Close();
