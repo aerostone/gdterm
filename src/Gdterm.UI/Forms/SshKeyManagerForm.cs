@@ -29,11 +29,13 @@ namespace Gdterm.UI.Forms
             _keepass = keepass;
             Text = "SSH 密钥管理";
             FormBorderStyle = FormBorderStyle.FixedDialog;
+            Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             StartPosition = FormStartPosition.CenterParent;
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
             Size = new Size(600, 520);
+            Services.FormFontPolicy.Apply(this); // AntdUI 控件继承 Form.Font，恢复用户配置 UI 字号传导
 
             int y = 20;
             _title = Labeled(ref y, "条目标题", "SSH Key");

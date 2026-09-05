@@ -47,6 +47,7 @@ namespace Gdterm.UI.Forms
             }
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
+            Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             MaximizeBox = false;
             BackColor = GdtermColorTable.Background;
 
@@ -340,6 +341,7 @@ namespace Gdterm.UI.Forms
             Size = new Size(470, 560);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
+            Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
@@ -458,6 +460,7 @@ namespace Gdterm.UI.Forms
             Size = new Size(420, 190);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
+            Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;

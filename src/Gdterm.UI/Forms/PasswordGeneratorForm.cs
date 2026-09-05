@@ -41,6 +41,7 @@ namespace Gdterm.UI.Forms
         {
             InitializeComponent();
             GeneratePassword();
+            Services.FormFontPolicy.Apply(this); // AntdUI 控件继承 Form.Font，恢复用户配置 UI 字号传导
         }
 
         private void InitializeComponent()
@@ -49,6 +50,7 @@ namespace Gdterm.UI.Forms
             Size = new Size(520, 600);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
+            Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;

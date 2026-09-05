@@ -120,6 +120,7 @@ namespace Gdterm.UI.Forms
             AutoScaleMode = AutoScaleMode.Font;
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
+            Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             MaximizeBox = false;
             MinimizeBox = false;
             BackColor = GdtermColorTable.Background;

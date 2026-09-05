@@ -27,6 +27,8 @@ namespace Gdterm.UI.Controls
             _store = store;
             Text = "快速跳转连接 (Ctrl+Shift+K)";
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
+            Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
+            AutoHandDpi = false; // 尺寸已按 DpiScale 预缩放，关掉 AntdUI 的自动 DPI 避免二次放大
             StartPosition = FormStartPosition.CenterParent;
             ClientSize = DpiScale.S(this, 520, 360);
             BackColor = GdtermColorTable.Background;

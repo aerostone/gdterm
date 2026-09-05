@@ -36,6 +36,7 @@ namespace Gdterm.UI.Forms
             Size = DpiScale.S(this, 700, 550);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
+            Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             MaximizeBox = false;
             BackColor = GdtermColorTable.Surface;
 

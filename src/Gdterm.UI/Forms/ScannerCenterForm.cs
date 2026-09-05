@@ -144,7 +144,7 @@ namespace Gdterm.UI.Forms
                 Dock = DockStyle.Bottom,
                 Height = 20,
                 Text = "提示：双击运行；在 插件目录 增删改脚本即热更新（无需重启）",
-                ForeColor = SystemColors.GrayText
+                ForeColor = GdtermColorTable.Muted
             };
             pluginPanel.Controls.Add(pluginHint);
             _split.Panel1.Controls.Add(pluginPanel);
@@ -295,7 +295,7 @@ namespace Gdterm.UI.Forms
             flow.Controls.Add(new AntdUI.Label {
                 Text = "留空凭据=用当前身份；域账号格式 DOMAIN\\user；需目标管理员权限 + ADMIN$ 共享",
                 AutoSize = true,
-                ForeColor = SystemColors.GrayText,
+                ForeColor = GdtermColorTable.Muted,
                 Margin = new Padding(10, 9, 3, 0)
             });
             _wmiPanel.Controls.Add(flow);

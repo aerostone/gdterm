@@ -33,7 +33,7 @@ namespace Gdterm.UI.Controls
         private void InitializeComponent()
         {
             Size = DpiScale.S(this, 500, 400);
-            BackColor = SystemColors.Control;
+            BackColor = GdtermColorTable.Background;
 
             // 搜索栏
             var searchPanel = new FlowLayoutPanel
@@ -82,7 +82,7 @@ namespace Gdterm.UI.Controls
                 Text = "就绪",
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(3, 0, 0, 0),
-                BackColor = SystemColors.ControlLight
+                BackColor = GdtermColorTable.Surface
             };
 
             Controls.Add(_historyList);

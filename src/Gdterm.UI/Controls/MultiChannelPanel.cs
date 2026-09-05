@@ -38,7 +38,7 @@ namespace Gdterm.UI.Controls
         private void InitializeComponent()
         {
             Size = DpiScale.S(this, 300, 400);
-            BackColor = SystemColors.Control;
+            BackColor = GdtermColorTable.Background;
 
             // 工具栏
             var toolbar = new FlowLayoutPanel
@@ -87,7 +87,7 @@ namespace Gdterm.UI.Controls
             var inputHint = new AntdUI.Label {
                 Dock = DockStyle.Fill,
                 Text = "输入命令后按 Enter 广播到所有选中会话",
-                ForeColor = SystemColors.GrayText,
+                ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
@@ -101,7 +101,7 @@ namespace Gdterm.UI.Controls
                 Text = "就绪",
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(3, 0, 0, 0),
-                BackColor = SystemColors.ControlLight
+                BackColor = GdtermColorTable.Surface
             };
 
             Controls.Add(_sessionList);
@@ -242,7 +242,7 @@ namespace Gdterm.UI.Controls
 
                 // 未连接或非就绪的终端灰色显示
                 if (!session.IsConnected)
-                    item.ForeColor = SystemColors.GrayText;
+                    item.ForeColor = GdtermColorTable.Muted;
                 else if (session.ReadyState != null && !session.ReadyState.IsReady)
                     item.ForeColor = Color.OrangeRed;
 
@@ -264,7 +264,7 @@ namespace Gdterm.UI.Controls
             }
             else
             {
-                _statusLabel.ForeColor = SystemColors.ControlText;
+                _statusLabel.ForeColor = GdtermColorTable.Foreground;
             }
         }
 
@@ -272,7 +272,7 @@ namespace Gdterm.UI.Controls
         {
             var total = _manager.GetAllSessions().Count;
             var selected = _manager.SelectedCount;
-            _statusLabel.ForeColor = SystemColors.ControlText;
+            _statusLabel.ForeColor = GdtermColorTable.Foreground;
             _statusLabel.Text = selected > 0
                 ? $"已选中 {selected}/{total} 个就绪会话，广播模式已激活"
                 : $"共 {total} 个会话，未选择广播目标";

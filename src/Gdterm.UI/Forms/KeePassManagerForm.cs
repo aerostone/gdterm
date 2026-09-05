@@ -32,6 +32,7 @@ namespace Gdterm.UI.Forms
             Size = DpiScale.S(this, 700, 500);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
+            Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             MaximizeBox = false;
 
             // 工具行（AntdUI.Button 流式靠右）
@@ -371,6 +372,7 @@ namespace Gdterm.UI.Forms
             // 跟随字体/DPI 自动整体缩放（绝对定位在 11pt@144dpi 下会重叠/溢出）,
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
+            Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
