@@ -17,7 +17,7 @@ namespace Gdterm.UI.Forms
         private readonly IKeePassService _keepassService;
         private AntdUI.Table _entryTable;
         private AntdUI.Label _statusLabel;
-        private System.Collections.Generic.List<KeePassEntry> _entries = new System.Collections.Generic.List<KeePassEntry>();
+        private System.Collections.Generic.List<KeePassEntrySummary> _entries = new System.Collections.Generic.List<KeePassEntrySummary>();
 
         public KeePassManagerForm(IKeePassService keepassService)
         {
