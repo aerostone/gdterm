@@ -62,7 +62,7 @@ namespace Gdterm.UI.Controls
                 Font = ResolveDefaultFont(),
                 Height = 24
             };
-            try { Gdterm.UI.Diagnostics._filterBox.PlaceholderText = "输入主机/名称/分组过滤…"; }
+            try { WinFormsCompat.SetCueBanner(_filterBox, "输入主机/名称/分组过滤…"); }
             catch { }
             _filterBox.TextChanged += (s, e) => ApplyFilter(_filterBox.Text);
 
