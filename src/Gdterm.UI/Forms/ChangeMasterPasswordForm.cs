@@ -72,7 +72,7 @@ namespace Gdterm.UI.Forms
             var titleLabel = new AntdUI.Label
             {
                 Text = "修改主密码",
-                Font = new Font("Segoe UI", 15F, FontStyle.Bold),
+                Font = Gdterm.UI.Services.FormFontPolicy.UiFont(+6f, FontStyle.Bold),
                 AutoSize = true,
                 Location = new Point(labelX, y)
             };

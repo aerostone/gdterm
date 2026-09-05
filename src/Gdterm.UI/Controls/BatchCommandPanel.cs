@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using Gdterm.Security;
 using Gdterm.Terminal;
 using Gdterm.UI.Services;
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Controls
 {
@@ -29,7 +30,7 @@ namespace Gdterm.UI.Controls
         {
             _executor = new BatchCommandExecutor();
             Dock = DockStyle.Fill;
-            BackColor = Color.FromArgb(30, 30, 30);
+            BackColor = GdtermColorTable.Background;
             BuildUI();
         }
 
@@ -51,11 +52,11 @@ namespace Gdterm.UI.Controls
             // ── 顶部：命令输入 ──
             var topPanel = new Panel { Dock = DockStyle.Top, Height = 70, BackColor = Color.FromArgb(37, 37, 38), Padding = new Padding(8) };
 
-            var lblCmd = new Label { Text = "命令:", Location = DpiScale.P(this, 8, 8), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204) };
-            _txtCommand = new TextBox { Location = DpiScale.P(this, 8, 28), Size = DpiScale.S(this, 500, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
+            var lblCmd = new Label { Text = "命令:", Location = DpiScale.P(this, 8, 8), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Foreground };
+            _txtCommand = new TextBox { Location = DpiScale.P(this, 8, 28), Size = DpiScale.S(this, 500, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
             _txtCommand.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { ExecuteCommand(); e.SuppressKeyPress = true; } };
 
-            _btnExecute = new Button { Text = "▶ 执行", Location = DpiScale.P(this, 520, 26), Size = DpiScale.S(this, 80, 28), FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White, Font = font };
+            _btnExecute = new Button { Text = "▶ 执行", Location = DpiScale.P(this, 520, 26), Size = DpiScale.S(this, 80, 28), FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Accent, ForeColor = Color.White, Font = font };
             _btnExecute.FlatAppearance.BorderSize = 0;
             _btnExecute.Click += (s, e) => ExecuteCommand();
 
@@ -67,10 +68,10 @@ namespace Gdterm.UI.Controls
             var leftPanel = new Panel { Dock = DockStyle.Left, Width = 250, BackColor = Color.FromArgb(37, 37, 38), Padding = new Padding(4) };
 
             var leftHeader = new Panel { Dock = DockStyle.Top, Height = 32, BackColor = Color.FromArgb(37, 37, 38) };
-            _btnSelectAll = new Button { Text = "全选", Location = DpiScale.P(this, 4, 4), AutoSize = true, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = Services.FormFontPolicy.UiFont(-1f) };
+            _btnSelectAll = new Button { Text = "全选", Location = DpiScale.P(this, 4, 4), AutoSize = true, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-1f) };
             _btnSelectAll.FlatAppearance.BorderSize = 0;
             _btnSelectAll.Click += (s, e) => { foreach (ListViewItem item in _lvSessions.Items) item.Checked = true; };
-            var btnDeselect = new Button { Text = "取消", Location = DpiScale.P(this, 64, 4), AutoSize = true, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = Services.FormFontPolicy.UiFont(-1f) };
+            var btnDeselect = new Button { Text = "取消", Location = DpiScale.P(this, 64, 4), AutoSize = true, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-1f) };
             btnDeselect.FlatAppearance.BorderSize = 0;
             btnDeselect.Click += (s, e) => { foreach (ListViewItem item in _lvSessions.Items) item.Checked = false; };
             leftHeader.Controls.AddRange(new Control[] { _btnSelectAll, btnDeselect });
@@ -80,8 +81,8 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 View = View.Details,
                 CheckBoxes = true,
-                BackColor = Color.FromArgb(30, 30, 30),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                BackColor = GdtermColorTable.Background,
+                ForeColor = GdtermColorTable.Foreground,
                 Font = new Font("Consolas", 8.5f),
                 BorderStyle = BorderStyle.None,
                 FullRowSelect = true
@@ -97,7 +98,7 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(25, 25, 25),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                ForeColor = GdtermColorTable.Foreground,
                 Font = new Font("Consolas", 9f),
                 ReadOnly = true,
                 BorderStyle = BorderStyle.None,
@@ -173,7 +174,7 @@ namespace Gdterm.UI.Controls
 
             _rtbResults.Clear();
             AppendResult("━━━ 批量命令执行 ━━━\n", Color.FromArgb(78, 201, 176));
-            AppendResult(string.Format("命令: {0}\n", command), Color.FromArgb(204, 204, 204));
+            AppendResult(string.Format("命令: {0}\n", command), GdtermColorTable.Foreground);
             AppendResult(string.Format("目标: {0} 个会话\n\n", selected.Count), Color.FromArgb(130, 130, 130));
 
             var results = await _executor.ExecuteAsync(selected, command, 15000);
@@ -188,7 +189,7 @@ namespace Gdterm.UI.Controls
                     AppendResult(string.Format("│  ... ({0} 行)\n", result.Output.Count), Color.FromArgb(100, 100, 100));
                 if (!string.IsNullOrEmpty(result.ErrorMessage))
                     AppendResult("│  错误: " + result.ErrorMessage + "\n", Color.FromArgb(255, 80, 80));
-                AppendResult("└────────────────\n\n", Color.FromArgb(80, 80, 80));
+                AppendResult("└────────────────\n\n", GdtermColorTable.Border);
             }
 
             _btnExecute.Enabled = true;

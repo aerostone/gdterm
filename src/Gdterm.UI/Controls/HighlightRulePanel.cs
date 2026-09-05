@@ -24,7 +24,7 @@ namespace Gdterm.UI.Controls
         {
             _store = store;
             Dock = DockStyle.Fill;
-            BackColor = Color.FromArgb(30, 30, 30);
+            BackColor = GdtermColorTable.Background;
             _config = _store.Load();
             BuildUI();
             RefreshList();
@@ -50,8 +50,8 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 View = View.Details,
                 FullRowSelect = true,
-                BackColor = Color.FromArgb(30, 30, 30),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                BackColor = GdtermColorTable.Background,
+                ForeColor = GdtermColorTable.Foreground,
                 Font = Services.FormFontPolicy.UiFont(),
                 BorderStyle = BorderStyle.None,
                 GridLines = false
@@ -75,7 +75,7 @@ namespace Gdterm.UI.Controls
             {
                 Text = text, Size = DpiScale.S(this, 70, 28), Location = DpiScale.P(this, x, 6),
                 FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.FromArgb(204, 204, 204), Font = Services.FormFontPolicy.UiFont(-0.5f)
+                ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-0.5f)
             };
         }
 
@@ -92,7 +92,7 @@ namespace Gdterm.UI.Controls
                 item.SubItems.Add(r.Bold ? "✓" : "");
                 item.SubItems.Add(r.Enabled ? "✓" : "✗");
                 item.Tag = r;
-                if (!r.Enabled) item.ForeColor = Color.FromArgb(80, 80, 80);
+                if (!r.Enabled) item.ForeColor = GdtermColorTable.Border;
                 _lvRules.Items.Add(item);
             }
         }
@@ -163,8 +163,8 @@ namespace Gdterm.UI.Controls
                 Text = existing == null ? "添加高亮规则" : "编辑高亮规则",
                 Size = DpiScale.S(this, 420, 350),
                 StartPosition = FormStartPosition.CenterParent,
-                BackColor = Color.FromArgb(30, 30, 30),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                BackColor = GdtermColorTable.Background,
+                ForeColor = GdtermColorTable.Foreground,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false, MinimizeBox = false
             };
@@ -189,8 +189,8 @@ namespace Gdterm.UI.Controls
                 chkBold.Checked = existing.Bold;
             }
 
-            var btnOk = new Button { Text = "确定", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(this, 220, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(0, 122, 204), ForeColor = Color.White };
-            var btnCancel = new Button { Text = "取消", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(this, 310, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(60, 60, 60), ForeColor = Color.FromArgb(204, 204, 204) };
+            var btnOk = new Button { Text = "确定", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(this, 220, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Accent, ForeColor = Color.White };
+            var btnCancel = new Button { Text = "取消", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(this, 310, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
 
             form.Controls.AddRange(new Control[] { lblName, txtName, lblPattern, txtPattern, chkRegex, chkCase, lblFg, txtFg, lblBg, txtBg, chkBold, btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
@@ -206,9 +206,9 @@ namespace Gdterm.UI.Controls
             };
         }
 
-        private Label Lbl(string t, int x, int y) => new Label { Text = t, Location = DpiScale.P(this, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = Color.FromArgb(204, 204, 204) };
-        private TextBox Txt(int x, int y, int w) => new TextBox { Location = DpiScale.P(this, x, y), Size = DpiScale.S(this, w, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
-        private CheckBox Chk(string t, int x, int y) { var c = new CheckBox { Text = t, Location = DpiScale.P(this, x, y), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = Color.FromArgb(204, 204, 204) }; Controls.Add(c); return c; }
+        private Label Lbl(string t, int x, int y) => new Label { Text = t, Location = DpiScale.P(this, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground };
+        private TextBox Txt(int x, int y, int w) => new TextBox { Location = DpiScale.P(this, x, y), Size = DpiScale.S(this, w, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
+        private CheckBox Chk(string t, int x, int y) { var c = new CheckBox { Text = t, Location = DpiScale.P(this, x, y), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }; Controls.Add(c); return c; }
 
         protected override void Dispose(bool disposing) { base.Dispose(disposing); }
     }

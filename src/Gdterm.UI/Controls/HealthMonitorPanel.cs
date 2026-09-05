@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.Terminal;
 using Gdterm.UI.Services;
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Controls
 {
@@ -34,7 +35,7 @@ namespace Gdterm.UI.Controls
         public HealthMonitorPanel()
         {
             Dock = DockStyle.Fill;
-            BackColor = Color.FromArgb(30, 30, 30);
+            BackColor = GdtermColorTable.Background;
             BuildUI();
         }
 
@@ -54,7 +55,7 @@ namespace Gdterm.UI.Controls
             var cards = new Panel { Dock = DockStyle.Top, Height = 80, BackColor = Color.FromArgb(37, 37, 38), Padding = new Padding(12, 10, 12, 10) };
 
             _lblStatus = CreateCard("● 状态", "未知", 12, Color.FromArgb(130, 130, 130));
-            _lblUptime = CreateCard("⏱ 运行时间", "00:00:00", 160, Color.FromArgb(204, 204, 204));
+            _lblUptime = CreateCard("⏱ 运行时间", "00:00:00", 160, GdtermColorTable.Foreground);
             _lblLatency = CreateCard("⚡ 延迟", "— ms", 320, Color.FromArgb(78, 201, 176));
             _lblReconnects = CreateCard("↻ 重连", "0", 480, Color.FromArgb(255, 200, 87));
 
@@ -133,7 +134,7 @@ namespace Gdterm.UI.Controls
             g.DrawString("连接状态", _titleFont, Brushes.Gray, rect.Left + left, 8);
 
             // 网格线
-            using (var pen = new Pen(Color.FromArgb(40, 40, 40), 1))
+            using (var pen = new Pen(GdtermColorTable.Surface, 1))
             {
                 for (int i = 0; i <= 4; i++)
                 {

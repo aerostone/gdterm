@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using Gdterm.Security;
 using Gdterm.Core.Models;
 using Gdterm.UI.Services;
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Forms
 {
@@ -46,13 +47,13 @@ namespace Gdterm.UI.Forms
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
-            BackColor = Color.FromArgb(30, 30, 30);
+            BackColor = GdtermColorTable.Background;
 
             // 工具栏
             _toolbar = new ToolStrip
             {
                 BackColor = Color.FromArgb(45, 45, 45),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                ForeColor = GdtermColorTable.Foreground,
                 GripStyle = ToolStripGripStyle.Hidden,
                 Renderer = new DarkToolStripRenderer(),
                 Font = Services.FormFontPolicy.UiFont(),
@@ -91,8 +92,8 @@ namespace Gdterm.UI.Forms
                 FullRowSelect = true,
                 GridLines = true,
                 Font = new Font("Consolas", 9f),
-                BackColor = Color.FromArgb(30, 30, 30),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                BackColor = GdtermColorTable.Background,
+                ForeColor = GdtermColorTable.Foreground,
                 HeaderStyle = ColumnHeaderStyle.Nonclickable,
                 BorderStyle = BorderStyle.None,
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
@@ -108,7 +109,7 @@ namespace Gdterm.UI.Forms
             _ruleList.DoubleClick += OnEditRuleClick;
 
             // —— 白名单区（底部组合面板，Dock=Bottom，字体驱动高度）——
-            var wlPanel = new Panel { Dock = DockStyle.Bottom, BackColor = Color.FromArgb(30, 30, 30) };
+            var wlPanel = new Panel { Dock = DockStyle.Bottom, BackColor = GdtermColorTable.Background };
             var wlHeaderRow = FormFontPolicy.RowStep(this);
             var wlBtnRow = wlHeaderRow + DpiScale.V(this, 24) + 4;
             wlPanel.Height = wlBtnRow + DpiScale.V(this, 96) + DpiScale.V(this, 8);
@@ -117,7 +118,7 @@ namespace Gdterm.UI.Forms
             {
                 Text = "白名单（豁免命令）",
                 Font = Services.FormFontPolicy.UiFont(0.5f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                ForeColor = GdtermColorTable.Foreground,
                 Location = DpiScale.P(this, 5, 2),
                 AutoSize = true
             };
@@ -131,7 +132,7 @@ namespace Gdterm.UI.Forms
                 Location = DpiScale.P(this, 5, wlHeaderRow),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(-0.5f),
-                BackColor = Color.FromArgb(0, 122, 204),
+                BackColor = GdtermColorTable.Accent,
                 ForeColor = Color.White
             };
             btnAddWhitelist.Click += OnAddWhitelistClick;
@@ -157,7 +158,7 @@ namespace Gdterm.UI.Forms
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
                 Font = new Font("Consolas", 9.5f),
                 BackColor = Color.FromArgb(25, 25, 25),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                ForeColor = GdtermColorTable.Foreground,
                 BorderStyle = BorderStyle.FixedSingle
             };
             wlPanel.Controls.Add(_whitelistBox);
@@ -366,7 +367,7 @@ namespace Gdterm.UI.Forms
             {
                 if (e.Item.Selected || e.Item.Pressed)
                 {
-                    using (var brush = new SolidBrush(Color.FromArgb(60, 60, 60)))
+                    using (var brush = new SolidBrush(GdtermColorTable.Hover))
                         e.Graphics.FillRectangle(brush, new Rectangle(Point.Empty, e.Item.Size));
                 }
             }
@@ -374,13 +375,13 @@ namespace Gdterm.UI.Forms
             protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)
             {
                 var y = e.Item.Height / 2;
-                using (var pen = new Pen(Color.FromArgb(60, 60, 60)))
+                using (var pen = new Pen(GdtermColorTable.Hover))
                     e.Graphics.DrawLine(pen, 0, y, e.Item.Width, y);
             }
 
             protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
             {
-                e.TextColor = Color.FromArgb(204, 204, 204);
+                e.TextColor = GdtermColorTable.Foreground;
                 base.OnRenderItemText(e);
             }
         }

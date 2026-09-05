@@ -37,6 +37,21 @@ namespace Gdterm.UI.Diagnostics
         public static Color Hover { get { return s_hover; } }
         public static Color Pressed { get { return s_pressed; } }
 
+        // ── 语义色（DESIGN-LANGUAGE v1.1 §3：状态色只用于文字与图标，不做大面积底色）──
+        private static Color s_danger = Color.FromArgb(0xF8, 0x51, 0x49);
+        private static Color s_warning = Color.FromArgb(0xD2, 0x99, 0x22);
+        private static Color s_success = Color.FromArgb(0x3F, 0xB9, 0x50);
+        private static Color s_info = Color.FromArgb(0x58, 0xA6, 0xFF);
+
+        /// <summary>危险/删除/错误文字（#F85149）。</summary>
+        public static Color Danger { get { return s_danger; } }
+        /// <summary>告警文字（#D29922）。</summary>
+        public static Color Warning { get { return s_warning; } }
+        /// <summary>成功状态文字（#3FB950，区别于 Accent 按钮绿）。</summary>
+        public static Color Success { get { return s_success; } }
+        /// <summary>链接/信息（#58A6FF，蓝色仅在可点击文字场景）。</summary>
+        public static Color Info { get { return s_info; } }
+
         /// <summary>运行时切换外壳主题（与终端 ColorScheme 独立）。</summary>
         public static void ApplyTheme(string name)
         {

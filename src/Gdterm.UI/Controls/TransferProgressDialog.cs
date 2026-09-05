@@ -154,13 +154,13 @@ namespace Gdterm.UI.Controls
             {
                 _bar.Value = 100;
                 _detailLabel.Text = message ?? "完成";
-                _detailLabel.ForeColor = Color.FromArgb(0, 255, 65);
+                _detailLabel.ForeColor = GdtermColorTable.Accent;
                 _percentLabel.Text = "100%";
             }
             else
             {
                 _detailLabel.Text = message ?? "失败";
-                _detailLabel.ForeColor = Color.FromArgb(248, 81, 73);
+                _detailLabel.ForeColor = GdtermColorTable.Danger;
             }
         }
 

@@ -45,7 +45,7 @@ namespace Gdterm.UI.Controls
 
         private void BuildUI()
         {
-            BackColor = Color.FromArgb(30, 30, 30);
+            BackColor = GdtermColorTable.Background;
             Dock = DockStyle.Fill;
 
             var top = new Panel { Dock = DockStyle.Top, Height = 36, BackColor = Color.FromArgb(37, 37, 38) };
@@ -100,7 +100,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 View = View.Details,
                 FullRowSelect = true,
-                BackColor = Color.FromArgb(30, 30, 30),
+                BackColor = GdtermColorTable.Background,
                 ForeColor = Color.FromArgb(220, 220, 220),
                 BorderStyle = BorderStyle.None,
                 Font = new Font("Consolas", 9.5f)
@@ -143,7 +143,7 @@ namespace Gdterm.UI.Controls
                 Width = 70,
                 Height = 28,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(60, 60, 60),
+                BackColor = GdtermColorTable.Hover,
                 ForeColor = Color.White,
                 Margin = new Padding(2)
             };
@@ -363,13 +363,13 @@ namespace Gdterm.UI.Controls
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false,
                 MinimizeBox = false,
-                BackColor = Color.FromArgb(35, 35, 35)
+                BackColor = GdtermColorTable.Surface
             };
             using (f)
             {
                 f.Size = DpiScale.S(f, 360, 140);
                 var lbl = new Label { Text = label, ForeColor = Color.White, Location = DpiScale.P(f, 12, 12), AutoSize = true };
-                var box = new TextBox { Location = DpiScale.P(f, 12, 40), Width = 320, BackColor = Color.FromArgb(50, 50, 50), ForeColor = Color.White };
+                var box = new TextBox { Location = DpiScale.P(f, 12, 40), Width = 320, BackColor = GdtermColorTable.Surface, ForeColor = Color.White };
                 var ok = new Button { Text = "确定", DialogResult = DialogResult.OK, Location = DpiScale.P(f, 250, 70) };
                 f.Controls.AddRange(new Control[] { lbl, box, ok });
                 f.AcceptButton = ok;

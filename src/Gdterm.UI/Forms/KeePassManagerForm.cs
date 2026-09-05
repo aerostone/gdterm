@@ -35,13 +35,13 @@ namespace Gdterm.UI.Forms
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
-            BackColor = Color.FromArgb(30, 30, 30);
+            BackColor = GdtermColorTable.Background;
 
             // 工具栏（字体由 FormFontPolicy.Apply 统一替换为全局 UI 字体）
             _toolbar = new ToolStrip
             {
                 BackColor = Color.FromArgb(45, 45, 45),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                ForeColor = GdtermColorTable.Foreground,
                 GripStyle = ToolStripGripStyle.Hidden,
                 Renderer = new DarkToolStripRenderer(),
                 Font = Services.FormFontPolicy.UiFont(),
@@ -84,8 +84,8 @@ namespace Gdterm.UI.Forms
                 FullRowSelect = true,
                 GridLines = true,
                 Font = new Font("Consolas", 9.5f),
-                BackColor = Color.FromArgb(30, 30, 30),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                BackColor = GdtermColorTable.Background,
+                ForeColor = GdtermColorTable.Foreground,
                 HeaderStyle = ColumnHeaderStyle.Nonclickable,
                 BorderStyle = BorderStyle.None
             };
@@ -328,7 +328,7 @@ namespace Gdterm.UI.Forms
             {
                 if (e.Item.Selected || e.Item.Pressed)
                 {
-                    using (var brush = new SolidBrush(Color.FromArgb(60, 60, 60)))
+                    using (var brush = new SolidBrush(GdtermColorTable.Hover))
                         e.Graphics.FillRectangle(brush, new Rectangle(Point.Empty, e.Item.Size));
                 }
             }
@@ -336,13 +336,13 @@ namespace Gdterm.UI.Forms
             protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)
             {
                 var y = e.Item.Height / 2;
-                using (var pen = new Pen(Color.FromArgb(60, 60, 60)))
+                using (var pen = new Pen(GdtermColorTable.Hover))
                     e.Graphics.DrawLine(pen, 0, y, e.Item.Width, y);
             }
 
             protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
             {
-                e.TextColor = Color.FromArgb(204, 204, 204);
+                e.TextColor = GdtermColorTable.Foreground;
                 base.OnRenderItemText(e);
             }
         }
@@ -408,16 +408,16 @@ namespace Gdterm.UI.Forms
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
-            BackColor = Color.FromArgb(30, 30, 30);
+            BackColor = GdtermColorTable.Background;
 
             // ===== 底部按钮（流式靠右，随字体缩放）=====
-            var btnPanel = new Panel { Dock = DockStyle.Bottom, Height = 45, BackColor = Color.FromArgb(30, 30, 30) };
+            var btnPanel = new Panel { Dock = DockStyle.Bottom, Height = 45, BackColor = GdtermColorTable.Background };
             var btnFlow = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.RightToLeft,
                 WrapContents = false,
-                BackColor = Color.FromArgb(30, 30, 30),
+                BackColor = GdtermColorTable.Background,
                 Padding = new Padding(0, 7, 15, 0)
             };
             var okButton = new Button
@@ -426,7 +426,7 @@ namespace Gdterm.UI.Forms
                 DialogResult = DialogResult.OK,
                 AutoSize = true,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(0, 122, 204),
+                BackColor = GdtermColorTable.Accent,
                 ForeColor = Color.White,
                 Margin = new Padding(0)
             };
@@ -436,7 +436,7 @@ namespace Gdterm.UI.Forms
                 DialogResult = DialogResult.Cancel,
                 AutoSize = true,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(60, 60, 60),
+                BackColor = GdtermColorTable.Hover,
                 ForeColor = Color.White,
                 Margin = new Padding(0, 0, 8, 0)
             };
@@ -451,7 +451,7 @@ namespace Gdterm.UI.Forms
                 ColumnCount = 2,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                BackColor = Color.FromArgb(30, 30, 30),
+                BackColor = GdtermColorTable.Background,
                 Padding = new Padding(12, 12, 12, 4)
             };
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));   // 标签列按文字宽度自适应
@@ -463,8 +463,8 @@ namespace Gdterm.UI.Forms
             _passwordBox = new TextBox
             {
                 Font = new Font("Consolas", 9.5f),   // 等宽语义，FormFontPolicy 会保留
-                BackColor = Color.FromArgb(50, 50, 50),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                BackColor = GdtermColorTable.Surface,
+                ForeColor = GdtermColorTable.Foreground,
                 BorderStyle = BorderStyle.FixedSingle,
                 UseSystemPasswordChar = true
             };
@@ -477,8 +477,8 @@ namespace Gdterm.UI.Forms
                 Text = "显示",
                 AutoSize = true,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(60, 60, 60),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                BackColor = GdtermColorTable.Hover,
+                ForeColor = GdtermColorTable.Foreground,
                 Margin = new Padding(6, 1, 0, 1)
             };
             btnShowPwd.Click += (s, e) =>
@@ -499,8 +499,8 @@ namespace Gdterm.UI.Forms
                 Minimum = 0,
                 Maximum = 65535,
                 Value = 22,
-                BackColor = Color.FromArgb(50, 50, 50),
-                ForeColor = Color.FromArgb(204, 204, 204)
+                BackColor = GdtermColorTable.Surface,
+                ForeColor = GdtermColorTable.Foreground
             });
             _autoTypeBox = AddField(grid, ref row, "AutoType：", new TextBox());
             _notesBox = new TextBox
@@ -510,8 +510,8 @@ namespace Gdterm.UI.Forms
                 Height = 64,
                 Dock = DockStyle.Fill,
                 Margin = new Padding(0, 4, 0, 4),
-                BackColor = Color.FromArgb(50, 50, 50),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                BackColor = GdtermColorTable.Surface,
+                ForeColor = GdtermColorTable.Foreground,
                 BorderStyle = BorderStyle.FixedSingle
             };
             AddLabel(grid, row, "备注：");
@@ -530,7 +530,7 @@ namespace Gdterm.UI.Forms
             grid.Controls.Add(new Label
             {
                 Text = text,
-                ForeColor = Color.FromArgb(204, 204, 204),
+                ForeColor = GdtermColorTable.Foreground,
                 AutoSize = true,
                 Anchor = AnchorStyles.Left,
                 Margin = new Padding(3, 6, 8, 0)

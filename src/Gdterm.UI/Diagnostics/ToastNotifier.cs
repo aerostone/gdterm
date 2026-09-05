@@ -216,9 +216,9 @@ namespace Gdterm.UI.Diagnostics
             {
                 switch (level)
                 {
-                    case Level.Success: return Color.FromArgb(0, 255, 65);
+                    case Level.Success: return GdtermColorTable.Accent;
                     case Level.Warning: return Color.FromArgb(210, 153, 34);
-                    case Level.Error: return Color.FromArgb(248, 81, 73);
+                    case Level.Error: return GdtermColorTable.Danger;
                     default: return Color.FromArgb(56, 139, 253);
                 }
             }

@@ -122,11 +122,11 @@ namespace Gdterm.UI.Forms
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
-            BackColor = Color.FromArgb(30, 30, 30);
+            BackColor = GdtermColorTable.Background;
             Font = Services.FormFontPolicy.UiFont();
 
             // ===== 顶部：基本信息 + 凭据 + 更多选项开关 =====
-            var topPanel = new Panel { Dock = DockStyle.Top, AutoSize = true, BackColor = Color.FromArgb(30, 30, 30), Padding = new Padding(12, 10, 12, 4) };
+            var topPanel = new Panel { Dock = DockStyle.Top, AutoSize = true, BackColor = GdtermColorTable.Background, Padding = new Padding(12, 10, 12, 4) };
 
             var basicLayout = new TableLayoutPanel
             {
@@ -158,7 +158,7 @@ namespace Gdterm.UI.Forms
             credRow.Controls.Add(new Label
             {
                 Text = "凭据",
-                ForeColor = Color.FromArgb(204, 204, 204),
+                ForeColor = GdtermColorTable.Foreground,
                 AutoSize = false,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleRight,
@@ -180,7 +180,7 @@ namespace Gdterm.UI.Forms
             {
                 Text = "选择凭据...",
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(0, 122, 204),
+                BackColor = GdtermColorTable.Accent,
                 ForeColor = Color.White,
                 // 随全局字体/DPI 自动适配尺寸：固定 Size 在 11pt@144dpi 下文字撑满按钮显得过大
                 AutoSize = true,
@@ -192,8 +192,8 @@ namespace Gdterm.UI.Forms
             {
                 Text = "清除",
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(60, 60, 60),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                BackColor = GdtermColorTable.Hover,
+                ForeColor = GdtermColorTable.Foreground,
                 AutoSize = true,
                 Padding = new Padding(4, 2, 4, 2),
                 Margin = new Padding(0, 2, 0, 0)
@@ -221,14 +221,14 @@ namespace Gdterm.UI.Forms
 
             // ===== 高级区：协议专属选项 + 备注（默认折叠）=====
             // AutoScroll：内容超过剩余空间时出滚动条，保证保存/取消按钮永远可见
-            _advancedHost = new Panel { Dock = DockStyle.Fill, Visible = false, AutoScroll = true, BackColor = Color.FromArgb(30, 30, 30), Padding = new Padding(12, 4, 12, 4) };
+            _advancedHost = new Panel { Dock = DockStyle.Fill, Visible = false, AutoScroll = true, BackColor = GdtermColorTable.Background, Padding = new Padding(12, 4, 12, 4) };
             _advFlow = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
                 AutoSize = true,
-                BackColor = Color.FromArgb(30, 30, 30)
+                BackColor = GdtermColorTable.Background
             };
 
             // --- SSH 区 ---
@@ -236,7 +236,7 @@ namespace Gdterm.UI.Forms
             var sshLayout = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true };
             sshLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
             sshLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            _tunnelCheck = new CheckBox { Text = "使用 SSH 隧道（跳板机）", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true };
+            _tunnelCheck = new CheckBox { Text = "使用 SSH 隧道（跳板机）", ForeColor = GdtermColorTable.Foreground, AutoSize = true };
             sshLayout.Controls.Add(_tunnelCheck, 0, 0); sshLayout.SetColumnSpan(_tunnelCheck, 2);
             _tunnelHostBox = AddRow(sshLayout, 1, "跳板主机", new TextBox());
             _tunnelPortBox = AddRow(sshLayout, 2, "跳板端口", new NumericUpDown { Minimum = 1, Maximum = 65535, Value = 22 });
@@ -253,17 +253,17 @@ namespace Gdterm.UI.Forms
             _domainBox = AddRow(rdpGrid, 0, "RDP域名", new TextBox());
             WinFormsCompat.SetCueBanner(_domainBox, "域账户如 CONTOSO，普通账户留空");
             var rdpChecks = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = true, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 4, 0, 4) };
-            _rdpDriveCheck = new CheckBox { Text = "本地磁盘", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true };
-            _rdpClipboardCheck = new CheckBox { Text = "剪贴板", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true, Checked = true };
-            _rdpPrinterCheck = new CheckBox { Text = "打印机", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true };
-            _rdpFullScreenCheck = new CheckBox { Text = "全屏", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true };
-            _rdpNlaCheck = new CheckBox { Text = "NLA 认证", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true, Checked = true };
-            _rdpForceNlaCheck = new CheckBox { Text = "强制 NLA", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true, Checked = false };
+            _rdpDriveCheck = new CheckBox { Text = "本地磁盘", ForeColor = GdtermColorTable.Foreground, AutoSize = true };
+            _rdpClipboardCheck = new CheckBox { Text = "剪贴板", ForeColor = GdtermColorTable.Foreground, AutoSize = true, Checked = true };
+            _rdpPrinterCheck = new CheckBox { Text = "打印机", ForeColor = GdtermColorTable.Foreground, AutoSize = true };
+            _rdpFullScreenCheck = new CheckBox { Text = "全屏", ForeColor = GdtermColorTable.Foreground, AutoSize = true };
+            _rdpNlaCheck = new CheckBox { Text = "NLA 认证", ForeColor = GdtermColorTable.Foreground, AutoSize = true, Checked = true };
+            _rdpForceNlaCheck = new CheckBox { Text = "强制 NLA", ForeColor = GdtermColorTable.Foreground, AutoSize = true, Checked = false };
             _rdpTcpDumpCheck = new CheckBox { Text = "抓包（TCP dump）", ForeColor = Color.FromArgb(255, 180, 60), AutoSize = true, Checked = false,
                 Visible = Program.DebugConfig != null && Program.DebugConfig.Enabled };
             rdpChecks.Controls.AddRange(new Control[] { _rdpDriveCheck, _rdpClipboardCheck, _rdpPrinterCheck, _rdpFullScreenCheck, _rdpNlaCheck, _rdpForceNlaCheck, _rdpTcpDumpCheck });
             var depthPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 4) };
-            depthPanel.Controls.Add(new Label { Text = "色深:", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true });
+            depthPanel.Controls.Add(new Label { Text = "色深:", ForeColor = GdtermColorTable.Foreground, AutoSize = true });
             _rdpColorDepth = new NumericUpDown { Minimum = 8, Maximum = 32, Value = 32, Increment = 8, Width = 60 };
             depthPanel.Controls.Add(_rdpColorDepth);
             rdpGrid.Controls.Add(rdpChecks, 1, 1);
@@ -271,14 +271,14 @@ namespace Gdterm.UI.Forms
             // 引擎选择：旧堡垒机/代理常与 FreeRDP 不兼容（重定向 PDU 处理差异），
             // 系统自带 mstsc（ActiveX 嵌入）是微软自家实现，兼容性最好
             var enginePanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 4) };
-            enginePanel.Controls.Add(new Label { Text = "渲染引擎:", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true });
+            enginePanel.Controls.Add(new Label { Text = "渲染引擎:", ForeColor = GdtermColorTable.Foreground, AutoSize = true });
             _rdpEngineCombo = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 170 };
             _rdpEngineCombo.Items.AddRange(new object[] { "自动（优先 FreeRDP）", "FreeRDP 进程嵌入", "系统 mstsc（兼容模式）" });
             enginePanel.Controls.Add(_rdpEngineCombo);
             rdpGrid.Controls.Add(enginePanel, 1, 3);
             // 负载均衡 token：堡垒机/NetScaler 下发的 LB_LOAD_BALANCE_INFO Cookie（如 tsv://... 或 Cookie: msts=...）
             var lbPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 4) };
-            lbPanel.Controls.Add(new Label { Text = "负载均衡:", ForeColor = Color.FromArgb(204, 204, 204), AutoSize = true });
+            lbPanel.Controls.Add(new Label { Text = "负载均衡:", ForeColor = GdtermColorTable.Foreground, AutoSize = true });
             _rdpLoadBalanceBox = new TextBox { Width = 230 };
             WinFormsCompat.SetCueBanner(_rdpLoadBalanceBox, "如 Cookie: msts=NSFVERIFYHASH=... (选填)");
             lbPanel.Controls.Add(_rdpLoadBalanceBox);
@@ -317,7 +317,7 @@ namespace Gdterm.UI.Forms
                 Width = 512,
                 Height = 56,
                 BackColor = Color.FromArgb(37, 37, 38),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                ForeColor = GdtermColorTable.Foreground,
                 BorderStyle = BorderStyle.FixedSingle,
                 Font = new Font("Consolas", 9f)
             };
@@ -345,7 +345,7 @@ namespace Gdterm.UI.Forms
             {
                 Text = _isNew ? "创建" : "保存",
                 DialogResult = DialogResult.OK,
-                BackColor = Color.FromArgb(0, 122, 204),
+                BackColor = GdtermColorTable.Accent,
                 ForeColor = Color.White,
                 FlatStyle = FlatStyle.Flat,
                 Size = DpiScale.S(this, 80, 30),
@@ -355,8 +355,8 @@ namespace Gdterm.UI.Forms
             {
                 Text = "取消",
                 DialogResult = DialogResult.Cancel,
-                BackColor = Color.FromArgb(60, 60, 60),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                BackColor = GdtermColorTable.Hover,
+                ForeColor = GdtermColorTable.Foreground,
                 FlatStyle = FlatStyle.Flat,
                 Size = DpiScale.S(this, 80, 30),
                 Margin = new Padding(0, 0, 8, 0)
@@ -490,7 +490,7 @@ namespace Gdterm.UI.Forms
             layout.Controls.Add(new Label
             {
                 Text = text,
-                ForeColor = Color.FromArgb(204, 204, 204),
+                ForeColor = GdtermColorTable.Foreground,
                 AutoSize = false,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleRight,
@@ -695,7 +695,7 @@ namespace Gdterm.UI.Forms
             {
                 // 未解锁时仅显示 UUID 前 8 位，避免用户面对原始 UUID。
                 _credentialTitleLabel.Text = "已选 UUID: " + (uuid.Length > 12 ? uuid.Substring(0, 12) + "…" : uuid);
-                _credentialTitleLabel.ForeColor = Color.FromArgb(204, 204, 204);
+                _credentialTitleLabel.ForeColor = GdtermColorTable.Foreground;
                 return;
             }
             try
@@ -715,7 +715,7 @@ namespace Gdterm.UI.Forms
             catch
             {
                 _credentialTitleLabel.Text = "已选 UUID: " + (uuid.Length > 12 ? uuid.Substring(0, 12) + "…" : uuid);
-                _credentialTitleLabel.ForeColor = Color.FromArgb(204, 204, 204);
+                _credentialTitleLabel.ForeColor = GdtermColorTable.Foreground;
             }
         }
     }

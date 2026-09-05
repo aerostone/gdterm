@@ -9,6 +9,7 @@ using Gdterm.Core.Models;
 using Gdterm.KeePass;
 using Gdterm.UI.Forms;
 using Gdterm.UI.Services;
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Controls
 {
@@ -208,7 +209,7 @@ namespace Gdterm.UI.Controls
                     }
                     break;
                 case "server":
-                    using (var bg = new SolidBrush(Color.FromArgb(80, 80, 80)))
+                    using (var bg = new SolidBrush(GdtermColorTable.Border))
                         g.FillRectangle(bg, 2, 1, 12, 14);
                     using (var fg = new SolidBrush(Color.FromArgb(100, 200, 100)))
                     {

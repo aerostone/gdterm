@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Forms;
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Services
 {
@@ -60,7 +61,7 @@ namespace Gdterm.UI.Services
                 Text = "退出专注 (Esc/F11)",
                 AutoSize = true,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(0, 122, 204),
+                BackColor = GdtermColorTable.Accent,
                 ForeColor = Color.White,
                 Font = Services.FormFontPolicy.UiFont(0f, FontStyle.Bold),
                 Padding = new Padding(10, 4, 10, 4),

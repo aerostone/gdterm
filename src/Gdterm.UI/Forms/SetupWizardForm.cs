@@ -5,6 +5,7 @@ using System.Linq;
 using System.Windows.Forms;
 using Gdterm.Security;
 using Gdterm.UI.Services;
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Forms
 {
@@ -69,7 +70,7 @@ namespace Gdterm.UI.Forms
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = true;
-            BackColor = Color.FromArgb(30, 30, 30);
+            BackColor = GdtermColorTable.Background;
             // 规范见 docs/UI-SCALING-CONVENTIONS.md：手写窗体不设 AutoScaleMode，字体由 FormFontPolicy 统一注入全局 UI 字号
 
             // —— 顶部标题 ——
@@ -127,7 +128,7 @@ namespace Gdterm.UI.Forms
             {
                 Dock = DockStyle.Bottom,
                 Height = DpiScale.V(this, 60),
-                BackColor = Color.FromArgb(35, 35, 35),
+                BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(DpiScale.V(this, 16), DpiScale.V(this, 12), DpiScale.V(this, 16), DpiScale.V(this, 12))
             };
 
@@ -146,7 +147,7 @@ namespace Gdterm.UI.Forms
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 10), 0),
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(0, 122, 204),
+                BackColor = GdtermColorTable.Accent,
                 ForeColor = Color.White,
                 Cursor = Cursors.Hand,
                 Name = "nextButton"
@@ -160,7 +161,7 @@ namespace Gdterm.UI.Forms
             {
                 Dock = DockStyle.Fill,
                 Padding = new Padding(DpiScale.V(this, 28), DpiScale.V(this, 20), DpiScale.V(this, 28), DpiScale.V(this, 12)),
-                BackColor = Color.FromArgb(30, 30, 30)
+                BackColor = GdtermColorTable.Background
             };
 
             CreateWelcomePanel();
@@ -283,7 +284,7 @@ namespace Gdterm.UI.Forms
                 // 等宽语义例外（规范规则③）：密码输入用等宽字体，字号跟随全局 UI 字号
                 Font = new Font("Consolas", Program.GlobalAppearance != null ? Program.GlobalAppearance.UIFontSize : 11f),
                 UseSystemPasswordChar = true,
-                BackColor = Color.FromArgb(50, 50, 50),
+                BackColor = GdtermColorTable.Surface,
                 ForeColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
                 Margin = new Padding(0, 6, 0, 6)
@@ -304,7 +305,7 @@ namespace Gdterm.UI.Forms
                 Dock = DockStyle.Fill,
                 Font = new Font("Consolas", Program.GlobalAppearance != null ? Program.GlobalAppearance.UIFontSize : 11f),
                 UseSystemPasswordChar = true,
-                BackColor = Color.FromArgb(50, 50, 50),
+                BackColor = GdtermColorTable.Surface,
                 ForeColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
                 Margin = new Padding(0, 6, 0, 6)

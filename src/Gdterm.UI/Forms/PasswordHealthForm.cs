@@ -5,6 +5,7 @@ using Gdterm.KeePass;
 using Gdterm.KeePass.Models;
 using Gdterm.Security;
 using Gdterm.UI.Services;
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Forms
 {
@@ -36,7 +37,7 @@ namespace Gdterm.UI.Forms
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
-            BackColor = Color.FromArgb(35, 35, 35);
+            BackColor = GdtermColorTable.Surface;
 
             // 顶部评分区
             var headerPanel = new Panel
@@ -125,7 +126,7 @@ namespace Gdterm.UI.Forms
         private void AddIssueTab(string name, System.Collections.Generic.IList<PasswordIssue> issues, Color color)
         {
             var tab = new TabPage($"  {name} ({issues.Count})  ");
-            tab.BackColor = Color.FromArgb(35, 35, 35);
+            tab.BackColor = GdtermColorTable.Surface;
 
             var listView = new ListView
             {
@@ -133,7 +134,7 @@ namespace Gdterm.UI.Forms
                 View = View.Details,
                 FullRowSelect = true,
                 Font = new Font("Consolas", 9.5f),
-                BackColor = Color.FromArgb(30, 30, 30),
+                BackColor = GdtermColorTable.Background,
                 ForeColor = Color.White
             };
 
@@ -164,7 +165,7 @@ namespace Gdterm.UI.Forms
         private void AddDuplicateTab(string name, System.Collections.Generic.IList<DuplicatePasswordGroup> groups)
         {
             var tab = new TabPage($"  {name} ({groups.Count} 组)  ");
-            tab.BackColor = Color.FromArgb(35, 35, 35);
+            tab.BackColor = GdtermColorTable.Surface;
 
             var listView = new ListView
             {
@@ -172,7 +173,7 @@ namespace Gdterm.UI.Forms
                 View = View.Details,
                 FullRowSelect = true,
                 Font = new Font("Consolas", 9.5f),
-                BackColor = Color.FromArgb(30, 30, 30),
+                BackColor = GdtermColorTable.Background,
                 ForeColor = Color.White
             };
 

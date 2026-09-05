@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using Gdterm.Core.Models;
 using Gdterm.Security;
 using Gdterm.UI.Services;
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Controls
 {
@@ -242,23 +243,23 @@ namespace Gdterm.UI.Controls
             switch (level)
             {
                 case DangerLevel.Critical:
-                    bg = Color.FromArgb(60, 15, 15);
-                    accent = Color.FromArgb(200, 30, 30);
-                    text = Color.FromArgb(255, 200, 200);
+                    bg = GdtermColorTable.Background;
+                    accent = GdtermColorTable.Danger;
+                    text = GdtermColorTable.Danger;
                     levelText = "严重危险";
                     emoji = "🔴";
                     break;
                 case DangerLevel.High:
-                    bg = Color.FromArgb(60, 35, 10);
-                    accent = Color.FromArgb(220, 120, 20);
-                    text = Color.FromArgb(255, 220, 180);
+                    bg = GdtermColorTable.Background;
+                    accent = GdtermColorTable.Warning;
+                    text = GdtermColorTable.Warning;
                     levelText = "高风险";
                     emoji = "🟠";
                     break;
                 default: // Medium
-                    bg = Color.FromArgb(55, 50, 15);
-                    accent = Color.FromArgb(180, 160, 30);
-                    text = Color.FromArgb(255, 255, 200);
+                    bg = GdtermColorTable.Background;
+                    accent = GdtermColorTable.Warning;
+                    text = GdtermColorTable.Warning;
                     levelText = "中等风险";
                     emoji = "🟡";
                     break;

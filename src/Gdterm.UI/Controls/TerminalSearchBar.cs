@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Services;
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Controls
 {
@@ -44,7 +45,7 @@ namespace Gdterm.UI.Controls
             {
                 Width = DpiScale.V(this, 250),
                 BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                ForeColor = GdtermColorTable.Foreground,
                 Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f),
                 BorderStyle = BorderStyle.FixedSingle,
                 Margin = new Padding(0, 2, DpiScale.V(this, 6), 0)
@@ -107,7 +108,7 @@ namespace Gdterm.UI.Controls
                 MinimumSize = new Size(DpiScale.V(this, 26), DpiScale.V(this, 24)),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.FromArgb(204, 204, 204)
+                ForeColor = GdtermColorTable.Foreground
             };
             btn.FlatAppearance.BorderSize = 0;
             var t = new ToolTip();

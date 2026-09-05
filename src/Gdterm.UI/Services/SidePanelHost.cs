@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Controls;
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Services
 {
@@ -34,7 +35,7 @@ namespace Gdterm.UI.Services
                 Dock = DockStyle.Right,
                 Width = 360,
                 Visible = false,
-                BackColor = Color.FromArgb(30, 30, 30)
+                BackColor = GdtermColorTable.Background
             };
             var sideClose = new Button
             {
@@ -42,7 +43,7 @@ namespace Gdterm.UI.Services
                 Dock = DockStyle.Top,
                 Height = 28,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(50, 50, 50),
+                BackColor = GdtermColorTable.Surface,
                 ForeColor = Color.White
             };
             if (onCloseClick != null)

@@ -288,7 +288,7 @@ namespace Gdterm.UI.Controls
                 item.SubItems.Add(f.IsDirectory ? "<DIR>" : FormatSize(f.SizeBytes));
                 item.SubItems.Add(f.LastModified == DateTime.MinValue ? "" : f.LastModified.ToString("yyyy-MM-dd HH:mm"));
                 item.SubItems.Add(f.Permissions ?? "");
-                item.ForeColor = f.IsDirectory ? Color.FromArgb(88, 166, 255) : GdtermColorTable.Foreground;
+                item.ForeColor = f.IsDirectory ? GdtermColorTable.Info : GdtermColorTable.Foreground;
                 item.Tag = f;
                 _list.Items.Add(item);
             }

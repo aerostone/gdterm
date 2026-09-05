@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.Security;
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Services
 {
@@ -32,7 +33,7 @@ namespace Gdterm.UI.Services
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dialog.MaximizeBox = false;
                 dialog.MinimizeBox = false;
-                dialog.BackColor = Color.FromArgb(35, 35, 35);
+                dialog.BackColor = GdtermColorTable.Surface;
 
                 var label = new Label
                 {
@@ -48,7 +49,7 @@ namespace Gdterm.UI.Services
                     Size = DpiScale.S(dialog, 335, 28),
                     Font = new Font("Consolas", DpiScale.Factor(dialog) * 11f),
                     UseSystemPasswordChar = true,
-                    BackColor = Color.FromArgb(50, 50, 50),
+                    BackColor = GdtermColorTable.Surface,
                     ForeColor = Color.White,
                     BorderStyle = BorderStyle.FixedSingle
                 };
@@ -66,7 +67,7 @@ namespace Gdterm.UI.Services
                     Size = DpiScale.S(dialog, 80, 32),
                     Location = DpiScale.P(dialog, 270, 105),
                     FlatStyle = FlatStyle.Flat,
-                    BackColor = Color.FromArgb(0, 122, 204),
+                    BackColor = GdtermColorTable.Accent,
                     ForeColor = Color.White
                 };
                 okBtn.Click += (s, ev) =>

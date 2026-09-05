@@ -76,7 +76,7 @@ namespace Gdterm.UI.Controls
             _local = new FilePaneControl(new LocalFilePaneProvider());
             _local.EntriesDropped += entries => OnTransfer(entries, targetIsRemote: false); // 拖到本地=下载
             _local.TransferToPeerRequested += entries => OnTransfer(entries, targetIsRemote: true); // 本地→对侧=上传
-            AddPane(_split.Panel1, _local, "本地", Color.FromArgb(88, 166, 255));
+            AddPane(_split.Panel1, _local, "本地", GdtermColorTable.Info);
 
             // Panel2：连接成功前只放占位提示
             var placeholder = new Label
@@ -143,20 +143,20 @@ namespace Gdterm.UI.Controls
                 }
 
                 _connStatus.Text = "  已连接 " + _config.Host + "  ·  " + (_config.Username ?? "");
-                _connStatus.ForeColor = Color.FromArgb(0, 255, 65);
+                _connStatus.ForeColor = GdtermColorTable.Accent;
 
                 // 连接成功：用远端栏替换占位
                 _split.Panel2.Controls.Clear();
                 _remote = new FilePaneControl(new SftpFilePaneProvider(_sftp, _config.Host));
                 _remote.EntriesDropped += entries => OnTransfer(entries, targetIsRemote: true); // 拖到远程=上传
                 _remote.TransferToPeerRequested += entries => OnTransfer(entries, targetIsRemote: false); // 远程→对侧=下载
-                AddPane(_split.Panel2, _remote, "远程 " + _config.Host, Color.FromArgb(0, 255, 65));
+                AddPane(_split.Panel2, _remote, "远程 " + _config.Host, GdtermColorTable.Accent);
                 _remote.Navigate("/");
             }
             catch (Exception ex)
             {
                 _connStatus.Text = "  连接失败: " + ex.Message + "  （关闭此标签页后重试）";
-                _connStatus.ForeColor = Color.FromArgb(248, 81, 73);
+                _connStatus.ForeColor = GdtermColorTable.Danger;
                 try { DiagLog.Info("SftpDualPane.Connect", "failed: " + ex.Message); } catch { }
             }
         }

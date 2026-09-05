@@ -24,17 +24,17 @@ namespace Gdterm.UI.Controls
         {
             _registry = registry;
             Dock = DockStyle.Fill;
-            BackColor = Color.FromArgb(30, 30, 30);
+            BackColor = GdtermColorTable.Background;
 
             // 左侧工具列表
-            var split = new Splitter { Dock = DockStyle.Left, Width = 3, BackColor = Color.FromArgb(50, 50, 50) };
+            var split = new Splitter { Dock = DockStyle.Left, Width = 3, BackColor = GdtermColorTable.Surface };
 
             _lvTools = new ListView
             {
                 Dock = DockStyle.Left,
                 Width = 220,
                 BackColor = Color.FromArgb(37, 37, 38),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                ForeColor = GdtermColorTable.Foreground,
                 Font = Services.FormFontPolicy.UiFont(),
                 View = View.Details,
                 FullRowSelect = true,
@@ -48,7 +48,7 @@ namespace Gdterm.UI.Controls
             _pnlDetail = new Panel
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(30, 30, 30),
+                BackColor = GdtermColorTable.Background,
                 Padding = new Padding(15)
             };
 
@@ -70,12 +70,12 @@ namespace Gdterm.UI.Controls
                 Text = "选择左侧工具开始使用"
             };
 
-            var outputSplit = new Splitter { Dock = DockStyle.Top, Height = 3, BackColor = Color.FromArgb(50, 50, 50) };
+            var outputSplit = new Splitter { Dock = DockStyle.Top, Height = 3, BackColor = GdtermColorTable.Surface };
 
             _txtOutput = new RichTextBox
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(30, 30, 30),
+                BackColor = GdtermColorTable.Background,
                 ForeColor = Color.FromArgb(200, 200, 200),
                 Font = new Font("Consolas", 9f),
                 ReadOnly = true,
@@ -114,7 +114,7 @@ namespace Gdterm.UI.Controls
                 {
                     var item = new ListViewItem("    " + tool.DisplayName);
                     item.Tag = tool;
-                    item.ForeColor = Color.FromArgb(204, 204, 204);
+                    item.ForeColor = GdtermColorTable.Foreground;
                     _lvTools.Items.Add(item);
                 }
             }

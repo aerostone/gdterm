@@ -6,6 +6,7 @@ using Gdterm.Connections;
 using Gdterm.Terminal;
 using TerminalControl = Gdterm.UI.Controls.TerminalControl;
 using Gdterm.UI.Services;
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Controls
 {
@@ -33,7 +34,7 @@ namespace Gdterm.UI.Controls
         {
             _store = store;
             Dock = DockStyle.Fill;
-            BackColor = Color.FromArgb(30, 30, 30);
+            BackColor = GdtermColorTable.Background;
             _config = _store.Load();
             BuildUI();
             RefreshList();
@@ -48,7 +49,7 @@ namespace Gdterm.UI.Controls
             {
                 Text = "预设:",
                 Font = Services.FormFontPolicy.UiFont(),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                ForeColor = GdtermColorTable.Foreground,
                 AutoSize = true,
                 Location = DpiScale.P(this, 10, 13)
             };
@@ -59,7 +60,7 @@ namespace Gdterm.UI.Controls
                 Size = DpiScale.S(this, 200, 25),
                 DropDownStyle = ComboBoxStyle.DropDownList,
                 BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                ForeColor = GdtermColorTable.Foreground,
                 Font = Services.FormFontPolicy.UiFont(),
                 FlatStyle = FlatStyle.Flat
             };
@@ -80,7 +81,7 @@ namespace Gdterm.UI.Controls
             {
                 Text = "拦截模式（匹配的按键不发送到终端）",
                 Font = Services.FormFontPolicy.UiFont(-1f),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                ForeColor = GdtermColorTable.Foreground,
                 AutoSize = true,
                 Location = DpiScale.P(this, 480, 12),
                 Checked = _config.InterceptMode
@@ -108,8 +109,8 @@ namespace Gdterm.UI.Controls
             _lvBindings = new ListView
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(30, 30, 30),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                BackColor = GdtermColorTable.Background,
+                ForeColor = GdtermColorTable.Foreground,
                 Font = new Font("Consolas", 9f),
                 View = View.Details,
                 FullRowSelect = true,
@@ -149,7 +150,7 @@ namespace Gdterm.UI.Controls
                 Location = DpiScale.P(this, x, 5),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                ForeColor = GdtermColorTable.Foreground,
                 Font = Services.FormFontPolicy.UiFont(),
                 Cursor = Cursors.Hand
             };
@@ -295,8 +296,8 @@ namespace Gdterm.UI.Controls
                 Text = existing == null ? "添加快捷键" : "编辑快捷键",
                 Size = DpiScale.S(this, 450, 380),
                 StartPosition = FormStartPosition.CenterParent,
-                BackColor = Color.FromArgb(30, 30, 30),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                BackColor = GdtermColorTable.Background,
+                ForeColor = GdtermColorTable.Foreground,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false,
                 MinimizeBox = false
@@ -305,29 +306,29 @@ namespace Gdterm.UI.Controls
             int y = 15;
             var font = Services.FormFontPolicy.UiFont();
 
-            var lblName = new Label { Text = "名称:", Location = DpiScale.P(this, 15, y), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204) };
-            var txtName = new TextBox { Location = DpiScale.P(this, 100, y - 3), Size = DpiScale.S(this, 310, 25), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = font };
+            var lblName = new Label { Text = "名称:", Location = DpiScale.P(this, 15, y), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Foreground };
+            var txtName = new TextBox { Location = DpiScale.P(this, 100, y - 3), Size = DpiScale.S(this, 310, 25), BackColor = Color.FromArgb(45, 45, 48), ForeColor = GdtermColorTable.Foreground, Font = font };
             y += 35;
 
-            var lblCombo = new Label { Text = "按键组合:", Location = DpiScale.P(this, 15, y), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204) };
-            var chkCtrl = new CheckBox { Text = "Ctrl", Location = DpiScale.P(this, 100, y - 2), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204) };
-            var chkAlt = new CheckBox { Text = "Alt", Location = DpiScale.P(this, 160, y - 2), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204) };
-            var chkShift = new CheckBox { Text = "Shift", Location = DpiScale.P(this, 210, y - 2), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204) };
-            var cmbKey = new ComboBox { Location = DpiScale.P(this, 270, y - 3), Size = DpiScale.S(this, 140, 25), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = font, FlatStyle = FlatStyle.Flat };
+            var lblCombo = new Label { Text = "按键组合:", Location = DpiScale.P(this, 15, y), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Foreground };
+            var chkCtrl = new CheckBox { Text = "Ctrl", Location = DpiScale.P(this, 100, y - 2), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Foreground };
+            var chkAlt = new CheckBox { Text = "Alt", Location = DpiScale.P(this, 160, y - 2), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Foreground };
+            var chkShift = new CheckBox { Text = "Shift", Location = DpiScale.P(this, 210, y - 2), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Foreground };
+            var cmbKey = new ComboBox { Location = DpiScale.P(this, 270, y - 3), Size = DpiScale.S(this, 140, 25), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(45, 45, 48), ForeColor = GdtermColorTable.Foreground, Font = font, FlatStyle = FlatStyle.Flat };
             FillKeyCombo(cmbKey);
             y += 35;
 
-            var lblType = new Label { Text = "类型:", Location = DpiScale.P(this, 15, y), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204) };
-            var cmbType = new ComboBox { Location = DpiScale.P(this, 100, y - 3), Size = DpiScale.S(this, 140, 25), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = font, FlatStyle = FlatStyle.Flat };
+            var lblType = new Label { Text = "类型:", Location = DpiScale.P(this, 15, y), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Foreground };
+            var cmbType = new ComboBox { Location = DpiScale.P(this, 100, y - 3), Size = DpiScale.S(this, 140, 25), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(45, 45, 48), ForeColor = GdtermColorTable.Foreground, Font = font, FlatStyle = FlatStyle.Flat };
             cmbType.Items.AddRange(new object[] { "Sequence (转义序列)", "Text (字面文本)", "Action (内置动作)" });
             y += 35;
 
-            var lblValue = new Label { Text = "发送内容:", Location = DpiScale.P(this, 15, y), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204) };
-            var txtValue = new TextBox { Location = DpiScale.P(this, 100, y - 3), Size = DpiScale.S(this, 310, 25), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = new Font("Consolas", 9f) };
+            var lblValue = new Label { Text = "发送内容:", Location = DpiScale.P(this, 15, y), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Foreground };
+            var txtValue = new TextBox { Location = DpiScale.P(this, 100, y - 3), Size = DpiScale.S(this, 310, 25), BackColor = Color.FromArgb(45, 45, 48), ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f) };
             y += 35;
 
-            var lblDesc = new Label { Text = "描述:", Location = DpiScale.P(this, 15, y), AutoSize = true, Font = font, ForeColor = Color.FromArgb(204, 204, 204) };
-            var txtDesc = new TextBox { Location = DpiScale.P(this, 100, y - 3), Size = DpiScale.S(this, 310, 25), BackColor = Color.FromArgb(45, 45, 48), ForeColor = Color.FromArgb(204, 204, 204), Font = font };
+            var lblDesc = new Label { Text = "描述:", Location = DpiScale.P(this, 15, y), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Foreground };
+            var txtDesc = new TextBox { Location = DpiScale.P(this, 100, y - 3), Size = DpiScale.S(this, 310, 25), BackColor = Color.FromArgb(45, 45, 48), ForeColor = GdtermColorTable.Foreground, Font = font };
             y += 10;
 
             // 提示
@@ -348,7 +349,7 @@ namespace Gdterm.UI.Controls
                 Location = DpiScale.P(this, 250, y),
                 DialogResult = DialogResult.OK,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(0, 122, 204),
+                BackColor = GdtermColorTable.Accent,
                 ForeColor = Color.White
             };
 
@@ -359,8 +360,8 @@ namespace Gdterm.UI.Controls
                 Location = DpiScale.P(this, 340, y),
                 DialogResult = DialogResult.Cancel,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(60, 60, 60),
-                ForeColor = Color.FromArgb(204, 204, 204)
+                BackColor = GdtermColorTable.Hover,
+                ForeColor = GdtermColorTable.Foreground
             };
 
             // 填充现有值

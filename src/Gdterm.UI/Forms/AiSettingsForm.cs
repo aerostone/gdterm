@@ -51,7 +51,7 @@ namespace Gdterm.UI.Forms
             var titleLabel = new AntdUI.Label
             {
                 Text = "AI 模型配置",
-                Font = new Font("Segoe UI", 14F, FontStyle.Bold),
+                Font = Gdterm.UI.Services.FormFontPolicy.UiFont(+5f, FontStyle.Bold),
                 AutoSize = true,
                 Location = new Point(pad, y)
             };

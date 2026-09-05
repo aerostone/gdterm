@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using Gdterm.Connections;
 using Gdterm.Core.Models;
 using Gdterm.UI.Services;
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Controls
 {
@@ -33,7 +34,7 @@ namespace Gdterm.UI.Controls
 
         private void InitializeComponent()
         {
-            BackColor = Color.FromArgb(30, 30, 30);
+            BackColor = GdtermColorTable.Background;
             Dock = DockStyle.Fill;
 
             var title = new Label
@@ -61,7 +62,7 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Top,
                 Height = 32,
-                BackColor = Color.FromArgb(35, 35, 35),
+                BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(4, 2, 4, 2)
             };
             var addBtn = MakeButton("添加书签");
@@ -88,7 +89,7 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Horizontal,
-                BackColor = Color.FromArgb(30, 30, 30),
+                BackColor = GdtermColorTable.Background,
                 SplitterWidth = 4
             };
 
@@ -158,7 +159,7 @@ namespace Gdterm.UI.Controls
                 FullRowSelect = true,
                 MultiSelect = false,
                 HideSelection = false,
-                BackColor = Color.FromArgb(40, 40, 40),
+                BackColor = GdtermColorTable.Surface,
                 ForeColor = Color.White,
                 BorderStyle = BorderStyle.None,
                 HeaderStyle = ColumnHeaderStyle.Nonclickable,
@@ -278,13 +279,13 @@ namespace Gdterm.UI.Controls
                 dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dlg.MaximizeBox = false;
                 dlg.MinimizeBox = false;
-                dlg.BackColor = Color.FromArgb(35, 35, 35);
+                dlg.BackColor = GdtermColorTable.Surface;
 
                 var nameBox = new TextBox
                 {
                     Location = DpiScale.P(this, 15, 20),
                     Size = DpiScale.S(this, 310, 24),
-                    BackColor = Color.FromArgb(50, 50, 50),
+                    BackColor = GdtermColorTable.Surface,
                     ForeColor = Color.White
                 };
                 var combo = new ComboBox
@@ -292,7 +293,7 @@ namespace Gdterm.UI.Controls
                     Location = DpiScale.P(this, 15, 55),
                     Size = DpiScale.S(this, 310, 24),
                     DropDownStyle = ComboBoxStyle.DropDownList,
-                    BackColor = Color.FromArgb(50, 50, 50),
+                    BackColor = GdtermColorTable.Surface,
                     ForeColor = Color.White
                 };
                 foreach (var c in connections)
@@ -306,7 +307,7 @@ namespace Gdterm.UI.Controls
                     Location = DpiScale.P(this, 245, 110),
                     Size = DpiScale.S(this, 80, 28),
                     FlatStyle = FlatStyle.Flat,
-                    BackColor = Color.FromArgb(0, 122, 204),
+                    BackColor = GdtermColorTable.Accent,
                     ForeColor = Color.White
                 };
                 dlg.Controls.Add(new Label { Text = "名称", ForeColor = Color.Silver, Location = DpiScale.P(this, 15, 4), AutoSize = true });

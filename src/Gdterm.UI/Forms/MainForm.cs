@@ -205,7 +205,7 @@ namespace Gdterm.UI.Forms
             {
                 Dock = DockStyle.Left,
                 Width = 4,
-                BackColor = Color.FromArgb(60, 60, 60)
+                BackColor = GdtermColorTable.Hover
             };
 
             _tabContainer = new TabContainerControl(
@@ -270,7 +270,7 @@ namespace Gdterm.UI.Forms
             {
                 Dock = DockStyle.Right,
                 Width = 4,
-                BackColor = Color.FromArgb(60, 60, 60)
+                BackColor = GdtermColorTable.Hover
             };
 
             _statusBar = new StatusBarControl(

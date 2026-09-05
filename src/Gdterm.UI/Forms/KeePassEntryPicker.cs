@@ -6,6 +6,7 @@ using System.Windows.Forms;
 using Gdterm.KeePass;
 using Gdterm.KeePass.Models;
 using Gdterm.UI.Services;
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Forms
 {
@@ -39,7 +40,7 @@ namespace Gdterm.UI.Forms
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
-            BackColor = Color.FromArgb(30, 30, 30);
+            BackColor = GdtermColorTable.Background;
             Font = Services.FormFontPolicy.UiFont();
 
             // 搜索框（Dock 布局，随字体/DPI 自适应高度）
@@ -48,7 +49,7 @@ namespace Gdterm.UI.Forms
                 Dock = DockStyle.Top,
                 Height = 42,
                 Padding = new Padding(12, 10, 12, 6),
-                BackColor = Color.FromArgb(30, 30, 30)
+                BackColor = GdtermColorTable.Background
             };
             var searchHint = new Label
             {
@@ -63,7 +64,7 @@ namespace Gdterm.UI.Forms
             {
                 Dock = DockStyle.Fill,
                 BackColor = Color.FromArgb(37, 37, 38),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                ForeColor = GdtermColorTable.Foreground,
                 BorderStyle = BorderStyle.FixedSingle
             };
             _searchBox.TextChanged += (s, e) => ApplyFilter();
@@ -83,7 +84,7 @@ namespace Gdterm.UI.Forms
                 HideSelection = false,
                 GridLines = true,
                 BackColor = Color.FromArgb(37, 37, 38),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                ForeColor = GdtermColorTable.Foreground,
                 BorderStyle = BorderStyle.FixedSingle,
                 OwnerDraw = true
             };
@@ -98,7 +99,7 @@ namespace Gdterm.UI.Forms
                 using (var headerFont = new Font(Font.FontFamily, Font.Size, FontStyle.Bold))
                 {
                     TextRenderer.DrawText(e.Graphics, e.Header.Text, headerFont,
-                        e.Bounds, Color.FromArgb(204, 204, 204),
+                        e.Bounds, GdtermColorTable.Foreground,
                         TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
                 }
             };
@@ -106,7 +107,7 @@ namespace Gdterm.UI.Forms
             {
                 e.DrawDefault = false;
                 var bg = e.Item.Selected
-                    ? new SolidBrush(Color.FromArgb(0, 122, 204))
+                    ? new SolidBrush(GdtermColorTable.Accent)
                     : new SolidBrush(e.ItemIndex % 2 == 0
                         ? Color.FromArgb(37, 37, 38)
                         : Color.FromArgb(42, 42, 43));
@@ -116,7 +117,7 @@ namespace Gdterm.UI.Forms
                     var bounds = e.Item.SubItems[i].Bounds;
                     var text = e.Item.SubItems[i].Text;
                     TextRenderer.DrawText(e.Graphics, text, Font,
-                        bounds, e.Item.Selected ? Color.White : Color.FromArgb(204, 204, 204),
+                        bounds, e.Item.Selected ? Color.White : GdtermColorTable.Foreground,
                         TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
                 }
             };
@@ -133,8 +134,8 @@ namespace Gdterm.UI.Forms
                 Text = "新建凭据",
                 AutoSize = true,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(60, 60, 60),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                BackColor = GdtermColorTable.Hover,
+                ForeColor = GdtermColorTable.Foreground,
                 Margin = new Padding(12, 7, 0, 0)
             };
             btnNew.Click += (s, e) => CreateNewEntry();
@@ -163,7 +164,7 @@ namespace Gdterm.UI.Forms
                 DialogResult = DialogResult.OK,
                 AutoSize = true,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(0, 122, 204),
+                BackColor = GdtermColorTable.Accent,
                 ForeColor = Color.White,
                 Margin = new Padding(8, 7, 0, 0)
             };
@@ -174,8 +175,8 @@ namespace Gdterm.UI.Forms
                 DialogResult = DialogResult.Cancel,
                 AutoSize = true,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(60, 60, 60),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                BackColor = GdtermColorTable.Hover,
+                ForeColor = GdtermColorTable.Foreground,
                 Margin = new Padding(0, 7, 8, 0)
             };
             btnSelectFlow.Controls.Add(btnCancel);   // RightToLeft：第一个在最右

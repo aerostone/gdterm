@@ -27,7 +27,7 @@ namespace Gdterm.UI.Controls
             _scanner = scanner;
             _security = security;
             Dock = DockStyle.Fill;
-            BackColor = Color.FromArgb(30, 30, 30);
+            BackColor = GdtermColorTable.Background;
 
             // ── 顶部：安全评分 + 控制按钮 ──
             var topPanel = new Panel { Dock = DockStyle.Top, Height = 80, BackColor = Color.FromArgb(37, 37, 38), Padding = new Padding(15) };
@@ -56,7 +56,7 @@ namespace Gdterm.UI.Controls
                 Size = DpiScale.S(this, 100, 35),
                 Location = DpiScale.P(this, 500, 15),
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(0, 122, 204),
+                BackColor = GdtermColorTable.Accent,
                 ForeColor = Color.White,
                 Font = Services.FormFontPolicy.UiFont(),
                 Cursor = Cursors.Hand
@@ -89,8 +89,8 @@ namespace Gdterm.UI.Controls
             _lvFindings = new ListView
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(30, 30, 30),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                BackColor = GdtermColorTable.Background,
+                ForeColor = GdtermColorTable.Foreground,
                 Font = new Font("Consolas", 9f),
                 View = View.Details,
                 FullRowSelect = true,
@@ -219,8 +219,8 @@ namespace Gdterm.UI.Controls
                 Text = "发现详情",
                 Size = DpiScale.S(this, 600, 400),
                 StartPosition = FormStartPosition.CenterParent,
-                BackColor = Color.FromArgb(30, 30, 30),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                BackColor = GdtermColorTable.Background,
+                ForeColor = GdtermColorTable.Foreground,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false,
                 MinimizeBox = false
@@ -236,8 +236,8 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 Multiline = true,
                 ReadOnly = true,
-                BackColor = Color.FromArgb(30, 30, 30),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                BackColor = GdtermColorTable.Background,
+                ForeColor = GdtermColorTable.Foreground,
                 Font = new Font("Consolas", 10f),
                 ScrollBars = ScrollBars.Vertical
             };
@@ -266,8 +266,8 @@ namespace Gdterm.UI.Controls
                 Height = 30,
                 Left = 8,
                 Top = 5,
-                BackColor = Color.FromArgb(60, 60, 60),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                BackColor = GdtermColorTable.Hover,
+                ForeColor = GdtermColorTable.Foreground,
                 FlatStyle = FlatStyle.Flat
             };
             btnReveal.Click += (s2, e2) =>
@@ -297,8 +297,8 @@ namespace Gdterm.UI.Controls
                 Height = 30,
                 Left = 120,
                 Top = 5,
-                BackColor = Color.FromArgb(60, 60, 60),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                BackColor = GdtermColorTable.Hover,
+                ForeColor = GdtermColorTable.Foreground,
                 FlatStyle = FlatStyle.Flat
             };
             btnWhitelist.Click += (s2, e2) =>
@@ -335,7 +335,7 @@ namespace Gdterm.UI.Controls
                 case FindingSeverity.High: return Color.FromArgb(255, 150, 50);
                 case FindingSeverity.Medium: return Color.FromArgb(220, 220, 100);
                 case FindingSeverity.Low: return Color.FromArgb(100, 200, 100);
-                default: return Color.FromArgb(204, 204, 204);
+                default: return GdtermColorTable.Foreground;
             }
         }
 

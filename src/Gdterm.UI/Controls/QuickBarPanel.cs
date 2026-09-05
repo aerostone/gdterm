@@ -7,6 +7,7 @@ using Gdterm.Core.Models;
 using Gdterm.Terminal;
 using TerminalControl = Gdterm.UI.Controls.TerminalControl;
 using Gdterm.UI.Services;
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Controls
 {
@@ -134,7 +135,7 @@ namespace Gdterm.UI.Controls
             // 右键菜单
             var ctx = new ContextMenuStrip();
             ctx.BackColor = Color.FromArgb(45, 45, 48);
-            ctx.ForeColor = Color.FromArgb(204, 204, 204);
+            ctx.ForeColor = GdtermColorTable.Foreground;
             ctx.Renderer = new DarkMenuRenderer();
 
             var miAdd = new ToolStripMenuItem("➕ 添加快捷命令");
@@ -255,7 +256,7 @@ namespace Gdterm.UI.Controls
                         var sep = new Label
                         {
                             Text = "│",
-                            ForeColor = Color.FromArgb(60, 60, 60),
+                            ForeColor = GdtermColorTable.Hover,
                             Font = new Font("Consolas", 9f),
                             AutoSize = true,
                             Margin = new Padding(4, 6, 4, 6)
@@ -296,7 +297,7 @@ namespace Gdterm.UI.Controls
                 AutoSize = true,
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.FromArgb(204, 204, 204),
+                ForeColor = GdtermColorTable.Foreground,
                 Font = Services.FormFontPolicy.UiFont(-0.5f),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(2),
@@ -342,7 +343,7 @@ namespace Gdterm.UI.Controls
             // 右键菜单
             var ctx = new ContextMenuStrip();
             ctx.BackColor = Color.FromArgb(45, 45, 48);
-            ctx.ForeColor = Color.FromArgb(204, 204, 204);
+            ctx.ForeColor = GdtermColorTable.Foreground;
             ctx.Renderer = new DarkMenuRenderer();
 
             var miEdit = new ToolStripMenuItem("编辑");
@@ -411,12 +412,12 @@ namespace Gdterm.UI.Controls
         {
             var original = btn.BackColor;
             btn.BackColor = flashColor;
-            btn.ForeColor = Color.FromArgb(30, 30, 30);
+            btn.ForeColor = GdtermColorTable.Background;
             var timer = new Timer { Interval = 300 };
             timer.Tick += (s, e) =>
             {
                 btn.BackColor = original;
-                btn.ForeColor = Color.FromArgb(204, 204, 204);
+                btn.ForeColor = GdtermColorTable.Foreground;
                 timer.Stop();
                 timer.Dispose();
             };
@@ -494,7 +495,7 @@ namespace Gdterm.UI.Controls
         protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
         {
             e.Item.BackColor = e.Item.Selected ? Color.FromArgb(60, 60, 62) : Color.FromArgb(45, 45, 48);
-            e.Item.ForeColor = Color.FromArgb(204, 204, 204);
+            e.Item.ForeColor = GdtermColorTable.Foreground;
         }
 
         protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
@@ -509,7 +510,7 @@ namespace Gdterm.UI.Controls
 
         protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
         {
-            e.TextColor = Color.FromArgb(204, 204, 204);
+            e.TextColor = GdtermColorTable.Foreground;
             base.OnRenderItemText(e);
         }
     }
