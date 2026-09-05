@@ -133,7 +133,8 @@ namespace Gdterm.Tests.Scanning
                 Assert.Contains(byId["no-targets"].LoadError, "targets", "empty targets reported");
 
                 // -- TOCTOU：脚本被换后复验拒绝（先在干净内容上建插件快照，再换文件）--
-                var snapshot = MakePlugin(byId["good-plugin"]);   // 快照哈希 = 干净内容
+                var goodDir = Path.GetDirectoryName(byId["good-plugin"].ScriptPath);
+                var snapshot = MakePlugin(goodDir);   // 快照哈希 = 干净内容
                 File.WriteAllText(byId["good-plugin"].ScriptPath, "Write-Output EVIL", Utf8);
                 var r1 = new ScanRunner().RunOne(snapshot, new NullChannel());
                 Assert.Contains(r1.RuntimeError, "脚本内容在加载后被变更", "tampered script rejected at run");
