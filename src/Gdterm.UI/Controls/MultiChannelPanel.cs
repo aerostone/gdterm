@@ -49,9 +49,9 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(3)
             };
 
-            _btnSelectAll = new AntdUI.Button { Text = "全选就绪", Size = DpiScale.S(this, 70, 25), FlatStyle = FlatStyle.Flat };
-            _btnDeselectAll = new AntdUI.Button { Text = "取消", Size = DpiScale.S(this, 50, 25), FlatStyle = FlatStyle.Flat };
-            _btnBroadcast = new AntdUI.Button { Text = "广播", Size = DpiScale.S(this, 60, 25), FlatStyle = FlatStyle.Flat, Enabled = false };
+            _btnSelectAll = new AntdUI.Button { Text = "全选就绪", Size = DpiScale.S(this, 70, 25) };
+            _btnDeselectAll = new AntdUI.Button { Text = "取消", Size = DpiScale.S(this, 50, 25) };
+            _btnBroadcast = new AntdUI.Button { Text = "广播", Size = DpiScale.S(this, 60, 25), Enabled = false };
 
             toolbar.Controls.AddRange(new Control[] { _btnSelectAll, _btnDeselectAll, _btnBroadcast });
 

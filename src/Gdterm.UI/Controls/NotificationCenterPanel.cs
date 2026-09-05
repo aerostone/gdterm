@@ -31,7 +31,6 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground
             };
-            _clear.FlatAppearance.BorderColor = GdtermColorTable.Border;
             _clear.Click += (s, e) =>
             {
                 lock (Sync) Buffer.Clear();

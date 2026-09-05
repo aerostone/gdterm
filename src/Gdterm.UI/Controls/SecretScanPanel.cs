@@ -57,7 +57,6 @@ namespace Gdterm.UI.Controls
                 Font = Services.FormFontPolicy.UiFont(),
                 Cursor = Cursors.Hand
             };
-            _btnScan.FlatAppearance.BorderSize = 0;
             _btnScan.Click += (s, e) => StartScan();
 
             _btnStop = new AntdUI.Button {
@@ -70,7 +69,6 @@ namespace Gdterm.UI.Controls
                 Enabled = false,
                 Cursor = Cursors.Hand
             };
-            _btnStop.FlatAppearance.BorderSize = 0;
             _btnStop.Click += (s, e) => StopScan();
 
             topPanel.Controls.AddRange(new Control[] { _lblScore, _lblStats, _btnScan, _btnStop });

@@ -206,8 +206,6 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(6, 3, 6, 3),
                 Height = 24
             };
-            btn.FlatAppearance.BorderSize = 0;
-            btn.FlatAppearance.MouseOverBackColor = GdtermColorTable.Hover;
             return btn;
         }
 
@@ -278,8 +276,6 @@ namespace Gdterm.UI.Controls
                 Margin = new Padding(2),
                 TextAlign = ContentAlignment.MiddleCenter
             };
-            addBtn.FlatAppearance.BorderSize = 0;
-            addBtn.FlatAppearance.MouseOverBackColor = GdtermColorTable.Hover;
             addBtn.Click += (s, e) => AddRequested?.Invoke(_activeGroup ?? "自定义");
             _buttonPanel.Controls.Add(addBtn);
         }
@@ -298,15 +294,10 @@ namespace Gdterm.UI.Controls
                 Height = 26,
                 Tag = cmd
             };
-            btn.FlatAppearance.BorderSize = 0;
-            btn.FlatAppearance.MouseOverBackColor = GdtermColorTable.Hover;
-            btn.FlatAppearance.MouseDownBackColor = GdtermColorTable.Pressed;
 
             // 需要 root 的命令用橙色边框
             if (cmd.RequiresRoot)
             {
-                btn.FlatAppearance.BorderColor = GdtermColorTable.Warning;
-                btn.FlatAppearance.BorderSize = 1;
             }
 
             // 单击发送命令

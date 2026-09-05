@@ -104,7 +104,6 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground
             };
-            btn.FlatAppearance.BorderSize = 0;
             var t = new ToolTip();
             t.SetToolTip(btn, tip);
             return btn;

@@ -56,11 +56,8 @@ namespace Gdterm.UI.Services
         {
             if (b == null) return;
             b.FlatStyle = FlatStyle.Flat;
-            b.FlatAppearance.BorderSize = 0;
             b.BackColor = GdtermColorTable.Accent;
             b.ForeColor = Color.Black; // 绿底黑字对比度最高（纯绿 #00FF41 上白字仅 ~1.4:1）
-            b.FlatAppearance.MouseOverBackColor = GdtermColorTable.Pressed;
-            b.FlatAppearance.MouseDownBackColor = GdtermColorTable.Pressed;
             EnsureButtonAutoSize(b);
         }
 
@@ -69,12 +66,8 @@ namespace Gdterm.UI.Services
         {
             if (b == null) return;
             b.FlatStyle = FlatStyle.Flat;
-            b.FlatAppearance.BorderSize = 1;
-            b.FlatAppearance.BorderColor = GdtermColorTable.Border;
             b.BackColor = GdtermColorTable.Surface;
             b.ForeColor = GdtermColorTable.Foreground;
-            b.FlatAppearance.MouseOverBackColor = GdtermColorTable.Hover;
-            b.FlatAppearance.MouseDownBackColor = GdtermColorTable.Pressed;
             EnsureButtonAutoSize(b);
         }
 
@@ -83,11 +76,8 @@ namespace Gdterm.UI.Services
         {
             if (b == null) return;
             b.FlatStyle = FlatStyle.Flat;
-            b.FlatAppearance.BorderSize = 0;
             b.BackColor = Color.FromArgb(0xEF, 0x44, 0x44);
             b.ForeColor = Color.White;
-            b.FlatAppearance.MouseOverBackColor = Color.FromArgb(0xB9, 0x1C, 0x1C);
-            b.FlatAppearance.MouseDownBackColor = Color.FromArgb(0x99, 0x1B, 0x1B);
             EnsureButtonAutoSize(b);
         }
 
@@ -137,9 +127,9 @@ namespace Gdterm.UI.Services
         }
 
         /// <summary>表单行标签——Muted 色、AutoSize、右对齐（配 TableLayoutPanel 标签列）。</summary>
-        public static Label FieldLabel(string text)
+        public static AntdUI.Label FieldLabel(string text)
         {
-            return new Label
+            return new AntdUI.Label
             {
                 Text = text,
                 AutoSize = true,
@@ -160,7 +150,7 @@ namespace Gdterm.UI.Services
         }
 
         /// <summary>分组标题——全局字号 +0.5 粗体。</summary>
-        public static Label GroupTitle(string text)
+        public static AntdUI.Label GroupTitle(string text)
         {
             var l = new AntdUI.Label {
                 Text = text,

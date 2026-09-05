@@ -210,8 +210,6 @@ namespace Gdterm.UI.Controls
                 Text = title + (string.IsNullOrEmpty(sub) ? "" : "   ·   " + sub),
                 Cursor = Cursors.Hand
             };
-            btn.FlatAppearance.BorderColor = GdtermColorTable.Border;
-            btn.FlatAppearance.MouseOverBackColor = GdtermColorTable.Hover;
             btn.Click += (s, e) => { if (onClick != null) onClick(); };
             host.Controls.Add(btn);
         }
@@ -238,8 +236,6 @@ namespace Gdterm.UI.Controls
                 Margin = new Padding(0, 0, 10, 0),
                 Cursor = Cursors.Hand
             };
-            b.FlatAppearance.BorderColor = GdtermColorTable.Border;
-            b.FlatAppearance.MouseOverBackColor = GdtermColorTable.Hover;
             b.Click += (s, e) => { if (onClick != null) onClick(); };
             return b;
         }

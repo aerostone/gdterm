@@ -233,14 +233,14 @@ namespace Gdterm.UI.Controls
             foreach (var ph in placeholders)
             {
                 var lbl = new AntdUI.Label { Text = ph + ":", Location = new Point(15, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground };
-                var txt = new AntdUI.Input { Location = DpiScale.P(form, 100, y), Size = DpiScale.S(form, 260, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
+                var txt = new AntdUI.Input { Location = DpiScale.P(form, 100, y), Size = DpiScale.S(form, 260, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f)};
                 form.Controls.AddRange(new Control[] { lbl, txt });
                 inputs[ph] = txt;
                 y += 36;
             }
 
-            var btnOk = new AntdUI.Button { Text = "执行", Size = DpiScale.S(form, 80, 28), Location = DpiScale.P(form, 190, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Accent, ForeColor = Color.White };
-            var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(form, 80, 28), Location = DpiScale.P(form, 280, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
+            var btnOk = new AntdUI.Button { Text = "执行", Size = DpiScale.S(form, 80, 28), Location = DpiScale.P(form, 190, y), DialogResult = DialogResult.OK BackColor = GdtermColorTable.Accent, ForeColor = Color.White };
+            var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(form, 80, 28), Location = DpiScale.P(form, 280, y), DialogResult = DialogResult.Cancel BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
 

@@ -67,7 +67,6 @@ namespace Gdterm.UI.Services
                 TabStop = false,
                 Cursor = Cursors.Hand
             };
-            _exitFocusButton.FlatAppearance.BorderSize = 0;
             _exitFocusButton.Click += (s, e) => SetViewMode(ViewMode.Standard);
             try
             {

@@ -229,9 +229,6 @@ namespace Gdterm.UI.Controls
                     Tag = k
                 };
                 if (k.Tip != null) b.ToolTipText2(k.Tip);
-                b.FlatAppearance.MouseOverBackColor = GdtermColorTable.Hover;
-                b.FlatAppearance.MouseDownBackColor = GdtermColorTable.Pressed;
-                b.FlatAppearance.BorderColor = GdtermColorTable.Border;
                 b.Click += OnKeyClick;
                 row.Controls.Add(b);
             }

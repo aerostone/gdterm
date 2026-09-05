@@ -55,8 +55,8 @@ namespace Gdterm.UI.Controls
             _hostFilter.Items.Add("所有主机");
             _hostFilter.SelectedIndex = 0;
 
-            var btnRefresh = new AntdUI.Button { Text = "刷新", Size = DpiScale.S(this, 50, 23), FlatStyle = FlatStyle.Flat };
-            var btnClear = new AntdUI.Button { Text = "清空", Size = DpiScale.S(this, 50, 23), FlatStyle = FlatStyle.Flat };
+            var btnRefresh = new AntdUI.Button { Text = "刷新", Size = DpiScale.S(this, 50, 23)};
+            var btnClear = new AntdUI.Button { Text = "清空", Size = DpiScale.S(this, 50, 23)};
 
             searchPanel.Controls.AddRange(new Control[] { _searchBox, _hostFilter, btnRefresh, btnClear });
 

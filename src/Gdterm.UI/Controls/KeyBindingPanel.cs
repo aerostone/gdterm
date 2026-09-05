@@ -427,7 +427,7 @@ namespace Gdterm.UI.Controls
         {
             if (disposing)
             {
-                _lvBindings?.Dispose();
+                _table?.Dispose();
             }
             base.Dispose(disposing);
         }

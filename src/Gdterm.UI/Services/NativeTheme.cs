@@ -76,9 +76,6 @@ namespace Gdterm.UI.Services
             btn.FlatStyle = FlatStyle.Flat;
             btn.BackColor = GdtermColorTable.Surface;
             btn.ForeColor = GdtermColorTable.Foreground;
-            btn.FlatAppearance.BorderColor = GdtermColorTable.Border;
-            btn.FlatAppearance.MouseOverBackColor = GdtermColorTable.Hover;
-            btn.FlatAppearance.MouseDownBackColor = GdtermColorTable.Pressed;
             return btn;
         }
 
@@ -89,9 +86,6 @@ namespace Gdterm.UI.Services
             btn.FlatStyle = FlatStyle.Flat;
             btn.BackColor = GdtermColorTable.Accent;
             btn.ForeColor = Color.FromArgb(0x0D, 0x11, 0x17);
-            btn.FlatAppearance.BorderSize = 0;
-            btn.FlatAppearance.MouseOverBackColor = GdtermColorTable.Hover;
-            btn.FlatAppearance.MouseDownBackColor = GdtermColorTable.Pressed;
             return btn;
         }
 
@@ -102,9 +96,6 @@ namespace Gdterm.UI.Services
             btn.FlatStyle = FlatStyle.Flat;
             btn.BackColor = GdtermColorTable.Danger;
             btn.ForeColor = Color.White;
-            btn.FlatAppearance.BorderSize = 0;
-            btn.FlatAppearance.MouseOverBackColor = GdtermColorTable.Hover;
-            btn.FlatAppearance.MouseDownBackColor = GdtermColorTable.Pressed;
             return btn;
         }
 
