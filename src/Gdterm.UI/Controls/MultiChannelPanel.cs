@@ -4,6 +4,8 @@ using System.Windows.Forms;
 using Gdterm.Terminal;
 using Gdterm.UI.Services;
 
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+
 namespace Gdterm.UI.Controls
 {
     /// <summary>
