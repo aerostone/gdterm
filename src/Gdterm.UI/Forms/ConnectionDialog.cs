@@ -24,46 +24,46 @@ namespace Gdterm.UI.Forms
         private readonly bool _isNew;
 
         // 基本信息
-        private TextBox _nameBox;
-        private ComboBox _protocolCombo;
-        private TextBox _hostBox;
-        private NumericUpDown _portBox;
-        private TextBox _usernameBox;
-        private TextBox _groupPathBox;
+        private AntdUI.Input _nameBox;
+        private AntdUI.Select _protocolCombo;
+        private AntdUI.Input _hostBox;
+        private AntdUI.InputNumber _portBox;
+        private AntdUI.Input _usernameBox;
+        private AntdUI.Input _groupPathBox;
 
         // SSH 高级
-        private CheckBox _tunnelCheck;
-        private TextBox _tunnelHostBox;
-        private NumericUpDown _tunnelPortBox;
-        private TextBox _tunnelUserBox;
+        private AntdUI.Checkbox _tunnelCheck;
+        private AntdUI.Input _tunnelHostBox;
+        private AntdUI.InputNumber _tunnelPortBox;
+        private AntdUI.Input _tunnelUserBox;
 
         // RDP
-        private TextBox _domainBox;
-        private CheckBox _rdpDriveCheck;
-        private CheckBox _rdpClipboardCheck;
-        private CheckBox _rdpPrinterCheck;
-        private NumericUpDown _rdpColorDepth;
-        private CheckBox _rdpFullScreenCheck;
-        private CheckBox _rdpNlaCheck;
+        private AntdUI.Input _domainBox;
+        private AntdUI.Checkbox _rdpDriveCheck;
+        private AntdUI.Checkbox _rdpClipboardCheck;
+        private AntdUI.Checkbox _rdpPrinterCheck;
+        private AntdUI.InputNumber _rdpColorDepth;
+        private AntdUI.Checkbox _rdpFullScreenCheck;
+        private AntdUI.Checkbox _rdpNlaCheck;
         /// <summary>强制 NLA（FreeRDP 下加 /sec:nla，禁止降级 legacy security）</summary>
-        private CheckBox _rdpForceNlaCheck;
+        private AntdUI.Checkbox _rdpForceNlaCheck;
         /// <summary>负载均衡路由 token（FreeRDP 下加 /load-balance-info）</summary>
-        private TextBox _rdpLoadBalanceBox;
+        private AntdUI.Input _rdpLoadBalanceBox;
         /// <summary>RDP 渲染引擎：0=自动（优先 FreeRDP） 1=FreeRDP 2=系统 mstsc（ActiveX）。旧堡垒机对 mstsc 兼容性最好。</summary>
-        private ComboBox _rdpEngineCombo;
+        private AntdUI.Select _rdpEngineCombo;
         /// <summary>抓包：通过本地 TCP 代理中转，hex dump 双向流量到 logs/rdp-dump/（仅调试模式可见）</summary>
-        private CheckBox _rdpTcpDumpCheck;
+        private AntdUI.Checkbox _rdpTcpDumpCheck;
 
         // Serial
-        private ComboBox _serialPortCombo;
-        private ComboBox _serialBaudCombo;
-        private ComboBox _serialDataBitsCombo;
-        private ComboBox _serialStopBitsCombo;
-        private ComboBox _serialParityCombo;
+        private AntdUI.Select _serialPortCombo;
+        private AntdUI.Select _serialBaudCombo;
+        private AntdUI.Select _serialDataBitsCombo;
+        private AntdUI.Select _serialStopBitsCombo;
+        private AntdUI.Select _serialParityCombo;
 
         // KeePass
-        private TextBox _credentialRefBox;
-        private Label _credentialTitleLabel;
+        private AntdUI.Input _credentialRefBox;
+        private AntdUI.Label _credentialTitleLabel;
 
         // 布局
         private Panel _advancedHost;
@@ -71,12 +71,12 @@ namespace Gdterm.UI.Forms
         private TableLayoutPanel _secSsh;
         private TableLayoutPanel _secRdp;
         private TableLayoutPanel _secSerial;
-        private TextBox _notesBox;
-        private LinkLabel _moreLink;
+        private AntdUI.Input _notesBox;
+        private AntdUI.HyperlinkLabel _moreLink;
         private bool _expanded;
         private int _expandedDelta;   // 本次展开实际增加的高度（收起时原样减回，兼容工作区封顶）
         private Panel _btnPanel;      // 日志用
-        private Button _okBtn;
+        private AntdUI.Button _okBtn;
 
         private readonly IKeePassService _keepass;
 
@@ -135,16 +135,16 @@ namespace Gdterm.UI.Forms
             basicLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 96));
             basicLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
-            _nameBox = AddRow(basicLayout, 0, "名称", new TextBox());
+            _nameBox = AddRow(basicLayout, 0, "名称", new AntdUI.Input());
             WinFormsCompat.SetCueBanner(_nameBox, "可选，留空则用 主机:端口");
-            _protocolCombo = AddRow(basicLayout, 1, "协议", new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList });
+            _protocolCombo = AddRow(basicLayout, 1, "协议", new AntdUI.Select());
             _protocolCombo.Items.AddRange(new object[] { "SSH", "RDP", "Serial" });
             _protocolCombo.SelectedIndexChanged += OnProtocolChanged;
-            _hostBox = AddRow(basicLayout, 2, "主机", new TextBox());
+            _hostBox = AddRow(basicLayout, 2, "主机", new AntdUI.Input());
             WinFormsCompat.SetCueBanner(_hostBox, "IP 或主机名，如 192.168.1.10");
-            _portBox = AddRow(basicLayout, 3, "端口", new NumericUpDown { Minimum = 1, Maximum = 65535, Value = 22 });
-            _usernameBox = AddRow(basicLayout, 4, "用户名", new TextBox());
-            _groupPathBox = AddRow(basicLayout, 5, "分组", new TextBox());
+            _portBox = AddRow(basicLayout, 3, "端口", new AntdUI.InputNumber { Minimum = 1, Maximum = 65535, Value = 22 });
+            _usernameBox = AddRow(basicLayout, 4, "用户名", new AntdUI.Input());
+            _groupPathBox = AddRow(basicLayout, 5, "分组", new AntdUI.Input());
             WinFormsCompat.SetCueBanner(_groupPathBox, "如: Web/生产");
             topPanel.Controls.Add(basicLayout);
 
@@ -154,18 +154,17 @@ namespace Gdterm.UI.Forms
             credRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             credRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             // 隐藏的 UUID 存储框（不入布局，仅作保存时读取的存储）
-            _credentialRefBox = new TextBox { Visible = false, Enabled = false };
-            credRow.Controls.Add(new Label
+            _credentialRefBox = new AntdUI.Input { Visible = false, Enabled = false };
+            credRow.Controls.Add(new AntdUI.Label
             {
                 Text = "凭据",
-                ForeColor = GdtermColorTable.Foreground,
                 AutoSize = false,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleRight,
                 Padding = new Padding(0, 0, 8, 0),
                 Height = 30
             }, 0, 0);
-            _credentialTitleLabel = new Label
+            _credentialTitleLabel = new AntdUI.Label
             {
                 Text = "未选（按主机+用户名自动匹配）",
                 ForeColor = GdtermColorTable.Muted,
@@ -176,26 +175,19 @@ namespace Gdterm.UI.Forms
             };
             credRow.Controls.Add(_credentialTitleLabel, 1, 0);
             var credBtns = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = false, AutoSize = true };
-            var btnPickCred = new Button
+            var btnPickCred = new AntdUI.Button
             {
                 Text = "选择凭据...",
-                FlatStyle = FlatStyle.Flat,
-                BackColor = GdtermColorTable.Accent,
-                ForeColor = Color.White,
-                // 随全局字体/DPI 自动适配尺寸：固定 Size 在 11pt@144dpi 下文字撑满按钮显得过大
+                Type = AntdUI.TTypeMini.Primary,
                 AutoSize = true,
-                Padding = new Padding(2, 2, 2, 2),
                 Margin = new Padding(0, 2, 6, 0)
             };
             btnPickCred.Click += OnPickCredential;
-            var btnClearCred = new Button
+            var btnClearCred = new AntdUI.Button
             {
                 Text = "清除",
-                FlatStyle = FlatStyle.Flat,
-                BackColor = GdtermColorTable.Hover,
-                ForeColor = GdtermColorTable.Foreground,
+                Type = AntdUI.TTypeMini.Default,
                 AutoSize = true,
-                Padding = new Padding(4, 2, 4, 2),
                 Margin = new Padding(0, 2, 0, 0)
             };
             btnClearCred.Click += OnClearCredential;
@@ -206,15 +198,12 @@ namespace Gdterm.UI.Forms
 
             // ===== 更多选项 开关 =====
             var linkRow = new Panel { Dock = DockStyle.Top, AutoSize = true, Height = 28, Padding = new Padding(0, 6, 0, 0) };
-            _moreLink = new LinkLabel
+            _moreLink = new AntdUI.HyperlinkLabel
             {
                 Text = "更多选项 ▾",
                 AutoSize = true,
-                Location = DpiScale.P(this, 0, 6),
-                LinkColor = GdtermColorTable.Info,
-                ActiveLinkColor = Color.White
+                Location = DpiScale.P(this, 0, 6)
             };
-            _moreLink.LinkBehavior = LinkBehavior.HoverUnderline;
             _moreLink.Click += (s, e) => ToggleAdvanced();
             linkRow.Controls.Add(_moreLink);
             topPanel.Controls.Add(linkRow);
@@ -236,11 +225,11 @@ namespace Gdterm.UI.Forms
             var sshLayout = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true };
             sshLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
             sshLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            _tunnelCheck = new CheckBox { Text = "使用 SSH 隧道（跳板机）", ForeColor = GdtermColorTable.Foreground, AutoSize = true };
+            _tunnelCheck = new AntdUI.Checkbox { Text = "使用 SSH 隧道（跳板机）", AutoSize = true };
             sshLayout.Controls.Add(_tunnelCheck, 0, 0); sshLayout.SetColumnSpan(_tunnelCheck, 2);
-            _tunnelHostBox = AddRow(sshLayout, 1, "跳板主机", new TextBox());
-            _tunnelPortBox = AddRow(sshLayout, 2, "跳板端口", new NumericUpDown { Minimum = 1, Maximum = 65535, Value = 22 });
-            _tunnelUserBox = AddRow(sshLayout, 3, "跳板用户", new TextBox());
+            _tunnelHostBox = AddRow(sshLayout, 1, "跳板主机", new AntdUI.Input());
+            _tunnelPortBox = AddRow(sshLayout, 2, "跳板端口", new AntdUI.InputNumber { Minimum = 1, Maximum = 65535, Value = 22 });
+            _tunnelUserBox = AddRow(sshLayout, 3, "跳板用户", new AntdUI.Input());
             SectionContent(_secSsh, sshLayout);
             _advFlow.Controls.Add(_secSsh);
 
@@ -250,36 +239,36 @@ namespace Gdterm.UI.Forms
             rdpGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
             rdpGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             // 域名仅 RDP 域账户有意义——从基本信息移到这里
-            _domainBox = AddRow(rdpGrid, 0, "RDP域名", new TextBox());
+            _domainBox = AddRow(rdpGrid, 0, "RDP域名", new AntdUI.Input());
             WinFormsCompat.SetCueBanner(_domainBox, "域账户如 CONTOSO，普通账户留空");
             var rdpChecks = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = true, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 4, 0, 4) };
-            _rdpDriveCheck = new CheckBox { Text = "本地磁盘", ForeColor = GdtermColorTable.Foreground, AutoSize = true };
-            _rdpClipboardCheck = new CheckBox { Text = "剪贴板", ForeColor = GdtermColorTable.Foreground, AutoSize = true, Checked = true };
-            _rdpPrinterCheck = new CheckBox { Text = "打印机", ForeColor = GdtermColorTable.Foreground, AutoSize = true };
-            _rdpFullScreenCheck = new CheckBox { Text = "全屏", ForeColor = GdtermColorTable.Foreground, AutoSize = true };
-            _rdpNlaCheck = new CheckBox { Text = "NLA 认证", ForeColor = GdtermColorTable.Foreground, AutoSize = true, Checked = true };
-            _rdpForceNlaCheck = new CheckBox { Text = "强制 NLA", ForeColor = GdtermColorTable.Foreground, AutoSize = true, Checked = false };
-            _rdpTcpDumpCheck = new CheckBox { Text = "抓包（TCP dump）", ForeColor = GdtermColorTable.Warning, AutoSize = true, Checked = false,
+            _rdpDriveCheck = new AntdUI.Checkbox { Text = "本地磁盘", AutoSize = true };
+            _rdpClipboardCheck = new AntdUI.Checkbox { Text = "剪贴板", AutoSize = true, Checked = true };
+            _rdpPrinterCheck = new AntdUI.Checkbox { Text = "打印机", AutoSize = true };
+            _rdpFullScreenCheck = new AntdUI.Checkbox { Text = "全屏", AutoSize = true };
+            _rdpNlaCheck = new AntdUI.Checkbox { Text = "NLA 认证", AutoSize = true, Checked = true };
+            _rdpForceNlaCheck = new AntdUI.Checkbox { Text = "强制 NLA", AutoSize = true, Checked = false };
+            _rdpTcpDumpCheck = new AntdUI.Checkbox { Text = "抓包（TCP dump）", AutoSize = true, Checked = false,
                 Visible = Program.DebugConfig != null && Program.DebugConfig.Enabled };
             rdpChecks.Controls.AddRange(new Control[] { _rdpDriveCheck, _rdpClipboardCheck, _rdpPrinterCheck, _rdpFullScreenCheck, _rdpNlaCheck, _rdpForceNlaCheck, _rdpTcpDumpCheck });
             var depthPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 4) };
-            depthPanel.Controls.Add(new Label { Text = "色深:", ForeColor = GdtermColorTable.Foreground, AutoSize = true });
-            _rdpColorDepth = new NumericUpDown { Minimum = 8, Maximum = 32, Value = 32, Increment = 8, Width = 60 };
+            depthPanel.Controls.Add(new AntdUI.Label { Text = "色深:", AutoSize = true });
+            _rdpColorDepth = new AntdUI.InputNumber { Minimum = 8, Maximum = 32, Value = 32, Increment = 8, Width = 60 };
             depthPanel.Controls.Add(_rdpColorDepth);
             rdpGrid.Controls.Add(rdpChecks, 1, 1);
             rdpGrid.Controls.Add(depthPanel, 1, 2);
             // 引擎选择：旧堡垒机/代理常与 FreeRDP 不兼容（重定向 PDU 处理差异），
             // 系统自带 mstsc（ActiveX 嵌入）是微软自家实现，兼容性最好
             var enginePanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 4) };
-            enginePanel.Controls.Add(new Label { Text = "渲染引擎:", ForeColor = GdtermColorTable.Foreground, AutoSize = true });
-            _rdpEngineCombo = new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList, Width = 170 };
+            enginePanel.Controls.Add(new AntdUI.Label { Text = "渲染引擎:", AutoSize = true });
+            _rdpEngineCombo = new AntdUI.Select { Width = 170 };
             _rdpEngineCombo.Items.AddRange(new object[] { "自动（优先 FreeRDP）", "FreeRDP 进程嵌入", "系统 mstsc（兼容模式）" });
             enginePanel.Controls.Add(_rdpEngineCombo);
             rdpGrid.Controls.Add(enginePanel, 1, 3);
             // 负载均衡 token：堡垒机/NetScaler 下发的 LB_LOAD_BALANCE_INFO Cookie（如 tsv://... 或 Cookie: msts=...）
             var lbPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 4) };
-            lbPanel.Controls.Add(new Label { Text = "负载均衡:", ForeColor = GdtermColorTable.Foreground, AutoSize = true });
-            _rdpLoadBalanceBox = new TextBox { Width = 230 };
+            lbPanel.Controls.Add(new AntdUI.Label { Text = "负载均衡:", AutoSize = true });
+            _rdpLoadBalanceBox = new AntdUI.Input { Width = 230 };
             WinFormsCompat.SetCueBanner(_rdpLoadBalanceBox, "如 Cookie: msts=NSFVERIFYHASH=... (选填)");
             lbPanel.Controls.Add(_rdpLoadBalanceBox);
             rdpGrid.Controls.Add(lbPanel, 1, 4);
@@ -291,37 +280,33 @@ namespace Gdterm.UI.Forms
             var serialLayout = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true };
             serialLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
             serialLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            _serialPortCombo = AddRow(serialLayout, 0, "端口", new ComboBox { DropDownStyle = ComboBoxStyle.DropDown });
+            _serialPortCombo = AddRow(serialLayout, 0, "端口", new AntdUI.Select());
             _serialPortCombo.Items.AddRange(new object[] { "COM1", "COM2", "COM3", "COM4", "/dev/ttyS0", "/dev/ttyUSB0" });
-            _serialBaudCombo = AddRow(serialLayout, 1, "波特率", new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList });
+            _serialBaudCombo = AddRow(serialLayout, 1, "波特率", new AntdUI.Select());
             _serialBaudCombo.Items.AddRange(new object[] { "9600", "19200", "38400", "57600", "115200" });
-            _serialBaudCombo.SelectedItem = "9600";
-            _serialDataBitsCombo = AddRow(serialLayout, 2, "数据位", new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList });
+            _serialBaudCombo.SelectedValue = "9600";
+            _serialDataBitsCombo = AddRow(serialLayout, 2, "数据位", new AntdUI.Select());
             _serialDataBitsCombo.Items.AddRange(new object[] { "5", "6", "7", "8" });
-            _serialDataBitsCombo.SelectedItem = "8";
-            _serialStopBitsCombo = AddRow(serialLayout, 3, "停止位", new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList });
+            _serialDataBitsCombo.SelectedValue = "8";
+            _serialStopBitsCombo = AddRow(serialLayout, 3, "停止位", new AntdUI.Select());
             _serialStopBitsCombo.Items.AddRange(new object[] { "1", "1.5", "2" });
-            _serialStopBitsCombo.SelectedItem = "1";
-            _serialParityCombo = AddRow(serialLayout, 4, "校验位", new ComboBox { DropDownStyle = ComboBoxStyle.DropDownList });
+            _serialStopBitsCombo.SelectedValue = "1";
+            _serialParityCombo = AddRow(serialLayout, 4, "校验位", new AntdUI.Select());
             _serialParityCombo.Items.AddRange(new object[] { "None", "Odd", "Even", "Mark", "Space" });
-            _serialParityCombo.SelectedItem = "None";
+            _serialParityCombo.SelectedValue = "None";
             SectionContent(_secSerial, serialLayout);
             _advFlow.Controls.Add(_secSerial);
 
             // --- 备注 ---
             var notesSec = MakeSection("备注");
-            _notesBox = new TextBox
+            _notesBox = new AntdUI.Input
             {
                 Multiline = true,
-                ScrollBars = ScrollBars.Vertical,
                 Width = 512,
                 Height = 56,
-                BackColor = GdtermColorTable.Surface,
-                ForeColor = GdtermColorTable.Foreground,
-                BorderStyle = BorderStyle.FixedSingle,
-                Font = new Font("Consolas", 9f)
+                Font = new Font("Consolas", 9f),
+                PlaceholderText = "服务器用途、特殊配置、注意事项..."
             };
-            WinFormsCompat.SetCueBanner(_notesBox, "服务器用途、特殊配置、注意事项...");
             SectionContent(notesSec, _notesBox);
             _advFlow.Controls.Add(notesSec);
 
@@ -341,29 +326,24 @@ namespace Gdterm.UI.Forms
                 BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(0, 7, 16, 0)
             };
-            var okBtn = new Button
+            var okBtn = new AntdUI.Button
             {
                 Text = _isNew ? "创建" : "保存",
-                DialogResult = DialogResult.OK,
-                BackColor = GdtermColorTable.Accent,
-                ForeColor = Color.White,
-                FlatStyle = FlatStyle.Flat,
-                Size = DpiScale.S(this, 80, 30),
+                Type = AntdUI.TTypeMini.Primary,
+                Size = DpiScale.S(this, 80, 34),
                 Margin = new Padding(0)
             };
-            var cancelBtn = new Button
+            var cancelBtn = new AntdUI.Button
             {
                 Text = "取消",
-                DialogResult = DialogResult.Cancel,
-                BackColor = GdtermColorTable.Hover,
-                ForeColor = GdtermColorTable.Foreground,
-                FlatStyle = FlatStyle.Flat,
-                Size = DpiScale.S(this, 80, 30),
+                Type = AntdUI.TTypeMini.Default,
+                Size = DpiScale.S(this, 80, 34),
                 Margin = new Padding(0, 0, 8, 0)
             };
-            okBtn.Click += (s, e) => { SaveToConfig(); };
+            okBtn.Click += (s, e) => { SaveToConfig(); DialogResult = DialogResult.OK; Close(); };
             _okBtn = okBtn;
             btnFlow.Controls.Add(okBtn);      // RightToLeft：第一个在最右
+            cancelBtn.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
             btnFlow.Controls.Add(cancelBtn);
             btnPanel.Controls.Add(btnFlow);
 
@@ -390,10 +370,9 @@ namespace Gdterm.UI.Forms
             t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            t.Controls.Add(new Label
+            t.Controls.Add(new AntdUI.Label
             {
                 Text = title,
-                ForeColor = GdtermColorTable.Muted,
                 AutoSize = true,
                 Font = Services.FormFontPolicy.UiFont(0f, FontStyle.Bold),
                 Margin = new Padding(0, 0, 0, 3)
@@ -487,10 +466,9 @@ namespace Gdterm.UI.Forms
             var text = label ?? "";
             if (text.EndsWith(":") || text.EndsWith("："))
                 text = text.TrimEnd(':', '：');
-            layout.Controls.Add(new Label
+            layout.Controls.Add(new AntdUI.Label
             {
                 Text = text,
-                ForeColor = GdtermColorTable.Foreground,
                 AutoSize = false,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleRight,
@@ -505,7 +483,7 @@ namespace Gdterm.UI.Forms
 
         private void OnProtocolChanged(object sender, EventArgs e)
         {
-            var proto = (string)_protocolCombo.SelectedItem;
+            var proto = (string)_protocolCombo.SelectedValue;
             _portBox.Value = proto == "SSH" ? 22 : proto == "RDP" ? 3389 : 9600;
             // 高级区只显示当前协议相关的分节
             bool isSsh = proto == "SSH", isRdp = proto == "RDP", isSerial = proto == "Serial";
@@ -519,7 +497,7 @@ namespace Gdterm.UI.Forms
         private void LoadFromConfig()
         {
             _nameBox.Text = _config.Name ?? "";
-            _protocolCombo.SelectedItem = _config.Protocol == ProtocolType.RDP ? "RDP" :
+            _protocolCombo.SelectedValue = _config.Protocol == ProtocolType.RDP ? "RDP" :
                                           _config.Protocol == ProtocolType.Serial ? "Serial" : "SSH";
             _hostBox.Text = _config.Host ?? "";
             _portBox.Value = _config.Port > 0 ? _config.Port : 22;
@@ -546,9 +524,9 @@ namespace Gdterm.UI.Forms
             if (_config.Serial != null)
             {
                 _serialPortCombo.Text = _config.Serial.PortName ?? "COM1";
-                _serialBaudCombo.SelectedItem = _config.Serial.BaudRate.ToString();
-                _serialDataBitsCombo.SelectedItem = _config.Serial.DataBits.ToString();
-                _serialParityCombo.SelectedItem = _config.Serial.Parity.ToString();
+                _serialBaudCombo.SelectedValue = _config.Serial.BaudRate.ToString();
+                _serialDataBitsCombo.SelectedValue = _config.Serial.DataBits.ToString();
+                _serialParityCombo.SelectedValue = _config.Serial.Parity.ToString();
             }
 
             // RDP options (from Metadata)
@@ -577,7 +555,7 @@ namespace Gdterm.UI.Forms
         private void SaveToConfig()
         {
             _config.Name = _nameBox.Text.Trim();
-            var proto = (string)_protocolCombo.SelectedItem;
+            var proto = (string)_protocolCombo.SelectedValue;
             _config.Protocol = proto == "RDP" ? ProtocolType.RDP : proto == "Serial" ? ProtocolType.Serial : ProtocolType.SSH;
             _config.Host = _hostBox.Text.Trim();
             _config.Port = (int)_portBox.Value;
@@ -626,20 +604,20 @@ namespace Gdterm.UI.Forms
             // Serial
             if (_config.Protocol == ProtocolType.Serial)
             {
-                var baud = 9600; int.TryParse((string)_serialBaudCombo.SelectedItem, out baud);
-                var dataBits = 8; int.TryParse((string)_serialDataBitsCombo.SelectedItem, out dataBits);
+                var baud = 9600; int.TryParse((string)_serialBaudCombo.SelectedValue, out baud);
+                var dataBits = 8; int.TryParse((string)_serialDataBitsCombo.SelectedValue, out dataBits);
                 _config.Serial = new SerialConfig
                 {
                     PortName = _serialPortCombo.Text.Trim(),
                     BaudRate = baud,
                     DataBits = dataBits,
-                    Parity = (string)_serialParityCombo.SelectedItem == "Odd" ? System.IO.Ports.Parity.Odd :
-                             (string)_serialParityCombo.SelectedItem == "Even" ? System.IO.Ports.Parity.Even :
-                             (string)_serialParityCombo.SelectedItem == "Mark" ? System.IO.Ports.Parity.Mark :
-                             (string)_serialParityCombo.SelectedItem == "Space" ? System.IO.Ports.Parity.Space :
+                    Parity = (string)_serialParityCombo.SelectedValue == "Odd" ? System.IO.Ports.Parity.Odd :
+                             (string)_serialParityCombo.SelectedValue == "Even" ? System.IO.Ports.Parity.Even :
+                             (string)_serialParityCombo.SelectedValue == "Mark" ? System.IO.Ports.Parity.Mark :
+                             (string)_serialParityCombo.SelectedValue == "Space" ? System.IO.Ports.Parity.Space :
                              System.IO.Ports.Parity.None,
-                    StopBits = (string)_serialStopBitsCombo.SelectedItem == "2" ? System.IO.Ports.StopBits.Two :
-                               (string)_serialStopBitsCombo.SelectedItem == "1.5" ? System.IO.Ports.StopBits.OnePointFive :
+                    StopBits = (string)_serialStopBitsCombo.SelectedValue == "2" ? System.IO.Ports.StopBits.Two :
+                               (string)_serialStopBitsCombo.SelectedValue == "1.5" ? System.IO.Ports.StopBits.OnePointFive :
                                System.IO.Ports.StopBits.One
                 };
             }

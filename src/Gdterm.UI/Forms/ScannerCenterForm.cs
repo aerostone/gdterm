@@ -22,22 +22,24 @@ namespace Gdterm.UI.Forms
         private readonly ScanPluginStore _store;
         private readonly Func<Gdterm.Tools.ISshRemoteSession> _remoteSessionFactory;
 
-        private ComboBox _targetCombo;
-        private Label _hotStateLabel;
-        private Button _reloadButton;
-        private Button _openFolderButton;
-        private Button _runButton;
-        private ListView _pluginList;
-        private ListView _findingList;
-        private Label _findingHeader;
-        private TextBox _rawOutput;
+        private AntdUI.Select _targetCombo;
+        private AntdUI.Label _hotStateLabel;
+        private AntdUI.Button _reloadButton;
+        private AntdUI.Button _openFolderButton;
+        private AntdUI.Button _runButton;
+        private AntdUI.Table _pluginTable;
+        private AntdUI.Table _findingTable;
+        private System.Collections.Generic.List<ScanPlugin> _pluginRows = new System.Collections.Generic.List<ScanPlugin>();
+        private System.Collections.Generic.List<ScanFinding> _findingRows = new System.Collections.Generic.List<ScanFinding>();
+        private AntdUI.Label _findingHeader;
+        private AntdUI.Input _rawOutput;
         private SplitContainer _split;
 
         // WMI 免 SSH 通道的连接参数行（仅该目标可见）
         private Panel _wmiPanel;
-        private TextBox _wmiHost;
-        private TextBox _wmiUser;
-        private TextBox _wmiPass;
+        private AntdUI.Input _wmiHost;
+        private AntdUI.Input _wmiUser;
+        private AntdUI.Input _wmiPass;
 
         private readonly ScanRunner _runner = new ScanRunner();
         private bool _running;
@@ -77,15 +79,14 @@ namespace Gdterm.UI.Forms
                 Padding = new Padding(8, 8, 8, 0),
                 WrapContents = false
             };
-            top.Controls.Add(new Label
+            top.Controls.Add(new AntdUI.Label
             {
                 Text = "目标:",
                 AutoSize = true,
                 Margin = new Padding(3, 8, 4, 0)
             });
-            _targetCombo = new ComboBox
+            _targetCombo = new AntdUI.Select
             {
-                DropDownStyle = ComboBoxStyle.DropDownList,
                 Width = 250
             };
             _targetCombo.Items.Add("本机（Windows）");
@@ -95,19 +96,19 @@ namespace Gdterm.UI.Forms
             _targetCombo.SelectedIndexChanged += (s, ev) => { UpdateWmiPanelVisibility(); UpdateRunButtonState(); };
             top.Controls.Add(_targetCombo);
 
-            _runButton = new Button { Text = "运行选中", Width = 96 };
+            _runButton = new AntdUI.Button { Text = "运行选中", Type = AntdUI.TTypeMini.Primary, Width = 96 };
             _runButton.Click += OnRunClicked;
             top.Controls.Add(_runButton);
 
-            _reloadButton = new Button { Text = "重新加载插件", Width = 110 };
+            _reloadButton = new AntdUI.Button { Text = "重新加载插件", Type = AntdUI.TTypeMini.Default, Width = 110 };
             _reloadButton.Click += (s, ev) => _store.Reload();
             top.Controls.Add(_reloadButton);
 
-            _openFolderButton = new Button { Text = "打开插件目录", Width = 110 };
+            _openFolderButton = new AntdUI.Button { Text = "打开插件目录", Type = AntdUI.TTypeMini.Default, Width = 110 };
             _openFolderButton.Click += OnOpenPluginsFolder;
             top.Controls.Add(_openFolderButton);
 
-            _hotStateLabel = new Label
+            _hotStateLabel = new AntdUI.Label
             {
                 Text = "",
                 AutoSize = true,
@@ -126,24 +127,23 @@ namespace Gdterm.UI.Forms
 
             // 左：插件清单
             var pluginPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(8) };
-            _pluginList = new ListView
+            _pluginTable = new AntdUI.Table
             {
                 Dock = DockStyle.Fill,
-                View = View.Details,
-                FullRowSelect = true,
-                MultiSelect = true,
-                HideSelection = false
+                BorderWidth = 0,
+                GridLines = true,
+                RowHeight = 28
             };
-            _pluginList.Columns.Add("插件", 190);
-            _pluginList.Columns.Add("目标", 90);
-            _pluginList.Columns.Add("分类", 70);
-            _pluginList.Columns.Add("来源", 66);
-            _pluginList.Columns.Add("签名", 74);
-            _pluginList.Columns.Add("版本", 50);
-            _pluginList.SelectedIndexChanged += (s, ev) => UpdateRunButtonState();
-            _pluginList.DoubleClick += (s, ev) => { if (!_running && SelectedRunnablePlugins().Count > 0) OnRunClicked(null, null); };
+            _pluginTable.Columns.Add(new AntdUI.Column("Name", "插件", AntdUI.ColumnAlign.Left));
+            _pluginTable.Columns.Add(new AntdUI.Column("Target", "目标", AntdUI.ColumnAlign.Left));
+            _pluginTable.Columns.Add(new AntdUI.Column("Category", "分类", AntdUI.ColumnAlign.Left));
+            _pluginTable.Columns.Add(new AntdUI.Column("Source", "来源", AntdUI.ColumnAlign.Left));
+            _pluginTable.Columns.Add(new AntdUI.Column("Trust", "签名", AntdUI.ColumnAlign.Left));
+            _pluginTable.Columns.Add(new AntdUI.Column("Version", "版本", AntdUI.ColumnAlign.Left));
+            _pluginTable.CheckedChanged += (s, ev) => UpdateRunButtonState();
+            _pluginTable.CellDoubleClick += (s, ev) => { if (!_running && SelectedRunnablePlugins().Count > 0) OnRunClicked(null, null); };
             pluginPanel.Controls.Add(_pluginList);
-            var pluginHint = new Label
+            var pluginHint = new AntdUI.Label
             {
                 Dock = DockStyle.Bottom,
                 Height = 20,
@@ -161,21 +161,21 @@ namespace Gdterm.UI.Forms
             };
 
             var findingPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 8, 8, 0) };
-            _findingList = new ListView
+            _findingTable = new AntdUI.Table
             {
                 Dock = DockStyle.Fill,
-                View = View.Details,
-                FullRowSelect = true,
-                HideSelection = false
+                BorderWidth = 0,
+                GridLines = true,
+                RowHeight = 28
             };
-            _findingList.Columns.Add("级别", 70);
-            _findingList.Columns.Add("标题", 210);
-            _findingList.Columns.Add("详情", 330);
+            _findingTable.Columns.Add(new AntdUI.Column("Severity", "级别", AntdUI.ColumnAlign.Left));
+            _findingTable.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left));
+            _findingTable.Columns.Add(new AntdUI.Column("Detail", "详情", AntdUI.ColumnAlign.Left));
             findingPanel.Controls.Add(_findingList);
-            var findingHeader = new Label
+            var findingHeader = new AntdUI.Label
             {
                 Dock = DockStyle.Top,
-                Height = 22,
+                Height = 24,
                 Text = "发现（0）",
                 Font = new Font(Font, FontStyle.Bold)
             };
@@ -185,17 +185,15 @@ namespace Gdterm.UI.Forms
             rightSplit.Panel1.Controls.Add(findingPanel);
 
             var rawPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 8, 8, 8) };
-            _rawOutput = new TextBox
+            _rawOutput = new AntdUI.Input
             {
                 Dock = DockStyle.Fill,
                 Multiline = true,
                 ReadOnly = true,
-                ScrollBars = ScrollBars.Both,
-                WordWrap = false,
                 Font = new Font("Consolas", 8.5f)
             };
             rawPanel.Controls.Add(_rawOutput);
-            var rawHeader = new Label { Dock = DockStyle.Top, Height = 22, Text = "原始输出", Font = new Font(Font, FontStyle.Bold) };
+            var rawHeader = new AntdUI.Label { Dock = DockStyle.Top, Height = 24, Text = "原始输出", Font = new Font(Font, FontStyle.Bold) };
             rawPanel.Controls.Add(rawHeader);
             rawHeader.BringToFront();
             rightSplit.Panel2.Controls.Add(rawPanel);
@@ -246,31 +244,35 @@ namespace Gdterm.UI.Forms
             catch (Exception ex) { DiagLog.Swallowed("Scanner.OnStoreReloaded", ex); }
         }
 
+        private sealed class PluginRow
+        {
+            public string Name { get; set; }
+            public string Target { get; set; }
+            public string Category { get; set; }
+            public string Source { get; set; }
+            public string Trust { get; set; }
+            public string Version { get; set; }
+        }
+
         private void RefreshPluginList()
         {
-            _pluginList.BeginUpdate();
-            _pluginList.Items.Clear();
+            _pluginRows.Clear();
+            var rows = new AntdUI.AntList<PluginRow>();
             foreach (var p in _store.Plugins)
             {
-                var item = new ListViewItem(p.LoadError != null ? p.DisplayName + "（加载失败）" : p.DisplayName)
+                _pluginRows.Add(p);
+                var state = p.LoadError != null ? "（加载失败）" : (!p.IsRunnable ? " [已停用]" : "");
+                rows.Add(new PluginRow
                 {
-                    Tag = p,
-                    ForeColor = p.LoadError != null ? Color.Firebrick : (p.Source == "builtin" ? SystemColors.ControlText : GdtermColorTable.Info)
-                };
-                if (!p.IsRunnable && p.LoadError == null)
-                    item.ForeColor = SystemColors.GrayText; // 已停用
-                item.SubItems.Add(p.TargetSummary);
-                item.SubItems.Add(p.Manifest != null ? (p.Manifest.Category ?? "-") : "-");
-                item.SubItems.Add(p.Source == "builtin" ? "内置" : "用户");
-                item.SubItems.Add(TrustBadge(p));
-                item.SubItems.Add(p.Manifest != null ? (p.Manifest.Version ?? "-") : "-");
-                if (p.LoadError != null)
-                    item.ToolTipText = p.LoadError;
-                else if (p.Manifest != null && !string.IsNullOrEmpty(p.Manifest.Description))
-                    item.ToolTipText = p.Manifest.Description + "\r\n脚本: " + p.ScriptPath;
-                _pluginList.Items.Add(item);
+                    Name = p.DisplayName + state,
+                    Target = p.TargetSummary,
+                    Category = p.Manifest != null ? (p.Manifest.Category ?? "-") : "-",
+                    Source = p.Source == "builtin" ? "内置" : "用户",
+                    Trust = TrustBadge(p),
+                    Version = p.Manifest != null ? (p.Manifest.Version ?? "-") : "-"
+                });
             }
-            _pluginList.EndUpdate();
+            _pluginTable.DataSource = rows;
             UpdateHotStateLabel();
             UpdateRunButtonState();
         }
@@ -287,16 +289,16 @@ namespace Gdterm.UI.Forms
         {
             _wmiPanel = new Panel { Dock = DockStyle.Top, Height = 34, Visible = false };
             var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Padding = new Padding(8, 4, 8, 0) };
-            flow.Controls.Add(new Label { Text = "主机:", AutoSize = true, Margin = new Padding(3, 9, 4, 0) });
-            _wmiHost = new TextBox { Width = 160 };
+            flow.Controls.Add(new AntdUI.Label { Text = "主机:", AutoSize = true, Margin = new Padding(3, 9, 4, 0) });
+            _wmiHost = new AntdUI.Input { Width = 160 };
             flow.Controls.Add(_wmiHost);
-            flow.Controls.Add(new Label { Text = "用户名:", AutoSize = true, Margin = new Padding(10, 9, 4, 0) });
-            _wmiUser = new TextBox { Width = 140 };
+            flow.Controls.Add(new AntdUI.Label { Text = "用户名:", AutoSize = true, Margin = new Padding(10, 9, 4, 0) });
+            _wmiUser = new AntdUI.Input { Width = 140 };
             flow.Controls.Add(_wmiUser);
-            flow.Controls.Add(new Label { Text = "密码:", AutoSize = true, Margin = new Padding(10, 9, 4, 0) });
-            _wmiPass = new TextBox { Width = 140, UseSystemPasswordChar = true };
+            flow.Controls.Add(new AntdUI.Label { Text = "密码:", AutoSize = true, Margin = new Padding(10, 9, 4, 0) });
+            _wmiPass = new AntdUI.Input { Width = 140, UseSystemPasswordChar = true };
             flow.Controls.Add(_wmiPass);
-            flow.Controls.Add(new Label
+            flow.Controls.Add(new AntdUI.Label
             {
                 Text = "留空凭据=用当前身份；域账号格式 DOMAIN\\user；需目标管理员权限 + ADMIN$ 共享",
                 AutoSize = true,
@@ -336,10 +338,13 @@ namespace Gdterm.UI.Forms
 
         private List<ScanPlugin> SelectedRunnablePlugins()
         {
-            return _pluginList.SelectedItems.Cast<ListViewItem>()
-                .Select(x => x.Tag as ScanPlugin)
-                .Where(x => x != null && x.IsRunnable)
-                .ToList();
+            var result = new List<ScanPlugin>();
+            foreach (var idx in _pluginTable.SelectedIndexs)
+            {
+                if (idx >= 0 && idx < _pluginRows.Count && _pluginRows[idx].IsRunnable)
+                    result.Add(_pluginRows[idx]);
+            }
+            return result;
         }
 
         private void UpdateRunButtonState()
@@ -402,7 +407,7 @@ namespace Gdterm.UI.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "打开目录失败: " + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AntdUI.Message.error(this, "打开目录失败: " + ex.Message);
             }
         }
 
@@ -417,10 +422,9 @@ namespace Gdterm.UI.Forms
             {
                 if (p.Trust == ScanTrust.Invalid)
                 {
-                    MessageBox.Show(this,
-                        "插件「" + p.DisplayName + "」的官方签名校验失败：\r\n\r\n" + p.ScriptPath +
-                        "\r\n\r\n内容可能与发布时不一致（疑似被篡改），已拒绝运行。",
-                        "签名无效", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    AntdUI.Message.error(this,
+                        "插件「" + p.DisplayName + "」的官方签名校验失败：" + p.ScriptPath +
+                        " 内容可能与发布时不一致（疑似被篡改），已拒绝运行。");
                     return;
                 }
                 if (p.Trust == ScanTrust.Unsigned && !_store.IsApproved(p))
@@ -440,13 +444,14 @@ namespace Gdterm.UI.Forms
             channel = BuildChannel(out validationError);
             if (channel == null)
             {
-                MessageBox.Show(this, validationError, "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                AntdUI.Message.warn(this, validationError);
                 return;
             }
 
             _running = true;
             UpdateRunButtonState();
-            _findingList.Items.Clear();
+            _findingRows.Clear();
+            _findingTable.DataSource = new AntdUI.AntList<FindingRow>();
             SetFindingCount(0);
             _rawOutput.Text = "";
 
@@ -471,7 +476,7 @@ namespace Gdterm.UI.Forms
             catch (Exception ex)
             {
                 if (!IsDisposed)
-                    MessageBox.Show(this, "扫描执行失败: " + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    AntdUI.Message.error(this, "扫描执行失败: " + ex.Message);
             }
             finally
             {
@@ -493,16 +498,15 @@ namespace Gdterm.UI.Forms
 
             foreach (var f in r.Findings)
             {
-                var item = new ListViewItem(SeverityLabel(f.Severity))
-                {
-                    ForeColor = SeverityColor(f.Severity),
-                    Tag = f
-                };
-                item.SubItems.Add(f.Title);
-                item.SubItems.Add(f.Detail);
-                _findingList.Items.Add(item);
+                _findingRows.Add(f);
             }
-            SetFindingCount(_findingList.Items.Count);
+            var rows = new AntdUI.AntList<FindingRow>();
+            foreach (var f in _findingRows)
+            {
+                rows.Add(new FindingRow { Severity = SeverityLabel(f.Severity), Title = f.Title, Detail = f.Detail });
+            }
+            _findingTable.DataSource = rows;
+            SetFindingCount(_findingRows.Count);
 
             if (!string.IsNullOrEmpty(r.RawOutput)) _rawOutput.AppendText(r.RawOutput + Environment.NewLine);
             // finding-16：改用 AppendRawLine，删除下方与私有方法重复的扩展类
@@ -521,6 +525,13 @@ namespace Gdterm.UI.Forms
 
         // ===== 展示辅助 =====
 
+        private sealed class FindingRow
+        {
+            public string Severity { get; set; }
+            public string Title { get; set; }
+            public string Detail { get; set; }
+        }
+
         private static string SeverityLabel(string s)
         {
             switch ((s ?? "").ToLowerInvariant())
@@ -533,16 +544,5 @@ namespace Gdterm.UI.Forms
             }
         }
 
-        private static Color SeverityColor(string s)
-        {
-            switch ((s ?? "").ToLowerInvariant())
-            {
-                case "critical": return GdtermColorTable.Danger;
-                case "high": return Color.Firebrick;
-                case "medium": return GdtermColorTable.Warning;
-                case "low": return GdtermColorTable.Warning;
-                default: return SystemColors.GrayText;
-            }
-        }
     }
 }

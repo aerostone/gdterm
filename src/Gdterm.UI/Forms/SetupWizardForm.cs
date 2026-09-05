@@ -17,18 +17,18 @@ namespace Gdterm.UI.Forms
     {
         private readonly ISecurityManager _securityManager;
         private Panel _stepPanel;
-        private Label _stepIndicator;
-        private Button _nextButton;
+        private AntdUI.Label _stepIndicator;
+        private AntdUI.Button _nextButton;
         private int _currentStep = 0;
 
         // Step 1: 欢迎
         private Panel _welcomePanel;
         // Step 2: 设置密码
         private Panel _passwordPanel;
-        private TextBox _passwordBox;
-        private TextBox _confirmBox;
-        private Label _strengthLabel;
-        private Label _errorLabel;
+        private AntdUI.Input _passwordBox;
+        private AntdUI.Input _confirmBox;
+        private AntdUI.Label _strengthLabel;
+        private AntdUI.Label _errorLabel;
         // Step 3: 完成
         private Panel _completePanel;
 
@@ -82,7 +82,7 @@ namespace Gdterm.UI.Forms
                 Padding = new Padding(DpiScale.V(this, 24), DpiScale.V(this, 14), DpiScale.V(this, 24), DpiScale.V(this, 10))
             };
 
-            var titleLabel = new Label
+            var titleLabel = new AntdUI.Label
             {
                 Text = "欢迎使用 gdterm",
                 // 标题强调：相对当前字体放大加粗，不硬编码字族/磅值（规范规则③）
@@ -93,7 +93,7 @@ namespace Gdterm.UI.Forms
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
-            var subtitleLabel = new Label
+            var subtitleLabel = new AntdUI.Label
             {
                 Text = "绿色运维客户端 · 首次使用请完成以下设置",
                 ForeColor = GdtermColorTable.Muted,
@@ -113,7 +113,7 @@ namespace Gdterm.UI.Forms
                 Padding = new Padding(DpiScale.V(this, 16), 0, DpiScale.V(this, 16), 0)
             };
 
-            _stepIndicator = new Label
+            _stepIndicator = new AntdUI.Label
             {
                 Text = BuildStepText(0),
                 ForeColor = GdtermColorTable.Muted,
@@ -141,18 +141,14 @@ namespace Gdterm.UI.Forms
             };
             buttonPanel.Controls.Add(flow);
 
-            _nextButton = new Button
+            _nextButton = new AntdUI.Button
             {
                 Text = "开始设置 →",
                 AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 10), 0),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = GdtermColorTable.Accent,
-                ForeColor = Color.White,
+                Type = AntdUI.TTypeMini.Primary,
                 Cursor = Cursors.Hand,
                 Name = "nextButton"
             };
-            _nextButton.FlatAppearance.BorderSize = 0;
             _nextButton.Click += OnNextClick;
             flow.Controls.Add(_nextButton);
 
@@ -216,7 +212,7 @@ namespace Gdterm.UI.Forms
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, DpiScale.V(this, 8)));
 
-            var infoLabel = new Label
+            var infoLabel = new AntdUI.Label
             {
                 Text =
                     "为了保护您的连接信息和密码数据，gdterm 使用主密码加密所有敏感信息。\r\n\r\n" +
@@ -260,7 +256,7 @@ namespace Gdterm.UI.Forms
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, DpiScale.V(this, 32)));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
-            var promptLabel = new Label
+            var promptLabel = new AntdUI.Label
             {
                 Text = "请设置主密码",
                 Font = new Font(Font.FontFamily, Font.Size + 2f, FontStyle.Bold),
@@ -271,49 +267,42 @@ namespace Gdterm.UI.Forms
             layout.SetColumnSpan(promptLabel, 2);
             layout.Controls.Add(promptLabel, 0, 0);
 
-            var pwdLabel = new Label
+            var pwdLabel = new AntdUI.Label
             {
                 Text = "密码",
                 ForeColor = GdtermColorTable.Foreground,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft
             };
-            _passwordBox = new TextBox
+            _passwordBox = new AntdUI.Input
             {
                 Dock = DockStyle.Fill,
-                // 等宽语义例外（规范规则③）：密码输入用等宽字体，字号跟随全局 UI 字号
                 Font = new Font("Consolas", Program.GlobalAppearance != null ? Program.GlobalAppearance.UIFontSize : 11f),
                 UseSystemPasswordChar = true,
-                BackColor = GdtermColorTable.Surface,
-                ForeColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
                 Margin = new Padding(0, 6, 0, 6)
             };
             _passwordBox.TextChanged += OnPasswordChanged;
             layout.Controls.Add(pwdLabel, 0, 1);
             layout.Controls.Add(_passwordBox, 1, 1);
 
-            var confirmLabel = new Label
+            var confirmLabel = new AntdUI.Label
             {
                 Text = "确认",
                 ForeColor = GdtermColorTable.Foreground,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft
             };
-            _confirmBox = new TextBox
+            _confirmBox = new AntdUI.Input
             {
                 Dock = DockStyle.Fill,
                 Font = new Font("Consolas", Program.GlobalAppearance != null ? Program.GlobalAppearance.UIFontSize : 11f),
                 UseSystemPasswordChar = true,
-                BackColor = GdtermColorTable.Surface,
-                ForeColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
                 Margin = new Padding(0, 6, 0, 6)
             };
             layout.Controls.Add(confirmLabel, 0, 2);
             layout.Controls.Add(_confirmBox, 1, 2);
 
-            _strengthLabel = new Label
+            _strengthLabel = new AntdUI.Label
             {
                 Text = "密码强度：未输入",
                 ForeColor = GdtermColorTable.Muted,
@@ -324,7 +313,7 @@ namespace Gdterm.UI.Forms
             layout.SetColumnSpan(_strengthLabel, 2);
             layout.Controls.Add(_strengthLabel, 0, 3);
 
-            _errorLabel = new Label
+            _errorLabel = new AntdUI.Label
             {
                 Text = "",
                 ForeColor = GdtermColorTable.Danger,
@@ -335,10 +324,9 @@ namespace Gdterm.UI.Forms
             layout.SetColumnSpan(_errorLabel, 2);
             layout.Controls.Add(_errorLabel, 0, 4);
 
-            var showPwdCheck = new CheckBox
+            var showPwdCheck = new AntdUI.Checkbox
             {
                 Text = "显示密码",
-                ForeColor = GdtermColorTable.Muted,
                 Dock = DockStyle.Left,
                 AutoSize = true,
                 Margin = new Padding(0, DpiScale.V(this, 4), 0, 0)
@@ -375,7 +363,7 @@ namespace Gdterm.UI.Forms
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 30f));
 
-            var doneLabel = new Label
+            var doneLabel = new AntdUI.Label
             {
                 Text = "设置完成",
                 // 标题强调：相对当前字体放大加粗（规范规则③）
@@ -386,7 +374,7 @@ namespace Gdterm.UI.Forms
                 TextAlign = ContentAlignment.MiddleCenter
             };
 
-            var summaryLabel = new Label
+            var summaryLabel = new AntdUI.Label
             {
                 Text =
                     "主密码已设置，您的数据将被安全加密。\r\n\r\n" +

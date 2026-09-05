@@ -17,9 +17,9 @@ namespace Gdterm.UI.Forms
     public class PasswordHealthForm : AntdUI.Window
     {
         private readonly IKeePassService _keepassService;
-        private Label _scoreLabel;
-        private Label _summaryLabel;
-        private TabControl _tabControl;
+        private AntdUI.Label _scoreLabel;
+        private AntdUI.Label _summaryLabel;
+        private AntdUI.Tabs _tabControl;
 
         public PasswordHealthForm(IKeePassService keepassService)
         {
@@ -48,28 +48,26 @@ namespace Gdterm.UI.Forms
                 Padding = new Padding(15, 10, 15, 5)
             };
 
-            _scoreLabel = new Label
+            _scoreLabel = new AntdUI.Label
             {
                 Text = "健康评分：—",
                 Font = Services.FormFontPolicy.UiFont(+9f, FontStyle.Bold),
-                ForeColor = Color.White,
                 Location = DpiScale.P(this, 15, 10),
-                Size = DpiScale.S(this, 250, 35)
+                Size = DpiScale.S(this, 250, 40)
             };
 
-            _summaryLabel = new Label
+            _summaryLabel = new AntdUI.Label
             {
                 Text = "正在分析...",
                 Font = Services.FormFontPolicy.UiFont(+1f),
-                ForeColor = GdtermColorTable.Muted,
                 Location = DpiScale.P(this, 15, 48),
-                Size = DpiScale.S(this, 650, 25)
+                Size = DpiScale.S(this, 650, 28)
             };
 
             headerPanel.Controls.AddRange(new Control[] { _scoreLabel, _summaryLabel });
 
             // 标签页容器
-            _tabControl = new TabControl
+            _tabControl = new AntdUI.Tabs
             {
                 Dock = DockStyle.Fill,
                 Font = Services.FormFontPolicy.UiFont(+0.5f)
@@ -108,7 +106,7 @@ namespace Gdterm.UI.Forms
             _summaryLabel.Text = $"{report.Summary}（共 {report.TotalEntries} 个条目）";
 
             // 清空标签页
-            _tabControl.TabPages.Clear();
+            _tabControl.Pages.Clear();
 
             // 空密码标签页
             AddIssueTab("空密码", report.EmptyPasswords, GdtermColorTable.Danger);
@@ -123,82 +121,97 @@ namespace Gdterm.UI.Forms
             AddIssueTab("过期密码", report.ExpiredPasswords, GdtermColorTable.Warning);
         }
 
+        private sealed class IssueRow
+        {
+            public string Title { get; set; }
+            public string Username { get; set; }
+            public string GroupPath { get; set; }
+            public string Issue { get; set; }
+            public string Strength { get; set; }
+        }
+
         private void AddIssueTab(string name, System.Collections.Generic.IList<PasswordIssue> issues, Color color)
         {
-            var tab = new TabPage($"  {name} ({issues.Count})  ");
-            tab.BackColor = GdtermColorTable.Surface;
+            var tab = new AntdUI.TabPage($"  {name} ({issues != null ? issues.Count : 0})  ");
 
-            var listView = new ListView
+            var table = new AntdUI.Table
             {
                 Dock = DockStyle.Fill,
-                View = View.Details,
-                FullRowSelect = true,
                 Font = new Font("Consolas", 9.5f),
-                BackColor = GdtermColorTable.Background,
-                ForeColor = Color.White
+                BorderWidth = 0,
+                GridLines = true,
+                RowHeight = 28
             };
+            table.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left));
+            table.Columns.Add(new AntdUI.Column("Username", "用户名", AntdUI.ColumnAlign.Left));
+            table.Columns.Add(new AntdUI.Column("GroupPath", "分组", AntdUI.ColumnAlign.Left));
+            table.Columns.Add(new AntdUI.Column("Issue", "问题", AntdUI.ColumnAlign.Left));
+            table.Columns.Add(new AntdUI.Column("Strength", "强度", AntdUI.ColumnAlign.Left));
 
-            listView.Columns.Add("标题", 180);
-            listView.Columns.Add("用户名", 120);
-            listView.Columns.Add("分组", 120);
-            listView.Columns.Add("问题", 150);
-            listView.Columns.Add("强度", 60);
-
+            var rows = new AntdUI.AntList<IssueRow>();
             if (issues != null)
             {
                 foreach (var issue in issues)
                 {
-                    var item = new ListViewItem(issue.Title ?? "(无标题)");
-                    item.SubItems.Add(issue.Username ?? "");
-                    item.SubItems.Add(issue.GroupPath ?? "");
-                    item.SubItems.Add(issue.Issue ?? "");
-                    item.SubItems.Add(issue.StrengthScore.ToString());
-                    item.ForeColor = color;
-                    listView.Items.Add(item);
+                    rows.Add(new IssueRow
+                    {
+                        Title = issue.Title ?? "(无标题)",
+                        Username = issue.Username ?? "",
+                        GroupPath = issue.GroupPath ?? "",
+                        Issue = issue.Issue ?? "",
+                        Strength = issue.StrengthScore.ToString()
+                    });
                 }
             }
+            table.DataSource = rows;
 
-            tab.Controls.Add(listView);
-            _tabControl.TabPages.Add(tab);
+            tab.Controls.Add(table);
+            _tabControl.Pages.Add(tab);
+        }
+
+        private sealed class DupRow
+        {
+            public string Hash { get; set; }
+            public string Title { get; set; }
+            public string Username { get; set; }
+            public string GroupPath { get; set; }
         }
 
         private void AddDuplicateTab(string name, System.Collections.Generic.IList<DuplicatePasswordGroup> groups)
         {
-            var tab = new TabPage($"  {name} ({groups.Count} 组)  ");
-            tab.BackColor = GdtermColorTable.Surface;
+            var tab = new AntdUI.TabPage($"  {name} ({groups.Count} 组)  ");
 
-            var listView = new ListView
+            var listView = new AntdUI.Table
             {
                 Dock = DockStyle.Fill,
-                View = View.Details,
-                FullRowSelect = true,
                 Font = new Font("Consolas", 9.5f),
-                BackColor = GdtermColorTable.Background,
-                ForeColor = Color.White
+                BorderWidth = 0,
+                GridLines = true,
+                RowHeight = 28
             };
+            listView.Columns.Add(new AntdUI.Column("Hash", "密码哈希", AntdUI.ColumnAlign.Left));
+            listView.Columns.Add(new AntdUI.Column("Title", "条目标题", AntdUI.ColumnAlign.Left));
+            listView.Columns.Add(new AntdUI.Column("Username", "用户名", AntdUI.ColumnAlign.Left));
+            listView.Columns.Add(new AntdUI.Column("GroupPath", "分组", AntdUI.ColumnAlign.Left));
 
-            listView.Columns.Add("密码哈希", 120);
-            listView.Columns.Add("条目标题", 180);
-            listView.Columns.Add("用户名", 120);
-            listView.Columns.Add("分组", 120);
-
+            var rows = new AntdUI.AntList<DupRow>();
             foreach (var group in groups)
             {
                 bool first = true;
                 foreach (var entry in group.Entries)
                 {
-                    var item = new ListViewItem(first ? group.PasswordHash : "");
-                    item.SubItems.Add(entry.Title ?? "(无标题)");
-                    item.SubItems.Add(entry.Username ?? "");
-                    item.SubItems.Add(entry.GroupPath ?? "");
-                    item.ForeColor = GdtermColorTable.Warning;
-                    listView.Items.Add(item);
+                    rows.Add(new DupRow
+                    {
+                        Hash = first ? group.PasswordHash : "",
+                        Title = entry.Title ?? "(无标题)",
+                        Username = entry.Username ?? "",
+                        GroupPath = entry.GroupPath ?? ""
+                    });
                     first = false;
                 }
             }
-
-            tab.Controls.Add(listView);
-            _tabControl.TabPages.Add(tab);
+            listView.DataSource = rows;
+            _tabControl.Pages.Add(tab);
         }
     }
 }

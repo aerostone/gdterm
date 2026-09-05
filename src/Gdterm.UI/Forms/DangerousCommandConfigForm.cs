@@ -15,10 +15,11 @@ namespace Gdterm.UI.Forms
     public class DangerousCommandConfigForm : AntdUI.Window
     {
         private readonly DangerousCommandDetector _detector;
-        private ListView _ruleList;
-        private ListBox _whitelistBox;
-        private ToolStrip _toolbar;
-        private Label _statusLabel;
+
+        private AntdUI.Input _whitelistBox;
+        private System.Collections.Generic.List<DangerousCommandRule> _ruleRows = new System.Collections.Generic.List<DangerousCommandRule>();
+        private AntdUI.Table _ruleTable;
+        private AntdUI.Label _statusLabel;
 
         // 危险等级颜色
         private static readonly Color ColorMedium = GdtermColorTable.Warning;
@@ -50,63 +51,36 @@ namespace Gdterm.UI.Forms
             BackColor = GdtermColorTable.Background;
 
             // 工具栏
-            _toolbar = new ToolStrip
+            var toolbar = new FlowLayoutPanel
             {
-                BackColor = GdtermColorTable.Surface,
-                ForeColor = GdtermColorTable.Foreground,
-                GripStyle = ToolStripGripStyle.Hidden,
-                Renderer = new DarkToolStripRenderer(),
-                Font = Services.FormFontPolicy.UiFont(),
-                Padding = new Padding(5, 2, 5, 2)
+                Dock = DockStyle.Top,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                Height = 46,
+                Padding = new Padding(8, 5, 8, 5)
             };
-
-            var btnAdd = new ToolStripButton("添加自定义规则");
-            btnAdd.Click += OnAddRuleClick;
-            _toolbar.Items.Add(btnAdd);
-
-            var btnEdit = new ToolStripButton("编辑");
-            btnEdit.Click += OnEditRuleClick;
-            _toolbar.Items.Add(btnEdit);
-
-            var btnDelete = new ToolStripButton("删除");
-            btnDelete.Click += OnDeleteRuleClick;
-            _toolbar.Items.Add(btnDelete);
-
-            _toolbar.Items.Add(new ToolStripSeparator());
-
-            var btnToggle = new ToolStripButton("启用/禁用");
-            btnToggle.Click += OnToggleRuleClick;
-            _toolbar.Items.Add(btnToggle);
-
-            _toolbar.Items.Add(new ToolStripSeparator());
-
-            var btnRefresh = new ToolStripButton("刷新");
-            btnRefresh.Click += (s, e) => { LoadRules(); LoadWhitelist(); };
-            _toolbar.Items.Add(btnRefresh);
+            toolbar.Controls.Add(MakeBtn("添加自定义规则", OnAddRuleClick, AntdUI.TTypeMini.Primary));
+            toolbar.Controls.Add(MakeBtn("编辑", OnEditRuleClick, AntdUI.TTypeMini.Default));
+            toolbar.Controls.Add(MakeBtn("删除", OnDeleteRuleClick, AntdUI.TTypeMini.Default));
+            toolbar.Controls.Add(MakeBtn("启用/禁用", OnToggleRuleClick, AntdUI.TTypeMini.Default));
+            toolbar.Controls.Add(MakeBtn("刷新", (s, e) => { LoadRules(); LoadWhitelist(); }, AntdUI.TTypeMini.Default));
 
             // 规则列表（Dock 布局：工具栏下、白名单上，随窗体伸缩）
-            _ruleList = new ListView
+            _ruleTable = new AntdUI.Table
             {
                 Dock = DockStyle.Fill,
-                View = View.Details,
-                FullRowSelect = true,
-                GridLines = true,
                 Font = new Font("Consolas", 9f),
-                BackColor = GdtermColorTable.Background,
-                ForeColor = GdtermColorTable.Foreground,
-                HeaderStyle = ColumnHeaderStyle.Nonclickable,
-                BorderStyle = BorderStyle.None,
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
+                BorderWidth = 0,
+                GridLines = true,
+                RowHeight = 28
             };
-
-            _ruleList.Columns.Add("名称", 150);
-            _ruleList.Columns.Add("匹配模式", 200);
-            _ruleList.Columns.Add("匹配类型", 70);
-            _ruleList.Columns.Add("危险等级", 80);
-            _ruleList.Columns.Add("分类", 100);
-            _ruleList.Columns.Add("启用", 50);
-
-            _ruleList.DoubleClick += OnEditRuleClick;
+            _ruleTable.Columns.Add(new AntdUI.Column("Name", "名称", AntdUI.ColumnAlign.Left));
+            _ruleTable.Columns.Add(new AntdUI.Column("Pattern", "匹配模式", AntdUI.ColumnAlign.Left));
+            _ruleTable.Columns.Add(new AntdUI.Column("Type", "匹配类型", AntdUI.ColumnAlign.Left));
+            _ruleTable.Columns.Add(new AntdUI.Column("Level", "危险等级", AntdUI.ColumnAlign.Left));
+            _ruleTable.Columns.Add(new AntdUI.Column("Category", "分类", AntdUI.ColumnAlign.Left));
+            _ruleTable.Columns.Add(new AntdUI.Column("Enabled", "启用", AntdUI.ColumnAlign.Left));
+            _ruleTable.CellDoubleClick += (s, e) => OnEditRuleClick(s, e);
 
             // —— 白名单区（底部组合面板，Dock=Bottom，字体驱动高度）——
             var wlPanel = new Panel { Dock = DockStyle.Bottom, BackColor = GdtermColorTable.Background };
@@ -114,52 +88,42 @@ namespace Gdterm.UI.Forms
             var wlBtnRow = wlHeaderRow + DpiScale.V(this, 24) + 4;
             wlPanel.Height = wlBtnRow + DpiScale.V(this, 96) + DpiScale.V(this, 8);
 
-            var whitelistHeader = new Label
+            var whitelistHeader = new AntdUI.Label
             {
                 Text = "白名单（豁免命令）",
                 Font = Services.FormFontPolicy.UiFont(0.5f, FontStyle.Bold),
-                ForeColor = GdtermColorTable.Foreground,
                 Location = DpiScale.P(this, 5, 2),
                 AutoSize = true
             };
 
             // 白名单按钮
-            var btnAddWhitelist = new Button
+            var btnAddWhitelist = new AntdUI.Button
             {
                 Text = "添加",
+                Type = AntdUI.TTypeMini.Primary,
                 AutoSize = true,
-                MinimumSize = new Size(DpiScale.V(this, 60), 0),
-                Location = DpiScale.P(this, 5, wlHeaderRow),
-                FlatStyle = FlatStyle.Flat,
-                Font = Services.FormFontPolicy.UiFont(-0.5f),
-                BackColor = GdtermColorTable.Accent,
-                ForeColor = Color.White
+                Location = DpiScale.P(this, 5, wlHeaderRow)
             };
             btnAddWhitelist.Click += OnAddWhitelistClick;
 
-            var btnRemoveWhitelist = new Button
+            var btnRemoveWhitelist = new AntdUI.Button
             {
                 Text = "移除",
+                Type = AntdUI.TTypeMini.Error,
                 AutoSize = true,
-                MinimumSize = new Size(DpiScale.V(this, 60), 0),
-                Location = DpiScale.P(this, 70, wlHeaderRow),
-                FlatStyle = FlatStyle.Flat,
-                Font = Services.FormFontPolicy.UiFont(-0.5f),
-                BackColor = GdtermColorTable.Danger,
-                ForeColor = Color.White
+                Location = DpiScale.P(this, 70, wlHeaderRow)
             };
             btnRemoveWhitelist.Click += OnRemoveWhitelistClick;
 
             // 白名单列表（铺满面板剩余高度）
-            _whitelistBox = new ListBox
+            _whitelistBox = new AntdUI.Input
             {
                 Location = DpiScale.P(this, 5, wlBtnRow),
                 Size = new Size(0, 0),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
                 Font = new Font("Consolas", 9.5f),
-                BackColor = GdtermColorTable.Background,
-                ForeColor = GdtermColorTable.Foreground,
-                BorderStyle = BorderStyle.FixedSingle
+                Multiline = true,
+                ReadOnly = true
             };
             wlPanel.Controls.Add(_whitelistBox);
             wlPanel.Controls.Add(whitelistHeader);
@@ -172,65 +136,66 @@ namespace Gdterm.UI.Forms
             };
 
             // 状态栏
-            _statusLabel = new Label
+            _statusLabel = new AntdUI.Label
             {
                 Dock = DockStyle.Bottom,
-                Height = 24,
-                BackColor = GdtermColorTable.Surface,
-                ForeColor = GdtermColorTable.Muted,
-                Font = Services.FormFontPolicy.UiFont(-0.5f),
-                TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(8, 0, 0, 0),
+                Height = 26,
                 Text = "就绪"
             };
 
             // Dock 装配（WinForms 按添加逆序分配边缘，Fill 必须最后添加）
             Controls.Add(_statusLabel);   // Bottom：最底状态条
             Controls.Add(wlPanel);        // Bottom：白名单区（在状态条之上）
-            Controls.Add(_toolbar);       // Top：工具栏
-            Controls.Add(_ruleList);      // Fill：规则列表拿剩余全部空间
+            Controls.Add(toolbar);        // Top：工具栏
+            Controls.Add(_ruleTable);     // Fill：规则列表拿剩余全部空间
+        }
+
+        private static AntdUI.Button MakeBtn(string text, EventHandler onClick, AntdUI.TTypeMini type)
+        {
+            var btn = new AntdUI.Button { Text = text, Type = type, Ghost = type != AntdUI.TTypeMini.Primary, Size = new Size(110, 34) };
+            btn.Click += onClick;
+            return btn;
+        }
+
+        private sealed class RuleRow
+        {
+            public string Name { get; set; }
+            public string Pattern { get; set; }
+            public string Type { get; set; }
+            public string Level { get; set; }
+            public string Category { get; set; }
+            public string Enabled { get; set; }
+        }
+
+        /// <summary>取当前选中规则；无选中返回 null。</summary>
+        private DangerousCommandRule SelectedRule()
+        {
+            var idx = _ruleTable.SelectedIndex;
+            if (idx >= 0 && idx < _ruleRows.Count) return _ruleRows[idx];
+            return null;
         }
 
         private void LoadRules()
-        {
-            _ruleList.Items.Clear();
+        {            _ruleRows.Clear();
             try
             {
                 var rules = _detector.GetAllRules();
+                var rows = new AntdUI.AntList<RuleRow>();
                 foreach (var rule in rules)
                 {
-                    var item = new ListViewItem(rule.Name ?? "(无名称)");
-                    item.SubItems.Add(rule.Pattern ?? "");
-                    item.SubItems.Add(rule.PatternType.ToString());
-                    item.SubItems.Add(GetLevelText(rule.Level));
-                    item.SubItems.Add(rule.Category ?? "");
-                    item.SubItems.Add(rule.Enabled ? "是" : "否");
-
-                    // 按危险等级着色
-                    if (!rule.Enabled)
+                    _ruleRows.Add(rule);
+                    rows.Add(new RuleRow
                     {
-                        item.ForeColor = ColorDisabled;
-                    }
-                    else
-                    {
-                        switch (rule.Level)
-                        {
-                            case DangerLevel.Medium:
-                                item.ForeColor = ColorMedium;
-                                break;
-                            case DangerLevel.High:
-                                item.ForeColor = ColorHigh;
-                                break;
-                            case DangerLevel.Critical:
-                                item.ForeColor = ColorCritical;
-                                break;
-                        }
-                    }
-
-                    item.Tag = rule;
-                    _ruleList.Items.Add(item);
+                        Name = rule.Name ?? "(无名称)",
+                        Pattern = rule.Pattern ?? "",
+                        Type = rule.PatternType.ToString(),
+                        Level = GetLevelText(rule.Level),
+                        Category = rule.Category ?? "",
+                        Enabled = rule.Enabled ? "是" : "否"
+                    });
                 }
-                _statusLabel.Text = $"共 {rules.Count} 条规则";
+                _ruleTable.DataSource = rows;
+                _statusLabel.Text = $"共 {rows.Count} 条规则";
             }
             catch (Exception ex)
             {
@@ -291,9 +256,8 @@ namespace Gdterm.UI.Forms
 
         private void OnDeleteRuleClick(object sender, EventArgs e)
         {
-            if (_ruleList.SelectedItems.Count == 0) return;
-
-            var rule = (DangerousCommandRule)_ruleList.SelectedItems[0].Tag;
+            var rule = SelectedRule();
+            if (rule == null) return;
             var confirm = MessageBox.Show(this,
                 $"确定要删除规则 \"{rule.Name}\" 吗？",
                 "确认删除",
@@ -308,9 +272,8 @@ namespace Gdterm.UI.Forms
 
         private void OnToggleRuleClick(object sender, EventArgs e)
         {
-            if (_ruleList.SelectedItems.Count == 0) return;
-
-            var rule = (DangerousCommandRule)_ruleList.SelectedItems[0].Tag;
+            var rule = SelectedRule();
+            if (rule == null) return;
             rule.Enabled = !rule.Enabled;
             LoadRules();
             _statusLabel.Text = $"规则 \"{rule.Name}\" 已{(rule.Enabled ? "启用" : "禁用")}";
@@ -326,7 +289,7 @@ namespace Gdterm.UI.Forms
                     if (!string.IsNullOrEmpty(command))
                     {
                         _detector.AddToWhitelist(command);
-                        _whitelistBox.Items.Add(command);
+                        _whitelistBox.Text += (_whitelistBox.Text.Length > 0 ? "\n" : "") + command;
                         _statusLabel.Text = $"已添加白名单：{command}";
                     }
                 }
@@ -335,9 +298,12 @@ namespace Gdterm.UI.Forms
 
         private void OnRemoveWhitelistClick(object sender, EventArgs e)
         {
-            if (_whitelistBox.SelectedItem == null) return;
-
-            var command = _whitelistBox.SelectedItem.ToString();
+            var command = _whitelistBox.SelectedText;
+            if (string.IsNullOrEmpty(command))
+            {
+                AntdUI.Message.warn(this, "请先在白名单框中选中要移除的命令。");
+                return;
+            }
             var confirm = MessageBox.Show(this,
                 $"确定要从白名单中移除 \"{command}\" 吗？",
                 "确认移除",
@@ -347,7 +313,7 @@ namespace Gdterm.UI.Forms
             if (confirm == DialogResult.Yes)
             {
                 _detector.RemoveFromWhitelist(command);
-                _whitelistBox.Items.Remove(_whitelistBox.SelectedItem);
+                _whitelistBox.Text = _whitelistBox.Text.Replace(command, "").Replace("\n\n", "\n").TrimStart('\n');
                 _statusLabel.Text = $"已移除白名单：{command}";
             }
         }
@@ -355,36 +321,6 @@ namespace Gdterm.UI.Forms
         /// <summary>
         /// 深色工具栏渲染器
         /// </summary>
-        private class DarkToolStripRenderer : ToolStripProfessionalRenderer
-        {
-            protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
-            {
-                using (var brush = new SolidBrush(GdtermColorTable.Surface))
-                    e.Graphics.FillRectangle(brush, e.AffectedBounds);
-            }
-
-            protected override void OnRenderButtonBackground(ToolStripItemRenderEventArgs e)
-            {
-                if (e.Item.Selected || e.Item.Pressed)
-                {
-                    using (var brush = new SolidBrush(GdtermColorTable.Hover))
-                        e.Graphics.FillRectangle(brush, new Rectangle(Point.Empty, e.Item.Size));
-                }
-            }
-
-            protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)
-            {
-                var y = e.Item.Height / 2;
-                using (var pen = new Pen(GdtermColorTable.Hover))
-                    e.Graphics.DrawLine(pen, 0, y, e.Item.Width, y);
-            }
-
-            protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
-            {
-                e.TextColor = GdtermColorTable.Foreground;
-                base.OnRenderItemText(e);
-            }
-        }
     }
 
     /// <summary>

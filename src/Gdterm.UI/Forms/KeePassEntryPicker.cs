@@ -16,8 +16,9 @@ namespace Gdterm.UI.Forms
     public sealed class KeePassEntryPicker : AntdUI.Window
     {
         private readonly IKeePassService _keepass;
-        private TextBox _searchBox;
-        private ListView _listView;
+        private AntdUI.Input _searchBox;
+        private AntdUI.Table _table;
+        private System.Collections.Generic.List<KeePassEntrySummary> _rows = new System.Collections.Generic.List<KeePassEntrySummary>();
         private IList<KeePassEntrySummary> _entries;
 
         /// <summary>选中的条目 UUID，未选择返回 null</summary>
@@ -51,76 +52,26 @@ namespace Gdterm.UI.Forms
                 Padding = new Padding(12, 10, 12, 6),
                 BackColor = GdtermColorTable.Background
             };
-            var searchHint = new Label
-            {
-                Text = "搜索...",
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(4, 0, 0, 0),
-                ForeColor = GdtermColorTable.Muted,
-                BackColor = Color.Transparent
-            };
-            _searchBox = new TextBox
+            _searchBox = new AntdUI.Input
             {
                 Dock = DockStyle.Fill,
-                BackColor = GdtermColorTable.Surface,
-                ForeColor = GdtermColorTable.Foreground,
-                BorderStyle = BorderStyle.FixedSingle
+                PlaceholderText = "搜索..."
             };
             _searchBox.TextChanged += (s, e) => ApplyFilter();
-            _searchBox.Enter += (s, e) => { searchHint.Visible = false; };
-            _searchBox.Leave += (s, e) => { searchHint.Visible = string.IsNullOrEmpty(_searchBox.Text); };
-            // 先加的在上层：提示文字覆盖在空文本框上方
-            searchPanel.Controls.Add(searchHint);
             searchPanel.Controls.Add(_searchBox);
 
             // 列表
-            _listView = new ListView
+            _table = new AntdUI.Table
             {
                 Dock = DockStyle.Fill,
-                View = View.Details,
-                FullRowSelect = true,
-                MultiSelect = false,
-                HideSelection = false,
+                BorderWidth = 0,
                 GridLines = true,
-                BackColor = GdtermColorTable.Surface,
-                ForeColor = GdtermColorTable.Foreground,
-                BorderStyle = BorderStyle.FixedSingle,
-                OwnerDraw = true
+                RowHeight = 28
             };
-            _listView.Columns.Add("标题", 180);
-            _listView.Columns.Add("用户名", 120);
-            _listView.Columns.Add("分组", 160);
-            _listView.DoubleClick += (s, e) => SelectEntry();
-            _listView.DrawColumnHeader += (s, e) =>
-            {
-                e.Graphics.FillRectangle(new SolidBrush(GdtermColorTable.Surface), e.Bounds);
-                // 表头字体跟随窗体当前字体（硬编码 9f 在 11pt 全局下不协调）
-                using (var headerFont = new Font(Font.FontFamily, Font.Size, FontStyle.Bold))
-                {
-                    TextRenderer.DrawText(e.Graphics, e.Header.Text, headerFont,
-                        e.Bounds, GdtermColorTable.Foreground,
-                        TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
-                }
-            };
-            _listView.DrawItem += (s, e) =>
-            {
-                e.DrawDefault = false;
-                var bg = e.Item.Selected
-                    ? new SolidBrush(GdtermColorTable.Accent)
-                    : new SolidBrush(e.ItemIndex % 2 == 0
-                        ? GdtermColorTable.Surface
-                        : GdtermColorTable.Hover);
-                e.Graphics.FillRectangle(bg, e.Bounds);
-                for (int i = 0; i < _listView.Columns.Count; i++)
-                {
-                    var bounds = e.Item.SubItems[i].Bounds;
-                    var text = e.Item.SubItems[i].Text;
-                    TextRenderer.DrawText(e.Graphics, text, Font,
-                        bounds, e.Item.Selected ? Color.White : GdtermColorTable.Foreground,
-                        TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
-                }
-            };
+            _table.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left));
+            _table.Columns.Add(new AntdUI.Column("Username", "用户名", AntdUI.ColumnAlign.Left));
+            _table.Columns.Add(new AntdUI.Column("GroupPath", "分组", AntdUI.ColumnAlign.Left));
+            _table.CellDoubleClick += (s, e) => SelectEntry();
 
             // ===== 底部按钮（流式布局，随字体/DPI 自适应）=====
             var btnPanel = new Panel
@@ -129,13 +80,11 @@ namespace Gdterm.UI.Forms
                 Height = 45,
                 BackColor = GdtermColorTable.Surface
             };
-            var btnNew = new Button
+            var btnNew = new AntdUI.Button
             {
                 Text = "新建凭据",
+                Type = AntdUI.TTypeMini.Default,
                 AutoSize = true,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = GdtermColorTable.Hover,
-                ForeColor = GdtermColorTable.Foreground,
                 Margin = new Padding(12, 7, 0, 0)
             };
             btnNew.Click += (s, e) => CreateNewEntry();
@@ -158,27 +107,22 @@ namespace Gdterm.UI.Forms
                 AutoSize = true,
                 Padding = new Padding(0, 0, 12, 0)
             };
-            var btnSelect = new Button
+            var btnSelect = new AntdUI.Button
             {
                 Text = "选择",
-                DialogResult = DialogResult.OK,
+                Type = AntdUI.TTypeMini.Primary,
                 AutoSize = true,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = GdtermColorTable.Accent,
-                ForeColor = Color.White,
                 Margin = new Padding(8, 7, 0, 0)
             };
             btnSelect.Click += (s, e) => SelectEntry();
-            var btnCancel = new Button
+            var btnCancel = new AntdUI.Button
             {
                 Text = "取消",
-                DialogResult = DialogResult.Cancel,
+                Type = AntdUI.TTypeMini.Default,
                 AutoSize = true,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = GdtermColorTable.Hover,
-                ForeColor = GdtermColorTable.Foreground,
                 Margin = new Padding(0, 7, 8, 0)
             };
+            btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
             btnSelectFlow.Controls.Add(btnCancel);   // RightToLeft：第一个在最右
             btnSelectFlow.Controls.Add(btnSelect);
 
@@ -186,7 +130,7 @@ namespace Gdterm.UI.Forms
             btnPanel.Controls.Add(btnNewFlow);
 
             // Dock 顺序：后添加的先布局——Top 先钉住，Bottom 再钉住，Fill 吃剩余空间
-            Controls.Add(_listView);
+            Controls.Add(_table);
             Controls.Add(btnPanel);
             Controls.Add(searchPanel);
         }
@@ -197,19 +141,28 @@ namespace Gdterm.UI.Forms
             PopulateList(_entries);
         }
 
+        private sealed class EntryRow
+        {
+            public string Title { get; set; }
+            public string Username { get; set; }
+            public string GroupPath { get; set; }
+        }
+
         private void PopulateList(IList<KeePassEntrySummary> items)
         {
-            _listView.BeginUpdate();
-            _listView.Items.Clear();
+            _rows.Clear();
+            var rows = new AntdUI.AntList<EntryRow>();
             foreach (var e in items)
             {
-                var item = new ListViewItem(e.Title ?? "");
-                item.SubItems.Add(e.Username ?? "");
-                item.SubItems.Add(e.GroupPath ?? "");
-                item.Tag = e.Id;
-                _listView.Items.Add(item);
+                _rows.Add(e);
+                rows.Add(new EntryRow
+                {
+                    Title = e.Title ?? "",
+                    Username = e.Username ?? "",
+                    GroupPath = e.GroupPath ?? ""
+                });
             }
-            _listView.EndUpdate();
+            _table.DataSource = rows;
         }
 
         private void ApplyFilter()
@@ -227,9 +180,10 @@ namespace Gdterm.UI.Forms
 
         private void SelectEntry()
         {
-            if (_listView.SelectedItems.Count > 0)
+            var idx = _table.SelectedIndex;
+            if (idx >= 0 && idx < _rows.Count)
             {
-                SelectedEntryId = _listView.SelectedItems[0].Tag as string;
+                SelectedEntryId = _rows[idx].Id;
                 DialogResult = DialogResult.OK;
                 Close();
             }
@@ -268,8 +222,7 @@ namespace Gdterm.UI.Forms
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show("创建凭据失败: " + ex.Message, "错误",
-                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        AntdUI.Message.error(this, "创建凭据失败: " + ex.Message);
                     }
                 }
             }

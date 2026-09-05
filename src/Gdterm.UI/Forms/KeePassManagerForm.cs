@@ -15,16 +15,14 @@ namespace Gdterm.UI.Forms
     public class KeePassManagerForm : AntdUI.Window
     {
         private readonly IKeePassService _keepassService;
-        private ListView _entryList;
-        private ToolStrip _toolbar;
-        private Label _statusLabel;
+        private AntdUI.Table _entryTable;
+        private AntdUI.Label _statusLabel;
+        private System.Collections.Generic.List<KeePassEntry> _entries = new System.Collections.Generic.List<KeePassEntry>();
 
         public KeePassManagerForm(IKeePassService keepassService)
         {
             _keepassService = keepassService;
             InitializeComponent();
-            // 高/低 DPI 自适应：声明设计基准 96 DPI，让 .NET 自动按当前 DPI 缩放控件。
-            Gdterm.UI.Services.FormFontPolicy.Apply(this);
             LoadEntries();
         }
 
@@ -35,119 +33,119 @@ namespace Gdterm.UI.Forms
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
-            BackColor = GdtermColorTable.Background;
 
-            // 工具栏（字体由 FormFontPolicy.Apply 统一替换为全局 UI 字体）
-            _toolbar = new ToolStrip
+            // 工具行（AntdUI.Button 流式靠右）
+            var toolbar = new FlowLayoutPanel
             {
-                BackColor = GdtermColorTable.Surface,
-                ForeColor = GdtermColorTable.Foreground,
-                GripStyle = ToolStripGripStyle.Hidden,
-                Renderer = new DarkToolStripRenderer(),
-                Font = Services.FormFontPolicy.UiFont(),
-                Padding = new Padding(5, 2, 5, 2)
+                Dock = DockStyle.Top,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                Height = 46,
+                Padding = new Padding(8, 5, 8, 5)
             };
 
-            var btnAdd = new ToolStripButton("添加");
-            btnAdd.Click += OnAddClick;
-            _toolbar.Items.Add(btnAdd);
+            toolbar.Controls.Add(MakeToolBtn("添加", OnAddClick));
+            toolbar.Controls.Add(MakeToolBtn("编辑", OnEditClick));
+            toolbar.Controls.Add(MakeToolBtn("删除", OnDeleteClick));
+            toolbar.Controls.Add(new AntdUI.Divider { Orientation = AntdUI.TOrientation.FromVert, Size = 8 });
+            toolbar.Controls.Add(MakeToolBtn("复制密码", OnCopyPasswordClick));
+            toolbar.Controls.Add(MakeToolBtn("复制用户名", OnCopyUsernameClick));
+            toolbar.Controls.Add(new AntdUI.Divider { Orientation = AntdUI.TOrientation.FromVert, Size = 8 });
+            toolbar.Controls.Add(MakeToolBtn("刷新", (s, e) => LoadEntries()));
 
-            var btnEdit = new ToolStripButton("编辑");
-            btnEdit.Click += OnEditClick;
-            _toolbar.Items.Add(btnEdit);
-
-            var btnDelete = new ToolStripButton("删除");
-            btnDelete.Click += OnDeleteClick;
-            _toolbar.Items.Add(btnDelete);
-
-            _toolbar.Items.Add(new ToolStripSeparator());
-
-            var btnCopyPassword = new ToolStripButton("复制密码");
-            btnCopyPassword.Click += OnCopyPasswordClick;
-            _toolbar.Items.Add(btnCopyPassword);
-
-            var btnCopyUsername = new ToolStripButton("复制用户名");
-            btnCopyUsername.Click += OnCopyUsernameClick;
-            _toolbar.Items.Add(btnCopyUsername);
-
-            _toolbar.Items.Add(new ToolStripSeparator());
-
-            var btnRefresh = new ToolStripButton("刷新");
-            btnRefresh.Click += (s, e) => LoadEntries();
-            _toolbar.Items.Add(btnRefresh);
-
-            // 列表
-            _entryList = new ListView
+            // 条目表（AntdUI.Table）
+            _entryTable = new AntdUI.Table
             {
                 Dock = DockStyle.Fill,
-                View = View.Details,
-                FullRowSelect = true,
-                GridLines = true,
                 Font = new Font("Consolas", 9.5f),
-                BackColor = GdtermColorTable.Background,
-                ForeColor = GdtermColorTable.Foreground,
-                HeaderStyle = ColumnHeaderStyle.Nonclickable,
-                BorderStyle = BorderStyle.None
+                BorderWidth = 0,
+                GridLines = true,
+                RowHeight = 30
             };
-
-            _entryList.DoubleClick += OnCopyPasswordClick;
-
-            // 列宽随 DPI 缩放：固定像素列在 150% 下文字被裁剪
-            float dpiFactor;
-            try { using (var g = CreateGraphics()) dpiFactor = g.DpiX / 96f; }
-            catch { dpiFactor = 1f; }
-            int Scale(int v) { return Math.Max(60, (int)Math.Round(v * dpiFactor)); }
-            _entryList.Columns.Add("标题", Scale(180));
-            _entryList.Columns.Add("用户名", Scale(120));
-            _entryList.Columns.Add("分组路径", Scale(150));
-            _entryList.Columns.Add("URL", Scale(150));
-            _entryList.Columns.Add("最后修改", Scale(120));
+            _entryTable.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left));
+            _entryTable.Columns.Add(new AntdUI.Column("Username", "用户名", AntdUI.ColumnAlign.Left));
+            _entryTable.Columns.Add(new AntdUI.Column("GroupPath", "分组路径", AntdUI.ColumnAlign.Left));
+            _entryTable.Columns.Add(new AntdUI.Column("Url", "URL", AntdUI.ColumnAlign.Left));
+            _entryTable.Columns.Add(new AntdUI.Column("Modified", "最后修改", AntdUI.ColumnAlign.Left));
+            _entryTable.CellClick += OnEntryCellClick;
+            _entryTable.CellDoubleClick += OnEntryCellClick;   // 双击=复制密码
 
             // 状态栏
-            _statusLabel = new Label
+            _statusLabel = new AntdUI.Label
             {
                 Dock = DockStyle.Bottom,
-                AutoSize = false,
-                Height = (int)Math.Round(24 * dpiFactor),
-                BackColor = GdtermColorTable.Surface,
-                ForeColor = GdtermColorTable.Muted,
-                Font = Services.FormFontPolicy.UiFont(-0.5f),
-                TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(8, 0, 0, 0),
+                Height = 28,
                 Text = "就绪"
             };
 
-            Controls.Add(_entryList);
-            Controls.Add(_toolbar);
+            Controls.Add(_entryTable);
+            Controls.Add(toolbar);
             Controls.Add(_statusLabel);
+        }
+
+        private static AntdUI.Button MakeToolBtn(string text, EventHandler onClick)
+        {
+            var btn = new AntdUI.Button { Text = text, Type = AntdUI.TTypeMini.Default, Ghost = true, Size = new Size(88, 34) };
+            btn.Click += onClick;
+            return btn;
+        }
+
+        /// <summary>AntdUI.Table 单元格点击：取行数据条目 Id 执行复制密码。</summary>
+        private void OnEntryCellClick(object sender, AntdUI.TableClickEventArgs e)
+        {
+            if (e.RowIndex < 0 || e.RowIndex >= _entries.Count) return;
+            CopyEntryPassword(_entries[e.RowIndex].Id);
+        }
+
+        private sealed class EntryRow
+        {
+            public string Id { get; set; }
+            public string Title { get; set; }
+            public string Username { get; set; }
+            public string GroupPath { get; set; }
+            public string Url { get; set; }
+            public string Modified { get; set; }
         }
 
         private void LoadEntries()
         {
-            _entryList.Items.Clear();
             try
             {
-                var entries = _keepassService.ListEntries();
+                var entries = _keepassService.ListEntries() ?? new System.Collections.Generic.List<KeePassEntry>();
+                _entries.Clear();
+                var rows = new AntdUI.AntList<EntryRow>();
                 foreach (var entry in entries)
                 {
                     var title = entry.Title ?? "(无标题)";
                     if (entry.HasSshPrivateKey) title = "🔑 " + title;
-                    var item = new ListViewItem(title);
-                    item.SubItems.Add(entry.Username ?? "");
-                    item.SubItems.Add(entry.GroupPath ?? "");
-                    item.SubItems.Add(entry.Url ?? "");
-                    item.SubItems.Add(entry.LastModified > DateTime.MinValue
-                        ? entry.LastModified.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
-                        : "");
-                    item.Tag = entry.Id;
-                    _entryList.Items.Add(item);
+                    _entries.Add(entry);
+                    rows.Add(new EntryRow
+                    {
+                        Id = entry.Id,
+                        Title = title,
+                        Username = entry.Username ?? "",
+                        GroupPath = entry.GroupPath ?? "",
+                        Url = entry.Url ?? "",
+                        Modified = entry.LastModified > DateTime.MinValue
+                            ? entry.LastModified.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
+                            : ""
+                    });
                 }
-                _statusLabel.Text = $"共 {entries.Count} 个条目";
+                _entryTable.DataSource = rows;
+                _statusLabel.Text = $"共 {rows.Count} 个条目";
             }
             catch (Exception ex)
             {
                 _statusLabel.Text = $"加载失败：{ex.Message}";
             }
+        }
+
+        /// <summary>取当前选中（或最后点击）的条目 Id；无选中返回 null。</summary>
+        private string SelectedEntryId()
+        {
+            if (_entryTable.SelectedIndex >= 0 && _entryTable.SelectedIndex < _entries.Count)
+                return _entries[_entryTable.SelectedIndex].Id;
+            return null;
         }
 
         private void OnAddClick(object sender, EventArgs e)
@@ -187,10 +185,8 @@ namespace Gdterm.UI.Forms
 
         private void OnEditClick(object sender, EventArgs e)
         {
-            if (_entryList.SelectedItems.Count == 0) return;
-
-            var selected = _entryList.SelectedItems[0];
-            var entryId = (string)selected.Tag;
+            var entryId = SelectedEntryId();
+            if (entryId == null) return;
 
             try
             {
@@ -236,11 +232,10 @@ namespace Gdterm.UI.Forms
 
         private void OnDeleteClick(object sender, EventArgs e)
         {
-            if (_entryList.SelectedItems.Count == 0) return;
-
-            var selected = _entryList.SelectedItems[0];
-            var entryId = (string)selected.Tag;
-            var title = selected.Text;
+            var entryId = SelectedEntryId();
+            if (entryId == null) return;
+            var row = _entries.Find(x => x.Id == entryId);
+            var title = row != null ? (row.Title ?? "(无标题)") : entryId;
 
             var confirm = MessageBox.Show(this,
                 $"确定要删除条目 \"{title}\" 吗？\n此操作不可撤销。",
@@ -266,11 +261,13 @@ namespace Gdterm.UI.Forms
 
         private void OnCopyPasswordClick(object sender, EventArgs e)
         {
-            if (_entryList.SelectedItems.Count == 0) return;
+            var entryId = SelectedEntryId();
+            if (entryId == null) return;
+            CopyEntryPassword(entryId);
+        }
 
-            var selected = _entryList.SelectedItems[0];
-            var entryId = (string)selected.Tag;
-
+        private void CopyEntryPassword(string entryId)
+        {
             try
             {
                 var credential = _keepassService.GetCredential(entryId);
@@ -293,10 +290,10 @@ namespace Gdterm.UI.Forms
 
         private void OnCopyUsernameClick(object sender, EventArgs e)
         {
-            if (_entryList.SelectedItems.Count == 0) return;
-
-            var selected = _entryList.SelectedItems[0];
-            var username = selected.SubItems[1].Text;
+            var entryId = SelectedEntryId();
+            if (entryId == null) return;
+            var row = _entries.Find(x => x.Id == entryId);
+            var username = row != null ? (row.Username ?? "") : "";
 
             if (!string.IsNullOrEmpty(username))
             {
@@ -316,36 +313,6 @@ namespace Gdterm.UI.Forms
         /// <summary>
         /// 深色工具栏渲染器
         /// </summary>
-        private class DarkToolStripRenderer : ToolStripProfessionalRenderer
-        {
-            protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
-            {
-                using (var brush = new SolidBrush(GdtermColorTable.Surface))
-                    e.Graphics.FillRectangle(brush, e.AffectedBounds);
-            }
-
-            protected override void OnRenderButtonBackground(ToolStripItemRenderEventArgs e)
-            {
-                if (e.Item.Selected || e.Item.Pressed)
-                {
-                    using (var brush = new SolidBrush(GdtermColorTable.Hover))
-                        e.Graphics.FillRectangle(brush, new Rectangle(Point.Empty, e.Item.Size));
-                }
-            }
-
-            protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)
-            {
-                var y = e.Item.Height / 2;
-                using (var pen = new Pen(GdtermColorTable.Hover))
-                    e.Graphics.DrawLine(pen, 0, y, e.Item.Width, y);
-            }
-
-            protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
-            {
-                e.TextColor = GdtermColorTable.Foreground;
-                base.OnRenderItemText(e);
-            }
-        }
     }
 
     /// <summary>
@@ -353,17 +320,17 @@ namespace Gdterm.UI.Forms
     /// </summary>
     internal class KeePassEntryEditForm : AntdUI.Window
     {
-        private TextBox _titleBox;
-        private TextBox _usernameBox;
-        private TextBox _passwordBox;
-        private TextBox _urlBox;
-        private TextBox _notesBox;
-        private TextBox _groupBox;
+        private AntdUI.Input _titleBox;
+        private AntdUI.Input _usernameBox;
+        private AntdUI.Input _passwordBox;
+        private AntdUI.Input _urlBox;
+        private AntdUI.Input _notesBox;
+        private AntdUI.Input _groupBox;
 
-        private TextBox _hostBox;
-        private NumericUpDown _portBox;
-        private TextBox _protocolBox;
-        private TextBox _autoTypeBox;
+        private AntdUI.Input _hostBox;
+        private AntdUI.InputNumber _portBox;
+        private AntdUI.Input _protocolBox;
+        private AntdUI.Input _autoTypeBox;
 
         public string EntryTitle { get { return _titleBox.Text; } }
         public string EntryUsername { get { return _usernameBox.Text; } }
@@ -420,26 +387,22 @@ namespace Gdterm.UI.Forms
                 BackColor = GdtermColorTable.Background,
                 Padding = new Padding(0, 7, 15, 0)
             };
-            var okButton = new Button
+            var okButton = new AntdUI.Button
             {
                 Text = "确定",
-                DialogResult = DialogResult.OK,
                 AutoSize = true,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = GdtermColorTable.Accent,
-                ForeColor = Color.White,
+                Type = AntdUI.TTypeMini.Primary,
                 Margin = new Padding(0)
             };
-            var cancelButton = new Button
+            okButton.Click += (s, e) => { DialogResult = DialogResult.OK; Close(); };
+            var cancelButton = new AntdUI.Button
             {
                 Text = "取消",
-                DialogResult = DialogResult.Cancel,
                 AutoSize = true,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = GdtermColorTable.Hover,
-                ForeColor = Color.White,
+                Type = AntdUI.TTypeMini.Default,
                 Margin = new Padding(0, 0, 8, 0)
             };
+            cancelButton.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
             btnFlow.Controls.Add(okButton);       // RightToLeft：第一个在最右
             btnFlow.Controls.Add(cancelButton);
             btnPanel.Controls.Add(btnFlow);
@@ -457,28 +420,23 @@ namespace Gdterm.UI.Forms
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));   // 标签列按文字宽度自适应
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             int row = 0;
-            _titleBox = AddField(grid, ref row, "标题：", new TextBox());
-            _usernameBox = AddField(grid, ref row, "用户名：", new TextBox());
+            _titleBox = AddField(grid, ref row, "标题：", new AntdUI.Input());
+            _usernameBox = AddField(grid, ref row, "用户名：", new AntdUI.Input());
 
-            _passwordBox = new TextBox
+            _passwordBox = new AntdUI.Input
             {
-                Font = new Font("Consolas", 9.5f),   // 等宽语义，FormFontPolicy 会保留
-                BackColor = GdtermColorTable.Surface,
-                ForeColor = GdtermColorTable.Foreground,
-                BorderStyle = BorderStyle.FixedSingle,
+                Font = new Font("Consolas", 9.5f),   // 等宽语义
                 UseSystemPasswordChar = true
             };
             var pwdCell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, AutoSize = true, Margin = new Padding(0) };
             pwdCell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             pwdCell.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             pwdCell.Controls.Add(_passwordBox, 0, 0);
-            var btnShowPwd = new Button
+            var btnShowPwd = new AntdUI.Button
             {
                 Text = "显示",
                 AutoSize = true,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = GdtermColorTable.Hover,
-                ForeColor = GdtermColorTable.Foreground,
+                Type = AntdUI.TTypeMini.Default,
                 Margin = new Padding(6, 1, 0, 1)
             };
             btnShowPwd.Click += (s, e) =>
@@ -489,30 +447,24 @@ namespace Gdterm.UI.Forms
             pwdCell.Controls.Add(btnShowPwd, 1, 0);
             AddField(grid, ref row, "密码：", pwdCell);
 
-            _urlBox = AddField(grid, ref row, "URL：", new TextBox());
-            _groupBox = AddField(grid, ref row, "分组：", new TextBox());
-            _hostBox = AddField(grid, ref row, "主机：", new TextBox());
-            _protocolBox = AddField(grid, ref row, "协议：", new TextBox());
+            _urlBox = AddField(grid, ref row, "URL：", new AntdUI.Input());
+            _groupBox = AddField(grid, ref row, "分组：", new AntdUI.Input());
+            _hostBox = AddField(grid, ref row, "主机：", new AntdUI.Input());
+            _protocolBox = AddField(grid, ref row, "协议：", new AntdUI.Input());
             if (string.IsNullOrEmpty(_protocolBox.Text)) _protocolBox.Text = "SSH";
-            _portBox = AddField(grid, ref row, "端口：", new NumericUpDown
+            _portBox = AddField(grid, ref row, "端口：", new AntdUI.InputNumber
             {
                 Minimum = 0,
                 Maximum = 65535,
-                Value = 22,
-                BackColor = GdtermColorTable.Surface,
-                ForeColor = GdtermColorTable.Foreground
+                Value = 22
             });
-            _autoTypeBox = AddField(grid, ref row, "AutoType：", new TextBox());
-            _notesBox = new TextBox
+            _autoTypeBox = AddField(grid, ref row, "AutoType：", new AntdUI.Input());
+            _notesBox = new AntdUI.Input
             {
                 Multiline = true,
-                ScrollBars = ScrollBars.Vertical,
                 Height = 64,
                 Dock = DockStyle.Fill,
-                Margin = new Padding(0, 4, 0, 4),
-                BackColor = GdtermColorTable.Surface,
-                ForeColor = GdtermColorTable.Foreground,
-                BorderStyle = BorderStyle.FixedSingle
+                Margin = new Padding(0, 4, 0, 4)
             };
             AddLabel(grid, row, "备注：");
             grid.Controls.Add(_notesBox, 1, row);
@@ -527,10 +479,9 @@ namespace Gdterm.UI.Forms
 
         private static void AddLabel(TableLayoutPanel grid, int row, string text)
         {
-            grid.Controls.Add(new Label
+            grid.Controls.Add(new AntdUI.Label
             {
                 Text = text,
-                ForeColor = GdtermColorTable.Foreground,
                 AutoSize = true,
                 Anchor = AnchorStyles.Left,
                 Margin = new Padding(3, 6, 8, 0)
