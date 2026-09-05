@@ -216,7 +216,7 @@ namespace Gdterm.UI.Controls
 
         private void AddEmpty(FlowLayoutPanel host, string text)
         {
-            host.Controls.Add(new Label
+            host.Controls.Add(new AntdUI.Label
             {
                 AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,

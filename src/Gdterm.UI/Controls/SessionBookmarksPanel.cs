@@ -162,7 +162,7 @@ namespace Gdterm.UI.Controls
 
         private static Button MakeButton(string text)
         {
-            return new Button
+            return new AntdUI.Button
             {
                 Text = text,
                 AutoSize = true,
@@ -297,9 +297,9 @@ namespace Gdterm.UI.Controls
                     BackColor = GdtermColorTable.Accent,
                     ForeColor = Color.White
                 };
-                dlg.Controls.Add(new Label { Text = "名称", ForeColor = Color.Silver, Location = DpiScale.P(this, 15, 4), AutoSize = true });
+                dlg.Controls.Add(new AntdUI.Label { Text = "名称", ForeColor = Color.Silver, Location = DpiScale.P(this, 15, 4), AutoSize = true });
                 dlg.Controls.Add(nameBox);
-                dlg.Controls.Add(new Label { Text = "连接", ForeColor = Color.Silver, Location = DpiScale.P(this, 15, 40), AutoSize = true });
+                dlg.Controls.Add(new AntdUI.Label { Text = "连接", ForeColor = Color.Silver, Location = DpiScale.P(this, 15, 40), AutoSize = true });
                 dlg.Controls.Add(combo);
                 dlg.Controls.Add(ok);
                 dlg.AcceptButton = ok;

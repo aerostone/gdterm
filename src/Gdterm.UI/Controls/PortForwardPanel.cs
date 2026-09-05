@@ -75,9 +75,9 @@ namespace Gdterm.UI.Controls
             Controls.Add(toolbar);
         }
 
-        private Button CreateBtn(string text, int x)
+        private AntdUI.Button CreateBtn(string text, int x)
         {
-            return new Button
+            return new AntdUI.Button
             {
                 Text = text, Size = DpiScale.S(this, 75, 28), Location = DpiScale.P(this, x, 6), BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-0.5f)
@@ -176,7 +176,7 @@ namespace Gdterm.UI.Controls
             if (rule != null) { try { _manager.Bind(_host); } catch { } _manager.Stop(rule.Id); _rules.Remove(rule); RefreshList(); }
         }
 
-        private static void Lbl(Form f, string t, int x, int y) { f.Controls.Add(new Label { Text = t, Location = DpiScale.P(f, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }); }
+        private static void Lbl(Form f, string t, int x, int y) { f.Controls.Add(new AntdUI.Label { Text = t, Location = DpiScale.P(f, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }); }
         private static AntdUI.Input Txt(Form f, int x, int y, int w) { var t = new AntdUI.Input { Location = DpiScale.P(f, x, y), Size = DpiScale.S(f, w, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f)}; f.Controls.Add(t); return t; }
 
         protected override void Dispose(bool disposing)
