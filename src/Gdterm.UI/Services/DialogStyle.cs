@@ -140,10 +140,7 @@ namespace Gdterm.UI.Services
         public static void ApplyInput(Control input)
         {
             if (input == null) return;
-            input.BackColor = GdtermColorTable.Surface;
-            input.ForeColor = GdtermColorTable.Foreground;
-            var tb = input as TextBoxBase;
-            if (tb != null) tb.;
+            // AntdUI 输入控件自带边框/底色主题；原生控件（TerminalControl 等豁免区）沿用原生外观
         }
 
         /// <summary>分组标题——全局字号 +0.5 粗体。</summary>
