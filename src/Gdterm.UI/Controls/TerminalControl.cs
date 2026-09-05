@@ -314,7 +314,7 @@ namespace Gdterm.UI.Controls
             };
             _termMenu.Items.Add(settingsItem);
 
-            // 绑到 TerminalControl 本身；canvas 会在 OnCellMouseDown 里拦右键后手动 Show。
+            // 绑到 TerminalControl 本身；canvas 会在 OnCellMouseDown 里拦右键后手动 Show。,
             ContextMenuStrip = _termMenu;
         }
 

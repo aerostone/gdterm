@@ -154,7 +154,7 @@ namespace Gdterm.UI.Controls
                 MultiSelect = false,
                 HideSelection = false,
                 BackColor = GdtermColorTable.Surface,
-                ForeColor = Color.White
+                ForeColor = Color.White,
                 HeaderStyle = ColumnHeaderStyle.Nonclickable,
                 Font = Services.FormFontPolicy.UiFont()
             };

@@ -368,7 +368,7 @@ namespace Gdterm.UI.Forms
         {
             Text = "添加密码条目";
             ClientSize = DpiScale.S(this, 420, 470);
-            // 跟随字体/DPI 自动整体缩放（绝对定位在 11pt@144dpi 下会重叠/溢出）
+            // 跟随字体/DPI 自动整体缩放（绝对定位在 11pt@144dpi 下会重叠/溢出）,
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -421,7 +421,7 @@ namespace Gdterm.UI.Forms
             _usernameBox = AddField(grid, ref row, "用户名：", new AntdUI.Input());
 
             _passwordBox = new AntdUI.Input {
-                Font = new Font("Consolas", 9.5f),   // 等宽语义
+                Font = new Font("Consolas", 9.5f),   // 等宽语义,
                 UseSystemPasswordChar = true
             };
             var pwdCell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, AutoSize = true, Margin = new Padding(0) };

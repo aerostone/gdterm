@@ -20,7 +20,6 @@ namespace Gdterm.UI.Services
             if (lv == null) return lv;
             lv.BackColor = GdtermColorTable.Surface;
             lv.ForeColor = GdtermColorTable.Foreground;
-            lv.;
             if (lv.View == View.Details)
             {
                 lv.OwnerDraw = false;
@@ -35,7 +34,6 @@ namespace Gdterm.UI.Services
             if (lb == null) return lb;
             lb.BackColor = GdtermColorTable.Surface;
             lb.ForeColor = GdtermColorTable.Foreground;
-            lb.;
             return lb;
         }
 
@@ -45,7 +43,6 @@ namespace Gdterm.UI.Services
             if (tv == null) return tv;
             tv.BackColor = GdtermColorTable.Surface;
             tv.ForeColor = GdtermColorTable.Foreground;
-            tv.;
             return tv;
         }
 
@@ -55,7 +52,6 @@ namespace Gdterm.UI.Services
             if (tb == null) return tb;
             tb.BackColor = GdtermColorTable.Surface;
             tb.ForeColor = GdtermColorTable.Foreground;
-            tb.;
             return tb;
         }
 
@@ -65,7 +61,6 @@ namespace Gdterm.UI.Services
             if (cb == null) return cb;
             cb.BackColor = GdtermColorTable.Surface;
             cb.ForeColor = GdtermColorTable.Foreground;
-            cb.;
             return cb;
         }
 
@@ -73,7 +68,6 @@ namespace Gdterm.UI.Services
         public static Button Dark(this Button btn)
         {
             if (btn == null) return btn;
-            btn.;
             btn.BackColor = GdtermColorTable.Surface;
             btn.ForeColor = GdtermColorTable.Foreground;
             return btn;
@@ -83,7 +77,6 @@ namespace Gdterm.UI.Services
         public static Button DarkPrimary(this Button btn)
         {
             if (btn == null) return btn;
-            btn.;
             btn.BackColor = GdtermColorTable.Accent;
             btn.ForeColor = Color.FromArgb(0x0D, 0x11, 0x17);
             return btn;
@@ -93,7 +86,6 @@ namespace Gdterm.UI.Services
         public static Button DarkDanger(this Button btn)
         {
             if (btn == null) return btn;
-            btn.;
             btn.BackColor = GdtermColorTable.Danger;
             btn.ForeColor = Color.White;
             return btn;

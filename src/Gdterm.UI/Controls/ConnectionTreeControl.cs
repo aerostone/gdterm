@@ -56,7 +56,7 @@ namespace Gdterm.UI.Controls
             // 顶部筛选框（输即过滤）-- Xshell/SecureCRT filter bar 风格。
             _filterBox = new TextBox
             {
-                Dock = DockStyle.Top
+                Dock = DockStyle.Top,
                 BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Surface,
                 ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Foreground,
                 Font = ResolveDefaultFont(),
@@ -72,7 +72,7 @@ namespace Gdterm.UI.Controls
                 ImageList = _imageList,
                 BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Background,
                 ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Foreground,
-                Font = ResolveDefaultFont()
+                Font = ResolveDefaultFont(),
                 ShowLines = true,
                 ShowPlusMinus = true,
                 ShowRootLines = true,
@@ -383,7 +383,7 @@ namespace Gdterm.UI.Controls
             base.OnMouseEnter(e);
             if (!_pinned && Width == CollapsedWidth)
             {
-                // 临时展开（不置位 _pinned）
+                // 临时展开（不置位 _pinned）,
                 Width = _pinnedWidth;
                 if (_filterBox != null) _filterBox.Visible = true;
                 if (_treeView != null) _treeView.Visible = true;

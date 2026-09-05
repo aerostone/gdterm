@@ -86,7 +86,7 @@ namespace Gdterm.UI.Controls
                 Font = new Font("Consolas", 9f),
                 View = View.Details,
                 FullRowSelect = true,
-                GridLines = false
+                GridLines = false,
                 MultiSelect = false
             };
             _lvFindings.Columns.Add("严重程度", 80);

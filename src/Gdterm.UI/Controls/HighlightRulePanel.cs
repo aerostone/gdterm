@@ -52,7 +52,7 @@ namespace Gdterm.UI.Controls
                 FullRowSelect = true,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = Services.FormFontPolicy.UiFont()
+                Font = Services.FormFontPolicy.UiFont(),
                 GridLines = false
             };
             _lvRules.Columns.Add("名称", 120);

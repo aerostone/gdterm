@@ -84,7 +84,7 @@ namespace Gdterm.UI.Forms
 
             var titleLabel = new AntdUI.Label {
                 Text = "欢迎使用 gdterm",
-                // 标题强调：相对当前字体放大加粗，不硬编码字族/磅值（规范规则③）
+                // 标题强调：相对当前字体放大加粗，不硬编码字族/磅值（规范规则③）,
                 Font = new Font(Font.FontFamily, Font.Size + 6f, FontStyle.Bold),
                 ForeColor = Color.White,
                 Dock = DockStyle.Top,
@@ -352,7 +352,7 @@ namespace Gdterm.UI.Forms
 
             var doneLabel = new AntdUI.Label {
                 Text = "设置完成",
-                // 标题强调：相对当前字体放大加粗（规范规则③）
+                // 标题强调：相对当前字体放大加粗（规范规则③）,
                 Font = new Font(Font.FontFamily, Font.Size + 7f, FontStyle.Bold),
                 ForeColor = GdtermColorTable.Success,
                 Dock = DockStyle.Fill,
@@ -427,7 +427,7 @@ namespace Gdterm.UI.Forms
                     }
                     break;
 
-                case 2:
+                case 2:,
                     IsCompleted = true;
                     DialogResult = DialogResult.OK;
                     Close();

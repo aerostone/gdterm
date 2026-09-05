@@ -99,7 +99,7 @@ namespace Gdterm.UI.Controls
                 View = View.Details,
                 FullRowSelect = true,
                 BackColor = GdtermColorTable.Background,
-                ForeColor = GdtermColorTable.Foreground
+                ForeColor = GdtermColorTable.Foreground,
                 Font = new Font("Consolas", 9.5f)
             };
             _list.Columns.Add("名称", 280);

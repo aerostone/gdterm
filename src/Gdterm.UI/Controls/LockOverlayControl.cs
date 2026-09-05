@@ -31,7 +31,7 @@ namespace Gdterm.UI.Controls
 
         private void InitializeComponent()
         {
-            // 半透明黑遮罩：盖住 ClientArea 所有内容
+            // 半透明黑遮罩：盖住 ClientArea 所有内容,
             BackColor = Color.FromArgb(210, 10, 14, 18);
             Dock = DockStyle.Fill;
 

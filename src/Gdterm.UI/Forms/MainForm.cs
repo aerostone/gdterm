@@ -129,7 +129,7 @@ namespace Gdterm.UI.Forms
             _secretScanner = secretScanner;
 
             // 消除重绘闪烁：DoubleBuffered + 指定一致暗色背景。
-            // 这是「发虚」的第二根因——重绘时 GDI 一帧帧走，看起来不稳重。
+            // 这是「发虚」的第二根因——重绘时 GDI 一帧帧走，看起来不稳重。,
             DoubleBuffered = true;
             SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.AllPaintingInWmPaint, true);
             BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Background;
@@ -192,7 +192,7 @@ namespace Gdterm.UI.Forms
             KeyPreview = true; // Esc/F11 在终端焦点时也能回到主窗体
             // app.manifest 声明 PerMonitorV2 让 WinForms 按屏自动缩放；不要在这里再叠手工 Scale，
             // 否则控件会被缩放两次导致字号超大、布局错乱（DpiHelper 已废弃）。
-            // 同理：主窗体自身尺寸不手工缩放，交给系统 PerMonitorV2（豁免清单见 docs/UI-SCALING-CONVENTIONS.md）。
+            // 同理：主窗体自身尺寸不手工缩放，交给系统 PerMonitorV2（豁免清单见 docs/UI-SCALING-CONVENTIONS.md）。,
             Size = new Size(1200, 800);
             MinimumSize = new Size(800, 600);
             StartPosition = FormStartPosition.CenterScreen;

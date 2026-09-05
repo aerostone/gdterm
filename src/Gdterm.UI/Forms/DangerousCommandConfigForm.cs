@@ -42,7 +42,7 @@ namespace Gdterm.UI.Forms
             Text = "危险命令规则配置";
             {
                 float grow = FormFontPolicy.UiFontSize / 9f;
-                // Dock 布局：白名单区/工具栏高度已字体驱动，窗体只需适度增长保证列表可视高度
+                // Dock 布局：白名单区/工具栏高度已字体驱动，窗体只需适度增长保证列表可视高度,
                 Size = DpiScale.S(this, 800, (int)(520 * Math.Max(1f, grow)));
             }
             StartPosition = FormStartPosition.CenterParent;

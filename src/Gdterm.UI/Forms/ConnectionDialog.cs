@@ -116,7 +116,7 @@ namespace Gdterm.UI.Forms
         {
             Text = _isNew ? "新建连接" : $"编辑连接 — {_config.Name}";
             ClientSize = DpiScale.S(this, 560, 330);
-            // 跟随字体/DPI 自动整体缩放（否则 144dpi 下控件行高变大而窗体不变，底部按钮被挤出可视区）
+            // 跟随字体/DPI 自动整体缩放（否则 144dpi 下控件行高变大而窗体不变，底部按钮被挤出可视区）,
             AutoScaleMode = AutoScaleMode.Font;
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -395,7 +395,7 @@ namespace Gdterm.UI.Forms
                 int desired = Height + h + 16;
                 if (desired > workH - 32)
                 {
-                    // FixedDialog 不能手拉也不能滚窗体：封顶到工作区，剩余内容靠高级区滚动条
+                    // FixedDialog 不能手拉也不能滚窗体：封顶到工作区，剩余内容靠高级区滚动条,
                     Height = workH - 32;
                     DiagLog.Info("ConnDialog", "ToggleAdvanced capped desired=" + desired + " -> " + Height + " (workArea=" + workH + ")");
                 }

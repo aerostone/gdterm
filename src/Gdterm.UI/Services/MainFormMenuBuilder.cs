@@ -139,7 +139,7 @@ namespace Gdterm.UI.Services
             viewMenu.DropDownItems.Add(new ToolStripSeparator());
             var toggleTree = new ToolStripMenuItem("切换连接面板(&T)")
             {
-                // Ctrl+Shift+L：普通 Ctrl+L 是 shell 清屏，不能被菜单抢走
+                // Ctrl+Shift+L：普通 Ctrl+L 是 shell 清屏，不能被菜单抢走,
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.L
             };
             toggleTree.Click += cb.ToggleTree;
@@ -156,7 +156,7 @@ namespace Gdterm.UI.Services
             viewMenu.DropDownItems.Add(Mk("快捷命令栏", cb.ToggleQuickBar, "batch"));
             var toggleTmux = new ToolStripMenuItem("tmux 快捷面板")
             {
-                // Ctrl+Shift+M：与现有 UI 动作约定一致（Ctrl+Shift+字母）
+                // Ctrl+Shift+M：与现有 UI 动作约定一致（Ctrl+Shift+字母）,
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.M
             };
             toggleTmux.Click += cb.ToggleTmuxBar;

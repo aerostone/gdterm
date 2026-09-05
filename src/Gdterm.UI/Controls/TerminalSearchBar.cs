@@ -84,7 +84,7 @@ namespace Gdterm.UI.Controls
             var chk = new AntdUI.Checkbox {
                 Text = text,
                 AutoSize = true,
-                // 等宽语义例外：Aa/.*/W 为正则记号，字号相对当前字体缩小一号（规范规则③）
+                // 等宽语义例外：Aa/.*/W 为正则记号，字号相对当前字体缩小一号（规范规则③）,
                 Font = new Font(Font.FontFamily, Font.Size - 0.5f),
                 ForeColor = GdtermColorTable.Muted,
                 Margin = new Padding(0, 4, DpiScale.V(this, 6), 0)

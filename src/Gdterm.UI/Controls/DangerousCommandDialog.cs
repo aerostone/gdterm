@@ -187,7 +187,7 @@ namespace Gdterm.UI.Controls
 
             if (_currentConfirm >= _checkResult.ConfirmCount)
             {
-                // 确认完成
+                // 确认完成,
                 IsConfirmed = true;
                 DialogResult = DialogResult.OK;
             }
