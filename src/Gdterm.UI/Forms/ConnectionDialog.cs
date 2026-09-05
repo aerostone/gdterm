@@ -655,14 +655,12 @@ namespace Gdterm.UI.Forms
         {
             if (_keepass == null)
             {
-                MessageBox.Show("密码库服务不可用。", "提示",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                AntdUI.Message.warn(this, "密码库服务不可用。");
                 return;
             }
             if (!_keepass.IsUnlocked)
             {
-                MessageBox.Show("请先解锁密码库。", "提示",
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                AntdUI.Message.warn(this, "请先解锁密码库。");
                 return;
             }
             using (var picker = new KeePassEntryPicker(_keepass))

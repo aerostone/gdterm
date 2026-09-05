@@ -282,13 +282,10 @@ namespace Gdterm.UI.Forms
             if (_ruleList.SelectedItems.Count == 0) return;
 
             var rule = (DangerousCommandRule)_ruleList.SelectedItems[0].Tag;
-            MessageBox.Show(this,
+            AntdUI.Message.info(this,
                 $"编辑规则 \"{rule.Name}\" 的功能需要配置文件支持。\n" +
                 $"当前规则：{rule.Pattern}\n" +
-                $"类型：{rule.PatternType} | 等级：{GetLevelText(rule.Level)}",
-                "规则详情",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Information);
+                $"类型：{rule.PatternType} | 等级：{GetLevelText(rule.Level)}");
         }
 
         private void OnDeleteRuleClick(object sender, EventArgs e)

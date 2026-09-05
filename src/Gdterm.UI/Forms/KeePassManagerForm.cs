@@ -179,8 +179,7 @@ namespace Gdterm.UI.Forms
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show(this, $"创建失败：{ex.Message}", "错误",
-                            MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        AntdUI.Message.error(this, $"创建失败：{ex.Message}");
                     }
                 }
             }
@@ -198,8 +197,7 @@ namespace Gdterm.UI.Forms
                 var full = _keepassService.GetEntry(entryId);
                 if (full == null)
                 {
-                    MessageBox.Show(this, "无法加载条目详情（可能已删除或库已锁定）。",
-                        "编辑", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    AntdUI.Message.warn(this, "无法加载条目详情（可能已删除或库已锁定）。");
                     return;
                 }
 
@@ -232,8 +230,7 @@ namespace Gdterm.UI.Forms
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "编辑失败：" + ex.Message, "错误",
-                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                AntdUI.Message.error(this, "编辑失败：" + ex.Message);
             }
         }
 
@@ -262,8 +259,7 @@ namespace Gdterm.UI.Forms
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(this, $"删除失败：{ex.Message}", "错误",
-                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    AntdUI.Message.error(this, $"删除失败：{ex.Message}");
                 }
             }
         }
