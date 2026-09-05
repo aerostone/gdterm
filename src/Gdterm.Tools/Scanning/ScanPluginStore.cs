@@ -153,7 +153,8 @@ namespace Gdterm.Tools.Scanning
                     Source = source,
                     LoadError = null,
                     Trust = VerifyTrust(manifestPath, scriptPath),
-                    VerifiedScriptSha256 = ScriptSha256Hex(scriptPath)
+                    VerifiedScriptSha256 = ScriptSha256Hex(scriptPath),
+                    VerifiedManifestSha256 = FileSha256Hex(manifestPath)
                 };
             }
             catch (Exception ex)
@@ -194,11 +195,17 @@ namespace Gdterm.Tools.Scanning
             }
         }
 
+        /// <summary>计算文件当前内容的 SHA256（十六进制小写）；读不到返回 null。</summary>
+        internal static string FileSha256Hex(string filePath)
+        {
+            try { return Sha256Hex(File.ReadAllBytes(filePath)); }
+            catch { return null; }
+        }
+
         /// <summary>计算脚本文件当前内容的 SHA256（十六进制小写）；读不到返回 null。</summary>
         internal static string ScriptSha256Hex(string scriptPath)
         {
-            try { return Sha256Hex(File.ReadAllBytes(scriptPath)); }
-            catch { return null; }
+            return FileSha256Hex(scriptPath);
         }
 
         /// <summary>规范负载字节：hex(manifestSha) || 0x00 || hex(scriptSha)。批准台账复用其再散列。</summary>

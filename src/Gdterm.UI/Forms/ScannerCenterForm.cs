@@ -26,6 +26,7 @@ namespace Gdterm.UI.Forms
         private AntdUI.Label _hotStateLabel;
         private AntdUI.Button _reloadButton;
         private AntdUI.Button _openFolderButton;
+        private AntdUI.Button _newPluginButton;
         private AntdUI.Button _runButton;
         private AntdUI.Table _pluginTable;
         private AntdUI.Table _findingTable;
@@ -105,6 +106,10 @@ namespace Gdterm.UI.Forms
             _openFolderButton = new AntdUI.Button { Text = "打开插件目录", Type = AntdUI.TTypeMini.Default, Width = 110 };
             _openFolderButton.Click += OnOpenPluginsFolder;
             top.Controls.Add(_openFolderButton);
+
+            _newPluginButton = new AntdUI.Button { Text = "新建插件模板", Type = AntdUI.TTypeMini.Default, Width = 118 };
+            _newPluginButton.Click += OnNewPluginTemplate;
+            top.Controls.Add(_newPluginButton);
 
             _hotStateLabel = new AntdUI.Label {
                 Text = "",
@@ -403,6 +408,64 @@ namespace Gdterm.UI.Forms
                 AntdUI.Message.error(this, "打开目录失败: " + ex.Message);
             }
         }
+
+        /// <summary>
+        /// 在用户插件根生成一个可直接运行的示例插件目录（my-demo-plugin），
+        /// 并打开资源管理器定位；生成的插件为 Unsigned，首次运行走确认流。
+        /// 详细协议见 docs/PLUGIN-DEV.md。
+        /// </summary>
+        private void OnNewPluginTemplate(object sender, EventArgs e)
+        {
+            try
+            {
+                var root = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "plugins", "scanner");
+                var dir = Path.Combine(root, "my-demo-plugin");
+                if (Directory.Exists(dir))
+                {
+                    AntdUI.Message.warn(this, "示例插件已存在：" + dir);
+                }
+                else
+                {
+                    Directory.CreateDirectory(dir);
+                    File.WriteAllText(Path.Combine(dir, "manifest.json"), DemoManifest, new System.Text.UTF8Encoding(false));
+                    File.WriteAllText(Path.Combine(dir, "scan.ps1"), DemoScript, new System.Text.UTF8Encoding(false));
+                    _store.Reload();
+                }
+                System.Diagnostics.Process.Start("explorer.exe", "/select,\"" + dir + "\"");
+            }
+            catch (Exception ex)
+            {
+                AntdUI.Message.error(this, "创建插件模板失败: " + ex.Message);
+            }
+        }
+
+        private const string DemoManifest = "{\n"
+            + "  \"id\": \"my-demo-plugin\",\n"
+            + "  \"name\": \"示例插件\",\n"
+            + "  \"description\": \"演示插件目录结构与 FINDING 输出契约（见 docs/PLUGIN-DEV.md）\",\n"
+            + "  \"category\": \"示例\",\n"
+            + "  \"targets\": [\"windows\"],\n"
+            + "  \"scriptFile\": \"scan.ps1\",\n"
+            + "  \"timeoutSeconds\": 60,\n"
+            + "  \"version\": \"1.0.0\",\n"
+            + "  \"enabled\": true\n"
+            + "}\n";
+
+        private const string DemoScript = "# 示例扫描脚本：演示 FINDING|severity|title|detail 输出契约\n"
+            + "# 修改本文件后插件列表会在约 1 秒内自动热加载\n"
+            + "$os = (Get-CimInstance Win32_OperatingSystem)\n"
+            + "Write-Output (\"目标: \" + $os.Caption + \" (\" + $os.Version + \")\")\n"
+            + "\n"
+            + "# 演示：系统盘剩余空间低于 10% 视为发现\n"
+            + "$c = Get-PSDrive C\n"
+            + "$freePct = [int]($c.Free / ($c.Used + $c.Free) * 100)\n"
+            + "if ($freePct -lt 10) {\n"
+            + "    Write-Output \"FINDING|warning|C 盘空间不足|剩余 $freePct%，低于 10% 阈值\"\n"
+            + "} else {\n"
+            + "    Write-Output (\"FINDING|info|C 盘空间正常|剩余 $freePct%\")\n"
+            + "}\n"
+            + "\n"
+            + "Write-Output '示例执行完毕'\n";
 
         private async void OnRunClicked(object sender, EventArgs e)
         {

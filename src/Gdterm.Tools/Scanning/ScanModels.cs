@@ -74,6 +74,13 @@ namespace Gdterm.Tools.Scanning
         /// </summary>
         public string VerifiedScriptSha256 { get; set; }
 
+        /// <summary>
+        /// 信任判定时验过的 manifest.json 内容 SHA256（十六进制小写）。
+        /// 执行前与脚本一并复验：manifest 在加载后被改（换目标/改超时/改脚本文件名）同样拒绝执行。
+        /// null 表示未知（不可执行）。
+        /// </summary>
+        public string VerifiedManifestSha256 { get; set; }
+
         public bool IsRunnable { get { return LoadError == null && Manifest != null && Manifest.Enabled && File.Exists(ScriptPath); } }
 
         public string DisplayName { get { return Manifest != null ? Manifest.Name : Id; } }

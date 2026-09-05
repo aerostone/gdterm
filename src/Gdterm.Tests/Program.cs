@@ -2,6 +2,7 @@ using System;
 using Gdterm.Tests.Connections;
 using Gdterm.Tests.Core;
 using Gdterm.Tests.Logging;
+using Gdterm.Tests.Scanning;
 using Gdterm.Tests.Security;
 using Gdterm.Tests.Terminal;
 
@@ -28,6 +29,7 @@ namespace Gdterm.Tests
             SecurityManagerHashTests.Run();
             TerminalProfileTests.Run();
             VtTerminalEngineTests.Run();
+            ScanPluginTests.Run();
 
             Console.WriteLine();
             Console.WriteLine("Passed: {0}  Failed: {1}", Assert.Passes, Assert.Failures);
