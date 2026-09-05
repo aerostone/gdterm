@@ -227,7 +227,7 @@ namespace Gdterm.UI.Controls
             };
             form.Size = DpiScale.S(form, 400, 40 + placeholders.Count * 40 + 60);
 
-            var inputs = new Dictionary<string, TextBox>();
+            var inputs = new Dictionary<string, AntdUI.Input>();
             int y = 15;
             foreach (var ph in placeholders)
             {

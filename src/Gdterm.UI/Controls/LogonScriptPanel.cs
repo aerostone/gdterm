@@ -63,7 +63,7 @@ namespace Gdterm.UI.Controls
 
         private AntdUI.Button CreateBtn(string text, int x)
         {
-            return new Button
+            return new AntdUI.Button
             {
                 Text = text, Size = DpiScale.S(this, 75, 28), Location = DpiScale.P(this, x, 6), BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-0.5f)
@@ -250,8 +250,8 @@ namespace Gdterm.UI.Controls
             };
         }
 
-        private static Label Lbl(string t, int x, int y, Form f) { var l = new AntdUI.Label { Text = t, Location = DpiScale.P(f, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }; f.Controls.Add(l); return l; }
-        private static TextBox Txt(int x, int y, int w, Form f) { var t = new AntdUI.Input { Location = DpiScale.P(f, x, y), Size = DpiScale.S(f, w, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f)}; f.Controls.Add(t); return t; }
+        private static AntdUI.Label Lbl(string t, int x, int y, Form f) { var l = new AntdUI.Label { Text = t, Location = DpiScale.P(f, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }; f.Controls.Add(l); return l; }
+        private static AntdUI.Input Txt(int x, int y, int w, Form f) { var t = new AntdUI.Input { Location = DpiScale.P(f, x, y), Size = DpiScale.S(f, w, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f)}; f.Controls.Add(t); return t; }
 
         protected override void Dispose(bool disposing) { base.Dispose(disposing); }
     }

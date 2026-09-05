@@ -26,7 +26,7 @@ namespace Gdterm.UI.Controls
         // 右键点中的节点（ContextMenuStrip.Opening 读的），后后菜单设置选中
         private TreeNode _rightClickedNode;
         // 顶部搜索框（参考 Xshell/SecureCRT Session Manager filter bar）
-        private AntdUI.Input _filterBox;
+        private TextBox _filterBox;
         // 所有连接的原始列表（筛选时从它重建树）
         private List<ConnectionConfig> _allConnections;
         // auto-hide 状态：true=固定展开（默认）；false=收为窄边，悬停展开。
