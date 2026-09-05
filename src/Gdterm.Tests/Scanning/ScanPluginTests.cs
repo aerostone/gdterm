@@ -88,16 +88,16 @@ namespace Gdterm.Tests.Scanning
                 File.WriteAllText(Path.Combine(good, "manifest.json"), Manifest("good-plugin", "scan.ps1"), Utf8);
                 File.WriteAllText(Path.Combine(good, "scan.ps1"), "Write-Output hi", Utf8);
 
-                // -- ../ 逃逸 --
+                // -- ../ 逃逸（JSON 内反斜杠需双写转义）--
                 var evil = Path.Combine(root, "user", "evil-plugin");
                 Directory.CreateDirectory(evil);
-                File.WriteAllText(Path.Combine(evil, "manifest.json"), Manifest("evil-plugin", "..\\evil-plugin\\payload.ps1"), Utf8);
-                File.WriteAllText(Path.Combine(evil, "payload.ps1"), "evil", Utf8);
+                File.WriteAllText(Path.Combine(evil, "manifest.json"), Manifest("evil-plugin", "..\\\\payload.ps1"), Utf8);
+                File.WriteAllText(Path.Combine(root, "user", "payload.ps1"), "evil", Utf8);
 
-                // -- 同级前缀目录绕过（a-b 逃逸进 a）--
+                // -- 同级前缀目录绕过（good-plugin-extra 逃逸进 good-plugin）--
                 var prefixSibling = Path.Combine(root, "user", "good-plugin-extra");
                 Directory.CreateDirectory(prefixSibling);
-                File.WriteAllText(Path.Combine(prefixSibling, "manifest.json"), Manifest("good-plugin-extra", "..\\good-plugin\\scan.ps1"), Utf8);
+                File.WriteAllText(Path.Combine(prefixSibling, "manifest.json"), Manifest("good-plugin-extra", "..\\\\good-plugin\\\\scan.ps1"), Utf8);
 
                 // -- 缺 manifest --
                 var noManifest = Path.Combine(root, "user", "no-manifest");
