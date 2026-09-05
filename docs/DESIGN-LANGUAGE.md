@@ -268,6 +268,8 @@ DarkUI（作者离世停更）、AcrylicUI/Beep（net Core/net8，Win7 出局）
 
 - AntdUI 窗体基类：`AntdUI.Window`（自带暗色边框/自绘拖拽/圆角阴影）；**不要**再叠 FormFontPolicy.Apply
   （AntdUI 控件自带 DPI/字体处理，Config.Font 全局设置）；
+  **例外**：B 类混合窗体（AntdUI.Window 底 + 原生 ListView 等子控件）必须保留 Apply——
+  原生子控件不继承 AntdUI 的 Config.Font，去掉会回退系统字体；
 - 消息提示用 `AntdUI.Message.success/error/warn(form, text)` 取代 MessageBox（窗体内非阻断提示）；
   阻断式确认仍用 MessageBox；
 - AntdUI 控件属性名与本设计语言 Token 的对应关系写在 PR 描述里，评审按 §1-§4 语义审。
