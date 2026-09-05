@@ -44,7 +44,7 @@ namespace Gdterm.UI.Forms
             {
                 Dock = DockStyle.Top,
                 Height = 80,
-                BackColor = Color.FromArgb(45, 45, 45),
+                BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(15, 10, 15, 5)
             };
 
@@ -61,7 +61,7 @@ namespace Gdterm.UI.Forms
             {
                 Text = "正在分析...",
                 Font = Services.FormFontPolicy.UiFont(+1f),
-                ForeColor = Color.FromArgb(180, 180, 180),
+                ForeColor = GdtermColorTable.Muted,
                 Location = DpiScale.P(this, 15, 48),
                 Size = DpiScale.S(this, 650, 25)
             };
@@ -89,7 +89,7 @@ namespace Gdterm.UI.Forms
             catch (Exception ex)
             {
                 _scoreLabel.Text = "分析失败";
-                _scoreLabel.ForeColor = Color.FromArgb(255, 100, 100);
+                _scoreLabel.ForeColor = GdtermColorTable.Danger;
                 _summaryLabel.Text = ex.Message;
             }
         }
@@ -98,10 +98,10 @@ namespace Gdterm.UI.Forms
         {
             // 评分颜色
             Color scoreColor;
-            if (report.HealthScore >= 90) scoreColor = Color.FromArgb(80, 220, 80);
-            else if (report.HealthScore >= 70) scoreColor = Color.FromArgb(255, 200, 60);
-            else if (report.HealthScore >= 50) scoreColor = Color.FromArgb(255, 150, 50);
-            else scoreColor = Color.FromArgb(255, 80, 80);
+            if (report.HealthScore >= 90) scoreColor = GdtermColorTable.Success;
+            else if (report.HealthScore >= 70) scoreColor = GdtermColorTable.Warning;
+            else if (report.HealthScore >= 50) scoreColor = GdtermColorTable.Warning;
+            else scoreColor = GdtermColorTable.Danger;
 
             _scoreLabel.Text = $"健康评分：{report.HealthScore}/100";
             _scoreLabel.ForeColor = scoreColor;
@@ -111,16 +111,16 @@ namespace Gdterm.UI.Forms
             _tabControl.TabPages.Clear();
 
             // 空密码标签页
-            AddIssueTab("空密码", report.EmptyPasswords, Color.FromArgb(255, 80, 80));
+            AddIssueTab("空密码", report.EmptyPasswords, GdtermColorTable.Danger);
 
             // 弱密码标签页
-            AddIssueTab("弱密码", report.WeakPasswords, Color.FromArgb(255, 150, 50));
+            AddIssueTab("弱密码", report.WeakPasswords, GdtermColorTable.Warning);
 
             // 重复密码标签页
             AddDuplicateTab("重复密码", report.DuplicatePasswords);
 
             // 过期密码标签页
-            AddIssueTab("过期密码", report.ExpiredPasswords, Color.FromArgb(255, 200, 60));
+            AddIssueTab("过期密码", report.ExpiredPasswords, GdtermColorTable.Warning);
         }
 
         private void AddIssueTab(string name, System.Collections.Generic.IList<PasswordIssue> issues, Color color)
@@ -191,7 +191,7 @@ namespace Gdterm.UI.Forms
                     item.SubItems.Add(entry.Title ?? "(无标题)");
                     item.SubItems.Add(entry.Username ?? "");
                     item.SubItems.Add(entry.GroupPath ?? "");
-                    item.ForeColor = Color.FromArgb(255, 150, 50);
+                    item.ForeColor = GdtermColorTable.Warning;
                     listView.Items.Add(item);
                     first = false;
                 }

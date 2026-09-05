@@ -40,7 +40,7 @@ namespace Gdterm.UI.Forms
             // 工具栏（字体由 FormFontPolicy.Apply 统一替换为全局 UI 字体）
             _toolbar = new ToolStrip
             {
-                BackColor = Color.FromArgb(45, 45, 45),
+                BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 GripStyle = ToolStripGripStyle.Hidden,
                 Renderer = new DarkToolStripRenderer(),
@@ -109,8 +109,8 @@ namespace Gdterm.UI.Forms
                 Dock = DockStyle.Bottom,
                 AutoSize = false,
                 Height = (int)Math.Round(24 * dpiFactor),
-                BackColor = Color.FromArgb(45, 45, 45),
-                ForeColor = Color.FromArgb(160, 160, 160),
+                BackColor = GdtermColorTable.Surface,
+                ForeColor = GdtermColorTable.Muted,
                 Font = Services.FormFontPolicy.UiFont(-0.5f),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(8, 0, 0, 0),
@@ -320,7 +320,7 @@ namespace Gdterm.UI.Forms
         {
             protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
             {
-                using (var brush = new SolidBrush(Color.FromArgb(45, 45, 45)))
+                using (var brush = new SolidBrush(GdtermColorTable.Surface))
                     e.Graphics.FillRectangle(brush, e.AffectedBounds);
             }
 

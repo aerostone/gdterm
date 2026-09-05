@@ -52,12 +52,12 @@ namespace Gdterm.UI.Controls
         private void BuildUI()
         {
             // ── 状态卡片 ──
-            var cards = new Panel { Dock = DockStyle.Top, Height = 80, BackColor = Color.FromArgb(37, 37, 38), Padding = new Padding(12, 10, 12, 10) };
+            var cards = new Panel { Dock = DockStyle.Top, Height = 80, BackColor = GdtermColorTable.Surface, Padding = new Padding(12, 10, 12, 10) };
 
-            _lblStatus = CreateCard("● 状态", "未知", 12, Color.FromArgb(130, 130, 130));
+            _lblStatus = CreateCard("● 状态", "未知", 12, GdtermColorTable.Muted);
             _lblUptime = CreateCard("⏱ 运行时间", "00:00:00", 160, GdtermColorTable.Foreground);
-            _lblLatency = CreateCard("⚡ 延迟", "— ms", 320, Color.FromArgb(78, 201, 176));
-            _lblReconnects = CreateCard("↻ 重连", "0", 480, Color.FromArgb(255, 200, 87));
+            _lblLatency = CreateCard("⚡ 延迟", "— ms", 320, GdtermColorTable.Success);
+            _lblReconnects = CreateCard("↻ 重连", "0", 480, GdtermColorTable.Warning);
 
             cards.Controls.AddRange(new Control[] { _lblStatus, _lblUptime, _lblLatency, _lblReconnects });
 
@@ -65,7 +65,7 @@ namespace Gdterm.UI.Controls
             _graphPanel = new Panel
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(25, 25, 25),
+                BackColor = GdtermColorTable.Background,
                 Padding = new Padding(12)
             };
             _graphPanel.Paint += OnPaintGraph;
@@ -110,7 +110,7 @@ namespace Gdterm.UI.Controls
                 BeginInvoke((Action)(() =>
                 {
                     _lblStatus.Text = snapshot.IsConnected ? "● 已连接" : "○ 断开";
-                    _lblStatus.ForeColor = snapshot.IsConnected ? Color.FromArgb(78, 201, 176) : Color.FromArgb(255, 80, 80);
+                    _lblStatus.ForeColor = snapshot.IsConnected ? GdtermColorTable.Success : GdtermColorTable.Danger;
                     _lblUptime.Text = FormatTimeSpan(snapshot.Uptime);
                     _lblLatency.Text = string.Format("{0:F0}ms", snapshot.LatencyMs);
                     _lblReconnects.Text = snapshot.ReconnectCount.ToString();
@@ -123,7 +123,7 @@ namespace Gdterm.UI.Controls
         {
             var g = e.Graphics;
             var rect = _graphPanel.ClientRectangle;
-            var bgBrush = GetBrush(Color.FromArgb(25, 25, 25));
+            var bgBrush = GetBrush(GdtermColorTable.Background);
             g.FillRectangle(bgBrush, rect);
 
             // 边距
@@ -156,7 +156,7 @@ namespace Gdterm.UI.Controls
                 points[i] = new PointF(x, y);
             }
 
-            using (var pen = new Pen(Color.FromArgb(78, 201, 176), 2))
+            using (var pen = new Pen(GdtermColorTable.Success, 2))
             {
                 g.DrawLines(pen, points);
             }

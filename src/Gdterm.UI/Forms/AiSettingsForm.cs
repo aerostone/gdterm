@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.AI;
 using Gdterm.AI.Models;
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Forms
 {
@@ -206,7 +207,7 @@ namespace Gdterm.UI.Forms
             catch (Exception ex)
             {
                 _statusLabel.Text = $"加载配置失败：{ex.Message}";
-                _statusLabel.ForeColor = Color.FromArgb(255, 100, 100);
+                _statusLabel.ForeColor = GdtermColorTable.Danger;
             }
         }
 
@@ -216,7 +217,7 @@ namespace Gdterm.UI.Forms
             if (string.IsNullOrWhiteSpace(_endpointBox.Text))
             {
                 _statusLabel.Text = "端点 URL 不能为空";
-                _statusLabel.ForeColor = Color.FromArgb(255, 100, 100);
+                _statusLabel.ForeColor = GdtermColorTable.Danger;
                 _endpointBox.Focus();
                 return;
             }
@@ -224,7 +225,7 @@ namespace Gdterm.UI.Forms
             if (string.IsNullOrWhiteSpace(_modelBox.Text))
             {
                 _statusLabel.Text = "模型名称不能为空";
-                _statusLabel.ForeColor = Color.FromArgb(255, 100, 100);
+                _statusLabel.ForeColor = GdtermColorTable.Danger;
                 _modelBox.Focus();
                 return;
             }
@@ -264,7 +265,7 @@ namespace Gdterm.UI.Forms
             catch (Exception ex)
             {
                 _statusLabel.Text = $"保存失败：{ex.Message}";
-                _statusLabel.ForeColor = Color.FromArgb(255, 100, 100);
+                _statusLabel.ForeColor = GdtermColorTable.Danger;
             }
         }
     }

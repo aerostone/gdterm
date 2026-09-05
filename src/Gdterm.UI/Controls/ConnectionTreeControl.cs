@@ -167,7 +167,7 @@ namespace Gdterm.UI.Controls
             switch (type)
             {
                 case "folder":
-                    using (var brush = new SolidBrush(Color.FromArgb(255, 193, 7)))
+                    using (var brush = new SolidBrush(GdtermColorTable.Warning))
                     {
                         g.FillRectangle(brush, 1, 5, 14, 10);
                         g.FillRectangle(brush, 1, 3, 6, 3);
@@ -177,7 +177,7 @@ namespace Gdterm.UI.Controls
                     // Terminal icon with >_
                     using (var bg = new SolidBrush(Color.FromArgb(40, 120, 80)))
                         g.FillRectangle(bg, 1, 1, 14, 14);
-                    using (var pen = new Pen(Color.FromArgb(100, 255, 100), 1.5f))
+                    using (var pen = new Pen(GdtermColorTable.Success, 1.5f))
                     {
                         g.DrawLine(pen, 4, 6, 8, 6);
                         g.DrawLine(pen, 8, 6, 6, 9);
@@ -199,7 +199,7 @@ namespace Gdterm.UI.Controls
                     break;
                 case "serial":
                     // Plug icon
-                    using (var pen = new Pen(Color.FromArgb(180, 130, 60), 1.5f))
+                    using (var pen = new Pen(GdtermColorTable.Warning, 1.5f))
                     {
                         g.DrawRectangle(pen, 4, 2, 8, 12);
                         g.DrawLine(pen, 6, 5, 6, 8);
@@ -211,12 +211,12 @@ namespace Gdterm.UI.Controls
                 case "server":
                     using (var bg = new SolidBrush(GdtermColorTable.Border))
                         g.FillRectangle(bg, 2, 1, 12, 14);
-                    using (var fg = new SolidBrush(Color.FromArgb(100, 200, 100)))
+                    using (var fg = new SolidBrush(GdtermColorTable.Success))
                     {
                         g.FillEllipse(fg, 4, 3, 2, 2);
                         g.FillEllipse(fg, 4, 7, 2, 2);
                     }
-                    using (var line = new Pen(Color.FromArgb(120, 120, 120), 1))
+                    using (var line = new Pen(GdtermColorTable.Muted, 1))
                     {
                         g.DrawLine(line, 2, 6, 14, 6);
                         g.DrawLine(line, 2, 10, 14, 10);

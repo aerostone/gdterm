@@ -52,7 +52,7 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Top,
                 Height = 24,
-                BackColor = Color.FromArgb(45, 45, 45),
+                BackColor = GdtermColorTable.Surface,
                 ForeColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle
             };
@@ -79,7 +79,7 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Bottom,
                 Height = 22,
-                ForeColor = Color.FromArgb(160, 160, 160),
+                ForeColor = GdtermColorTable.Muted,
                 Font = Services.FormFontPolicy.UiFont(-0.5f),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(8, 0, 0, 0)
@@ -111,7 +111,7 @@ namespace Gdterm.UI.Controls
                 Text = "收藏书签",
                 Dock = DockStyle.Top,
                 Height = 20,
-                ForeColor = Color.FromArgb(180, 180, 180),
+                ForeColor = GdtermColorTable.Muted,
                 Padding = new Padding(6, 2, 0, 0)
             };
             bmHost.Controls.Add(_bookmarksList);
@@ -130,7 +130,7 @@ namespace Gdterm.UI.Controls
                 Text = "最近连接",
                 Dock = DockStyle.Top,
                 Height = 20,
-                ForeColor = Color.FromArgb(180, 180, 180),
+                ForeColor = GdtermColorTable.Muted,
                 Padding = new Padding(6, 2, 0, 0)
             };
             recentHost.Controls.Add(_recentList);
@@ -174,7 +174,7 @@ namespace Gdterm.UI.Controls
                 Text = text,
                 AutoSize = true,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(55, 55, 55),
+                BackColor = GdtermColorTable.Surface,
                 ForeColor = Color.White,
                 Margin = new Padding(2),
                 Height = 26
@@ -210,7 +210,7 @@ namespace Gdterm.UI.Controls
                     var item = new ListViewItem(b.Name ?? "(未命名)")
                     {
                         Tag = b,
-                        ForeColor = b.IsFavorite ? Color.FromArgb(255, 200, 80) : Color.White
+                        ForeColor = b.IsFavorite ? GdtermColorTable.Warning : Color.White
                     };
                     item.SubItems.Add(b.ConnectionId ?? "");
                     item.SubItems.Add(b.Tags ?? "");
@@ -241,7 +241,7 @@ namespace Gdterm.UI.Controls
                     var item = new ListViewItem(r.Host ?? r.ConnectionId ?? "")
                     {
                         Tag = r,
-                        ForeColor = r.Success ? Color.FromArgb(120, 200, 120) : Color.FromArgb(220, 120, 120)
+                        ForeColor = r.Success ? GdtermColorTable.Success : Color.FromArgb(220, 120, 120)
                     };
                     item.SubItems.Add(r.Protocol ?? "");
                     item.SubItems.Add(r.ConnectedAt.ToLocalTime().ToString("MM-dd HH:mm"));

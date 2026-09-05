@@ -111,7 +111,7 @@ namespace Gdterm.UI.Forms
             {
                 Text = "",
                 AutoSize = true,
-                ForeColor = Color.FromArgb(120, 200, 120),
+                ForeColor = GdtermColorTable.Success,
                 Margin = new Padding(6, 10, 3, 0)
             };
             top.Controls.Add(_hotStateLabel);
@@ -255,7 +255,7 @@ namespace Gdterm.UI.Forms
                 var item = new ListViewItem(p.LoadError != null ? p.DisplayName + "（加载失败）" : p.DisplayName)
                 {
                     Tag = p,
-                    ForeColor = p.LoadError != null ? Color.Firebrick : (p.Source == "builtin" ? SystemColors.ControlText : Color.FromArgb(110, 170, 230))
+                    ForeColor = p.LoadError != null ? Color.Firebrick : (p.Source == "builtin" ? SystemColors.ControlText : GdtermColorTable.Info)
                 };
                 if (!p.IsRunnable && p.LoadError == null)
                     item.ForeColor = SystemColors.GrayText; // 已停用
@@ -537,10 +537,10 @@ namespace Gdterm.UI.Forms
         {
             switch ((s ?? "").ToLowerInvariant())
             {
-                case "critical": return Color.FromArgb(200, 40, 40);
+                case "critical": return GdtermColorTable.Danger;
                 case "high": return Color.Firebrick;
-                case "medium": return Color.FromArgb(200, 130, 30);
-                case "low": return Color.FromArgb(160, 140, 40);
+                case "medium": return GdtermColorTable.Warning;
+                case "low": return GdtermColorTable.Warning;
                 default: return SystemColors.GrayText;
             }
         }

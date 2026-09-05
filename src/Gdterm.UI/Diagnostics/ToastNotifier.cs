@@ -139,7 +139,7 @@ namespace Gdterm.UI.Diagnostics
                 {
                     Dock = DockStyle.Fill,
                     Text = message,
-                    ForeColor = Color.FromArgb(230, 237, 243),
+                    ForeColor = GdtermColorTable.Foreground,
                     Font = Services.FormFontPolicy.UiFont(),
                     TextAlign = ContentAlignment.MiddleLeft,
                     Padding = new Padding(12, 8, 12, 8)
@@ -187,7 +187,7 @@ namespace Gdterm.UI.Diagnostics
             protected override void OnPaint(PaintEventArgs e)
             {
                 base.OnPaint(e);
-                using (var pen = new Pen(Color.FromArgb(48, 54, 61)))
+                using (var pen = new Pen(GdtermColorTable.Border))
                     e.Graphics.DrawRectangle(pen, 0, 0, Width - 1, Height - 1);
             }
 
@@ -205,10 +205,10 @@ namespace Gdterm.UI.Diagnostics
             {
                 switch (level)
                 {
-                    case Level.Success: return Color.FromArgb(22, 40, 28);
-                    case Level.Warning: return Color.FromArgb(45, 36, 16);
-                    case Level.Error: return Color.FromArgb(48, 22, 22);
-                    default: return Color.FromArgb(22, 27, 34);
+                    case Level.Success: return GdtermColorTable.Success;
+                    case Level.Warning: return GdtermColorTable.Warning;
+                    case Level.Error: return GdtermColorTable.Danger;
+                    default: return GdtermColorTable.Background;
                 }
             }
 
@@ -217,9 +217,9 @@ namespace Gdterm.UI.Diagnostics
                 switch (level)
                 {
                     case Level.Success: return GdtermColorTable.Accent;
-                    case Level.Warning: return Color.FromArgb(210, 153, 34);
+                    case Level.Warning: return GdtermColorTable.Warning;
                     case Level.Error: return GdtermColorTable.Danger;
-                    default: return Color.FromArgb(56, 139, 253);
+                    default: return GdtermColorTable.Info;
                 }
             }
         }

@@ -33,7 +33,7 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Left,
                 Width = 220,
-                BackColor = Color.FromArgb(37, 37, 38),
+                BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = Services.FormFontPolicy.UiFont(),
                 View = View.Details,
@@ -57,7 +57,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Top,
                 Height = 35,
                 Font = Services.FormFontPolicy.UiFont(+5f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(220, 220, 220),
+                ForeColor = GdtermColorTable.Foreground,
                 Text = "运维工具箱"
             };
 
@@ -66,7 +66,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Top,
                 Height = 25,
                 Font = Services.FormFontPolicy.UiFont(),
-                ForeColor = Color.FromArgb(150, 150, 150),
+                ForeColor = GdtermColorTable.Muted,
                 Text = "选择左侧工具开始使用"
             };
 
@@ -76,7 +76,7 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Fill,
                 BackColor = GdtermColorTable.Background,
-                ForeColor = Color.FromArgb(200, 200, 200),
+                ForeColor = GdtermColorTable.Foreground,
                 Font = new Font("Consolas", 9f),
                 ReadOnly = true,
                 BorderStyle = BorderStyle.None,
@@ -106,7 +106,7 @@ namespace Gdterm.UI.Controls
             {
                 // 分类头
                 var groupItem = new ListViewItem("▸ " + cat);
-                groupItem.ForeColor = Color.FromArgb(86, 156, 214);
+                groupItem.ForeColor = GdtermColorTable.Info;
                 groupItem.Font = Services.FormFontPolicy.UiFont(0f, FontStyle.Bold);
                 _lvTools.Items.Add(groupItem);
 

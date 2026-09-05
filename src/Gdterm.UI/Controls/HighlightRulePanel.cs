@@ -33,7 +33,7 @@ namespace Gdterm.UI.Controls
         private void BuildUI()
         {
             // 工具栏
-            var toolbar = new Panel { Dock = DockStyle.Top, Height = 40, BackColor = Color.FromArgb(37, 37, 38), Padding = new Padding(8, 5, 8, 5) };
+            var toolbar = new Panel { Dock = DockStyle.Top, Height = 40, BackColor = GdtermColorTable.Surface, Padding = new Padding(8, 5, 8, 5) };
             _btnAdd = CreateBtn("添加", 0);
             _btnEdit = CreateBtn("编辑", 75);
             _btnDelete = CreateBtn("删除", 150);
@@ -74,7 +74,7 @@ namespace Gdterm.UI.Controls
             return new Button
             {
                 Text = text, Size = DpiScale.S(this, 70, 28), Location = DpiScale.P(this, x, 6),
-                FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48),
+                FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-0.5f)
             };
         }
@@ -207,7 +207,7 @@ namespace Gdterm.UI.Controls
         }
 
         private Label Lbl(string t, int x, int y) => new Label { Text = t, Location = DpiScale.P(this, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground };
-        private TextBox Txt(int x, int y, int w) => new TextBox { Location = DpiScale.P(this, x, y), Size = DpiScale.S(this, w, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
+        private TextBox Txt(int x, int y, int w) => new TextBox { Location = DpiScale.P(this, x, y), Size = DpiScale.S(this, w, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
         private CheckBox Chk(string t, int x, int y) { var c = new CheckBox { Text = t, Location = DpiScale.P(this, x, y), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }; Controls.Add(c); return c; }
 
         protected override void Dispose(bool disposing) { base.Dispose(disposing); }

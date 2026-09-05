@@ -48,11 +48,11 @@ namespace Gdterm.UI.Controls
             BackColor = GdtermColorTable.Background;
             Dock = DockStyle.Fill;
 
-            var top = new Panel { Dock = DockStyle.Top, Height = 36, BackColor = Color.FromArgb(37, 37, 38) };
+            var top = new Panel { Dock = DockStyle.Top, Height = 36, BackColor = GdtermColorTable.Surface };
             _pathBox = new TextBox
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(45, 45, 48),
+                BackColor = GdtermColorTable.Surface,
                 ForeColor = Color.White,
                 BorderStyle = BorderStyle.FixedSingle,
                 Text = "/"
@@ -101,7 +101,7 @@ namespace Gdterm.UI.Controls
                 View = View.Details,
                 FullRowSelect = true,
                 BackColor = GdtermColorTable.Background,
-                ForeColor = Color.FromArgb(220, 220, 220),
+                ForeColor = GdtermColorTable.Foreground,
                 BorderStyle = BorderStyle.None,
                 Font = new Font("Consolas", 9.5f)
             };
@@ -126,7 +126,7 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Bottom,
                 Height = 22,
-                ForeColor = Color.FromArgb(160, 160, 160),
+                ForeColor = GdtermColorTable.Muted,
                 Text = "正在连接..."
             };
 
@@ -190,7 +190,7 @@ namespace Gdterm.UI.Controls
                     item.SubItems.Add(f.IsDirectory ? "<DIR>" : f.SizeBytes.ToString());
                     item.SubItems.Add(f.Permissions ?? "");
                     item.SubItems.Add(f.LastModified.ToString("yyyy-MM-dd HH:mm"));
-                    item.ForeColor = f.IsDirectory ? Color.FromArgb(100, 180, 255) : Color.FromArgb(220, 220, 220);
+                    item.ForeColor = f.IsDirectory ? Color.FromArgb(100, 180, 255) : GdtermColorTable.Foreground;
                     item.Tag = f;
                     _list.Items.Add(item);
                 }

@@ -50,28 +50,28 @@ namespace Gdterm.UI.Controls
             var font = Services.FormFontPolicy.UiFont();
 
             // ── 顶部：命令输入 ──
-            var topPanel = new Panel { Dock = DockStyle.Top, Height = 70, BackColor = Color.FromArgb(37, 37, 38), Padding = new Padding(8) };
+            var topPanel = new Panel { Dock = DockStyle.Top, Height = 70, BackColor = GdtermColorTable.Surface, Padding = new Padding(8) };
 
             var lblCmd = new Label { Text = "命令:", Location = DpiScale.P(this, 8, 8), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Foreground };
-            _txtCommand = new TextBox { Location = DpiScale.P(this, 8, 28), Size = DpiScale.S(this, 500, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
+            _txtCommand = new TextBox { Location = DpiScale.P(this, 8, 28), Size = DpiScale.S(this, 500, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
             _txtCommand.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { ExecuteCommand(); e.SuppressKeyPress = true; } };
 
             _btnExecute = new Button { Text = "▶ 执行", Location = DpiScale.P(this, 520, 26), Size = DpiScale.S(this, 80, 28), FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Accent, ForeColor = Color.White, Font = font };
             _btnExecute.FlatAppearance.BorderSize = 0;
             _btnExecute.Click += (s, e) => ExecuteCommand();
 
-            _lblStatus = new Label { Text = "", Location = DpiScale.P(this, 610, 30), AutoSize = true, Font = font, ForeColor = Color.FromArgb(130, 130, 130) };
+            _lblStatus = new Label { Text = "", Location = DpiScale.P(this, 610, 30), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Muted };
 
             topPanel.Controls.AddRange(new Control[] { lblCmd, _txtCommand, _btnExecute, _lblStatus });
 
             // ── 左侧：会话列表 ──
-            var leftPanel = new Panel { Dock = DockStyle.Left, Width = 250, BackColor = Color.FromArgb(37, 37, 38), Padding = new Padding(4) };
+            var leftPanel = new Panel { Dock = DockStyle.Left, Width = 250, BackColor = GdtermColorTable.Surface, Padding = new Padding(4) };
 
-            var leftHeader = new Panel { Dock = DockStyle.Top, Height = 32, BackColor = Color.FromArgb(37, 37, 38) };
-            _btnSelectAll = new Button { Text = "全选", Location = DpiScale.P(this, 4, 4), AutoSize = true, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-1f) };
+            var leftHeader = new Panel { Dock = DockStyle.Top, Height = 32, BackColor = GdtermColorTable.Surface };
+            _btnSelectAll = new Button { Text = "全选", Location = DpiScale.P(this, 4, 4), AutoSize = true, FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-1f) };
             _btnSelectAll.FlatAppearance.BorderSize = 0;
             _btnSelectAll.Click += (s, e) => { foreach (ListViewItem item in _lvSessions.Items) item.Checked = true; };
-            var btnDeselect = new Button { Text = "取消", Location = DpiScale.P(this, 64, 4), AutoSize = true, FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48), ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-1f) };
+            var btnDeselect = new Button { Text = "取消", Location = DpiScale.P(this, 64, 4), AutoSize = true, FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-1f) };
             btnDeselect.FlatAppearance.BorderSize = 0;
             btnDeselect.Click += (s, e) => { foreach (ListViewItem item in _lvSessions.Items) item.Checked = false; };
             leftHeader.Controls.AddRange(new Control[] { _btnSelectAll, btnDeselect });
@@ -97,7 +97,7 @@ namespace Gdterm.UI.Controls
             _rtbResults = new RichTextBox
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(25, 25, 25),
+                BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = new Font("Consolas", 9f),
                 ReadOnly = true,
@@ -137,7 +137,7 @@ namespace Gdterm.UI.Controls
             if (selected.Count == 0)
             {
                 _lblStatus.Text = "请勾选至少一个会话";
-                _lblStatus.ForeColor = Color.FromArgb(255, 100, 100);
+                _lblStatus.ForeColor = GdtermColorTable.Danger;
                 return;
             }
 
@@ -155,7 +155,7 @@ namespace Gdterm.UI.Controls
                             if (!dlg.IsConfirmed)
                             {
                                 _lblStatus.Text = "已取消危险命令";
-                                _lblStatus.ForeColor = Color.FromArgb(255, 180, 50);
+                                _lblStatus.ForeColor = GdtermColorTable.Warning;
                                 return;
                             }
                             if (dlg.RememberChoice)
@@ -170,32 +170,32 @@ namespace Gdterm.UI.Controls
 
             _btnExecute.Enabled = false;
             _lblStatus.Text = string.Format("正在向 {0} 个会话发送...", selected.Count);
-            _lblStatus.ForeColor = Color.FromArgb(200, 200, 200);
+            _lblStatus.ForeColor = GdtermColorTable.Foreground;
 
             _rtbResults.Clear();
-            AppendResult("━━━ 批量命令执行 ━━━\n", Color.FromArgb(78, 201, 176));
+            AppendResult("━━━ 批量命令执行 ━━━\n", GdtermColorTable.Success);
             AppendResult(string.Format("命令: {0}\n", command), GdtermColorTable.Foreground);
-            AppendResult(string.Format("目标: {0} 个会话\n\n", selected.Count), Color.FromArgb(130, 130, 130));
+            AppendResult(string.Format("目标: {0} 个会话\n\n", selected.Count), GdtermColorTable.Muted);
 
             var results = await _executor.ExecuteAsync(selected, command, 15000);
 
             foreach (var result in results)
             {
-                var color = result.IsSuccess ? Color.FromArgb(78, 201, 176) : Color.FromArgb(255, 80, 80);
+                var color = result.IsSuccess ? GdtermColorTable.Success : GdtermColorTable.Danger;
                 AppendResult(string.Format("┌─ {0} {1}\n", result.SessionId, result.IsSuccess ? "✓" : "✗"), color);
                 foreach (var line in result.Output.Take(20))
-                    AppendResult("│  " + line + "\n", Color.FromArgb(180, 180, 180));
+                    AppendResult("│  " + line + "\n", GdtermColorTable.Muted);
                 if (result.Output.Count > 20)
-                    AppendResult(string.Format("│  ... ({0} 行)\n", result.Output.Count), Color.FromArgb(100, 100, 100));
+                    AppendResult(string.Format("│  ... ({0} 行)\n", result.Output.Count), GdtermColorTable.Muted);
                 if (!string.IsNullOrEmpty(result.ErrorMessage))
-                    AppendResult("│  错误: " + result.ErrorMessage + "\n", Color.FromArgb(255, 80, 80));
+                    AppendResult("│  错误: " + result.ErrorMessage + "\n", GdtermColorTable.Danger);
                 AppendResult("└────────────────\n\n", GdtermColorTable.Border);
             }
 
             _btnExecute.Enabled = true;
             _lblStatus.Text = string.Format("完成: {0} 成功 / {1} 总计",
                 results.Count(r => r.IsSuccess), results.Count);
-            _lblStatus.ForeColor = Color.FromArgb(78, 201, 176);
+            _lblStatus.ForeColor = GdtermColorTable.Success;
         }
 
         private void AppendResult(string text, Color color)

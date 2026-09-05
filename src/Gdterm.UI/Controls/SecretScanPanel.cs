@@ -30,13 +30,13 @@ namespace Gdterm.UI.Controls
             BackColor = GdtermColorTable.Background;
 
             // ── 顶部：安全评分 + 控制按钮 ──
-            var topPanel = new Panel { Dock = DockStyle.Top, Height = 80, BackColor = Color.FromArgb(37, 37, 38), Padding = new Padding(15) };
+            var topPanel = new Panel { Dock = DockStyle.Top, Height = 80, BackColor = GdtermColorTable.Surface, Padding = new Padding(15) };
 
             _lblScore = new Label
             {
                 Text = "安全评分: --",
                 Font = Services.FormFontPolicy.UiFont(+11f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(78, 201, 176),
+                ForeColor = GdtermColorTable.Success,
                 AutoSize = true,
                 Location = DpiScale.P(this, 15, 15)
             };
@@ -45,7 +45,7 @@ namespace Gdterm.UI.Controls
             {
                 Text = "等待扫描...",
                 Font = Services.FormFontPolicy.UiFont(),
-                ForeColor = Color.FromArgb(150, 150, 150),
+                ForeColor = GdtermColorTable.Muted,
                 AutoSize = true,
                 Location = DpiScale.P(this, 15, 55)
             };
@@ -70,7 +70,7 @@ namespace Gdterm.UI.Controls
                 Size = DpiScale.S(this, 70, 35),
                 Location = DpiScale.P(this, 610, 15),
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(200, 50, 50),
+                BackColor = GdtermColorTable.Danger,
                 ForeColor = Color.White,
                 Font = Services.FormFontPolicy.UiFont(),
                 Enabled = false,
@@ -108,12 +108,12 @@ namespace Gdterm.UI.Controls
             _lvFindings.DoubleClick += OnFindingDoubleClick;
 
             // ── 底部状态栏 ──
-            var bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 25, BackColor = Color.FromArgb(37, 37, 38) };
+            var bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 25, BackColor = GdtermColorTable.Surface };
             _lblStatus = new Label
             {
                 Dock = DockStyle.Fill,
                 Font = Services.FormFontPolicy.UiFont(-1f),
-                ForeColor = Color.FromArgb(130, 130, 130),
+                ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(10, 0, 0, 0),
                 Text = "选择扫描路径后点击「开始扫描」"
@@ -140,7 +140,7 @@ namespace Gdterm.UI.Controls
             _progress.Style = ProgressBarStyle.Marquee;
             _lblStatus.Text = "扫描中...";
             _lblScore.Text = "安全评分: 扫描中...";
-            _lblScore.ForeColor = Color.FromArgb(78, 201, 176);
+            _lblScore.ForeColor = GdtermColorTable.Success;
 
             _scanner.StartScanAsync();
         }
@@ -189,10 +189,10 @@ namespace Gdterm.UI.Controls
 
             var score = report.SecurityScore;
             _lblScore.Text = string.Format("安全评分: {0}", score);
-            _lblScore.ForeColor = score >= 80 ? Color.FromArgb(78, 201, 176) :
-                                  score >= 60 ? Color.FromArgb(220, 220, 170) :
-                                  score >= 40 ? Color.FromArgb(255, 150, 50) :
-                                  Color.FromArgb(255, 80, 80);
+            _lblScore.ForeColor = score >= 80 ? GdtermColorTable.Success :
+                                  score >= 60 ? GdtermColorTable.Warning :
+                                  score >= 40 ? GdtermColorTable.Warning :
+                                  GdtermColorTable.Danger;
 
             _lblStats.Text = string.Format("扫描完成: {0} 文件 | {1} 个发现 (严重:{2} 高:{3} 中:{4} 低:{5})",
                 report.FilesScanned, report.TotalFindings,
@@ -257,7 +257,7 @@ namespace Gdterm.UI.Controls
             };
             refreshText();
 
-            var bottom = new Panel { Dock = DockStyle.Bottom, Height = 40, BackColor = Color.FromArgb(37, 37, 38) };
+            var bottom = new Panel { Dock = DockStyle.Bottom, Height = 40, BackColor = GdtermColorTable.Surface };
 
             var btnReveal = new Button
             {
@@ -331,10 +331,10 @@ namespace Gdterm.UI.Controls
         {
             switch (severity)
             {
-                case FindingSeverity.Critical: return Color.FromArgb(255, 80, 80);
-                case FindingSeverity.High: return Color.FromArgb(255, 150, 50);
-                case FindingSeverity.Medium: return Color.FromArgb(220, 220, 100);
-                case FindingSeverity.Low: return Color.FromArgb(100, 200, 100);
+                case FindingSeverity.Critical: return GdtermColorTable.Danger;
+                case FindingSeverity.High: return GdtermColorTable.Warning;
+                case FindingSeverity.Medium: return GdtermColorTable.Warning;
+                case FindingSeverity.Low: return GdtermColorTable.Success;
                 default: return GdtermColorTable.Foreground;
             }
         }

@@ -104,7 +104,7 @@ namespace Gdterm.UI.Controls
         {
             Dock = DockStyle.Bottom;
             Height = 36;
-            BackColor = Color.FromArgb(37, 37, 38);
+            BackColor = GdtermColorTable.Surface;
             Padding = new Padding(0);
 
             // 左侧：分组标签
@@ -113,7 +113,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Left,
                 AutoSize = true,
                 FlowDirection = FlowDirection.LeftToRight,
-                BackColor = Color.FromArgb(37, 37, 38),
+                BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(4, 4, 0, 4),
                 WrapContents = false
             };
@@ -123,7 +123,7 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.LeftToRight,
-                BackColor = Color.FromArgb(37, 37, 38),
+                BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(4, 3, 4, 3),
                 WrapContents = false,
                 AutoScroll = true
@@ -134,7 +134,7 @@ namespace Gdterm.UI.Controls
 
             // 右键菜单
             var ctx = new ContextMenuStrip();
-            ctx.BackColor = Color.FromArgb(45, 45, 48);
+            ctx.BackColor = GdtermColorTable.Surface;
             ctx.ForeColor = GdtermColorTable.Foreground;
             ctx.Renderer = new DarkMenuRenderer();
 
@@ -200,8 +200,8 @@ namespace Gdterm.UI.Controls
                 Text = text,
                 AutoSize = true,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(37, 37, 38),
-                ForeColor = Color.FromArgb(130, 130, 130),
+                BackColor = GdtermColorTable.Surface,
+                ForeColor = GdtermColorTable.Muted,
                 Font = Services.FormFontPolicy.UiFont(-1f),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(1, 0, 1, 0),
@@ -209,7 +209,7 @@ namespace Gdterm.UI.Controls
                 Height = 24
             };
             btn.FlatAppearance.BorderSize = 0;
-            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(50, 50, 52);
+            btn.FlatAppearance.MouseOverBackColor = GdtermColorTable.Hover;
             return btn;
         }
 
@@ -226,12 +226,12 @@ namespace Gdterm.UI.Controls
             {
                 if (kvp.Key == name)
                 {
-                    kvp.Value.ForeColor = Color.FromArgb(78, 201, 176);
+                    kvp.Value.ForeColor = GdtermColorTable.Success;
                     kvp.Value.Font = Services.FormFontPolicy.UiFont(-1f, FontStyle.Bold);
                 }
                 else
                 {
-                    kvp.Value.ForeColor = Color.FromArgb(130, 130, 130);
+                    kvp.Value.ForeColor = GdtermColorTable.Muted;
                     kvp.Value.Font = Services.FormFontPolicy.UiFont(-1f);
                 }
             }
@@ -276,15 +276,15 @@ namespace Gdterm.UI.Controls
                 Text = "+",
                 Size = DpiScale.S(this, 28, 26),
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(45, 45, 48),
-                ForeColor = Color.FromArgb(100, 100, 100),
+                BackColor = GdtermColorTable.Surface,
+                ForeColor = GdtermColorTable.Muted,
                 Font = new Font("Consolas", 10f),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(2),
                 TextAlign = ContentAlignment.MiddleCenter
             };
             addBtn.FlatAppearance.BorderSize = 0;
-            addBtn.FlatAppearance.MouseOverBackColor = Color.FromArgb(55, 55, 58);
+            addBtn.FlatAppearance.MouseOverBackColor = GdtermColorTable.Hover;
             addBtn.Click += (s, e) => AddRequested?.Invoke(_activeGroup ?? "自定义");
             _buttonPanel.Controls.Add(addBtn);
         }
@@ -296,7 +296,7 @@ namespace Gdterm.UI.Controls
                 Text = cmd.Name,
                 AutoSize = true,
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(45, 45, 48),
+                BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = Services.FormFontPolicy.UiFont(-0.5f),
                 Cursor = Cursors.Hand,
@@ -306,13 +306,13 @@ namespace Gdterm.UI.Controls
                 Tag = cmd
             };
             btn.FlatAppearance.BorderSize = 0;
-            btn.FlatAppearance.MouseOverBackColor = Color.FromArgb(55, 55, 58);
-            btn.FlatAppearance.MouseDownBackColor = Color.FromArgb(30, 30, 32);
+            btn.FlatAppearance.MouseOverBackColor = GdtermColorTable.Hover;
+            btn.FlatAppearance.MouseDownBackColor = GdtermColorTable.Pressed;
 
             // 需要 root 的命令用橙色边框
             if (cmd.RequiresRoot)
             {
-                btn.FlatAppearance.BorderColor = Color.FromArgb(255, 150, 50);
+                btn.FlatAppearance.BorderColor = GdtermColorTable.Warning;
                 btn.FlatAppearance.BorderSize = 1;
             }
 
@@ -332,7 +332,7 @@ namespace Gdterm.UI.Controls
                 {
                     // 不直发 ITerminalSession——由 MainForm 经 TerminalControl 闸门发送
                     CommandSent?.Invoke(resolved, cmd.Group);
-                    FlashButton(btn, Color.FromArgb(78, 201, 176));
+                    FlashButton(btn, GdtermColorTable.Success);
                 }
                 catch (Exception ex)
                 {
@@ -342,7 +342,7 @@ namespace Gdterm.UI.Controls
 
             // 右键菜单
             var ctx = new ContextMenuStrip();
-            ctx.BackColor = Color.FromArgb(45, 45, 48);
+            ctx.BackColor = GdtermColorTable.Surface;
             ctx.ForeColor = GdtermColorTable.Foreground;
             ctx.Renderer = new DarkMenuRenderer();
 
@@ -494,18 +494,18 @@ namespace Gdterm.UI.Controls
     {
         protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
         {
-            e.Item.BackColor = e.Item.Selected ? Color.FromArgb(60, 60, 62) : Color.FromArgb(45, 45, 48);
+            e.Item.BackColor = e.Item.Selected ? GdtermColorTable.Border : GdtermColorTable.Surface;
             e.Item.ForeColor = GdtermColorTable.Foreground;
         }
 
         protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
         {
-            e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(45, 45, 48)), e.AffectedBounds);
+            e.Graphics.FillRectangle(new SolidBrush(GdtermColorTable.Surface), e.AffectedBounds);
         }
 
         protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)
         {
-            e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(60, 60, 62)), 0, 3, e.Item.Width, 1);
+            e.Graphics.FillRectangle(new SolidBrush(GdtermColorTable.Border), 0, 3, e.Item.Width, 1);
         }
 
         protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)

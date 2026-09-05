@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using Gdterm.Security;
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Forms
 {
@@ -112,7 +113,7 @@ namespace Gdterm.UI.Forms
             {
                 Text = "",
                 AutoSize = true,
-                ForeColor = Color.FromArgb(255, 100, 100),
+                ForeColor = GdtermColorTable.Danger,
                 Location = new Point(labelX, y)
             };
             Controls.Add(_errorLabel);
@@ -178,7 +179,7 @@ namespace Gdterm.UI.Forms
             if (string.IsNullOrEmpty(pwd))
             {
                 _strengthLabel.Text = "密码强度：未输入";
-                _strengthLabel.ForeColor = Color.FromArgb(140, 140, 140);
+                _strengthLabel.ForeColor = GdtermColorTable.Muted;
                 return;
             }
 
@@ -192,9 +193,9 @@ namespace Gdterm.UI.Forms
 
             string strength;
             Color color;
-            if (score <= 2) { strength = "弱"; color = Color.FromArgb(255, 80, 80); }
-            else if (score <= 4) { strength = "中"; color = Color.FromArgb(255, 200, 60); }
-            else { strength = "强"; color = Color.FromArgb(80, 220, 80); }
+            if (score <= 2) { strength = "弱"; color = GdtermColorTable.Danger; }
+            else if (score <= 4) { strength = "中"; color = GdtermColorTable.Warning; }
+            else { strength = "强"; color = GdtermColorTable.Success; }
 
             _strengthLabel.Text = $"密码强度：{strength}（{pwd.Length} 字符）";
             _strengthLabel.ForeColor = color;

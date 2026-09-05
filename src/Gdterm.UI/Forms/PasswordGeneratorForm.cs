@@ -261,10 +261,10 @@ namespace Gdterm.UI.Forms
 
             string strength;
             Color color;
-            if (entropy < 40) { strength = "弱"; color = Color.FromArgb(255, 80, 80); }
-            else if (entropy < 60) { strength = "中"; color = Color.FromArgb(255, 200, 60); }
-            else if (entropy < 80) { strength = "强"; color = Color.FromArgb(80, 220, 80); }
-            else { strength = "极强"; color = Color.FromArgb(60, 200, 255); }
+            if (entropy < 40) { strength = "弱"; color = GdtermColorTable.Danger; }
+            else if (entropy < 60) { strength = "中"; color = GdtermColorTable.Warning; }
+            else if (entropy < 80) { strength = "强"; color = GdtermColorTable.Success; }
+            else { strength = "极强"; color = GdtermColorTable.Success; }
 
             _strengthLabel.Text = $"强度：{strength}（{entropy:F0} bit 熵）";
             _strengthLabel.ForeColor = color;

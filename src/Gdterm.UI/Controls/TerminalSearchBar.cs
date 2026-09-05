@@ -24,7 +24,7 @@ namespace Gdterm.UI.Controls
         {
             Dock = DockStyle.Top;
             Height = DpiScale.V(this, 36);
-            BackColor = Color.FromArgb(37, 37, 38);
+            BackColor = GdtermColorTable.Surface;
             Visible = false;
             Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 4), DpiScale.V(this, 8), DpiScale.V(this, 4));
             BuildUI();
@@ -44,7 +44,7 @@ namespace Gdterm.UI.Controls
             _txtSearch = new TextBox
             {
                 Width = DpiScale.V(this, 250),
-                BackColor = Color.FromArgb(45, 45, 48),
+                BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f),
                 BorderStyle = BorderStyle.FixedSingle,
@@ -64,14 +64,14 @@ namespace Gdterm.UI.Controls
             _btnPrev = CreateBtn("▲", "上一个 (Shift+F3)");
             _btnNext = CreateBtn("▼", "下一个 (F3)");
             _btnClose = CreateBtn("✕", "关闭 (Esc)");
-            _btnClose.ForeColor = Color.FromArgb(180, 180, 180);
+            _btnClose.ForeColor = GdtermColorTable.Muted;
 
             _lblCount = new Label
             {
                 Text = "",
                 AutoSize = true,
                 Margin = new Padding(DpiScale.V(this, 8), 6, 3, 0),
-                ForeColor = Color.FromArgb(130, 130, 130)
+                ForeColor = GdtermColorTable.Muted
             };
 
             _btnPrev.Click += (s, e) => NavigateRequested?.Invoke(false);
@@ -90,7 +90,7 @@ namespace Gdterm.UI.Controls
                 AutoSize = true,
                 // 等宽语义例外：Aa/.*/W 为正则记号，字号相对当前字体缩小一号（规范规则③）
                 Font = new Font(Font.FontFamily, Font.Size - 0.5f),
-                ForeColor = Color.FromArgb(150, 150, 150),
+                ForeColor = GdtermColorTable.Muted,
                 Margin = new Padding(0, 4, DpiScale.V(this, 6), 0)
             };
             var t = new ToolTip();
@@ -107,7 +107,7 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(1, 0, 1, 0),
                 MinimumSize = new Size(DpiScale.V(this, 26), DpiScale.V(this, 24)),
                 FlatStyle = FlatStyle.Flat,
-                BackColor = Color.FromArgb(45, 45, 48),
+                BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground
             };
             btn.FlatAppearance.BorderSize = 0;
@@ -134,7 +134,7 @@ namespace Gdterm.UI.Controls
         public void UpdateMatchCount(int current, int total)
         {
             _lblCount.Text = total > 0 ? string.Format("{0}/{1}", current + 1, total) : "无匹配";
-            _lblCount.ForeColor = total > 0 ? Color.FromArgb(78, 201, 176) : Color.FromArgb(255, 100, 100);
+            _lblCount.ForeColor = total > 0 ? GdtermColorTable.Success : GdtermColorTable.Danger;
         }
 
         protected override void Dispose(bool disposing) { base.Dispose(disposing); }

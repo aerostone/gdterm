@@ -168,7 +168,7 @@ namespace Gdterm.UI.Forms
             _credentialTitleLabel = new Label
             {
                 Text = "未选（按主机+用户名自动匹配）",
-                ForeColor = Color.FromArgb(100, 100, 100),
+                ForeColor = GdtermColorTable.Muted,
                 AutoSize = false,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -211,7 +211,7 @@ namespace Gdterm.UI.Forms
                 Text = "更多选项 ▾",
                 AutoSize = true,
                 Location = DpiScale.P(this, 0, 6),
-                LinkColor = Color.FromArgb(120, 180, 255),
+                LinkColor = GdtermColorTable.Info,
                 ActiveLinkColor = Color.White
             };
             _moreLink.LinkBehavior = LinkBehavior.HoverUnderline;
@@ -259,7 +259,7 @@ namespace Gdterm.UI.Forms
             _rdpFullScreenCheck = new CheckBox { Text = "全屏", ForeColor = GdtermColorTable.Foreground, AutoSize = true };
             _rdpNlaCheck = new CheckBox { Text = "NLA 认证", ForeColor = GdtermColorTable.Foreground, AutoSize = true, Checked = true };
             _rdpForceNlaCheck = new CheckBox { Text = "强制 NLA", ForeColor = GdtermColorTable.Foreground, AutoSize = true, Checked = false };
-            _rdpTcpDumpCheck = new CheckBox { Text = "抓包（TCP dump）", ForeColor = Color.FromArgb(255, 180, 60), AutoSize = true, Checked = false,
+            _rdpTcpDumpCheck = new CheckBox { Text = "抓包（TCP dump）", ForeColor = GdtermColorTable.Warning, AutoSize = true, Checked = false,
                 Visible = Program.DebugConfig != null && Program.DebugConfig.Enabled };
             rdpChecks.Controls.AddRange(new Control[] { _rdpDriveCheck, _rdpClipboardCheck, _rdpPrinterCheck, _rdpFullScreenCheck, _rdpNlaCheck, _rdpForceNlaCheck, _rdpTcpDumpCheck });
             var depthPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 4) };
@@ -316,7 +316,7 @@ namespace Gdterm.UI.Forms
                 ScrollBars = ScrollBars.Vertical,
                 Width = 512,
                 Height = 56,
-                BackColor = Color.FromArgb(37, 37, 38),
+                BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 BorderStyle = BorderStyle.FixedSingle,
                 Font = new Font("Consolas", 9f)
@@ -328,7 +328,7 @@ namespace Gdterm.UI.Forms
             _advancedHost.Controls.Add(_advFlow);
 
             // ===== 底部按钮 =====
-            var btnPanel = new Panel { Dock = DockStyle.Bottom, Height = 45, BackColor = Color.FromArgb(37, 37, 38) };
+            var btnPanel = new Panel { Dock = DockStyle.Bottom, Height = 45, BackColor = GdtermColorTable.Surface };
             _btnPanel = btnPanel;
             // 按钮交给布局引擎（RightToLeft 流式：先加的靠右）。
             // 不用绝对坐标 + Anchor.Right：在字体/DPI 缩放下会双重补偿漂出窗体右边界，
@@ -338,7 +338,7 @@ namespace Gdterm.UI.Forms
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.RightToLeft,
                 WrapContents = false,
-                BackColor = Color.FromArgb(37, 37, 38),
+                BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(0, 7, 16, 0)
             };
             var okBtn = new Button
@@ -393,7 +393,7 @@ namespace Gdterm.UI.Forms
             t.Controls.Add(new Label
             {
                 Text = title,
-                ForeColor = Color.FromArgb(150, 150, 155),
+                ForeColor = GdtermColorTable.Muted,
                 AutoSize = true,
                 Font = Services.FormFontPolicy.UiFont(0f, FontStyle.Bold),
                 Margin = new Padding(0, 0, 0, 3)
@@ -688,7 +688,7 @@ namespace Gdterm.UI.Forms
             if (string.IsNullOrWhiteSpace(uuid))
             {
                 _credentialTitleLabel.Text = "未选（按主机+用户名自动匹配）";
-                _credentialTitleLabel.ForeColor = Color.FromArgb(100, 100, 100);
+                _credentialTitleLabel.ForeColor = GdtermColorTable.Muted;
                 return;
             }
             if (_keepass == null || !_keepass.IsUnlocked)
@@ -704,13 +704,13 @@ namespace Gdterm.UI.Forms
                 if (entry == null)
                 {
                     _credentialTitleLabel.Text = "凭据已被删除（清除后自动匹配）";
-                    _credentialTitleLabel.ForeColor = Color.FromArgb(204, 120, 60);
+                    _credentialTitleLabel.ForeColor = GdtermColorTable.Warning;
                     return;
                 }
                 var title = string.IsNullOrWhiteSpace(entry.Title) ? "(无标题)" : entry.Title;
                 var user = string.IsNullOrWhiteSpace(entry.Username) ? "" : " — " + entry.Username;
                 _credentialTitleLabel.Text = "已选: " + title + user;
-                _credentialTitleLabel.ForeColor = Color.FromArgb(120, 200, 120);
+                _credentialTitleLabel.ForeColor = GdtermColorTable.Success;
             }
             catch
             {

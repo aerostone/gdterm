@@ -57,13 +57,13 @@ namespace Gdterm.UI.Forms
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(4, 0, 0, 0),
-                ForeColor = Color.FromArgb(100, 100, 100),
+                ForeColor = GdtermColorTable.Muted,
                 BackColor = Color.Transparent
             };
             _searchBox = new TextBox
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.FromArgb(37, 37, 38),
+                BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 BorderStyle = BorderStyle.FixedSingle
             };
@@ -83,7 +83,7 @@ namespace Gdterm.UI.Forms
                 MultiSelect = false,
                 HideSelection = false,
                 GridLines = true,
-                BackColor = Color.FromArgb(37, 37, 38),
+                BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 BorderStyle = BorderStyle.FixedSingle,
                 OwnerDraw = true
@@ -94,7 +94,7 @@ namespace Gdterm.UI.Forms
             _listView.DoubleClick += (s, e) => SelectEntry();
             _listView.DrawColumnHeader += (s, e) =>
             {
-                e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(45, 45, 45)), e.Bounds);
+                e.Graphics.FillRectangle(new SolidBrush(GdtermColorTable.Surface), e.Bounds);
                 // 表头字体跟随窗体当前字体（硬编码 9f 在 11pt 全局下不协调）
                 using (var headerFont = new Font(Font.FontFamily, Font.Size, FontStyle.Bold))
                 {
@@ -109,8 +109,8 @@ namespace Gdterm.UI.Forms
                 var bg = e.Item.Selected
                     ? new SolidBrush(GdtermColorTable.Accent)
                     : new SolidBrush(e.ItemIndex % 2 == 0
-                        ? Color.FromArgb(37, 37, 38)
-                        : Color.FromArgb(42, 42, 43));
+                        ? GdtermColorTable.Surface
+                        : GdtermColorTable.Hover);
                 e.Graphics.FillRectangle(bg, e.Bounds);
                 for (int i = 0; i < _listView.Columns.Count; i++)
                 {
@@ -127,7 +127,7 @@ namespace Gdterm.UI.Forms
             {
                 Dock = DockStyle.Bottom,
                 Height = 45,
-                BackColor = Color.FromArgb(37, 37, 38)
+                BackColor = GdtermColorTable.Surface
             };
             var btnNew = new Button
             {
@@ -144,7 +144,7 @@ namespace Gdterm.UI.Forms
                 Dock = DockStyle.Left,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
-                BackColor = Color.FromArgb(37, 37, 38),
+                BackColor = GdtermColorTable.Surface,
                 AutoSize = true
             };
             btnNewFlow.Controls.Add(btnNew);
@@ -154,7 +154,7 @@ namespace Gdterm.UI.Forms
                 Dock = DockStyle.Right,
                 FlowDirection = FlowDirection.RightToLeft,
                 WrapContents = false,
-                BackColor = Color.FromArgb(37, 37, 38),
+                BackColor = GdtermColorTable.Surface,
                 AutoSize = true,
                 Padding = new Padding(0, 0, 12, 0)
             };

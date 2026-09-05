@@ -21,10 +21,10 @@ namespace Gdterm.UI.Forms
         private Label _statusLabel;
 
         // 危险等级颜色
-        private static readonly Color ColorMedium = Color.FromArgb(255, 200, 60);
-        private static readonly Color ColorHigh = Color.FromArgb(255, 150, 50);
-        private static readonly Color ColorCritical = Color.FromArgb(255, 80, 80);
-        private static readonly Color ColorDisabled = Color.FromArgb(100, 100, 100);
+        private static readonly Color ColorMedium = GdtermColorTable.Warning;
+        private static readonly Color ColorHigh = GdtermColorTable.Warning;
+        private static readonly Color ColorCritical = GdtermColorTable.Danger;
+        private static readonly Color ColorDisabled = GdtermColorTable.Muted;
 
         public DangerousCommandConfigForm(DangerousCommandDetector detector)
         {
@@ -52,7 +52,7 @@ namespace Gdterm.UI.Forms
             // 工具栏
             _toolbar = new ToolStrip
             {
-                BackColor = Color.FromArgb(45, 45, 45),
+                BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 GripStyle = ToolStripGripStyle.Hidden,
                 Renderer = new DarkToolStripRenderer(),
@@ -145,7 +145,7 @@ namespace Gdterm.UI.Forms
                 Location = DpiScale.P(this, 70, wlHeaderRow),
                 FlatStyle = FlatStyle.Flat,
                 Font = Services.FormFontPolicy.UiFont(-0.5f),
-                BackColor = Color.FromArgb(80, 40, 40),
+                BackColor = GdtermColorTable.Danger,
                 ForeColor = Color.White
             };
             btnRemoveWhitelist.Click += OnRemoveWhitelistClick;
@@ -157,7 +157,7 @@ namespace Gdterm.UI.Forms
                 Size = new Size(0, 0),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
                 Font = new Font("Consolas", 9.5f),
-                BackColor = Color.FromArgb(25, 25, 25),
+                BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
                 BorderStyle = BorderStyle.FixedSingle
             };
@@ -176,8 +176,8 @@ namespace Gdterm.UI.Forms
             {
                 Dock = DockStyle.Bottom,
                 Height = 24,
-                BackColor = Color.FromArgb(45, 45, 45),
-                ForeColor = Color.FromArgb(160, 160, 160),
+                BackColor = GdtermColorTable.Surface,
+                ForeColor = GdtermColorTable.Muted,
                 Font = Services.FormFontPolicy.UiFont(-0.5f),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(8, 0, 0, 0),
@@ -359,7 +359,7 @@ namespace Gdterm.UI.Forms
         {
             protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
             {
-                using (var brush = new SolidBrush(Color.FromArgb(45, 45, 45)))
+                using (var brush = new SolidBrush(GdtermColorTable.Surface))
                     e.Graphics.FillRectangle(brush, e.AffectedBounds);
             }
 

@@ -78,7 +78,7 @@ namespace Gdterm.UI.Forms
             {
                 Dock = DockStyle.Top,
                 Height = DpiScale.V(this, 78),
-                BackColor = Color.FromArgb(45, 45, 45),
+                BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(DpiScale.V(this, 24), DpiScale.V(this, 14), DpiScale.V(this, 24), DpiScale.V(this, 10))
             };
 
@@ -96,7 +96,7 @@ namespace Gdterm.UI.Forms
             var subtitleLabel = new Label
             {
                 Text = "绿色运维客户端 · 首次使用请完成以下设置",
-                ForeColor = Color.FromArgb(170, 170, 170),
+                ForeColor = GdtermColorTable.Muted,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.TopLeft
             };
@@ -109,14 +109,14 @@ namespace Gdterm.UI.Forms
             {
                 Dock = DockStyle.Top,
                 Height = DpiScale.V(this, 36),
-                BackColor = Color.FromArgb(38, 38, 38),
+                BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(DpiScale.V(this, 16), 0, DpiScale.V(this, 16), 0)
             };
 
             _stepIndicator = new Label
             {
                 Text = BuildStepText(0),
-                ForeColor = Color.FromArgb(160, 160, 160),
+                ForeColor = GdtermColorTable.Muted,
                 Dock = DockStyle.Fill,
                 AutoSize = true,
                 TextAlign = ContentAlignment.MiddleCenter
@@ -225,7 +225,7 @@ namespace Gdterm.UI.Forms
                     "    ·  密码需包含大小写字母、数字和特殊字符\r\n" +
                     "    ·  此密码用于锁定/解锁应用和加密配置\r\n\r\n" +
                     "请牢记此密码，忘记后无法恢复数据。",
-                ForeColor = Color.FromArgb(215, 215, 215),
+                ForeColor = GdtermColorTable.Foreground,
                 Dock = DockStyle.Fill,
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleLeft
@@ -274,7 +274,7 @@ namespace Gdterm.UI.Forms
             var pwdLabel = new Label
             {
                 Text = "密码",
-                ForeColor = Color.FromArgb(200, 200, 200),
+                ForeColor = GdtermColorTable.Foreground,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft
             };
@@ -296,7 +296,7 @@ namespace Gdterm.UI.Forms
             var confirmLabel = new Label
             {
                 Text = "确认",
-                ForeColor = Color.FromArgb(200, 200, 200),
+                ForeColor = GdtermColorTable.Foreground,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft
             };
@@ -316,7 +316,7 @@ namespace Gdterm.UI.Forms
             _strengthLabel = new Label
             {
                 Text = "密码强度：未输入",
-                ForeColor = Color.FromArgb(140, 140, 140),
+                ForeColor = GdtermColorTable.Muted,
                 Dock = DockStyle.Fill,
                 AutoSize = true,
                 TextAlign = ContentAlignment.MiddleLeft
@@ -327,7 +327,7 @@ namespace Gdterm.UI.Forms
             _errorLabel = new Label
             {
                 Text = "",
-                ForeColor = Color.FromArgb(255, 100, 100),
+                ForeColor = GdtermColorTable.Danger,
                 Dock = DockStyle.Fill,
                 AutoSize = true,
                 TextAlign = ContentAlignment.TopLeft
@@ -338,7 +338,7 @@ namespace Gdterm.UI.Forms
             var showPwdCheck = new CheckBox
             {
                 Text = "显示密码",
-                ForeColor = Color.FromArgb(160, 160, 160),
+                ForeColor = GdtermColorTable.Muted,
                 Dock = DockStyle.Left,
                 AutoSize = true,
                 Margin = new Padding(0, DpiScale.V(this, 4), 0, 0)
@@ -380,7 +380,7 @@ namespace Gdterm.UI.Forms
                 Text = "设置完成",
                 // 标题强调：相对当前字体放大加粗（规范规则③）
                 Font = new Font(Font.FontFamily, Font.Size + 7f, FontStyle.Bold),
-                ForeColor = Color.FromArgb(80, 200, 120),
+                ForeColor = GdtermColorTable.Success,
                 Dock = DockStyle.Fill,
                 AutoSize = true,
                 TextAlign = ContentAlignment.MiddleCenter
@@ -394,7 +394,7 @@ namespace Gdterm.UI.Forms
                     "·  空闲 5 分钟后自动锁定\r\n" +
                     "·  Ctrl+` 全局热键可快速呼出/隐藏窗口\r\n\r\n" +
                     "点击「进入 gdterm」开始使用。",
-                ForeColor = Color.FromArgb(200, 200, 200),
+                ForeColor = GdtermColorTable.Foreground,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.TopCenter
             };
@@ -468,7 +468,7 @@ namespace Gdterm.UI.Forms
             if (string.IsNullOrEmpty(pwd))
             {
                 _strengthLabel.Text = "密码强度：未输入";
-                _strengthLabel.ForeColor = Color.FromArgb(140, 140, 140);
+                _strengthLabel.ForeColor = GdtermColorTable.Muted;
                 return;
             }
 
@@ -482,9 +482,9 @@ namespace Gdterm.UI.Forms
 
             string strength;
             Color color;
-            if (score <= 2) { strength = "弱"; color = Color.FromArgb(255, 80, 80); }
-            else if (score <= 4) { strength = "中"; color = Color.FromArgb(255, 200, 60); }
-            else { strength = "强"; color = Color.FromArgb(80, 220, 80); }
+            if (score <= 2) { strength = "弱"; color = GdtermColorTable.Danger; }
+            else if (score <= 4) { strength = "中"; color = GdtermColorTable.Warning; }
+            else { strength = "强"; color = GdtermColorTable.Success; }
 
             _strengthLabel.Text = string.Format("密码强度：{0}（{1} 字符）", strength, pwd.Length);
             _strengthLabel.ForeColor = color;

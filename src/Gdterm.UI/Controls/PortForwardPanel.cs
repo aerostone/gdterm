@@ -42,7 +42,7 @@ namespace Gdterm.UI.Controls
 
         private void BuildUI()
         {
-            var toolbar = new Panel { Dock = DockStyle.Top, Height = 40, BackColor = Color.FromArgb(37, 37, 38) };
+            var toolbar = new Panel { Dock = DockStyle.Top, Height = 40, BackColor = GdtermColorTable.Surface };
             var btnAdd = CreateBtn("添加规则", 8);
             var btnStart = CreateBtn("启动", 100);
             var btnStop = CreateBtn("停止", 180);
@@ -81,7 +81,7 @@ namespace Gdterm.UI.Controls
             return new Button
             {
                 Text = text, Size = DpiScale.S(this, 75, 28), Location = DpiScale.P(this, x, 6),
-                FlatStyle = FlatStyle.Flat, BackColor = Color.FromArgb(45, 45, 48),
+                FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-0.5f)
             };
         }
@@ -98,7 +98,7 @@ namespace Gdterm.UI.Controls
                 item.SubItems.Add(_manager.IsActive(r.Id) ? "● 运行" : "○ 停止");
                 item.SubItems.Add(r.Description ?? "");
                 item.Tag = r;
-                if (_manager.IsActive(r.Id)) item.ForeColor = Color.FromArgb(78, 201, 176);
+                if (_manager.IsActive(r.Id)) item.ForeColor = GdtermColorTable.Success;
                 _lvRules.Items.Add(item);
             }
         }
@@ -113,7 +113,7 @@ namespace Gdterm.UI.Controls
                 FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false
             };
             var font = Services.FormFontPolicy.UiFont(); int y = 15;
-            var cmbType = new ComboBox { Location = DpiScale.P(this, 110, y - 3), Size = DpiScale.S(this, 250, 25), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = Color.FromArgb(45, 45, 48), ForeColor = GdtermColorTable.Foreground, FlatStyle = FlatStyle.Flat, Font = font };
+            var cmbType = new ComboBox { Location = DpiScale.P(this, 110, y - 3), Size = DpiScale.S(this, 250, 25), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, FlatStyle = FlatStyle.Flat, Font = font };
             cmbType.Items.AddRange(new object[] { "Local（本地转发）", "Remote（远程转发）", "Dynamic（SOCKS5）" });
             cmbType.SelectedIndex = 0;
             Lbl(form, "类型:", 15, y); form.Controls.Add(cmbType); y += 32;
@@ -179,7 +179,7 @@ namespace Gdterm.UI.Controls
         }
 
         private static void Lbl(Form f, string t, int x, int y) { f.Controls.Add(new Label { Text = t, Location = DpiScale.P(f, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }); }
-        private static TextBox Txt(Form f, int x, int y, int w) { var t = new TextBox { Location = DpiScale.P(f, x, y), Size = DpiScale.S(f, w, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle }; f.Controls.Add(t); return t; }
+        private static TextBox Txt(Form f, int x, int y, int w) { var t = new TextBox { Location = DpiScale.P(f, x, y), Size = DpiScale.S(f, w, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle }; f.Controls.Add(t); return t; }
 
         protected override void Dispose(bool disposing)
         {

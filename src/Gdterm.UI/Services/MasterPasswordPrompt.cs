@@ -39,7 +39,7 @@ namespace Gdterm.UI.Services
                 {
                     Text = (action ?? "操作") + "需要验证主密码：",
                     Font = Services.FormFontPolicy.UiFont(+1f),
-                    ForeColor = Color.FromArgb(200, 200, 200),
+                    ForeColor = GdtermColorTable.Foreground,
                     Location = DpiScale.P(dialog, 15, 15),
                     Size = DpiScale.S(dialog, 340, 25)
                 };
@@ -57,7 +57,7 @@ namespace Gdterm.UI.Services
                 {
                     Text = "",
                     Font = Services.FormFontPolicy.UiFont(),
-                    ForeColor = Color.FromArgb(255, 100, 100),
+                    ForeColor = GdtermColorTable.Danger,
                     Location = DpiScale.P(dialog, 15, 78),
                     Size = DpiScale.S(dialog, 335, 20)
                 };

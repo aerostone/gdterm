@@ -56,7 +56,7 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Top,
                 Height = 32,
-                BackColor = Color.FromArgb(37, 37, 38),
+                BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = new Font("Consolas", 11f),
                 BorderStyle = BorderStyle.FixedSingle
@@ -71,7 +71,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Top,
                 Height = 22,
                 Font = Services.FormFontPolicy.UiFont(-1f),
-                ForeColor = Color.FromArgb(100, 100, 100),
+                ForeColor = GdtermColorTable.Muted,
                 BackColor = GdtermColorTable.Background,
                 TextAlign = ContentAlignment.MiddleLeft
             };
@@ -236,7 +236,7 @@ namespace Gdterm.UI.Controls
             foreach (var ph in placeholders)
             {
                 var lbl = new Label { Text = ph + ":", Location = new Point(15, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground };
-                var txt = new TextBox { Location = DpiScale.P(form, 100, y), Size = DpiScale.S(form, 260, 24), BackColor = Color.FromArgb(45, 45, 48), ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
+                var txt = new TextBox { Location = DpiScale.P(form, 100, y), Size = DpiScale.S(form, 260, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
                 form.Controls.AddRange(new Control[] { lbl, txt });
                 inputs[ph] = txt;
                 y += 36;
