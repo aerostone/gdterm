@@ -165,10 +165,10 @@ namespace Gdterm.UI.Controls
             y += 210;
 
             // 步骤操作按钮
-            var btnAddStep = new AntdUI.Button { Text = "+", Location = DpiScale.P(form, 100, y), Size = DpiScale.S(this, 28, 24) BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Success };
-            var btnDelStep = new AntdUI.Button { Text = "−", Location = DpiScale.P(form, 132, y), Size = DpiScale.S(this, 28, 24) BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Danger };
-            var btnUp = new AntdUI.Button { Text = "↑", Location = DpiScale.P(form, 170, y), Size = DpiScale.S(this, 28, 24) BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
-            var btnDown = new AntdUI.Button { Text = "↓", Location = DpiScale.P(form, 202, y), Size = DpiScale.S(this, 28, 24) BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+            var btnAddStep = new AntdUI.Button { Text = "+", Location = DpiScale.P(form, 100, y), Size = DpiScale.S(this, 28, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Success };
+            var btnDelStep = new AntdUI.Button { Text = "−", Location = DpiScale.P(form, 132, y), Size = DpiScale.S(this, 28, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Danger };
+            var btnUp = new AntdUI.Button { Text = "↑", Location = DpiScale.P(form, 170, y), Size = DpiScale.S(this, 28, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+            var btnDown = new AntdUI.Button { Text = "↓", Location = DpiScale.P(form, 202, y), Size = DpiScale.S(this, 28, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnAddStep, btnDelStep, btnUp, btnDown });
 
             var steps = new List<LogonStep>();
@@ -199,8 +199,8 @@ namespace Gdterm.UI.Controls
             };
             y += 40;
 
-            var btnOk = new AntdUI.Button { Text = "确定", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(form, 340, y), DialogResult = DialogResult.OK BackColor = GdtermColorTable.Accent, ForeColor = Color.White };
-            var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(form, 430, y), DialogResult = DialogResult.Cancel BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
+            var btnOk = new AntdUI.Button { Text = "确定", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(form, 340, y), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = Color.White };
+            var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(form, 430, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
 
@@ -231,15 +231,15 @@ namespace Gdterm.UI.Controls
                 FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false
             };
             var font = Services.FormFontPolicy.UiFont();
-            var cmbType = new AntdUI.Select { Location = DpiScale.P(this, 100, 12), Size = DpiScale.S(this, 220, 25) BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, FlatStyle = FlatStyle.Flat, Font = font };
+            var cmbType = new AntdUI.Select { Location = DpiScale.P(this, 100, 12), Size = DpiScale.S(this, 220, 25), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, FlatStyle = FlatStyle.Flat, Font = font };
             cmbType.Items.AddRange(new object[] { "Send（发送文本）", "Wait（等待关键词）", "Delay（延时）" });
             cmbType.SelectedIndex = 0;
             Lbl("类型:", 12, 15, form); form.Controls.Add(cmbType);
             var txtValue = Txt(100, 48, 220, form); Lbl("内容:", 12, 51, form);
             var numTimeout = new AntdUI.InputNumber { Location = DpiScale.P(this, 100, 82), Size = DpiScale.S(this, 100, 25), Maximum = 60000, Value = 10000, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = font }; Lbl("超时:", 12, 85, form); form.Controls.Add(numTimeout);
 
-            var btnOk = new AntdUI.Button { Text = "确定", Size = DpiScale.S(this, 70, 26), Location = DpiScale.P(this, 170, 140), DialogResult = DialogResult.OK BackColor = GdtermColorTable.Accent, ForeColor = Color.White };
-            var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(this, 70, 26), Location = DpiScale.P(this, 250, 140), DialogResult = DialogResult.Cancel BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
+            var btnOk = new AntdUI.Button { Text = "确定", Size = DpiScale.S(this, 70, 26), Location = DpiScale.P(this, 170, 140), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = Color.White };
+            var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(this, 70, 26), Location = DpiScale.P(this, 250, 140), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
 

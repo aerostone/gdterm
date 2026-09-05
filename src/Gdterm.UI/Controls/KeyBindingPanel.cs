@@ -412,8 +412,7 @@ namespace Gdterm.UI.Controls
                 "OemCloseBrackets",   // ]
                 "OemSemicolon",       // ;
                 "OemQuotes",          // '
-                "Oemcomma",           // ,
-                "OemPeriod",          // .
+                "Oemcomma",           //, "OemPeriod",          // .
                 "OemQuestion",        // /
                 "Oemtilde",           // `
                 "OemMinus",           // -

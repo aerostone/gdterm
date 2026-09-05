@@ -189,8 +189,8 @@ namespace Gdterm.UI.Controls
                 chkBold.Checked = existing.Bold;
             }
 
-            var btnOk = new AntdUI.Button { Text = "确定", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(this, 220, y), DialogResult = DialogResult.OK BackColor = GdtermColorTable.Accent, ForeColor = Color.White };
-            var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(this, 310, y), DialogResult = DialogResult.Cancel BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
+            var btnOk = new AntdUI.Button { Text = "确定", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(this, 220, y), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = Color.White };
+            var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(this, 310, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
 
             form.Controls.AddRange(new Control[] { lblName, txtName, lblPattern, txtPattern, chkRegex, chkCase, lblFg, txtFg, lblBg, txtBg, chkBold, btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;

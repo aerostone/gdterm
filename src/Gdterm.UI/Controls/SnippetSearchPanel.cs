@@ -239,8 +239,8 @@ namespace Gdterm.UI.Controls
                 y += 36;
             }
 
-            var btnOk = new AntdUI.Button { Text = "执行", Size = DpiScale.S(form, 80, 28), Location = DpiScale.P(form, 190, y), DialogResult = DialogResult.OK BackColor = GdtermColorTable.Accent, ForeColor = Color.White };
-            var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(form, 80, 28), Location = DpiScale.P(form, 280, y), DialogResult = DialogResult.Cancel BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
+            var btnOk = new AntdUI.Button { Text = "执行", Size = DpiScale.S(form, 80, 28), Location = DpiScale.P(form, 190, y), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = Color.White };
+            var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(form, 80, 28), Location = DpiScale.P(form, 280, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
 

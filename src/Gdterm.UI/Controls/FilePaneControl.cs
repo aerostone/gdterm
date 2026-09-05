@@ -400,8 +400,8 @@ namespace Gdterm.UI.Controls
                 };
                 if (!string.IsNullOrEmpty(initial)) box.Text = initial;
                 var flow = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 40, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(12, 6, 12, 6) };
-                var cancel = new AntdUI.Button { Text = "取消", DialogResult = DialogResult.Cancel, AutoSize = true BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
-                var ok = new AntdUI.Button { Text = "确定", DialogResult = DialogResult.OK, AutoSize = true BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+                var cancel = new AntdUI.Button { Text = "取消", DialogResult = DialogResult.Cancel, AutoSize = true, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+                var ok = new AntdUI.Button { Text = "确定", DialogResult = DialogResult.OK, AutoSize = true, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
                 flow.Controls.Add(cancel); // RightToLeft 流序：先加靠右
                 flow.Controls.Add(ok);
                 f.Controls.Add(box);

@@ -113,7 +113,7 @@ namespace Gdterm.UI.Controls
                 FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false
             };
             var font = Services.FormFontPolicy.UiFont(); int y = 15;
-            var cmbType = new AntdUI.Select { Location = DpiScale.P(this, 110, y - 3), Size = DpiScale.S(this, 250, 25) BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, FlatStyle = FlatStyle.Flat, Font = font };
+            var cmbType = new AntdUI.Select { Location = DpiScale.P(this, 110, y - 3), Size = DpiScale.S(this, 250, 25), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, FlatStyle = FlatStyle.Flat, Font = font };
             cmbType.Items.AddRange(new object[] { "Local（本地转发）", "Remote（远程转发）", "Dynamic（SOCKS5）" });
             cmbType.SelectedIndex = 0;
             Lbl(form, "类型:", 15, y); form.Controls.Add(cmbType); y += 32;
@@ -123,8 +123,8 @@ namespace Gdterm.UI.Controls
             var txtRemoteHost = Txt(form, 110, y, 120); txtRemoteHost.Text = "127.0.0.1"; Lbl(form, "远程地址:", 15, y);
             var txtRemotePort = Txt(form, 280, y, 80); Lbl(form, "端口:", 245, y); y += 50;
 
-            var btnOk = new AntdUI.Button { Text = "确定", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(this, 200, y), DialogResult = DialogResult.OK BackColor = GdtermColorTable.Accent, ForeColor = Color.White };
-            var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(this, 290, y), DialogResult = DialogResult.Cancel BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
+            var btnOk = new AntdUI.Button { Text = "确定", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(this, 200, y), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = Color.White };
+            var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(this, 290, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
 
