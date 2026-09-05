@@ -38,8 +38,7 @@ namespace Gdterm.UI.Controls
                 Font = Services.FormFontPolicy.UiFont(),
                 View = View.Details,
                 FullRowSelect = true,
-                HeaderStyle = ColumnHeaderStyle.None,
-                BorderStyle = BorderStyle.None
+                HeaderStyle = ColumnHeaderStyle.None
             };
             _lvTools.Columns.Add("", 210);
             _lvTools.SelectedIndexChanged += OnToolSelected;
@@ -76,9 +75,7 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = new Font("Consolas", 9f),
-                ReadOnly = true,
-                BorderStyle = BorderStyle.None,
-                ScrollBars = RichTextBoxScrollBars.Vertical
+                ReadOnly = true
             };
 
             _pnlDetail.Controls.Add(_txtOutput);

@@ -62,8 +62,7 @@ namespace Gdterm.UI.Controls
                 FullRowSelect = true,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", 9f),
-                BorderStyle = BorderStyle.None
+                Font = new Font("Consolas", 9f)
             };
             _lvRules.Columns.Add("类型", 60);
             _lvRules.Columns.Add("名称", 120);
@@ -80,8 +79,7 @@ namespace Gdterm.UI.Controls
         {
             return new Button
             {
-                Text = text, Size = DpiScale.S(this, 75, 28), Location = DpiScale.P(this, x, 6),
-                FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Surface,
+                Text = text, Size = DpiScale.S(this, 75, 28), Location = DpiScale.P(this, x, 6), BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-0.5f)
             };
         }
@@ -113,7 +111,7 @@ namespace Gdterm.UI.Controls
                 FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false
             };
             var font = Services.FormFontPolicy.UiFont(); int y = 15;
-            var cmbType = new AntdUI.Select { Location = DpiScale.P(this, 110, y - 3), Size = DpiScale.S(this, 250, 25), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, FlatStyle = FlatStyle.Flat, Font = font };
+            var cmbType = new AntdUI.Select { Location = DpiScale.P(this, 110, y - 3), Size = DpiScale.S(this, 250, 25), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = font };
             cmbType.Items.AddRange(new object[] { "Local（本地转发）", "Remote（远程转发）", "Dynamic（SOCKS5）" });
             cmbType.SelectedIndex = 0;
             Lbl(form, "类型:", 15, y); form.Controls.Add(cmbType); y += 32;

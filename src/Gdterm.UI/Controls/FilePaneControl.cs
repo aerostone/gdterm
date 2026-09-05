@@ -93,8 +93,7 @@ namespace Gdterm.UI.Controls
                 MultiSelect = true,
                 HeaderStyle = ColumnHeaderStyle.Clickable,
                 BackColor = GdtermColorTable.Background,
-                ForeColor = GdtermColorTable.Foreground,
-                BorderStyle = BorderStyle.None,
+                ForeColor = GdtermColorTable.Foreground
                 Font = new Font("Consolas", 9.5f),
                 AllowDrop = true
             };

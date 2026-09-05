@@ -80,8 +80,7 @@ namespace Gdterm.UI.Controls
                 CheckBoxes = true,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", 8.5f),
-                BorderStyle = BorderStyle.None,
+                Font = new Font("Consolas", 8.5f)
                 FullRowSelect = true
             };
             _lvSessions.Columns.Add("会话", 200);
@@ -97,8 +96,7 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = new Font("Consolas", 9f),
-                ReadOnly = true,
-                BorderStyle = BorderStyle.None,
+                ReadOnly = true
                 WordWrap = false
             };
 

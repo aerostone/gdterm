@@ -86,8 +86,7 @@ namespace Gdterm.UI.Controls
                 Font = new Font("Consolas", 9f),
                 View = View.Details,
                 FullRowSelect = true,
-                GridLines = false,
-                BorderStyle = BorderStyle.None,
+                GridLines = false
                 MultiSelect = false
             };
             _lvFindings.Columns.Add("严重程度", 80);
@@ -229,7 +228,6 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = new Font("Consolas", 10f),
-                ScrollBars = ScrollBars.Vertical
             };
 
             Action refreshText = () =>

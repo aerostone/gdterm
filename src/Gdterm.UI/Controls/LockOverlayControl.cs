@@ -39,8 +39,7 @@ namespace Gdterm.UI.Controls
             _centerPanel = new Panel
             {
                 Size = DpiScale.S(this, 320, 170),
-                BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Surface,
-                BorderStyle = BorderStyle.FixedSingle
+                BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Surface
             };
             _centerPanel.Location = new Point(
                 (Width - _centerPanel.Width) / 2,

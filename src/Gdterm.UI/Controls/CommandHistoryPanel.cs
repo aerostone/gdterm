@@ -47,7 +47,7 @@ namespace Gdterm.UI.Controls
             _searchBox = new AntdUI.Input {
                 Size = DpiScale.S(this, 150, 23)
             };
-            WinFormsCompat.SetCueBanner(_searchBox, "搜索命令...");
+            _searchBox.PlaceholderText = "搜索命令...";
 
             _hostFilter = new AntdUI.Select {
                 Size = DpiScale.S(this, 120, 23),
@@ -118,7 +118,7 @@ namespace Gdterm.UI.Controls
                 query.CommandContains = _searchBox.Text;
 
             if (_hostFilter.SelectedIndex > 0)
-                query.Hostname = _hostFilter.SelectedItem as string;
+                query.Hostname = _hostFilter.SelectedValue as string;
 
             var entries = _store.Query(query);
 

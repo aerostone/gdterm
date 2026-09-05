@@ -18,7 +18,7 @@ namespace Gdterm.UI.Controls
         private readonly LogonScriptStore _store;
         private List<LogonScript> _scripts;
         private ListView _lvScripts;
-        private Button _btnAdd, _btnEdit, _btnDelete;
+        private AntdUI.Button _btnAdd, _btnEdit, _btnDelete;
 
         public LogonScriptPanel(LogonScriptStore store)
         {
@@ -48,8 +48,7 @@ namespace Gdterm.UI.Controls
                 FullRowSelect = true,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = Services.FormFontPolicy.UiFont(),
-                BorderStyle = BorderStyle.None
+                Font = Services.FormFontPolicy.UiFont()
             };
             _lvScripts.Columns.Add("名称", 120);
             _lvScripts.Columns.Add("步骤数", 60);
@@ -66,8 +65,7 @@ namespace Gdterm.UI.Controls
         {
             return new Button
             {
-                Text = text, Size = DpiScale.S(this, 75, 28), Location = DpiScale.P(this, x, 6),
-                FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Surface,
+                Text = text, Size = DpiScale.S(this, 75, 28), Location = DpiScale.P(this, x, 6), BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-0.5f)
             };
         }
@@ -155,7 +153,7 @@ namespace Gdterm.UI.Controls
                 Location = DpiScale.P(form, 100, y), Size = DpiScale.S(this, 410, 200),
                 View = View.Details, FullRowSelect = true,
                 BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", 8.5f), BorderStyle = BorderStyle.FixedSingle
+                Font = new Font("Consolas", 8.5f)
             };
             lvSteps.Columns.Add("类型", 60);
             lvSteps.Columns.Add("内容/关键词", 180);
@@ -231,7 +229,7 @@ namespace Gdterm.UI.Controls
                 FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false
             };
             var font = Services.FormFontPolicy.UiFont();
-            var cmbType = new AntdUI.Select { Location = DpiScale.P(this, 100, 12), Size = DpiScale.S(this, 220, 25), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, FlatStyle = FlatStyle.Flat, Font = font };
+            var cmbType = new AntdUI.Select { Location = DpiScale.P(this, 100, 12), Size = DpiScale.S(this, 220, 25), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = font };
             cmbType.Items.AddRange(new object[] { "Send（发送文本）", "Wait（等待关键词）", "Delay（延时）" });
             cmbType.SelectedIndex = 0;
             Lbl("类型:", 12, 15, form); form.Controls.Add(cmbType);

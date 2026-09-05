@@ -26,7 +26,7 @@ namespace Gdterm.UI.Controls
         // 右键点中的节点（ContextMenuStrip.Opening 读的），后后菜单设置选中
         private TreeNode _rightClickedNode;
         // 顶部搜索框（参考 Xshell/SecureCRT Session Manager filter bar）
-        private TextBox _filterBox;
+        private AntdUI.Input _filterBox;
         // 所有连接的原始列表（筛选时从它重建树）
         private List<ConnectionConfig> _allConnections;
         // auto-hide 状态：true=固定展开（默认）；false=收为窄边，悬停展开。
@@ -56,14 +56,13 @@ namespace Gdterm.UI.Controls
             // 顶部筛选框（输即过滤）-- Xshell/SecureCRT filter bar 风格。
             _filterBox = new TextBox
             {
-                Dock = DockStyle.Top,
-                BorderStyle = BorderStyle.FixedSingle,
+                Dock = DockStyle.Top
                 BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Surface,
                 ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Foreground,
                 Font = ResolveDefaultFont(),
                 Height = 24
             };
-            try { Gdterm.UI.Diagnostics.WinFormsCompat.SetCueBanner(_filterBox, "输入主机/名称/分组过滤…"); }
+            try { Gdterm.UI.Diagnostics._filterBox.PlaceholderText = "输入主机/名称/分组过滤…"; }
             catch { }
             _filterBox.TextChanged += (s, e) => ApplyFilter(_filterBox.Text);
 
@@ -73,8 +72,7 @@ namespace Gdterm.UI.Controls
                 ImageList = _imageList,
                 BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Background,
                 ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Foreground,
-                Font = ResolveDefaultFont(),
-                BorderStyle = BorderStyle.None,
+                Font = ResolveDefaultFont()
                 ShowLines = true,
                 ShowPlusMinus = true,
                 ShowRootLines = true,

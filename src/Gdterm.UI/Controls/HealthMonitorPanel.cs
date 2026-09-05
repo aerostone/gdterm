@@ -14,7 +14,7 @@ namespace Gdterm.UI.Controls
     public class HealthMonitorPanel : UserControl
     {
         private ConnectionHealthMonitor _monitor;
-        private Label _lblStatus, _lblUptime, _lblLatency, _lblReconnects;
+        private AntdUI.Label _lblStatus, _lblUptime, _lblLatency, _lblReconnects;
         private Panel _graphPanel;
         private readonly List<HealthSnapshot> _recent = new List<HealthSnapshot>();
         private System.Windows.Forms.Timer _refreshTimer;

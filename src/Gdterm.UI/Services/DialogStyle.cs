@@ -55,7 +55,7 @@ namespace Gdterm.UI.Services
         public static void MakePrimary(Button b)
         {
             if (b == null) return;
-            b.FlatStyle = FlatStyle.Flat;
+            b.;
             b.BackColor = GdtermColorTable.Accent;
             b.ForeColor = Color.Black; // 绿底黑字对比度最高（纯绿 #00FF41 上白字仅 ~1.4:1）
             EnsureButtonAutoSize(b);
@@ -65,7 +65,7 @@ namespace Gdterm.UI.Services
         public static void MakeSecondary(Button b)
         {
             if (b == null) return;
-            b.FlatStyle = FlatStyle.Flat;
+            b.;
             b.BackColor = GdtermColorTable.Surface;
             b.ForeColor = GdtermColorTable.Foreground;
             EnsureButtonAutoSize(b);
@@ -75,7 +75,7 @@ namespace Gdterm.UI.Services
         public static void MakeDanger(Button b)
         {
             if (b == null) return;
-            b.FlatStyle = FlatStyle.Flat;
+            b.;
             b.BackColor = Color.FromArgb(0xEF, 0x44, 0x44);
             b.ForeColor = Color.White;
             EnsureButtonAutoSize(b);
@@ -146,7 +146,7 @@ namespace Gdterm.UI.Services
             input.BackColor = GdtermColorTable.Surface;
             input.ForeColor = GdtermColorTable.Foreground;
             var tb = input as TextBoxBase;
-            if (tb != null) tb.BorderStyle = BorderStyle.FixedSingle;
+            if (tb != null) tb.;
         }
 
         /// <summary>分组标题——全局字号 +0.5 粗体。</summary>

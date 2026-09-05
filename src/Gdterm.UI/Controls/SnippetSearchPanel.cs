@@ -81,8 +81,7 @@ namespace Gdterm.UI.Controls
                 FullRowSelect = true,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = Services.FormFontPolicy.UiFont(),
-                BorderStyle = BorderStyle.None,
+                Font = Services.FormFontPolicy.UiFont()
                 HeaderStyle = ColumnHeaderStyle.None
             };
             _lvResults.Columns.Add("匹配结果", 600);

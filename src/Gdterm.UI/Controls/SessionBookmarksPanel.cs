@@ -154,8 +154,7 @@ namespace Gdterm.UI.Controls
                 MultiSelect = false,
                 HideSelection = false,
                 BackColor = GdtermColorTable.Surface,
-                ForeColor = Color.White,
-                BorderStyle = BorderStyle.None,
+                ForeColor = Color.White
                 HeaderStyle = ColumnHeaderStyle.Nonclickable,
                 Font = Services.FormFontPolicy.UiFont()
             };
@@ -167,7 +166,6 @@ namespace Gdterm.UI.Controls
             {
                 Text = text,
                 AutoSize = true,
-                FlatStyle = FlatStyle.Flat,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = Color.White,
                 Margin = new Padding(2),
@@ -307,7 +305,7 @@ namespace Gdterm.UI.Controls
                 dlg.AcceptButton = ok;
 
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
-                var selected = combo.SelectedItem as ConnItem;
+                var selected = combo.SelectedValue as ConnItem;
                 if (selected == null) return;
                 var name = string.IsNullOrWhiteSpace(nameBox.Text) ? selected.Config.Name : nameBox.Text.Trim();
                 var bm = new SessionBookmark

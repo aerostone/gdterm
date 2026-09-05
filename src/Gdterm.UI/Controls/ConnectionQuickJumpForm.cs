@@ -47,8 +47,7 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Fill,
                 BackColor = GdtermColorTable.Surface,
-                ForeColor = GdtermColorTable.Foreground,
-                BorderStyle = BorderStyle.None,
+                ForeColor = GdtermColorTable.Foreground
                 Font = new Font("Consolas", 10f),
                 IntegralHeight = false
             };
@@ -125,7 +124,7 @@ namespace Gdterm.UI.Controls
 
         private void AcceptSelection()
         {
-            var item = _list.SelectedItem as Item;
+            var item = _list.SelectedValue as Item;
             if (item == null && _list.Items.Count > 0) item = _list.Items[0] as Item;
             if (item == null) return;
             Selected = item.Config;

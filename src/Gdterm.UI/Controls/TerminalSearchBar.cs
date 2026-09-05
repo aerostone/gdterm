@@ -12,8 +12,8 @@ namespace Gdterm.UI.Controls
     public class TerminalSearchBar : Panel
     {
         private AntdUI.Input _txtSearch;
-        private CheckBox _chkRegex, _chkCase, _chkWholeWord;
-        private Button _btnPrev, _btnNext, _btnClose;
+        private AntdUI.Checkbox _chkRegex, _chkCase, _chkWholeWord;
+        private AntdUI.Button _btnPrev, _btnNext, _btnClose;
         private AntdUI.Label _lblCount;
 
         public event Action<string, bool, bool, bool> SearchRequested; // pattern, caseSensitive, regex, wholeWord

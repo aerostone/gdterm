@@ -260,14 +260,14 @@ namespace Gdterm.UI.Controls
         }
     }
 
-    /// <summary>Button 的 ToolTip 扩展（避免每个按钮创建独立 ToolTip 组件）。</summary>
+    /// <summary>控件的 ToolTip 扩展（避免每个控件创建独立 ToolTip 组件）。</summary>
     internal static class ButtonTipExtension
     {
         private static readonly ToolTip Tip = new ToolTip();
 
-        public static void ToolTipText2(this Button b, string text)
+        public static void ToolTipText2(this Control c, string text)
         {
-            Tip.SetToolTip(b, text);
+            Tip.SetToolTip(c, text);
         }
     }
 }

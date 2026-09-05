@@ -34,8 +34,7 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Fill,
                 BackColor = GdtermColorTable.Surface,
-                ForeColor = GdtermColorTable.Foreground,
-                BorderStyle = BorderStyle.None,
+                ForeColor = GdtermColorTable.Foreground
                 Font = new Font("Consolas", 9f),
                 IntegralHeight = false
             };

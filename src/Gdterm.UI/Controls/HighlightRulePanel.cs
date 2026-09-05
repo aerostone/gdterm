@@ -16,7 +16,7 @@ namespace Gdterm.UI.Controls
         private readonly HighlightStore _store;
         private HighlightRuleConfig _config;
         private ListView _lvRules;
-        private Button _btnAdd, _btnEdit, _btnDelete, _btnToggle;
+        private AntdUI.Button _btnAdd, _btnEdit, _btnDelete, _btnToggle;
 
         public event Action RulesChanged;
 
@@ -52,8 +52,7 @@ namespace Gdterm.UI.Controls
                 FullRowSelect = true,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = Services.FormFontPolicy.UiFont(),
-                BorderStyle = BorderStyle.None,
+                Font = Services.FormFontPolicy.UiFont()
                 GridLines = false
             };
             _lvRules.Columns.Add("名称", 120);
@@ -73,8 +72,7 @@ namespace Gdterm.UI.Controls
         {
             return new Button
             {
-                Text = text, Size = DpiScale.S(this, 70, 28), Location = DpiScale.P(this, x, 6),
-                FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Surface,
+                Text = text, Size = DpiScale.S(this, 70, 28), Location = DpiScale.P(this, x, 6), BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-0.5f)
             };
         }
@@ -174,8 +172,8 @@ namespace Gdterm.UI.Controls
             var lblName = Lbl("名称:", 15, y); var txtName = Txt(100, y, 285); y += 32;
             var lblPattern = Lbl("匹配模式:", 15, y); var txtPattern = Txt(100, y, 285); y += 32;
             var chkRegex = Chk("正则表达式", 100, y); var chkCase = Chk("区分大小写", 220, y); y += 28;
-            var lblFg = Lbl("前景色:", 15, y); var txtFg = Txt(100, y, 100); WinFormsCompat.SetCueBanner(txtFg, "#FF4444");
-            var lblBg = Lbl("背景色:", 220, y); var txtBg = Txt(290, y, 95); WinFormsCompat.SetCueBanner(txtBg, "#330000"); y += 32;
+            var lblFg = Lbl("前景色:", 15, y); var txtFg = Txt(100, y, 100); txtFg.PlaceholderText = "#FF4444";
+            var lblBg = Lbl("背景色:", 220, y); var txtBg = Txt(290, y, 95); txtBg.PlaceholderText = "#330000"; y += 32;
             var chkBold = Chk("加粗", 100, y); y += 40;
 
             if (existing != null)
