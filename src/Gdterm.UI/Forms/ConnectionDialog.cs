@@ -136,16 +136,16 @@ namespace Gdterm.UI.Forms
             basicLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
             _nameBox = AddRow(basicLayout, 0, "名称", new AntdUI.Input());
-            WinFormsCompat.SetCueBanner(_nameBox, "可选，留空则用 主机:端口");
+            _nameBox.PlaceholderText = "可选，留空则用 主机:端口";
             _protocolCombo = AddRow(basicLayout, 1, "协议", new AntdUI.Select());
             _protocolCombo.Items.AddRange(new object[] { "SSH", "RDP", "Serial" });
             _protocolCombo.SelectedIndexChanged += OnProtocolChanged;
             _hostBox = AddRow(basicLayout, 2, "主机", new AntdUI.Input());
-            WinFormsCompat.SetCueBanner(_hostBox, "IP 或主机名，如 192.168.1.10");
+            _hostBox.PlaceholderText = "IP 或主机名，如 192.168.1.10";
             _portBox = AddRow(basicLayout, 3, "端口", new AntdUI.InputNumber { Minimum = 1, Maximum = 65535, Value = 22 });
             _usernameBox = AddRow(basicLayout, 4, "用户名", new AntdUI.Input());
             _groupPathBox = AddRow(basicLayout, 5, "分组", new AntdUI.Input());
-            WinFormsCompat.SetCueBanner(_groupPathBox, "如: Web/生产");
+            _groupPathBox.PlaceholderText = "如: Web/生产";
             topPanel.Controls.Add(basicLayout);
 
             // ===== 凭据行（原独立标签页收为一行）=====
@@ -240,7 +240,7 @@ namespace Gdterm.UI.Forms
             rdpGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             // 域名仅 RDP 域账户有意义——从基本信息移到这里
             _domainBox = AddRow(rdpGrid, 0, "RDP域名", new AntdUI.Input());
-            WinFormsCompat.SetCueBanner(_domainBox, "域账户如 CONTOSO，普通账户留空");
+            _domainBox.PlaceholderText = "域账户如 CONTOSO，普通账户留空";
             var rdpChecks = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = true, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 4, 0, 4) };
             _rdpDriveCheck = new AntdUI.Checkbox { Text = "本地磁盘", AutoSize = true };
             _rdpClipboardCheck = new AntdUI.Checkbox { Text = "剪贴板", AutoSize = true, Checked = true };
@@ -269,7 +269,7 @@ namespace Gdterm.UI.Forms
             var lbPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 4) };
             lbPanel.Controls.Add(new AntdUI.Label { Text = "负载均衡:", AutoSize = true });
             _rdpLoadBalanceBox = new AntdUI.Input { Width = 230 };
-            WinFormsCompat.SetCueBanner(_rdpLoadBalanceBox, "如 Cookie: msts=NSFVERIFYHASH=... (选填)");
+            _rdpLoadBalanceBox.PlaceholderText = "如 Cookie: msts=NSFVERIFYHASH=... (选填)";
             lbPanel.Controls.Add(_rdpLoadBalanceBox);
             rdpGrid.Controls.Add(lbPanel, 1, 4);
             SectionContent(_secRdp, rdpGrid);

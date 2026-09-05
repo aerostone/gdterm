@@ -111,7 +111,7 @@ namespace Gdterm.UI.Forms
         {
             try
             {
-                var entries = _keepassService.ListEntries() ?? new System.Collections.Generic.List<KeePassEntry>();
+                var entries = _keepassService.ListEntries() ?? new System.Collections.Generic.List<KeePassEntrySummary>();
                 _entries.Clear();
                 var rows = new AntdUI.AntList<EntryRow>();
                 foreach (var entry in entries)
