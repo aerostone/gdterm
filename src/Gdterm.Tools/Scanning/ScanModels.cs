@@ -81,10 +81,13 @@ namespace Gdterm.Tools.Scanning
         /// </summary>
         public string VerifiedManifestSha256 { get; set; }
 
+        /// <summary>目录名回退标识（manifest 可用前即知，加载失败也保留）；Manifest.Id 的降级源。</summary>
+        public string RawId { get; set; }
+
         public bool IsRunnable { get { return LoadError == null && Manifest != null && Manifest.Enabled && File.Exists(ScriptPath); } }
 
-        public string DisplayName { get { return Manifest != null ? Manifest.Name : Id; } }
-        public string Id { get { return Manifest != null ? Manifest.Id : "(未知)"; } }
+        public string DisplayName { get { return Manifest != null ? Manifest.Name : (RawId ?? "(未知)"); } }
+        public string Id { get { return Manifest != null ? Manifest.Id : (RawId ?? "(未知)"); } }
 
         public string TargetSummary
         {

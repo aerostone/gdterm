@@ -149,6 +149,7 @@ namespace Gdterm.Tools.Scanning
                 return new ScanPlugin
                 {
                     Manifest = manifest,
+                    RawId = id,
                     ScriptPath = scriptPath,
                     Source = source,
                     LoadError = null,
@@ -165,7 +166,8 @@ namespace Gdterm.Tools.Scanning
 
         private static ScanPlugin BadPlugin(string id, ScanPluginManifest manifest, string source, string error)
         {
-            return new ScanPlugin { Manifest = manifest, Source = source, LoadError = error };
+            // RawId 保留目录名/清单 id：加载失败的插件也以稳定 key 出现在列表与去重逻辑中
+            return new ScanPlugin { Manifest = manifest, RawId = id, Source = source, LoadError = error };
         }
 
         // ===== 官方签名验证（RSA-3072 + SHA256，公钥钉死在程序集） =====
