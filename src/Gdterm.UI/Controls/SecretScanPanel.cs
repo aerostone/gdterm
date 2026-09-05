@@ -14,13 +14,13 @@ namespace Gdterm.UI.Controls
     {
         private readonly SecretScanner _scanner;
         private readonly ISecurityManager _security;
-        private readonly Label _lblScore;
-        private readonly Label _lblStats;
+        private readonly AntdUI.Label _lblScore;
+        private readonly AntdUI.Label _lblStats;
         private readonly ListView _lvFindings;
-        private readonly Button _btnScan;
-        private readonly Button _btnStop;
+        private readonly AntdUI.Button _btnScan;
+        private readonly AntdUI.Button _btnStop;
         private readonly ProgressBar _progress;
-        private readonly Label _lblStatus;
+        private readonly AntdUI.Label _lblStatus;
 
         public SecretScanPanel(SecretScanner scanner, ISecurityManager security = null)
         {
@@ -32,8 +32,7 @@ namespace Gdterm.UI.Controls
             // ── 顶部：安全评分 + 控制按钮 ──
             var topPanel = new Panel { Dock = DockStyle.Top, Height = 80, BackColor = GdtermColorTable.Surface, Padding = new Padding(15) };
 
-            _lblScore = new Label
-            {
+            _lblScore = new AntdUI.Label {
                 Text = "安全评分: --",
                 Font = Services.FormFontPolicy.UiFont(+11f, FontStyle.Bold),
                 ForeColor = GdtermColorTable.Success,
@@ -41,8 +40,7 @@ namespace Gdterm.UI.Controls
                 Location = DpiScale.P(this, 15, 15)
             };
 
-            _lblStats = new Label
-            {
+            _lblStats = new AntdUI.Label {
                 Text = "等待扫描...",
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = GdtermColorTable.Muted,
@@ -50,12 +48,10 @@ namespace Gdterm.UI.Controls
                 Location = DpiScale.P(this, 15, 55)
             };
 
-            _btnScan = new Button
-            {
+            _btnScan = new AntdUI.Button {
                 Text = "开始扫描",
                 Size = DpiScale.S(this, 100, 35),
                 Location = DpiScale.P(this, 500, 15),
-                FlatStyle = FlatStyle.Flat,
                 BackColor = GdtermColorTable.Accent,
                 ForeColor = Color.White,
                 Font = Services.FormFontPolicy.UiFont(),
@@ -64,12 +60,10 @@ namespace Gdterm.UI.Controls
             _btnScan.FlatAppearance.BorderSize = 0;
             _btnScan.Click += (s, e) => StartScan();
 
-            _btnStop = new Button
-            {
+            _btnStop = new AntdUI.Button {
                 Text = "停止",
                 Size = DpiScale.S(this, 70, 35),
                 Location = DpiScale.P(this, 610, 15),
-                FlatStyle = FlatStyle.Flat,
                 BackColor = GdtermColorTable.Danger,
                 ForeColor = Color.White,
                 Font = Services.FormFontPolicy.UiFont(),
@@ -109,8 +103,7 @@ namespace Gdterm.UI.Controls
 
             // ── 底部状态栏 ──
             var bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 25, BackColor = GdtermColorTable.Surface };
-            _lblStatus = new Label
-            {
+            _lblStatus = new AntdUI.Label {
                 Dock = DockStyle.Fill,
                 Font = Services.FormFontPolicy.UiFont(-1f),
                 ForeColor = GdtermColorTable.Muted,
@@ -231,8 +224,7 @@ namespace Gdterm.UI.Controls
             var matchDisplay = masked;
             var revealed = false;
 
-            var txt = new TextBox
-            {
+            var txt = new AntdUI.Input {
                 Dock = DockStyle.Fill,
                 Multiline = true,
                 ReadOnly = true,
@@ -259,8 +251,7 @@ namespace Gdterm.UI.Controls
 
             var bottom = new Panel { Dock = DockStyle.Bottom, Height = 40, BackColor = GdtermColorTable.Surface };
 
-            var btnReveal = new Button
-            {
+            var btnReveal = new AntdUI.Button {
                 Text = "显示明文",
                 Width = 100,
                 Height = 30,
@@ -268,7 +259,6 @@ namespace Gdterm.UI.Controls
                 Top = 5,
                 BackColor = GdtermColorTable.Hover,
                 ForeColor = GdtermColorTable.Foreground,
-                FlatStyle = FlatStyle.Flat
             };
             btnReveal.Click += (s2, e2) =>
             {
@@ -290,8 +280,7 @@ namespace Gdterm.UI.Controls
                 refreshText();
             };
 
-            var btnWhitelist = new Button
-            {
+            var btnWhitelist = new AntdUI.Button {
                 Text = "加入白名单",
                 Width = 100,
                 Height = 30,
@@ -299,7 +288,6 @@ namespace Gdterm.UI.Controls
                 Top = 5,
                 BackColor = GdtermColorTable.Hover,
                 ForeColor = GdtermColorTable.Foreground,
-                FlatStyle = FlatStyle.Flat
             };
             btnWhitelist.Click += (s2, e2) =>
             {

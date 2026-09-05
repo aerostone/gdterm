@@ -65,8 +65,7 @@ namespace Gdterm.UI.Controls
             Text = $"⚠️ 危险命令确认 - {levelText}";
 
             // 标题
-            _titleLabel = new AntdUI.Label
-            {
+            _titleLabel = new AntdUI.Label {
                 Text = $"{levelEmoji} {levelText} - 第 1/{_checkResult.ConfirmCount} 次确认",
                 Font = new Font(Font.FontFamily, Font.Size + 3f, FontStyle.Bold),
                 ForeColor = textColor,
@@ -77,8 +76,7 @@ namespace Gdterm.UI.Controls
             };
 
             // 命令显示（等宽语义例外，字号跟随全局）
-            _commandLabel = new AntdUI.Input
-            {
+            _commandLabel = new AntdUI.Input {
                 Text = _command,
                 Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 10f),
                 ReadOnly = true,
@@ -95,16 +93,14 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(15, 10, 15, 10)
             };
 
-            var ruleNameLabel = new AntdUI.Label
-            {
+            var ruleNameLabel = new AntdUI.Label {
                 Text = $"规则: {_checkResult.RuleName}  |  分类: {_checkResult.Category}",
                 ForeColor = textColor,
                 Dock = DockStyle.Top,
                 AutoSize = true
             };
 
-            _descriptionLabel = new AntdUI.Label
-            {
+            _descriptionLabel = new AntdUI.Label {
                 Text = _checkResult.Description,
                 ForeColor = textColor,
                 Dock = DockStyle.Fill,
@@ -116,8 +112,7 @@ namespace Gdterm.UI.Controls
             infoPanel.Controls.Add(ruleNameLabel);
 
             // 确认进度
-            _confirmLabel = new AntdUI.Label
-            {
+            _confirmLabel = new AntdUI.Label {
                 Text = GetConfirmText(),
                 Font = new Font(Font.FontFamily, Font.Size + 1.5f, FontStyle.Bold),
                 ForeColor = textColor,
@@ -137,8 +132,7 @@ namespace Gdterm.UI.Controls
             };
 
             // 记住选择
-            _rememberChoice = new AntdUI.Checkbox
-            {
+            _rememberChoice = new AntdUI.Checkbox {
                 Text = "记住此命令，下次不再警告（加入白名单）",
                 ForeColor = textColor,
                 Dock = DockStyle.Top,
@@ -155,16 +149,14 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(10, 8, 10, 8)
             };
 
-            _cancelButton = new AntdUI.Button
-            {
+            _cancelButton = new AntdUI.Button {
                 Text = "取消 (Esc)",
                 AutoSize = true,
                 Type = AntdUI.TTypeMini.Default
             };
             _cancelButton.Click += (s, e) => { IsConfirmed = false; DialogResult = DialogResult.Cancel; };
 
-            _confirmButton = new AntdUI.Button
-            {
+            _confirmButton = new AntdUI.Button {
                 Text = GetConfirmButtonText(),
                 AutoSize = true,
                 Font = new Font(Font.FontFamily, Font.Size + 0.5f, FontStyle.Bold),

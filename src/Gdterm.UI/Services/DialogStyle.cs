@@ -162,8 +162,7 @@ namespace Gdterm.UI.Services
         /// <summary>分组标题——全局字号 +0.5 粗体。</summary>
         public static Label GroupTitle(string text)
         {
-            var l = new Label
-            {
+            var l = new AntdUI.Label {
                 Text = text,
                 AutoSize = true,
                 ForeColor = GdtermColorTable.Foreground,

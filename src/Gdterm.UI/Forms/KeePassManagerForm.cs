@@ -71,8 +71,7 @@ namespace Gdterm.UI.Forms
             _entryTable.CellDoubleClick += OnEntryCellClick;   // 双击=复制密码
 
             // 状态栏
-            _statusLabel = new AntdUI.Label
-            {
+            _statusLabel = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
                 Height = 28,
                 Text = "就绪"
@@ -387,16 +386,14 @@ namespace Gdterm.UI.Forms
                 BackColor = GdtermColorTable.Background,
                 Padding = new Padding(0, 7, 15, 0)
             };
-            var okButton = new AntdUI.Button
-            {
+            var okButton = new AntdUI.Button {
                 Text = "确定",
                 AutoSize = true,
                 Type = AntdUI.TTypeMini.Primary,
                 Margin = new Padding(0)
             };
             okButton.Click += (s, e) => { DialogResult = DialogResult.OK; Close(); };
-            var cancelButton = new AntdUI.Button
-            {
+            var cancelButton = new AntdUI.Button {
                 Text = "取消",
                 AutoSize = true,
                 Type = AntdUI.TTypeMini.Default,
@@ -423,8 +420,7 @@ namespace Gdterm.UI.Forms
             _titleBox = AddField(grid, ref row, "标题：", new AntdUI.Input());
             _usernameBox = AddField(grid, ref row, "用户名：", new AntdUI.Input());
 
-            _passwordBox = new AntdUI.Input
-            {
+            _passwordBox = new AntdUI.Input {
                 Font = new Font("Consolas", 9.5f),   // 等宽语义
                 UseSystemPasswordChar = true
             };
@@ -432,8 +428,7 @@ namespace Gdterm.UI.Forms
             pwdCell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             pwdCell.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             pwdCell.Controls.Add(_passwordBox, 0, 0);
-            var btnShowPwd = new AntdUI.Button
-            {
+            var btnShowPwd = new AntdUI.Button {
                 Text = "显示",
                 AutoSize = true,
                 Type = AntdUI.TTypeMini.Default,
@@ -452,15 +447,13 @@ namespace Gdterm.UI.Forms
             _hostBox = AddField(grid, ref row, "主机：", new AntdUI.Input());
             _protocolBox = AddField(grid, ref row, "协议：", new AntdUI.Input());
             if (string.IsNullOrEmpty(_protocolBox.Text)) _protocolBox.Text = "SSH";
-            _portBox = AddField(grid, ref row, "端口：", new AntdUI.InputNumber
-            {
+            _portBox = AddField(grid, ref row, "端口：", new AntdUI.InputNumber {
                 Minimum = 0,
                 Maximum = 65535,
                 Value = 22
             });
             _autoTypeBox = AddField(grid, ref row, "AutoType：", new AntdUI.Input());
-            _notesBox = new AntdUI.Input
-            {
+            _notesBox = new AntdUI.Input {
                 Multiline = true,
                 Height = 64,
                 Dock = DockStyle.Fill,
@@ -479,8 +472,7 @@ namespace Gdterm.UI.Forms
 
         private static void AddLabel(TableLayoutPanel grid, int row, string text)
         {
-            grid.Controls.Add(new AntdUI.Label
-            {
+            grid.Controls.Add(new AntdUI.Label {
                 Text = text,
                 AutoSize = true,
                 Anchor = AnchorStyles.Left,

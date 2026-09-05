@@ -79,14 +79,12 @@ namespace Gdterm.UI.Forms
                 Padding = new Padding(8, 8, 8, 0),
                 WrapContents = false
             };
-            top.Controls.Add(new AntdUI.Label
-            {
+            top.Controls.Add(new AntdUI.Label {
                 Text = "目标:",
                 AutoSize = true,
                 Margin = new Padding(3, 8, 4, 0)
             });
-            _targetCombo = new AntdUI.Select
-            {
+            _targetCombo = new AntdUI.Select {
                 Width = 250
             };
             _targetCombo.Items.Add("本机（Windows）");
@@ -108,8 +106,7 @@ namespace Gdterm.UI.Forms
             _openFolderButton.Click += OnOpenPluginsFolder;
             top.Controls.Add(_openFolderButton);
 
-            _hotStateLabel = new AntdUI.Label
-            {
+            _hotStateLabel = new AntdUI.Label {
                 Text = "",
                 AutoSize = true,
                 ForeColor = GdtermColorTable.Success,
@@ -143,8 +140,7 @@ namespace Gdterm.UI.Forms
             _pluginTable.CheckedChanged += (s, ev) => UpdateRunButtonState();
             _pluginTable.CellDoubleClick += (s, ev) => { if (!_running && SelectedRunnablePlugins().Count > 0) OnRunClicked(null, null); };
             pluginPanel.Controls.Add(_pluginTable);
-            var pluginHint = new AntdUI.Label
-            {
+            var pluginHint = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
                 Height = 20,
                 Text = "提示：双击运行；在 插件目录 增删改脚本即热更新（无需重启）",
@@ -172,8 +168,7 @@ namespace Gdterm.UI.Forms
             _findingTable.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left));
             _findingTable.Columns.Add(new AntdUI.Column("Detail", "详情", AntdUI.ColumnAlign.Left));
             findingPanel.Controls.Add(_findingTable);
-            var findingHeader = new AntdUI.Label
-            {
+            var findingHeader = new AntdUI.Label {
                 Dock = DockStyle.Top,
                 Height = 24,
                 Text = "发现（0）",
@@ -185,8 +180,7 @@ namespace Gdterm.UI.Forms
             rightSplit.Panel1.Controls.Add(findingPanel);
 
             var rawPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 8, 8, 8) };
-            _rawOutput = new AntdUI.Input
-            {
+            _rawOutput = new AntdUI.Input {
                 Dock = DockStyle.Fill,
                 Multiline = true,
                 ReadOnly = true,
@@ -298,8 +292,7 @@ namespace Gdterm.UI.Forms
             flow.Controls.Add(new AntdUI.Label { Text = "密码:", AutoSize = true, Margin = new Padding(10, 9, 4, 0) });
             _wmiPass = new AntdUI.Input { Width = 140, UseSystemPasswordChar = true };
             flow.Controls.Add(_wmiPass);
-            flow.Controls.Add(new AntdUI.Label
-            {
+            flow.Controls.Add(new AntdUI.Label {
                 Text = "留空凭据=用当前身份；域账号格式 DOMAIN\\user；需目标管理员权限 + ADMIN$ 共享",
                 AutoSize = true,
                 ForeColor = SystemColors.GrayText,

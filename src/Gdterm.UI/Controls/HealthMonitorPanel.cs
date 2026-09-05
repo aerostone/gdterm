@@ -81,8 +81,7 @@ namespace Gdterm.UI.Controls
 
         private Label CreateCard(string title, string value, int x, Color valueColor)
         {
-            var lbl = new Label
-            {
+            var lbl = new AntdUI.Label {
                 Location = DpiScale.P(this, x, 6),
                 AutoSize = false,
                 Size = DpiScale.S(this, 140, 65),

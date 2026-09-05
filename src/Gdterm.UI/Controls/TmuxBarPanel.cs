@@ -21,7 +21,7 @@ namespace Gdterm.UI.Controls
         private string _prefix = "\u0002"; // C-b 默认
         private FlowLayoutPanel _row1;
         private FlowLayoutPanel _row2;
-        private ComboBox _prefixBox;
+        private AntdUI.Select _prefixBox;
 
         /// <summary>面板发送的原始字节（含前缀）已进入终端时触发（用于审计/调试）。</summary>
         public event Action<string> RawSent;
@@ -140,19 +140,15 @@ namespace Gdterm.UI.Controls
                 Width = 70,
                 BackColor = GdtermColorTable.Surface
             };
-            var prefixLabel = new Label
-            {
+            var prefixLabel = new AntdUI.Label {
                 Text = "前缀",
                 AutoSize = true,
                 Location = new Point(8, 6),
                 ForeColor = GdtermColorTable.Muted
             };
-            _prefixBox = new ComboBox
-            {
+            _prefixBox = new AntdUI.Select {
                 Location = new Point(6, 26),
                 Size = new Size(56, 21),
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                FlatStyle = FlatStyle.Flat,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = new Font("Consolas", 9f)
@@ -210,8 +206,7 @@ namespace Gdterm.UI.Controls
                 row.Controls.Add(MakeSeparator());
 
             // 分组标签（竖排文字太挤，用小号灰色标签）
-            var tag = new Label
-            {
+            var tag = new AntdUI.Label {
                 Text = g.Name,
                 AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
@@ -223,11 +218,9 @@ namespace Gdterm.UI.Controls
 
             foreach (var k in g.Keys)
             {
-                var b = new Button
-                {
+                var b = new AntdUI.Button {
                     Text = k.Label,
                     AutoSize = true,
-                    FlatStyle = FlatStyle.Flat,
                     BackColor = GdtermColorTable.Background,
                     ForeColor = GdtermColorTable.Foreground,
                     Font = Services.FormFontPolicy.UiFont(-0.75f),

@@ -14,11 +14,11 @@ namespace Gdterm.UI.Controls
     {
         private readonly MultiChannelManager _manager;
         private ListView _sessionList;
-        private Button _btnSelectAll;
-        private Button _btnDeselectAll;
-        private Button _btnBroadcast;
-        private Label _statusLabel;
-        private TextBox _commandInput;
+        private AntdUI.Button _btnSelectAll;
+        private AntdUI.Button _btnDeselectAll;
+        private AntdUI.Button _btnBroadcast;
+        private AntdUI.Label _statusLabel;
+        private AntdUI.Input _commandInput;
         private EventHandler<ChannelSessionEventArgs> _onSessionRegistered;
         private EventHandler<ChannelSessionEventArgs> _onSessionUnregistered;
         private EventHandler<BroadcastStateChangedEventArgs> _onBroadcastStateChanged;
@@ -49,9 +49,9 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(3)
             };
 
-            _btnSelectAll = new Button { Text = "全选就绪", Size = DpiScale.S(this, 70, 25), FlatStyle = FlatStyle.Flat };
-            _btnDeselectAll = new Button { Text = "取消", Size = DpiScale.S(this, 50, 25), FlatStyle = FlatStyle.Flat };
-            _btnBroadcast = new Button { Text = "广播", Size = DpiScale.S(this, 60, 25), FlatStyle = FlatStyle.Flat, Enabled = false };
+            _btnSelectAll = new AntdUI.Button { Text = "全选就绪", Size = DpiScale.S(this, 70, 25), FlatStyle = FlatStyle.Flat };
+            _btnDeselectAll = new AntdUI.Button { Text = "取消", Size = DpiScale.S(this, 50, 25), FlatStyle = FlatStyle.Flat };
+            _btnBroadcast = new AntdUI.Button { Text = "广播", Size = DpiScale.S(this, 60, 25), FlatStyle = FlatStyle.Flat, Enabled = false };
 
             toolbar.Controls.AddRange(new Control[] { _btnSelectAll, _btnDeselectAll, _btnBroadcast });
 
@@ -78,15 +78,13 @@ namespace Gdterm.UI.Controls
                 Height = 60
             };
 
-            _commandInput = new TextBox
-            {
+            _commandInput = new AntdUI.Input {
                 Dock = DockStyle.Top,
                 Height = 25,
                 Font = new Font("Consolas", 9f)
             };
 
-            var inputHint = new Label
-            {
+            var inputHint = new AntdUI.Label {
                 Dock = DockStyle.Fill,
                 Text = "输入命令后按 Enter 广播到所有选中会话",
                 ForeColor = SystemColors.GrayText,
@@ -97,8 +95,7 @@ namespace Gdterm.UI.Controls
             inputPanel.Controls.Add(_commandInput);
 
             // 状态栏
-            _statusLabel = new Label
-            {
+            _statusLabel = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
                 Height = 20,
                 Text = "就绪",

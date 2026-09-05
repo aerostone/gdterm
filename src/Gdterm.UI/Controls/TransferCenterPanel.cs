@@ -22,8 +22,7 @@ namespace Gdterm.UI.Controls
             BackColor = GdtermColorTable.Background;
             ForeColor = GdtermColorTable.Foreground;
 
-            var title = new Label
-            {
+            var title = new AntdUI.Label {
                 Text = "传输中心",
                 Dock = DockStyle.Top,
                 Height = 28,
@@ -40,8 +39,7 @@ namespace Gdterm.UI.Controls
                 Font = new Font("Consolas", 9f),
                 IntegralHeight = false
             };
-            var tip = new Label
-            {
+            var tip = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
                 Height = 22,
                 Text = "上传/下载完成后会出现在此列表",

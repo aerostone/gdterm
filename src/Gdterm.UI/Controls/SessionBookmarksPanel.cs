@@ -18,8 +18,8 @@ namespace Gdterm.UI.Controls
         private readonly IConnectionStore _connectionStore;
         private ListView _bookmarksList;
         private ListView _recentList;
-        private TextBox _searchBox;
-        private Label _statusLabel;
+        private AntdUI.Input _searchBox;
+        private AntdUI.Label _statusLabel;
 
         /// <summary>请求打开连接（ConnectionId）</summary>
         public event Action<ConnectionConfig> OpenConnectionRequested;
@@ -37,8 +37,7 @@ namespace Gdterm.UI.Controls
             BackColor = GdtermColorTable.Background;
             Dock = DockStyle.Fill;
 
-            var title = new Label
-            {
+            var title = new AntdUI.Label {
                 Text = "书签 / 最近连接",
                 Dock = DockStyle.Top,
                 Height = 28,
@@ -48,13 +47,11 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(8, 0, 0, 0)
             };
 
-            _searchBox = new TextBox
-            {
+            _searchBox = new AntdUI.Input {
                 Dock = DockStyle.Top,
                 Height = 24,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle
             };
             _searchBox.TextChanged += (s, e) => FilterBookmarks();
 
@@ -75,8 +72,7 @@ namespace Gdterm.UI.Controls
             refreshBtn.Click += (s, e) => Reload();
             toolbar.Controls.AddRange(new Control[] { addBtn, delBtn, favBtn, refreshBtn });
 
-            _statusLabel = new Label
-            {
+            _statusLabel = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
                 Height = 22,
                 ForeColor = GdtermColorTable.Muted,
@@ -106,8 +102,7 @@ namespace Gdterm.UI.Controls
             };
 
             var bmHost = new Panel { Dock = DockStyle.Fill };
-            var bmLabel = new Label
-            {
+            var bmLabel = new AntdUI.Label {
                 Text = "收藏书签",
                 Dock = DockStyle.Top,
                 Height = 20,
@@ -125,8 +120,7 @@ namespace Gdterm.UI.Controls
             _recentList.DoubleClick += (s, e) => OpenSelectedRecent();
 
             var recentHost = new Panel { Dock = DockStyle.Fill };
-            var recentLabel = new Label
-            {
+            var recentLabel = new AntdUI.Label {
                 Text = "最近连接",
                 Dock = DockStyle.Top,
                 Height = 20,
@@ -281,18 +275,15 @@ namespace Gdterm.UI.Controls
                 dlg.MinimizeBox = false;
                 dlg.BackColor = GdtermColorTable.Surface;
 
-                var nameBox = new TextBox
-                {
+                var nameBox = new AntdUI.Input {
                     Location = DpiScale.P(this, 15, 20),
                     Size = DpiScale.S(this, 310, 24),
                     BackColor = GdtermColorTable.Surface,
                     ForeColor = Color.White
                 };
-                var combo = new ComboBox
-                {
+                var combo = new AntdUI.Select {
                     Location = DpiScale.P(this, 15, 55),
                     Size = DpiScale.S(this, 310, 24),
-                    DropDownStyle = ComboBoxStyle.DropDownList,
                     BackColor = GdtermColorTable.Surface,
                     ForeColor = Color.White
                 };
@@ -300,13 +291,11 @@ namespace Gdterm.UI.Controls
                     combo.Items.Add(new ConnItem(c));
                 if (combo.Items.Count > 0) combo.SelectedIndex = 0;
 
-                var ok = new Button
-                {
+                var ok = new AntdUI.Button {
                     Text = "确定",
                     DialogResult = DialogResult.OK,
                     Location = DpiScale.P(this, 245, 110),
                     Size = DpiScale.S(this, 80, 28),
-                    FlatStyle = FlatStyle.Flat,
                     BackColor = GdtermColorTable.Accent,
                     ForeColor = Color.White
                 };

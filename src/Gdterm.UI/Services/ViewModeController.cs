@@ -23,7 +23,7 @@ namespace Gdterm.UI.Services
         private readonly ToolStripMenuItem _viewFocusItem;
         private readonly ToolStripMenuItem _viewCompactItem;
         private readonly Control _host;
-        private Button _exitFocusButton;
+        private AntdUI.Button _exitFocusButton;
         private bool _tmuxBarWasVisible;
 
         private ViewMode _current = ViewMode.Standard;
@@ -56,11 +56,9 @@ namespace Gdterm.UI.Services
         private void EnsureExitButton()
         {
             if (_host == null || _exitFocusButton != null) return;
-            _exitFocusButton = new Button
-            {
+            _exitFocusButton = new AntdUI.Button {
                 Text = "退出专注 (Esc/F11)",
                 AutoSize = true,
-                FlatStyle = FlatStyle.Flat,
                 BackColor = GdtermColorTable.Accent,
                 ForeColor = Color.White,
                 Font = Services.FormFontPolicy.UiFont(0f, FontStyle.Bold),

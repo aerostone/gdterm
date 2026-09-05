@@ -48,16 +48,14 @@ namespace Gdterm.UI.Forms
                 Padding = new Padding(15, 10, 15, 5)
             };
 
-            _scoreLabel = new AntdUI.Label
-            {
+            _scoreLabel = new AntdUI.Label {
                 Text = "健康评分：—",
                 Font = Services.FormFontPolicy.UiFont(+9f, FontStyle.Bold),
                 Location = DpiScale.P(this, 15, 10),
                 Size = DpiScale.S(this, 250, 40)
             };
 
-            _summaryLabel = new AntdUI.Label
-            {
+            _summaryLabel = new AntdUI.Label {
                 Text = "正在分析...",
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 Location = DpiScale.P(this, 15, 48),

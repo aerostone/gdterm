@@ -34,8 +34,7 @@ namespace Gdterm.UI.Controls
             KeyPreview = true;
             ShowInTaskbar = false;
 
-            _filter = new AntdUI.Input
-            {
+            _filter = new AntdUI.Input {
                 Dock = DockStyle.Top,
                 PlaceholderText = "输入名称 / 主机 / 分组…",
                 AllowClear = true,

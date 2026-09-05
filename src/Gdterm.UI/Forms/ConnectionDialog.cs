@@ -155,8 +155,7 @@ namespace Gdterm.UI.Forms
             credRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             // 隐藏的 UUID 存储框（不入布局，仅作保存时读取的存储）
             _credentialRefBox = new AntdUI.Input { Visible = false, Enabled = false };
-            credRow.Controls.Add(new AntdUI.Label
-            {
+            credRow.Controls.Add(new AntdUI.Label {
                 Text = "凭据",
                 AutoSize = false,
                 Dock = DockStyle.Fill,
@@ -164,8 +163,7 @@ namespace Gdterm.UI.Forms
                 Padding = new Padding(0, 0, 8, 0),
                 Height = 30
             }, 0, 0);
-            _credentialTitleLabel = new AntdUI.Label
-            {
+            _credentialTitleLabel = new AntdUI.Label {
                 Text = "未选（按主机+用户名自动匹配）",
                 ForeColor = GdtermColorTable.Muted,
                 AutoSize = false,
@@ -175,16 +173,14 @@ namespace Gdterm.UI.Forms
             };
             credRow.Controls.Add(_credentialTitleLabel, 1, 0);
             var credBtns = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = false, AutoSize = true };
-            var btnPickCred = new AntdUI.Button
-            {
+            var btnPickCred = new AntdUI.Button {
                 Text = "选择凭据...",
                 Type = AntdUI.TTypeMini.Primary,
                 AutoSize = true,
                 Margin = new Padding(0, 2, 6, 0)
             };
             btnPickCred.Click += OnPickCredential;
-            var btnClearCred = new AntdUI.Button
-            {
+            var btnClearCred = new AntdUI.Button {
                 Text = "清除",
                 Type = AntdUI.TTypeMini.Default,
                 AutoSize = true,
@@ -299,8 +295,7 @@ namespace Gdterm.UI.Forms
 
             // --- 备注 ---
             var notesSec = MakeSection("备注");
-            _notesBox = new AntdUI.Input
-            {
+            _notesBox = new AntdUI.Input {
                 Multiline = true,
                 Width = 512,
                 Height = 56,
@@ -326,15 +321,13 @@ namespace Gdterm.UI.Forms
                 BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(0, 7, 16, 0)
             };
-            var okBtn = new AntdUI.Button
-            {
+            var okBtn = new AntdUI.Button {
                 Text = _isNew ? "创建" : "保存",
                 Type = AntdUI.TTypeMini.Primary,
                 Size = DpiScale.S(this, 80, 34),
                 Margin = new Padding(0)
             };
-            var cancelBtn = new AntdUI.Button
-            {
+            var cancelBtn = new AntdUI.Button {
                 Text = "取消",
                 Type = AntdUI.TTypeMini.Default,
                 Size = DpiScale.S(this, 80, 34),
@@ -370,8 +363,7 @@ namespace Gdterm.UI.Forms
             t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            t.Controls.Add(new AntdUI.Label
-            {
+            t.Controls.Add(new AntdUI.Label {
                 Text = title,
                 AutoSize = true,
                 Font = Services.FormFontPolicy.UiFont(0f, FontStyle.Bold),
@@ -466,8 +458,7 @@ namespace Gdterm.UI.Forms
             var text = label ?? "";
             if (text.EndsWith(":") || text.EndsWith("："))
                 text = text.TrimEnd(':', '：');
-            layout.Controls.Add(new AntdUI.Label
-            {
+            layout.Controls.Add(new AntdUI.Label {
                 Text = text,
                 AutoSize = false,
                 Dock = DockStyle.Fill,

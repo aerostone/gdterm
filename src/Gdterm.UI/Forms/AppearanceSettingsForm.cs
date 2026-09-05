@@ -143,8 +143,7 @@ namespace Gdterm.UI.Forms
             y += rowH;
 
             // —— DPI ——
-            _dpiAwareCheck = new AntdUI.Checkbox
-            {
+            _dpiAwareCheck = new AntdUI.Checkbox {
                 Text = "启用 DPI 感知（需重启，减轻菜单模糊）",
                 Location = new Point(colLabel, y),
                 AutoSize = true,
@@ -154,8 +153,7 @@ namespace Gdterm.UI.Forms
             y += rowH + 2;
 
             // —— 预览（ReadOnly Input 展示）——
-            _preview = new AntdUI.Input
-            {
+            _preview = new AntdUI.Input {
                 Text = "AaBbCc 0123 预览 Preview",
                 Location = new Point(colLabel, y),
                 Size = new Size(520 - pad * 2, 64),
@@ -166,8 +164,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(_preview);
             y += 78;
 
-            var resetHint = new AntdUI.Label
-            {
+            var resetHint = new AntdUI.Label {
                 Text = "字体或界面错乱时，点「恢复默认」一键还原全部外观设置",
                 AutoSize = true,
                 Location = new Point(colLabel, y)
@@ -212,8 +209,7 @@ namespace Gdterm.UI.Forms
 
         private AntdUI.InputNumber MakeNumber(int min, int max, int value)
         {
-            return new AntdUI.InputNumber
-            {
+            return new AntdUI.InputNumber {
                 Size = new Size(86, 38),
                 Minimum = min,
                 Maximum = max,

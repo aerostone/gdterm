@@ -43,8 +43,7 @@ namespace Gdterm.UI.Forms
             int y = 24;
 
             // ── 标题区 ──
-            var title = new AntdUI.Label
-            {
+            var title = new AntdUI.Label {
                 Text = "🔐 密码库已锁定",
                 Font = new Font("Segoe UI Emoji", 14F, FontStyle.Bold),
                 AutoSize = true,
@@ -53,8 +52,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(title);
             y += 44;
 
-            var status = new AntdUI.Label
-            {
+            var status = new AntdUI.Label {
                 Text = "请输入主密码以解锁 KeePass 密码库",
                 AutoSize = true,
                 Location = new Point(pad, y)
@@ -63,8 +61,7 @@ namespace Gdterm.UI.Forms
             y += 40;
 
             // ── 密码输入（AntdUI.Input：占位符/清除钮/回车提交）──
-            _passwordBox = new AntdUI.Input
-            {
+            _passwordBox = new AntdUI.Input {
                 Location = new Point(pad, y),
                 Size = new Size(440 - pad * 2, 38),
                 PlaceholderText = "主密码",
@@ -78,8 +75,7 @@ namespace Gdterm.UI.Forms
             y += 54;
 
             // ── 按钮行：取消（次）+ 解锁（主，绿）──
-            _cancelButton = new AntdUI.Button
-            {
+            _cancelButton = new AntdUI.Button {
                 Text = "取消",
                 Size = new Size(96, 38),
                 Location = new Point(440 - pad - 96 - 12 - 96, y),
@@ -88,8 +84,7 @@ namespace Gdterm.UI.Forms
             _cancelButton.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
             Controls.Add(_cancelButton);
 
-            _unlockButton = new AntdUI.Button
-            {
+            _unlockButton = new AntdUI.Button {
                 Text = "解锁",
                 Size = new Size(96, 38),
                 Location = new Point(440 - pad - 96, y),

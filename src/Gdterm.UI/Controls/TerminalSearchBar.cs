@@ -11,10 +11,10 @@ namespace Gdterm.UI.Controls
     /// </summary>
     public class TerminalSearchBar : Panel
     {
-        private TextBox _txtSearch;
+        private AntdUI.Input _txtSearch;
         private CheckBox _chkRegex, _chkCase, _chkWholeWord;
         private Button _btnPrev, _btnNext, _btnClose;
-        private Label _lblCount;
+        private AntdUI.Label _lblCount;
 
         public event Action<string, bool, bool, bool> SearchRequested; // pattern, caseSensitive, regex, wholeWord
         public event Action<bool> NavigateRequested; // true=next, false=prev
@@ -41,13 +41,11 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(0)
             };
 
-            _txtSearch = new TextBox
-            {
+            _txtSearch = new AntdUI.Input {
                 Width = DpiScale.V(this, 250),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f),
-                BorderStyle = BorderStyle.FixedSingle,
                 Margin = new Padding(0, 2, DpiScale.V(this, 6), 0)
             };
             _txtSearch.KeyDown += (s, e) =>
@@ -66,8 +64,7 @@ namespace Gdterm.UI.Controls
             _btnClose = CreateBtn("✕", "关闭 (Esc)");
             _btnClose.ForeColor = GdtermColorTable.Muted;
 
-            _lblCount = new Label
-            {
+            _lblCount = new AntdUI.Label {
                 Text = "",
                 AutoSize = true,
                 Margin = new Padding(DpiScale.V(this, 8), 6, 3, 0),
@@ -84,8 +81,7 @@ namespace Gdterm.UI.Controls
 
         private CheckBox CreateChk(string text, string tip)
         {
-            var chk = new CheckBox
-            {
+            var chk = new AntdUI.Checkbox {
                 Text = text,
                 AutoSize = true,
                 // 等宽语义例外：Aa/.*/W 为正则记号，字号相对当前字体缩小一号（规范规则③）
@@ -100,13 +96,11 @@ namespace Gdterm.UI.Controls
 
         private Button CreateBtn(string text, string tip)
         {
-            var btn = new Button
-            {
+            var btn = new AntdUI.Button {
                 Text = text,
                 AutoSize = true,
                 Padding = new Padding(1, 0, 1, 0),
                 MinimumSize = new Size(DpiScale.V(this, 26), DpiScale.V(this, 24)),
-                FlatStyle = FlatStyle.Flat,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground
             };

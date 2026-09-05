@@ -16,7 +16,7 @@ namespace Gdterm.UI.Controls
         private const int Max = 200;
 
         private readonly ListBox _list;
-        private readonly Button _clear;
+        private readonly AntdUI.Button _clear;
 
         public NotificationCenterPanel()
         {
@@ -24,12 +24,10 @@ namespace Gdterm.UI.Controls
             BackColor = GdtermColorTable.Background;
             ForeColor = GdtermColorTable.Foreground;
 
-            _clear = new Button
-            {
+            _clear = new AntdUI.Button {
                 Text = "清空",
                 Dock = DockStyle.Bottom,
                 Height = 28,
-                FlatStyle = FlatStyle.Flat,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground
             };
@@ -50,8 +48,7 @@ namespace Gdterm.UI.Controls
                 IntegralHeight = false
             };
 
-            var title = new Label
-            {
+            var title = new AntdUI.Label {
                 Text = "通知中心",
                 Dock = DockStyle.Top,
                 Height = 28,

@@ -16,9 +16,9 @@ namespace Gdterm.UI.Controls
     /// </summary>
     public class SnippetSearchPanel : Panel
     {
-        private TextBox _txtSearch;
+        private AntdUI.Input _txtSearch;
         private ListView _lvResults;
-        private Label _lblHint;
+        private AntdUI.Label _lblHint;
         private readonly List<QuickCommand> _commands;
         private List<QuickCommand> _filtered;
         private ITerminalSession _activeSession;
@@ -52,21 +52,18 @@ namespace Gdterm.UI.Controls
         private void BuildUI()
         {
             // 搜索框
-            _txtSearch = new TextBox
-            {
+            _txtSearch = new AntdUI.Input {
                 Dock = DockStyle.Top,
                 Height = 32,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = new Font("Consolas", 11f),
-                BorderStyle = BorderStyle.FixedSingle
             };
             _txtSearch.TextChanged += (s, e) => FilterResults();
             _txtSearch.KeyDown += OnSearchKeyDown;
 
             // 提示
-            _lblHint = new Label
-            {
+            _lblHint = new AntdUI.Label {
                 Text = "输入关键词搜索快捷命令 | Enter 执行 | Esc 关闭",
                 Dock = DockStyle.Top,
                 Height = 22,
@@ -235,15 +232,15 @@ namespace Gdterm.UI.Controls
             int y = 15;
             foreach (var ph in placeholders)
             {
-                var lbl = new Label { Text = ph + ":", Location = new Point(15, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground };
-                var txt = new TextBox { Location = DpiScale.P(form, 100, y), Size = DpiScale.S(form, 260, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
+                var lbl = new AntdUI.Label { Text = ph + ":", Location = new Point(15, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground };
+                var txt = new AntdUI.Input { Location = DpiScale.P(form, 100, y), Size = DpiScale.S(form, 260, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
                 form.Controls.AddRange(new Control[] { lbl, txt });
                 inputs[ph] = txt;
                 y += 36;
             }
 
-            var btnOk = new Button { Text = "执行", Size = DpiScale.S(form, 80, 28), Location = DpiScale.P(form, 190, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Accent, ForeColor = Color.White };
-            var btnCancel = new Button { Text = "取消", Size = DpiScale.S(form, 80, 28), Location = DpiScale.P(form, 280, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
+            var btnOk = new AntdUI.Button { Text = "执行", Size = DpiScale.S(form, 80, 28), Location = DpiScale.P(form, 190, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Accent, ForeColor = Color.White };
+            var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(form, 80, 28), Location = DpiScale.P(form, 280, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
 

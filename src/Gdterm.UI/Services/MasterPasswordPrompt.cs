@@ -35,38 +35,32 @@ namespace Gdterm.UI.Services
                 dialog.MinimizeBox = false;
                 dialog.BackColor = GdtermColorTable.Surface;
 
-                var label = new Label
-                {
+                var label = new AntdUI.Label {
                     Text = (action ?? "操作") + "需要验证主密码：",
                     Font = Services.FormFontPolicy.UiFont(+1f),
                     ForeColor = GdtermColorTable.Foreground,
                     Location = DpiScale.P(dialog, 15, 15),
                     Size = DpiScale.S(dialog, 340, 25)
                 };
-                var pwdBox = new TextBox
-                {
+                var pwdBox = new AntdUI.Input {
                     Location = DpiScale.P(dialog, 15, 45),
                     Size = DpiScale.S(dialog, 335, 28),
                     Font = new Font("Consolas", DpiScale.Factor(dialog) * 11f),
                     UseSystemPasswordChar = true,
                     BackColor = GdtermColorTable.Surface,
                     ForeColor = Color.White,
-                    BorderStyle = BorderStyle.FixedSingle
                 };
-                var errorLabel = new Label
-                {
+                var errorLabel = new AntdUI.Label {
                     Text = "",
                     Font = Services.FormFontPolicy.UiFont(),
                     ForeColor = GdtermColorTable.Danger,
                     Location = DpiScale.P(dialog, 15, 78),
                     Size = DpiScale.S(dialog, 335, 20)
                 };
-                var okBtn = new Button
-                {
+                var okBtn = new AntdUI.Button {
                     Text = "验证",
                     Size = DpiScale.S(dialog, 80, 32),
                     Location = DpiScale.P(dialog, 270, 105),
-                    FlatStyle = FlatStyle.Flat,
                     BackColor = GdtermColorTable.Accent,
                     ForeColor = Color.White
                 };

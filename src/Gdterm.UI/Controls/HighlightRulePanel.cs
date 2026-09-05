@@ -189,8 +189,8 @@ namespace Gdterm.UI.Controls
                 chkBold.Checked = existing.Bold;
             }
 
-            var btnOk = new Button { Text = "确定", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(this, 220, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Accent, ForeColor = Color.White };
-            var btnCancel = new Button { Text = "取消", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(this, 310, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
+            var btnOk = new AntdUI.Button { Text = "确定", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(this, 220, y), DialogResult = DialogResult.OK, FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Accent, ForeColor = Color.White };
+            var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(this, 310, y), DialogResult = DialogResult.Cancel, FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
 
             form.Controls.AddRange(new Control[] { lblName, txtName, lblPattern, txtPattern, chkRegex, chkCase, lblFg, txtFg, lblBg, txtBg, chkBold, btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
@@ -207,8 +207,8 @@ namespace Gdterm.UI.Controls
         }
 
         private Label Lbl(string t, int x, int y) => new Label { Text = t, Location = DpiScale.P(this, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground };
-        private TextBox Txt(int x, int y, int w) => new TextBox { Location = DpiScale.P(this, x, y), Size = DpiScale.S(this, w, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
-        private CheckBox Chk(string t, int x, int y) { var c = new CheckBox { Text = t, Location = DpiScale.P(this, x, y), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }; Controls.Add(c); return c; }
+        private TextBox Txt(int x, int y, int w) => new AntdUI.Input { Location = DpiScale.P(this, x, y), Size = DpiScale.S(this, w, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f), BorderStyle = BorderStyle.FixedSingle };
+        private CheckBox Chk(string t, int x, int y) { var c = new AntdUI.Checkbox { Text = t, Location = DpiScale.P(this, x, y), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }; Controls.Add(c); return c; }
 
         protected override void Dispose(bool disposing) { base.Dispose(disposing); }
     }

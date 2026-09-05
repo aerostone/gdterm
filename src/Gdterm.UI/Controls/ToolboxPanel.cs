@@ -15,8 +15,8 @@ namespace Gdterm.UI.Controls
         private readonly ToolRegistry _registry;
         private readonly ListView _lvTools;
         private readonly Panel _pnlDetail;
-        private readonly Label _lblTitle;
-        private readonly Label _lblDescription;
+        private readonly AntdUI.Label _lblTitle;
+        private readonly AntdUI.Label _lblDescription;
         private readonly RichTextBox _txtOutput;
         private ISshRemoteSession _remoteSession;
 
@@ -52,8 +52,7 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(15)
             };
 
-            _lblTitle = new Label
-            {
+            _lblTitle = new AntdUI.Label {
                 Dock = DockStyle.Top,
                 Height = 35,
                 Font = Services.FormFontPolicy.UiFont(+5f, FontStyle.Bold),
@@ -61,8 +60,7 @@ namespace Gdterm.UI.Controls
                 Text = "运维工具箱"
             };
 
-            _lblDescription = new Label
-            {
+            _lblDescription = new AntdUI.Label {
                 Dock = DockStyle.Top,
                 Height = 25,
                 Font = Services.FormFontPolicy.UiFont(),

@@ -18,9 +18,9 @@ namespace Gdterm.UI.Controls
     public class LockOverlayControl : UserControl
     {
         private readonly ISecurityManager _securityManager;
-        private TextBox _passwordBox;
-        private Button _unlockButton;
-        private Label _messageLabel;
+        private AntdUI.Input _passwordBox;
+        private AntdUI.Button _unlockButton;
+        private AntdUI.Label _messageLabel;
         private Panel _centerPanel;
 
         public LockOverlayControl(ISecurityManager securityManager)
@@ -48,8 +48,7 @@ namespace Gdterm.UI.Controls
             Controls.Add(_centerPanel);
 
             // 标题标签
-            var titleLabel = new Label
-            {
+            var titleLabel = new AntdUI.Label {
                 Text = "应用已锁定",
                 Location = DpiScale.P(this, 20, 18),
                 Size = DpiScale.S(this, 280, 24),
@@ -60,8 +59,7 @@ namespace Gdterm.UI.Controls
             _centerPanel.Controls.Add(titleLabel);
 
             // 消息标签（错误提示用，初始为说明文字）
-            _messageLabel = new Label
-            {
+            _messageLabel = new AntdUI.Label {
                 Text = "请输入主密码解锁",
                 Location = DpiScale.P(this, 20, 52),
                 Size = DpiScale.S(this, 280, 20),
@@ -71,14 +69,12 @@ namespace Gdterm.UI.Controls
             _centerPanel.Controls.Add(_messageLabel);
 
             // 密码输入框：暗色 surface + 浅色前景，圆点遮罩
-            _passwordBox = new TextBox
-            {
+            _passwordBox = new AntdUI.Input {
                 Location = DpiScale.P(this, 20, 78),
                 Size = DpiScale.S(this, 280, 26),
                 UseSystemPasswordChar = true,
                 BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Background,
                 ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Foreground,
-                BorderStyle = BorderStyle.FixedSingle
             };
             _passwordBox.KeyDown += (s, e) =>
             {
@@ -88,12 +84,10 @@ namespace Gdterm.UI.Controls
             _centerPanel.Controls.Add(_passwordBox);
 
             // 解锁按钮：accent 强调色
-            _unlockButton = new Button
-            {
+            _unlockButton = new AntdUI.Button {
                 Text = "解锁",
                 Location = DpiScale.P(this, 110, 118),
                 Size = DpiScale.S(this, 100, 32),
-                FlatStyle = FlatStyle.Flat,
                 BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Accent,
                 ForeColor = Color.Black,
                 FlatAppearance = { BorderSize = 0 }

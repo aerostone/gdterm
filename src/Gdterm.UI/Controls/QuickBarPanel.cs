@@ -195,11 +195,9 @@ namespace Gdterm.UI.Controls
 
         private Button CreateGroupButton(string text)
         {
-            var btn = new Button
-            {
+            var btn = new AntdUI.Button {
                 Text = text,
                 AutoSize = true,
-                FlatStyle = FlatStyle.Flat,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Muted,
                 Font = Services.FormFontPolicy.UiFont(-1f),
@@ -253,8 +251,7 @@ namespace Gdterm.UI.Controls
                 {
                     if (lastGroup != null)
                     {
-                        var sep = new Label
-                        {
+                        var sep = new AntdUI.Label {
                             Text = "│",
                             ForeColor = GdtermColorTable.Hover,
                             Font = new Font("Consolas", 9f),
@@ -271,11 +268,9 @@ namespace Gdterm.UI.Controls
             }
 
             // 末尾的"+"按钮
-            var addBtn = new Button
-            {
+            var addBtn = new AntdUI.Button {
                 Text = "+",
                 Size = DpiScale.S(this, 28, 26),
-                FlatStyle = FlatStyle.Flat,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Muted,
                 Font = new Font("Consolas", 10f),
@@ -291,11 +286,9 @@ namespace Gdterm.UI.Controls
 
         private Button CreateCommandButton(QuickCommand cmd)
         {
-            var btn = new Button
-            {
+            var btn = new AntdUI.Button {
                 Text = cmd.Name,
                 AutoSize = true,
-                FlatStyle = FlatStyle.Flat,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = Services.FormFontPolicy.UiFont(-0.5f),

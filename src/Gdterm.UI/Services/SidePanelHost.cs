@@ -37,12 +37,10 @@ namespace Gdterm.UI.Services
                 Visible = false,
                 BackColor = GdtermColorTable.Background
             };
-            var sideClose = new Button
-            {
+            var sideClose = new AntdUI.Button {
                 Text = "✕ 关闭面板",
                 Dock = DockStyle.Top,
                 Height = 28,
-                FlatStyle = FlatStyle.Flat,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = Color.White
             };

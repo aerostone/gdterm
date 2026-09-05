@@ -18,14 +18,15 @@ namespace Gdterm.UI.Controls
         private readonly TerminalKeyBindingStore _store;
         private TerminalKeyBindingConfig _config;
 
-        private ComboBox _cmbPreset;
-        private ListView _lvBindings;
-        private Label _lblDescription;
-        private Button _btnAdd;
-        private Button _btnEdit;
-        private Button _btnDelete;
-        private Button _btnReset;
-        private CheckBox _chkIntercept;
+        private AntdUI.Select _cmbPreset;
+        private AntdUI.Table _table;
+        private System.Collections.Generic.List<TerminalKeyBinding> _rows = new System.Collections.Generic.List<TerminalKeyBinding>();
+        private AntdUI.Label _lblDescription;
+        private AntdUI.Button _btnAdd;
+        private AntdUI.Button _btnEdit;
+        private AntdUI.Button _btnDelete;
+        private AntdUI.Button _btnReset;
+        private AntdUI.Checkbox _chkIntercept;
 
         /// <summary>当绑定变更时触发（通知外部刷新 TerminalControl 的 resolver）</summary>
         public event Action BindingsChanged;
@@ -45,43 +46,28 @@ namespace Gdterm.UI.Controls
             // ── 顶部：预设选择 ──
             var topPanel = new Panel { Dock = DockStyle.Top, Height = 45, BackColor = GdtermColorTable.Surface, Padding = new Padding(10) };
 
-            var lblPreset = new Label
-            {
+            var lblPreset = new AntdUI.Label {
                 Text = "预设:",
-                Font = Services.FormFontPolicy.UiFont(),
-                ForeColor = GdtermColorTable.Foreground,
                 AutoSize = true,
                 Location = DpiScale.P(this, 10, 13)
             };
 
-            _cmbPreset = new ComboBox
-            {
+            _cmbPreset = new AntdUI.Select {
                 Location = DpiScale.P(this, 55, 10),
-                Size = DpiScale.S(this, 200, 25),
-                DropDownStyle = ComboBoxStyle.DropDownList,
-                BackColor = GdtermColorTable.Surface,
-                ForeColor = GdtermColorTable.Foreground,
-                Font = Services.FormFontPolicy.UiFont(),
-                FlatStyle = FlatStyle.Flat
+                Size = DpiScale.S(this, 200, 34)
             };
             foreach (var preset in _config.Presets)
                 _cmbPreset.Items.Add(string.Format("{0} — {1}", preset.Name, preset.Description));
             _cmbPreset.SelectedIndexChanged += OnPresetChanged;
 
-            _lblDescription = new Label
-            {
+            _lblDescription = new AntdUI.Label {
                 Text = "",
-                Font = Services.FormFontPolicy.UiFont(-1f),
-                ForeColor = GdtermColorTable.Muted,
                 AutoSize = true,
                 Location = DpiScale.P(this, 270, 13)
             };
 
-            _chkIntercept = new CheckBox
-            {
+            _chkIntercept = new AntdUI.Checkbox {
                 Text = "拦截模式（匹配的按键不发送到终端）",
-                Font = Services.FormFontPolicy.UiFont(-1f),
-                ForeColor = GdtermColorTable.Foreground,
                 AutoSize = true,
                 Location = DpiScale.P(this, 480, 12),
                 Checked = _config.InterceptMode
@@ -106,27 +92,23 @@ namespace Gdterm.UI.Controls
             bottomPanel.Controls.AddRange(new Control[] { _btnAdd, _btnEdit, _btnDelete, _btnReset });
 
             // ── 中间：绑定列表 ──
-            _lvBindings = new ListView
+            _table = new AntdUI.Table
             {
                 Dock = DockStyle.Fill,
-                BackColor = GdtermColorTable.Background,
-                ForeColor = GdtermColorTable.Foreground,
                 Font = new Font("Consolas", 9f),
-                View = View.Details,
-                FullRowSelect = true,
-                GridLines = false,
-                BorderStyle = BorderStyle.None
+                BorderWidth = 0,
+                RowHeight = 28
             };
-            _lvBindings.Columns.Add("名称", 150);
-            _lvBindings.Columns.Add("按键组合", 150);
-            _lvBindings.Columns.Add("类型", 60);
-            _lvBindings.Columns.Add("发送内容", 200);
-            _lvBindings.Columns.Add("分组", 60);
-            _lvBindings.Columns.Add("状态", 50);
-            _lvBindings.Columns.Add("描述", 200);
-            _lvBindings.DoubleClick += (s, e) => OnEdit(s, e);
+            _table.Columns.Add(new AntdUI.Column("Name", "名称", AntdUI.ColumnAlign.Left));
+            _table.Columns.Add(new AntdUI.Column("Combo", "按键组合", AntdUI.ColumnAlign.Left));
+            _table.Columns.Add(new AntdUI.Column("Type", "类型", AntdUI.ColumnAlign.Left));
+            _table.Columns.Add(new AntdUI.Column("Value", "发送内容", AntdUI.ColumnAlign.Left));
+            _table.Columns.Add(new AntdUI.Column("Group", "分组", AntdUI.ColumnAlign.Left));
+            _table.Columns.Add(new AntdUI.Column("State", "状态", AntdUI.ColumnAlign.Left));
+            _table.Columns.Add(new AntdUI.Column("Desc", "描述", AntdUI.ColumnAlign.Left));
+            _table.CellDoubleClick += (s, e) => OnEdit(s, e);
 
-            Controls.Add(_lvBindings);
+            Controls.Add(_table);
             Controls.Add(bottomPanel);
             Controls.Add(topPanel);
 
@@ -141,17 +123,13 @@ namespace Gdterm.UI.Controls
             }
         }
 
-        private Button CreateButton(string text, int x)
+        private AntdUI.Button CreateButton(string text, int x)
         {
-            return new Button
-            {
+            return new AntdUI.Button {
                 Text = text,
-                Size = DpiScale.S(this, 70, 30),
-                Location = DpiScale.P(this, x, 5),
-                FlatStyle = FlatStyle.Flat,
-                BackColor = GdtermColorTable.Surface,
-                ForeColor = GdtermColorTable.Foreground,
-                Font = Services.FormFontPolicy.UiFont(),
+                Size = DpiScale.S(this, 76, 34),
+                Location = DpiScale.P(this, x, 4),
+                Type = AntdUI.TTypeMini.Default,
                 Cursor = Cursors.Hand
             };
         }
@@ -167,28 +145,42 @@ namespace Gdterm.UI.Controls
             BindingsChanged?.Invoke();
         }
 
+        private sealed class BindingRow
+        {
+            public string Name { get; set; }
+            public string Combo { get; set; }
+            public string Type { get; set; }
+            public string Value { get; set; }
+            public string Group { get; set; }
+            public string State { get; set; }
+            public string Desc { get; set; }
+        }
+
         private void RefreshList()
         {
-            _lvBindings.Items.Clear();
-            var bindings = _store.GetActiveBindings();
-
-            foreach (var b in bindings)
+            _rows.Clear();
+            var rows = new AntdUI.AntList<BindingRow>();
+            foreach (var b in _store.GetActiveBindings())
             {
-                var item = new ListViewItem(b.Name);
-                item.SubItems.Add(b.GetKeyCombo());
-                item.SubItems.Add(b.Type.ToString());
-                item.SubItems.Add(FormatValue(b));
-                item.SubItems.Add(b.Group);
-                item.SubItems.Add(b.Enabled ? "✓" : "✗");
-                item.SubItems.Add(b.Description ?? "");
-                item.Tag = b;
-
-                // 自定义绑定用不同颜色
-                if (b.Group == "custom")
-                    item.ForeColor = GdtermColorTable.Success;
-
-                _lvBindings.Items.Add(item);
+                _rows.Add(b);
+                rows.Add(new BindingRow
+                {
+                    Name = b.Name,
+                    Combo = b.GetKeyCombo(),
+                    Type = b.Type.ToString(),
+                    Value = FormatValue(b),
+                    Group = b.Group,
+                    State = b.Enabled ? "✓" : "✗",
+                    Desc = b.Description ?? ""
+                });
             }
+            _table.DataSource = rows;
+        }
+
+        private TerminalKeyBinding SelectedBinding()
+        {
+            var idx = _table.SelectedIndex;
+            return idx >= 0 && idx < _rows.Count ? _rows[idx] : null;
         }
 
         private static string FormatValue(TerminalKeyBinding b)
@@ -236,8 +228,8 @@ namespace Gdterm.UI.Controls
 
         private void OnEdit(object sender, EventArgs e)
         {
-            if (_lvBindings.SelectedItems.Count == 0) return;
-            var binding = _lvBindings.SelectedItems[0].Tag as TerminalKeyBinding;
+            var binding = SelectedBinding();
+            if (binding == null) return;
             if (binding == null) return;
 
             var updated = ShowBindingEditor(binding);
@@ -260,8 +252,8 @@ namespace Gdterm.UI.Controls
 
         private void OnDelete(object sender, EventArgs e)
         {
-            if (_lvBindings.SelectedItems.Count == 0) return;
-            var binding = _lvBindings.SelectedItems[0].Tag as TerminalKeyBinding;
+            var binding = SelectedBinding();
+            if (binding == null) return;
             if (binding == null) return;
 
             if (binding.Group != "custom")
@@ -288,131 +280,119 @@ namespace Gdterm.UI.Controls
             }
         }
 
-        /// <summary>快捷键编辑对话框</summary>
+        /// <summary>快捷键编辑对话框（AntdUI 版）</summary>
         private TerminalKeyBinding ShowBindingEditor(TerminalKeyBinding existing)
         {
-            var form = new Form
+            using (var form = new AntdUI.Window())
             {
-                Text = existing == null ? "添加快捷键" : "编辑快捷键",
-                Size = DpiScale.S(this, 450, 380),
-                StartPosition = FormStartPosition.CenterParent,
-                BackColor = GdtermColorTable.Background,
-                ForeColor = GdtermColorTable.Foreground,
-                FormBorderStyle = FormBorderStyle.FixedDialog,
-                MaximizeBox = false,
-                MinimizeBox = false
-            };
+                form.Text = existing == null ? "添加快捷键" : "编辑快捷键";
+                form.Size = DpiScale.S(this, 470, 500);
+                form.StartPosition = FormStartPosition.CenterParent;
+                form.FormBorderStyle = FormBorderStyle.FixedDialog;
+                form.MaximizeBox = false;
+                form.MinimizeBox = false;
 
-            int y = 15;
-            var font = Services.FormFontPolicy.UiFont();
+                int y = 20;
+                var lblName = new AntdUI.Label { Text = "名称", Location = DpiScale.P(this, 15, y + 8), AutoSize = true };
+                var txtName = new AntdUI.Input { Location = DpiScale.P(this, 100, y), Size = DpiScale.S(this, 330, 36) };
+                y += 50;
 
-            var lblName = new Label { Text = "名称:", Location = DpiScale.P(this, 15, y), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Foreground };
-            var txtName = new TextBox { Location = DpiScale.P(this, 100, y - 3), Size = DpiScale.S(this, 310, 25), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = font };
-            y += 35;
+                var lblCombo = new AntdUI.Label { Text = "按键组合", Location = DpiScale.P(this, 15, y + 8), AutoSize = true };
+                var chkCtrl = new AntdUI.Checkbox { Text = "Ctrl", Location = DpiScale.P(this, 100, y + 8), AutoSize = true };
+                var chkAlt = new AntdUI.Checkbox { Text = "Alt", Location = DpiScale.P(this, 160, y + 8), AutoSize = true };
+                var chkShift = new AntdUI.Checkbox { Text = "Shift", Location = DpiScale.P(this, 218, y + 8), AutoSize = true };
+                var cmbKey = new AntdUI.Select { Location = DpiScale.P(this, 275, y), Size = DpiScale.S(this, 155, 36) };
+                FillKeyCombo(cmbKey);
+                y += 50;
 
-            var lblCombo = new Label { Text = "按键组合:", Location = DpiScale.P(this, 15, y), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Foreground };
-            var chkCtrl = new CheckBox { Text = "Ctrl", Location = DpiScale.P(this, 100, y - 2), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Foreground };
-            var chkAlt = new CheckBox { Text = "Alt", Location = DpiScale.P(this, 160, y - 2), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Foreground };
-            var chkShift = new CheckBox { Text = "Shift", Location = DpiScale.P(this, 210, y - 2), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Foreground };
-            var cmbKey = new ComboBox { Location = DpiScale.P(this, 270, y - 3), Size = DpiScale.S(this, 140, 25), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = font, FlatStyle = FlatStyle.Flat };
-            FillKeyCombo(cmbKey);
-            y += 35;
+                var lblType = new AntdUI.Label { Text = "类型", Location = DpiScale.P(this, 15, y + 8), AutoSize = true };
+                var cmbType = new AntdUI.Select { Location = DpiScale.P(this, 100, y), Size = DpiScale.S(this, 155, 36) };
+                cmbType.Items.AddRange(new object[] { "Sequence (转义序列)", "Text (字面文本)", "Action (内置动作)" });
+                y += 50;
 
-            var lblType = new Label { Text = "类型:", Location = DpiScale.P(this, 15, y), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Foreground };
-            var cmbType = new ComboBox { Location = DpiScale.P(this, 100, y - 3), Size = DpiScale.S(this, 140, 25), DropDownStyle = ComboBoxStyle.DropDownList, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = font, FlatStyle = FlatStyle.Flat };
-            cmbType.Items.AddRange(new object[] { "Sequence (转义序列)", "Text (字面文本)", "Action (内置动作)" });
-            y += 35;
+                var lblValue = new AntdUI.Label { Text = "发送内容", Location = DpiScale.P(this, 15, y + 8), AutoSize = true };
+                var txtValue = new AntdUI.Input { Location = DpiScale.P(this, 100, y), Size = DpiScale.S(this, 330, 36), Font = new Font("Consolas", 9f) };
+                y += 50;
 
-            var lblValue = new Label { Text = "发送内容:", Location = DpiScale.P(this, 15, y), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Foreground };
-            var txtValue = new TextBox { Location = DpiScale.P(this, 100, y - 3), Size = DpiScale.S(this, 310, 25), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f) };
-            y += 35;
+                var lblDesc = new AntdUI.Label { Text = "描述", Location = DpiScale.P(this, 15, y + 8), AutoSize = true };
+                var txtDesc = new AntdUI.Input { Location = DpiScale.P(this, 100, y), Size = DpiScale.S(this, 330, 36) };
+                y += 52;
 
-            var lblDesc = new Label { Text = "描述:", Location = DpiScale.P(this, 15, y), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Foreground };
-            var txtDesc = new TextBox { Location = DpiScale.P(this, 100, y - 3), Size = DpiScale.S(this, 310, 25), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = font };
-            y += 10;
+                var lblHint = new AntdUI.Label {
+                    Text = "Sequence: \\x1b[1;5A (Ctrl+Up)\nText: ls -la\\r\nAction: copy/paste/clear/scroll_up/scroll_down/find",
+                    Location = DpiScale.P(this, 15, y),
+                    Size = DpiScale.S(this, 420, 52),
+                    AutoSize = false
+                };
+                y += 62;
 
-            // 提示
-            var lblHint = new Label
-            {
-                Text = "Sequence 示例: \\x1b[1;5A (Ctrl+Up)\nText 示例: ls -la\\r\nAction: copy/paste/clear/scroll_up/scroll_down/find",
-                Location = DpiScale.P(this, 15, y),
-                Size = DpiScale.S(this, 400, 40),
-                Font = Services.FormFontPolicy.UiFont(-1f),
-                ForeColor = GdtermColorTable.Muted
-            };
-            y += 50;
-
-            var btnOk = new Button
-            {
-                Text = "确定",
-                Size = DpiScale.S(this, 80, 30),
-                Location = DpiScale.P(this, 250, y),
-                DialogResult = DialogResult.OK,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = GdtermColorTable.Accent,
-                ForeColor = Color.White
-            };
-
-            var btnCancel = new Button
-            {
-                Text = "取消",
-                Size = DpiScale.S(this, 80, 30),
-                Location = DpiScale.P(this, 340, y),
-                DialogResult = DialogResult.Cancel,
-                FlatStyle = FlatStyle.Flat,
-                BackColor = GdtermColorTable.Hover,
-                ForeColor = GdtermColorTable.Foreground
-            };
-
-            // 填充现有值
-            if (existing != null)
-            {
-                txtName.Text = existing.Name;
-                chkCtrl.Checked = existing.Ctrl;
-                chkAlt.Checked = existing.Alt;
-                chkShift.Checked = existing.Shift;
-                cmbType.SelectedIndex = (int)existing.Type;
-                txtValue.Text = existing.Value;
-                txtDesc.Text = existing.Description;
-                for (int i = 0; i < cmbKey.Items.Count; i++)
+                var btnOk = new AntdUI.Button {
+                    Text = "确定",
+                    Type = AntdUI.TTypeMini.Primary,
+                    Size = DpiScale.S(this, 84, 36),
+                    Location = DpiScale.P(this, 250, y)
+                };
+                btnOk.Click += (s, e) =>
                 {
-                    if (string.Equals(cmbKey.Items[i].ToString(), existing.Key, StringComparison.OrdinalIgnoreCase))
-                    { cmbKey.SelectedIndex = i; break; }
+                    if (string.IsNullOrWhiteSpace(txtName.Text) || cmbKey.SelectedValue == null)
+                    {
+                        AntdUI.Message.warn(form, "请填写名称和选择按键");
+                        return;
+                    }
+                    form.DialogResult = DialogResult.OK;
+                    form.Close();
+                };
+
+                var btnCancel = new AntdUI.Button {
+                    Text = "取消",
+                    Type = AntdUI.TTypeMini.Default,
+                    Size = DpiScale.S(this, 84, 36),
+                    Location = DpiScale.P(this, 346, y)
+                };
+                btnCancel.Click += (s, e) => { form.DialogResult = DialogResult.Cancel; form.Close(); };
+
+                // 填充现有值
+                if (existing != null)
+                {
+                    txtName.Text = existing.Name;
+                    chkCtrl.Checked = existing.Ctrl;
+                    chkAlt.Checked = existing.Alt;
+                    chkShift.Checked = existing.Shift;
+                    cmbType.SelectedIndex = (int)existing.Type;
+                    txtValue.Text = existing.Value;
+                    txtDesc.Text = existing.Description;
+                    for (int i = 0; i < cmbKey.Items.Count; i++)
+                    {
+                        if (string.Equals(cmbKey.Items[i].ToString(), existing.Key, StringComparison.OrdinalIgnoreCase))
+                        { cmbKey.SelectedIndex = i; break; }
+                    }
                 }
+                else
+                {
+                    cmbType.SelectedIndex = 0;
+                }
+
+                form.Controls.AddRange(new Control[] { lblName, txtName, lblCombo, chkCtrl, chkAlt, chkShift, cmbKey, lblType, cmbType, lblValue, txtValue, lblDesc, txtDesc, lblHint, btnOk, btnCancel });
+
+                if (form.ShowDialog(this) != DialogResult.OK) return null;
+
+                return new TerminalKeyBinding
+                {
+                    Name = txtName.Text.Trim(),
+                    Ctrl = chkCtrl.Checked,
+                    Alt = chkAlt.Checked,
+                    Shift = chkShift.Checked,
+                    Key = cmbKey.SelectedValue.ToString(),
+                    Type = (SendType)cmbType.SelectedIndex,
+                    Value = txtValue.Text ?? "",
+                    Description = txtDesc.Text ?? "",
+                    Enabled = existing == null || existing.Enabled,
+                    Group = existing != null ? existing.Group : "custom"
+                };
             }
-            else
-            {
-                cmbType.SelectedIndex = 0;
-            }
-
-            form.Controls.AddRange(new Control[] { lblName, txtName, lblCombo, chkCtrl, chkAlt, chkShift, cmbKey, lblType, cmbType, lblValue, txtValue, lblDesc, txtDesc, lblHint, btnOk, btnCancel });
-            form.AcceptButton = btnOk;
-            form.CancelButton = btnCancel;
-
-            if (form.ShowDialog(this) != DialogResult.OK) return null;
-
-            if (string.IsNullOrWhiteSpace(txtName.Text) || cmbKey.SelectedItem == null)
-            {
-                MessageBox.Show("请填写名称和选择按键", "gdterm", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return null;
-            }
-
-            return new TerminalKeyBinding
-            {
-                Name = txtName.Text.Trim(),
-                Ctrl = chkCtrl.Checked,
-                Alt = chkAlt.Checked,
-                Shift = chkShift.Checked,
-                Key = cmbKey.SelectedItem.ToString(),
-                Type = (SendType)cmbType.SelectedIndex,
-                Value = txtValue.Text ?? "",
-                Description = txtDesc.Text ?? "",
-                Group = "custom",
-                Enabled = true
-            };
         }
 
-        private static void FillKeyCombo(ComboBox cmb)
+        private static void FillKeyCombo(AntdUI.Select cmb)
         {
             // 字母
             for (char c = 'A'; c <= 'Z'; c++) cmb.Items.Add(c.ToString());

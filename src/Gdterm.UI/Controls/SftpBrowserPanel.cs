@@ -24,8 +24,8 @@ namespace Gdterm.UI.Controls
         private readonly ITunnelManager _tunnelManager;
         private ISftpService _sftp;
         private ListView _list;
-        private TextBox _pathBox;
-        private Label _status;
+        private AntdUI.Input _pathBox;
+        private AntdUI.Label _status;
         private string _currentPath = "/";
         private bool _disposed;
 
@@ -49,12 +49,10 @@ namespace Gdterm.UI.Controls
             Dock = DockStyle.Fill;
 
             var top = new Panel { Dock = DockStyle.Top, Height = 36, BackColor = GdtermColorTable.Surface };
-            _pathBox = new TextBox
-            {
+            _pathBox = new AntdUI.Input {
                 Dock = DockStyle.Fill,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = Color.White,
-                BorderStyle = BorderStyle.FixedSingle,
                 Text = "/"
             };
             _pathBox.KeyDown += (s, e) =>
@@ -122,8 +120,7 @@ namespace Gdterm.UI.Controls
                 }
             };
 
-            _status = new Label
-            {
+            _status = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
                 Height = 22,
                 ForeColor = GdtermColorTable.Muted,
@@ -137,12 +134,10 @@ namespace Gdterm.UI.Controls
 
         private Button MakeBtn(string text, EventHandler onClick)
         {
-            var b = new Button
-            {
+            var b = new AntdUI.Button {
                 Text = text,
                 Width = 70,
                 Height = 28,
-                FlatStyle = FlatStyle.Flat,
                 BackColor = GdtermColorTable.Hover,
                 ForeColor = Color.White,
                 Margin = new Padding(2)
@@ -368,9 +363,9 @@ namespace Gdterm.UI.Controls
             using (f)
             {
                 f.Size = DpiScale.S(f, 360, 140);
-                var lbl = new Label { Text = label, ForeColor = Color.White, Location = DpiScale.P(f, 12, 12), AutoSize = true };
-                var box = new TextBox { Location = DpiScale.P(f, 12, 40), Width = 320, BackColor = GdtermColorTable.Surface, ForeColor = Color.White };
-                var ok = new Button { Text = "确定", DialogResult = DialogResult.OK, Location = DpiScale.P(f, 250, 70) };
+                var lbl = new AntdUI.Label { Text = label, ForeColor = Color.White, Location = DpiScale.P(f, 12, 12), AutoSize = true };
+                var box = new AntdUI.Input { Location = DpiScale.P(f, 12, 40), Width = 320, BackColor = GdtermColorTable.Surface, ForeColor = Color.White };
+                var ok = new AntdUI.Button { Text = "确定", DialogResult = DialogResult.OK, Location = DpiScale.P(f, 250, 70) };
                 f.Controls.AddRange(new Control[] { lbl, box, ok });
                 f.AcceptButton = ok;
                 return f.ShowDialog() == DialogResult.OK ? box.Text : null;

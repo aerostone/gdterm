@@ -17,9 +17,9 @@ namespace Gdterm.UI.Controls
     internal sealed class FilePaneControl : UserControl
     {
         private readonly IFilePaneProvider _provider;
-        private TextBox _pathBox;
+        private AntdUI.Input _pathBox;
         private ListView _list;
-        private Label _status;
+        private AntdUI.Label _status;
         private string _currentPath;
         private bool _busy;
 
@@ -66,12 +66,10 @@ namespace Gdterm.UI.Controls
             };
             buttons.Controls.AddRange(new Control[] { btnHome, btnUp, btnRefresh, btnMkdir, btnRename, btnDelete });
 
-            _pathBox = new TextBox
-            {
+            _pathBox = new AntdUI.Input {
                 Dock = DockStyle.Fill,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
-                BorderStyle = BorderStyle.FixedSingle,
                 Font = new Font("Consolas", 9f)
             };
             _pathBox.KeyDown += (s, e) =>
@@ -131,8 +129,7 @@ namespace Gdterm.UI.Controls
                 EntriesDropped?.Invoke(entries);
             };
 
-            _status = new Label
-            {
+            _status = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
                 Height = 22,
                 ForeColor = GdtermColorTable.Muted,
@@ -197,11 +194,9 @@ namespace Gdterm.UI.Controls
 
         private Button MakeBtn(string text, string tip, EventHandler onClick)
         {
-            var b = new Button
-            {
+            var b = new AntdUI.Button {
                 Text = text,
                 Size = new Size(DpiScale.V(this, 30), DpiScale.V(this, 24)),
-                FlatStyle = FlatStyle.Flat,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 Margin = new Padding(1, 0, 1, 0),
@@ -398,19 +393,17 @@ namespace Gdterm.UI.Controls
             })
             {
                 f.ClientSize = new Size(DpiScale.V(f, 380), DpiScale.V(f, 128));
-                var lbl = new Label { Text = label, Dock = DockStyle.Top, Height = 28, Padding = new Padding(12, 8, 12, 0), ForeColor = GdtermColorTable.Muted };
-                var box = new TextBox
-                {
+                var lbl = new AntdUI.Label { Text = label, Dock = DockStyle.Top, Height = 28, Padding = new Padding(12, 8, 12, 0), ForeColor = GdtermColorTable.Muted };
+                var box = new AntdUI.Input {
                     Dock = DockStyle.Top,
                     Font = new Font("Consolas", 9.5f),
                     BackColor = GdtermColorTable.Surface,
                     ForeColor = GdtermColorTable.Foreground,
-                    BorderStyle = BorderStyle.FixedSingle
                 };
                 if (!string.IsNullOrEmpty(initial)) box.Text = initial;
                 var flow = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 40, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(12, 6, 12, 6) };
-                var cancel = new Button { Text = "取消", DialogResult = DialogResult.Cancel, AutoSize = true, FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
-                var ok = new Button { Text = "确定", DialogResult = DialogResult.OK, AutoSize = true, FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+                var cancel = new AntdUI.Button { Text = "取消", DialogResult = DialogResult.Cancel, AutoSize = true, FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+                var ok = new AntdUI.Button { Text = "确定", DialogResult = DialogResult.OK, AutoSize = true, FlatStyle = FlatStyle.Flat, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
                 flow.Controls.Add(cancel); // RightToLeft 流序：先加靠右
                 flow.Controls.Add(ok);
                 f.Controls.Add(box);

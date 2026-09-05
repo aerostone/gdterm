@@ -49,8 +49,7 @@ namespace Gdterm.UI.Forms
             int rowH = 48;
             int y = 18;
 
-            var titleLabel = new AntdUI.Label
-            {
+            var titleLabel = new AntdUI.Label {
                 Text = "AI 模型配置",
                 Font = Gdterm.UI.Services.FormFontPolicy.UiFont(+5f, FontStyle.Bold),
                 AutoSize = true,
@@ -58,8 +57,7 @@ namespace Gdterm.UI.Forms
             };
             y += 36;
 
-            var subtitleLabel = new AntdUI.Label
-            {
+            var subtitleLabel = new AntdUI.Label {
                 Text = "配置 OpenAI 兼容 API 端点和模型参数",
                 AutoSize = true,
                 Location = new Point(pad, y)
@@ -74,15 +72,13 @@ namespace Gdterm.UI.Forms
 
             // API Key（带掩码 + 显示切换）
             Controls.Add(MakeLabel("API Key", labelX, y));
-            _apiKeyBox = new AntdUI.Input
-            {
+            _apiKeyBox = new AntdUI.Input {
                 Location = new Point(boxX, y),
                 Size = new Size(boxW - 76, 38),
                 Font = new Font("Consolas", 9.5f),
                 UseSystemPasswordChar = true
             };
-            _showKeyCheck = new AntdUI.Checkbox
-            {
+            _showKeyCheck = new AntdUI.Checkbox {
                 Text = "显示",
                 AutoSize = true,
                 Location = new Point(boxX + boxW - 66, y + 10)
@@ -101,8 +97,7 @@ namespace Gdterm.UI.Forms
 
             // Max Tokens
             Controls.Add(MakeLabel("最大 Token", labelX, y));
-            _maxTokensSpinner = new AntdUI.InputNumber
-            {
+            _maxTokensSpinner = new AntdUI.InputNumber {
                 Location = new Point(boxX, y),
                 Size = new Size(140, 38),
                 Minimum = 1,
@@ -115,8 +110,7 @@ namespace Gdterm.UI.Forms
 
             // Temperature
             Controls.Add(MakeLabel("温度", labelX, y));
-            _temperatureSpinner = new AntdUI.InputNumber
-            {
+            _temperatureSpinner = new AntdUI.InputNumber {
                 Location = new Point(boxX, y),
                 Size = new Size(140, 38),
                 Minimum = 0m,
@@ -129,8 +123,7 @@ namespace Gdterm.UI.Forms
             y += rowH + 4;
 
             // 状态栏
-            _statusLabel = new AntdUI.Label
-            {
+            _statusLabel = new AntdUI.Label {
                 Text = "",
                 AutoSize = true,
                 Location = new Point(pad, y)
@@ -139,8 +132,7 @@ namespace Gdterm.UI.Forms
             y += 40;
 
             // 按钮（主按钮最右）
-            var saveButton = new AntdUI.Button
-            {
+            var saveButton = new AntdUI.Button {
                 Text = "保存",
                 Type = AntdUI.TTypeMini.Primary,
                 Size = new Size(90, 38),
@@ -149,8 +141,7 @@ namespace Gdterm.UI.Forms
             saveButton.Click += OnSaveClick;
             Controls.Add(saveButton);
 
-            var cancelButton = new AntdUI.Button
-            {
+            var cancelButton = new AntdUI.Button {
                 Text = "取消",
                 Size = new Size(90, 38),
                 Location = new Point(boxX + boxW - 90, y)
@@ -170,8 +161,7 @@ namespace Gdterm.UI.Forms
         private AntdUI.Input AddField(string labelText, int labelX, int boxX, int y, int boxW, bool password)
         {
             Controls.Add(MakeLabel(labelText, labelX, y));
-            var box = new AntdUI.Input
-            {
+            var box = new AntdUI.Input {
                 Location = new Point(boxX, y),
                 Size = new Size(boxW, 38)
             };

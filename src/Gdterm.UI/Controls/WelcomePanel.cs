@@ -46,16 +46,14 @@ namespace Gdterm.UI.Controls
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
 
-            var title = new Label
-            {
+            var title = new AntdUI.Label {
                 Text = "gdterm",
                 Dock = DockStyle.Fill,
                 Font = new Font("Consolas", 28f, FontStyle.Bold),
                 ForeColor = GdtermColorTable.Accent,
                 TextAlign = ContentAlignment.BottomLeft
             };
-            var subtitle = new Label
-            {
+            var subtitle = new AntdUI.Label {
                 Text = "便携运维终端  ·  选择最近会话或新建连接",
                 Dock = DockStyle.Fill,
                 ForeColor = GdtermColorTable.Muted,
@@ -179,8 +177,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 Padding = new Padding(0, 8, 0, 0)
             };
-            var lbl = new Label
-            {
+            var lbl = new AntdUI.Label {
                 Text = title,
                 Dock = DockStyle.Top,
                 Height = 24,
@@ -202,11 +199,9 @@ namespace Gdterm.UI.Controls
 
         private void AddRow(FlowLayoutPanel host, string title, string sub, Action onClick)
         {
-            var btn = new Button
-            {
+            var btn = new AntdUI.Button {
                 Width = Math.Max(320, Width - 100),
                 Height = 44,
-                FlatStyle = FlatStyle.Flat,
                 TextAlign = ContentAlignment.MiddleLeft,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
@@ -234,12 +229,10 @@ namespace Gdterm.UI.Controls
 
         private Button MakeAction(string text, Action onClick)
         {
-            var b = new Button
-            {
+            var b = new AntdUI.Button {
                 Text = text,
                 AutoSize = true,
                 MinimumSize = DpiScale.S(this, 110, 32),
-                FlatStyle = FlatStyle.Flat,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 Margin = new Padding(0, 0, 10, 0),

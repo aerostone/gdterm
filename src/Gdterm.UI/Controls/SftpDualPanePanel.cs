@@ -30,8 +30,8 @@ namespace Gdterm.UI.Controls
         private FilePaneControl _local;
         private FilePaneControl _remote;
         private SplitContainer _split;
-        private Label _connStatus;
-        private Label _queueLabel;
+        private AntdUI.Label _connStatus;
+        private AntdUI.Label _queueLabel;
         private int _activeTransfers;
 
         public SftpDualPanePanel(
@@ -55,8 +55,7 @@ namespace Gdterm.UI.Controls
             Dock = DockStyle.Fill;
             BackColor = GdtermColorTable.Background;
 
-            _connStatus = new Label
-            {
+            _connStatus = new AntdUI.Label {
                 Dock = DockStyle.Top,
                 Height = 24,
                 Text = "  连接 " + (_config != null ? _config.Host : "?") + " …",
@@ -79,8 +78,7 @@ namespace Gdterm.UI.Controls
             AddPane(_split.Panel1, _local, "本地", GdtermColorTable.Info);
 
             // Panel2：连接成功前只放占位提示
-            var placeholder = new Label
-            {
+            var placeholder = new AntdUI.Label {
                 Dock = DockStyle.Fill,
                 Text = "正在连接 " + (_config != null ? _config.Host : "") + " …",
                 TextAlign = ContentAlignment.MiddleCenter,
@@ -90,8 +88,7 @@ namespace Gdterm.UI.Controls
             _split.Panel2.Controls.Add(placeholder);
 
             var queueBar = new Panel { Dock = DockStyle.Bottom, Height = 26, BackColor = GdtermColorTable.Surface };
-            _queueLabel = new Label
-            {
+            _queueLabel = new AntdUI.Label {
                 Dock = DockStyle.Fill,
                 Text = "  传输队列空闲",
                 ForeColor = GdtermColorTable.Muted,
@@ -111,8 +108,7 @@ namespace Gdterm.UI.Controls
 
         private static void AddPane(SplitterPanel host, FilePaneControl pane, string title, Color titleColor)
         {
-            var header = new Label
-            {
+            var header = new AntdUI.Label {
                 Dock = DockStyle.Top,
                 Height = FormFontPolicy.RowStep(pane) - 9,
                 AutoEllipsis = true,

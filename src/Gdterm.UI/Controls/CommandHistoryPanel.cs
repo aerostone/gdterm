@@ -15,9 +15,9 @@ namespace Gdterm.UI.Controls
     {
         private readonly CommandHistoryStore _store;
         private ListView _historyList;
-        private TextBox _searchBox;
-        private ComboBox _hostFilter;
-        private Label _statusLabel;
+        private AntdUI.Input _searchBox;
+        private AntdUI.Select _hostFilter;
+        private AntdUI.Label _statusLabel;
 
         /// <summary>
         /// 双击命令事件（用于重新执行）
@@ -44,22 +44,19 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(3)
             };
 
-            _searchBox = new TextBox
-            {
+            _searchBox = new AntdUI.Input {
                 Size = DpiScale.S(this, 150, 23)
             };
             WinFormsCompat.SetCueBanner(_searchBox, "搜索命令...");
 
-            _hostFilter = new ComboBox
-            {
+            _hostFilter = new AntdUI.Select {
                 Size = DpiScale.S(this, 120, 23),
-                DropDownStyle = ComboBoxStyle.DropDownList
             };
             _hostFilter.Items.Add("所有主机");
             _hostFilter.SelectedIndex = 0;
 
-            var btnRefresh = new Button { Text = "刷新", Size = DpiScale.S(this, 50, 23), FlatStyle = FlatStyle.Flat };
-            var btnClear = new Button { Text = "清空", Size = DpiScale.S(this, 50, 23), FlatStyle = FlatStyle.Flat };
+            var btnRefresh = new AntdUI.Button { Text = "刷新", Size = DpiScale.S(this, 50, 23), FlatStyle = FlatStyle.Flat };
+            var btnClear = new AntdUI.Button { Text = "清空", Size = DpiScale.S(this, 50, 23), FlatStyle = FlatStyle.Flat };
 
             searchPanel.Controls.AddRange(new Control[] { _searchBox, _hostFilter, btnRefresh, btnClear });
 
@@ -79,8 +76,7 @@ namespace Gdterm.UI.Controls
             _historyList.Columns.Add("广播", 40);
 
             // 状态栏
-            _statusLabel = new Label
-            {
+            _statusLabel = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
                 Height = 20,
                 Text = "就绪",

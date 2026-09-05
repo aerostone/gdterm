@@ -43,14 +43,12 @@ namespace Gdterm.UI.Forms
             _passphrase.UseSystemPasswordChar = true;
 
             Controls.Add(MakeLabel("私钥文件", 20, y));
-            _keyPath = new AntdUI.Input
-            {
+            _keyPath = new AntdUI.Input {
                 Location = new Point(120, y),
                 Size = new Size(330, 38)
             };
             Controls.Add(_keyPath);
-            var browse = new AntdUI.Button
-            {
+            var browse = new AntdUI.Button {
                 Text = "浏览…",
                 Location = new Point(460, y),
                 Size = new Size(90, 38)
@@ -75,8 +73,7 @@ namespace Gdterm.UI.Forms
             y += 50;
 
             Controls.Add(MakeLabel("预览", 20, y));
-            _preview = new AntdUI.Input
-            {
+            _preview = new AntdUI.Input {
                 Location = new Point(120, y),
                 Size = new Size(430, 190),
                 Multiline = true,
@@ -85,8 +82,7 @@ namespace Gdterm.UI.Forms
             };
             Controls.Add(_preview);
 
-            var ok = new AntdUI.Button
-            {
+            var ok = new AntdUI.Button {
                 Text = "导入到密码库",
                 Type = AntdUI.TTypeMini.Primary,
                 Location = new Point(300, 440),
@@ -95,8 +91,7 @@ namespace Gdterm.UI.Forms
             ok.Click += OnImport;
             Controls.Add(ok);
 
-            var cancel = new AntdUI.Button
-            {
+            var cancel = new AntdUI.Button {
                 Text = "关闭",
                 Location = new Point(442, 440),
                 Size = new Size(88, 38)
@@ -154,8 +149,7 @@ namespace Gdterm.UI.Forms
         private AntdUI.Input Labeled(ref int y, string label, string value)
         {
             Controls.Add(MakeLabel(label, 20, y));
-            var tb = new AntdUI.Input
-            {
+            var tb = new AntdUI.Input {
                 Location = new Point(120, y),
                 Size = new Size(430, 38),
                 Text = value ?? ""

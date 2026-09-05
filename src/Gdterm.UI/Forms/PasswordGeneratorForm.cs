@@ -57,8 +57,7 @@ namespace Gdterm.UI.Forms
             int y = 22;
 
             // 标题
-            var titleLabel = new AntdUI.Label
-            {
+            var titleLabel = new AntdUI.Label {
                 Text = "🔑 密码生成器",
                 Font = new Font("Segoe UI Emoji", 15F, FontStyle.Bold),
                 AutoSize = true,
@@ -71,8 +70,7 @@ namespace Gdterm.UI.Forms
             var lengthLabel = new AntdUI.Label { Text = "密码长度", AutoSize = true, Location = new Point(pad, y + 10) };
             Controls.Add(lengthLabel);
 
-            _lengthSpinner = new AntdUI.InputNumber
-            {
+            _lengthSpinner = new AntdUI.InputNumber {
                 Location = new Point(pad + 90, y),
                 Size = new Size(90, 38),
                 Minimum = 8,
@@ -89,8 +87,7 @@ namespace Gdterm.UI.Forms
             foreach (var len in quickLengths)
             {
                 var lenCaptured = len;
-                var btn = new AntdUI.Button
-                {
+                var btn = new AntdUI.Button {
                     Text = len.ToString(),
                     Location = new Point(btnX, y),
                     Size = new Size(48, 38)
@@ -121,8 +118,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(resultLabel);
             y += 28;
 
-            _resultBox = new AntdUI.Input
-            {
+            _resultBox = new AntdUI.Input {
                 Location = new Point(pad, y),
                 Size = new Size(300, 44),
                 Font = new Font("Consolas", 14f, FontStyle.Bold),
@@ -130,16 +126,14 @@ namespace Gdterm.UI.Forms
             };
             Controls.Add(_resultBox);
 
-            _strengthLabel = new AntdUI.Label
-            {
+            _strengthLabel = new AntdUI.Label {
                 Text = "强度：—",
                 AutoSize = true,
                 Location = new Point(pad, y + 52)
             };
             Controls.Add(_strengthLabel);
 
-            var generateBtn = new AntdUI.Button
-            {
+            var generateBtn = new AntdUI.Button {
                 Text = "🔄 重新生成",
                 Location = new Point(pad + 312, y),
                 Size = new Size(150, 44),
@@ -148,8 +142,7 @@ namespace Gdterm.UI.Forms
             generateBtn.Click += (s, e) => GeneratePassword();
             Controls.Add(generateBtn);
 
-            _copyBtn = new AntdUI.Button
-            {
+            _copyBtn = new AntdUI.Button {
                 Text = "📋 复制",
                 Location = new Point(pad + 312, y + 52),
                 Size = new Size(150, 44)
@@ -158,8 +151,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(_copyBtn);
             y += 108;
 
-            var generate10Btn = new AntdUI.Button
-            {
+            var generate10Btn = new AntdUI.Button {
                 Text = "批量生成 10 个",
                 Location = new Point(pad, y),
                 Size = new Size(130, 38)
@@ -169,8 +161,7 @@ namespace Gdterm.UI.Forms
             y += 52;
 
             // 历史记录（只读多行 Input，双击复制整行由 KeyDown/MouseUp 简化为一键复制全部）
-            var historyLabel = new AntdUI.Label
-            {
+            var historyLabel = new AntdUI.Label {
                 Text = "本次生成记录（双击复制）",
                 AutoSize = true,
                 Location = new Point(pad, y)
@@ -178,8 +169,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(historyLabel);
             y += 28;
 
-            _historyBox = new AntdUI.Input
-            {
+            _historyBox = new AntdUI.Input {
                 Location = new Point(pad, y),
                 Size = new Size(520 - pad * 2, 110),
                 Font = new Font("Consolas", 10f),
@@ -192,8 +182,7 @@ namespace Gdterm.UI.Forms
 
         private AntdUI.Checkbox CreateCheck(string text, int x, int y)
         {
-            var cb = new AntdUI.Checkbox
-            {
+            var cb = new AntdUI.Checkbox {
                 Text = text,
                 AutoSize = true,
                 Location = new Point(x, y),

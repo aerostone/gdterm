@@ -70,8 +70,7 @@ namespace Gdterm.UI.Forms
             int rowH = 46;
             int y = 20;
 
-            var titleLabel = new AntdUI.Label
-            {
+            var titleLabel = new AntdUI.Label {
                 Text = "修改主密码",
                 Font = Gdterm.UI.Services.FormFontPolicy.UiFont(+6f, FontStyle.Bold),
                 AutoSize = true,
@@ -79,8 +78,7 @@ namespace Gdterm.UI.Forms
             };
             y += 46;
 
-            var tipLabel = new AntdUI.Label
-            {
+            var tipLabel = new AntdUI.Label {
                 Text = "修改后，KeePass 密码库 (gdterm.kdbx) 将用新主密码重新加密。\n请妥善保管新密码，丢失将无法找回。",
                 AutoSize = true,
                 Location = new Point(labelX, y)
@@ -100,8 +98,7 @@ namespace Gdterm.UI.Forms
             _confirmBox = MakePasswordBox(boxX, y, boxWidth);
             y += rowH + 2;
 
-            _strengthLabel = new AntdUI.Label
-            {
+            _strengthLabel = new AntdUI.Label {
                 Text = "密码强度：未输入",
                 AutoSize = true,
                 Location = new Point(boxX, y)
@@ -109,8 +106,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(_strengthLabel);
             y += rowH;
 
-            _errorLabel = new AntdUI.Label
-            {
+            _errorLabel = new AntdUI.Label {
                 Text = "",
                 AutoSize = true,
                 ForeColor = GdtermColorTable.Danger,
@@ -119,8 +115,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(_errorLabel);
             y += rowH;
 
-            _showPwdCheck = new AntdUI.Checkbox
-            {
+            _showPwdCheck = new AntdUI.Checkbox {
                 Text = "显示密码",
                 AutoSize = true,
                 Location = new Point(labelX, y)
@@ -134,8 +129,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(_showPwdCheck);
             y += rowH + 4;
 
-            _okButton = new AntdUI.Button
-            {
+            _okButton = new AntdUI.Button {
                 Text = "确认修改",
                 Type = AntdUI.TTypeMini.Primary,
                 Size = new Size(100, 38),
@@ -144,8 +138,7 @@ namespace Gdterm.UI.Forms
             _okButton.Click += OnOkClick;
             Controls.Add(_okButton);
 
-            var cancelButton = new AntdUI.Button
-            {
+            var cancelButton = new AntdUI.Button {
                 Text = "取消",
                 Size = new Size(90, 38),
                 Location = new Point(500 - 20 - 90, y)
@@ -164,8 +157,7 @@ namespace Gdterm.UI.Forms
 
         private AntdUI.Input MakePasswordBox(int x, int y, int width)
         {
-            return new AntdUI.Input
-            {
+            return new AntdUI.Input {
                 Location = new Point(x, y),
                 Size = new Size(width, 38),
                 Font = new Font("Consolas", 11f),

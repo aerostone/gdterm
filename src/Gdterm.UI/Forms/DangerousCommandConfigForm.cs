@@ -88,8 +88,7 @@ namespace Gdterm.UI.Forms
             var wlBtnRow = wlHeaderRow + DpiScale.V(this, 24) + 4;
             wlPanel.Height = wlBtnRow + DpiScale.V(this, 96) + DpiScale.V(this, 8);
 
-            var whitelistHeader = new AntdUI.Label
-            {
+            var whitelistHeader = new AntdUI.Label {
                 Text = "白名单（豁免命令）",
                 Font = Services.FormFontPolicy.UiFont(0.5f, FontStyle.Bold),
                 Location = DpiScale.P(this, 5, 2),
@@ -97,8 +96,7 @@ namespace Gdterm.UI.Forms
             };
 
             // 白名单按钮
-            var btnAddWhitelist = new AntdUI.Button
-            {
+            var btnAddWhitelist = new AntdUI.Button {
                 Text = "添加",
                 Type = AntdUI.TTypeMini.Primary,
                 AutoSize = true,
@@ -106,8 +104,7 @@ namespace Gdterm.UI.Forms
             };
             btnAddWhitelist.Click += OnAddWhitelistClick;
 
-            var btnRemoveWhitelist = new AntdUI.Button
-            {
+            var btnRemoveWhitelist = new AntdUI.Button {
                 Text = "移除",
                 Type = AntdUI.TTypeMini.Error,
                 AutoSize = true,
@@ -116,8 +113,7 @@ namespace Gdterm.UI.Forms
             btnRemoveWhitelist.Click += OnRemoveWhitelistClick;
 
             // 白名单列表（铺满面板剩余高度）
-            _whitelistBox = new AntdUI.Input
-            {
+            _whitelistBox = new AntdUI.Input {
                 Location = DpiScale.P(this, 5, wlBtnRow),
                 Size = new Size(0, 0),
                 Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
@@ -136,8 +132,7 @@ namespace Gdterm.UI.Forms
             };
 
             // 状态栏
-            _statusLabel = new AntdUI.Label
-            {
+            _statusLabel = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
                 Height = 26,
                 Text = "就绪"
@@ -390,8 +385,7 @@ namespace Gdterm.UI.Forms
 
             // 描述
             Controls.Add(MakeLabel("描述", labelX, y));
-            _descriptionBox = new AntdUI.Input
-            {
+            _descriptionBox = new AntdUI.Input {
                 Location = new Point(boxX, y),
                 Size = new Size(boxW, 56),
                 Multiline = true
@@ -400,8 +394,7 @@ namespace Gdterm.UI.Forms
             y += rowH + 22;
 
             // 启用
-            _enabledCheck = new AntdUI.Checkbox
-            {
+            _enabledCheck = new AntdUI.Checkbox {
                 Text = "启用此规则",
                 Location = new Point(boxX, y + 6),
                 AutoSize = true,
@@ -411,8 +404,7 @@ namespace Gdterm.UI.Forms
             y += rowH;
 
             // 按钮（主按钮最右）
-            var okButton = new AntdUI.Button
-            {
+            var okButton = new AntdUI.Button {
                 Text = "确定",
                 Type = AntdUI.TTypeMini.Primary,
                 Size = new Size(84, 38),
@@ -421,8 +413,7 @@ namespace Gdterm.UI.Forms
             okButton.Click += (s, e) => { DialogResult = DialogResult.OK; Close(); };
             Controls.Add(okButton);
 
-            var cancelButton = new AntdUI.Button
-            {
+            var cancelButton = new AntdUI.Button {
                 Text = "取消",
                 Size = new Size(84, 38),
                 Location = new Point(boxX + boxW - 84, y)
@@ -442,8 +433,7 @@ namespace Gdterm.UI.Forms
         private AntdUI.Input AddTextField(string labelText, int labelX, int boxX, ref int y, int boxW, int rowH)
         {
             Controls.Add(MakeLabel(labelText, labelX, y));
-            var textBox = new AntdUI.Input
-            {
+            var textBox = new AntdUI.Input {
                 Location = new Point(boxX, y),
                 Size = new Size(boxW, 38)
             };
@@ -472,24 +462,21 @@ namespace Gdterm.UI.Forms
             MinimizeBox = false;
             ShowInTaskbar = false;
 
-            var promptLabel = new AntdUI.Label
-            {
+            var promptLabel = new AntdUI.Label {
                 Text = prompt,
                 AutoSize = true,
                 Location = new Point(18, 18)
             };
             Controls.Add(promptLabel);
 
-            _inputBox = new AntdUI.Input
-            {
+            _inputBox = new AntdUI.Input {
                 Location = new Point(18, 48),
                 Size = new Size(420 - 36, 38),
                 Font = new Font("Consolas", 10f)
             };
             Controls.Add(_inputBox);
 
-            var okButton = new AntdUI.Button
-            {
+            var okButton = new AntdUI.Button {
                 Text = "确定",
                 Type = AntdUI.TTypeMini.Primary,
                 Size = new Size(84, 38),
@@ -498,8 +485,7 @@ namespace Gdterm.UI.Forms
             okButton.Click += (s, e) => { DialogResult = DialogResult.OK; Close(); };
             Controls.Add(okButton);
 
-            var cancelButton = new AntdUI.Button
-            {
+            var cancelButton = new AntdUI.Button {
                 Text = "取消",
                 Size = new Size(84, 38),
                 Location = new Point(420 - 20 - 84, 104)

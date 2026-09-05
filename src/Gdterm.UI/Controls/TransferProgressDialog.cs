@@ -32,16 +32,14 @@ namespace Gdterm.UI.Controls
 
             // 规范规则②：布局改用 Dock，禁绝对坐标；尺寸经 DpiScale（规范见 docs/UI-SCALING-CONVENTIONS.md）
 
-            _titleLabel = new AntdUI.Label
-            {
+            _titleLabel = new AntdUI.Label {
                 Text = title ?? "传输中…",
                 Dock = DockStyle.Top,
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 16), DpiScale.V(this, 14), DpiScale.V(this, 16), 0),
                 Font = new Font(Font.FontFamily, Font.Size + 1f, FontStyle.Bold)
             };
-            _detailLabel = new AntdUI.Label
-            {
+            _detailLabel = new AntdUI.Label {
                 Text = "准备中…",
                 Dock = DockStyle.Top,
                 AutoSize = true,
@@ -69,15 +67,13 @@ namespace Gdterm.UI.Controls
                 WrapContents = false,
                 Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 8), DpiScale.V(this, 16), DpiScale.V(this, 8))
             };
-            _percentLabel = new AntdUI.Label
-            {
+            _percentLabel = new AntdUI.Label {
                 Text = "0%",
                 AutoSize = true,
                 Margin = new Padding(3, 0, DpiScale.V(this, 12), 0),
                 Anchor = AnchorStyles.Left
             };
-            _cancelButton = new AntdUI.Button
-            {
+            _cancelButton = new AntdUI.Button {
                 Text = "取消",
                 AutoSize = true,
                 Type = AntdUI.TTypeMini.Default

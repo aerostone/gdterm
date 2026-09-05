@@ -52,8 +52,7 @@ namespace Gdterm.UI.Forms
                 Padding = new Padding(12, 10, 12, 6),
                 BackColor = GdtermColorTable.Background
             };
-            _searchBox = new AntdUI.Input
-            {
+            _searchBox = new AntdUI.Input {
                 Dock = DockStyle.Fill,
                 PlaceholderText = "搜索..."
             };
@@ -80,8 +79,7 @@ namespace Gdterm.UI.Forms
                 Height = 45,
                 BackColor = GdtermColorTable.Surface
             };
-            var btnNew = new AntdUI.Button
-            {
+            var btnNew = new AntdUI.Button {
                 Text = "新建凭据",
                 Type = AntdUI.TTypeMini.Default,
                 AutoSize = true,
@@ -107,16 +105,14 @@ namespace Gdterm.UI.Forms
                 AutoSize = true,
                 Padding = new Padding(0, 0, 12, 0)
             };
-            var btnSelect = new AntdUI.Button
-            {
+            var btnSelect = new AntdUI.Button {
                 Text = "选择",
                 Type = AntdUI.TTypeMini.Primary,
                 AutoSize = true,
                 Margin = new Padding(8, 7, 0, 0)
             };
             btnSelect.Click += (s, e) => SelectEntry();
-            var btnCancel = new AntdUI.Button
-            {
+            var btnCancel = new AntdUI.Button {
                 Text = "取消",
                 Type = AntdUI.TTypeMini.Default,
                 AutoSize = true,

@@ -55,8 +55,7 @@ namespace Gdterm.UI.Forms
             y += 84;
 
             // 占位符提示
-            var lblHint = new AntdUI.Label
-            {
+            var lblHint = new AntdUI.Label {
                 Text = "占位符: {host} {user} {date} {time} {datetime} {env:VAR_NAME}",
                 Location = new Point(inputX, y),
                 AutoSize = true
@@ -66,8 +65,7 @@ namespace Gdterm.UI.Forms
 
             // 分组
             AddLabel("分组", lblX, y);
-            _cmbGroup = new AntdUI.Select
-            {
+            _cmbGroup = new AntdUI.Select {
                 Location = new Point(inputX, y),
                 Size = new Size(200, 38)
             };
@@ -90,8 +88,7 @@ namespace Gdterm.UI.Forms
             y += rowH;
 
             // 需要 root + 排序
-            _chkRequiresRoot = new AntdUI.Checkbox
-            {
+            _chkRequiresRoot = new AntdUI.Checkbox {
                 Text = "需要 root 权限",
                 Location = new Point(inputX, y + 8),
                 AutoSize = true
@@ -99,8 +96,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(_chkRequiresRoot);
 
             AddLabel("排序", 300, y);
-            _numSortOrder = new AntdUI.InputNumber
-            {
+            _numSortOrder = new AntdUI.InputNumber {
                 Location = new Point(345, y),
                 Size = new Size(80, 38),
                 Maximum = 999,
@@ -122,8 +118,7 @@ namespace Gdterm.UI.Forms
             y += rowH + 4;
 
             // 按钮（主按钮最右）
-            var btnOk = new AntdUI.Button
-            {
+            var btnOk = new AntdUI.Button {
                 Text = "确定",
                 Type = AntdUI.TTypeMini.Primary,
                 Size = new Size(84, 38),
@@ -132,8 +127,7 @@ namespace Gdterm.UI.Forms
             btnOk.Click += (s, e) => TryCloseOk();
             Controls.Add(btnOk);
 
-            var btnCancel = new AntdUI.Button
-            {
+            var btnCancel = new AntdUI.Button {
                 Text = "取消",
                 Size = new Size(84, 38),
                 Location = new Point(520 - 20 - 84, y)
@@ -152,8 +146,7 @@ namespace Gdterm.UI.Forms
 
         private AntdUI.Input AddInput(int x, int y, int w, bool password)
         {
-            var txt = new AntdUI.Input
-            {
+            var txt = new AntdUI.Input {
                 Location = new Point(x, y),
                 Size = new Size(w, 38)
             };
