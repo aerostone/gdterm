@@ -132,7 +132,7 @@ namespace Gdterm.UI.Forms
 
         private void AddIssueTab(string name, System.Collections.Generic.IList<PasswordIssue> issues, Color color)
         {
-            var tab = new AntdUI.TabPage($"  {name} ({issues != null ? issues.Count : 0})  ");
+            var tab = new AntdUI.TabPage($"  {name} ({(issues != null ? issues.Count : 0)})  ");
 
             var table = new AntdUI.Table
             {
