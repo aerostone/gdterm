@@ -1,6 +1,9 @@
 # gdterm 设计语言（C/S 客户端 · WinForms）
 
-> 版本：1.1（2026-09-05）—— v1.1 决议：引入 **AntdUI 2.4.8**（Apache-2.0，net40+，纯 GDI）作为组件底座，
+> 版本：1.2（2026-09-05）—— v1.2 决议：**全窗体 AntdUI 迁移完成**（除 MainForm/TerminalControl/
+> 连接树/ToastForm 豁免区），语义色四 token 落地 `GdtermColorTable`，裸 FromArgb 色值全仓清零
+> （保留连接树自绘与 MenuIconFactory 图标专用色），新增原生控件过渡层 `NativeTheme`。
+> v1.1 决议：引入 **AntdUI 2.4.8**（Apache-2.0，net40+，纯 GDI）作为组件底座，
 > 与本设计语言对齐使用（`Config.IsDark=true` + `Style.SetPrimary(终端绿)`，见 §9）。
 
 
@@ -221,7 +224,8 @@ git diff -U0 | grep "^+" | grep -v "^+++" | grep "y += 3[0-9]"
 | 设计 Token | 代码入口 |
 |---|---|
 | 全部颜色 | `GdtermColorTable.XXX` |
-| Danger/Warning/Success/Info | `GdtermColorTable` 扩展（迁移时补充静态属性） |
+| Danger/Warning/Success/Info | `GdtermColorTable.Danger/Warning/Success/Info`（v1.2 已实现） |
+| 原生控件暗色 | `NativeTheme.Dark/DarkPrimary/DarkDanger/DarkRecursive`（AntdUI 过渡层，v1.2） |
 | 字体阶梯 | `FormFontPolicy.UiFont(±delta[, style])` |
 | 字族回退 | `FormFontPolicy.UiFontName` |
 | 行距 | `FormFontPolicy.RowStep(ctrl)` |
@@ -272,3 +276,25 @@ DarkUI（作者离世停更）、AcrylicUI/Beep（net Core/net8，Win7 出局）
 
 - `KeePassUnlockForm`（2026-09-05）：AntdUI.Window + Input + Button + Message；
   验证点：Win7 下窗体边框/拖拽、Input 密码框回车提交、Message 提示样式、高 DPI 缩放。
+
+### 9.5 迁移完成状态（v1.2，2026-09-05）
+
+**A 类完整迁移（AntdUI 控件体系）16 个**：KeePassUnlock、AppearanceSettings、PasswordGenerator、
+ChangeMasterPassword、AiSettings、QuickCommandEditor、SshKeyManager、DangerousCommandRuleEdit、
+TextInputForm、ConnectionQuickJump、TransferProgress、DangerousCommandDialog、SftpDualPane（局部）、
+FilePane（局部）等。
+
+**B 类基类替换（AntdUI.Window + 保留原生布局）7 个**：ConnectionDialog、KeePassManager(+EntryEdit)、
+ScannerCenter、SetupWizard、PasswordHealth、KeePassEntryPicker、DangerousCommandConfig。
+
+**豁免区（永久原生）**：MainForm、TerminalControl、SplitPaneControl、ConnectionTreeControl、
+ToastNotifier.ToastForm（无边框角落弹窗）。
+
+**原生控件过渡层**：`Services/NativeTheme.cs` —— ListView/ListBox/TreeView/TextBox/ComboBox/Button
+的 `.Dark()/.DarkPrimary()/.DarkDanger()` 扩展，供侧边板（KeyBinding/PortForward/LogonScript 等十余个
+ListView 交互核心面板）在不动交互逻辑的前提下统一暗色；色值取运行时 token，主题切换即时生效。
+
+**裸色值清零**：全仓 `FromArgb(数字,数字,数字)` 字面量已全部替换为 token 映射
+（30,30,30→Background / 35,50→Surface / 60→Hover / 80→Border / 204→Foreground /
+0,122,204 品牌蓝→Accent 主绿 / VS teal 78,201,176→Success / 255,80,80→Danger 等）。
+保留例外：连接树自绘组头/健康点三色、MenuIconFactory.Ink 图标墨色。

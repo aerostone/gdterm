@@ -18,6 +18,21 @@ standards:
 
 <!-- cs-note managed: 用 cs-note 维护，新条目按下面分节追加 -->
 
+### UI 体系（2026-09-05 AntdUI 全迁移后）
+
+- **视觉 SSOT**：docs/DESIGN-LANGUAGE.md v1.2（色 token/字体阶梯/间距/AntdUI 规范）；
+  布局机械规则 docs/UI-SCALING-CONVENTIONS.md。一句话：颜色找 ColorTable、字体找 FontPolicy、
+  组件找 DialogStyle、原生控件暗色找 NativeTheme、坐标找 DpiScale。
+- **AntdUI 2.4.8 已全窗体迁移**（lib/AntdUI.dll，net40 版，Apache-2.0）：A 类完整迁移 16 个窗体、
+  B 类基类替换 7 个；豁免区 MainForm/TerminalControl/连接树/ToastForm。
+  新窗体默认 `AntdUI.Window` + TTypeMini 语义按钮；提示用 AntdUI.Message（warn/error/info），
+  阻断确认仍 MessageBox；AntdUI 窗体不再叠 FormFontPolicy.Apply。
+- **语义色已实现**：GdtermColorTable.Danger/Warning/Success/Info（#F85149/#D29922/#3FB950/#58A6FF）；
+  状态色只用于文字与图标。全仓裸 FromArgb 字面量已清零（例外：连接树自绘、MenuIconFactory.Ink）。
+- **原生控件过渡层**：Services/NativeTheme.cs —— .Dark()/.DarkPrimary()/.DarkDanger() 扩展，
+  侧边板 ListView 交互面板统一暗色入口，不要在面板里再写裸背景/前景色。
+- **裸 0,122,204 品牌蓝禁用**：主操作色是终端绿（AntdUI SetPrimary #00B84A / 原生按钮 GdtermColorTable.Accent）。
+
 ### 技术栈与选型
 
 - **框架：** .NET Framework 4.6.2 + WinForms（Win7/Server 2008 原生支持）；**主程序强制 x64**（PlatformTarget=x64，修 RDP 许可存储错位与 winpty 加载）
