@@ -177,7 +177,7 @@ namespace Gdterm.UI.Controls
         }
 
         private static void Lbl(Form f, string t, int x, int y) { f.Controls.Add(new Label { Text = t, Location = DpiScale.P(f, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }); }
-        private static TextBox Txt(Form f, int x, int y, int w) { var t = new AntdUI.Input { Location = DpiScale.P(f, x, y), Size = DpiScale.S(f, w, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f)}; f.Controls.Add(t); return t; }
+        private static AntdUI.Input Txt(Form f, int x, int y, int w) { var t = new AntdUI.Input { Location = DpiScale.P(f, x, y), Size = DpiScale.S(f, w, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f)}; f.Controls.Add(t); return t; }
 
         protected override void Dispose(bool disposing)
         {

@@ -27,7 +27,7 @@ namespace Gdterm.UI.Controls
         private TerminalControl _activeTerminal;
         private string _hostName;
         private string _userName;
-        private Dictionary<string, Button> _groupButtons;
+        private Dictionary<string, AntdUI.Button> _groupButtons;
 
         // ── 事件 ──
         /// <summary>当命令发送到终端时触发</summary>
@@ -43,7 +43,7 @@ namespace Gdterm.UI.Controls
         {
             _commands = new List<QuickCommand>();
             _sessions = new Dictionary<string, ITerminalSession>();
-            _groupButtons = new Dictionary<string, Button>();
+            _groupButtons = new Dictionary<string, AntdUI.Button>();
             BuildUI();
         }
 

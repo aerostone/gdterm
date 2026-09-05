@@ -61,7 +61,7 @@ namespace Gdterm.UI.Controls
             Controls.Add(toolbar);
         }
 
-        private Button CreateBtn(string text, int x)
+        private AntdUI.Button CreateBtn(string text, int x)
         {
             return new Button
             {

@@ -79,7 +79,7 @@ namespace Gdterm.UI.Controls
             _refreshTimer.Start();
         }
 
-        private Label CreateCard(string title, string value, int x, Color valueColor)
+        private AntdUI.Label CreateCard(string title, string value, int x, Color valueColor)
         {
             var lbl = new AntdUI.Label {
                 Location = DpiScale.P(this, x, 6),

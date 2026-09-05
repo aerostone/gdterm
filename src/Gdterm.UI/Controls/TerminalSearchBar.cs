@@ -79,7 +79,7 @@ namespace Gdterm.UI.Controls
             Controls.Add(flow);
         }
 
-        private CheckBox CreateChk(string text, string tip)
+        private AntdUI.Checkbox CreateChk(string text, string tip)
         {
             var chk = new AntdUI.Checkbox {
                 Text = text,
