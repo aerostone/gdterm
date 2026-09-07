@@ -285,7 +285,6 @@ namespace Gdterm.UI.Forms
             try { cmds = _quickCommandStore?.LoadAll(); } catch { }
             _quickBar = new QuickBarPanel(cmds ?? new List<QuickCommand>());
             _quickBar.Dock = DockStyle.Bottom;
-            _quickBar.Height = 36;
             _quickBar.CommandSent += (cmd, group) =>
             {
                 var tc = _tabContainer.GetActiveTerminalControl();
@@ -498,8 +497,8 @@ namespace Gdterm.UI.Forms
             try
             {
                 int row = Services.FormFontPolicy.RowStep(this);
-                if (_quickBar != null) _quickBar.Height = Math.Max(DpiScale.V(this, 36), row + DpiScale.V(this, 2));
-                if (_tmuxBar != null) _tmuxBar.Height = Math.Max(DpiScale.V(this, 32), row + DpiScale.V(this, 2));
+                if (_quickBar != null) _quickBar.Height = Math.Max(DpiScale.V(this, 36), _quickBar.GetPreferredHeight());
+                if (_tmuxBar != null) _tmuxBar.Height = Math.Max(DpiScale.V(this, 68), _tmuxBar.GetPreferredHeight());
                 if (_statusBar != null) _statusBar.Height = Math.Max(DpiScale.V(this, 25), row);
             }
             catch { }

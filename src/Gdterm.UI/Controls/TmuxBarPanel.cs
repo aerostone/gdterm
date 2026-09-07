@@ -23,6 +23,7 @@ namespace Gdterm.UI.Controls
         private FlowLayoutPanel _row1;
         private FlowLayoutPanel _row2;
         private AntdUI.Select _prefixBox;
+        private const int DesignHeight = 68;
 
         /// <summary>面板发送的原始字节（含前缀）已进入终端时触发（用于审计/调试）。</summary>
         public event Action<string> RawSent;
@@ -131,7 +132,8 @@ namespace Gdterm.UI.Controls
         private void BuildUI()
         {
             Dock = DockStyle.Bottom;
-            Height = 64;
+            AutoSize = false;
+            MinimumSize = new Size(0, DpiScale.V(this, DesignHeight));
             BackColor = GdtermColorTable.Surface;
 
             // 前缀选择器（左侧竖排：标签 + 下拉）
@@ -152,14 +154,15 @@ namespace Gdterm.UI.Controls
                 Text = "前缀",
                 AutoSize = true,
                 Margin = new Padding(0, 0, 0, DpiScale.V(this, 2)),
-                ForeColor = GdtermColorTable.Muted
+                ForeColor = GdtermColorTable.Muted,
+                Font = Services.FormFontPolicy.UiFont(-0.5f)
             };
             _prefixBox = new AntdUI.Select {
                 Width = DpiScale.V(this, 56),
                 AutoSize = true,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", 9f)
+                Font = Services.FormFontPolicy.UiFont(-0.5f)
             };
             _prefixBox.Items.Add("C-b");
             _prefixBox.Items.Add("C-a");
@@ -205,6 +208,16 @@ namespace Gdterm.UI.Controls
 
             Controls.Add(rows);
             Controls.Add(prefixPanel);
+            Height = GetPreferredHeight();
+        }
+
+        /// <summary>
+        /// 两行快捷栏的最小可用高度。高度由当前 UI 字体驱动，不能按单行工具栏压缩。
+        /// </summary>
+        public int GetPreferredHeight()
+        {
+            int row = Math.Max(DpiScale.V(this, 30), FormFontPolicy.RowStep(this));
+            return Math.Max(DpiScale.V(this, DesignHeight), row * 2 + DpiScale.V(this, 8));
         }
 
         private void AddGroup(GroupDef g)
@@ -218,6 +231,7 @@ namespace Gdterm.UI.Controls
                 Text = g.Name,
                 AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
+                Font = Services.FormFontPolicy.UiFont(-0.5f),
                 Padding = new Padding(2, 4, 2, 0),
                 Margin = new Padding(1, 0, 0, 0)
             };
@@ -231,7 +245,7 @@ namespace Gdterm.UI.Controls
                     AutoSize = true,
                     BackColor = GdtermColorTable.Background,
                     ForeColor = GdtermColorTable.Foreground,
-                    Font = Services.FormFontPolicy.UiFont(-0.75f),
+                    Font = Services.FormFontPolicy.UiFont(-0.5f),
                     Margin = new Padding(1, 2, 1, 2),
                     TabStop = false,
                     Tag = k

@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 
 namespace Gdterm.UI.Services
@@ -18,6 +19,9 @@ namespace Gdterm.UI.Services
     /// </summary>
     public static class FormFontPolicy
     {
+        private static readonly ConditionalWeakTable<Control, EventHandler> AntdShapeHooks =
+            new ConditionalWeakTable<Control, EventHandler>();
+
         /// <summary>
         /// UI 字体的安全解析——带安装探测与 Win7 回退链。
         ///
@@ -123,6 +127,7 @@ namespace Gdterm.UI.Services
         {
             if (root == null || string.IsNullOrEmpty(name) || size <= 0) return;
             ReplaceChildFonts(root.Controls, name, size, true);
+            NormalizeAntdShapes(root);
         }
 
         public static void Apply(Form form)
@@ -135,6 +140,74 @@ namespace Gdterm.UI.Services
             catch { return; }
 
             ReplaceChildFonts(form.Controls, name, size, false);
+            NormalizeAntdShapes(form);
+        }
+
+        /// <summary>
+        /// AntdUI 默认控件带圆角，而原生 WinForms 工作台控件是方角。
+        /// 统一采用方角密集工作台语言，使用 AntdUI 自身的 Radius 属性，不自绘控件。
+        /// 通过反射兼容当前随包 DLL 的属性版本；没有该属性的控件保持原样。
+        /// </summary>
+        private static void NormalizeAntdShapes(Control root)
+        {
+            if (root == null) return;
+            var stack = new System.Collections.Generic.Stack<Control>();
+            stack.Push(root);
+            while (stack.Count > 0)
+            {
+                var c = stack.Pop();
+                try
+                {
+                    ApplyAntdShape(c);
+                }
+                catch { }
+                HookAntdShapeChanges(c);
+                foreach (Control child in c.Controls) stack.Push(child);
+            }
+        }
+
+        /// <summary>把单个 AntdUI 控件纳入方角语言，供运行时动态创建控件调用。</summary>
+        public static void ApplyAntdShape(Control control)
+        {
+            if (control == null || !IsAntdControl(control)) return;
+            SetNumericProperty(control, "Radius", 0);
+            SetNumericProperty(control, "RadiusX", 0);
+            SetNumericProperty(control, "RadiusY", 0);
+        }
+
+        private static bool IsAntdControl(Control control)
+        {
+            var ns = control != null ? control.GetType().Namespace : null;
+            return ns == "AntdUI" || (ns != null && ns.StartsWith("AntdUI.", StringComparison.Ordinal));
+        }
+
+        private static void HookAntdShapeChanges(Control control)
+        {
+            if (control == null) return;
+            lock (AntdShapeHooks)
+            {
+                EventHandler ignored;
+                if (AntdShapeHooks.TryGetValue(control, out ignored)) return;
+                EventHandler handler = (sender, args) =>
+                {
+                    var added = args != null ? args.Control : null;
+                    if (added != null) NormalizeAntdShapes(added);
+                };
+                control.ControlAdded += handler;
+                AntdShapeHooks.Add(control, handler);
+            }
+        }
+
+        private static void SetNumericProperty(Control control, string name, int value)
+        {
+            var property = control.GetType().GetProperty(name);
+            if (property == null || !property.CanWrite) return;
+            if (property.PropertyType == typeof(int)) property.SetValue(control, value, null);
+            else if (property.PropertyType == typeof(short)) property.SetValue(control, (short)value, null);
+            else if (property.PropertyType == typeof(byte)) property.SetValue(control, (byte)value, null);
+            else if (property.PropertyType == typeof(float)) property.SetValue(control, (float)value, null);
+            else if (property.PropertyType == typeof(double)) property.SetValue(control, (double)value, null);
+            else if (property.PropertyType == typeof(decimal)) property.SetValue(control, (decimal)value, null);
         }
 
         private static void ReplaceChildFonts(Control.ControlCollection controls, string name, float size, bool replaceAllUiFonts)

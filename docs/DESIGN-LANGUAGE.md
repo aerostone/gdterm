@@ -129,6 +129,12 @@ SnippetSearchPanel）以及 TableLayoutPanel 表达不了的精确对齐；且�
 - 底部按钮条右对齐，主按钮最右（Windows 惯例），用 `DialogStyle.ButtonStrip`；
 - 标题与正文的左边距统一（12 或 16，同窗体内不得混用）。
 
+### 3.4 形状语言
+
+- 工作台采用方角密集布局：结构容器、列表、分隔条和原生控件保持 0px 圆角。
+- AntdUI 控件使用框架自身的 `Radius=0` 与原生控件对齐；禁止在外层再包一层自绘圆角容器。
+- 不使用胶囊按钮或装饰性大圆角。按钮通过颜色、层级和悬浮态区分，不通过圆角抢夺注意力。
+
 ---
 
 ## 4. 组件规范
@@ -166,7 +172,13 @@ SnippetSearchPanel）以及 TableLayoutPanel 表达不了的精确对齐；且�
 - 错误行：Danger 色 AutoSize 标签，占位在按钮条上方，不弹 MessageBox 打断流。
 - 中断式确认（危险操作）才用 MessageBox，且用 `YesNo` 并写明后果。
 
-### 4.5 列表/树
+### 4.5 底部快捷栏
+
+- 快捷命令栏为单行，最小高度 36px；tmux 快捷栏为两行，最小高度 68px。
+- 两者高度必须由 `FormFontPolicy.RowStep` 驱动，禁止用单行高度覆盖 tmux 两行布局。
+- 快捷栏中的分组、按钮和分隔符统一使用当前 UI 字体，不得混入硬编码 Consolas 字号。
+
+### 4.6 列表/树
 
 - 连接树：目录=Info 蓝；节点选中=`Surface` 底 + Accent 左标线。
 - 文件列表（SFTP 双栏）：目录=Info 蓝，可执行/敏感文件按功能色点缀。

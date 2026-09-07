@@ -12,7 +12,7 @@ namespace Gdterm.UI.Forms
     /// <summary>
     /// 外观设置：字体/字号/配色/行距提示。保存到 data/config/appearance.ini。
     /// 2026-09 AntdUI 版：AntdUI.Window + Input/Select/InputNumber/Checkbox。
-    /// 布局：手工 y 流式（AntdUI 控件固定行高，本窗体 FixedDialog 不随字号伸缩）。
+    /// 布局：手工 y 流式，但行高和客户区高度由当前 UI 字体驱动。
     /// </summary>
     public sealed class AppearanceSettingsForm : AntdUI.Window
     {
@@ -30,6 +30,8 @@ namespace Gdterm.UI.Forms
         private AntdUI.Select _uiFontCombo;
         private AntdUI.InputNumber _uiSizeNum;
         private AntdUI.Select _uiThemeCombo;
+        private int _fieldHeight = 38;
+        private int _rowHeight = 44;
 
         public AppearanceSettings Result { get; private set; }
 
@@ -48,6 +50,7 @@ namespace Gdterm.UI.Forms
         private void BuildUi()
         {
             Text = "外观设置";
+            Font = FormFontPolicy.UiFont();
             Size = new Size(520, 560);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -55,12 +58,16 @@ namespace Gdterm.UI.Forms
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
+            BackColor = GdtermColorTable.Background;
+            ForeColor = GdtermColorTable.Foreground;
 
             int pad = 20;
             int colLabel = pad;
             int colValue = pad + 110;
             int valueW = 220;
-            int rowH = 44;
+            _fieldHeight = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            _rowHeight = Math.Max(DpiScale.V(this, 44), _fieldHeight + DpiScale.V(this, 6));
+            int rowH = _rowHeight;
             int y = 22;
 
             // —— 终端字体 ——
@@ -129,8 +136,6 @@ namespace Gdterm.UI.Forms
                 _uiThemeCombo.Items.Add(name);
             _uiThemeCombo.Location = new Point(colValue, y);
             Controls.Add(_uiThemeCombo);
-            var themeHint = MakeLabel("Dark/Darker/OLED 配暗色终端方案", colValue + valueW + 10, y + 8);
-            Controls.Add(themeHint);
             y += rowH;
 
             // —— 界面字体 + 字号（同行）——
@@ -140,7 +145,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(_uiFontCombo);
             _uiSizeNum = MakeNumber(8, 24, 9);
             _uiSizeNum.Location = new Point(colValue + valueW + 10, y);
-            _uiSizeNum.Size = new Size(70, 38);
+            _uiSizeNum.Size = new Size(70, _fieldHeight);
             Controls.Add(_uiSizeNum);
             y += rowH;
 
@@ -149,7 +154,8 @@ namespace Gdterm.UI.Forms
                 Text = "启用 DPI 感知（需重启，减轻菜单模糊）",
                 Location = new Point(colLabel, y),
                 AutoSize = true,
-                Checked = true
+                Checked = true,
+                ForeColor = GdtermColorTable.Foreground
             };
             Controls.Add(_dpiAwareCheck);
             y += rowH + 2;
@@ -158,30 +164,33 @@ namespace Gdterm.UI.Forms
             _preview = new AntdUI.Input {
                 Text = "AaBbCc 0123 预览 Preview",
                 Location = new Point(colLabel, y),
-                Size = new Size(520 - pad * 2, 64),
+                Size = new Size(520 - pad * 2, Math.Max(DpiScale.V(this, 64), _fieldHeight + DpiScale.V(this, 20))),
                 ReadOnly = true,
                 Multiline = true,
-                BorderWidth = 1F
+                BorderWidth = 1F,
+                BackColor = GdtermColorTable.Surface,
+                ForeColor = GdtermColorTable.Foreground
             };
             Controls.Add(_preview);
-            y += 78;
+            y += _preview.Height + DpiScale.V(this, 14);
 
             var resetHint = new AntdUI.Label {
-                Text = "字体或界面错乱时，点「恢复默认」一键还原全部外观设置",
+                Text = "字体异常可恢复默认",
                 AutoSize = true,
-                Location = new Point(colLabel, y)
+                Location = new Point(colLabel, y),
+                ForeColor = GdtermColorTable.Muted
             };
             Controls.Add(resetHint);
-            y += 36;
+            y += rowH;
 
             // ── 底部按钮条：主(保存) + 恢复默认 + 取消 ──
-            _btnOk = new AntdUI.Button { Text = "保存", Type = AntdUI.TTypeMini.Primary, Size = new Size(88, 38) };
+            _btnOk = new AntdUI.Button { Text = "保存", Type = AntdUI.TTypeMini.Primary, Size = new Size(88, _fieldHeight), BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent };
             _btnOk.Click += (s, e) => SaveResult();
 
-            _btnReset = new AntdUI.Button { Text = "恢复默认", Size = new Size(96, 38) };
+            _btnReset = new AntdUI.Button { Text = "恢复默认", Type = AntdUI.TTypeMini.Default, Size = new Size(96, _fieldHeight), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
             _btnReset.Click += (s, e) => ResetToDefaults();
 
-            _btnCancel = new AntdUI.Button { Text = "取消", Size = new Size(88, 38) };
+            _btnCancel = new AntdUI.Button { Text = "取消", Type = AntdUI.TTypeMini.Default, Size = new Size(88, _fieldHeight), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
             _btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
 
             int btnTotal = 88 + 8 + 96 + 8 + 88;
@@ -193,18 +202,23 @@ namespace Gdterm.UI.Forms
             Controls.Add(_btnReset);
             Controls.Add(_btnCancel);
 
+            ClientSize = new Size(Math.Max(ClientSize.Width, 520), Math.Max(ClientSize.Height, y + _fieldHeight + pad));
+
             AcceptButton = _btnOk;
             CancelButton = _btnCancel;
         }
 
-        private static AntdUI.Label MakeLabel(string text, int x, int y)
+        private AntdUI.Label MakeLabel(string text, int x, int y)
         {
-            return new AntdUI.Label { Text = text, AutoSize = true, Location = new Point(x, y + 10) };
+            var label = new AntdUI.Label { Text = text, AutoSize = true, Font = Font, ForeColor = GdtermColorTable.Muted };
+            int offset = Math.Max(4, (_rowHeight - label.Font.Height) / 2);
+            label.Location = new Point(x, y + offset);
+            return label;
         }
 
         private AntdUI.Select MakeSelect(int width, Action<AntdUI.Select> fill)
         {
-            var cb = new AntdUI.Select { Size = new Size(width, 38) };
+            var cb = new AntdUI.Select { Size = new Size(width, _fieldHeight), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
             if (fill != null) fill(cb);
             return cb;
         }
@@ -212,11 +226,13 @@ namespace Gdterm.UI.Forms
         private AntdUI.InputNumber MakeNumber(int min, int max, int value)
         {
             return new AntdUI.InputNumber {
-                Size = new Size(86, 38),
+                Size = new Size(86, _fieldHeight),
                 Minimum = min,
                 Maximum = max,
                 Value = value,
-                Increment = 1
+                Increment = 1,
+                BackColor = GdtermColorTable.Surface,
+                ForeColor = GdtermColorTable.Foreground
             };
         }
 

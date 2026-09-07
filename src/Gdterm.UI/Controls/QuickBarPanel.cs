@@ -28,6 +28,7 @@ namespace Gdterm.UI.Controls
         private string _hostName;
         private string _userName;
         private Dictionary<string, AntdUI.Button> _groupButtons;
+        private const int DesignHeight = 36;
 
         // ── 事件 ──
         /// <summary>当命令发送到终端时触发</summary>
@@ -103,7 +104,8 @@ namespace Gdterm.UI.Controls
         private void BuildUI()
         {
             Dock = DockStyle.Bottom;
-            Height = 36;
+            AutoSize = false;
+            MinimumSize = new Size(0, DpiScale.V(this, DesignHeight));
             BackColor = GdtermColorTable.Surface;
             Padding = new Padding(0);
 
@@ -200,7 +202,7 @@ namespace Gdterm.UI.Controls
                 AutoSize = true,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Muted,
-                Font = Services.FormFontPolicy.UiFont(-1f),
+                Font = Services.FormFontPolicy.UiFont(-0.5f),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(1, 0, 1, 0),
                 Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 3), DpiScale.V(this, 6), DpiScale.V(this, 3))
@@ -222,12 +224,12 @@ namespace Gdterm.UI.Controls
                 if (kvp.Key == name)
                 {
                     kvp.Value.ForeColor = GdtermColorTable.Success;
-                    kvp.Value.Font = Services.FormFontPolicy.UiFont(-1f, FontStyle.Bold);
+                    kvp.Value.Font = Services.FormFontPolicy.UiFont(-0.5f, FontStyle.Bold);
                 }
                 else
                 {
                     kvp.Value.ForeColor = GdtermColorTable.Muted;
-                    kvp.Value.Font = Services.FormFontPolicy.UiFont(-1f);
+                    kvp.Value.Font = Services.FormFontPolicy.UiFont(-0.5f);
                 }
             }
         }
@@ -251,7 +253,7 @@ namespace Gdterm.UI.Controls
                         var sep = new AntdUI.Label {
                             Text = "│",
                             ForeColor = GdtermColorTable.Hover,
-                            Font = new Font("Consolas", 9f),
+                            Font = Services.FormFontPolicy.UiFont(-0.5f),
                             AutoSize = true,
                             Margin = new Padding(4, 6, 4, 6)
                         };
@@ -271,7 +273,7 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(DpiScale.V(this, 7), DpiScale.V(this, 3), DpiScale.V(this, 7), DpiScale.V(this, 3)),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Muted,
-                Font = new Font("Consolas", 10f),
+                Font = Services.FormFontPolicy.UiFont(-0.5f),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(2),
                 TextAlign = ContentAlignment.MiddleCenter
@@ -395,7 +397,7 @@ namespace Gdterm.UI.Controls
         {
             var original = btn.BackColor;
             btn.BackColor = flashColor;
-            btn.ForeColor = GdtermColorTable.Background;
+            btn.ForeColor = GdtermColorTable.OnAccent;
             var timer = new Timer { Interval = 300 };
             timer.Tick += (s, e) =>
             {
@@ -411,6 +413,12 @@ namespace Gdterm.UI.Controls
         {
             var tip = new ToolTip();
             tip.Show(message, control, 0, control.Height + 4, 2000);
+        }
+
+        /// <summary>返回单行快捷栏的字体驱动高度，避免字号增大后按钮被容器裁切。</summary>
+        public int GetPreferredHeight()
+        {
+            return Math.Max(DpiScale.V(this, DesignHeight), FormFontPolicy.RowStep(this) + DpiScale.V(this, 4));
         }
 
         // ── 右键菜单处理 ──
