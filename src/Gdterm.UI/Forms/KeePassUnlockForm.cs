@@ -2,6 +2,8 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.KeePass;
+using Gdterm.UI.Services;
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Forms
 {
@@ -32,17 +34,22 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "解锁密码库";
-            Size = new Size(440, 250);
+            Size = DpiScale.S(this, 440, 250); // 初始基准，构造末尾按内容自适应重设
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
-            // AntdUI.Window 自带暗色背景与边框主题；不设 BackColor 走主题默认。
+            BackColor = GdtermColorTable.Background;
+            ForeColor = GdtermColorTable.Foreground;
+            Font = FormFontPolicy.UiFont(); // 布局前先设全局字体，RowStep 才能按真实字号算行距
 
-            int pad = 24;
-            int y = 24;
+            // 字体驱动 + DPI 缩放布局（修复：固定坐标在大字号/高 DPI 下控件挤压）
+            int clientW = DpiScale.V(this, 440);
+            int pad = DpiScale.V(this, 24);
+            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int y = DpiScale.V(this, 24);
 
             // ── 标题区 ──
             var title = new AntdUI.Label {
@@ -52,7 +59,7 @@ namespace Gdterm.UI.Forms
                 Location = new Point(pad, y)
             };
             Controls.Add(title);
-            y += 44;
+            y += Math.Max(DpiScale.V(this, 44), FormFontPolicy.RowStep(this) + DpiScale.V(this, 10));
 
             var status = new AntdUI.Label {
                 Text = "请输入主密码以解锁 KeePass 密码库",
@@ -60,12 +67,12 @@ namespace Gdterm.UI.Forms
                 Location = new Point(pad, y)
             };
             Controls.Add(status);
-            y += 40;
+            y += Math.Max(DpiScale.V(this, 40), FormFontPolicy.RowStep(this) + DpiScale.V(this, 6));
 
             // ── 密码输入（AntdUI.Input：占位符/清除钮/回车提交）──
             _passwordBox = new AntdUI.Input {
                 Location = new Point(pad, y),
-                Size = new Size(440 - pad * 2, 38),
+                Size = new Size(clientW - pad * 2, fieldH),
                 PlaceholderText = "主密码",
                 UseSystemPasswordChar = true
             };
@@ -74,13 +81,15 @@ namespace Gdterm.UI.Forms
                 // 输入变化即清除旧错误占位（原生版在错误 Label 上显示，这里用 Input 内建错误态）
             };
             Controls.Add(_passwordBox);
-            y += 54;
+            y += fieldH + DpiScale.V(this, 16);
 
-            // ── 按钮行：取消（次）+ 解锁（主，绿）──
+            // ── 按钮行：取消（次）+ 解锁（主，绿，最右）──
+            int btnW = DpiScale.V(this, 96);
+            int btnGap = DpiScale.V(this, 12);
             _cancelButton = new AntdUI.Button {
                 Text = "取消",
-                Size = new Size(96, 38),
-                Location = new Point(440 - pad - 96 - 12 - 96, y),
+                Size = new Size(btnW, fieldH),
+                Location = new Point(clientW - pad - btnW * 2 - btnGap, y),
                 Type = AntdUI.TTypeMini.Default
             };
             _cancelButton.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
@@ -88,12 +97,14 @@ namespace Gdterm.UI.Forms
 
             _unlockButton = new AntdUI.Button {
                 Text = "解锁",
-                Size = new Size(96, 38),
-                Location = new Point(440 - pad - 96, y),
+                Size = new Size(btnW, fieldH),
+                Location = new Point(clientW - pad - btnW, y),
                 Type = AntdUI.TTypeMini.Primary
             };
             _unlockButton.Click += OnUnlockClick;
             Controls.Add(_unlockButton);
+
+            ClientSize = new Size(clientW, y + fieldH + DpiScale.V(this, 24));
 
             AcceptButton = _unlockButton;
             CancelButton = _cancelButton;

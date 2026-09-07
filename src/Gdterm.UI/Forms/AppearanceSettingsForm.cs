@@ -51,7 +51,7 @@ namespace Gdterm.UI.Forms
         {
             Text = "外观设置";
             Font = FormFontPolicy.UiFont();
-            Size = new Size(520, 560);
+            Size = DpiScale.S(this, 520, 560); // 初始基准，末尾按内容自适应重设
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
@@ -61,10 +61,11 @@ namespace Gdterm.UI.Forms
             BackColor = GdtermColorTable.Background;
             ForeColor = GdtermColorTable.Foreground;
 
-            int pad = 20;
+            int pad = DpiScale.V(this, 20);
+            int clientW = DpiScale.V(this, 520);
             int colLabel = pad;
-            int colValue = pad + 110;
-            int valueW = 220;
+            int colValue = pad + DpiScale.V(this, 110);
+            int valueW = DpiScale.V(this, 220);
             _fieldHeight = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
             _rowHeight = Math.Max(DpiScale.V(this, 44), _fieldHeight + DpiScale.V(this, 6));
             int rowH = _rowHeight;
@@ -144,8 +145,8 @@ namespace Gdterm.UI.Forms
             _uiFontCombo.Location = new Point(colValue, y);
             Controls.Add(_uiFontCombo);
             _uiSizeNum = MakeNumber(8, 24, 9);
-            _uiSizeNum.Location = new Point(colValue + valueW + 10, y);
-            _uiSizeNum.Size = new Size(70, _fieldHeight);
+            _uiSizeNum.Location = new Point(colValue + valueW + DpiScale.V(this, 10), y);
+            _uiSizeNum.Size = new Size(DpiScale.V(this, 70), _fieldHeight);
             Controls.Add(_uiSizeNum);
             y += rowH;
 
@@ -164,7 +165,7 @@ namespace Gdterm.UI.Forms
             _preview = new AntdUI.Input {
                 Text = "AaBbCc 0123 预览 Preview",
                 Location = new Point(colLabel, y),
-                Size = new Size(520 - pad * 2, Math.Max(DpiScale.V(this, 64), _fieldHeight + DpiScale.V(this, 20))),
+                Size = new Size(clientW - pad * 2, Math.Max(DpiScale.V(this, 64), _fieldHeight + DpiScale.V(this, 20))),
                 ReadOnly = true,
                 Multiline = true,
                 BorderWidth = 1F,
@@ -184,25 +185,25 @@ namespace Gdterm.UI.Forms
             y += rowH;
 
             // ── 底部按钮条：主(保存) + 恢复默认 + 取消 ──
-            _btnOk = new AntdUI.Button { Text = "保存", Type = AntdUI.TTypeMini.Primary, Size = new Size(88, _fieldHeight), BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent };
+            _btnOk = new AntdUI.Button { Text = "保存", Type = AntdUI.TTypeMini.Primary, Size = new Size(DpiScale.V(this, 88), _fieldHeight), BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent };
             _btnOk.Click += (s, e) => SaveResult();
 
-            _btnReset = new AntdUI.Button { Text = "恢复默认", Type = AntdUI.TTypeMini.Default, Size = new Size(96, _fieldHeight), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+            _btnReset = new AntdUI.Button { Text = "恢复默认", Type = AntdUI.TTypeMini.Default, Size = new Size(DpiScale.V(this, 96), _fieldHeight), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
             _btnReset.Click += (s, e) => ResetToDefaults();
 
-            _btnCancel = new AntdUI.Button { Text = "取消", Type = AntdUI.TTypeMini.Default, Size = new Size(88, _fieldHeight), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+            _btnCancel = new AntdUI.Button { Text = "取消", Type = AntdUI.TTypeMini.Default, Size = new Size(DpiScale.V(this, 88), _fieldHeight), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
             _btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
 
-            int btnTotal = 88 + 8 + 96 + 8 + 88;
-            int bx = 520 - 20 - btnTotal;
+            int btnTotal = DpiScale.V(this, 88 + 8 + 96 + 8 + 88);
+            int bx = clientW - pad - btnTotal;
             _btnOk.Location = new Point(bx, y);
-            _btnReset.Location = new Point(bx + 96, y);
-            _btnCancel.Location = new Point(bx + 96 + 104, y);
+            _btnReset.Location = new Point(bx + DpiScale.V(this, 96), y);
+            _btnCancel.Location = new Point(bx + DpiScale.V(this, 96 + 104), y);
             Controls.Add(_btnOk);
             Controls.Add(_btnReset);
             Controls.Add(_btnCancel);
 
-            ClientSize = new Size(Math.Max(ClientSize.Width, 520), Math.Max(ClientSize.Height, y + _fieldHeight + pad));
+            ClientSize = new Size(Math.Max(ClientSize.Width, clientW), Math.Max(ClientSize.Height, y + _fieldHeight + pad));
 
             AcceptButton = _btnOk;
             CancelButton = _btnCancel;

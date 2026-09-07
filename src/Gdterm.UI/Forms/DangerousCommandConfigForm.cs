@@ -344,42 +344,48 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "添加自定义规则";
-            Size = new Size(470, 560);
+            Size = DpiScale.S(this, 470, 560); // 初始基准，构造末尾按内容自适应重设
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
+            BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Background;
+            ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Foreground;
+            Font = Gdterm.UI.Services.FormFontPolicy.UiFont(); // 布局前先设全局字体，RowStep 才能按真实字号算行距
 
-            int labelX = 18;
-            int boxX = 110;
-            int boxW = 320;
-            int rowH = 48;
-            int y = 20;
+            // 字体驱动 + DPI 缩放布局（修复：固定像素步进在大字号/高 DPI 下控件重叠）
+            int clientW = DpiScale.V(this, 470);
+            int labelX = DpiScale.V(this, 18);
+            int boxX = DpiScale.V(this, 110);
+            int boxW = clientW - boxX - labelX;
+            int fieldH = Math.Max(DpiScale.V(this, 38), Gdterm.UI.Services.FormFontPolicy.RowStep(this));
+            int rowH = fieldH + DpiScale.V(this, 10);
+            int y = DpiScale.V(this, 20);
 
-            _nameBox = AddTextField("规则名称", labelX, boxX, ref y, boxW, rowH);
-            _patternBox = AddTextField("匹配模式", labelX, boxX, ref y, boxW, rowH);
+            _nameBox = AddTextField("规则名称", labelX, boxX, ref y, boxW, fieldH, rowH);
+            _patternBox = AddTextField("匹配模式", labelX, boxX, ref y, boxW, fieldH, rowH);
 
             // 匹配类型
-            Controls.Add(MakeLabel("匹配类型", labelX, y));
-            _patternTypeCombo = new AntdUI.Select { Location = new Point(boxX, y), Size = new Size(160, 38) };
+            Controls.Add(MakeLabel("匹配类型", labelX, y, fieldH));
+            _patternTypeCombo = new AntdUI.Select { Location = new Point(boxX, y), Size = new Size(DpiScale.V(this, 160), fieldH) };
             foreach (var v in new[] { "Regex", "Contains", "Equals" }) _patternTypeCombo.Items.Add(v);
             _patternTypeCombo.SelectedIndex = 0;
             Controls.Add(_patternTypeCombo);
             y += rowH;
 
             // 危险等级
-            Controls.Add(MakeLabel("危险等级", labelX, y));
-            _levelCombo = new AntdUI.Select { Location = new Point(boxX, y), Size = new Size(160, 38) };
+            Controls.Add(MakeLabel("危险等级", labelX, y, fieldH));
+            _levelCombo = new AntdUI.Select { Location = new Point(boxX, y), Size = new Size(DpiScale.V(this, 160), fieldH) };
             foreach (var v in new[] { "Medium", "High", "Critical" }) _levelCombo.Items.Add(v);
             _levelCombo.SelectedIndex = 0;
             Controls.Add(_levelCombo);
             y += rowH;
 
             // 分类
-            Controls.Add(MakeLabel("分类", labelX, y));
-            _categoryCombo = new AntdUI.Select { Location = new Point(boxX, y), Size = new Size(200, 38) };
+            Controls.Add(MakeLabel("分类", labelX, y, fieldH));
+            _categoryCombo = new AntdUI.Select { Location = new Point(boxX, y), Size = new Size(DpiScale.V(this, 200), fieldH) };
             foreach (var v in new[]
             {
                 "filesystem", "disk", "system", "process", "firewall",
@@ -392,58 +398,64 @@ namespace Gdterm.UI.Forms
             y += rowH;
 
             // 描述
-            Controls.Add(MakeLabel("描述", labelX, y));
+            Controls.Add(MakeLabel("描述", labelX, y, fieldH));
+            int descH = fieldH + DpiScale.V(this, 18);
             _descriptionBox = new AntdUI.Input {
                 Location = new Point(boxX, y),
-                Size = new Size(boxW, 56),
+                Size = new Size(boxW, descH),
                 Multiline = true
             };
             Controls.Add(_descriptionBox);
-            y += rowH + 22;
+            y += descH + DpiScale.V(this, 14);
 
             // 启用
             _enabledCheck = new AntdUI.Checkbox {
                 Text = "启用此规则",
-                Location = new Point(boxX, y + 6),
+                Location = new Point(boxX, y + DpiScale.V(this, 6)),
                 AutoSize = true,
                 Checked = true
             };
             Controls.Add(_enabledCheck);
             y += rowH;
 
+            int btnW = DpiScale.V(this, 84);
+            int btnGap = DpiScale.V(this, 8);
             // 按钮（主按钮最右）
             var okButton = new AntdUI.Button {
                 Text = "确定",
                 Type = AntdUI.TTypeMini.Primary,
-                Size = new Size(84, 38),
-                Location = new Point(boxX + boxW - 176, y)
+                Size = new Size(btnW, fieldH),
+                Location = new Point(boxX + boxW - btnW * 2 - btnGap, y)
             };
             okButton.Click += (s, e) => { DialogResult = DialogResult.OK; Close(); };
             Controls.Add(okButton);
 
             var cancelButton = new AntdUI.Button {
                 Text = "取消",
-                Size = new Size(84, 38),
-                Location = new Point(boxX + boxW - 84, y)
+                Size = new Size(btnW, fieldH),
+                Location = new Point(boxX + boxW - btnW, y)
             };
             cancelButton.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
             Controls.Add(cancelButton);
+
+            ClientSize = new Size(clientW, y + fieldH + DpiScale.V(this, 18));
 
             AcceptButton = okButton;
             CancelButton = cancelButton;
         }
 
-        private static AntdUI.Label MakeLabel(string text, int x, int y)
+        private AntdUI.Label MakeLabel(string text, int x, int y, int fieldH)
         {
-            return new AntdUI.Label { Text = text, AutoSize = true, Location = new Point(x, y + 10) };
+            int offset = Math.Max(4, (fieldH - FontHeight) / 2);
+            return new AntdUI.Label { Text = text, AutoSize = true, Location = new Point(x, y + offset) };
         }
 
-        private AntdUI.Input AddTextField(string labelText, int labelX, int boxX, ref int y, int boxW, int rowH)
+        private AntdUI.Input AddTextField(string labelText, int labelX, int boxX, ref int y, int boxW, int fieldH, int rowH)
         {
-            Controls.Add(MakeLabel(labelText, labelX, y));
+            Controls.Add(MakeLabel(labelText, labelX, y, fieldH));
             var textBox = new AntdUI.Input {
                 Location = new Point(boxX, y),
-                Size = new Size(boxW, 38)
+                Size = new Size(boxW, fieldH)
             };
             Controls.Add(textBox);
             y += rowH;
@@ -463,44 +475,58 @@ namespace Gdterm.UI.Forms
         public TextInputForm(string title, string prompt)
         {
             Text = title;
-            Size = new Size(420, 190);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
+            BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Background;
+            ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Foreground;
+            Font = Gdterm.UI.Services.FormFontPolicy.UiFont(); // 布局前先设全局字体，RowStep 才能按真实字号算行距
+
+            // 字体驱动 + DPI 缩放布局（修复：固定坐标在大字号/高 DPI 下控件挤压）
+            int clientW = DpiScale.V(this, 420);
+            int pad = DpiScale.V(this, 18);
+            int fieldH = Math.Max(DpiScale.V(this, 38), Gdterm.UI.Services.FormFontPolicy.RowStep(this));
+            int y = pad;
 
             var promptLabel = new AntdUI.Label {
                 Text = prompt,
                 AutoSize = true,
-                Location = new Point(18, 18)
+                Location = new Point(pad, y)
             };
             Controls.Add(promptLabel);
+            y += Math.Max(DpiScale.V(this, 30), Gdterm.UI.Services.FormFontPolicy.RowStep(this));
 
             _inputBox = new AntdUI.Input {
-                Location = new Point(18, 48),
-                Size = new Size(420 - 36, 38),
+                Location = new Point(pad, y),
+                Size = new Size(clientW - pad * 2, fieldH),
                 Font = new Font("Consolas", 10f)
             };
             Controls.Add(_inputBox);
+            y += fieldH + DpiScale.V(this, 18);
+
+            int btnW = DpiScale.V(this, 84);
+            int btnGap = DpiScale.V(this, 8);
+            var cancelButton = new AntdUI.Button {
+                Text = "取消",
+                Size = new Size(btnW, fieldH),
+                Location = new Point(clientW - pad - btnW, y)
+            };
+            cancelButton.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
+            Controls.Add(cancelButton);
 
             var okButton = new AntdUI.Button {
                 Text = "确定",
                 Type = AntdUI.TTypeMini.Primary,
-                Size = new Size(84, 38),
-                Location = new Point(420 - 20 - 84 - 8 - 84, 104)
+                Size = new Size(btnW, fieldH),
+                Location = new Point(clientW - pad - btnW * 2 - btnGap, y)
             };
             okButton.Click += (s, e) => { DialogResult = DialogResult.OK; Close(); };
             Controls.Add(okButton);
 
-            var cancelButton = new AntdUI.Button {
-                Text = "取消",
-                Size = new Size(84, 38),
-                Location = new Point(420 - 20 - 84, 104)
-            };
-            cancelButton.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
-            Controls.Add(cancelButton);
+            ClientSize = new Size(clientW, y + fieldH + pad);
 
             AcceptButton = okButton;
             CancelButton = cancelButton;

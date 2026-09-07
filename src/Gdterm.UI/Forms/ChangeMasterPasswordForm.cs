@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using Gdterm.Security;
+using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Forms
@@ -58,19 +59,26 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "修改主密码";
-            Size = new Size(500, 470);
+            Size = DpiScale.S(this, 500, 470); // 初始基准，构造末尾按内容自适应重设
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
+            BackColor = GdtermColorTable.Background;
+            ForeColor = GdtermColorTable.Foreground;
+            Font = Gdterm.UI.Services.FormFontPolicy.UiFont(); // 布局前先设全局字体，RowStep 才能按真实字号算行距
 
-            int labelX = 20;
-            int boxX = 120;
-            int boxWidth = 340;
-            int rowH = 46;
-            int y = 20;
+            // 字体驱动 + DPI 缩放布局（修复：固定像素步进在大字号/高 DPI 下控件重叠、底部按钮被裁剪）
+            int clientW = DpiScale.V(this, 500);
+            int pad = DpiScale.V(this, 20);
+            int labelX = pad;
+            int boxX = DpiScale.V(this, 120);
+            int boxWidth = clientW - boxX - pad;
+            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int rowH = fieldH + DpiScale.V(this, 8);
+            int y = DpiScale.V(this, 20);
 
             var titleLabel = new AntdUI.Label {
                 Text = "修改主密码",
@@ -78,27 +86,29 @@ namespace Gdterm.UI.Forms
                 AutoSize = true,
                 Location = new Point(labelX, y)
             };
-            y += 46;
+            Controls.Add(titleLabel);
+            y += Math.Max(DpiScale.V(this, 46), FormFontPolicy.RowStep(this) + DpiScale.V(this, 10));
 
             var tipLabel = new AntdUI.Label {
                 Text = "修改后，KeePass 密码库 (gdterm.kdbx) 将用新主密码重新加密。\n请妥善保管新密码，丢失将无法找回。",
                 AutoSize = true,
                 Location = new Point(labelX, y)
             };
-            y += 58;
+            Controls.Add(tipLabel);
+            y += Math.Max(DpiScale.V(this, 58), FormFontPolicy.RowStep(this) * 2);
 
-            Controls.Add(MakeFieldLabel("当前密码", labelX, y));
-            _oldBox = MakePasswordBox(boxX, y, boxWidth);
+            Controls.Add(MakeFieldLabel("当前密码", labelX, y, fieldH));
+            _oldBox = MakePasswordBox(boxX, y, boxWidth, fieldH);
             y += rowH;
 
-            Controls.Add(MakeFieldLabel("新密码", labelX, y));
-            _newBox = MakePasswordBox(boxX, y, boxWidth);
+            Controls.Add(MakeFieldLabel("新密码", labelX, y, fieldH));
+            _newBox = MakePasswordBox(boxX, y, boxWidth, fieldH);
             _newBox.TextChanged += OnNewPasswordChanged;
             y += rowH;
 
-            Controls.Add(MakeFieldLabel("确认新密码", labelX, y));
-            _confirmBox = MakePasswordBox(boxX, y, boxWidth);
-            y += rowH + 2;
+            Controls.Add(MakeFieldLabel("确认新密码", labelX, y, fieldH));
+            _confirmBox = MakePasswordBox(boxX, y, boxWidth, fieldH);
+            y += rowH;
 
             _strengthLabel = new AntdUI.Label {
                 Text = "密码强度：未输入",
@@ -129,39 +139,47 @@ namespace Gdterm.UI.Forms
                 _confirmBox.UseSystemPasswordChar = !_showPwdCheck.Checked;
             };
             Controls.Add(_showPwdCheck);
-            y += rowH + 4;
+            y += rowH + DpiScale.V(this, 4);
+
+            int btnW = DpiScale.V(this, 100);
+            int btnW2 = DpiScale.V(this, 90);
+            int btnGap = DpiScale.V(this, 8);
+            // 按钮：Windows 惯例主按钮最右（修复：原先确认修改在左侧）
+            var cancelButton = new AntdUI.Button {
+                Text = "取消",
+                Size = new Size(btnW2, fieldH),
+                Location = new Point(clientW - pad - btnW2, y)
+            };
+            cancelButton.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
+            Controls.Add(cancelButton);
 
             _okButton = new AntdUI.Button {
                 Text = "确认修改",
                 Type = AntdUI.TTypeMini.Primary,
-                Size = new Size(100, 38),
-                Location = new Point(500 - 20 - 100 - 8 - 90, y)
+                Size = new Size(btnW, fieldH),
+                Location = new Point(clientW - pad - btnW - btnGap - btnW2, y)
             };
             _okButton.Click += OnOkClick;
             Controls.Add(_okButton);
 
-            var cancelButton = new AntdUI.Button {
-                Text = "取消",
-                Size = new Size(90, 38),
-                Location = new Point(500 - 20 - 90, y)
-            };
-            cancelButton.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
-            Controls.Add(cancelButton);
+            // 客户区高度随内容自适应（修复：固定 470 在大字号下裁剪底部按钮）
+            ClientSize = new Size(clientW, y + fieldH + DpiScale.V(this, 18));
 
             AcceptButton = _okButton;
             CancelButton = cancelButton;
         }
 
-        private static AntdUI.Label MakeFieldLabel(string text, int x, int y)
+        private static AntdUI.Label MakeFieldLabel(string text, int x, int y, int fieldH)
         {
-            return new AntdUI.Label { Text = text, AutoSize = true, Location = new Point(x, y + 10) };
+            int offset = Math.Max(4, (fieldH - 17) / 2);
+            return new AntdUI.Label { Text = text, AutoSize = true, Location = new Point(x, y + offset) };
         }
 
-        private AntdUI.Input MakePasswordBox(int x, int y, int width)
+        private AntdUI.Input MakePasswordBox(int x, int y, int width, int fieldH)
         {
             return new AntdUI.Input {
                 Location = new Point(x, y),
-                Size = new Size(width, 38),
+                Size = new Size(width, fieldH),
                 Font = new Font("Consolas", 11f),
                 UseSystemPasswordChar = true
             };

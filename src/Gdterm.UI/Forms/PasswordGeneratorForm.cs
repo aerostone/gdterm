@@ -47,16 +47,23 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "密码生成器";
-            Size = new Size(520, 600);
+            Size = DpiScale.S(this, 520, 600); // 初始基准，构造末尾按内容自适应重设
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
+            BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Background;
+            ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Foreground;
+            Font = FormFontPolicy.UiFont(); // 布局前先设全局字体，RowStep 才能按真实字号算行距
 
-            int pad = 20;
-            int y = 22;
+            // 字体驱动 + DPI 缩放布局（修复：固定 520x600 下历史框底部被裁剪）
+            int clientW = DpiScale.V(this, 520);
+            int pad = DpiScale.V(this, 20);
+            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int rowH = fieldH + DpiScale.V(this, 8);
+            int y = DpiScale.V(this, 22);
 
             // 标题
             var titleLabel = new AntdUI.Label {
@@ -66,15 +73,15 @@ namespace Gdterm.UI.Forms
                 Location = new Point(pad, y)
             };
             Controls.Add(titleLabel);
-            y += 52;
+            y += Math.Max(DpiScale.V(this, 52), FormFontPolicy.RowStep(this) + DpiScale.V(this, 14));
 
             // 密码长度
-            var lengthLabel = new AntdUI.Label { Text = "密码长度", AutoSize = true, Location = new Point(pad, y + 10) };
+            var lengthLabel = new AntdUI.Label { Text = "密码长度", AutoSize = true, Location = new Point(pad, y + DpiScale.V(this, 10)) };
             Controls.Add(lengthLabel);
 
             _lengthSpinner = new AntdUI.InputNumber {
-                Location = new Point(pad + 90, y),
-                Size = new Size(90, 38),
+                Location = new Point(pad + DpiScale.V(this, 90), y),
+                Size = new Size(DpiScale.V(this, 90), fieldH),
                 Minimum = 8,
                 Maximum = 128,
                 Value = 16,
@@ -85,44 +92,46 @@ namespace Gdterm.UI.Forms
 
             // 快捷长度按钮
             int[] quickLengths = { 12, 16, 20, 24, 32 };
-            int btnX = pad + 200;
+            int btnX = pad + DpiScale.V(this, 200);
             foreach (var len in quickLengths)
             {
                 var lenCaptured = len;
                 var btn = new AntdUI.Button {
                     Text = len.ToString(),
                     Location = new Point(btnX, y),
-                    Size = new Size(48, 38)
+                    Size = new Size(DpiScale.V(this, 48), fieldH)
                 };
                 btn.Click += (s, e) => { _lengthSpinner.Value = lenCaptured; };
                 Controls.Add(btn);
-                btnX += 56;
+                btnX += DpiScale.V(this, 56);
             }
-            y += 52;
+            y += rowH + DpiScale.V(this, 4);
 
             // 字符集选项
             var charsetTitle = new AntdUI.Label { Text = "字符集", AutoSize = true, Location = new Point(pad, y) };
             Controls.Add(charsetTitle);
-            y += 32;
+            y += Math.Max(DpiScale.V(this, 32), FormFontPolicy.RowStep(this));
 
+            int col2X = pad + DpiScale.V(this, 220);
             _upperCheck = CreateCheck("大写字母 (A-Z)", pad, y);
-            _digitCheck = CreateCheck("数字 (0-9)", pad + 220, y);
-            y += 32;
+            _digitCheck = CreateCheck("数字 (0-9)", col2X, y);
+            y += Math.Max(DpiScale.V(this, 32), FormFontPolicy.RowStep(this));
             _lowerCheck = CreateCheck("小写字母 (a-z)", pad, y);
-            _specialCheck = CreateCheck("特殊字符 (!@#$...)", pad + 220, y);
-            y += 32;
+            _specialCheck = CreateCheck("特殊字符 (!@#$...)", col2X, y);
+            y += Math.Max(DpiScale.V(this, 32), FormFontPolicy.RowStep(this));
             _ambiguousCheck = CreateCheck("排除易混淆字符 (Il1O0)", pad, y);
             _ambiguousCheck.CheckedChanged += (s, e) => GeneratePassword();
-            y += 44;
+            y += Math.Max(DpiScale.V(this, 44), FormFontPolicy.RowStep(this) + DpiScale.V(this, 12));
 
             // 生成结果
             var resultLabel = new AntdUI.Label { Text = "生成结果", AutoSize = true, Location = new Point(pad, y) };
             Controls.Add(resultLabel);
-            y += 28;
+            y += DpiScale.V(this, 28);
 
+            int resultH = fieldH + DpiScale.V(this, 6);
             _resultBox = new AntdUI.Input {
                 Location = new Point(pad, y),
-                Size = new Size(300, 44),
+                Size = new Size(DpiScale.V(this, 300), resultH),
                 Font = new Font("Consolas", 14f, FontStyle.Bold),
                 ReadOnly = true
             };
@@ -131,14 +140,14 @@ namespace Gdterm.UI.Forms
             _strengthLabel = new AntdUI.Label {
                 Text = "强度：—",
                 AutoSize = true,
-                Location = new Point(pad, y + 52)
+                Location = new Point(pad, y + resultH + DpiScale.V(this, 8))
             };
             Controls.Add(_strengthLabel);
 
             var generateBtn = new AntdUI.Button {
                 Text = "🔄 重新生成",
-                Location = new Point(pad + 312, y),
-                Size = new Size(150, 44),
+                Location = new Point(pad + DpiScale.V(this, 312), y),
+                Size = new Size(DpiScale.V(this, 150), resultH),
                 Type = AntdUI.TTypeMini.Primary
             };
             generateBtn.Click += (s, e) => GeneratePassword();
@@ -146,21 +155,21 @@ namespace Gdterm.UI.Forms
 
             _copyBtn = new AntdUI.Button {
                 Text = "📋 复制",
-                Location = new Point(pad + 312, y + 52),
-                Size = new Size(150, 44)
+                Location = new Point(pad + DpiScale.V(this, 312), y + resultH + DpiScale.V(this, 8)),
+                Size = new Size(DpiScale.V(this, 150), fieldH)
             };
             _copyBtn.Click += OnCopyClick;
             Controls.Add(_copyBtn);
-            y += 108;
+            y += resultH + fieldH + DpiScale.V(this, 16);
 
             var generate10Btn = new AntdUI.Button {
                 Text = "批量生成 10 个",
                 Location = new Point(pad, y),
-                Size = new Size(130, 38)
+                Size = new Size(DpiScale.V(this, 130), fieldH)
             };
             generate10Btn.Click += OnBatchGenerate;
             Controls.Add(generate10Btn);
-            y += 52;
+            y += rowH + DpiScale.V(this, 4);
 
             // 历史记录（只读多行 Input，双击复制整行由 KeyDown/MouseUp 简化为一键复制全部）
             var historyLabel = new AntdUI.Label {
@@ -169,17 +178,22 @@ namespace Gdterm.UI.Forms
                 Location = new Point(pad, y)
             };
             Controls.Add(historyLabel);
-            y += 28;
+            y += DpiScale.V(this, 28);
 
+            int historyH = DpiScale.V(this, 110);
             _historyBox = new AntdUI.Input {
                 Location = new Point(pad, y),
-                Size = new Size(520 - pad * 2, 110),
+                Size = new Size(clientW - pad * 2, historyH),
                 Font = new Font("Consolas", 10f),
                 ReadOnly = true,
                 Multiline = true
             };
             _historyBox.MouseDoubleClick += OnHistoryDoubleClick;
             Controls.Add(_historyBox);
+            y += historyH;
+
+            // 客户区高度随内容自适应（修复：固定高度下历史框底部被裁剪）
+            ClientSize = new Size(clientW, y + DpiScale.V(this, 20));
         }
 
         private AntdUI.Checkbox CreateCheck(string text, int x, int y)

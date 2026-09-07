@@ -34,26 +34,36 @@ namespace Gdterm.UI.Forms
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
-            Size = new Size(600, 520);
+            Size = DpiScale.S(this, 600, 520);
             Services.FormFontPolicy.Apply(this); // AntdUI 控件继承 Form.Font，恢复用户配置 UI 字号传导
+            BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Background;
+            ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Foreground;
+            Font = FormFontPolicy.UiFont(); // 布局前先设全局字体，RowStep 才能按真实字号算行距
 
-            int y = 20;
-            _title = Labeled(ref y, "条目标题", "SSH Key");
-            _user = Labeled(ref y, "用户名", "root");
-            _host = Labeled(ref y, "主机名", "");
-            _passphrase = Labeled(ref y, "密钥口令", "");
+            // 字体驱动 + DPI 缩放布局（修复：固定坐标下预览框与底部按钮重叠）
+            int clientW = DpiScale.V(this, 600);
+            int pad = DpiScale.V(this, 20);
+            int boxX = DpiScale.V(this, 120);
+            int boxW = clientW - boxX - pad;
+            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int rowH = fieldH + DpiScale.V(this, 12);
+            int y = DpiScale.V(this, 20);
+            _title = Labeled(ref y, "条目标题", "SSH Key", boxX, boxW, fieldH, rowH);
+            _user = Labeled(ref y, "用户名", "root", boxX, boxW, fieldH, rowH);
+            _host = Labeled(ref y, "主机名", "", boxX, boxW, fieldH, rowH);
+            _passphrase = Labeled(ref y, "密钥口令", "", boxX, boxW, fieldH, rowH);
             _passphrase.UseSystemPasswordChar = true;
 
-            Controls.Add(MakeLabel("私钥文件", 20, y));
+            Controls.Add(MakeLabel("私钥文件", pad, y, fieldH));
             _keyPath = new AntdUI.Input {
-                Location = new Point(120, y),
-                Size = new Size(330, 38)
+                Location = new Point(boxX, y),
+                Size = new Size(boxW - DpiScale.V(this, 100), fieldH)
             };
             Controls.Add(_keyPath);
             var browse = new AntdUI.Button {
                 Text = "浏览…",
-                Location = new Point(460, y),
-                Size = new Size(90, 38)
+                Location = new Point(boxX + boxW - DpiScale.V(this, 90), y),
+                Size = new Size(DpiScale.V(this, 90), fieldH)
             };
             browse.Click += (s, e) =>
             {
@@ -72,40 +82,49 @@ namespace Gdterm.UI.Forms
                 }
             };
             Controls.Add(browse);
-            y += 50;
+            y += rowH;
 
-            Controls.Add(MakeLabel("预览", 20, y));
+            Controls.Add(MakeLabel("预览", pad, y, fieldH));
+            int previewH = DpiScale.V(this, 190);
             _preview = new AntdUI.Input {
-                Location = new Point(120, y),
-                Size = new Size(430, 190),
+                Location = new Point(boxX, y),
+                Size = new Size(boxW, previewH),
                 Multiline = true,
                 ReadOnly = true,
                 Font = new Font("Consolas", 8.5f)
             };
             Controls.Add(_preview);
+            y += previewH + DpiScale.V(this, 16);
+
+            // 底部按钮：主按钮最右，行位置由 y 流式推导（修复：原先固定 y=440 与预览框重叠）
+            int btnW = DpiScale.V(this, 130);
+            int btnW2 = DpiScale.V(this, 88);
+            int btnGap = DpiScale.V(this, 8);
+            var cancel = new AntdUI.Button {
+                Text = "关闭",
+                Location = new Point(clientW - pad - btnW2, y),
+                Size = new Size(btnW2, fieldH)
+            };
+            cancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
+            Controls.Add(cancel);
 
             var ok = new AntdUI.Button {
                 Text = "导入到密码库",
                 Type = AntdUI.TTypeMini.Primary,
-                Location = new Point(300, 440),
-                Size = new Size(130, 38)
+                Location = new Point(clientW - pad - btnW - btnGap - btnW2, y),
+                Size = new Size(btnW, fieldH)
             };
             ok.Click += OnImport;
             Controls.Add(ok);
 
-            var cancel = new AntdUI.Button {
-                Text = "关闭",
-                Location = new Point(442, 440),
-                Size = new Size(88, 38)
-            };
-            cancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
-            Controls.Add(cancel);
+            ClientSize = new Size(clientW, y + fieldH + DpiScale.V(this, 16));
             CancelButton = cancel;
         }
 
-        private static AntdUI.Label MakeLabel(string text, int x, int y)
+        private static AntdUI.Label MakeLabel(string text, int x, int y, int fieldH)
         {
-            return new AntdUI.Label { Text = text, AutoSize = true, Location = new Point(x, y + 10) };
+            int offset = Math.Max(4, (fieldH - 17) / 2);
+            return new AntdUI.Label { Text = text, AutoSize = true, Location = new Point(x, y + offset) };
         }
 
         private void OnImport(object sender, EventArgs e)
@@ -148,16 +167,16 @@ namespace Gdterm.UI.Forms
             }
         }
 
-        private AntdUI.Input Labeled(ref int y, string label, string value)
+        private AntdUI.Input Labeled(ref int y, string label, string value, int boxX, int boxW, int fieldH, int rowH)
         {
-            Controls.Add(MakeLabel(label, 20, y));
+            Controls.Add(MakeLabel(label, DpiScale.V(this, 20), y, fieldH));
             var tb = new AntdUI.Input {
-                Location = new Point(120, y),
-                Size = new Size(430, 38),
+                Location = new Point(boxX, y),
+                Size = new Size(boxW, fieldH),
                 Text = value ?? ""
             };
             Controls.Add(tb);
-            y += 50;
+            y += rowH;
             return tb;
         }
     }
