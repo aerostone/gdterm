@@ -9,24 +9,26 @@ namespace Gdterm.UI.Diagnostics
     /// 全局 UI 主题色表 + ToolStrip 渲染器：解决"发虚/不稳重"的视觉问题。
     /// </summary>
     /// <remarks>
-    /// 色板对齐 ui-ux-pro-max 推荐（GitHub Dark / 终端绿）：
-    /// bg #0D1117 / surface #161B22 / border #30363D / muted #25292F /
-    /// accent #00FF41 终端绿 / destructive #EF4444 / fg #E6EDF3。
-    /// 参照 Xshell/SecureCRT 暗色专业外观：深背景、低饱和、单一绿色强调，
-    /// 不要彩色渐变。
+    /// 色板采用石墨暗色 + 低饱和薄荷绿：
+    /// 背景和容器保持中性，薄荷绿只负责主操作和选中反馈，状态色只做小面积提示。
+    /// 参照 Xshell/SecureCRT 暗色专业外观：深背景、清晰层级、无彩色渐变。
     /// </remarks>
     internal sealed class GdtermColorTable : ProfessionalColorTable
     {
-        // GitHub Dark + 终端绿 — 对齐成熟终端客户端的暗色规范
+        // 石墨暗色 + 薄荷绿 — 降低荧光色造成的视觉噪声
         // 采用静态属性 + 后台字段，使运行时可切换主题而不重启。
-        private static Color s_background = Color.FromArgb(0x0D, 0x11, 0x17);
-        private static Color s_surface = Color.FromArgb(0x16, 0x1B, 0x22);
-        private static Color s_border = Color.FromArgb(0x30, 0x36, 0x3D);
-        private static Color s_accent = Color.FromArgb(0x00, 0xFF, 0x41);
-        private static Color s_foreground = Color.FromArgb(0xE6, 0xED, 0xF3);
-        private static Color s_muted = Color.FromArgb(0x8B, 0x94, 0x9E);
-        private static Color s_hover = Color.FromArgb(0x25, 0x29, 0x2F);
-        private static Color s_pressed = Color.FromArgb(0x35, 0x39, 0x3F);
+        private static Color s_background = Color.FromArgb(0x11, 0x16, 0x1A);
+        private static Color s_surface = Color.FromArgb(0x1A, 0x21, 0x27);
+        private static Color s_border = Color.FromArgb(0x35, 0x41, 0x4A);
+        private static Color s_accent = Color.FromArgb(0x34, 0xD3, 0x99);
+        private static Color s_foreground = Color.FromArgb(0xE8, 0xEE, 0xF2);
+        private static Color s_muted = Color.FromArgb(0x9A, 0xA7, 0xB1);
+        private static Color s_hover = Color.FromArgb(0x26, 0x30, 0x39);
+        private static Color s_pressed = Color.FromArgb(0x32, 0x3D, 0x47);
+        private static Color s_on_accent = Color.FromArgb(0x08, 0x22, 0x18);
+        private static Color s_on_danger = Color.FromArgb(0x2A, 0x0E, 0x0C);
+        private static Color s_on_info = Color.FromArgb(0x0B, 0x1B, 0x2B);
+        private static Color s_overlay = Color.FromArgb(210, 0x0A, 0x0E, 0x12);
 
         public static Color Background { get { return s_background; } }
         public static Color Surface { get { return s_surface; } }
@@ -36,20 +38,24 @@ namespace Gdterm.UI.Diagnostics
         public static Color Muted { get { return s_muted; } }
         public static Color Hover { get { return s_hover; } }
         public static Color Pressed { get { return s_pressed; } }
+        public static Color OnAccent { get { return s_on_accent; } }
+        public static Color OnDanger { get { return s_on_danger; } }
+        public static Color OnInfo { get { return s_on_info; } }
+        public static Color Overlay { get { return s_overlay; } }
 
-        // ── 语义色（DESIGN-LANGUAGE v1.1 §3：状态色只用于文字与图标，不做大面积底色）──
-        private static Color s_danger = Color.FromArgb(0xF8, 0x51, 0x49);
-        private static Color s_warning = Color.FromArgb(0xD2, 0x99, 0x22);
-        private static Color s_success = Color.FromArgb(0x3F, 0xB9, 0x50);
-        private static Color s_info = Color.FromArgb(0x58, 0xA6, 0xFF);
+        // ── 语义色（DESIGN-LANGUAGE v1.3：状态色只用于文字与图标，不做大面积底色）──
+        private static Color s_danger = Color.FromArgb(0xF0, 0x6A, 0x64);
+        private static Color s_warning = Color.FromArgb(0xE4, 0xB8, 0x6A);
+        private static Color s_success = Color.FromArgb(0x59, 0xC7, 0x7B);
+        private static Color s_info = Color.FromArgb(0x75, 0xA9, 0xE6);
 
-        /// <summary>危险/删除/错误文字（#F85149）。</summary>
+        /// <summary>危险/删除/错误文字（#F06A64）。</summary>
         public static Color Danger { get { return s_danger; } }
-        /// <summary>告警文字（#D29922）。</summary>
+        /// <summary>告警文字（#E4B86A）。</summary>
         public static Color Warning { get { return s_warning; } }
-        /// <summary>成功状态文字（#3FB950，区别于 Accent 按钮绿）。</summary>
+        /// <summary>成功状态文字（#59C77B，区别于 Accent 按钮绿）。</summary>
         public static Color Success { get { return s_success; } }
-        /// <summary>链接/信息（#58A6FF，蓝色仅在可点击文字场景）。</summary>
+        /// <summary>链接/信息（#75A9E6，蓝色仅在可点击文字场景）。</summary>
         public static Color Info { get { return s_info; } }
 
         /// <summary>运行时切换外壳主题（与终端 ColorScheme 独立）。</summary>
@@ -59,35 +65,35 @@ namespace Gdterm.UI.Diagnostics
             switch (name)
             {
                 case "Darker":
-                    s_background = Color.FromArgb(0x10, 0x10, 0x10);
-                    s_surface = Color.FromArgb(0x1A, 0x1A, 0x1A);
-                    s_border = Color.FromArgb(0x33, 0x33, 0x33);
-                    s_accent = Color.FromArgb(0x3B, 0x82, 0xF6);
-                    s_foreground = Color.FromArgb(0xE6, 0xED, 0xF3);
-                    s_muted = Color.FromArgb(0x82, 0x82, 0x82);
-                    s_hover = Color.FromArgb(0x26, 0x26, 0x26);
-                    s_pressed = Color.FromArgb(0x36, 0x36, 0x36);
+                    s_background = Color.FromArgb(0x0C, 0x10, 0x13);
+                    s_surface = Color.FromArgb(0x14, 0x1A, 0x1E);
+                    s_border = Color.FromArgb(0x2B, 0x35, 0x3C);
+                    s_accent = Color.FromArgb(0x34, 0xD3, 0x99);
+                    s_foreground = Color.FromArgb(0xE8, 0xEE, 0xF2);
+                    s_muted = Color.FromArgb(0x87, 0x94, 0x9D);
+                    s_hover = Color.FromArgb(0x20, 0x28, 0x2E);
+                    s_pressed = Color.FromArgb(0x2B, 0x34, 0x3B);
                     break;
                 case "OLED":
-                    s_background = Color.FromArgb(0x00, 0x00, 0x00);
-                    s_surface = Color.FromArgb(0x08, 0x08, 0x08);
-                    s_border = Color.FromArgb(0x20, 0x20, 0x20);
-                    s_accent = Color.FromArgb(0x00, 0xFF, 0x41);
-                    s_foreground = Color.FromArgb(0xFA, 0xFA, 0xFA);
-                    s_muted = Color.FromArgb(0x80, 0x80, 0x80);
-                    s_hover = Color.FromArgb(0x14, 0x14, 0x14);
-                    s_pressed = Color.FromArgb(0x22, 0x22, 0x22);
+                    s_background = Color.FromArgb(0x05, 0x06, 0x06);
+                    s_surface = Color.FromArgb(0x0C, 0x10, 0x10);
+                    s_border = Color.FromArgb(0x20, 0x28, 0x29);
+                    s_accent = Color.FromArgb(0x34, 0xD3, 0x99);
+                    s_foreground = Color.FromArgb(0xF1, 0xF5, 0xF5);
+                    s_muted = Color.FromArgb(0x8B, 0x96, 0x96);
+                    s_hover = Color.FromArgb(0x15, 0x1A, 0x1A);
+                    s_pressed = Color.FromArgb(0x20, 0x28, 0x28);
                     break;
                 case "Dark":
                 default:
-                    s_background = Color.FromArgb(0x0D, 0x11, 0x17);
-                    s_surface = Color.FromArgb(0x16, 0x1B, 0x22);
-                    s_border = Color.FromArgb(0x30, 0x36, 0x3D);
-                    s_accent = Color.FromArgb(0x00, 0xFF, 0x41);
-                    s_foreground = Color.FromArgb(0xE6, 0xED, 0xF3);
-                    s_muted = Color.FromArgb(0x8B, 0x94, 0x9E);
-                    s_hover = Color.FromArgb(0x25, 0x29, 0x2F);
-                    s_pressed = Color.FromArgb(0x35, 0x39, 0x3F);
+                    s_background = Color.FromArgb(0x11, 0x16, 0x1A);
+                    s_surface = Color.FromArgb(0x1A, 0x21, 0x27);
+                    s_border = Color.FromArgb(0x35, 0x41, 0x4A);
+                    s_accent = Color.FromArgb(0x34, 0xD3, 0x99);
+                    s_foreground = Color.FromArgb(0xE8, 0xEE, 0xF2);
+                    s_muted = Color.FromArgb(0x9A, 0xA7, 0xB1);
+                    s_hover = Color.FromArgb(0x26, 0x30, 0x39);
+                    s_pressed = Color.FromArgb(0x32, 0x3D, 0x47);
                     break;
             }
         }

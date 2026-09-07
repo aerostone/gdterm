@@ -41,7 +41,7 @@ namespace Gdterm.UI.Controls
                 Text = "书签 / 最近连接",
                 Dock = DockStyle.Top,
                 AutoSize = true,
-                ForeColor = Color.White,
+                ForeColor = GdtermColorTable.Foreground,
                 Font = Services.FormFontPolicy.UiFont(+1f, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(8, 0, 0, 0)
@@ -51,7 +51,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Top,
                 AutoSize = true,
                 BackColor = GdtermColorTable.Surface,
-                ForeColor = Color.White,
+                ForeColor = GdtermColorTable.Foreground,
             };
             _searchBox.TextChanged += (s, e) => FilterBookmarks();
 
@@ -156,7 +156,7 @@ namespace Gdterm.UI.Controls
                 MultiSelect = false,
                 HideSelection = false,
                 BackColor = GdtermColorTable.Surface,
-                ForeColor = Color.White,
+                ForeColor = GdtermColorTable.Foreground,
                 HeaderStyle = ColumnHeaderStyle.Nonclickable,
                 Font = Services.FormFontPolicy.UiFont()
             };
@@ -169,7 +169,7 @@ namespace Gdterm.UI.Controls
                 Text = text,
                 AutoSize = true,
                 BackColor = GdtermColorTable.Surface,
-                ForeColor = Color.White,
+                ForeColor = GdtermColorTable.Foreground,
                 Margin = new Padding(2),
                 Padding = new Padding(8, 3, 8, 3)
             };
@@ -204,7 +204,7 @@ namespace Gdterm.UI.Controls
                     var item = new ListViewItem(b.Name ?? "(未命名)")
                     {
                         Tag = b,
-                        ForeColor = b.IsFavorite ? GdtermColorTable.Warning : Color.White
+                        ForeColor = b.IsFavorite ? GdtermColorTable.Warning : GdtermColorTable.Foreground
                     };
                     item.SubItems.Add(b.ConnectionId ?? "");
                     item.SubItems.Add(b.Tags ?? "");
@@ -235,7 +235,7 @@ namespace Gdterm.UI.Controls
                     var item = new ListViewItem(r.Host ?? r.ConnectionId ?? "")
                     {
                         Tag = r,
-                        ForeColor = r.Success ? GdtermColorTable.Success : Color.FromArgb(220, 120, 120)
+                        ForeColor = r.Success ? GdtermColorTable.Success : GdtermColorTable.Danger
                     };
                     item.SubItems.Add(r.Protocol ?? "");
                     item.SubItems.Add(r.ConnectedAt.ToLocalTime().ToString("MM-dd HH:mm"));
@@ -279,13 +279,13 @@ namespace Gdterm.UI.Controls
                     Location = DpiScale.P(this, 15, 20),
                     Size = DpiScale.S(this, 310, 24),
                     BackColor = GdtermColorTable.Surface,
-                    ForeColor = Color.White
+                    ForeColor = GdtermColorTable.Foreground
                 };
                 var combo = new AntdUI.Select {
                     Location = DpiScale.P(this, 15, 55),
                     Size = DpiScale.S(this, 310, 24),
                     BackColor = GdtermColorTable.Surface,
-                    ForeColor = Color.White
+                    ForeColor = GdtermColorTable.Foreground
                 };
                 foreach (var c in connections)
                     combo.Items.Add(new ConnItem(c));
@@ -297,11 +297,11 @@ namespace Gdterm.UI.Controls
                     Location = DpiScale.P(this, 245, 110),
                     Size = DpiScale.S(this, 80, 28),
                     BackColor = GdtermColorTable.Accent,
-                    ForeColor = Color.White
+                    ForeColor = GdtermColorTable.OnAccent
                 };
-                dlg.Controls.Add(new AntdUI.Label { Text = "名称", ForeColor = Color.Silver, Location = DpiScale.P(this, 15, 4), AutoSize = true });
+                dlg.Controls.Add(new AntdUI.Label { Text = "名称", ForeColor = GdtermColorTable.Muted, Location = DpiScale.P(this, 15, 4), AutoSize = true });
                 dlg.Controls.Add(nameBox);
-                dlg.Controls.Add(new AntdUI.Label { Text = "连接", ForeColor = Color.Silver, Location = DpiScale.P(this, 15, 40), AutoSize = true });
+                dlg.Controls.Add(new AntdUI.Label { Text = "连接", ForeColor = GdtermColorTable.Muted, Location = DpiScale.P(this, 15, 40), AutoSize = true });
                 dlg.Controls.Add(combo);
                 dlg.Controls.Add(ok);
                 dlg.AcceptButton = ok;

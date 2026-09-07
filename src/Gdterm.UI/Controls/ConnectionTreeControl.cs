@@ -173,7 +173,7 @@ namespace Gdterm.UI.Controls
                     break;
                 case "ssh":
                     // Terminal icon with >_
-                    using (var bg = new SolidBrush(Color.FromArgb(40, 120, 80)))
+                    using (var bg = new SolidBrush(GdtermColorTable.Surface))
                         g.FillRectangle(bg, 1, 1, 14, 14);
                     using (var pen = new Pen(GdtermColorTable.Success, 1.5f))
                     {
@@ -185,14 +185,14 @@ namespace Gdterm.UI.Controls
                     break;
                 case "rdp":
                     // Monitor icon
-                    using (var bg = new SolidBrush(Color.FromArgb(0, 120, 215)))
+                    using (var bg = new SolidBrush(GdtermColorTable.Info))
                         g.FillRectangle(bg, 2, 2, 12, 9);
-                    using (var pen = new Pen(Color.FromArgb(0, 120, 215), 1.5f))
+                    using (var pen = new Pen(GdtermColorTable.Info, 1.5f))
                     {
                         g.DrawLine(pen, 5, 12, 11, 12);
                         g.DrawLine(pen, 8, 11, 8, 13);
                     }
-                    using (var fg = new SolidBrush(Color.White))
+                    using (var fg = new SolidBrush(GdtermColorTable.OnInfo))
                         g.FillRectangle(fg, 5, 4, 6, 5);
                     break;
                 case "serial":
@@ -221,9 +221,9 @@ namespace Gdterm.UI.Controls
                     }
                     break;
                 case "group":
-                    using (var bg = new SolidBrush(Color.FromArgb(60, 120, 180)))
+                    using (var bg = new SolidBrush(GdtermColorTable.Info))
                         g.FillEllipse(bg, 3, 3, 10, 10);
-                    using (var fg = new SolidBrush(Color.White))
+                    using (var fg = new SolidBrush(GdtermColorTable.OnInfo))
                     {
                         var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
                         g.DrawString("G", new Font("Consolas", 7f, FontStyle.Bold), fg, new RectangleF(3, 3, 10, 10), sf);

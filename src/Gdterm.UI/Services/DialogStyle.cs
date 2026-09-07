@@ -6,7 +6,7 @@ using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 namespace Gdterm.UI.Services
 {
     /// <summary>
-    /// C/S 客户端设计语言辅助——把“GitHub Dark + 终端绿”视觉规范沉淀成可复用的工厂方法。
+    /// C/S 客户端设计语言辅助——把“石墨暗色 + 薄荷绿”视觉规范沉淀成可复用的工厂方法。
     ///
     /// 背景（2026-09 布局治理）：此前十余个手写对话框各自 new Button/new Label 再
     /// 逐个设置颜色/FlatStyle/边框，结果样式漂移（蓝按钮/灰按钮混用、圆角直角不一、
@@ -16,7 +16,7 @@ namespace Gdterm.UI.Services
     ///     禁止再写 Color.FromArgb 的外壳色；
     ///   - 字体一律 FormFontPolicy（全局 UI 字体 + Win7 回退链），禁止硬编码字族；
     ///   - 文本控件 AutoSize + RowStep 行距（字体驱动，见 FormFontPolicy.RowStep）；
-    ///   - 按钮分三级：Primary（终端绿实心，每窗体至多一个）/ Secondary（Surface 面）
+    ///   - 按钮分三级：Primary（薄荷绿实心，每窗体至多一个）/ Secondary（Surface 面）
     ///     / Danger（红系，破坏性操作）；
     ///   - 对话框底边 1px Border 分隔线 + 右对齐按钮条（Windows 惯例：主按钮最右）。
     ///
@@ -51,12 +51,12 @@ namespace Gdterm.UI.Services
             f.ShowInTaskbar = false;
         }
 
-        /// <summary>主操作按钮——终端绿实心。每个窗体至多一个（单一 CTA 原则）。</summary>
+        /// <summary>主操作按钮——薄荷绿实心。每个窗体至多一个（单一 CTA 原则）。</summary>
         public static void MakePrimary(Button b)
         {
             if (b == null) return;
             b.BackColor = GdtermColorTable.Accent;
-            b.ForeColor = Color.Black; // 绿底黑字对比度最高（纯绿 #00FF41 上白字仅 ~1.4:1）
+            b.ForeColor = GdtermColorTable.OnAccent;
             EnsureButtonAutoSize(b);
         }
 
@@ -73,8 +73,8 @@ namespace Gdterm.UI.Services
         public static void MakeDanger(Button b)
         {
             if (b == null) return;
-            b.BackColor = Color.FromArgb(0xEF, 0x44, 0x44);
-            b.ForeColor = Color.White;
+            b.BackColor = GdtermColorTable.Danger;
+            b.ForeColor = GdtermColorTable.OnDanger;
             EnsureButtonAutoSize(b);
         }
 

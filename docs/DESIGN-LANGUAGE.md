@@ -1,13 +1,13 @@
 # gdterm 设计语言（C/S 客户端 · WinForms）
 
-> 版本：1.2（2026-09-05）—— v1.2 决议：**全窗体 AntdUI 迁移完成**（除 MainForm/TerminalControl/
-> 连接树/ToastForm 豁免区），语义色四 token 落地 `GdtermColorTable`，裸 FromArgb 色值全仓清零
-> （保留连接树自绘与 MenuIconFactory 图标专用色），新增原生控件过渡层 `NativeTheme`。
+> 版本：1.3（2026-09-07）—— v1.3 决议：**全窗体 AntdUI 迁移完成**（除 MainForm/TerminalControl/
+> 连接树/ToastForm 豁免区），语义色 token 落地 `GdtermColorTable`，外壳颜色统一收口
+> （仅保留自绘图标与透明遮罩专用值），新增原生控件过渡层 `NativeTheme`。
 > v1.1 决议：引入 **AntdUI 2.4.8**（Apache-2.0，net40+，纯 GDI）作为组件底座，
-> 与本设计语言对齐使用（`Config.IsDark=true` + `Style.SetPrimary(终端绿)`，见 §9）。
+> 与本设计语言对齐使用（`Config.IsDark=true` + `Style.SetPrimary(GdtermColorTable.Accent)`，见 §9）。
 
 
-> 约束前提：.NET Framework 4.6.2 WinForms、Windows 7 / Server 2008 R2 起步、单 EXE、无第三方 UI 框架。
+> 约束前提：.NET Framework 4.6.2 WinForms、Windows 7 / Server 2008 R2 起步、单 EXE；组件框架固定为 AntdUI 2.4.8。
 > 执行规则：本文是唯一视觉事实来源（SSOT）。代码以 `GdtermColorTable` + `DialogStyle` + `FormFontPolicy`
 > 三个类为实现载体；**写新 UI 前先读本文，评审 UI 代码时以本文为准。**
 
@@ -18,7 +18,7 @@
 gdterm 是**安全运维终端**，不是内容消费应用。视觉目标排序：
 
 1. **信息密度优先**——运维要在最短视距内分辨 20+ 会话/凭据/告警；
-2. **暗色为默认**——长时间盯屏；GitHub Dark 基调，终端绿做唯一强调色；
+2. **暗色为默认**——长时间盯屏；石墨暗色基调，低饱和薄荷绿做唯一强调色；
 3. **键盘优先**——所有高频操作必须有快捷键；鼠标路径是补充；
 4. **Win7 可跑**——任何视觉手段不得依赖 Win8+ 字体/API（详见 §5）。
 
@@ -30,32 +30,37 @@ gdterm 是**安全运维终端**，不是内容消费应用。视觉目标排序
 
 | Token | 值 (Dark) | 语义 | 典型用途 |
 |---|---|---|---|
-| `Background` | `#0D1117` | 最底层背景 | 窗体底色、列表区 |
-| `Surface` | `#161B22` | 卡片/控件面 | 输入框底、工具栏、悬浮面板 |
-| `Border` | `#30363D` | 1px 描边 | 分隔线、输入框描边、表格线 |
-| `Accent` | `#00FF41` | 唯一强调色（终端绿） | 主按钮、选中态、连接正常 |
-| `Foreground` | `#E6EDF3` | 主文字 | 标题、正文 |
-| `Muted` | `#8B949E` | 次级文字 | 说明、占位、标签 |
-| `Hover` | `#25292F` | 悬浮态面 | 按钮/行 hover |
-| `Pressed` | `#35393F` | 按压态面 | 按钮 pressed |
+| `Background` | `#11161A` | 最底层背景 | 窗体底色、列表区 |
+| `Surface` | `#1A2127` | 卡片/控件面 | 输入框底、工具栏、悬浮面板 |
+| `Border` | `#35414A` | 1px 描边 | 分隔线、输入框描边、表格线 |
+| `Accent` | `#34D399` | 唯一强调色（薄荷绿） | 主按钮、选中态、连接正常 |
+| `OnAccent` | `#082218` | 强调色上的文字 | Accent 实心按钮文字 |
+| `OnDanger` | `#2A0E0C` | 危险色上的文字 | Danger 实心按钮文字 |
+| `OnInfo` | `#0B1B2B` | 信息色上的文字 | 信息图标内部文字 |
+| `Overlay` | `rgba(10,14,18,0.82)` | 锁定遮罩 | 覆盖主工作区 |
+| `Foreground` | `#E8EEF2` | 主文字 | 标题、正文 |
+| `Muted` | `#9AA7B1` | 次级文字 | 说明、占位、标签 |
+| `Hover` | `#263039` | 悬浮态面 | 按钮/行 hover |
+| `Pressed` | `#323D47` | 按压态面 | 按钮 pressed |
 
 ### 1.1 语义扩展色（功能色）
 
 | 语义 | 值 | 用途 |
 |---|---|---|
-| Danger | `#F85149` | 删除/危险按钮、错误文字 |
-| Warning | `#D29922` | 告警文字 |
-| Success | `#3FB950` | 成功状态文字（区别于 Accent 按钮绿） |
-| Info | `#58A6FF` | 链接/信息（蓝色仅在"可点击文字"场景出现） |
+| Danger | `#F06A64` | 删除/危险按钮、错误文字 |
+| Warning | `#E4B86A` | 告警文字 |
+| Success | `#59C77B` | 成功状态文字（区别于 Accent 按钮绿） |
+| Info | `#75A9E6` | 链接/信息（蓝色仅在"可点击文字"场景出现） |
 
 **规则**：
 - 界面上**同时出现的强调色不超过 2 种**；大色块只允许 Accent（主操作）与 Danger（破坏性操作）。
-- `#58A6FF`（蓝）不参与按钮体系；需要蓝色系按钮的旧窗体（如 KeePass 解锁）属遗留，逐步迁移。
+- `Info`（蓝）不参与按钮体系；蓝色只用于目录、链接和信息图标。
 - 状态色（Success/Warning/Danger）只用于**文字与图标**，不做大面积底色。
+- 主按钮文字使用 `OnAccent`，危险按钮文字使用 `OnDanger`，禁止按控件临时选择黑/白字。
 
 ### 1.2 禁止项
 
-- ❌ 手写 `Color.FromArgb(35,35,35)` 这类裸值——现有 60+ 处是历史债，禁止新增，见 §7 迁移计划。
+- ❌ 手写外壳/功能色的 `Color.FromArgb(...)` 裸值——新代码必须使用 `GdtermColorTable`，见 §7 迁移计划。
 - ❌ 纯黑 `#000000` 做背景（与终端仿真底色冲突的视觉跳变）。
 - ❌ 亮色主题下直接反色（当前只有 Dark 一套 token；Light 立项时单独评审）。
 
@@ -163,7 +168,7 @@ SnippetSearchPanel）以及 TableLayoutPanel 表达不了的精确对齐；且�
 
 ### 4.5 列表/树
 
-- 连接树：目录=Info 蓝 `#58A6FF` 可选；节点选中=`Surface` 底 + Accent 左标线。
+- 连接树：目录=Info 蓝；节点选中=`Surface` 底 + Accent 左标线。
 - 文件列表（SFTP 双栏）：目录=Info 蓝，可执行/敏感文件按功能色点缀。
 - 行高：字体驱动（`RowStep` 派生），禁止固定 `ItemHeight`。
 
@@ -194,10 +199,10 @@ WinForms 下动效克制到三个：
 
 ## 7. 存量迁移与验收
 
-### 7.1 现状（2026-09-05 基线）
+### 7.1 现状（2026-09-07 基线）
 
 - `DialogStyle` 已落地并在 KeePassUnlock 等窗体使用；
-- 历史裸颜色 ~65 处（`FromArgb(35/50/60,…)`）、裸字体构造 2 处残留；
+- 历史裸颜色仍有少量自绘图标/透明遮罩专用值、裸字体构造残留；新 UI 外壳颜色必须走 token；
 - 绝对布局窗体已基本完成 RowStep/AutoSize 化（本轮 7 窗体）。
 
 ### 7.2 迁移规则
@@ -224,8 +229,8 @@ git diff -U0 | grep "^+" | grep -v "^+++" | grep "y += 3[0-9]"
 | 设计 Token | 代码入口 |
 |---|---|
 | 全部颜色 | `GdtermColorTable.XXX` |
-| Danger/Warning/Success/Info | `GdtermColorTable.Danger/Warning/Success/Info`（v1.2 已实现） |
-| 原生控件暗色 | `NativeTheme.Dark/DarkPrimary/DarkDanger/DarkRecursive`（AntdUI 过渡层，v1.2） |
+| Danger/Warning/Success/Info | `GdtermColorTable.Danger/Warning/Success/Info` |
+| 原生控件暗色 | `NativeTheme.Dark/DarkPrimary/DarkDanger/DarkRecursive`（AntdUI 过渡层） |
 | 字体阶梯 | `FormFontPolicy.UiFont(±delta[, style])` |
 | 字族回退 | `FormFontPolicy.UiFontName` |
 | 行距 | `FormFontPolicy.RowStep(ctrl)` |
@@ -258,8 +263,8 @@ DarkUI（作者离世停更）、AcrylicUI/Beep（net Core/net8，Win7 出局）
 
 1. **存量原生窗体不动**——Terminal/MainForm/连接树等核心区保持 GdtermColorTable 体系；
 2. **新窗体/重构窗体默认 AntdUI**——继承 `AntdUI.Window`，用 Button/Input/Label/Table/Tabs；
-3. **新旧视觉对齐**：AntdUI 初始化已钉死 `IsDark=true` + `SetPrimary(终端绿调暗档 #00B84A)`
-   （纯 #00FF41 在暗底上做大面积按钮底色对比度不足）；
+3. **新旧视觉对齐**：AntdUI 初始化使用 `IsDark=true` + `SetPrimary(GdtermColorTable.Accent)`，
+   所有主题变更也同步更新 AntdUI 主色；不再维护第二套主色值；
 4. **改到哪迁到哪**：触碰旧窗体时如果该窗体布局要大改，直接迁 AntdUI；小修小补维持原生；
 5. **设计 Token 映射**：§1 色彩/§2 字体的语义不变，实现载体从 DialogStyle 逐场景过渡到 AntdUI 控件
    （Primary=Type.Primary、Muted=AntdUI 默认次级色、RowStep 仅存留于原生窗体）。
@@ -279,9 +284,9 @@ DarkUI（作者离世停更）、AcrylicUI/Beep（net Core/net8，Win7 出局）
 - `KeePassUnlockForm`（2026-09-05）：AntdUI.Window + Input + Button + Message；
   验证点：Win7 下窗体边框/拖拽、Input 密码框回车提交、Message 提示样式、高 DPI 缩放。
 
-### 9.5 迁移完成状态（v1.2，2026-09-05；v1.3 全控件化更新）
+### 9.5 迁移完成状态（v1.3，2026-09-07；全控件化更新）
 
-**v1.3 决议（2026-09-05）：UI 控件全面 AntdUI 化**——除下列边界外，所有 new Button/Label/TextBox/
+**v1.3 决议（2026-09-07）：UI 控件全面 AntdUI 化**——除下列边界外，所有 new Button/Label/TextBox/
 ComboBox/CheckBox/NumericUpDown/TabControl 均已替换为 AntdUI 控件：
 
 1. **核心区豁免（永久原生）**：MainForm、TerminalControl、SplitPaneControl、ConnectionTreeControl
@@ -311,7 +316,5 @@ ToastNotifier.ToastForm（无边框角落弹窗）。
 的 `.Dark()/.DarkPrimary()/.DarkDanger()` 扩展，供侧边板（KeyBinding/PortForward/LogonScript 等十余个
 ListView 交互核心面板）在不动交互逻辑的前提下统一暗色；色值取运行时 token，主题切换即时生效。
 
-**裸色值清零**：全仓 `FromArgb(数字,数字,数字)` 字面量已全部替换为 token 映射
-（30,30,30→Background / 35,50→Surface / 60→Hover / 80→Border / 204→Foreground /
-0,122,204 品牌蓝→Accent 主绿 / VS teal 78,201,176→Success / 255,80,80→Danger 等）。
-保留例外：连接树自绘组头/健康点三色、MenuIconFactory.Ink 图标墨色。
+**裸色迁移**：全局外壳和功能色必须取 token；自绘图标的几何颜色、透明遮罩、终端 ANSI 调色板可保留专用值，
+但不得复用为按钮、面板、文字或状态色。连接树图标已统一使用 `Info/Success/Warning/Border` 及其反色 token。

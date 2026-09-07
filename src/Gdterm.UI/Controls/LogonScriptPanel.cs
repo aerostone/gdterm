@@ -208,7 +208,7 @@ namespace Gdterm.UI.Controls
             };
             y += 40;
 
-            var btnOk = new AntdUI.Button { Text = "确定", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(form, 340, y), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = Color.White };
+            var btnOk = new AntdUI.Button { Text = "确定", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(form, 340, y), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent };
             var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(form, 430, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
@@ -247,7 +247,7 @@ namespace Gdterm.UI.Controls
             var txtValue = Txt(100, 48, 220, form); Lbl("内容:", 12, 51, form);
             var numTimeout = new AntdUI.InputNumber { Location = DpiScale.P(this, 100, 82), Size = DpiScale.S(this, 100, 25), Maximum = 60000, Value = 10000, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = font }; Lbl("超时:", 12, 85, form); form.Controls.Add(numTimeout);
 
-            var btnOk = new AntdUI.Button { Text = "确定", Size = DpiScale.S(this, 70, 26), Location = DpiScale.P(this, 170, 140), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = Color.White };
+            var btnOk = new AntdUI.Button { Text = "确定", Size = DpiScale.S(this, 70, 26), Location = DpiScale.P(this, 170, 140), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent };
             var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(this, 70, 26), Location = DpiScale.P(this, 250, 140), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;

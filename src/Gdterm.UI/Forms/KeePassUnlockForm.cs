@@ -9,7 +9,7 @@ namespace Gdterm.UI.Forms
     /// KeePass 密码库解锁对话框（AntdUI 试点版）。
     /// 首个迁移到 AntdUI 控件体系的窗体：
     ///   Window 基类（暗色边框/自绘标题交互）+ Input（密码框）+ Button（主/次按钮）。
-    /// 设计对照：docs/DESIGN-LANGUAGE.md —— 终端绿 Primary、GitHub Dark 暗色。
+    /// 设计对照：docs/DESIGN-LANGUAGE.md —— 薄荷绿 Primary、石墨暗色。
     /// 若 AntdUI 试点不稳定，回退 git revert 即可恢复原生实现。
     /// </summary>
     public class KeePassUnlockForm : AntdUI.Window

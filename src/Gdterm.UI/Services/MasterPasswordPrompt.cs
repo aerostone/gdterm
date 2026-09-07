@@ -48,7 +48,7 @@ namespace Gdterm.UI.Services
                     Font = new Font("Consolas", DpiScale.Factor(dialog) * 11f),
                     UseSystemPasswordChar = true,
                     BackColor = GdtermColorTable.Surface,
-                    ForeColor = Color.White,
+                    ForeColor = GdtermColorTable.Foreground,
                 };
                 var errorLabel = new AntdUI.Label {
                     Text = "",
@@ -62,7 +62,7 @@ namespace Gdterm.UI.Services
                     Size = DpiScale.S(dialog, 80, 32),
                     Location = DpiScale.P(dialog, 270, 105),
                     BackColor = GdtermColorTable.Accent,
-                    ForeColor = Color.White
+                    ForeColor = GdtermColorTable.OnAccent
                 };
                 okBtn.Click += (s, ev) =>
                 {

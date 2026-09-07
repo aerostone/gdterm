@@ -93,7 +93,7 @@ namespace Gdterm.UI.Forms
                 Text = "欢迎使用 gdterm",
                 // 标题强调：相对当前字体放大加粗，不硬编码字族/磅值（规范规则③）,
                 Font = new Font(Font.FontFamily, Font.Size + 6f, FontStyle.Bold),
-                ForeColor = Color.White,
+                ForeColor = GdtermColorTable.Foreground,
                 AutoSize = true,
                 TextAlign = ContentAlignment.MiddleLeft
             };
@@ -257,7 +257,7 @@ namespace Gdterm.UI.Forms
             var promptLabel = new AntdUI.Label {
                 Text = "请设置主密码",
                 Font = new Font(Font.FontFamily, Font.Size + 2f, FontStyle.Bold),
-                ForeColor = Color.White,
+                ForeColor = GdtermColorTable.Foreground,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft
             };

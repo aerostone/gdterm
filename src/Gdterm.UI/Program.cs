@@ -35,12 +35,11 @@ namespace Gdterm.UI
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // AntdUI 全局初始化：暗色模式 + 终端绿主色（与 GdtermColorTable.Accent 对齐）。
+            // AntdUI 全局初始化：暗色模式。主色在加载用户主题后设置，确保两套控件使用同一 token。
             // 新 UI 逐步接入 AntdUI 控件；存量原生窗体不受影响（两套体系分区共存）。
             try
             {
                 AntdUI.Config.IsDark = true;
-                AntdUI.Style.SetPrimary(System.Drawing.Color.FromArgb(0x00, 0xB8, 0x4A)); // 终端绿调暗一档保对比度，见 DESIGN-LANGUAGE.md
             }
             catch { }
 
@@ -75,6 +74,7 @@ namespace Gdterm.UI
             catch { GlobalAppearance = new Gdterm.UI.Forms.AppearanceSettings(); }
             // 初始外壳主题（与终端 ColorScheme 独立）
             try { Gdterm.UI.Diagnostics.GdtermColorTable.ApplyTheme(GlobalAppearance.UiTheme); } catch { }
+            try { AntdUI.Style.SetPrimary(Gdterm.UI.Diagnostics.GdtermColorTable.Accent); } catch { }
 
             // 调试配置（控制连接对话框抓包等调试选项显隐）
             try

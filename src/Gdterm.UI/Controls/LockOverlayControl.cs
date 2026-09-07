@@ -32,7 +32,7 @@ namespace Gdterm.UI.Controls
         private void InitializeComponent()
         {
             // 半透明黑遮罩：盖住 ClientArea 所有内容,
-            BackColor = Color.FromArgb(210, 10, 14, 18);
+            BackColor = GdtermColorTable.Overlay;
             Dock = DockStyle.Fill;
 
             // 中心面板：暗色 surface，与全局主题一致
@@ -88,7 +88,7 @@ namespace Gdterm.UI.Controls
                 Location = DpiScale.P(this, 110, 118),
                 Size = DpiScale.S(this, 100, 32),
                 BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Accent,
-                ForeColor = Color.Black,
+                ForeColor = GdtermColorTable.OnAccent,
             };
             _unlockButton.Click += (s, e) => OnUnlock();
             _centerPanel.Controls.Add(_unlockButton);
@@ -122,7 +122,7 @@ namespace Gdterm.UI.Controls
             if (string.IsNullOrEmpty(password))
             {
                 _messageLabel.Text = "请输入密码";
-                _messageLabel.ForeColor = Color.FromArgb(0xEF, 0x44, 0x44);
+                _messageLabel.ForeColor = GdtermColorTable.Danger;
                 _passwordBox.Focus();
                 return;
             }
@@ -136,7 +136,7 @@ namespace Gdterm.UI.Controls
             else
             {
                 _messageLabel.Text = "密码错误，请重试";
-                _messageLabel.ForeColor = Color.FromArgb(0xEF, 0x44, 0x44);
+                _messageLabel.ForeColor = GdtermColorTable.Danger;
                 _passwordBox.SelectAll();
                 _passwordBox.Focus();
             }

@@ -12,7 +12,7 @@ namespace Gdterm.UI.Controls
     ///   1. 两行分组布局（窗口/面板/复制/会话 | Ctrl 键/翻页），代替手机单行横滚
     ///   2. 前缀选择器（C-b 默认 / C-a screen 兼容），一次点击完成 prefix+key
     ///   3. 去掉移动端拐杖（方向键/Esc/Tab 行）——PC 有键盘，保留高频 tmux 动作
-    ///   4. 分组标签 + 组分隔线，视觉对齐 GitHub Dark 主题（GdtermColorTable）
+    ///   4. 分组标签 + 组分隔线，视觉对齐石墨暗色主题（GdtermColorTable）
     /// 发送路径：TerminalControl.TrySendInput(raw)——字符直通，绕过危险命令闸门
     /// （tmux 命令是控制序列，不是 shell 命令行，不应触发确认弹窗）。
     /// </summary>

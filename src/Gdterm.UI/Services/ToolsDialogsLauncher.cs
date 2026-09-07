@@ -100,6 +100,7 @@ namespace Gdterm.UI.Services
                         try
                         {
                             Gdterm.UI.Diagnostics.GdtermColorTable.ApplyTheme(form.Result.UiTheme);
+                            AntdUI.Style.SetPrimary(Gdterm.UI.Diagnostics.GdtermColorTable.Accent);
                             // ToolStripManager.Renderer 是静态的，设成新实例会触发 Toolstrip 重画；但我们的自定义 GdtermToolStripRenderer 事件是读静态颜色属性，所以只要主动 Refresh 一下可见的 UI 即可
                             if (_owner is Gdterm.UI.Forms.MainForm mf2)
                             {

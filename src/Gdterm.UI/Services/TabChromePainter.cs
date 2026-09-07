@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Services
 {
@@ -25,7 +26,7 @@ namespace Gdterm.UI.Services
             var dpi = DpiScale.Factor(tabControl);
 
             bool isSelected = (e.Index == tabControl.SelectedIndex);
-            using (var brush = new SolidBrush(isSelected ? SystemColors.ControlLight : SystemColors.Control))
+            using (var brush = new SolidBrush(isSelected ? GdtermColorTable.Hover : GdtermColorTable.Surface))
                 e.Graphics.FillRectangle(brush, rect);
 
             var closeW = (int)Math.Round(CloseButtonWidth * dpi);
@@ -34,7 +35,7 @@ namespace Gdterm.UI.Services
             var closeT = (int)Math.Round(CloseButtonTopOffset * dpi);
 
             var textRect = new Rectangle(rect.X + 4, rect.Y + 2, rect.Width - closeR - 4, rect.Height - 4);
-            TextRenderer.DrawText(e.Graphics, tab.Text, e.Font, textRect, SystemColors.ControlText,
+            TextRenderer.DrawText(e.Graphics, tab.Text, e.Font, textRect, GdtermColorTable.Foreground,
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
 
             var closeRect = new Rectangle(
@@ -42,7 +43,7 @@ namespace Gdterm.UI.Services
                 rect.Y + closeT,
                 closeW,
                 closeH);
-            using (var brush = new SolidBrush(isSelected ? Color.Black : Color.Gray))
+            using (var brush = new SolidBrush(isSelected ? GdtermColorTable.Foreground : GdtermColorTable.Muted))
                 e.Graphics.DrawString("×", e.Font, brush,
                     closeRect.X + (closeW - 8) / 2,
                     closeRect.Y + (closeH - e.Font.Height) / 2);

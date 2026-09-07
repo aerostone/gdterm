@@ -78,7 +78,7 @@ namespace Gdterm.UI.Services
         {
             if (btn == null) return btn;
             btn.BackColor = GdtermColorTable.Accent;
-            btn.ForeColor = Color.FromArgb(0x0D, 0x11, 0x17);
+            btn.ForeColor = GdtermColorTable.OnAccent;
             return btn;
         }
 
@@ -87,7 +87,7 @@ namespace Gdterm.UI.Services
         {
             if (btn == null) return btn;
             btn.BackColor = GdtermColorTable.Danger;
-            btn.ForeColor = Color.White;
+            btn.ForeColor = GdtermColorTable.OnDanger;
             return btn;
         }
 

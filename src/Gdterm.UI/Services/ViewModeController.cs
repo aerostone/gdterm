@@ -60,7 +60,7 @@ namespace Gdterm.UI.Services
                 Text = "退出专注 (Esc/F11)",
                 AutoSize = true,
                 BackColor = GdtermColorTable.Accent,
-                ForeColor = Color.White,
+                ForeColor = GdtermColorTable.OnAccent,
                 Font = Services.FormFontPolicy.UiFont(0f, FontStyle.Bold),
                 Padding = new Padding(10, 4, 10, 4),
                 Visible = false,

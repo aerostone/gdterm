@@ -42,7 +42,7 @@ namespace Gdterm.UI.Services
                 Dock = DockStyle.Top,
                 Height = 28,
                 BackColor = GdtermColorTable.Surface,
-                ForeColor = Color.White
+                ForeColor = GdtermColorTable.Foreground
             };
             if (onCloseClick != null)
                 sideClose.Click += onCloseClick;

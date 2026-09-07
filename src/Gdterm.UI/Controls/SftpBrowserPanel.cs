@@ -64,7 +64,7 @@ namespace Gdterm.UI.Controls
             _pathBox = new AntdUI.Input {
                 Dock = DockStyle.Fill,
                 BackColor = GdtermColorTable.Surface,
-                ForeColor = Color.White,
+                ForeColor = GdtermColorTable.Foreground,
                 Text = "/",
                 Margin = new Padding(DpiScale.V(this, 2))
             };
@@ -152,7 +152,7 @@ namespace Gdterm.UI.Controls
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3)),
                 BackColor = GdtermColorTable.Hover,
-                ForeColor = Color.White,
+                ForeColor = GdtermColorTable.Foreground,
                 Margin = new Padding(2)
             };
             b.Click += onClick;
@@ -198,7 +198,7 @@ namespace Gdterm.UI.Controls
                     item.SubItems.Add(f.IsDirectory ? "<DIR>" : f.SizeBytes.ToString());
                     item.SubItems.Add(f.Permissions ?? "");
                     item.SubItems.Add(f.LastModified.ToString("yyyy-MM-dd HH:mm"));
-                    item.ForeColor = f.IsDirectory ? Color.FromArgb(100, 180, 255) : GdtermColorTable.Foreground;
+                    item.ForeColor = f.IsDirectory ? GdtermColorTable.Info : GdtermColorTable.Foreground;
                     item.Tag = f;
                     _list.Items.Add(item);
                 }
@@ -376,8 +376,8 @@ namespace Gdterm.UI.Controls
             using (f)
             {
                 f.Size = DpiScale.S(f, 360, 140);
-                var lbl = new AntdUI.Label { Text = label, ForeColor = Color.White, Location = DpiScale.P(f, 12, 12), AutoSize = true };
-                var box = new AntdUI.Input { Location = DpiScale.P(f, 12, 40), Width = 320, BackColor = GdtermColorTable.Surface, ForeColor = Color.White };
+                var lbl = new AntdUI.Label { Text = label, ForeColor = GdtermColorTable.Foreground, Location = DpiScale.P(f, 12, 12), AutoSize = true };
+                var box = new AntdUI.Input { Location = DpiScale.P(f, 12, 40), Width = 320, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
                 var ok = new AntdUI.Button { Text = "确定", DialogResult = DialogResult.OK, Location = DpiScale.P(f, 250, 70) };
                 f.Controls.AddRange(new Control[] { lbl, box, ok });
                 f.AcceptButton = ok;

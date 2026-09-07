@@ -68,7 +68,7 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 5), DpiScale.V(this, 10), DpiScale.V(this, 5)),
                 Margin = new Padding(0, 0, DpiScale.V(this, 8), 0),
                 BackColor = GdtermColorTable.Accent,
-                ForeColor = Color.White,
+                ForeColor = GdtermColorTable.OnAccent,
                 Font = Services.FormFontPolicy.UiFont(),
                 Cursor = Cursors.Hand
             };
@@ -79,7 +79,7 @@ namespace Gdterm.UI.Controls
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 5), DpiScale.V(this, 10), DpiScale.V(this, 5)),
                 BackColor = GdtermColorTable.Danger,
-                ForeColor = Color.White,
+                ForeColor = GdtermColorTable.OnDanger,
                 Font = Services.FormFontPolicy.UiFont(),
                 Enabled = false,
                 Cursor = Cursors.Hand

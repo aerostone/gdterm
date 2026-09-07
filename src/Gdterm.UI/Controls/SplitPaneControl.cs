@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Controls
 {
@@ -254,7 +255,7 @@ namespace Gdterm.UI.Controls
         public SplitterControl()
         {
             Cursor = Cursors.VSplit;
-            BackColor = SystemColors.ControlDark;
+            BackColor = GdtermColorTable.Border;
         }
 
         protected override void OnMouseDown(MouseEventArgs e)

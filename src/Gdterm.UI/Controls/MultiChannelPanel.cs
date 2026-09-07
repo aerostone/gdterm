@@ -207,7 +207,7 @@ namespace Gdterm.UI.Controls
                             // 选择失败，恢复未勾选状态
                             item.Checked = false;
                             _statusLabel.Text = $"✗ {item.SubItems[0].Text}: {result.Message}";
-                            _statusLabel.ForeColor = Color.Red;
+                            _statusLabel.ForeColor = GdtermColorTable.Danger;
                             return;
                         }
                     }
@@ -268,7 +268,7 @@ namespace Gdterm.UI.Controls
                 if (!session.IsConnected)
                     item.ForeColor = GdtermColorTable.Muted;
                 else if (session.ReadyState != null && !session.ReadyState.IsReady)
-                    item.ForeColor = Color.OrangeRed;
+                    item.ForeColor = GdtermColorTable.Warning;
 
                 _sessionList.Items.Add(item);
             }
@@ -284,7 +284,7 @@ namespace Gdterm.UI.Controls
             {
                 var msg = string.Join("\n", rejected.ConvertAll(r => $"• {r.Message}"));
                 _statusLabel.Text = $"✗ {rejected.Count} 个会话未就绪";
-                _statusLabel.ForeColor = Color.Red;
+                _statusLabel.ForeColor = GdtermColorTable.Danger;
             }
             else
             {
