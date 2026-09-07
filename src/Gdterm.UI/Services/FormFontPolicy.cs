@@ -19,8 +19,8 @@ namespace Gdterm.UI.Services
     /// </summary>
     public static class FormFontPolicy
     {
-        private static readonly ConditionalWeakTable<Control, EventHandler> AntdShapeHooks =
-            new ConditionalWeakTable<Control, EventHandler>();
+        private static readonly ConditionalWeakTable<Control, ControlEventHandler> AntdShapeHooks =
+            new ConditionalWeakTable<Control, ControlEventHandler>();
 
         /// <summary>
         /// UI 字体的安全解析——带安装探测与 Win7 回退链。
@@ -186,9 +186,9 @@ namespace Gdterm.UI.Services
             if (control == null) return;
             lock (AntdShapeHooks)
             {
-                EventHandler ignored;
+                ControlEventHandler ignored;
                 if (AntdShapeHooks.TryGetValue(control, out ignored)) return;
-                EventHandler handler = (sender, args) =>
+                ControlEventHandler handler = (sender, args) =>
                 {
                     var added = args != null ? args.Control : null;
                     if (added != null) NormalizeAntdShapes(added);
