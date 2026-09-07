@@ -57,7 +57,8 @@ namespace Gdterm.UI.Controls
 
             _connStatus = new AntdUI.Label {
                 Dock = DockStyle.Top,
-                Height = 24,
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 4), DpiScale.V(this, 6), DpiScale.V(this, 4)),
                 Text = "  连接 " + (_config != null ? _config.Host : "?") + " …",
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -87,10 +88,18 @@ namespace Gdterm.UI.Controls
             };
             _split.Panel2.Controls.Add(placeholder);
 
-            var queueBar = new Panel { Dock = DockStyle.Bottom, Height = 26, BackColor = GdtermColorTable.Surface };
+            var queueBar = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Bottom,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                WrapContents = false,
+                BackColor = GdtermColorTable.Surface,
+                Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 3), DpiScale.V(this, 6), DpiScale.V(this, 3))
+            };
             _queueLabel = new AntdUI.Label {
-                Dock = DockStyle.Fill,
-                Text = "  传输队列空闲",
+                AutoSize = true,
+                Text = "传输队列空闲",
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleLeft
             };

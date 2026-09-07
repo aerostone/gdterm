@@ -47,7 +47,19 @@ namespace Gdterm.UI.Controls
             Dock = DockStyle.Fill;
             BackColor = GdtermColorTable.Background;
 
-            var top = new Panel { Dock = DockStyle.Top, Height = 32, BackColor = GdtermColorTable.Surface, Padding = new Padding(6, 4, 6, 4) };
+            var top = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                ColumnCount = 2,
+                RowCount = 1,
+                BackColor = GdtermColorTable.Surface,
+                Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 4), DpiScale.V(this, 6), DpiScale.V(this, 4))
+            };
+            top.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            top.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             var btnHome = MakeBtn("⌂", "主目录", (s, e) => Navigate(_provider.HomePath));
             var btnUp = MakeBtn("↑", "上级目录 (Backspace)", (s, e) => NavigateUp());
@@ -58,8 +70,8 @@ namespace Gdterm.UI.Controls
 
             var buttons = new FlowLayoutPanel
             {
-                Dock = DockStyle.Right,
-                Width = DpiScale.V(this, 210),
+                Dock = DockStyle.Fill,
+                AutoSize = true,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
                 Margin = new Padding(0)
@@ -82,8 +94,8 @@ namespace Gdterm.UI.Controls
                 }
             };
 
-            top.Controls.Add(_pathBox);
-            top.Controls.Add(buttons);
+            top.Controls.Add(_pathBox, 0, 0);
+            top.Controls.Add(buttons, 1, 0);
 
             _list = new ListView
             {
@@ -195,7 +207,8 @@ namespace Gdterm.UI.Controls
         {
             var b = new AntdUI.Button {
                 Text = text,
-                Size = new Size(DpiScale.V(this, 30), DpiScale.V(this, 24)),
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 5), DpiScale.V(this, 2), DpiScale.V(this, 5), DpiScale.V(this, 2)),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 Margin = new Padding(1, 0, 1, 0),
@@ -398,7 +411,7 @@ namespace Gdterm.UI.Controls
                     ForeColor = GdtermColorTable.Foreground,
                 };
                 if (!string.IsNullOrEmpty(initial)) box.Text = initial;
-                var flow = new FlowLayoutPanel { Dock = DockStyle.Bottom, Height = 40, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(12, 6, 12, 6) };
+                var flow = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(DpiScale.V(f, 12), DpiScale.V(f, 6), DpiScale.V(f, 12), DpiScale.V(f, 6)) };
                 var cancel = new AntdUI.Button { Text = "取消", DialogResult = DialogResult.Cancel, AutoSize = true, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
                 var ok = new AntdUI.Button { Text = "确定", DialogResult = DialogResult.OK, AutoSize = true, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
                 flow.Controls.Add(cancel); // RightToLeft 流序：先加靠右

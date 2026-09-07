@@ -48,12 +48,25 @@ namespace Gdterm.UI.Controls
             BackColor = GdtermColorTable.Background;
             Dock = DockStyle.Fill;
 
-            var top = new Panel { Dock = DockStyle.Top, Height = 36, BackColor = GdtermColorTable.Surface };
+            var top = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                ColumnCount = 2,
+                RowCount = 1,
+                BackColor = GdtermColorTable.Surface,
+                Padding = new Padding(DpiScale.V(this, 4))
+            };
+            top.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            top.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             _pathBox = new AntdUI.Input {
                 Dock = DockStyle.Fill,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = Color.White,
-                Text = "/"
+                Text = "/",
+                Margin = new Padding(DpiScale.V(this, 2))
             };
             _pathBox.KeyDown += (s, e) =>
             {
@@ -83,15 +96,16 @@ namespace Gdterm.UI.Controls
 
             var buttons = new FlowLayoutPanel
             {
-                Dock = DockStyle.Right,
-                Width = 420,
+                Dock = DockStyle.Fill,
+                AutoSize = true,
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false
+                WrapContents = false,
+                Margin = new Padding(DpiScale.V(this, 2))
             };
             buttons.Controls.AddRange(new Control[] { btnUp, btnRefresh, btnUpload, btnDownload, btnMkdir, btnDelete });
 
-            top.Controls.Add(_pathBox);
-            top.Controls.Add(buttons);
+            top.Controls.Add(_pathBox, 0, 0);
+            top.Controls.Add(buttons, 1, 0);
 
             _list = new ListView
             {
@@ -135,8 +149,8 @@ namespace Gdterm.UI.Controls
         {
             var b = new AntdUI.Button {
                 Text = text,
-                Width = 70,
-                Height = 28,
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3)),
                 BackColor = GdtermColorTable.Hover,
                 ForeColor = Color.White,
                 Margin = new Padding(2)

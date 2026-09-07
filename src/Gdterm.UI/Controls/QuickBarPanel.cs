@@ -203,8 +203,7 @@ namespace Gdterm.UI.Controls
                 Font = Services.FormFontPolicy.UiFont(-1f),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(1, 0, 1, 0),
-                Padding = new Padding(6, 3, 6, 3),
-                Height = 24
+                Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 3), DpiScale.V(this, 6), DpiScale.V(this, 3))
             };
             return btn;
         }
@@ -268,7 +267,8 @@ namespace Gdterm.UI.Controls
             // 末尾的"+"按钮
             var addBtn = new AntdUI.Button {
                 Text = "+",
-                Size = DpiScale.S(this, 28, 26),
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 7), DpiScale.V(this, 3), DpiScale.V(this, 7), DpiScale.V(this, 3)),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Muted,
                 Font = new Font("Consolas", 10f),
@@ -290,8 +290,7 @@ namespace Gdterm.UI.Controls
                 Font = Services.FormFontPolicy.UiFont(-0.5f),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(2),
-                Padding = new Padding(8, 3, 8, 3),
-                Height = 26,
+                Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3)),
                 Tag = cmd
             };
 

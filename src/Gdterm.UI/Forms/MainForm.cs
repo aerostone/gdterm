@@ -490,6 +490,19 @@ namespace Gdterm.UI.Forms
             if (_connectionTree != null) try { _connectionTree.ApplyUIFont(name, size); } catch { }
             if (_quickBar != null) try { _quickBar.Font = font; } catch { }
             if (_tmuxBar != null) try { _tmuxBar.Font = font; } catch { }
+
+            // 运行中切换字号时，显式字体的子控件不会自动继承新的 Form.Font。
+            // 仅替换 UI 字体，保留 Consolas 等终端/代码字体的语义字号。
+            try { Services.FormFontPolicy.ApplyChildUIFont(this, name, size); } catch { }
+
+            try
+            {
+                int row = Services.FormFontPolicy.RowStep(this);
+                if (_quickBar != null) _quickBar.Height = Math.Max(DpiScale.V(this, 36), row + DpiScale.V(this, 2));
+                if (_tmuxBar != null) _tmuxBar.Height = Math.Max(DpiScale.V(this, 32), row + DpiScale.V(this, 2));
+                if (_statusBar != null) _statusBar.Height = Math.Max(DpiScale.V(this, 25), row);
+            }
+            catch { }
         }
 
         private void SetupEventHandlers()

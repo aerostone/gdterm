@@ -44,17 +44,25 @@ namespace Gdterm.UI.Controls
         private void BuildUI()
         {
             // ── 顶部：预设选择 ──
-            var topPanel = new Panel { Dock = DockStyle.Top, Height = 45, BackColor = GdtermColorTable.Surface, Padding = new Padding(10) };
+            var topPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                WrapContents = true,
+                BackColor = GdtermColorTable.Surface,
+                Padding = new Padding(DpiScale.V(this, 10))
+            };
 
             var lblPreset = new AntdUI.Label {
                 Text = "预设:",
                 AutoSize = true,
-                Location = DpiScale.P(this, 10, 13)
+                Margin = new Padding(0, DpiScale.V(this, 8), DpiScale.V(this, 10), 0)
             };
 
             _cmbPreset = new AntdUI.Select {
-                Location = DpiScale.P(this, 55, 10),
-                Size = DpiScale.S(this, 200, 34)
+                Size = DpiScale.S(this, 200, 34),
+                Margin = new Padding(0, DpiScale.V(this, 2), DpiScale.V(this, 14), 0)
             };
             foreach (var preset in _config.Presets)
                 _cmbPreset.Items.Add(string.Format("{0} — {1}", preset.Name, preset.Description));
@@ -63,13 +71,13 @@ namespace Gdterm.UI.Controls
             _lblDescription = new AntdUI.Label {
                 Text = "",
                 AutoSize = true,
-                Location = DpiScale.P(this, 270, 13)
+                Margin = new Padding(0, DpiScale.V(this, 8), DpiScale.V(this, 14), 0)
             };
 
             _chkIntercept = new AntdUI.Checkbox {
                 Text = "拦截模式（匹配的按键不发送到终端）",
                 AutoSize = true,
-                Location = DpiScale.P(this, 480, 12),
+                Margin = new Padding(0, DpiScale.V(this, 7), 0, 0),
                 Checked = _config.InterceptMode
             };
             _chkIntercept.CheckedChanged += (s, e) => { _config.InterceptMode = _chkIntercept.Checked; _store.Save(); };
@@ -77,12 +85,20 @@ namespace Gdterm.UI.Controls
             topPanel.Controls.AddRange(new Control[] { lblPreset, _cmbPreset, _lblDescription, _chkIntercept });
 
             // ── 底部：操作按钮 ──
-            var bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 40, BackColor = GdtermColorTable.Surface };
+            var bottomPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Bottom,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                WrapContents = false,
+                BackColor = GdtermColorTable.Surface,
+                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 5), DpiScale.V(this, 10), DpiScale.V(this, 5))
+            };
 
-            _btnAdd = CreateButton("添加", 10);
-            _btnEdit = CreateButton("编辑", 90);
-            _btnDelete = CreateButton("删除", 170);
-            _btnReset = CreateButton("重置预设", 300);
+            _btnAdd = CreateButton("添加");
+            _btnEdit = CreateButton("编辑");
+            _btnDelete = CreateButton("删除");
+            _btnReset = CreateButton("重置预设");
 
             _btnAdd.Click += OnAdd;
             _btnEdit.Click += OnEdit;
@@ -123,12 +139,13 @@ namespace Gdterm.UI.Controls
             }
         }
 
-        private AntdUI.Button CreateButton(string text, int x)
+        private AntdUI.Button CreateButton(string text)
         {
             return new AntdUI.Button {
                 Text = text,
-                Size = DpiScale.S(this, 76, 34),
-                Location = DpiScale.P(this, x, 4),
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
+                Margin = new Padding(0, 0, DpiScale.V(this, 8), 0),
                 Type = AntdUI.TTypeMini.Default,
                 Cursor = Cursors.Hand
             };

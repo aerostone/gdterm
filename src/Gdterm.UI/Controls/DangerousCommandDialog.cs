@@ -180,6 +180,10 @@ namespace Gdterm.UI.Controls
 
             CancelButton = _cancelButton;
             AcceptButton = _confirmButton;
+
+            // 该确认框由终端运行时动态弹出，也必须跟随外观设置中的 UI 字号；
+            // 控件尺寸由自身 AutoSize/布局容器负责。
+            Gdterm.UI.Services.FormFontPolicy.Apply(this);
         }
 
         private void OnConfirmClick(object sender, EventArgs e)

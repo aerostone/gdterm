@@ -30,14 +30,28 @@ namespace Gdterm.UI.Controls
             BackColor = GdtermColorTable.Background;
 
             // ── 顶部：安全评分 + 控制按钮 ──
-            var topPanel = new Panel { Dock = DockStyle.Top, Height = 80, BackColor = GdtermColorTable.Surface, Padding = new Padding(15) };
+            var topPanel = new TableLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                BackColor = GdtermColorTable.Surface,
+                Padding = new Padding(DpiScale.V(this, 15)),
+                ColumnCount = 3,
+                RowCount = 2
+            };
+            topPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            topPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            topPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            topPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            topPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             _lblScore = new AntdUI.Label {
                 Text = "安全评分: --",
                 Font = Services.FormFontPolicy.UiFont(+11f, FontStyle.Bold),
                 ForeColor = GdtermColorTable.Success,
                 AutoSize = true,
-                Location = DpiScale.P(this, 15, 15)
+                Margin = new Padding(0, 0, DpiScale.V(this, 12), DpiScale.V(this, 4))
             };
 
             _lblStats = new AntdUI.Label {
@@ -45,13 +59,14 @@ namespace Gdterm.UI.Controls
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = GdtermColorTable.Muted,
                 AutoSize = true,
-                Location = DpiScale.P(this, 15, 55)
+                Margin = new Padding(0, 0, DpiScale.V(this, 12), 0)
             };
 
             _btnScan = new AntdUI.Button {
                 Text = "开始扫描",
-                Size = DpiScale.S(this, 100, 35),
-                Location = DpiScale.P(this, 500, 15),
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 5), DpiScale.V(this, 10), DpiScale.V(this, 5)),
+                Margin = new Padding(0, 0, DpiScale.V(this, 8), 0),
                 BackColor = GdtermColorTable.Accent,
                 ForeColor = Color.White,
                 Font = Services.FormFontPolicy.UiFont(),
@@ -61,8 +76,8 @@ namespace Gdterm.UI.Controls
 
             _btnStop = new AntdUI.Button {
                 Text = "停止",
-                Size = DpiScale.S(this, 70, 35),
-                Location = DpiScale.P(this, 610, 15),
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 5), DpiScale.V(this, 10), DpiScale.V(this, 5)),
                 BackColor = GdtermColorTable.Danger,
                 ForeColor = Color.White,
                 Font = Services.FormFontPolicy.UiFont(),
@@ -71,7 +86,12 @@ namespace Gdterm.UI.Controls
             };
             _btnStop.Click += (s, e) => StopScan();
 
-            topPanel.Controls.AddRange(new Control[] { _lblScore, _lblStats, _btnScan, _btnStop });
+            topPanel.Controls.Add(_lblScore, 0, 0);
+            topPanel.Controls.Add(_lblStats, 0, 1);
+            topPanel.Controls.Add(_btnScan, 1, 0);
+            topPanel.SetRowSpan(_btnScan, 2);
+            topPanel.Controls.Add(_btnStop, 2, 0);
+            topPanel.SetRowSpan(_btnStop, 2);
 
             // ── 进度条 ──
             _progress = new ProgressBar { Dock = DockStyle.Top, Height = 3, Style = ProgressBarStyle.Continuous };
@@ -99,13 +119,22 @@ namespace Gdterm.UI.Controls
             _lvFindings.DoubleClick += OnFindingDoubleClick;
 
             // ── 底部状态栏 ──
-            var bottomPanel = new Panel { Dock = DockStyle.Bottom, Height = 25, BackColor = GdtermColorTable.Surface };
+            var bottomPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Bottom,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                WrapContents = false,
+                BackColor = GdtermColorTable.Surface,
+                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 3), DpiScale.V(this, 10), DpiScale.V(this, 3))
+            };
             _lblStatus = new AntdUI.Label {
+                AutoSize = true,
                 Dock = DockStyle.Fill,
                 Font = Services.FormFontPolicy.UiFont(-1f),
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(10, 0, 0, 0),
+                Padding = new Padding(0),
                 Text = "选择扫描路径后点击「开始扫描」"
             };
             bottomPanel.Controls.Add(_lblStatus);
@@ -245,14 +274,21 @@ namespace Gdterm.UI.Controls
             };
             refreshText();
 
-            var bottom = new Panel { Dock = DockStyle.Bottom, Height = 40, BackColor = GdtermColorTable.Surface };
+            var bottom = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Bottom,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                WrapContents = false,
+                BackColor = GdtermColorTable.Surface,
+                Padding = new Padding(DpiScale.V(form, 8), DpiScale.V(form, 5), DpiScale.V(form, 8), DpiScale.V(form, 5))
+            };
 
             var btnReveal = new AntdUI.Button {
                 Text = "显示明文",
-                Width = 100,
-                Height = 30,
-                Left = 8,
-                Top = 5,
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(form, 10), DpiScale.V(form, 4), DpiScale.V(form, 10), DpiScale.V(form, 4)),
+                Margin = new Padding(0, 0, DpiScale.V(form, 8), 0),
                 BackColor = GdtermColorTable.Hover,
                 ForeColor = GdtermColorTable.Foreground,
             };
@@ -278,10 +314,8 @@ namespace Gdterm.UI.Controls
 
             var btnWhitelist = new AntdUI.Button {
                 Text = "加入白名单",
-                Width = 100,
-                Height = 30,
-                Left = 120,
-                Top = 5,
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(form, 10), DpiScale.V(form, 4), DpiScale.V(form, 10), DpiScale.V(form, 4)),
                 BackColor = GdtermColorTable.Hover,
                 ForeColor = GdtermColorTable.Foreground,
             };

@@ -75,20 +75,25 @@ namespace Gdterm.UI.Forms
             // 规范见 docs/UI-SCALING-CONVENTIONS.md：手写窗体不设 AutoScaleMode，字体由 FormFontPolicy 统一注入全局 UI 字号
 
             // —— 顶部标题 ——
-            var headerPanel = new Panel
+            var headerPanel = new TableLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = DpiScale.V(this, 78),
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                ColumnCount = 1,
+                RowCount = 2,
                 BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(DpiScale.V(this, 24), DpiScale.V(this, 14), DpiScale.V(this, 24), DpiScale.V(this, 10))
             };
+            headerPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            headerPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            headerPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             var titleLabel = new AntdUI.Label {
                 Text = "欢迎使用 gdterm",
                 // 标题强调：相对当前字体放大加粗，不硬编码字族/磅值（规范规则③）,
                 Font = new Font(Font.FontFamily, Font.Size + 6f, FontStyle.Bold),
                 ForeColor = Color.White,
-                Dock = DockStyle.Top,
                 AutoSize = true,
                 TextAlign = ContentAlignment.MiddleLeft
             };
@@ -96,18 +101,21 @@ namespace Gdterm.UI.Forms
             var subtitleLabel = new AntdUI.Label {
                 Text = "绿色运维客户端 · 首次使用请完成以下设置",
                 ForeColor = GdtermColorTable.Muted,
-                Dock = DockStyle.Fill,
+                AutoSize = true,
                 TextAlign = ContentAlignment.TopLeft
             };
 
-            headerPanel.Controls.Add(subtitleLabel);
-            headerPanel.Controls.Add(titleLabel);
+            headerPanel.Controls.Add(titleLabel, 0, 0);
+            headerPanel.Controls.Add(subtitleLabel, 0, 1);
 
             // —— 步骤指示器 ——
-            var stepBar = new Panel
+            var stepBar = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = DpiScale.V(this, 36),
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                WrapContents = false,
+                FlowDirection = FlowDirection.LeftToRight,
                 BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(DpiScale.V(this, 16), 0, DpiScale.V(this, 16), 0)
             };
@@ -115,29 +123,23 @@ namespace Gdterm.UI.Forms
             _stepIndicator = new AntdUI.Label {
                 Text = BuildStepText(0),
                 ForeColor = GdtermColorTable.Muted,
-                Dock = DockStyle.Fill,
                 AutoSize = true,
                 TextAlign = ContentAlignment.MiddleCenter
             };
+            _stepIndicator.Margin = new Padding(0, DpiScale.V(this, 7), 0, DpiScale.V(this, 7));
             stepBar.Controls.Add(_stepIndicator);
 
             // —— 底部按钮栏 ——
-            var buttonPanel = new Panel
+            var buttonPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Bottom,
-                Height = DpiScale.V(this, 60),
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false,
                 BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(DpiScale.V(this, 16), DpiScale.V(this, 12), DpiScale.V(this, 16), DpiScale.V(this, 12))
             };
-
-            // 右对齐按钮条：FlowLayoutPanel(RightToLeft) 自动靠右，按钮随文字自适应尺寸（规范规则①②）
-            var flow = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.RightToLeft,
-                WrapContents = false
-            };
-            buttonPanel.Controls.Add(flow);
 
             _nextButton = new AntdUI.Button {
                 Text = "开始设置 →",
@@ -147,7 +149,7 @@ namespace Gdterm.UI.Forms
                 Name = "nextButton"
             };
             _nextButton.Click += OnNextClick;
-            flow.Controls.Add(_nextButton);
+            buttonPanel.Controls.Add(_nextButton);
 
             // —— 步骤内容区 ——
             _stepPanel = new Panel

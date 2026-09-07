@@ -50,26 +50,34 @@ namespace Gdterm.UI.Controls
             var font = Services.FormFontPolicy.UiFont();
 
             // ── 顶部：命令输入 ──
-            var topPanel = new Panel { Dock = DockStyle.Top, Height = 70, BackColor = GdtermColorTable.Surface, Padding = new Padding(8) };
+            var topPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                WrapContents = true,
+                BackColor = GdtermColorTable.Surface,
+                Padding = new Padding(DpiScale.V(this, 8))
+            };
 
-            var lblCmd = new AntdUI.Label { Text = "命令:", Location = DpiScale.P(this, 8, 8), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Foreground };
-            _txtCommand = new AntdUI.Input { Location = DpiScale.P(this, 8, 28), Size = DpiScale.S(this, 500, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f)};
+            var lblCmd = new AntdUI.Label { Text = "命令:", AutoSize = true, Margin = new Padding(0, DpiScale.V(this, 6), DpiScale.V(this, 8), 0), Font = font, ForeColor = GdtermColorTable.Foreground };
+            _txtCommand = new AntdUI.Input { Width = DpiScale.V(this, 500), Height = DpiScale.V(this, 28), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f), Margin = new Padding(0, DpiScale.V(this, 1), DpiScale.V(this, 8), 0)};
             _txtCommand.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { ExecuteCommand(); e.SuppressKeyPress = true; } };
 
-            _btnExecute = new AntdUI.Button { Text = "▶ 执行", Location = DpiScale.P(this, 520, 26), Size = DpiScale.S(this, 80, 28), BackColor = GdtermColorTable.Accent, ForeColor = Color.White, Font = font };
+            _btnExecute = new AntdUI.Button { Text = "▶ 执行", AutoSize = true, Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)), BackColor = GdtermColorTable.Accent, ForeColor = Color.White, Font = font, Margin = new Padding(0, 0, DpiScale.V(this, 8), 0) };
             _btnExecute.Click += (s, e) => ExecuteCommand();
 
-            _lblStatus = new AntdUI.Label { Text = "", Location = DpiScale.P(this, 610, 30), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Muted };
+            _lblStatus = new AntdUI.Label { Text = "", AutoSize = true, Margin = new Padding(0, DpiScale.V(this, 6), 0, 0), Font = font, ForeColor = GdtermColorTable.Muted };
 
             topPanel.Controls.AddRange(new Control[] { lblCmd, _txtCommand, _btnExecute, _lblStatus });
 
             // ── 左侧：会话列表 ──
             var leftPanel = new Panel { Dock = DockStyle.Left, Width = 250, BackColor = GdtermColorTable.Surface, Padding = new Padding(4) };
 
-            var leftHeader = new Panel { Dock = DockStyle.Top, Height = 32, BackColor = GdtermColorTable.Surface };
-            _btnSelectAll = new AntdUI.Button { Text = "全选", Location = DpiScale.P(this, 4, 4), AutoSize = true, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-1f) };
+            var leftHeader = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, BackColor = GdtermColorTable.Surface, Padding = new Padding(DpiScale.V(this, 4)) };
+            _btnSelectAll = new AntdUI.Button { Text = "全选", AutoSize = true, Margin = new Padding(0, 0, DpiScale.V(this, 6), 0), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-1f) };
             _btnSelectAll.Click += (s, e) => { foreach (ListViewItem item in _lvSessions.Items) item.Checked = true; };
-            var btnDeselect = new AntdUI.Button { Text = "取消", Location = DpiScale.P(this, 64, 4), AutoSize = true, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-1f) };
+            var btnDeselect = new AntdUI.Button { Text = "取消", AutoSize = true, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-1f) };
             btnDeselect.Click += (s, e) => { foreach (ListViewItem item in _lvSessions.Items) item.Checked = false; };
             leftHeader.Controls.AddRange(new Control[] { _btnSelectAll, btnDeselect });
 

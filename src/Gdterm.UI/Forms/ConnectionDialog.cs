@@ -75,7 +75,7 @@ namespace Gdterm.UI.Forms
         private AntdUI.HyperlinkLabel _moreLink;
         private bool _expanded;
         private int _expandedDelta;   // 本次展开实际增加的高度（收起时原样减回，兼容工作区封顶）
-        private Panel _btnPanel;      // 日志用
+        private Control _btnPanel;      // 日志用
         private AntdUI.Button _okBtn;
 
         private readonly IKeePassService _keepass;
@@ -116,8 +116,9 @@ namespace Gdterm.UI.Forms
         {
             Text = _isNew ? "新建连接" : $"编辑连接 — {_config.Name}";
             ClientSize = DpiScale.S(this, 560, 330);
-            // 跟随字体/DPI 自动整体缩放（否则 144dpi 下控件行高变大而窗体不变，底部按钮被挤出可视区）,
-            AutoScaleMode = AutoScaleMode.Font;
+            // 本窗体的尺寸和子控件已统一走 DpiScale；不能再叠加 WinForms
+            // AutoScaleMode.Font，否则 DPI 和字体会各缩放一次，导致文字/控件失配。
+            AutoHandDpi = false;
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
@@ -194,12 +195,12 @@ namespace Gdterm.UI.Forms
             topPanel.Controls.Add(credRow);
 
             // ===== 更多选项 开关 =====
-            var linkRow = new Panel { Dock = DockStyle.Top, AutoSize = true, Height = 28, Padding = new Padding(0, 6, 0, 0) };
+            var linkRow = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, Padding = new Padding(0, 6, 0, 0) };
             _moreLink = new AntdUI.HyperlinkLabel
             {
                 Text = "更多选项 ▾",
                 AutoSize = true,
-                Location = DpiScale.P(this, 0, 6)
+                Margin = new Padding(0)
             };
             _moreLink.Click += (s, e) => ToggleAdvanced();
             linkRow.Controls.Add(_moreLink);
@@ -309,37 +310,36 @@ namespace Gdterm.UI.Forms
             _advancedHost.Controls.Add(_advFlow);
 
             // ===== 底部按钮 =====
-            var btnPanel = new Panel { Dock = DockStyle.Bottom, Height = 45, BackColor = GdtermColorTable.Surface };
-            _btnPanel = btnPanel;
-            // 按钮交给布局引擎（RightToLeft 流式：先加的靠右）。
-            // 不用绝对坐标 + Anchor.Right：在字体/DPI 缩放下会双重补偿漂出窗体右边界，
-            // 0.1.118 实测 okBtn X=1009 > ClientSize 宽 808 → “保存按钮不见了”的根因。
-            var btnFlow = new FlowLayoutPanel
+            var btnPanel = new FlowLayoutPanel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Bottom,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.RightToLeft,
                 WrapContents = false,
                 BackColor = GdtermColorTable.Surface,
-                Padding = new Padding(0, 7, 16, 0)
+                Padding = new Padding(0, DpiScale.V(this, 7), DpiScale.V(this, 16), DpiScale.V(this, 7))
             };
+            _btnPanel = btnPanel;
             var okBtn = new AntdUI.Button {
                 Text = _isNew ? "创建" : "保存",
                 Type = AntdUI.TTypeMini.Primary,
-                Size = DpiScale.S(this, 80, 34),
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5)),
                 Margin = new Padding(0)
             };
             var cancelBtn = new AntdUI.Button {
                 Text = "取消",
                 Type = AntdUI.TTypeMini.Default,
-                Size = DpiScale.S(this, 80, 34),
-                Margin = new Padding(0, 0, 8, 0)
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5)),
+                Margin = new Padding(0, 0, DpiScale.V(this, 8), 0)
             };
             okBtn.Click += (s, e) => { SaveToConfig(); DialogResult = DialogResult.OK; Close(); };
             _okBtn = okBtn;
-            btnFlow.Controls.Add(okBtn);      // RightToLeft：第一个在最右
+            btnPanel.Controls.Add(okBtn);      // RightToLeft：第一个在最右
             cancelBtn.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
-            btnFlow.Controls.Add(cancelBtn);
-            btnPanel.Controls.Add(btnFlow);
+            btnPanel.Controls.Add(cancelBtn);
 
             // Dock 顺序：后添加的先布局——Top 先钉住，Bottom 再钉住，Fill 吃剩余空间
             Controls.Add(_advancedHost);

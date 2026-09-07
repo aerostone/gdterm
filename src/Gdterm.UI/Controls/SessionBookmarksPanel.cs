@@ -40,7 +40,7 @@ namespace Gdterm.UI.Controls
             var title = new AntdUI.Label {
                 Text = "书签 / 最近连接",
                 Dock = DockStyle.Top,
-                Height = 28,
+                AutoSize = true,
                 ForeColor = Color.White,
                 Font = Services.FormFontPolicy.UiFont(+1f, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -49,7 +49,7 @@ namespace Gdterm.UI.Controls
 
             _searchBox = new AntdUI.Input {
                 Dock = DockStyle.Top,
-                Height = 24,
+                AutoSize = true,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = Color.White,
             };
@@ -58,7 +58,9 @@ namespace Gdterm.UI.Controls
             var toolbar = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = 32,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                WrapContents = false,
                 BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(4, 2, 4, 2)
             };
@@ -74,7 +76,7 @@ namespace Gdterm.UI.Controls
 
             _statusLabel = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
-                Height = 22,
+                AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
                 Font = Services.FormFontPolicy.UiFont(-0.5f),
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -169,7 +171,7 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = Color.White,
                 Margin = new Padding(2),
-                Height = 26
+                Padding = new Padding(8, 3, 8, 3)
             };
         }
 

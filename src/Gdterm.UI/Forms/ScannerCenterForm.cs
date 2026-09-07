@@ -76,8 +76,9 @@ namespace Gdterm.UI.Forms
             var top = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = 40,
-                Padding = new Padding(8, 8, 8, 0),
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(8, 6, 8, 6),
                 WrapContents = false
             };
             top.Controls.Add(new AntdUI.Label {
@@ -95,19 +96,19 @@ namespace Gdterm.UI.Forms
             _targetCombo.SelectedIndexChanged += (s, ev) => { UpdateWmiPanelVisibility(); UpdateRunButtonState(); };
             top.Controls.Add(_targetCombo);
 
-            _runButton = new AntdUI.Button { Text = "运行选中", Type = AntdUI.TTypeMini.Primary, Width = 96 };
+            _runButton = new AntdUI.Button { Text = "运行选中", Type = AntdUI.TTypeMini.Primary, AutoSize = true, Padding = new Padding(10, 4, 10, 4) };
             _runButton.Click += OnRunClicked;
             top.Controls.Add(_runButton);
 
-            _reloadButton = new AntdUI.Button { Text = "重新加载插件", Type = AntdUI.TTypeMini.Default, Width = 110 };
+            _reloadButton = new AntdUI.Button { Text = "重新加载插件", Type = AntdUI.TTypeMini.Default, AutoSize = true, Padding = new Padding(10, 4, 10, 4) };
             _reloadButton.Click += (s, ev) => _store.Reload();
             top.Controls.Add(_reloadButton);
 
-            _openFolderButton = new AntdUI.Button { Text = "打开插件目录", Type = AntdUI.TTypeMini.Default, Width = 110 };
+            _openFolderButton = new AntdUI.Button { Text = "打开插件目录", Type = AntdUI.TTypeMini.Default, AutoSize = true, Padding = new Padding(10, 4, 10, 4) };
             _openFolderButton.Click += OnOpenPluginsFolder;
             top.Controls.Add(_openFolderButton);
 
-            _newPluginButton = new AntdUI.Button { Text = "新建插件模板", Type = AntdUI.TTypeMini.Default, Width = 118 };
+            _newPluginButton = new AntdUI.Button { Text = "新建插件模板", Type = AntdUI.TTypeMini.Default, AutoSize = true, Padding = new Padding(10, 4, 10, 4) };
             _newPluginButton.Click += OnNewPluginTemplate;
             top.Controls.Add(_newPluginButton);
 
@@ -286,8 +287,8 @@ namespace Gdterm.UI.Forms
         /// <summary>WMI 目标的主机/凭据行；仅选中 WMI 目标时显示。</summary>
         private Panel BuildWmiPanel()
         {
-            _wmiPanel = new Panel { Dock = DockStyle.Top, Height = 34, Visible = false };
-            var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, WrapContents = false, Padding = new Padding(8, 4, 8, 0) };
+            _wmiPanel = new Panel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Visible = false };
+            var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, Padding = new Padding(8, 4, 8, 4) };
             flow.Controls.Add(new AntdUI.Label { Text = "主机:", AutoSize = true, Margin = new Padding(3, 9, 4, 0) });
             _wmiHost = new AntdUI.Input { Width = 160 };
             flow.Controls.Add(_wmiHost);

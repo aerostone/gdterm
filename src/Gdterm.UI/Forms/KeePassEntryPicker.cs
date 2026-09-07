@@ -49,7 +49,8 @@ namespace Gdterm.UI.Forms
             var searchPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 42,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Padding = new Padding(12, 10, 12, 6),
                 BackColor = GdtermColorTable.Background
             };
@@ -77,7 +78,8 @@ namespace Gdterm.UI.Forms
             var btnPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 45,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = GdtermColorTable.Surface
             };
             var btnNew = new AntdUI.Button {

@@ -252,7 +252,15 @@ namespace Gdterm.UI.Controls
         public void ApplyUIFont(string name, int size)
         {
             if (string.IsNullOrEmpty(name) || size < 8 || size > 24) return;
-            try { _treeView.Font = new Font(name, size, FontStyle.Regular); }
+            try
+            {
+                _treeView.Font = new Font(name, size, FontStyle.Regular);
+                // TreeView 的默认 ItemHeight 不会在所有 DPI/字体组合下可靠更新。
+                // 显式按当前字高留出上下呼吸空间，避免节点文字被裁掉。
+                _treeView.ItemHeight = Math.Max(DpiScale.V(this, 22), FormFontPolicy.RowStep(_treeView) - DpiScale.V(this, 7));
+                if (_filterBox != null && _filterBox.Height < FormFontPolicy.RowStep(_filterBox) - DpiScale.V(this, 7))
+                    _filterBox.Height = FormFontPolicy.RowStep(_filterBox) - DpiScale.V(this, 7);
+            }
             catch { _treeView.Font = Services.FormFontPolicy.UiFont(); }
         }
 

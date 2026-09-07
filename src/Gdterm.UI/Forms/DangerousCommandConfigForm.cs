@@ -55,9 +55,10 @@ namespace Gdterm.UI.Forms
             var toolbar = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
-                Height = 46,
                 Padding = new Padding(8, 5, 8, 5)
             };
             toolbar.Controls.Add(MakeBtn("添加自定义规则", OnAddRuleClick, AntdUI.TTypeMini.Primary));
@@ -84,7 +85,18 @@ namespace Gdterm.UI.Forms
             _ruleTable.CellDoubleClick += (s, e) => OnEditRuleClick(s, e);
 
             // —— 白名单区（底部组合面板，Dock=Bottom，字体驱动高度）——
-            var wlPanel = new Panel { Dock = DockStyle.Bottom, BackColor = GdtermColorTable.Background };
+            var wlPanel = new TableLayoutPanel
+            {
+                Dock = DockStyle.Bottom,
+                BackColor = GdtermColorTable.Background,
+                ColumnCount = 1,
+                RowCount = 3,
+                Padding = new Padding(DpiScale.V(this, 5), DpiScale.V(this, 2), DpiScale.V(this, 5), DpiScale.V(this, 4))
+            };
+            wlPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            wlPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            wlPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            wlPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             var wlHeaderRow = FormFontPolicy.RowStep(this);
             var wlBtnRow = wlHeaderRow + DpiScale.V(this, 24) + 4;
             wlPanel.Height = wlBtnRow + DpiScale.V(this, 96) + DpiScale.V(this, 8);
@@ -92,50 +104,43 @@ namespace Gdterm.UI.Forms
             var whitelistHeader = new AntdUI.Label {
                 Text = "白名单（豁免命令）",
                 Font = Services.FormFontPolicy.UiFont(0.5f, FontStyle.Bold),
-                Location = DpiScale.P(this, 5, 2),
-                AutoSize = true
+                AutoSize = true,
+                Margin = new Padding(0, 0, 0, DpiScale.V(this, 4))
             };
 
             // 白名单按钮
-            var btnAddWhitelist = new AntdUI.Button {
-                Text = "添加",
-                Type = AntdUI.TTypeMini.Primary,
+            var whitelistButtons = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
                 AutoSize = true,
-                Location = DpiScale.P(this, 5, wlHeaderRow)
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                WrapContents = false,
+                Margin = new Padding(0, 0, 0, DpiScale.V(this, 4))
             };
+            var btnAddWhitelist = new AntdUI.Button { Text = "添加", Type = AntdUI.TTypeMini.Primary, AutoSize = true, Margin = new Padding(0, 0, DpiScale.V(this, 6), 0) };
             btnAddWhitelist.Click += OnAddWhitelistClick;
 
-            var btnRemoveWhitelist = new AntdUI.Button {
-                Text = "移除",
-                Type = AntdUI.TTypeMini.Error,
-                AutoSize = true,
-                Location = DpiScale.P(this, 70, wlHeaderRow)
-            };
+            var btnRemoveWhitelist = new AntdUI.Button { Text = "移除", Type = AntdUI.TTypeMini.Error, AutoSize = true };
             btnRemoveWhitelist.Click += OnRemoveWhitelistClick;
+            whitelistButtons.Controls.Add(btnAddWhitelist);
+            whitelistButtons.Controls.Add(btnRemoveWhitelist);
 
             // 白名单列表（铺满面板剩余高度）
             _whitelistBox = new AntdUI.Input {
-                Location = DpiScale.P(this, 5, wlBtnRow),
-                Size = new Size(0, 0),
-                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom,
+                Dock = DockStyle.Fill,
+                Margin = new Padding(0),
                 Font = new Font("Consolas", 9.5f),
                 Multiline = true,
                 ReadOnly = true
             };
-            wlPanel.Controls.Add(_whitelistBox);
-            wlPanel.Controls.Add(whitelistHeader);
-            wlPanel.Controls.Add(btnAddWhitelist);
-            wlPanel.Controls.Add(btnRemoveWhitelist);
-            wlPanel.Resize += (s, e) =>
-            {
-                _whitelistBox.Width = wlPanel.ClientSize.Width - DpiScale.V(this, 10);
-                _whitelistBox.Height = wlPanel.ClientSize.Height - wlBtnRow - DpiScale.V(this, 4);
-            };
+            wlPanel.Controls.Add(whitelistHeader, 0, 0);
+            wlPanel.Controls.Add(whitelistButtons, 0, 1);
+            wlPanel.Controls.Add(_whitelistBox, 0, 2);
 
             // 状态栏
             _statusLabel = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
-                Height = 26,
+                AutoSize = true,
                 Text = "就绪"
             };
 
@@ -148,7 +153,7 @@ namespace Gdterm.UI.Forms
 
         private static AntdUI.Button MakeBtn(string text, EventHandler onClick, AntdUI.TTypeMini type)
         {
-            var btn = new AntdUI.Button { Text = text, Type = type, Ghost = type != AntdUI.TTypeMini.Primary, Size = new Size(110, 34) };
+            var btn = new AntdUI.Button { Text = text, Type = type, Ghost = type != AntdUI.TTypeMini.Primary, AutoSize = true, Padding = new Padding(10, 4, 10, 4), Margin = new Padding(0, 0, 6, 0) };
             btn.Click += onClick;
             return btn;
         }
@@ -333,6 +338,7 @@ namespace Gdterm.UI.Forms
         public DangerousCommandRuleEditForm()
         {
             InitializeComponent();
+            Gdterm.UI.Services.FormFontPolicy.Apply(this);
         }
 
         private void InitializeComponent()
@@ -498,6 +504,7 @@ namespace Gdterm.UI.Forms
 
             AcceptButton = okButton;
             CancelButton = cancelButton;
+            Gdterm.UI.Services.FormFontPolicy.Apply(this);
         }
     }
 }

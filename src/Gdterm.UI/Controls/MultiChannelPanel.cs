@@ -46,14 +46,17 @@ namespace Gdterm.UI.Controls
             var toolbar = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = 35,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.LeftToRight,
-                Padding = new Padding(3)
+                WrapContents = false,
+                Padding = new Padding(DpiScale.V(this, 3))
             };
 
-            _btnSelectAll = new AntdUI.Button { Text = "全选就绪", Size = DpiScale.S(this, 70, 25) };
-            _btnDeselectAll = new AntdUI.Button { Text = "取消", Size = DpiScale.S(this, 50, 25) };
-            _btnBroadcast = new AntdUI.Button { Text = "广播", Size = DpiScale.S(this, 60, 25), Enabled = false };
+            _btnSelectAll = CreateToolbarButton("全选就绪");
+            _btnDeselectAll = CreateToolbarButton("取消");
+            _btnBroadcast = CreateToolbarButton("广播");
+            _btnBroadcast.Enabled = false;
 
             toolbar.Controls.AddRange(new Control[] { _btnSelectAll, _btnDeselectAll, _btnBroadcast });
 
@@ -74,35 +77,43 @@ namespace Gdterm.UI.Controls
             _sessionList.Columns.Add("命令数", 45);
 
             // 命令输入框
-            var inputPanel = new Panel
+            var inputPanel = new TableLayoutPanel
             {
                 Dock = DockStyle.Bottom,
-                Height = 60
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                ColumnCount = 1,
+                RowCount = 2,
+                Padding = new Padding(DpiScale.V(this, 3))
             };
+            inputPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            inputPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            inputPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             _commandInput = new AntdUI.Input {
                 Dock = DockStyle.Top,
-                Height = 25,
+                Height = DpiScale.V(this, 28),
                 Font = new Font("Consolas", 9f)
             };
 
             var inputHint = new AntdUI.Label {
                 Dock = DockStyle.Fill,
+                AutoSize = true,
                 Text = "输入命令后按 Enter 广播到所有选中会话",
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleLeft
             };
 
-            inputPanel.Controls.Add(inputHint);
-            inputPanel.Controls.Add(_commandInput);
+            inputPanel.Controls.Add(_commandInput, 0, 0);
+            inputPanel.Controls.Add(inputHint, 0, 1);
 
             // 状态栏
             _statusLabel = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
-                Height = 20,
+                AutoSize = true,
                 Text = "就绪",
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(3, 0, 0, 0),
+                Padding = new Padding(DpiScale.V(this, 3), 0, 0, 0),
                 BackColor = GdtermColorTable.Surface
             };
 
@@ -110,6 +121,17 @@ namespace Gdterm.UI.Controls
             Controls.Add(toolbar);
             Controls.Add(inputPanel);
             Controls.Add(_statusLabel);
+        }
+
+        private AntdUI.Button CreateToolbarButton(string text)
+        {
+            return new AntdUI.Button
+            {
+                Text = text,
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3)),
+                Margin = new Padding(DpiScale.V(this, 2))
+            };
         }
 
         private void WireEvents()

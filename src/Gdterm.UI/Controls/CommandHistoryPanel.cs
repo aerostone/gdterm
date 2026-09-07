@@ -39,24 +39,28 @@ namespace Gdterm.UI.Controls
             var searchPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
-                Height = 35,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.LeftToRight,
-                Padding = new Padding(3)
+                WrapContents = false,
+                Padding = new Padding(DpiScale.V(this, 3))
             };
 
             _searchBox = new AntdUI.Input {
-                Size = DpiScale.S(this, 150, 23)
+                Width = DpiScale.V(this, 150),
+                AutoSize = true
             };
             _searchBox.PlaceholderText = "搜索命令...";
 
             _hostFilter = new AntdUI.Select {
-                Size = DpiScale.S(this, 120, 23),
+                Width = DpiScale.V(this, 120),
+                AutoSize = true,
             };
             _hostFilter.Items.Add("所有主机");
             _hostFilter.SelectedIndex = 0;
 
-            var btnRefresh = new AntdUI.Button { Text = "刷新", Size = DpiScale.S(this, 50, 23)};
-            var btnClear = new AntdUI.Button { Text = "清空", Size = DpiScale.S(this, 50, 23)};
+            var btnRefresh = new AntdUI.Button { Text = "刷新", AutoSize = true, Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3))};
+            var btnClear = new AntdUI.Button { Text = "清空", AutoSize = true, Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3))};
 
             searchPanel.Controls.AddRange(new Control[] { _searchBox, _hostFilter, btnRefresh, btnClear });
 
@@ -78,7 +82,7 @@ namespace Gdterm.UI.Controls
             // 状态栏
             _statusLabel = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
-                Height = 20,
+                AutoSize = true,
                 Text = "就绪",
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(3, 0, 0, 0),

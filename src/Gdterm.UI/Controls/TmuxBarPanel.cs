@@ -134,21 +134,28 @@ namespace Gdterm.UI.Controls
             BackColor = GdtermColorTable.Surface;
 
             // 前缀选择器（左侧竖排：标签 + 下拉）
-            var prefixPanel = new Panel
+            var prefixPanel = new TableLayoutPanel
             {
                 Dock = DockStyle.Left,
-                Width = 70,
-                BackColor = GdtermColorTable.Surface
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                ColumnCount = 1,
+                RowCount = 2,
+                BackColor = GdtermColorTable.Surface,
+                Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 4), DpiScale.V(this, 6), DpiScale.V(this, 4))
             };
+            prefixPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            prefixPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            prefixPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             var prefixLabel = new AntdUI.Label {
                 Text = "前缀",
                 AutoSize = true,
-                Location = new Point(8, 6),
+                Margin = new Padding(0, 0, 0, DpiScale.V(this, 2)),
                 ForeColor = GdtermColorTable.Muted
             };
             _prefixBox = new AntdUI.Select {
-                Location = new Point(6, 26),
-                Size = new Size(56, 21),
+                Width = DpiScale.V(this, 56),
+                AutoSize = true,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = new Font("Consolas", 9f)
@@ -158,8 +165,8 @@ namespace Gdterm.UI.Controls
             _prefixBox.SelectedIndex = 0;
             _prefixBox.SelectedIndexChanged += (s, e) =>
                 _prefix = _prefixBox.SelectedIndex == 1 ? "\u0001" : "\u0002";
-            prefixPanel.Controls.Add(prefixLabel);
-            prefixPanel.Controls.Add(_prefixBox);
+            prefixPanel.Controls.Add(prefixLabel, 0, 0);
+            prefixPanel.Controls.Add(_prefixBox, 0, 1);
 
             // 两行按钮区
             var rows = new TableLayoutPanel

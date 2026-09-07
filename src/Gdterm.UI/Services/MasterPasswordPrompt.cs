@@ -84,6 +84,7 @@ namespace Gdterm.UI.Services
                 };
                 dialog.Controls.AddRange(new Control[] { label, pwdBox, errorLabel, okBtn });
                 dialog.AcceptButton = okBtn;
+                FormFontPolicy.Apply(dialog);
                 return dialog.ShowDialog(owner) == DialogResult.OK;
             }
         }

@@ -52,12 +52,20 @@ namespace Gdterm.UI.Controls
         private void BuildUI()
         {
             // ── 状态卡片 ──
-            var cards = new Panel { Dock = DockStyle.Top, Height = 80, BackColor = GdtermColorTable.Surface, Padding = new Padding(12, 10, 12, 10) };
+            var cards = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                WrapContents = false,
+                BackColor = GdtermColorTable.Surface,
+                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 10), DpiScale.V(this, 12), DpiScale.V(this, 10))
+            };
 
-            _lblStatus = CreateCard("● 状态", "未知", 12, GdtermColorTable.Muted);
-            _lblUptime = CreateCard("⏱ 运行时间", "00:00:00", 160, GdtermColorTable.Foreground);
-            _lblLatency = CreateCard("⚡ 延迟", "— ms", 320, GdtermColorTable.Success);
-            _lblReconnects = CreateCard("↻ 重连", "0", 480, GdtermColorTable.Warning);
+            _lblStatus = CreateCard("● 状态", "未知", GdtermColorTable.Muted);
+            _lblUptime = CreateCard("⏱ 运行时间", "00:00:00", GdtermColorTable.Foreground);
+            _lblLatency = CreateCard("⚡ 延迟", "— ms", GdtermColorTable.Success);
+            _lblReconnects = CreateCard("↻ 重连", "0", GdtermColorTable.Warning);
 
             cards.Controls.AddRange(new Control[] { _lblStatus, _lblUptime, _lblLatency, _lblReconnects });
 
@@ -79,12 +87,12 @@ namespace Gdterm.UI.Controls
             _refreshTimer.Start();
         }
 
-        private AntdUI.Label CreateCard(string title, string value, int x, Color valueColor)
+        private AntdUI.Label CreateCard(string title, string value, Color valueColor)
         {
             var lbl = new AntdUI.Label {
-                Location = DpiScale.P(this, x, 6),
-                AutoSize = false,
-                Size = DpiScale.S(this, 140, 65),
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 8), DpiScale.V(this, 10), DpiScale.V(this, 8)),
+                Margin = new Padding(0, 0, DpiScale.V(this, 8), 0),
                 Font = new Font("Consolas", 14f, FontStyle.Bold),
                 ForeColor = valueColor,
                 Text = value,

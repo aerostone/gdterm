@@ -39,9 +39,10 @@ namespace Gdterm.UI.Forms
             var toolbar = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
-                Height = 46,
                 Padding = new Padding(8, 5, 8, 5)
             };
 
@@ -74,7 +75,7 @@ namespace Gdterm.UI.Forms
             // 状态栏
             _statusLabel = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
-                Height = 28,
+                AutoSize = true,
                 Text = "就绪"
             };
 
@@ -85,7 +86,7 @@ namespace Gdterm.UI.Forms
 
         private static AntdUI.Button MakeToolBtn(string text, EventHandler onClick)
         {
-            var btn = new AntdUI.Button { Text = text, Type = AntdUI.TTypeMini.Default, Ghost = true, Size = new Size(88, 34) };
+            var btn = new AntdUI.Button { Text = text, Type = AntdUI.TTypeMini.Default, Ghost = true, AutoSize = true, Padding = new Padding(10, 4, 10, 4), Margin = new Padding(0, 0, 6, 0) };
             btn.Click += onClick;
             return btn;
         }
@@ -379,14 +380,15 @@ namespace Gdterm.UI.Forms
             BackColor = GdtermColorTable.Background;
 
             // ===== 底部按钮（流式靠右，随字体缩放）=====
-            var btnPanel = new Panel { Dock = DockStyle.Bottom, Height = 45, BackColor = GdtermColorTable.Background };
-            var btnFlow = new FlowLayoutPanel
+            var btnPanel = new FlowLayoutPanel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Bottom,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.RightToLeft,
                 WrapContents = false,
                 BackColor = GdtermColorTable.Background,
-                Padding = new Padding(0, 7, 15, 0)
+                Padding = new Padding(0, 7, 15, 7)
             };
             var okButton = new AntdUI.Button {
                 Text = "确定",
@@ -402,9 +404,8 @@ namespace Gdterm.UI.Forms
                 Margin = new Padding(0, 0, 8, 0)
             };
             cancelButton.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
-            btnFlow.Controls.Add(okButton);       // RightToLeft：第一个在最右
-            btnFlow.Controls.Add(cancelButton);
-            btnPanel.Controls.Add(btnFlow);
+            btnPanel.Controls.Add(okButton);       // RightToLeft：第一个在最右
+            btnPanel.Controls.Add(cancelButton);
 
             // ===== 字段表单 =====
             var grid = new TableLayoutPanel

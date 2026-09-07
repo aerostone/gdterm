@@ -118,6 +118,13 @@ namespace Gdterm.UI.Services
             return Math.Max(30, h + 9);
         }
 
+        /// <summary>运行时切换 UI 字号时，同步已有的显式 UI 字体。</summary>
+        public static void ApplyChildUIFont(Control root, string name, float size)
+        {
+            if (root == null || string.IsNullOrEmpty(name) || size <= 0) return;
+            ReplaceChildFonts(root.Controls, name, size, true);
+        }
+
         public static void Apply(Form form)
         {
             if (form == null) return;
@@ -127,10 +134,10 @@ namespace Gdterm.UI.Services
             try { form.Font = new Font(name, size, FontStyle.Regular); }
             catch { return; }
 
-            ReplaceChildFonts(form.Controls, name, size);
+            ReplaceChildFonts(form.Controls, name, size, false);
         }
 
-        private static void ReplaceChildFonts(Control.ControlCollection controls, string name, float size)
+        private static void ReplaceChildFonts(Control.ControlCollection controls, string name, float size, bool replaceAllUiFonts)
         {
             if (controls == null) return;
             foreach (Control c in controls)
@@ -138,16 +145,28 @@ namespace Gdterm.UI.Services
                 try
                 {
                     var f = c.Font;
-                    if (f != null && !string.IsNullOrEmpty(f.Name)
-                        && (f.Name.StartsWith("Microsoft YaHei", StringComparison.OrdinalIgnoreCase)
-                            || f.Name == "微软雅黑"))
+                    if (f != null && !string.IsNullOrEmpty(f.Name) && IsReplaceableUiFont(f.Name, replaceAllUiFonts))
                     {
                         c.Font = new Font(name, size, f.Style);
                     }
                 }
                 catch { }
-                ReplaceChildFonts(c.Controls, name, size);
+                ReplaceChildFonts(c.Controls, name, size, replaceAllUiFonts);
             }
+        }
+
+        private static bool IsReplaceableUiFont(string name, bool replaceAllUiFonts)
+        {
+            if (name.StartsWith("Microsoft YaHei", StringComparison.OrdinalIgnoreCase)
+                || name == "微软雅黑")
+                return true;
+            if (!replaceAllUiFonts) return false;
+
+            // 这些字体承载终端、密码或图标语义，不能被 UI 字号覆盖。
+            return name.IndexOf("Consolas", StringComparison.OrdinalIgnoreCase) < 0
+                && name.IndexOf("Courier", StringComparison.OrdinalIgnoreCase) < 0
+                && name.IndexOf("Mono", StringComparison.OrdinalIgnoreCase) < 0
+                && name.IndexOf("Emoji", StringComparison.OrdinalIgnoreCase) < 0;
         }
     }
 }

@@ -42,11 +42,19 @@ namespace Gdterm.UI.Controls
 
         private void BuildUI()
         {
-            var toolbar = new Panel { Dock = DockStyle.Top, Height = 40, BackColor = GdtermColorTable.Surface };
-            var btnAdd = CreateBtn("添加规则", 8);
-            var btnStart = CreateBtn("启动", 100);
-            var btnStop = CreateBtn("停止", 180);
-            var btnDelete = CreateBtn("删除", 260);
+            var toolbar = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Top,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                WrapContents = false,
+                BackColor = GdtermColorTable.Surface,
+                Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 5), DpiScale.V(this, 8), DpiScale.V(this, 5))
+            };
+            var btnAdd = CreateBtn("添加规则");
+            var btnStart = CreateBtn("启动");
+            var btnStop = CreateBtn("停止");
+            var btnDelete = CreateBtn("删除");
 
             btnAdd.Click += (s, e) => AddRule();
             btnStart.Click += (s, e) => StartSelected();
@@ -75,11 +83,14 @@ namespace Gdterm.UI.Controls
             Controls.Add(toolbar);
         }
 
-        private AntdUI.Button CreateBtn(string text, int x)
+        private AntdUI.Button CreateBtn(string text)
         {
             return new AntdUI.Button
             {
-                Text = text, Size = DpiScale.S(this, 75, 28), Location = DpiScale.P(this, x, 6), BackColor = GdtermColorTable.Surface,
+                Text = text, AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
+                Margin = new Padding(0, 0, DpiScale.V(this, 8), 0),
+                BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-0.5f)
             };
         }
