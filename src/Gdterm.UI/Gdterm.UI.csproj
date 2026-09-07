@@ -127,6 +127,9 @@
     <Compile Include="Controls\StatusBarControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Include="Controls\BottomBarPanel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Controls\LockOverlayControl.cs">
       <SubType>UserControl</SubType>
     </Compile>

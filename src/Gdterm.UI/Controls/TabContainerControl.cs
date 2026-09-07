@@ -140,9 +140,13 @@ namespace Gdterm.UI.Controls
                 ItemSize = DpiScale.S(this, 120, 24),
                 Padding = DpiScale.P(this, 10, 3)
             };
+            _tabControl.FontChanged += (s, e) => ApplyElasticTabWidth();
             _tabControl.DrawItem += OnDrawTab;
             _tabControl.MouseDown += OnTabMouseDown;
+            _tabControl.MouseMove += OnTabMouseMove;
+            _tabControl.MouseLeave += OnTabMouseLeave;
             _tabControl.SelectedIndexChanged += OnTabSelectedIndexChanged;
+            _tabControl.Resize += (s, e) => ApplyElasticTabWidth();
             Controls.Add(_tabControl);
 
             // 右键菜单（参考 Xshell/MobaXterm Tab 右键）
@@ -329,6 +333,45 @@ namespace Gdterm.UI.Controls
         private void OnDrawTab(object sender, DrawItemEventArgs e)
         {
             _chrome.DrawTab(e, _tabControl);
+        }
+
+        /// <summary>L1：悬停跟踪——关闭钮仅悬停/选中时绘制，需要知道鼠标在哪个标签上。</summary>
+        private void OnTabMouseMove(object sender, MouseEventArgs e)
+        {
+            int idx = -1;
+            for (int i = 0; i < _tabControl.TabCount; i++)
+                if (_tabControl.GetTabRect(i).Contains(e.Location)) { idx = i; break; }
+            if (idx != _chrome.HoverIndex)
+            {
+                _chrome.HoverIndex = idx;
+                try { _tabControl.Invalidate(); } catch { }
+            }
+        }
+
+        private void OnTabMouseLeave(object sender, EventArgs e)
+        {
+            if (_chrome.HoverIndex != -1)
+            {
+                _chrome.HoverIndex = -1;
+                try { _tabControl.Invalidate(); } catch { }
+            }
+        }
+
+        /// <summary>L1 弹性宽：标签宽随文本长度与可视宽自适应（90~180 设计 px），每次增删/缩放重算。</summary>
+        private void ApplyElasticTabWidth()
+        {
+            try
+            {
+                if (_tabControl == null || _tabControl.IsDisposed) return;
+                var dpi = DpiScale.Factor(this);
+                int designW = _chrome.ComputeTabWidth(_tabControl, _tabControl.Font, dpi);
+                int px = (int)Math.Round(designW * dpi);
+                int h = (int)Math.Round(24 * dpi);
+                var cur = _tabControl.ItemSize;
+                if (cur.Width != px || cur.Height != h)
+                    _tabControl.ItemSize = new Size(px, h);
+            }
+            catch { }
         }
 
         /// <summary>右键菜单条目 + 手绘图标（失败回退纯文本）。</summary>
@@ -574,6 +617,7 @@ namespace Gdterm.UI.Controls
 
         private void RaiseTabCountChanged()
         {
+            ApplyElasticTabWidth(); // L1：标签数变化 → 重算弹性宽
             try
             {
                 var h = TabCountChanged;

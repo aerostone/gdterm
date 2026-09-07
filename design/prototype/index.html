@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>gdterm 界面原型 · 一期复刻</title>
+<!--
+  ============================================================================
+  gdterm UI PROTOTYPE — PHASE 1: FAITHFUL REPLICA (只复刻, 不优化)
+  ============================================================================
+  目标: 把 WinForms 程序当前真实界面 1:1 复刻到浏览器, 作为后续优化的基线。
+  所有颜色/字体/尺寸/布局均从源码逐文件提取, 非凭印象:
+    - GdtermColorTable.cs   → 全部颜色 token (Dark 主题, 运行默认)
+    - FormFontPolicy.cs     → UI 字体 Microsoft YaHei UI 9pt; 终端 Consolas 12pt
+    - MainFormMenuBuilder   → 菜单栏 6 菜单全部条目与快捷键
+    - ConnectionTreeControl → 连接面板: 筛选框 24px + TreeView(ShowLines/全行选择)
+    - TabContainerControl   → 标签 120x24 固定宽, 选中 Hover 色 / 未选中 Surface
+    - StatusBarControl      → 状态栏 7 标签, 可点击项链接样式, 右侧尺寸/编码
+    - WelcomePanel          → 落地页: Consolas 28pt "gdterm" 绿标题 + 4 动作钮
+    - QuickBarPanel         → 快捷命令栏两行 (分组行 + 命令行), DesignHeight 66
+    - 对话框 (刚修复的字体驱动布局版本): AiSettings / QuickCommandEditor /
+      ChangeMasterPassword / SshKeyManager / PasswordGenerator / ConnectionDialog
+      AntdUI 控件近似复刻: 方角 (NormalizeAntdShapes), 38px 输入框
+  布局链 (WinForms Dock 语义):
+    MenuStrip(Top) → [ConnectionTree(Left,250) + TabContainer(Fill) + SideHost(Right)]
+    → QuickBar(Bottom,66) → StatusBar(Bottom,25)
+  快捷键: Alt+1 新建连接 · Alt+2 AI 设置 · Alt+3 SSH 密钥 · Alt+4 密码生成器
+          Alt+5 修改主密码 · Alt+6 落地页/终端 · Alt+7 右侧面板
+  ============================================================================
+-->
+<style>
+/* ── GdtermColorTable (Dark 主题, 与 C# 逐值对齐) ─────────────────────── */
+:root {
+  --bg:        #11161A;
+  --surface:   #1A2127;
+  --border:    #35414A;
+  --accent:    #34D399;
+  --fg:        #E8EEF2;
+  --muted:     #9AA7B1;
+  --hover:     #263039;
+  --pressed:   #323D47;
+  --on-accent: #082218;
+  --danger:    #F06A64;
+  --warning:   #E4B86A;
+  --success:   #59C77B;
+  --info:      #75A9E6;
+
+  --ui-font: "Microsoft YaHei UI", "Microsoft YaHei", "Segoe UI", sans-serif;
+  --mono: Consolas, "Courier New", monospace;
+
+  --tab-h: 24px;      /* TabContainer ItemSize 120x24 */
+  --tab-w: 120px;
+  --tree-w: 250px;    /* ConnectionTreeControl _pinnedWidth */
+  --quickbar-h: 66px; /* QuickBarPanel DesignHeight */
+  --status-h: 25px;   /* StatusBarControl.Height */
+  --menu-h: 26px;     /* MenuStrip 默认 */
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: #05070A;
+  font-family: var(--ui-font);
+  font-size: 12px;
+  color: var(--fg);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 24px; overflow: auto;
+}
+
+/* ══ Windows 桌面窗口框架 ═══════════════════════════════════════════════ */
+.win {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  box-shadow: 0 16px 48px rgba(0,0,0,.55);
+  display: flex; flex-direction: column;
+}
+#main-win { width: 1280px; height: 780px; }
+
+.titlebar {
+  height: 30px; flex: none;
+  display: flex; align-items: center;
+  background: #0D1115;
+  border-bottom: 1px solid var(--border);
+  padding-left: 10px;
+  user-select: none;
+}
+.titlebar .icon {
+  width: 16px; height: 16px; margin-right: 8px; flex: none;
+  background: var(--accent);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 3h12v10H2z' fill='none' stroke='black' stroke-width='1.5'/%3E%3Cpath d='M2 6h12M5.5 6v7M10.5 6v7' stroke='black' stroke-width='1'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M2 3h12v10H2z' fill='none' stroke='black' stroke-width='1.5'/%3E%3Cpath d='M2 6h12M5.5 6v7M10.5 6v7' stroke='black' stroke-width='1'/%3E%3C/svg%3E") center/contain no-repeat;
+}
+.titlebar .t { font-size: 12px; color: var(--muted); flex: 1; }
+.titlebar .wbtn {
+  width: 44px; height: 29px;
+  display: grid; place-items: center;
+  color: var(--muted); font-size: 11px; font-family: var(--mono);
+}
+.titlebar .wbtn:hover { background: var(--hover); color: var(--fg); }
+.titlebar .wbtn.close:hover { background: #C0392B; color: #fff; }
+
+/* ══ 菜单栏 (MainFormMenuBuilder 全条目) ═════════════════════════════ */
+.menubar {
+  height: var(--menu-h); flex: none;
+  display: flex; align-items: stretch;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  position: relative; z-index: 30;
+  user-select: none;
+}
+.menu-item { position: relative; }
+.menu-item > button {
+  all: unset;
+  display: flex; align-items: center;
+  height: 100%; padding: 0 10px;
+  font: 12px var(--ui-font); color: var(--fg);
+}
+.menu-item > button:hover, .menu-item.open > button { background: var(--hover); }
+.menu-item > button:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+.menu-drop {
+  position: absolute; top: 100%; left: 0; min-width: 230px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0,0,0,.5);
+  padding: 4px 0;
+  display: none; z-index: 40;
+}
+.menu-item.open .menu-drop { display: block; }
+.mi {
+  display: flex; align-items: center; gap: 6px;
+  min-height: 26px; padding: 0 12px 0 10px;
+  color: var(--fg); font-size: 12px; white-space: nowrap;
+}
+.mi:hover { background: var(--hover); }
+.mi .sc { margin-left: auto; color: var(--muted); font-size: 11px; padding-left: 28px; }
+.mi.sep { min-height: 0; height: 1px; padding: 0; margin: 4px 8px; background: var(--border); }
+.mi .chk { width: 14px; color: var(--accent); font-size: 11px; visibility: hidden; flex: none; }
+.mi.checked .chk { visibility: visible; }
+
+/* ══ 主体 3 列 (Dock 语义) ═════════════════════════════════════════════ */
+.body-row { flex: 1; display: flex; min-height: 0; }
+
+/* 连接面板 (ConnectionTreeControl) */
+.sidebar {
+  width: var(--tree-w); flex: none;
+  background: var(--bg);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+}
+.filter-box {
+  height: 24px; flex: none;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center;
+  padding: 0 8px;
+  color: var(--muted); font-size: 11px;
+}
+.tree { flex: 1; padding: 6px 4px; overflow: auto; }
+.tree-group {
+  display: flex; align-items: center; gap: 5px;
+  height: 24px; padding-left: 4px;
+  color: var(--fg); font-size: 12px;
+}
+.tree-group .caret { color: var(--muted); font-size: 10px; width: 9px; flex: none; }
+.tree-group .gicon { color: var(--muted); font-size: 11px; flex: none; }
+.tree-item {
+  display: flex; align-items: center; gap: 5px;
+  height: 24px; padding-left: 28px;
+  color: var(--fg); font-size: 12px;
+}
+.tree-item:hover { background: var(--hover); }
+.tree-item.selected { background: var(--hover); position: relative; }
+.tree-item.selected::before {
+  content: ""; position: absolute; left: 0; top: 2px; bottom: 2px; width: 2px; background: var(--accent);
+}
+.proto { font-size: 10px; padding: 0 4px; border-radius: 2px; flex: none; }
+.proto.ssh { color: var(--success); border: 1px solid rgba(89,199,123,.4); }
+.proto.rdp { color: var(--info); border: 1px solid rgba(117,169,230,.4); }
+
+/* 右侧面板宿主 (SidePanelHost, 默认隐藏) */
+.side-host {
+  width: 0; flex: none; border-left: 1px solid var(--border);
+  background: var(--surface); overflow: hidden;
+  transition: width .18s ease;
+}
+.side-host.open { width: 360px; }
+.side-host-inner { width: 360px; height: 100%; display: flex; flex-direction: column; }
+.side-head {
+  height: 34px; flex: none; display: flex; align-items: center;
+  padding: 0 12px; border-bottom: 1px solid var(--border);
+  font-size: 12px; color: var(--fg); background: var(--surface);
+}
+.side-head .x { margin-left: auto; color: var(--muted); padding: 2px 6px; }
+.side-head .x:hover { color: var(--fg); background: var(--hover); }
+.side-body { flex: 1; padding: 12px; overflow: auto; }
+
+/* ══ 标签页区 (TabContainerControl) ═══════════════════════════════════ */
+.center { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--bg); }
+.tabs-row {
+  height: var(--tab-h); flex: none;
+  display: flex; align-items: stretch;
+  border-bottom: 1px solid var(--border);
+}
+.tab {
+  width: var(--tab-w); flex: none;
+  display: flex; align-items: center; gap: 6px;
+  padding: 0 6px 0 10px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  font-size: 11px; color: var(--muted);
+  overflow: hidden;
+}
+.tab.active { background: var(--hover); color: var(--fg); }
+.tab .x { margin-left: auto; font-size: 12px; flex: none; }
+.tab .x:hover { color: var(--danger); }
+.tab.add { width: 28px; justify-content: center; padding: 0; }
+.tab.add:hover { background: var(--hover); color: var(--fg); }
+
+.tab-content { flex: 1; min-height: 0; display: flex; }
+.term-area { flex: 1; min-width: 0; position: relative; background: #0B0F13; }
+
+/* 终端 (TerminalControl: Consolas 12pt) */
+.term {
+  position: absolute; inset: 0;
+  font: 13px/1.45 var(--mono);
+  color: #C5CDD3;
+  padding: 6px 10px;
+  white-space: pre;
+  overflow: hidden;
+}
+.term .p { color: var(--accent); }
+.term .w { color: var(--warning); }
+.term .g { color: #7EC080; }
+
+/* ══ WelcomePanel (落地页) ═════════════════════════════════════════════ */
+.welcome {
+  position: absolute; inset: 0;
+  background: var(--bg);
+  padding: 24px 40px 20px;
+  display: flex; flex-direction: column;
+  overflow: auto;
+}
+.welcome h1 { font: 700 37px/1.15 var(--mono); color: var(--accent); letter-spacing: .5px; }
+.welcome .sub { color: var(--muted); font-size: 12px; padding: 4px 0 8px; }
+.welcome .actions { display: flex; gap: 10px; padding: 8px 0; flex: none; }
+.wbtn2 {
+  all: unset;
+  min-width: 110px; height: 32px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--surface); color: var(--fg);
+  border: 1px solid var(--border);
+  font-size: 12px;
+}
+.wbtn2:hover { background: var(--hover); }
+.wbtn2:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+.welcome section { margin-top: 16px; flex: 1; min-height: 120px; }
+.welcome h2 { font-size: 13px; font-weight: 700; color: var(--fg); padding: 8px 0 4px; }
+.host-row {
+  display: flex; align-items: center;
+  height: 40px; width: min(560px, 100%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  margin-top: 6px; padding: 0 12px;
+  color: var(--fg); font-size: 12px;
+}
+.host-row:hover { background: var(--hover); }
+.host-row .meta { margin-left: auto; color: var(--muted); font-size: 11px; white-space: nowrap; }
+.dot { width: 6px; height: 6px; border-radius: 50%; margin-right: 8px; flex: none; }
+.dot.ok { background: var(--success); }
+.dot.err { background: var(--danger); }
+
+/* ══ 快捷命令栏 (QuickBarPanel, 两行 66px) ════════════════════════════ */
+.quickbar {
+  height: var(--quickbar-h); flex: none;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  display: flex; flex-direction: column;
+}
+.qb-groups {
+  height: 28px; flex: none;
+  display: flex; align-items: center; gap: 2px;
+  padding: 0 6px; border-bottom: 1px solid var(--border);
+}
+.qb-g {
+  all: unset;
+  font-size: 11px; color: var(--muted);
+  padding: 3px 6px;
+}
+.qb-g:hover { background: var(--hover); }
+.qb-g.on { color: var(--success); font-weight: 700; }
+.qb-commands {
+  flex: 1;
+  display: flex; align-items: center; gap: 3px;
+  padding: 0 6px; overflow-x: auto;
+}
+.qb-c {
+  font-size: 11px; color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 3px 8px; flex: none;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.qb-c:hover { background: var(--hover); }
+.qb-c .tag { font-size: 10px; color: var(--muted); }
+.qb-c.add { color: var(--muted); border-style: dashed; }
+.qb-label { margin-left: auto; color: var(--muted); font-size: 10px; flex: none; padding-left: 8px; }
+
+/* ══ 状态栏 (StatusBarControl) ═════════════════════════════════════════ */
+.statusbar {
+  height: var(--status-h); flex: none;
+  display: flex; align-items: center;
+  background: var(--bg);
+  border-top: 1px solid var(--border);
+  padding: 0 6px;
+  font-size: 11px; color: var(--fg);
+  user-select: none;
+}
+.sb-item { padding: 0 8px; height: 100%; display: flex; align-items: center; white-space: nowrap; }
+.sb-sep { width: 1px; height: 13px; background: var(--border); margin: 0 4px; flex: none; }
+.sb-item.link { color: var(--info); cursor: pointer; }
+.sb-item.link:hover { text-decoration: underline; }
+.sb-spring { flex: 1; }
+.sb-item.dim { color: var(--muted); }
+
+/* ══ AntdUI 对话框近似 (方角, 字体驱动布局) ═══════════════════════════ */
+.dlg-layer { position: fixed; inset: 0; z-index: 100; display: none; }
+.dlg-layer.open { display: grid; place-items: center; background: rgba(10,14,18,.55); }
+.dlg {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+  display: flex; flex-direction: column;
+}
+.dlg-titlebar {
+  height: 32px; flex: none;
+  display: flex; align-items: center; padding: 0 12px;
+  color: var(--fg); font-size: 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface);
+}
+.dlg-titlebar .x { margin-left: auto; color: var(--muted); padding: 2px 6px; }
+.dlg-titlebar .x:hover { color: var(--fg); background: var(--hover); }
+.dlg-body { padding: 18px 20px; }
+.dlg-btnrow { flex: none; display: flex; justify-content: flex-end; gap: 8px; padding: 12px 20px 16px; }
+.btn {
+  all: unset;
+  min-width: 84px; height: 34px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  background: var(--surface); color: var(--fg);
+  border: 1px solid var(--border);
+}
+.btn:hover { background: var(--hover); }
+.btn:focus-visible { outline: 1px solid var(--accent); outline-offset: -1px; }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
+.btn.primary:hover { background: #2BC088; }
+
+/* 表单行 (RowStep 字体驱动: 46px 行高, 38px 控件高) */
+.frow { display: flex; align-items: center; height: 46px; }
+.frow .lbl { width: 110px; flex: none; color: var(--fg); font-size: 12px; }
+.frow .ctrl { flex: 1; display: flex; align-items: center; gap: 10px; }
+.input {
+  flex: 1; height: 38px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--fg); font-size: 12px;
+  padding: 0 10px;
+  display: flex; align-items: center;
+  white-space: nowrap; overflow: hidden;
+}
+.input.mono { font-family: var(--mono); font-size: 12.5px; }
+.input.pw { font-family: var(--mono); letter-spacing: 2px; }
+.select {
+  width: 160px; height: 38px; flex: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--fg); font-size: 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 10px;
+}
+.select::after { content: "▾"; color: var(--muted); font-size: 10px; }
+.select.wide { width: 200px; }
+.frow .hint { color: var(--muted); font-size: 11px; flex: none; }
+.chkline { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--fg); }
+.chkline .box { width: 14px; height: 14px; border: 1px solid var(--border); background: var(--surface); display: grid; place-items: center; color: transparent; font-size: 10px; flex: none; }
+.chkline.on .box { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+.dlg-title { font-size: 14px; font-weight: 700; }
+.dlg-subtitle { color: var(--muted); font-size: 11px; margin: 4px 0 10px; }
+.status-line { height: 26px; display: flex; align-items: center; color: var(--muted); font-size: 11px; }
+.status-line.ok { color: var(--success); }
+
+/* 控制台说明 */
+.console { margin-top: 14px; display: flex; flex-direction: column; gap: 6px; align-items: center; font-size: 11px; color: var(--muted); text-align: center; }
+.console .cap { font-size: 10px; letter-spacing: 2px; color: #56636D; text-transform: uppercase; }
+.console kbd { font-family: var(--mono); font-size: 10px; background: var(--surface); border: 1px solid var(--border); padding: 1px 5px; color: var(--fg); }
+</style>
+</head>
+<body>
+
+<!-- ════════════════ 主窗体 gdterm ════════════════ -->
+<div class="win" id="main-win">
+  <div class="titlebar">
+    <div class="icon"></div>
+    <div class="t">gdterm</div>
+    <div class="wbtn">─</div><div class="wbtn">▢</div><div class="wbtn close">✕</div>
+  </div>
+
+  <!-- 菜单栏: MainFormMenuBuilder 全条目复刻 -->
+  <nav class="menubar" aria-label="主菜单">
+    <div class="menu-item"><button>文件(F)</button>
+      <div class="menu-drop">
+        <div class="mi">新建连接(N)…<span class="sc">Ctrl+Shift+N</span></div>
+        <div class="mi">快速跳转连接<span class="sc">Ctrl+Shift+K</span></div>
+        <div class="mi sep"></div>
+        <div class="mi">本地终端(L)</div>
+        <div class="mi">SFTP 浏览器(S)</div>
+        <div class="mi sep"></div>
+        <div class="mi">导入连接(I)…</div>
+        <div class="mi">导出连接(E)…</div>
+        <div class="mi sep"></div>
+        <div class="mi">退出(X)</div>
+      </div>
+    </div>
+    <div class="menu-item"><button>连接(C)</button>
+      <div class="menu-drop">
+        <div class="mi">重连当前标签<span class="sc">Ctrl+Shift+R</span></div>
+        <div class="mi">关闭当前标签<span class="sc">Ctrl+Shift+W</span></div>
+        <div class="mi sep"></div>
+        <div class="mi">书签 / 最近连接(B)</div>
+      </div>
+    </div>
+    <div class="menu-item"><button>视图(V)</button>
+      <div class="menu-drop">
+        <div class="mi checked"><span class="chk">✓</span>标准视图(S)</div>
+        <div class="mi"><span class="chk">✓</span>专注模式(F)</div>
+        <div class="mi"><span class="chk">✓</span>紧凑模式(C)</div>
+        <div class="mi sep"></div>
+        <div class="mi">切换连接面板(T)<span class="sc">Ctrl+Shift+L</span></div>
+        <div class="mi">自动隐藏连接面板(P)</div>
+        <div class="mi sep"></div>
+        <div class="mi">水平分割</div>
+        <div class="mi">垂直分割</div>
+        <div class="mi sep"></div>
+        <div class="mi">快捷命令栏</div>
+        <div class="mi">tmux 快捷面板<span class="sc">Ctrl+Shift+M</span></div>
+      </div>
+    </div>
+    <div class="menu-item"><button>终端(E)</button>
+      <div class="menu-drop">
+        <div class="mi">查找<span class="sc">Ctrl+Shift+F</span></div>
+        <div class="mi">片段搜索<span class="sc">Ctrl+Shift+P</span></div>
+        <div class="mi sep"></div>
+        <div class="mi">高亮规则</div>
+        <div class="mi">登录脚本</div>
+        <div class="mi sep"></div>
+        <div class="mi">多通道广播</div>
+        <div class="mi">批量命令</div>
+        <div class="mi">命令历史</div>
+        <div class="mi sep"></div>
+        <div class="mi">健康监控</div>
+        <div class="mi">端口转发</div>
+      </div>
+    </div>
+    <div class="menu-item"><button>工具(T)</button>
+      <div class="menu-drop">
+        <div class="mi">运维工具箱</div>
+        <div class="mi">敏感信息扫描</div>
+        <div class="mi">扫描中心（插件）</div>
+        <div class="mi sep"></div>
+        <div class="mi">传输中心</div>
+        <div class="mi">通知中心</div>
+        <div class="mi sep"></div>
+        <div class="mi">密码库管理(K)</div>
+        <div class="mi">密码健康报告(H)</div>
+        <div class="mi">密码生成器(G)</div>
+        <div class="mi">SSH 密钥管理</div>
+        <div class="mi">修改主密码(M)…</div>
+        <div class="mi sep"></div>
+        <div class="mi">外观设置(R)…</div>
+        <div class="mi">AI 助手设置(I)</div>
+        <div class="mi">危险命令规则(D)</div>
+        <div class="mi">快捷键绑定</div>
+        <div class="mi sep"></div>
+        <div class="mi"><span class="chk"></span>调试模式(D)</div>
+      </div>
+    </div>
+    <div class="menu-item"><button>帮助(H)</button>
+      <div class="menu-drop">
+        <div class="mi">快捷键列表</div>
+        <div class="mi">打开日志文件夹</div>
+        <div class="mi sep"></div>
+        <div class="mi">关于 gdterm</div>
+      </div>
+    </div>
+  </nav>
+
+  <div class="body-row">
+    <!-- 连接面板 (ConnectionTreeControl) -->
+    <aside class="sidebar">
+      <div class="filter-box">输入主机/名称/分组过滤…</div>
+      <div class="tree">
+        <div class="tree-group"><span class="caret">▾</span><span class="gicon">▤</span>生产环境</div>
+        <div class="tree-item selected"><span class="proto ssh">SSH</span>web-nginx-01</div>
+        <div class="tree-item"><span class="proto ssh">SSH</span>app-tomcat-02</div>
+        <div class="tree-item"><span class="proto ssh">SSH</span>db-master-01</div>
+        <div class="tree-group"><span class="caret">▾</span><span class="gicon">▤</span>测试环境</div>
+        <div class="tree-item"><span class="proto ssh">SSH</span>test-node-01</div>
+        <div class="tree-item"><span class="proto ssh">SSH</span>test-db-01</div>
+        <div class="tree-group"><span class="caret">▾</span><span class="gicon">▤</span>办公网</div>
+        <div class="tree-item"><span class="proto ssh">SSH</span>nas-home</div>
+        <div class="tree-item"><span class="proto rdp">RDP</span>win-jumpbox</div>
+        <div class="tree-item"><span class="proto rdp">RDP</span>ad-dc-01</div>
+      </div>
+    </aside>
+
+    <!-- 中央: 标签页 + 终端/落地页 -->
+    <main class="center">
+      <div class="tabs-row">
+        <div class="tab active">web-nginx-01 <span class="x">×</span></div>
+        <div class="tab">app-tomcat-02 <span class="x">×</span></div>
+        <div class="tab">win-jumpbox <span class="x">×</span></div>
+        <div class="tab add">+</div>
+      </div>
+      <div class="tab-content">
+        <div class="term-area">
+<pre class="term" id="term-view"><span class="p">root@web-nginx-01</span>:~# systemctl status nginx
+● nginx.service - A high performance web server and a reverse proxy server
+   Loaded: loaded (/lib/systemd/system/nginx.service; <span class="g">enabled</span>)
+   Active: <span class="g">active (running)</span> since Tue 2026-09-07 20:15:33 CST; 3h 12min ago
+     Docs: man:nginx(8)
+ Main PID: 1234 (nginx)
+    Tasks: 5 (limit: 4915)
+   Memory: 12.4M
+      CPU: 1.230s
+   CGroup: /system.slice/nginx.service
+           ├─1234 nginx: master process /usr/sbin/nginx
+           └─1235 nginx: worker process
+
+<span class="p">root@web-nginx-01</span>:~# df -h /data
+Filesystem      Size  Used Avail Use% Mounted on
+/dev/sdb1       500G  <span class="w">412G</span>   88G  <span class="w">83%</span> /
+<span class="p">root@web-nginx-01</span>:~# _</pre>
+          <div class="welcome" id="welcome-panel" hidden>
+            <h1>gdterm</h1>
+            <div class="sub">便携运维终端  ·  选择最近会话或新建连接</div>
+            <div class="actions">
+              <button class="wbtn2">新建连接</button>
+              <button class="wbtn2">本地终端</button>
+              <button class="wbtn2">书签</button>
+              <button class="wbtn2">密码库</button>
+            </div>
+            <section>
+              <h2>最近连接</h2>
+              <div class="host-row"><span class="dot ok"></span>web-nginx-01<span class="meta">SSH · 成功 · 09-07 20:15</span></div>
+              <div class="host-row"><span class="dot ok"></span>app-tomcat-02<span class="meta">SSH · 成功 · 09-07 19:40</span></div>
+              <div class="host-row"><span class="dot err"></span>db-master-01<span class="meta">SSH · 失败 · 09-06 22:10</span></div>
+            </section>
+            <section>
+              <h2>收藏 / 书签</h2>
+              <div class="host-row"><span class="dot ok"></span>win-jumpbox<span class="meta">生产 · 跳板</span></div>
+              <div class="host-row"><span class="dot ok"></span>test-node-01<span class="meta">测试 · Node</span></div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- 右侧面板宿主 (端口转发等, 默认收起) -->
+    <aside class="side-host" id="side-host">
+      <div class="side-host-inner">
+        <div class="side-head">端口转发<span class="x" id="side-close">✕</span></div>
+        <div class="side-body">
+          <div class="frow"><div class="lbl">本地端口</div><div class="ctrl"><div class="input mono">16022</div></div></div>
+          <div class="frow"><div class="lbl">目标地址</div><div class="ctrl"><div class="input mono">10.0.2.15:22</div></div></div>
+          <div class="frow"><div class="lbl">类型</div><div class="ctrl"><div class="select">本地 (L)</div></div></div>
+          <div style="display:flex; justify-content:flex-end; margin-top:10px;"><span class="btn primary">添加</span></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <!-- 快捷命令栏 (QuickBarPanel) -->
+  <div class="quickbar">
+    <div class="qb-groups">
+      <button class="qb-g on">全部</button>
+      <button class="qb-g">网络</button>
+      <button class="qb-g">磁盘</button>
+      <button class="qb-g">进程</button>
+      <button class="qb-g">系统</button>
+      <button class="qb-g">安全</button>
+      <button class="qb-g">Docker</button>
+      <button class="qb-g">自定义</button>
+      <span class="qb-label">快捷命令栏</span>
+    </div>
+    <div class="qb-commands">
+      <span class="qb-c"><span class="tag">网络</span>ping 网关</span>
+      <span class="qb-c"><span class="tag">网络</span>端口监听</span>
+      <span class="qb-c"><span class="tag">磁盘</span>磁盘空间</span>
+      <span class="qb-c"><span class="tag">磁盘</span>大文件 Top10</span>
+      <span class="qb-c"><span class="tag">进程</span>Top 进程</span>
+      <span class="qb-c"><span class="tag">进程</span>僵尸进程</span>
+      <span class="qb-c"><span class="tag">系统</span>系统负载</span>
+      <span class="qb-c"><span class="tag">安全</span>失败登录</span>
+      <span class="qb-c add">+</span>
+    </div>
+  </div>
+
+  <!-- 状态栏 (StatusBarControl) -->
+  <div class="statusbar">
+    <span class="sb-item">连接: 就绪</span>
+    <span class="sb-sep"></span>
+    <span class="sb-item link" data-open="tunnel">隧道: 无</span>
+    <span class="sb-sep"></span>
+    <span class="sb-item link" data-open="keepass">密码库: 锁定</span>
+    <span class="sb-sep"></span>
+    <span class="sb-item link" data-open="ai">AI: 就绪</span>
+    <span class="sb-sep"></span>
+    <span class="sb-item link" data-open="security">安全: 已锁定</span>
+    <span class="sb-spring"></span>
+    <span class="sb-item dim">185×32</span>
+    <span class="sb-sep"></span>
+    <span class="sb-item dim">UTF-8</span>
+  </div>
+</div>
+
+<!-- ════════════════ 对话框层 (复刻修复后的布局) ════════════════ -->
+
+<!-- ConnectionDialog: 简洁优先, 六行必填 + 更多选项折叠 -->
+<div class="dlg-layer" id="dlg-conn">
+  <div class="dlg" style="width:560px;">
+    <div class="dlg-titlebar">新建连接<span class="x">✕</span></div>
+    <div class="dlg-body">
+      <div class="frow"><div class="lbl">名称</div><div class="ctrl"><div class="input">web-nginx-01</div></div></div>
+      <div class="frow"><div class="lbl">协议</div><div class="ctrl"><div class="select">SSH</div></div></div>
+      <div class="frow"><div class="lbl">主机</div><div class="ctrl"><div class="input mono">192.168.1.10</div></div></div>
+      <div class="frow"><div class="lbl">端口</div><div class="ctrl"><div class="input mono">22</div></div></div>
+      <div class="frow"><div class="lbl">用户名</div><div class="ctrl"><div class="input mono">root</div></div></div>
+      <div class="frow"><div class="lbl">分组</div><div class="ctrl"><div class="select">生产环境</div></div></div>
+      <div class="status-line" style="color: var(--info);">更多选项 ▾</div>
+    </div>
+    <div class="dlg-btnrow"><span class="btn">取消</span><span class="btn primary">创建</span></div>
+  </div>
+</div>
+
+<!-- AiSettingsForm (修复后: 字体驱动行距, 主按钮最右) -->
+<div class="dlg-layer" id="dlg-ai">
+  <div class="dlg" style="width:520px;">
+    <div class="dlg-titlebar">AI 设置<span class="x">✕</span></div>
+    <div class="dlg-body">
+      <div class="dlg-title">AI 模型配置</div>
+      <div class="dlg-subtitle">配置 OpenAI 兼容 API 端点和模型参数</div>
+      <div class="frow"><div class="lbl">配置名称</div><div class="ctrl"><div class="input">默认</div></div></div>
+      <div class="frow"><div class="lbl">端点 URL</div><div class="ctrl"><div class="input mono">https://api.openai.com/v1</div></div></div>
+      <div class="frow"><div class="lbl">API Key</div><div class="ctrl"><div class="input mono">sk-••••••••••••••••4Wk2</div><span class="hint">显示</span></div></div>
+      <div class="frow"><div class="lbl">模型名称</div><div class="ctrl"><div class="input mono">gpt-4</div></div></div>
+      <div class="frow"><div class="lbl">最大 Token</div><div class="ctrl"><div class="select">2048</div></div></div>
+      <div class="frow"><div class="lbl">温度</div><div class="ctrl"><div class="select">0.7</div></div></div>
+      <div class="status-line">当前模型：gpt-4（已使用 12,480 tokens）</div>
+    </div>
+    <div class="dlg-btnrow"><span class="btn">取消</span><span class="btn primary">保存</span></div>
+  </div>
+</div>
+
+<!-- SshKeyManagerForm (修复后: 预览框不再与按钮重叠) -->
+<div class="dlg-layer" id="dlg-keys">
+  <div class="dlg" style="width:600px;">
+    <div class="dlg-titlebar">SSH 密钥管理<span class="x">✕</span></div>
+    <div class="dlg-body">
+      <div class="frow"><div class="lbl">条目标题</div><div class="ctrl"><div class="input">SSH Key</div></div></div>
+      <div class="frow"><div class="lbl">用户名</div><div class="ctrl"><div class="input mono">root</div></div></div>
+      <div class="frow"><div class="lbl">主机名</div><div class="ctrl"><div class="input mono"></div></div></div>
+      <div class="frow"><div class="lbl">密钥口令</div><div class="ctrl"><div class="input pw">••••••••</div></div></div>
+      <div class="frow"><div class="lbl">私钥文件</div><div class="ctrl"><div class="input mono">~/.ssh/id_ed25519</div><span class="btn" style="min-width:88px;">浏览…</span></div></div>
+      <div class="frow" style="align-items:flex-start; height:auto; padding:6px 0;">
+        <div class="lbl" style="padding-top:10px;">公钥预览</div>
+        <div class="ctrl"><div class="input mono" style="height:96px; align-items:flex-start; padding:8px 10px; white-space:pre; line-height:1.5;">ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAb3xK
+9PpQ2mZR4vTnO7yLhW8sDfGhJ6kM5nBvCxE1u
+iOp9YtTr8ZsWq3KaLdF6GhJ4mNcVbXzA2wE5rT</div></div>
+      </div>
+    </div>
+    <div class="dlg-btnrow"><span class="btn">关闭</span></div>
+  </div>
+</div>
+
+<!-- PasswordGeneratorForm (修复后: 历史框完整显示) -->
+<div class="dlg-layer" id="dlg-pwdgen">
+  <div class="dlg" style="width:520px;">
+    <div class="dlg-titlebar">密码生成器<span class="x">✕</span></div>
+    <div class="dlg-body">
+      <div class="dlg-title">🔑 密码生成器</div>
+      <div style="height:10px;"></div>
+      <div class="frow"><div class="lbl">密码长度</div><div class="ctrl"><div class="select">16</div><span class="qb-c">12</span><span class="qb-c">16</span><span class="qb-c">20</span><span class="qb-c">24</span><span class="qb-c">32</span></div></div>
+      <div class="frow"><div class="lbl">字符集</div><div class="ctrl" style="flex-wrap:wrap; gap:8px 16px;">
+        <span class="chkline on"><span class="box">✓</span>大写字母 (A-Z)</span>
+        <span class="chkline on"><span class="box">✓</span>数字 (0-9)</span>
+        <span class="chkline on"><span class="box">✓</span>小写字母 (a-z)</span>
+        <span class="chkline on"><span class="box">✓</span>特殊字符 (!@#$…)</span>
+        <span class="chkline"><span class="box">✓</span>排除易混淆字符 (Il1O0)</span>
+      </div></div>
+      <div class="frow"><div class="lbl">生成结果</div><div class="ctrl"><div class="input mono" style="font-size:14px; font-weight:700;">K9#mP2$vL8@qR4tX</div></div></div>
+      <div class="status-line ok">强度：强</div>
+      <div class="frow"><div class="lbl">本次生成记录</div><div class="ctrl"><div class="input mono" style="height:64px; align-items:flex-start; white-space:pre; line-height:1.6; padding:6px 10px;">K9#mP2$vL8@qR4tX
+xT7!nB3&amp;zQ9@wE5m
+J2$aH8*sU4#pL6oN</div></div></div>
+    </div>
+    <div class="dlg-btnrow"><span class="btn">📋 复制</span><span class="btn primary">🔄 重新生成</span></div>
+  </div>
+</div>
+
+<!-- ChangeMasterPasswordForm (修复后: 按钮不被裁剪, 主按钮最右) -->
+<div class="dlg-layer" id="dlg-chpwd">
+  <div class="dlg" style="width:500px;">
+    <div class="dlg-titlebar">修改主密码<span class="x">✕</span></div>
+    <div class="dlg-body">
+      <div class="dlg-title">修改主密码</div>
+      <div class="dlg-subtitle" style="margin:6px 0 12px;">修改后，KeePass 密码库 (gdterm.kdbx) 将用新主密码重新加密。<br>请妥善保管新密码，丢失将无法找回。</div>
+      <div class="frow"><div class="lbl">当前密码</div><div class="ctrl"><div class="input pw">••••••••</div></div></div>
+      <div class="frow"><div class="lbl">新密码</div><div class="ctrl"><div class="input pw">••••••••</div></div></div>
+      <div class="frow"><div class="lbl">确认新密码</div><div class="ctrl"><div class="input pw">••••••••</div></div></div>
+      <div class="status-line ok">密码强度：强</div>
+      <div class="status-line"><span class="chkline"><span class="box">✓</span>显示密码</span></div>
+    </div>
+    <div class="dlg-btnrow"><span class="btn">取消</span><span class="btn primary">确认修改</span></div>
+  </div>
+</div>
+
+<div class="console">
+  <div class="cap">gdterm UI 复刻原型 · 一期 (仅复刻, 未优化)</div>
+  <div>
+    <kbd>Alt+1</kbd> 新建连接 ·
+    <kbd>Alt+2</kbd> AI 设置 ·
+    <kbd>Alt+3</kbd> SSH 密钥管理 ·
+    <kbd>Alt+4</kbd> 密码生成器 ·
+    <kbd>Alt+5</kbd> 修改主密码 ·
+    <kbd>Alt+6</kbd> 落地页/终端切换 ·
+    <kbd>Alt+7</kbd> 右侧面板
+  </div>
+</div>
+
+<script>
+'use strict';
+/* 原型导航状态 (localStorage 持久化, 与产品无关) */
+const S = {
+  view: localStorage.getItem('proto.view') || 'terminal',
+  side: localStorage.getItem('proto.side') === '1',
+};
+function save() {
+  localStorage.setItem('proto.view', S.view);
+  localStorage.setItem('proto.side', S.side ? '1' : '0');
+}
+
+/* 菜单开合 (点击 + 悬停切换, WinForms MenuStrip 行为) */
+document.querySelectorAll('.menu-item > button').forEach(btn => {
+  btn.addEventListener('click', e => {
+    const item = btn.parentElement;
+    const wasOpen = item.classList.contains('open');
+    document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('open'));
+    if (!wasOpen) item.classList.add('open');
+    e.stopPropagation();
+  });
+  btn.addEventListener('mouseenter', () => {
+    if (document.querySelector('.menu-item.open')) {
+      document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('open'));
+      btn.parentElement.classList.add('open');
+    }
+  });
+});
+document.addEventListener('click', () => {
+  document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('open'));
+});
+
+/* 对话框开关 */
+const DLG_IDS = ['dlg-conn', 'dlg-ai', 'dlg-keys', 'dlg-pwdgen', 'dlg-chpwd'];
+function openDlg(id) {
+  document.querySelectorAll('.dlg-layer').forEach(l => l.classList.remove('open'));
+  const layer = document.getElementById(id);
+  if (layer) layer.classList.add('open');
+}
+document.querySelectorAll('.dlg-layer').forEach(layer => {
+  layer.addEventListener('click', e => {
+    if (e.target === layer) layer.classList.remove('open');
+  });
+  layer.querySelectorAll('.x, .btn').forEach(el => {
+    el.addEventListener('click', () => layer.classList.remove('open'));
+  });
+});
+
+/* 落地页/终端切换 + 右侧面板 */
+function render() {
+  document.getElementById('welcome-panel').hidden = S.view !== 'welcome';
+  document.getElementById('term-view').style.visibility = S.view === 'welcome' ? 'hidden' : 'visible';
+  document.getElementById('side-host').classList.toggle('open', S.side);
+}
+function cycleView() {
+  S.view = S.view === 'terminal' ? 'welcome' : 'terminal';
+  save(); render();
+}
+document.getElementById('side-close').addEventListener('click', () => {
+  S.side = false; save(); render();
+});
+
+document.addEventListener('keydown', e => {
+  if (!e.altKey) return;
+  const map = { '1': 'dlg-conn', '2': 'dlg-ai', '3': 'dlg-keys', '4': 'dlg-pwdgen', '5': 'dlg-chpwd' };
+  if (map[e.key]) { openDlg(map[e.key]); e.preventDefault(); }
+  else if (e.key === '6') { cycleView(); e.preventDefault(); }
+  else if (e.key === '7') { S.side = !S.side; save(); render(); e.preventDefault(); }
+});
+
+/* 状态栏可点击项 → 对应面板/对话框 (MainForm.StatusClicked 路由复刻) */
+document.querySelectorAll('.sb-item.link').forEach(el => {
+  el.addEventListener('click', () => {
+    const key = el.dataset.open;
+    if (key === 'tunnel') { S.side = true; save(); render(); }
+    else if (key === 'ai') openDlg('dlg-ai');
+    else if (key === 'keepass') openDlg('dlg-chpwd');
+    else if (key === 'security') openDlg('dlg-chpwd');
+  });
+});
+
+render();
+</script>
+</body>
+</html>

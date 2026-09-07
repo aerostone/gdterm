@@ -73,12 +73,10 @@ namespace Gdterm.UI.Forms
         private ConnectionOpenCoordinator _openCoord;
         private LockStateCoordinator _lockCoord;
         private AppShutdownCoordinator _shutdown;
-        private StatusBarControl _statusBar;
+        private BottomBarPanel _statusBar; // v2 单栏合并底栏：快捷命令+tmux键组+状态三项合一
         private LockOverlayControl _lockOverlay;
         private MenuStrip _menuStrip;
         private ToolStripMenuItem _debugModeMenuItem;
-        private QuickBarPanel _quickBar;
-        private TmuxBarPanel _tmuxBar;
         private WelcomePanel _welcomePanel;
         private NotifyIcon _trayIcon;
         private bool _confirmExitPending;
@@ -273,36 +271,22 @@ namespace Gdterm.UI.Forms
                 BackColor = GdtermColorTable.Hover
             };
 
-            _statusBar = new StatusBarControl(
-                _tunnelManager,
-                _keepassService,
-                _aiService,
-                _securityManager);
+            // v2 单栏合并底栏（原型方案 A+B2 验收通过）：三行 89px → 一行 30px。
+            // 分组下拉单选 + 命令横排 + webtmux 风格 tmux 键组（可钉住）+ 彩点状态项。
+            _statusBar = new BottomBarPanel();
             _statusBar.Dock = DockStyle.Bottom;
-            _statusBar.Height = 25;
-
             List<QuickCommand> cmds = null;
             try { cmds = _quickCommandStore?.LoadAll(); } catch { }
-            _quickBar = new QuickBarPanel(cmds ?? new List<QuickCommand>());
-            _quickBar.Dock = DockStyle.Bottom;
-            _quickBar.CommandSent += (cmd, group) =>
+            _statusBar.SetCommands(cmds ?? new List<QuickCommand>());
+            _statusBar.CommandSent += (cmd, group) =>
             {
                 var tc = _tabContainer.GetActiveTerminalControl();
                 if (tc == null) return;
                 var line = cmd.EndsWith("\r") || cmd.EndsWith("\n") ? cmd : cmd + "\r";
                 tc.SendInput(line);
             };
-
-            // tmux 快捷面板：参考 webtmux 工具栏分组，PC 版两行布局 + 前缀选择器。
-            // 发送走 TrySendInput(raw)——tmux 控制序列不是 shell 命令行，绕过危险命令闸门。
-            _tmuxBar = new TmuxBarPanel(raw =>
-            {
-                var tc = _tabContainer.GetActiveTerminalControl();
-                if (tc == null) return;
-                tc.TrySendInput(raw);
-            });
-            // 默认隐藏：只占用 tmux 用户的垂直空间；视图菜单 / Ctrl+Shift+M 开启。
-            _tmuxBar.Visible = false;
+            _statusBar.UpdateSecurityStatus(_securityManager.IsLocked);
+            _statusBar.UpdateKeePassStatus(_keepassService.IsUnlocked);
 
             _lockOverlay = new LockOverlayControl(_securityManager);
             _lockOverlay.Dock = DockStyle.Fill;
@@ -353,11 +337,12 @@ namespace Gdterm.UI.Forms
                 SplitVertical = (s, e) => _tabContainer.SplitVertical(),
                 ToggleQuickBar = (s, e) =>
                 {
-                    if (_quickBar != null) _quickBar.Visible = !_quickBar.Visible;
+                    if (_statusBar != null) _statusBar.Visible = !_statusBar.Visible;
                 },
                 ToggleTmuxBar = (s, e) =>
                 {
-                    if (_tmuxBar != null) _tmuxBar.Visible = !_tmuxBar.Visible;
+                    // v2：tmux 键组并入单栏底栏，菜单项改为切到 tmux 组（与 Alt+8 同效）
+                    try { _statusBar?.ToggleTmuxGroup(); } catch { }
                 },
                 ShowSearch = (s, e) => _sidePanels?.AttachSearchBar(_tabContainer),
                 ShowSnippet = (s, e) => _sidePanelHost?.ShowSnippetSearch(_sidePanels, _tabContainer),
@@ -408,13 +393,12 @@ namespace Gdterm.UI.Forms
                 _connectionTree,
                 _statusBar,
                 _menuStrip,
-                _quickBar,
+                null, // v2：快捷栏已并入 _statusBar 单栏底栏
                 () => _sidePanelHost?.Hide(),
                 menuBuilt.ViewStandardItem,
                 menuBuilt.ViewFocusItem,
                 menuBuilt.ViewCompactItem,
-                host: this,
-                tmuxBar: _tmuxBar);
+                host: this);
 
             _cmdRouter = new MainFormCommandRouter(
                 _tabContainer, _sidePanels, _sidePanelHost, _viewMode);
@@ -437,9 +421,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(sideHostPanel);
             Controls.Add(mainSplitter);
             Controls.Add(_connectionTree);
-            Controls.Add(_quickBar);
-            Controls.Add(_tmuxBar);
-            Controls.Add(_statusBar);
+            Controls.Add(_statusBar); // v2：单栏底栏（含 tmux 键组钉住），旧 QuickBar/TmuxBar 两行不再添加
             Controls.Add(_lockOverlay);
             Controls.Add(_menuStrip);
             _lockOverlay.BringToFront();
@@ -487,8 +469,6 @@ namespace Gdterm.UI.Forms
             if (_menuStrip != null) try { _menuStrip.Font = font; } catch { }
             if (_statusBar != null) try { _statusBar.Font = font; } catch { }
             if (_connectionTree != null) try { _connectionTree.ApplyUIFont(name, size); } catch { }
-            if (_quickBar != null) try { _quickBar.Font = font; } catch { }
-            if (_tmuxBar != null) try { _tmuxBar.Font = font; } catch { }
 
             // 运行中切换字号时，显式字体的子控件不会自动继承新的 Form.Font。
             // 仅替换 UI 字体，保留 Consolas 等终端/代码字体的语义字号。
@@ -496,10 +476,7 @@ namespace Gdterm.UI.Forms
 
             try
             {
-                int row = Services.FormFontPolicy.RowStep(this);
-                if (_quickBar != null) _quickBar.Height = Math.Max(DpiScale.V(this, 30), _quickBar.GetPreferredHeight());
-                if (_tmuxBar != null) _tmuxBar.Height = Math.Max(DpiScale.V(this, 56), _tmuxBar.GetPreferredHeight());
-                if (_statusBar != null) _statusBar.Height = Math.Max(DpiScale.V(this, 25), row);
+                if (_statusBar != null) _statusBar.Height = _statusBar.GetPreferredHeight();
             }
             catch { }
         }
@@ -572,9 +549,9 @@ namespace Gdterm.UI.Forms
                 var user = tc?.Config?.Username;
                 DiagLog.Info("MainForm.ActiveSession", "session=" + (session?.ConnectionId ?? "null") + " host=" + (host ?? "-") + " user=" + (user ?? "-"));
                 if (tc != null)
-                    _quickBar?.SetActiveTerminal(tc, host, user);
+                    _statusBar?.SetActiveTerminal(tc, host, user);
                 else
-                    _quickBar?.SetActiveSession(session, host, user);
+                    _statusBar?.SetActiveSession(session, host, user);
 
                 try { _sidePanels?.SyncMultiChannelRegistrations(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.SyncMultiChannel", ex); }
             }

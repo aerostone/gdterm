@@ -14,9 +14,9 @@ namespace Gdterm.UI.Services
     public sealed class ViewModeController
     {
         private readonly ConnectionTreeControl _connectionTree;
-        private readonly StatusBarControl _statusBar;
+        private readonly Control _statusBar; // v2：BottomBarPanel 单栏底栏（只需 Visible 语义）
         private readonly MenuStrip _menuStrip;
-        private readonly QuickBarPanel _quickBar;
+        private readonly Control _quickBar; // v2：已并入单栏底栏，可空
         private readonly TmuxBarPanel _tmuxBar;
         private readonly Action _hideSidePanel;
         private readonly ToolStripMenuItem _viewStandardItem;
@@ -30,9 +30,9 @@ namespace Gdterm.UI.Services
 
         public ViewModeController(
             ConnectionTreeControl connectionTree,
-            StatusBarControl statusBar,
+            Control statusBar,
             MenuStrip menuStrip,
-            QuickBarPanel quickBar,
+            Control quickBar,
             Action hideSidePanel,
             ToolStripMenuItem viewStandardItem,
             ToolStripMenuItem viewFocusItem,
