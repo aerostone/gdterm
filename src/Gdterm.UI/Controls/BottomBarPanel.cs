@@ -281,9 +281,11 @@ namespace Gdterm.UI.Controls
             {
                 ForeColor = GdtermColorTable.Muted,
                 AutoSize = true,
-                ToolTipText = tip
+                ToolTipText = tip,
+                // ToolStripItem 无 Cursor；用 link 语义（悬停下划线）表达可点，与旧 StatusBarControl 一致
+                IsLink = true,
+                LinkBehavior = LinkBehavior.HoverUnderline
             };
-            label.Cursor = Cursors.Hand;
             label.Click += (s, e) => StatusClicked?.Invoke(this, key);
             label.MouseEnter += (s, e) => label.ForeColor = GdtermColorTable.Foreground;
             label.MouseLeave += (s, e) => label.ForeColor = GdtermColorTable.Muted;
@@ -465,7 +467,6 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 BorderWidth = 1f,
-                BorderColor = GdtermColorTable.Border,
                 Font = FormFontPolicy.UiFont(-0.5f),
                 Cursor = Cursors.Hand,
                 TabStop = false,
@@ -540,7 +541,6 @@ namespace Gdterm.UI.Controls
                         BackColor = GdtermColorTable.Surface,
                         ForeColor = GdtermColorTable.Foreground,
                         BorderWidth = 1f,
-                        BorderColor = GdtermColorTable.Border,
                         Font = FormFontPolicy.UiFont(-0.5f),
                         Cursor = Cursors.Hand,
                         TabStop = false,
