@@ -28,7 +28,9 @@ namespace Gdterm.UI.Controls
         private string _hostName;
         private string _userName;
         private Dictionary<string, AntdUI.Button> _groupButtons;
-        private const int DesignHeight = 30;
+        // 快捷命令固定两行，其他命令走“更多”菜单，避免系统滚动条占用按钮空间。
+        private const int DesignHeight = 66;
+        private const int MaxVisibleCommands = 4;
 
         // ── 事件 ──
         /// <summary>当命令发送到终端时触发</summary>
@@ -120,14 +122,14 @@ namespace Gdterm.UI.Controls
                 WrapContents = false
             };
 
-            // 右侧：命令按钮区（可横向滚动，但不出滚动条——溢出用鼠标滚轮或箭头导航）
+            // 右侧：固定两行；溢出命令由“更多”菜单承接，不显示系统滚动条。
             _buttonPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.LeftToRight,
                 BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(4, 3, 4, 3),
-                WrapContents = false,
+                WrapContents = true,
                 AutoScroll = false
             };
 
@@ -242,29 +244,15 @@ namespace Gdterm.UI.Controls
                 ? _commands.OrderBy(c => c.Group).ThenBy(c => c.SortOrder).ToList()
                 : _commands.Where(c => c.Group == _activeGroup).OrderBy(c => c.SortOrder).ToList();
 
-            string lastGroup = null;
-            foreach (var cmd in filtered)
+            var visible = filtered.Take(MaxVisibleCommands).ToList();
+            foreach (var cmd in visible)
             {
-                // 分组间添加分隔线
-                if (_activeGroup == null && cmd.Group != lastGroup)
-                {
-                    if (lastGroup != null)
-                    {
-                        var sep = new AntdUI.Label {
-                            Text = "│",
-                            ForeColor = GdtermColorTable.Hover,
-                            Font = Services.FormFontPolicy.UiFont(-0.5f),
-                            AutoSize = true,
-                            Margin = new Padding(4, 6, 4, 6)
-                        };
-                        _buttonPanel.Controls.Add(sep);
-                    }
-                    lastGroup = cmd.Group;
-                }
-
                 var btn = CreateCommandButton(cmd);
                 _buttonPanel.Controls.Add(btn);
             }
+
+            if (filtered.Count > visible.Count)
+                _buttonPanel.Controls.Add(CreateMoreButton(filtered.Skip(visible.Count)));
 
             // 末尾的"+"按钮
             var addBtn = new AntdUI.Button {
@@ -280,6 +268,39 @@ namespace Gdterm.UI.Controls
             };
             addBtn.Click += (s, e) => AddRequested?.Invoke(_activeGroup ?? "自定义");
             _buttonPanel.Controls.Add(addBtn);
+        }
+
+        private AntdUI.Button CreateMoreButton(IEnumerable<QuickCommand> commands)
+        {
+            var more = new AntdUI.Button {
+                Text = "...",
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 7), DpiScale.V(this, 3), DpiScale.V(this, 7), DpiScale.V(this, 3)),
+                BackColor = GdtermColorTable.Surface,
+                ForeColor = GdtermColorTable.Muted,
+                Font = Services.FormFontPolicy.UiFont(-0.5f),
+                Cursor = Cursors.Hand,
+                Margin = new Padding(2),
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            more.ToolTipText2("显示其余快捷命令");
+
+            var menu = new ContextMenuStrip {
+                BackColor = GdtermColorTable.Surface,
+                ForeColor = GdtermColorTable.Foreground,
+                Renderer = new DarkMenuRenderer()
+            };
+            foreach (var cmd in commands)
+            {
+                var command = cmd;
+                var item = new ToolStripMenuItem(command.Name ?? "(未命名命令)");
+                item.ToolTipText = command.Description ?? command.Command ?? "";
+                item.Click += (s, e) => SendCommand(command, more);
+                menu.Items.Add(item);
+            }
+            more.ContextMenuStrip = menu;
+            more.Click += (s, e) => menu.Show(more, new Point(0, more.Height));
+            return more;
         }
 
         private AntdUI.Button CreateCommandButton(QuickCommand cmd)
@@ -302,28 +323,7 @@ namespace Gdterm.UI.Controls
             }
 
             // 单击发送命令
-            btn.Click += (s, e) =>
-            {
-                var connected = (_activeTerminal != null && _activeTerminal.Session != null && _activeTerminal.Session.IsConnected)
-                    || (_activeSession?.IsConnected == true);
-                if (!connected)
-                {
-                    ShowTooltip(btn, "没有活动的终端会话");
-                    return;
-                }
-
-                var resolved = ResolveCommand(cmd);
-                try
-                {
-                    // 不直发 ITerminalSession——由 MainForm 经 TerminalControl 闸门发送
-                    CommandSent?.Invoke(resolved, cmd.Group);
-                    FlashButton(btn, GdtermColorTable.Success);
-                }
-                catch (Exception ex)
-                {
-                    ShowTooltip(btn, "发送失败: " + ex.Message);
-                }
-            };
+            btn.Click += (s, e) => SendCommand(cmd, btn);
 
             // 右键菜单
             var ctx = new ContextMenuStrip();
@@ -353,6 +353,30 @@ namespace Gdterm.UI.Controls
                 cmd.Command));
 
             return btn;
+        }
+
+        private void SendCommand(QuickCommand cmd, AntdUI.Button button)
+        {
+            if (cmd == null || button == null) return;
+            var connected = (_activeTerminal != null && _activeTerminal.Session != null && _activeTerminal.Session.IsConnected)
+                || (_activeSession?.IsConnected == true);
+            if (!connected)
+            {
+                ShowTooltip(button, "没有活动的终端会话");
+                return;
+            }
+
+            var resolved = ResolveCommand(cmd);
+            try
+            {
+                // 不直发 ITerminalSession——由 MainForm 经 TerminalControl 闸门发送
+                CommandSent?.Invoke(resolved, cmd.Group);
+                FlashButton(button, GdtermColorTable.Success);
+            }
+            catch (Exception ex)
+            {
+                ShowTooltip(button, "发送失败: " + ex.Message);
+            }
         }
 
         /// <summary>解析命令占位符</summary>
@@ -415,10 +439,11 @@ namespace Gdterm.UI.Controls
             tip.Show(message, control, 0, control.Height + 4, 2000);
         }
 
-        /// <summary>返回单行快捷栏的字体驱动高度，避免字号增大后按钮被容器裁切。</summary>
+        /// <summary>返回两行快捷栏的字体驱动高度，避免字号增大后按钮被容器裁切。</summary>
         public int GetPreferredHeight()
         {
-            return Math.Max(DpiScale.V(this, DesignHeight), FormFontPolicy.RowStep(this));
+            int row = FormFontPolicy.RowStep(this);
+            return Math.Max(DpiScale.V(this, DesignHeight), row * 2 + DpiScale.V(this, 6));
         }
 
         // ── 右键菜单处理 ──

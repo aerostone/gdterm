@@ -77,6 +77,7 @@ namespace Gdterm.UI.Forms
         private int _expandedDelta;   // 本次展开实际增加的高度（收起时原样减回，兼容工作区封顶）
         private Control _btnPanel;      // 日志用
         private AntdUI.Button _okBtn;
+        private Panel _topPanel;
 
         private readonly IKeePassService _keepass;
 
@@ -91,6 +92,7 @@ namespace Gdterm.UI.Forms
             // 高/低 DPI 自适应：声明设计基准 96 DPI，让 .NET 自动按当前 DPI 缩放控件。
             Gdterm.UI.Services.FormFontPolicy.Apply(this);
             LoadFromConfig();
+            EnsureCollapsedClientHeight();
             DiagLog.Info("ConnDialog", "ctor isNew=" + _isNew
                 + " ClientSize=" + ClientSize.Width + "x" + ClientSize.Height
                 + " font=" + Font.Name + "/" + Font.Size.ToString("0.#") + "pt"
@@ -110,14 +112,16 @@ namespace Gdterm.UI.Forms
             InitializeComponent();
             Gdterm.UI.Services.FormFontPolicy.Apply(this);
             LoadFromConfig();
+            EnsureCollapsedClientHeight();
         }
 
         private void InitializeComponent()
         {
             Text = _isNew ? "新建连接" : $"编辑连接 — {_config.Name}";
             int labelW = DpiScale.V(this, 96);
-            ClientSize = DpiScale.S(this, 560, 330);
-            // 本窗体的尺寸和子控件已统一走 DpiScale；不能再叠加 WinForms
+            // 窗体自身由 PerMonitorV2 处理缩放，子控件才使用 DpiScale。
+            ClientSize = new Size(560, 390);
+            // 子控件固定值已统一走 DpiScale；不能再叠加 WinForms
             // AutoScaleMode.Font，否则 DPI 和字体会各缩放一次，导致文字/控件失配。
             AutoHandDpi = false;
             StartPosition = FormStartPosition.CenterParent;
@@ -130,6 +134,7 @@ namespace Gdterm.UI.Forms
 
             // ===== 顶部：基本信息 + 凭据 + 更多选项开关 =====
             var topPanel = new Panel { Dock = DockStyle.Top, AutoSize = true, BackColor = GdtermColorTable.Background, Padding = new Padding(12, 10, 12, 4) };
+            _topPanel = topPanel;
 
             var basicLayout = new TableLayoutPanel
             {
@@ -298,9 +303,7 @@ namespace Gdterm.UI.Forms
             var notesSec = MakeSection("备注");
             _notesBox = new AntdUI.Input {
                 Multiline = true,
-                Width = 512,
-                Height = 56,
-                Font = new Font("Consolas", 9f),
+                MinimumSize = new Size(0, FormFontPolicy.RowStep(this) * 2),
                 PlaceholderText = "服务器用途、特殊配置、注意事项..."
             };
             SectionContent(notesSec, _notesBox);
@@ -357,7 +360,7 @@ namespace Gdterm.UI.Forms
                 ColumnCount = 1,
                 RowCount = 2,
                 AutoSize = true,
-                Width = 516,
+                Width = DpiScale.V(this, 516),
                 Margin = new Padding(0, 0, 0, 10)
             };
             t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -426,12 +429,24 @@ namespace Gdterm.UI.Forms
         protected override void OnShown(EventArgs e)
         {
             base.OnShown(e);
+            EnsureCollapsedClientHeight();
             // 可见性必须同时检查横向和纵向——0.1.118 只查了纵向，按钮横向飞出时误报 true
             bool visOk = _okBtn.Bottom <= ClientSize.Height && _okBtn.Height > 0
                          && _okBtn.Left >= 0 && _okBtn.Right <= ClientSize.Width && _okBtn.Width > 0;
             DiagLog.Info("ConnDialog", "shown ClientSize=" + ClientSize.Width + "x" + ClientSize.Height
                 + " okBtnBounds=" + _okBtn.Bounds + " visibleInForm=" + visOk
                 + " btnPanelBottom=" + _btnPanel.Bottom + " workArea=" + Screen.FromControl(this).WorkingArea);
+        }
+
+        /// <summary>基本信息区随字体增长时，给输入控件和底部操作保留各自的可用空间。</summary>
+        private void EnsureCollapsedClientHeight()
+        {
+            if (_topPanel == null || _btnPanel == null) return;
+            _topPanel.PerformLayout();
+            _btnPanel.PerformLayout();
+            int required = _topPanel.PreferredSize.Height + _btnPanel.PreferredSize.Height + DpiScale.V(this, 16);
+            if (ClientSize.Height < required)
+                ClientSize = new Size(ClientSize.Width, required);
         }
 
         /// <summary>编辑既有连接时若配置过高级选项，自动展开让用户看到当前状态。</summary>
@@ -459,7 +474,8 @@ namespace Gdterm.UI.Forms
             if (text.EndsWith(":") || text.EndsWith("："))
                 text = text.TrimEnd(':', '：');
             int rowHeight = Math.Max(DpiScale.V(this, 30), FormFontPolicy.RowStep(this));
-            int inputHeight = Math.Max(DpiScale.V(this, 26), rowHeight - DpiScale.V(this, 6));
+            int verticalMargin = DpiScale.V(this, 3);
+            int inputHeight = Math.Max(DpiScale.V(this, 24), rowHeight - verticalMargin * 2);
             layout.Controls.Add(new AntdUI.Label {
                 Text = text,
                 AutoSize = true,
@@ -468,7 +484,7 @@ namespace Gdterm.UI.Forms
                 Padding = new Padding(0, 0, 8, 0)
             }, 0, row);
             control.Dock = DockStyle.Fill;
-            control.Margin = new Padding(0, DpiScale.V(this, 3), 0, DpiScale.V(this, 3));
+            control.Margin = new Padding(0, verticalMargin, 0, verticalMargin);
             if (control is AntdUI.Input)
                 control.MinimumSize = new System.Drawing.Size(0, inputHeight);
             else if (control is AntdUI.InputNumber || control is AntdUI.Select)

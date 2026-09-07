@@ -9,10 +9,10 @@ namespace Gdterm.UI.Controls
 {
     /// <summary>
     /// tmux 快捷面板——参考 webtmux 移动端工具栏的分组设计，为 PC 优化：
-    ///   1. 两行分组布局（窗口/面板/复制/会话 | Ctrl 键/翻页），代替手机单行横滚
+    ///   1. 两行分组菜单（窗口/面板/复制/会话 | Ctrl 键/编辑），避免手机式横向滚动
     ///   2. 前缀选择器（C-b 默认 / C-a screen 兼容），一次点击完成 prefix+key
     ///   3. 去掉移动端拐杖（方向键/Esc/Tab 行）——PC 有键盘，保留高频 tmux 动作
-    ///   4. 分组标签 + 组分隔线，视觉对齐石墨暗色主题（GdtermColorTable）
+    ///   4. 使用现有深色菜单样式，视觉对齐石墨暗色主题（GdtermColorTable）
     /// 发送路径：TerminalControl.TrySendInput(raw)——字符直通，绕过危险命令闸门
     /// （tmux 命令是控制序列，不是 shell 命令行，不应触发确认弹窗）。
     /// </summary>
@@ -23,7 +23,7 @@ namespace Gdterm.UI.Controls
         private FlowLayoutPanel _row1;
         private FlowLayoutPanel _row2;
         private AntdUI.Select _prefixBox;
-        private const int DesignHeight = 56;
+        private const int DesignHeight = 68;
 
         /// <summary>面板发送的原始字节（含前缀）已进入终端时触发（用于审计/调试）。</summary>
         public event Action<string> RawSent;
@@ -223,42 +223,36 @@ namespace Gdterm.UI.Controls
         private void AddGroup(GroupDef g)
         {
             var row = g.Row2 ? _row2 : _row1;
-            if (row.Controls.Count > 0)
-                row.Controls.Add(MakeSeparator());
-
-            // 分组标签（竖排文字太挤，用小号灰色标签）
-            var tag = new AntdUI.Label {
-                Text = g.Name,
+            var menuButton = new AntdUI.Button {
+                Text = g.Name + "...",
                 AutoSize = true,
-                ForeColor = GdtermColorTable.Muted,
+                BackColor = GdtermColorTable.Background,
+                ForeColor = GdtermColorTable.Foreground,
                 Font = Services.FormFontPolicy.UiFont(-0.5f),
-                Padding = new Padding(2, 4, 2, 0),
-                Margin = new Padding(1, 0, 0, 0)
+                Margin = new Padding(1, 2, 1, 2),
+                TabStop = false
             };
-            if (g.Row2) tag.Padding = new Padding(2, 2, 2, 0);
-            row.Controls.Add(tag);
+            menuButton.ToolTipText2("显示" + g.Name + "快捷键");
 
-            foreach (var k in g.Keys)
+            var menu = new ContextMenuStrip {
+                BackColor = GdtermColorTable.Surface,
+                ForeColor = GdtermColorTable.Foreground,
+                Renderer = new DarkMenuRenderer()
+            };
+            foreach (var key in g.Keys)
             {
-                var b = new AntdUI.Button {
-                    Text = k.Label,
-                    AutoSize = true,
-                    BackColor = GdtermColorTable.Background,
-                    ForeColor = GdtermColorTable.Foreground,
-                    Font = Services.FormFontPolicy.UiFont(-0.5f),
-                    Margin = new Padding(1, 2, 1, 2),
-                    TabStop = false,
-                    Tag = k
-                };
-                if (k.Tip != null) b.ToolTipText2(k.Tip);
-                b.Click += OnKeyClick;
-                row.Controls.Add(b);
+                var keyDef = key;
+                var item = new ToolStripMenuItem(keyDef.Label) { ToolTipText = keyDef.Tip ?? "" };
+                item.Click += (s, e) => SendKey(keyDef);
+                menu.Items.Add(item);
             }
+            menuButton.ContextMenuStrip = menu;
+            menuButton.Click += (s, e) => menu.Show(menuButton, new Point(0, menuButton.Height));
+            row.Controls.Add(menuButton);
         }
 
-        private void OnKeyClick(object sender, EventArgs e)
+        private void SendKey(KeyDef k)
         {
-            var k = (sender as Button)?.Tag as KeyDef;
             if (k == null) return;
 
             string payload;
@@ -269,16 +263,6 @@ namespace Gdterm.UI.Controls
 
             try { RawSent?.Invoke(payload); } catch { }
             _send(payload);
-        }
-
-        private Control MakeSeparator()
-        {
-            return new Panel
-            {
-                Size = new Size(1, 22),
-                Margin = new Padding(2, 6, 2, 6),
-                BackColor = GdtermColorTable.Border
-            };
         }
     }
 

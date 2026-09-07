@@ -18,6 +18,8 @@ namespace Gdterm.UI.Forms
         private readonly IKeePassService _keepass;
         private AntdUI.Input _searchBox;
         private AntdUI.Table _table;
+        private Panel _emptyState;
+        private AntdUI.Button _selectButton;
         private System.Collections.Generic.List<KeePassEntrySummary> _rows = new System.Collections.Generic.List<KeePassEntrySummary>();
         private IList<KeePassEntrySummary> _entries;
 
@@ -35,7 +37,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "选择凭据";
-            Size = DpiScale.S(this, 520, 420);
+            Size = new Size(520, 420);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
@@ -67,71 +69,76 @@ namespace Gdterm.UI.Forms
                 Dock = DockStyle.Fill,
                 BorderWidth = 0,
 
-                RowHeight = 28
+                RowHeight = Math.Max(DpiScale.V(this, 28), FormFontPolicy.RowStep(this))
             };
             _table.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left));
             _table.Columns.Add(new AntdUI.Column("Username", "用户名", AntdUI.ColumnAlign.Left));
             _table.Columns.Add(new AntdUI.Column("GroupPath", "分组", AntdUI.ColumnAlign.Left));
+            _table.CellClick += (s, e) => UpdateSelectionState();
             _table.CellDoubleClick += (s, e) => SelectEntry();
 
-            // ===== 底部按钮（流式布局，随字体/DPI 自适应）=====
-            var btnPanel = new Panel
+            _emptyState = new Panel
+            {
+                Dock = DockStyle.Fill,
+                Visible = false,
+                BackColor = GdtermColorTable.Background
+            };
+            _emptyState.Controls.Add(new AntdUI.Label
+            {
+                Dock = DockStyle.Fill,
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleCenter,
+                ForeColor = GdtermColorTable.Muted
+            });
+
+            // 停靠子控件不会可靠撑开 Panel.AutoSize；按钮栏改为表格，取消按钮始终占据可点击空间。
+            var btnPanel = new TableLayoutPanel
             {
                 Dock = DockStyle.Bottom,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                BackColor = GdtermColorTable.Surface
+                BackColor = GdtermColorTable.Surface,
+                ColumnCount = 4,
+                RowCount = 1,
+                Padding = new Padding(12, 7, 12, 7)
             };
+            btnPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            btnPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            btnPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            btnPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             var btnNew = new AntdUI.Button {
                 Text = "新建凭据",
                 Type = AntdUI.TTypeMini.Default,
                 AutoSize = true,
-                Margin = new Padding(12, 7, 0, 0)
+                Margin = new Padding(0)
             };
             btnNew.Click += (s, e) => CreateNewEntry();
-            var btnNewFlow = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Left,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
-                BackColor = GdtermColorTable.Surface,
-                AutoSize = true
-            };
-            btnNewFlow.Controls.Add(btnNew);
-
-            var btnSelectFlow = new FlowLayoutPanel
-            {
-                Dock = DockStyle.Right,
-                FlowDirection = FlowDirection.RightToLeft,
-                WrapContents = false,
-                BackColor = GdtermColorTable.Surface,
-                AutoSize = true,
-                Padding = new Padding(0, 0, 12, 0)
-            };
-            var btnSelect = new AntdUI.Button {
+            _selectButton = new AntdUI.Button {
                 Text = "选择",
                 Type = AntdUI.TTypeMini.Primary,
                 AutoSize = true,
-                Margin = new Padding(8, 7, 0, 0)
+                Margin = new Padding(8, 0, 0, 0),
+                Enabled = false
             };
-            btnSelect.Click += (s, e) => SelectEntry();
+            _selectButton.Click += (s, e) => SelectEntry();
             var btnCancel = new AntdUI.Button {
                 Text = "取消",
                 Type = AntdUI.TTypeMini.Default,
                 AutoSize = true,
-                Margin = new Padding(0, 7, 8, 0)
+                Margin = new Padding(8, 0, 0, 0)
             };
             btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
-            btnSelectFlow.Controls.Add(btnCancel);   // RightToLeft：第一个在最右
-            btnSelectFlow.Controls.Add(btnSelect);
-
-            btnPanel.Controls.Add(btnSelectFlow);   // 后添加的先布局：右、左互不重叠
-            btnPanel.Controls.Add(btnNewFlow);
+            btnPanel.Controls.Add(btnNew, 0, 0);
+            btnPanel.Controls.Add(btnCancel, 2, 0);
+            btnPanel.Controls.Add(_selectButton, 3, 0);
 
             // Dock 顺序：后添加的先布局——Top 先钉住，Bottom 再钉住，Fill 吃剩余空间
             Controls.Add(_table);
+            Controls.Add(_emptyState);
             Controls.Add(btnPanel);
             Controls.Add(searchPanel);
+            AcceptButton = _selectButton;
+            CancelButton = btnCancel;
         }
 
         private void LoadEntries()
@@ -162,6 +169,24 @@ namespace Gdterm.UI.Forms
                 });
             }
             _table.DataSource = rows;
+            bool isEmpty = _rows.Count == 0;
+            _table.Visible = !isEmpty;
+            _emptyState.Visible = isEmpty;
+            if (isEmpty)
+            {
+                var label = _emptyState.Controls[0] as AntdUI.Label;
+                label.Text = string.IsNullOrWhiteSpace(_searchBox.Text)
+                    ? "密码库中没有可选凭据，可新建凭据或取消返回。"
+                    : "没有匹配的凭据，可调整搜索条件或取消返回。";
+            }
+            UpdateSelectionState();
+        }
+
+        private void UpdateSelectionState()
+        {
+            if (_selectButton == null) return;
+            int idx = _table.SelectedIndex;
+            _selectButton.Enabled = idx >= 0 && idx < _rows.Count;
         }
 
         private void ApplyFilter()
@@ -185,6 +210,10 @@ namespace Gdterm.UI.Forms
                 SelectedEntryId = _rows[idx].Id;
                 DialogResult = DialogResult.OK;
                 Close();
+            }
+            else
+            {
+                UpdateSelectionState();
             }
         }
 
