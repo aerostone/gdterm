@@ -39,10 +39,10 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
                 RowCount = 4,
-                Padding = new Padding(40, 28, 40, 28)
+                Padding = new Padding(40, 24, 40, 20)
             };
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 72));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 56));
+            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
 
@@ -180,7 +180,7 @@ namespace Gdterm.UI.Controls
             var lbl = new AntdUI.Label {
                 Text = title,
                 Dock = DockStyle.Top,
-                Height = 24,
+                AutoSize = true,
                 Font = Services.FormFontPolicy.UiFont(+1f, FontStyle.Bold),
                 ForeColor = GdtermColorTable.Foreground
             };
@@ -199,14 +199,15 @@ namespace Gdterm.UI.Controls
 
         private void AddRow(FlowLayoutPanel host, string title, string sub, Action onClick)
         {
+            int btnHeight = Math.Max(DpiScale.V(this, 40), FormFontPolicy.RowStep(this));
             var btn = new AntdUI.Button {
-                Width = Math.Max(320, Width - 100),
-                Height = 44,
+                Width = Math.Max(DpiScale.V(this, 320), Width - DpiScale.V(this, 100)),
+                Height = btnHeight,
                 TextAlign = ContentAlignment.MiddleLeft,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
-                Margin = new Padding(0, 0, 0, 6),
-                Padding = new Padding(12, 0, 12, 0),
+                Margin = new Padding(0, 0, 0, DpiScale.V(this, 6)),
+                Padding = new Padding(DpiScale.V(this, 12), 0, DpiScale.V(this, 12), 0),
                 Text = title + (string.IsNullOrEmpty(sub) ? "" : "   ·   " + sub),
                 Cursor = Cursors.Hand
             };
@@ -230,7 +231,7 @@ namespace Gdterm.UI.Controls
             var b = new AntdUI.Button {
                 Text = text,
                 AutoSize = true,
-                MinimumSize = DpiScale.S(this, 110, 32),
+                MinimumSize = DpiScale.S(this, 110, Math.Max(32, FormFontPolicy.RowStep(this))),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 Margin = new Padding(0, 0, 10, 0),

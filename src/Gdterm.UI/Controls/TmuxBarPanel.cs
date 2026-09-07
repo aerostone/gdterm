@@ -23,7 +23,7 @@ namespace Gdterm.UI.Controls
         private FlowLayoutPanel _row1;
         private FlowLayoutPanel _row2;
         private AntdUI.Select _prefixBox;
-        private const int DesignHeight = 68;
+        private const int DesignHeight = 56;
 
         /// <summary>面板发送的原始字节（含前缀）已进入终端时触发（用于审计/调试）。</summary>
         public event Action<string> RawSent;
@@ -189,7 +189,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
-                AutoScroll = true,
+                AutoScroll = false,
                 Margin = new Padding(0)
             };
             _row2 = new FlowLayoutPanel
@@ -197,7 +197,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
-                AutoScroll = true,
+                AutoScroll = false,
                 Margin = new Padding(0)
             };
             rows.Controls.Add(_row1, 0, 0);
@@ -216,8 +216,8 @@ namespace Gdterm.UI.Controls
         /// </summary>
         public int GetPreferredHeight()
         {
-            int row = Math.Max(DpiScale.V(this, 30), FormFontPolicy.RowStep(this));
-            return Math.Max(DpiScale.V(this, DesignHeight), row * 2 + DpiScale.V(this, 8));
+            int row = Math.Max(DpiScale.V(this, 24), FormFontPolicy.RowStep(this));
+            return Math.Max(DpiScale.V(this, DesignHeight), row * 2 + DpiScale.V(this, 2));
         }
 
         private void AddGroup(GroupDef g)

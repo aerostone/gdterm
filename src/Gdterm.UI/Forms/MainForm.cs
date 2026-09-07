@@ -497,8 +497,8 @@ namespace Gdterm.UI.Forms
             try
             {
                 int row = Services.FormFontPolicy.RowStep(this);
-                if (_quickBar != null) _quickBar.Height = Math.Max(DpiScale.V(this, 36), _quickBar.GetPreferredHeight());
-                if (_tmuxBar != null) _tmuxBar.Height = Math.Max(DpiScale.V(this, 68), _tmuxBar.GetPreferredHeight());
+                if (_quickBar != null) _quickBar.Height = Math.Max(DpiScale.V(this, 30), _quickBar.GetPreferredHeight());
+                if (_tmuxBar != null) _tmuxBar.Height = Math.Max(DpiScale.V(this, 56), _tmuxBar.GetPreferredHeight());
                 if (_statusBar != null) _statusBar.Height = Math.Max(DpiScale.V(this, 25), row);
             }
             catch { }

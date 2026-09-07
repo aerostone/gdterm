@@ -115,6 +115,7 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = _isNew ? "新建连接" : $"编辑连接 — {_config.Name}";
+            int labelW = DpiScale.V(this, 96);
             ClientSize = DpiScale.S(this, 560, 330);
             // 本窗体的尺寸和子控件已统一走 DpiScale；不能再叠加 WinForms
             // AutoScaleMode.Font，否则 DPI 和字体会各缩放一次，导致文字/控件失配。
@@ -134,7 +135,7 @@ namespace Gdterm.UI.Forms
             {
                 Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true
             };
-            basicLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 96));
+            basicLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
             basicLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
             _nameBox = AddRow(basicLayout, 0, "名称", new AntdUI.Input());
@@ -152,26 +153,24 @@ namespace Gdterm.UI.Forms
 
             // ===== 凭据行（原独立标签页收为一行）=====
             var credRow = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 3, AutoSize = true, Padding = new Padding(0, 6, 0, 0) };
-            credRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 96));
+            credRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
             credRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             credRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             // 隐藏的 UUID 存储框（不入布局，仅作保存时读取的存储）
             _credentialRefBox = new AntdUI.Input { Visible = false, Enabled = false };
             credRow.Controls.Add(new AntdUI.Label {
                 Text = "凭据",
-                AutoSize = false,
+                AutoSize = true,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleRight,
-                Padding = new Padding(0, 0, 8, 0),
-                Height = 30
+                Padding = new Padding(0, 0, 8, 0)
             }, 0, 0);
             _credentialTitleLabel = new AntdUI.Label {
                 Text = "未选（按主机+用户名自动匹配）",
                 ForeColor = GdtermColorTable.Muted,
-                AutoSize = false,
+                AutoSize = true,
                 Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleLeft,
-                Height = 30
+                TextAlign = ContentAlignment.MiddleLeft
             };
             credRow.Controls.Add(_credentialTitleLabel, 1, 0);
             var credBtns = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = false, AutoSize = true };
@@ -459,16 +458,21 @@ namespace Gdterm.UI.Forms
             var text = label ?? "";
             if (text.EndsWith(":") || text.EndsWith("："))
                 text = text.TrimEnd(':', '：');
+            int rowHeight = Math.Max(DpiScale.V(this, 30), FormFontPolicy.RowStep(this));
+            int inputHeight = Math.Max(DpiScale.V(this, 26), rowHeight - DpiScale.V(this, 6));
             layout.Controls.Add(new AntdUI.Label {
                 Text = text,
-                AutoSize = false,
+                AutoSize = true,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleRight,
-                Padding = new Padding(0, 0, 8, 0),
-                Height = 30
+                Padding = new Padding(0, 0, 8, 0)
             }, 0, row);
             control.Dock = DockStyle.Fill;
-            control.Margin = new Padding(0, 4, 0, 4);
+            control.Margin = new Padding(0, DpiScale.V(this, 3), 0, DpiScale.V(this, 3));
+            if (control is AntdUI.Input)
+                control.MinimumSize = new System.Drawing.Size(0, inputHeight);
+            else if (control is AntdUI.InputNumber || control is AntdUI.Select)
+                control.MinimumSize = new System.Drawing.Size(0, inputHeight);
             layout.Controls.Add(control, 1, row);
             return control;
         }

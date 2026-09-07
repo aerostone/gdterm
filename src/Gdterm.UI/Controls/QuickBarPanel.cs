@@ -28,7 +28,7 @@ namespace Gdterm.UI.Controls
         private string _hostName;
         private string _userName;
         private Dictionary<string, AntdUI.Button> _groupButtons;
-        private const int DesignHeight = 36;
+        private const int DesignHeight = 30;
 
         // ── 事件 ──
         /// <summary>当命令发送到终端时触发</summary>
@@ -120,7 +120,7 @@ namespace Gdterm.UI.Controls
                 WrapContents = false
             };
 
-            // 右侧：命令按钮区（可横向滚动）
+            // 右侧：命令按钮区（可横向滚动，但不出滚动条——溢出用鼠标滚轮或箭头导航）
             _buttonPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -128,7 +128,7 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(4, 3, 4, 3),
                 WrapContents = false,
-                AutoScroll = true
+                AutoScroll = false
             };
 
             Controls.Add(_buttonPanel);
@@ -418,7 +418,7 @@ namespace Gdterm.UI.Controls
         /// <summary>返回单行快捷栏的字体驱动高度，避免字号增大后按钮被容器裁切。</summary>
         public int GetPreferredHeight()
         {
-            return Math.Max(DpiScale.V(this, DesignHeight), FormFontPolicy.RowStep(this) + DpiScale.V(this, 4));
+            return Math.Max(DpiScale.V(this, DesignHeight), FormFontPolicy.RowStep(this));
         }
 
         // ── 右键菜单处理 ──
