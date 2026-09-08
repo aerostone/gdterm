@@ -107,6 +107,17 @@ Size = DpiScale.S(this, 500, (int)(480 * Math.Max(1f, grow)));
 `FormFontPolicy.UiFont()/UiFontName`（内置安装探测回退链：
 YaHei UI → YaHei → Segoe UI → 系统默认），禁止再手写字体名构造。
 
+### 规则 4d：密集工具条与 AntdUI 自绘控件的尺寸约定
+
+控件已是 AntdUI 仍可能“文字比框大 / 挤成两行 / 下拉只显示半个字”——病根在布局与尺寸，不在控件选型。四条铁律：
+
+1. **放 AutoSize 按钮的行不能 `Percent 50` 钉死**。行高必须是字体驱动：用 `SizeType.AutoSize` 行，或像 `QuickBarPanel` 那样用单个 `WrapContents=true` 的 FlowLayoutPanel 铺满整条。`Percent` 行不随字号长，按钮一高就被裁。
+2. **密集条里的 `AntdUI.Button` 必须显式给 DPI 缩放的小 `Padding`**（如 `DpiScale.V(6,3,6,3)`），不能吃框架默认大内边距——默认值不随本规范缩放，且高于行高。
+3. **`Margin` 必须走 `DpiScale.V`**，禁止 `new Padding(1, 2, 1, 2)` 这类裸像素（高 DPI 下间距不缩放，按钮挤在一起）。
+4. **`AntdUI.Select` 无 `AutoSize`**（那是基类 `Control` 属性，自绘控件不认）。宽度只能靠 `Width`/`MinimumSize`，且要预留“文字 + 右侧下拉箭头 + 内边距”；短文本如 `C-b` 也至少给 `DpiScale.V(72)`。
+
+> 反例（已修）：`TmuxBarPanel` 按钮不设 Padding + 行 `Percent 50` → 文字被裁/折行；`Select` 设 `AutoSize=true`+`Width=56` → 前缀只显示 `C-`。正例：`QuickBarPanel`。
+
 ### 规则 5：Form 统一收口
 
 - 构造末尾调用 `Gdterm.UI.Services.FormFontPolicy.Apply(this)`（现有约定，保持）；
@@ -134,4 +145,9 @@ grep -rn 'Size = new Size(' src/Gdterm.UI/Forms src/Gdterm.UI/Controls \
 grep -rn 'new Font("Microsoft YaHei\|new Font("微软雅黑' src --include='*.cs' \
   | grep -v 'FormFontPolicy.cs\|MainForm.cs'
 # 两者命中应为 0（MainForm 由 ApplyGlobalUIFont 豁免；FormFontPolicy 是策略本身）
+
+# 规则 4d：AntdUI.Select 不应设 AutoSize（自绘控件不认，宽度会失控）
+grep -rnB2 'new AntdUI.Select' src/Gdterm.UI --include='*.cs' | grep -i 'AutoSize' && echo '✗ Select 设了 AutoSize'
+# 规则 4d：密集条按钮裸像素 Margin（未走 DpiScale）
+grep -rnE 'Margin = new Padding\([0-9]+, [0-9]+, [0-9]+, [0-9]+\)' src/Gdterm.UI --include='*.cs'
 ```

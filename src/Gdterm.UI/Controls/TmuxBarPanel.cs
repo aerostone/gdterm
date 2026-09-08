@@ -158,8 +158,10 @@ namespace Gdterm.UI.Controls
                 Font = Services.FormFontPolicy.UiFont(-0.5f)
             };
             _prefixBox = new AntdUI.Select {
-                Width = DpiScale.V(this, 56),
-                AutoSize = true,
+                // AntdUI.Select 无 AutoSize（那是基类 Control 属性，自绘控件不认），
+                // 宽度只能靠 Width：需容纳「C-b/C-a 文字 + 右侧下拉箭头 + 内边距」，
+                // 56px 会把文字挤成只剩 C-，给到 72px 并随 DPI 缩放。
+                Width = DpiScale.V(this, 72),
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = Services.FormFontPolicy.UiFont(-0.5f)
@@ -229,7 +231,10 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = Services.FormFontPolicy.UiFont(-0.5f),
-                Margin = new Padding(1, 2, 1, 2),
+                // 密集条里的 AntdUI 按钮必须显式给 DPI 缩放的小 Padding，
+                // 否则吃框架默认大内边距 → 按钮自然高 > Percent 50 行高 → 文字被裁/折行。
+                Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 3), DpiScale.V(this, 6), DpiScale.V(this, 3)),
+                Margin = new Padding(DpiScale.V(this, 1), DpiScale.V(this, 2), DpiScale.V(this, 1), DpiScale.V(this, 2)),
                 TabStop = false
             };
             menuButton.ToolTipText2("显示" + g.Name + "快捷键");
