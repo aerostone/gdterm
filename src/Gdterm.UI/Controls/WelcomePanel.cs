@@ -46,25 +46,29 @@ namespace Gdterm.UI.Controls
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
 
+            var titleFont = new Font("Consolas", 28f, FontStyle.Bold);
+            // 行盒高度取真实 GDI 行高 × 1.2（对应原型 line-height:1.15 的“行盒”），
+            // 配合 TextAlign=MiddleLeft 让字形在盒内垂直居中——
+            // 旧版固定 Height=40 + BottomLeft 把字形压到盒底，视觉中心偏高，是“太靠上”的根源。
+            int titleBoxH = Math.Max(DpiScale.V(this, 44), FormFontPolicy.LineBox(titleFont, this, 1.2f));
             var title = new AntdUI.Label {
                 Text = "gdterm",
-                Dock = DockStyle.Fill,
-                Font = new Font("Consolas", 28f, FontStyle.Bold),
+                Dock = DockStyle.Top,
+                Height = titleBoxH,
+                Font = titleFont,
                 ForeColor = GdtermColorTable.Accent,
-                TextAlign = ContentAlignment.BottomLeft
+                TextAlign = ContentAlignment.MiddleLeft
             };
             var subtitle = new AntdUI.Label {
                 Text = "便携运维终端  ·  选择最近会话或新建连接",
                 Dock = DockStyle.Fill,
                 ForeColor = GdtermColorTable.Muted,
-                TextAlign = ContentAlignment.TopLeft,
-                Padding = new Padding(2, 4, 0, 0)
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(2, 0, 0, 0)
             };
             var header = new Panel { Dock = DockStyle.Fill };
             header.Controls.Add(subtitle);
             header.Controls.Add(title);
-            title.Height = 40;
-            title.Dock = DockStyle.Top;
             root.Controls.Add(header, 0, 0);
 
             var actions = new FlowLayoutPanel

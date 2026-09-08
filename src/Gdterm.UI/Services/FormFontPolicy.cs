@@ -122,6 +122,43 @@ namespace Gdterm.UI.Services
             return Math.Max(30, h + 9);
         }
 
+        /// <summary>
+        /// 真实 GDI 行高 × 节奏系数——对应 CSS line-height 的“行盒”高度。
+        ///
+        /// 用途：标题/单行标签所在容器的行高。配合 TextAlign=MiddleLeft，
+        /// 让字形在盒内垂直居中——CSS 的 line-box + baseline 默认白送的能力，
+        /// WinForms 必须显式：AutoSize 控件盒高=em 高（无 leading），
+        /// 固定 Height 控件字形按 baseline 摆，缺那 25% 呼吸，看着“贴顶/贴底”。
+        ///
+        /// 与 RowStep 的分工：
+        ///   RowStep = 行高 + 9（行与行之间的步进，y += RowStep）；
+        ///   LineBox = 行高 × rhythm（单行容器自身的高度，配 Middle 居中）。
+        /// </summary>
+        /// <param name="font">量哪个字体（标题往往用独立字体，不随控件 Font）。</param>
+        /// <param name="c">用于 CreateGraphics 取 DPI 的宿主；可空。</param>
+        /// <param name="rhythm">行高倍率，对应 CSS line-height 数值；默认 1.25（紧凑偏松）。</param>
+        public static int LineBox(Font font, Control c, float rhythm = 1.25f)
+        {
+            var f = font ?? UiFont();
+            int h;
+            try
+            {
+                using (var g = c != null ? c.CreateGraphics() : null)
+                {
+                    h = g != null ? TextRenderer.MeasureText(g, "M建g", f).Height
+                                  : TextRenderer.MeasureText("M建g", f).Height;
+                }
+            }
+            catch { h = 16; }
+            double box = h * (double)rhythm;
+            if (box < 1) box = 1;
+            return (int)Math.Round(box);
+        }
+
+        /// <overloads>宿主字体版（控件自身 Font）。</overloads>
+        public static int LineBox(Control c, float rhythm = 1.25f)
+            => LineBox(c != null ? c.Font : null, c, rhythm);
+
         /// <summary>运行时切换 UI 字号时，同步已有的显式 UI 字体。</summary>
         public static void ApplyChildUIFont(Control root, string name, float size)
         {
