@@ -539,6 +539,17 @@ namespace Gdterm.UI.Controls
 
         private int BuildTmuxKeys(int x, int dpi, int avail)
         {
+            string pfx = _prefix == "\u0001" ? "C-a" : "C-b";
+
+            // 前缀选择器：tmux(C-b) 与 screen(C-a) 都兼容，点选切换 _prefix（宽度按文字实测，见 PlaceControl）
+            x = PlaceControl(CreatePrefixButton("C-b", "\u0002", "tmux 默认前缀 C-b"), x, dpi);
+            x = PlaceControl(CreatePrefixButton("C-a", "\u0001", "screen 默认前缀 C-a"), x, dpi);
+            var sep0 = new Panel { Width = 1, BackColor = GdtermColorTable.Border, Margin = new Padding(0), TabStop = false };
+            _cmdHost.Controls.Add(sep0);
+            sep0.Location = new Point(x, DpiScale.V(this, 6));
+            sep0.Height = Math.Max(4, Height - DpiScale.V(this, 12));
+            x += 1 + DpiScale.V(this, 8);
+
             var groups = new[]
             {
                 new[] { new TmuxKey{Label="◀Win",Key="p",Tip="prev window"}, new TmuxKey{Label="Win▶",Key="n",Tip="next window"} },
@@ -579,11 +590,32 @@ namespace Gdterm.UI.Controls
                         Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 2), DpiScale.V(this, 8), DpiScale.V(this, 2))
                     };
                     btn.Click += (s, e) => SendTmuxKey(k.Raw ?? (_prefix + k.Key));
-                    btn.ToolTipText2("tmux · " + k.Tip + (k.Raw == null ? " (prefix+" + k.Key + ")" : ""));
+                    btn.ToolTipText2("tmux/screen · " + k.Tip + (k.Raw == null ? " (" + pfx + "+" + k.Key + ")" : ""));
                     x = PlaceControl(btn, x, dpi);
                 }
             }
             return x;
+        }
+
+        /// <summary>前缀切换按钮（C-b/C-a）。激活态：Surface2 底 + Accent 粗体字；关态 Muted。宽度走 PlaceControl 实测。</summary>
+        private AntdUI.Button CreatePrefixButton(string label, string val, string tip)
+        {
+            bool active = _prefix == val;
+            var b = new AntdUI.Button
+            {
+                Text = label,
+                AutoSize = true,
+                BackColor = active ? GdtermColorTable.Surface2 : GdtermColorTable.Surface,
+                ForeColor = active ? GdtermColorTable.Accent : GdtermColorTable.Muted,
+                BorderWidth = 1f,
+                Font = active ? FormFontPolicy.UiFont(-0.5f, FontStyle.Bold) : FormFontPolicy.UiFont(-0.5f),
+                Cursor = Cursors.Hand,
+                TabStop = false,
+                Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 2), DpiScale.V(this, 8), DpiScale.V(this, 2))
+            };
+            b.Click += (s, e) => { if (_prefix != val) { _prefix = val; RefreshCommands(); } };
+            b.ToolTipText2(tip);
+            return b;
         }
 
         private void SendTmuxKey(string payload)
