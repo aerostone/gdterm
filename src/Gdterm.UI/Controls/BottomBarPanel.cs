@@ -51,6 +51,8 @@ namespace Gdterm.UI.Controls
         private ToolStripStatusLabel _keepassStatus;
         private ToolStripStatusLabel _aiStatus;
         private ToolStripStatusLabel _securityStatus;
+        // P3 彩点（语义色），与上面的中性短词配对
+        private ToolStripStatusLabel _tunnelDot, _keepassDot, _aiDot, _securityDot;
         private ToolStripStatusLabel _terminalSizeLabel;
         private ToolStripStatusLabel _encodingLabel;
         private StatusStrip _statusStrip;
@@ -150,14 +152,14 @@ namespace Gdterm.UI.Controls
         public void UpdateSecurityStatus(bool locked)
         {
             if (InvokeRequired) { BeginInvoke(new Action<bool>(UpdateSecurityStatus), locked); return; }
-            _securityStatus.Text = locked ? "🔒" : "🔓";
+            _securityDot.ForeColor = locked ? GdtermColorTable.Muted : GdtermColorTable.Success;
             SetStatusTip(_securityStatus, locked ? "安全: 已锁定（点击修改主密码）" : "安全: 已解锁（点击修改主密码）");
         }
 
         public void UpdateKeePassStatus(bool unlocked)
         {
             if (InvokeRequired) { BeginInvoke(new Action<bool>(UpdateKeePassStatus), unlocked); return; }
-            _keepassStatus.Text = unlocked ? "🔑✓" : "🔑";
+            _keepassDot.ForeColor = unlocked ? GdtermColorTable.Success : GdtermColorTable.Muted;
             SetStatusTip(_keepassStatus, unlocked ? "密码库: 已解锁" : "密码库: 锁定");
         }
 
@@ -224,9 +226,11 @@ namespace Gdterm.UI.Controls
                 AutoSize = true,
                 Visible = false,
                 BackColor = GdtermColorTable.Background,
-                Font = FormFontPolicy.UiFont(-0.5f),
+                ForeColor = GdtermColorTable.Muted,
+                // 📌 是 emoji，雅黑无此字形 → 必须走 Segoe UI Emoji（项目既有例外，同 KeePassUnlockForm）
+                Font = new Font("Segoe UI Emoji", FormFontPolicy.UiFont().SizeInPoints - 0.5f),
                 Cursor = Cursors.Hand,
-                Margin = new Padding(2, 0, 2, 0),
+                Margin = new Padding(DpiScale.V(this, 4), 0, DpiScale.V(this, 4), 0),
                 TabStop = false
             };
             _pinBtn.Click += (s, e) => { _tmuxPinned = !_tmuxPinned; RefreshCommands(); };
@@ -255,41 +259,52 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Background
             };
 
-            _tunnelStatus = MakeStatusItem("⚡", "隧道: 无（点击打开端口转发面板）", "tunnel");
-            _keepassStatus = MakeStatusItem("🔑", "密码库: 锁定（点击打开密码库管理）", "keepass");
-            _aiStatus = MakeStatusItem("✦", "AI: 就绪（点击打开 AI 助手设置）", "ai");
-            _securityStatus = MakeStatusItem("🔒", "安全: 已锁定（点击修改主密码）", "security");
             _connectionStatus = new ToolStripStatusLabel("就绪") { ForeColor = GdtermColorTable.Muted, AutoSize = true, Spring = false };
             _terminalSizeLabel = new ToolStripStatusLabel("80×24") { ForeColor = GdtermColorTable.Muted, AutoSize = true };
             _encodingLabel = new ToolStripStatusLabel("UTF-8") { ForeColor = GdtermColorTable.Muted, AutoSize = true };
 
             strip.Items.Add(_connectionStatus);
             strip.Items.Add(new ToolStripSeparator());
-            strip.Items.Add(_tunnelStatus);
-            strip.Items.Add(_keepassStatus);
-            strip.Items.Add(_aiStatus);
-            strip.Items.Add(_securityStatus);
+            // P3：彩点(●语义色) + 中性短词。旧实现用 ⚡🔑✦🔒 emoji，雅黑无字形→豆腐块，且丢了短词。
+            _tunnelStatus   = MakeStatusPair(strip, out _tunnelDot,   "隧道",   GdtermColorTable.Muted,   "隧道: 无（点击打开端口转发面板）", "tunnel");
+            _keepassStatus  = MakeStatusPair(strip, out _keepassDot,  "密码库", GdtermColorTable.Muted,   "密码库: 锁定（点击打开密码库管理）", "keepass");
+            _aiStatus       = MakeStatusPair(strip, out _aiDot,       "AI",     GdtermColorTable.Success, "AI: 就绪（点击打开 AI 助手设置）", "ai");
+            _securityStatus = MakeStatusPair(strip, out _securityDot, "安全",   GdtermColorTable.Muted,   "安全: 已锁定（点击修改主密码）", "security");
             strip.Items.Add(_terminalSizeLabel);
             strip.Items.Add(new ToolStripSeparator());
             strip.Items.Add(_encodingLabel);
             return strip;
         }
 
-        private ToolStripStatusLabel MakeStatusItem(string icon, string tip, string key)
+        /// <summary>P3 状态项 = 彩点(●，语义色，纯指示) + 中性短词(可点链接)，两段各自路由到同一 key。</summary>
+        private ToolStripStatusLabel MakeStatusPair(StatusStrip strip, out ToolStripStatusLabel dot,
+            string word, Color dotColor, string tip, string key)
         {
-            var label = new ToolStripStatusLabel(icon)
+            dot = new ToolStripStatusLabel("●")
+            {
+                ForeColor = dotColor,
+                AutoSize = true,
+                ToolTipText = tip,
+                Font = FormFontPolicy.UiFont(-2f),
+                Margin = new Padding(DpiScale.V(this, 8), 0, 0, 0)
+            };
+            dot.Click += (s, e) => StatusClicked?.Invoke(this, key);
+            var text = new ToolStripStatusLabel(word)
             {
                 ForeColor = GdtermColorTable.Muted,
                 AutoSize = true,
                 ToolTipText = tip,
                 // ToolStripItem 无 Cursor；用 link 语义（悬停下划线）表达可点，与旧 StatusBarControl 一致
                 IsLink = true,
-                LinkBehavior = LinkBehavior.HoverUnderline
+                LinkBehavior = LinkBehavior.HoverUnderline,
+                Margin = new Padding(DpiScale.V(this, 2), 0, 0, 0)
             };
-            label.Click += (s, e) => StatusClicked?.Invoke(this, key);
-            label.MouseEnter += (s, e) => label.ForeColor = GdtermColorTable.Foreground;
-            label.MouseLeave += (s, e) => label.ForeColor = GdtermColorTable.Muted;
-            return label;
+            text.Click += (s, e) => StatusClicked?.Invoke(this, key);
+            text.MouseEnter += (s, e) => text.ForeColor = GdtermColorTable.Foreground;
+            text.MouseLeave += (s, e) => text.ForeColor = GdtermColorTable.Muted;
+            strip.Items.Add(dot);
+            strip.Items.Add(text);
+            return text;
         }
 
         private static void SetStatusTip(ToolStripStatusLabel label, string tip)
