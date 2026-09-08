@@ -418,6 +418,10 @@ namespace Gdterm.UI.Controls
                 add.ToolTipText2("添加快捷命令");
                 x = PlaceControl(add, x, dpi);
             }
+
+            // 分组按钮：AntdUI AutoSize 不把 Padding 计入宽度 → 显式按文字实测宽预留
+            _groupBtn.AutoSize = false;
+            _groupBtn.Width = FittedWidth(_groupBtn);
         }
 
         /// <summary>溢出命令收进「…」弹出菜单（不裁剪不滚动）。</summary>
@@ -455,9 +459,22 @@ namespace Gdterm.UI.Controls
         private int PlaceControl(Control c, int x, int dpi)
         {
             _cmdHost.Controls.Add(c);
+            // AntdUI.Button 的 AutoSize 只按文字宽、不把 Padding 计入宽度 → 文字贴右边框被裁。
+            // 关掉 AutoSize，用实测文字宽 + 左右 padding 显式预留（高度仍取 PreferredSize）。
+            c.AutoSize = false;
+            c.Height = Math.Max(c.PreferredSize.Height, DpiScale.V(this, 22));
+            c.Width = Math.Max(c.PreferredSize.Width, FittedWidth(c));
             c.Location = new Point(x, Math.Max(0, (Height - c.Height) / 2));
-            c.Width = Math.Max(c.Width, c.PreferredSize.Width);
             return x + c.Width + DpiScale.V(this, 4);
+        }
+
+        /// <summary>按实测文字宽 + 控件左右 Padding + 边框安全余量，算出应预留的控件宽。</summary>
+        private int FittedWidth(Control c)
+        {
+            string t = c.Text ?? "";
+            int textW = t.Length == 0 ? 0
+                : TextRenderer.MeasureText(t, c.Font, new Size(int.MaxValue, int.MaxValue), TextFormatFlags.NoPadding).Width;
+            return textW + c.Padding.Horizontal + DpiScale.V(this, 6);
         }
 
         protected override void OnResize(EventArgs e)
