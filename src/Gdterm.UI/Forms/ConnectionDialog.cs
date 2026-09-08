@@ -473,9 +473,10 @@ namespace Gdterm.UI.Forms
             var text = label ?? "";
             if (text.EndsWith(":") || text.EndsWith("："))
                 text = text.TrimEnd(':', '：');
-            int rowHeight = Math.Max(DpiScale.V(this, 30), FormFontPolicy.RowStep(this));
-            int verticalMargin = DpiScale.V(this, 3);
-            int inputHeight = Math.Max(DpiScale.V(this, 24), rowHeight - verticalMargin * 2);
+            // 字段高度与其余对话框统一：max(38 设计px, 字体行距)，行随控件自动撑高。
+            // 旧值 24 使本对话框输入框比原型和所有其他对话框矮 14px，文字在矮框内被挤显小。
+            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int verticalMargin = DpiScale.V(this, 4);
             layout.Controls.Add(new AntdUI.Label {
                 Text = text,
                 AutoSize = true,
@@ -485,10 +486,8 @@ namespace Gdterm.UI.Forms
             }, 0, row);
             control.Dock = DockStyle.Fill;
             control.Margin = new Padding(0, verticalMargin, 0, verticalMargin);
-            if (control is AntdUI.Input)
-                control.MinimumSize = new System.Drawing.Size(0, inputHeight);
-            else if (control is AntdUI.InputNumber || control is AntdUI.Select)
-                control.MinimumSize = new System.Drawing.Size(0, inputHeight);
+            if (control is AntdUI.Input || control is AntdUI.InputNumber || control is AntdUI.Select)
+                control.MinimumSize = new System.Drawing.Size(0, fieldH);
             layout.Controls.Add(control, 1, row);
             return control;
         }
