@@ -392,7 +392,7 @@ namespace Gdterm.UI.Controls
                 foreach (var cmd in filtered)
                 {
                     var btn = CreateCommandButton(cmd);
-                    int need = x + btn.PreferredSize.Width + DpiScale.V(this, 4);
+                    int need = x + FittedWidth(btn) + DpiScale.V(this, 8);
                     if (need > avail && filtered.Count > 1)
                     {
                         // 溢出：收进「…」菜单（对齐原 QuickBarPanel 模式），不裁剪
@@ -419,9 +419,11 @@ namespace Gdterm.UI.Controls
                 x = PlaceControl(add, x, dpi);
             }
 
-            // 分组按钮：AntdUI AutoSize 不把 Padding 计入宽度 → 显式按文字实测宽预留
+            // 分组按钮：同样绕开 AntdUI AutoSize（它不看 Padding），显式按实测文字宽预留
             _groupBtn.AutoSize = false;
-            _groupBtn.Width = FittedWidth(_groupBtn);
+            int gw = FittedWidth(_groupBtn);
+            _groupBtn.MinimumSize = new Size(gw, 0);
+            _groupBtn.Width = gw;
         }
 
         /// <summary>溢出命令收进「…」弹出菜单（不裁剪不滚动）。</summary>
@@ -459,22 +461,32 @@ namespace Gdterm.UI.Controls
         private int PlaceControl(Control c, int x, int dpi)
         {
             _cmdHost.Controls.Add(c);
-            // AntdUI.Button 的 AutoSize 只按文字宽、不把 Padding 计入宽度 → 文字贴右边框被裁。
-            // 关掉 AutoSize，用实测文字宽 + 左右 padding 显式预留（高度仍取 PreferredSize）。
+            // AntdUI.Button 的 AutoSize(PSize)=文字宽+固定gap(文字高×1.02)，不看 Padding；
+            // 且一旦关 AutoSize，PreferredSize 退化为 base(≈MinimumSize)，拿不到文字度量。
+            // → 完全自算宽高，显式 Size + 锁 MinimumSize，绕开 AntdUI 一切自动度量。
+            int w = FittedWidth(c);
+            int h = Math.Max(FittedHeight(c), DpiScale.V(this, 24));
             c.AutoSize = false;
-            c.Height = Math.Max(c.PreferredSize.Height, DpiScale.V(this, 22));
-            c.Width = Math.Max(c.PreferredSize.Width, FittedWidth(c));
+            c.MinimumSize = new Size(w, h);
+            c.Size = new Size(w, h);
             c.Location = new Point(x, Math.Max(0, (Height - c.Height) / 2));
-            return x + c.Width + DpiScale.V(this, 4);
+            return x + w + DpiScale.V(this, 8);
         }
 
-        /// <summary>按实测文字宽 + 控件左右 Padding + 边框安全余量，算出应预留的控件宽。</summary>
+        /// <summary>实测文字宽 + 左右各 10px 内边距(DPI) + 1px 边框×2，保证文字不贴边。</summary>
         private int FittedWidth(Control c)
         {
             string t = c.Text ?? "";
-            int textW = t.Length == 0 ? 0
-                : TextRenderer.MeasureText(t, c.Font, new Size(int.MaxValue, int.MaxValue), TextFormatFlags.NoPadding).Width;
-            return textW + c.Padding.Horizontal + DpiScale.V(this, 6);
+            int textW = t.Length == 0 ? DpiScale.V(this, 8)
+                : TextRenderer.MeasureText(t, c.Font, new Size(int.MaxValue, int.MaxValue),
+                    TextFormatFlags.NoPadding | TextFormatFlags.SingleLine).Width;
+            return textW + DpiScale.V(this, 20) + 2;
+        }
+
+        private int FittedHeight(Control c)
+        {
+            return TextRenderer.MeasureText(string.IsNullOrEmpty(c.Text) ? " " : c.Text, c.Font).Height
+                + DpiScale.V(this, 8);
         }
 
         protected override void OnResize(EventArgs e)
