@@ -71,12 +71,17 @@ namespace Gdterm.UI.Controls
             header.Controls.Add(title);
             root.Controls.Add(header, 0, 0);
 
-            var actions = new FlowLayoutPanel
+            // 用 AntdUI.StackPanel + Gap 做横向按钮行：Gap 只在按钮之间产生间距，
+            // 首尾不贴边也不留多余空白（等价 CSS gap），避免 WinForms FlowLayoutPanel
+            // 的 Margin=(0,0,N,0) 造成「首个贴左、末个留尾」的非对称间距。
+            var actions = new AntdUI.StackPanel
             {
                 Dock = DockStyle.Fill,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
-                Padding = new Padding(0, 8, 0, 8)
+                Vertical = false,
+                Gap = DpiScale.V(this, 10),
+                AutoContainerBgTransparent = true,
+                BackColor = GdtermColorTable.Background,
+                Padding = new Padding(0, DpiScale.V(this, 8), 0, DpiScale.V(this, 8))
             };
             actions.Controls.Add(MakeAction("新建连接", () => { if (NewConnectionRequested != null) NewConnectionRequested(); }));
             actions.Controls.Add(MakeAction("本地终端", () => { if (OpenLocalTerminalRequested != null) OpenLocalTerminalRequested(); }));
@@ -238,7 +243,6 @@ namespace Gdterm.UI.Controls
                 MinimumSize = DpiScale.S(this, 110, Math.Max(32, FormFontPolicy.RowStep(this))),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
-                Margin = new Padding(0, 0, 10, 0),
                 Cursor = Cursors.Hand
             };
             b.Click += (s, e) => { if (onClick != null) onClick(); };
