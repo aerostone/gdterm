@@ -458,36 +458,37 @@ namespace Gdterm.UI.Controls
             return PlaceControl(more, x, dpi);
         }
 
-        private int PlaceControl(Control c, int x, int dpi)
+        private int PlaceControl(Control c, int x, int dpi, int innerPx = 10)
         {
             _cmdHost.Controls.Add(c);
             // AntdUI.Button 的 AutoSize(PSize)=文字宽+固定gap(文字高×1.02)，不看 Padding；
             // 且一旦关 AutoSize，PreferredSize 退化为 base(≈MinimumSize)，拿不到文字度量。
             // → 完全自算宽高，显式 Size + 锁 MinimumSize，绕开 AntdUI 一切自动度量。
-            int w = FittedWidth(c);
-            int h = Math.Max(FittedHeight(c), DpiScale.V(this, 24));
+            int w = FittedWidth(c.Text, c.Font, innerPx);
+            int h = Math.Max(FittedHeight(c.Text, c.Font), DpiScale.V(this, 24));
             c.AutoSize = false;
             c.MinimumSize = new Size(w, h);
             c.Size = new Size(w, h);
             c.Location = new Point(x, Math.Max(0, (Height - c.Height) / 2));
-            return x + w + DpiScale.V(this, 8);
+            return x + w + DpiScale.V(this, 6);
         }
 
-        /// <summary>实测文字宽 + 左右各 10px 内边距(DPI) + 1px 边框×2，保证文字不贴边。</summary>
-        private int FittedWidth(Control c)
+        /// <summary>实测文字宽 + 左右各 innerPx(DPI) 内边距 + 1px 边框×2，保证文字不贴边。</summary>
+        private int FittedWidth(string text, Font font, int innerPx)
         {
-            string t = c.Text ?? "";
-            int textW = t.Length == 0 ? DpiScale.V(this, 8)
-                : TextRenderer.MeasureText(t, c.Font, new Size(int.MaxValue, int.MaxValue),
+            int textW = string.IsNullOrEmpty(text) ? DpiScale.V(this, 8)
+                : TextRenderer.MeasureText(text, font, new Size(int.MaxValue, int.MaxValue),
                     TextFormatFlags.NoPadding | TextFormatFlags.SingleLine).Width;
-            return textW + DpiScale.V(this, 20) + 2;
+            return textW + DpiScale.V(this, innerPx * 2) + 2;
         }
+        private int FittedWidth(Control c) { return FittedWidth(c.Text, c.Font, 10); }
 
-        private int FittedHeight(Control c)
+        private int FittedHeight(string text, Font font)
         {
-            return TextRenderer.MeasureText(string.IsNullOrEmpty(c.Text) ? " " : c.Text, c.Font).Height
+            return TextRenderer.MeasureText(string.IsNullOrEmpty(text) ? " " : text, font).Height
                 + DpiScale.V(this, 8);
         }
+        private int FittedHeight(Control c) { return FittedHeight(c.Text, c.Font); }
 
         protected override void OnResize(EventArgs e)
         {
@@ -549,18 +550,17 @@ namespace Gdterm.UI.Controls
             public string Tip;
         }
 
+        private static readonly object TmuxSep = new object(); // 组分隔哨兵
+
         private int BuildTmuxKeys(int x, int dpi, int avail)
         {
             string pfx = _prefix == "\u0001" ? "C-a" : "C-b";
+            var keyFont = FormFontPolicy.UiFont(-0.5f);
 
-            // 前缀选择器：tmux(C-b) 与 screen(C-a) 都兼容，点选切换 _prefix（宽度按文字实测，见 PlaceControl）
-            x = PlaceControl(CreatePrefixButton("C-b", "\u0002", "tmux 默认前缀 C-b"), x, dpi);
-            x = PlaceControl(CreatePrefixButton("C-a", "\u0001", "screen 默认前缀 C-a"), x, dpi);
-            var sep0 = new Panel { Width = 1, BackColor = GdtermColorTable.Border, Margin = new Padding(0), TabStop = false };
-            _cmdHost.Controls.Add(sep0);
-            sep0.Location = new Point(x, DpiScale.V(this, 6));
-            sep0.Height = Math.Max(4, Height - DpiScale.V(this, 12));
-            x += 1 + DpiScale.V(this, 8);
+            // 前缀选择器：tmux(C-b) 与 screen(C-a) 都兼容，点选切换 _prefix
+            x = PlaceControl(CreatePrefixButton("C-b", "\u0002", "tmux 默认前缀 C-b"), x, dpi, 8);
+            x = PlaceControl(CreatePrefixButton("C-a", "\u0001", "screen 默认前缀 C-a"), x, dpi, 8);
+            x = PlaceTmuxSeparator(x);
 
             var groups = new[]
             {
@@ -571,42 +571,89 @@ namespace Gdterm.UI.Controls
                 new[] { new TmuxKey{Label="NewWin",Key="c",Tip="new window"}, new TmuxKey{Label="List",Key="w",Tip="list windows"}, new TmuxKey{Label="Detach",Key="d",Tip="detach"} }
             };
 
-            bool firstGroup = true;
-            foreach (var grp in groups)
+            // 展平为「键 / 组分隔」序列：放不下时把剩余整段搬进「…」菜单，绝不静默丢键
+            var slots = new List<object>();
+            for (int gi = 0; gi < groups.Length; gi++)
             {
-                if (!firstGroup)
-                {
-                    // 组间 1px 分隔线（webtmux .tsep）
-                    var sep = new Panel { Width = 1, BackColor = GdtermColorTable.Border, Margin = new Padding(0), TabStop = false };
-                    _cmdHost.Controls.Add(sep);
-                    sep.Location = new Point(x, DpiScale.V(this, 6));
-                    sep.Height = Math.Max(4, Height - DpiScale.V(this, 12));
-                    x += 1 + DpiScale.V(this, 8);
-                }
-                firstGroup = false;
-
-                foreach (var key in grp)
-                {
-                    if (x > avail) break; // 超宽裁组（tmux 组固定集，不进菜单）
-                    var k = key;
-                    var btn = new AntdUI.Button
-                    {
-                        Text = k.Label,
-                        AutoSize = true,
-                        BackColor = GdtermColorTable.Surface,
-                        ForeColor = GdtermColorTable.Foreground,
-                        BorderWidth = 1f,
-                        Font = FormFontPolicy.UiFont(-0.5f),
-                        Cursor = Cursors.Hand,
-                        TabStop = false,
-                        Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 2), DpiScale.V(this, 8), DpiScale.V(this, 2))
-                    };
-                    btn.Click += (s, e) => SendTmuxKey(k.Raw ?? (_prefix + k.Key));
-                    btn.ToolTipText2("tmux/screen · " + k.Tip + (k.Raw == null ? " (" + pfx + "+" + k.Key + ")" : ""));
-                    x = PlaceControl(btn, x, dpi);
-                }
+                if (gi > 0) slots.Add(TmuxSep);
+                foreach (var k in groups[gi]) slots.Add(k);
             }
+
+            int placed = 0;
+            for (int i = 0; i < slots.Count; i++)
+            {
+                if (slots[i] is TmuxKey)
+                {
+                    var key = (TmuxKey)slots[i];
+                    if (x + FittedWidth(key.Label, keyFont, 8) > avail) break; // 从此键起溢出
+                    x = PlaceControl(MakeTmuxKeyButton(key, pfx, keyFont), x, dpi, 8);
+                }
+                else
+                {
+                    x = PlaceTmuxSeparator(x);
+                }
+                placed = i + 1;
+            }
+            if (placed < slots.Count)
+                x = PlaceTmuxMoreButton(x, dpi, slots.GetRange(placed, slots.Count - placed), pfx, keyFont);
             return x;
+        }
+
+        private int PlaceTmuxSeparator(int x)
+        {
+            var sep = new Panel { Width = 1, BackColor = GdtermColorTable.Border, Margin = new Padding(0), TabStop = false };
+            _cmdHost.Controls.Add(sep);
+            sep.Location = new Point(x, DpiScale.V(this, 6));
+            sep.Height = Math.Max(4, Height - DpiScale.V(this, 12));
+            return x + 1 + DpiScale.V(this, 6);
+        }
+
+        private AntdUI.Button MakeTmuxKeyButton(TmuxKey k, string pfx, Font font)
+        {
+            var btn = new AntdUI.Button
+            {
+                Text = k.Label,
+                AutoSize = true,
+                BackColor = GdtermColorTable.Surface,
+                ForeColor = GdtermColorTable.Foreground,
+                BorderWidth = 1f,
+                Font = font,
+                Cursor = Cursors.Hand,
+                TabStop = false,
+                Padding = new Padding(DpiScale.V(this, 4), DpiScale.V(this, 2), DpiScale.V(this, 4), DpiScale.V(this, 2))
+            };
+            btn.Click += (s, e) => SendTmuxKey(k.Raw ?? (_prefix + k.Key));
+            btn.ToolTipText2("tmux/screen · " + k.Tip + (k.Raw == null ? " (" + pfx + "+" + k.Key + ")" : ""));
+            return btn;
+        }
+
+        private int PlaceTmuxMoreButton(int x, int dpi, List<object> rest, string pfx, Font font)
+        {
+            var more = new AntdUI.Button
+            {
+                Text = "…",
+                AutoSize = true,
+                BackColor = GdtermColorTable.Surface,
+                ForeColor = GdtermColorTable.Muted,
+                BorderWidth = 1f,
+                Font = font,
+                Cursor = Cursors.Hand,
+                TabStop = false,
+                Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 2), DpiScale.V(this, 6), DpiScale.V(this, 2))
+            };
+            more.ToolTipText2("更多 tmux/screen 键");
+            var menu = new ContextMenuStrip { BackColor = GdtermColorTable.Surface2, ForeColor = GdtermColorTable.Foreground };
+            foreach (var s in rest)
+            {
+                if (s == TmuxSep) { menu.Items.Add(new ToolStripSeparator()); continue; }
+                var kk = (TmuxKey)s;
+                var item = new ToolStripMenuItem(kk.Label + (kk.Raw == null ? "  (" + pfx + "+" + kk.Key + ")" : "")) { ToolTipText = kk.Tip };
+                item.Click += (sender, e) => SendTmuxKey(kk.Raw ?? (_prefix + kk.Key));
+                menu.Items.Add(item);
+            }
+            more.ContextMenuStrip = menu;
+            more.Click += (s, e) => menu.Show(more, new Point(0, more.Height));
+            return PlaceControl(more, x, dpi, 8);
         }
 
         /// <summary>前缀切换按钮（C-b/C-a）。激活态：Surface2 底 + Accent 粗体字；关态 Muted。宽度走 PlaceControl 实测。</summary>
@@ -623,7 +670,7 @@ namespace Gdterm.UI.Controls
                 Font = active ? FormFontPolicy.UiFont(-0.5f, FontStyle.Bold) : FormFontPolicy.UiFont(-0.5f),
                 Cursor = Cursors.Hand,
                 TabStop = false,
-                Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 2), DpiScale.V(this, 8), DpiScale.V(this, 2))
+                Padding = new Padding(DpiScale.V(this, 4), DpiScale.V(this, 2), DpiScale.V(this, 4), DpiScale.V(this, 2))
             };
             b.Click += (s, e) => { if (_prefix != val) { _prefix = val; RefreshCommands(); } };
             b.ToolTipText2(tip);
