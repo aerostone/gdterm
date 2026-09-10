@@ -242,25 +242,32 @@ namespace Gdterm.UI.Controls
         {
             var form = new Form
             {
-                Text = "添加步骤", Size = DpiScale.S(this, 350, 220),
+                Text = "添加步骤", // ClientSize 在按钮行后按行高动态计算（见下方）
                 StartPosition = FormStartPosition.CenterParent,
                 BackColor = GdtermColorTable.Background, ForeColor = GdtermColorTable.Foreground,
                 FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false
             };
             var font = Services.FormFontPolicy.UiFont();
-            var cmbType = new AntdUI.Select { Location = DpiScale.P(this, 100, 12), Size = DpiScale.S(this, 220, 25), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = font };
+            // AddStepDialog 是独立小窗，用自身 fieldH（与主编辑器行高解耦；原先 25/26 高控件在大字号下文字被裁）
+            int stepFieldH = Math.Max(DpiScale.V(this, 30), Services.FormFontPolicy.RowStep(this));
+            int stepRowH = stepFieldH + DpiScale.V(this, 10);
+            int stepY = DpiScale.V(this, 12);
+            var cmbType = new AntdUI.Select { Location = new Point(DpiScale.V(this, 100), stepY), Size = new Size(DpiScale.V(this, 220), stepFieldH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = font };
             cmbType.Items.AddRange(new object[] { "Send（发送文本）", "Wait（等待关键词）", "Delay（延时）" });
             cmbType.SelectedIndex = 0;
-            Lbl("类型:", 12, 15, form); form.Controls.Add(cmbType);
-            // AddStepDialog 是独立小窗，用自身 fieldH（与主编辑器行高解耦）
-            int stepFieldH = Math.Max(DpiScale.V(this, 24), Services.FormFontPolicy.RowStep(this));
-            var txtValue = Txt(100, 48, 220, form, stepFieldH); Lbl("内容:", 12, 51, form);
-            var numTimeout = new AntdUI.InputNumber { Location = DpiScale.P(this, 100, 82), Size = DpiScale.S(this, 100, 25), Maximum = 60000, Value = 10000, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = font }; Lbl("超时:", 12, 85, form); form.Controls.Add(numTimeout);
+            Lbl("类型:", 12, stepY + 3, form); form.Controls.Add(cmbType);
+            stepY += stepRowH;
+            var txtValue = Txt(100, stepY, 220, form, stepFieldH); Lbl("内容:", 12, stepY + 3, form);
+            stepY += stepRowH;
+            var numTimeout = new AntdUI.InputNumber { Location = new Point(DpiScale.V(this, 100), stepY), Size = new Size(DpiScale.V(this, 100), stepFieldH), Maximum = 60000, Value = 10000, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = font }; Lbl("超时:", 12, stepY + 3, form); form.Controls.Add(numTimeout);
+            stepY += stepRowH + DpiScale.V(this, 8);
 
-            var btnOk = new AntdUI.Button { Text = "确定", Size = DpiScale.S(this, 70, 26), Location = DpiScale.P(this, 170, 140), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent };
-            var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(this, 70, 26), Location = DpiScale.P(this, 250, 140), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
+            int stepBtnH = Math.Max(DpiScale.V(this, 30), stepFieldH);
+            var btnOk = new AntdUI.Button { Text = "确定", Size = new Size(DpiScale.V(this, 70), stepBtnH), Location = new Point(DpiScale.V(this, 170), stepY), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent };
+            var btnCancel = new AntdUI.Button { Text = "取消", Size = new Size(DpiScale.V(this, 70), stepBtnH), Location = new Point(DpiScale.V(this, 250), stepY), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
+            form.ClientSize = new Size(DpiScale.V(this, 350), stepY + stepBtnH + DpiScale.V(this, 16));
 
             if (form.ShowDialog(this) != DialogResult.OK) return null;
             return new LogonStep

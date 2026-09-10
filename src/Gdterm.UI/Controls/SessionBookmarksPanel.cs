@@ -268,43 +268,58 @@ namespace Gdterm.UI.Controls
             using (var dlg = new Form())
             {
                 dlg.Text = "添加书签";
-                dlg.Size = DpiScale.S(this, 360, 200);
+                // ClientSize 在按钮行后按行高动态计算（见下方）
                 dlg.StartPosition = FormStartPosition.CenterParent;
                 dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dlg.MaximizeBox = false;
                 dlg.MinimizeBox = false;
                 dlg.BackColor = GdtermColorTable.Surface;
+                dlg.ForeColor = GdtermColorTable.Foreground;
+                dlg.Font = Services.FormFontPolicy.UiFont();
 
+                // 字体驱动行高（原先输入框高 24、按钮高 28，在大字号下文字被裁）
+                int fieldH = Math.Max(DpiScale.V(this, 30), Services.FormFontPolicy.RowStep(this));
+                int rowH = fieldH + DpiScale.V(this, 12);
+                int pad = DpiScale.V(this, 15);
+                int y = DpiScale.V(this, 18);
+                var lblName = new AntdUI.Label { Text = "名称", ForeColor = GdtermColorTable.Muted, Location = new Point(pad, y), AutoSize = true };
+                y += Services.FormFontPolicy.RowStep(this);
                 var nameBox = new AntdUI.Input {
-                    Location = DpiScale.P(this, 15, 20),
-                    Size = DpiScale.S(this, 310, 24),
+                    Location = new Point(pad, y),
+                    Size = new Size(DpiScale.V(this, 310), fieldH),
                     BackColor = GdtermColorTable.Surface,
                     ForeColor = GdtermColorTable.Foreground
                 };
+                y += rowH;
+                var lblConn = new AntdUI.Label { Text = "连接", ForeColor = GdtermColorTable.Muted, Location = new Point(pad, y), AutoSize = true };
+                y += Services.FormFontPolicy.RowStep(this);
                 var combo = new AntdUI.Select {
-                    Location = DpiScale.P(this, 15, 55),
-                    Size = DpiScale.S(this, 310, 24),
+                    Location = new Point(pad, y),
+                    Size = new Size(DpiScale.V(this, 310), fieldH),
                     BackColor = GdtermColorTable.Surface,
                     ForeColor = GdtermColorTable.Foreground
                 };
                 foreach (var c in connections)
                     combo.Items.Add(new ConnItem(c));
                 if (combo.Items.Count > 0) combo.SelectedIndex = 0;
+                y += rowH + DpiScale.V(this, 6);
 
+                int btnH = Math.Max(DpiScale.V(this, 30), fieldH);
                 var ok = new AntdUI.Button {
                     Text = "确定",
                     DialogResult = DialogResult.OK,
-                    Location = DpiScale.P(this, 245, 110),
-                    Size = DpiScale.S(this, 80, 28),
+                    Location = new Point(pad + DpiScale.V(this, 310) - DpiScale.V(this, 80), y),
+                    Size = new Size(DpiScale.V(this, 80), btnH),
                     BackColor = GdtermColorTable.Accent,
                     ForeColor = GdtermColorTable.OnAccent
                 };
-                dlg.Controls.Add(new AntdUI.Label { Text = "名称", ForeColor = GdtermColorTable.Muted, Location = DpiScale.P(this, 15, 4), AutoSize = true });
+                dlg.Controls.Add(lblName);
                 dlg.Controls.Add(nameBox);
-                dlg.Controls.Add(new AntdUI.Label { Text = "连接", ForeColor = GdtermColorTable.Muted, Location = DpiScale.P(this, 15, 40), AutoSize = true });
+                dlg.Controls.Add(lblConn);
                 dlg.Controls.Add(combo);
                 dlg.Controls.Add(ok);
                 dlg.AcceptButton = ok;
+                dlg.ClientSize = new Size(pad * 2 + DpiScale.V(this, 310), y + btnH + DpiScale.V(this, 16));
 
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
                 var selected = combo.SelectedValue as ConnItem;

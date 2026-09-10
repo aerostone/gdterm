@@ -146,7 +146,8 @@ namespace Gdterm.UI.Forms
                 AutoSize = true,
                 Type = AntdUI.TTypeMini.Primary,
                 Cursor = Cursors.Hand,
-                Name = "nextButton"
+                Name = "nextButton",
+                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5))
             };
             _nextButton.Click += OnNextClick;
             buttonPanel.Controls.Add(_nextButton);

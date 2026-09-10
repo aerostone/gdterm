@@ -67,10 +67,10 @@ namespace Gdterm.UI.Controls
             };
             _centerPanel.Controls.Add(_messageLabel);
 
-            // 密码输入框：暗色 surface + 浅色前景，圆点遮罩
+            // 密码输入框：暗色 surface + 浅色前景，圆点遮罩（高度字体驱动，原先 26 在大字号下文字被裁）
             _passwordBox = new AntdUI.Input {
                 Location = DpiScale.P(this, 20, 78),
-                Size = DpiScale.S(this, 280, 26),
+                Size = new Size(DpiScale.V(this, 280), Math.Max(DpiScale.V(this, 30), Gdterm.UI.Services.FormFontPolicy.RowStep(this))),
                 UseSystemPasswordChar = true,
                 BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Background,
                 ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Foreground,
