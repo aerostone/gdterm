@@ -22,6 +22,9 @@ namespace Gdterm.UI.Forms
         public KeePassManagerForm(IKeePassService keepassService)
         {
             _keepassService = keepassService;
+            Font = Gdterm.UI.Services.FormFontPolicy.UiFont(); // 布局前先设全局字体，RowStep 才能按真实字号算行距
+            BackColor = GdtermColorTable.Background;
+            ForeColor = GdtermColorTable.Foreground;
             InitializeComponent();
             LoadEntries();
         }
@@ -35,6 +38,15 @@ namespace Gdterm.UI.Forms
             Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             MaximizeBox = false;
 
+            // 字体驱动 + DPI 缩放：所有尺寸从 fieldH/rowH/pad 派生，避免固定像素在大字号/高 DPI 下挤压
+            int pad = DpiScale.V(this, 8);
+            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int rowH = Math.Max(DpiScale.V(this, 28), fieldH);
+            int btnPad = DpiScale.V(this, 10);
+            int btnMargin = DpiScale.V(this, 4);
+            var btnPadding = new Padding(btnPad, DpiScale.V(this, 4), btnPad, DpiScale.V(this, 4));
+            var btnMarginR = new Padding(0, 0, DpiScale.V(this, 6), 0);
+
             // 工具行（AntdUI.Button 流式靠右）
             var toolbar = new FlowLayoutPanel
             {
@@ -43,26 +55,26 @@ namespace Gdterm.UI.Forms
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
-                Padding = new Padding(8, 5, 8, 5)
+                Padding = new Padding(pad, DpiScale.V(this, 5), pad, DpiScale.V(this, 5)),
+                BackColor = GdtermColorTable.Background
             };
 
-            toolbar.Controls.Add(MakeToolBtn("添加", OnAddClick));
-            toolbar.Controls.Add(MakeToolBtn("编辑", OnEditClick));
-            toolbar.Controls.Add(MakeToolBtn("删除", OnDeleteClick));
-            toolbar.Controls.Add(new AntdUI.Divider { Orientation = AntdUI.TOrientation.Left, Thickness = 1f, Margin = new Padding(4) });
-            toolbar.Controls.Add(MakeToolBtn("复制密码", OnCopyPasswordClick));
-            toolbar.Controls.Add(MakeToolBtn("复制用户名", OnCopyUsernameClick));
-            toolbar.Controls.Add(new AntdUI.Divider { Orientation = AntdUI.TOrientation.Left, Thickness = 1f, Margin = new Padding(4) });
-            toolbar.Controls.Add(MakeToolBtn("刷新", (s, e) => LoadEntries()));
+            toolbar.Controls.Add(MakeToolBtn("添加", OnAddClick, btnPadding, btnMarginR));
+            toolbar.Controls.Add(MakeToolBtn("编辑", OnEditClick, btnPadding, btnMarginR));
+            toolbar.Controls.Add(MakeToolBtn("删除", OnDeleteClick, btnPadding, btnMarginR));
+            toolbar.Controls.Add(new AntdUI.Divider { Orientation = AntdUI.TOrientation.Left, Thickness = 1f, Margin = new Padding(btnMargin) });
+            toolbar.Controls.Add(MakeToolBtn("复制密码", OnCopyPasswordClick, btnPadding, btnMarginR));
+            toolbar.Controls.Add(MakeToolBtn("复制用户名", OnCopyUsernameClick, btnPadding, btnMarginR));
+            toolbar.Controls.Add(new AntdUI.Divider { Orientation = AntdUI.TOrientation.Left, Thickness = 1f, Margin = new Padding(btnMargin) });
+            toolbar.Controls.Add(MakeToolBtn("刷新", (s, e) => LoadEntries(), btnPadding, btnMarginR));
 
             // 条目表（AntdUI.Table）
             _entryTable = new AntdUI.Table
             {
                 Dock = DockStyle.Fill,
-                Font = new Font("Consolas", 9.5f),
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
                 BorderWidth = 0,
-
-                RowHeight = 30
+                RowHeight = rowH
             };
             _entryTable.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left));
             _entryTable.Columns.Add(new AntdUI.Column("Username", "用户名", AntdUI.ColumnAlign.Left));
@@ -72,11 +84,14 @@ namespace Gdterm.UI.Forms
             _entryTable.CellClick += OnEntryCellClick;
             _entryTable.CellDoubleClick += OnEntryCellClick;   // 双击=复制密码
 
-            // 状态栏
+            // 状态栏（等宽字体行高，底部左对齐内边距）
             _statusLabel = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
                 AutoSize = true,
-                Text = "就绪"
+                Text = "就绪",
+                TextAlign = ContentAlignment.MiddleLeft,
+                ForeColor = GdtermColorTable.Muted,
+                Padding = new Padding(pad, DpiScale.V(this, 5), pad, DpiScale.V(this, 5))
             };
 
             Controls.Add(_entryTable);
@@ -84,9 +99,9 @@ namespace Gdterm.UI.Forms
             Controls.Add(_statusLabel);
         }
 
-        private static AntdUI.Button MakeToolBtn(string text, EventHandler onClick)
+        private static AntdUI.Button MakeToolBtn(string text, EventHandler onClick, Padding padding, Padding margin)
         {
-            var btn = new AntdUI.Button { Text = text, Type = AntdUI.TTypeMini.Default, Ghost = true, AutoSize = true, Padding = new Padding(10, 4, 10, 4), Margin = new Padding(0, 0, 6, 0) };
+            var btn = new AntdUI.Button { Text = text, Type = AntdUI.TTypeMini.Default, Ghost = true, AutoSize = true, Padding = padding, Margin = margin };
             btn.Click += onClick;
             return btn;
         }
@@ -369,15 +384,31 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = "添加密码条目";
+            BackColor = GdtermColorTable.Background;
+            ForeColor = GdtermColorTable.Foreground;
+            Font = FormFontPolicy.UiFont(); // 布局前先设全局字体，RowStep 才能按真实字号算行距
             ClientSize = DpiScale.S(this, 420, 470);
-            // 跟随字体/DPI 自动整体缩放（绝对定位在 11pt@144dpi 下会重叠/溢出）,
+            // 跟随字体/DPI 自动整体缩放（绝对定位在 11pt@144dpi 下会重叠/溢出）
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
-            BackColor = GdtermColorTable.Background;
+
+            // 字体驱动布局常量
+            int pad = DpiScale.V(this, 12);
+            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int notesH = fieldH + DpiScale.V(this, 26); // 备注多行框比单行输入高两行空间
+            int labelPadL = DpiScale.V(this, 3);
+            int labelPadTop = DpiScale.V(this, 6);
+            int labelPadR = DpiScale.V(this, 8);
+            int ctrlPad = DpiScale.V(this, 4);
+            int btnPadH = DpiScale.V(this, 7);
+            int btnPadR = DpiScale.V(this, 15);
+            int btnGap = DpiScale.V(this, 8);
+            int btnShowPad = DpiScale.V(this, 6);
+            int btnShowTop = DpiScale.V(this, 1);
 
             // ===== 底部按钮（流式靠右，随字体缩放）=====
             var btnPanel = new FlowLayoutPanel
@@ -388,7 +419,7 @@ namespace Gdterm.UI.Forms
                 FlowDirection = FlowDirection.RightToLeft,
                 WrapContents = false,
                 BackColor = GdtermColorTable.Background,
-                Padding = new Padding(0, 7, 15, 7)
+                Padding = new Padding(0, btnPadH, btnPadR, btnPadH)
             };
             var okButton = new AntdUI.Button {
                 Text = "确定",
@@ -401,7 +432,7 @@ namespace Gdterm.UI.Forms
                 Text = "取消",
                 AutoSize = true,
                 Type = AntdUI.TTypeMini.Default,
-                Margin = new Padding(0, 0, 8, 0)
+                Margin = new Padding(0, 0, btnGap, 0)
             };
             cancelButton.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
             btnPanel.Controls.Add(okButton);       // RightToLeft：第一个在最右
@@ -415,16 +446,17 @@ namespace Gdterm.UI.Forms
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = GdtermColorTable.Background,
-                Padding = new Padding(12, 12, 12, 4)
+                Padding = new Padding(pad, pad, pad, DpiScale.V(this, 4))
             };
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));   // 标签列按文字宽度自适应
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             int row = 0;
-            _titleBox = AddField(grid, ref row, "标题：", new AntdUI.Input());
-            _usernameBox = AddField(grid, ref row, "用户名：", new AntdUI.Input());
+            _titleBox = AddField(grid, ref row, "标题：", new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
+            _usernameBox = AddField(grid, ref row, "用户名：", new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
 
             _passwordBox = new AntdUI.Input {
-                Font = new Font("Consolas", 9.5f),   // 等宽语义,
+                // 等宽语义（终端/密码字符对齐），字号跟随全局 UI 字号
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
                 UseSystemPasswordChar = true
             };
             var pwdCell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, AutoSize = true, Margin = new Padding(0) };
@@ -435,7 +467,8 @@ namespace Gdterm.UI.Forms
                 Text = "显示",
                 AutoSize = true,
                 Type = AntdUI.TTypeMini.Default,
-                Margin = new Padding(6, 1, 0, 1)
+                Padding = new Padding(btnShowPad, DpiScale.V(this, 3), btnShowPad, DpiScale.V(this, 3)),
+                Margin = new Padding(btnShowPad, btnShowTop, 0, btnShowTop)
             };
             btnShowPwd.Click += (s, e) =>
             {
@@ -443,26 +476,27 @@ namespace Gdterm.UI.Forms
                 btnShowPwd.Text = _passwordBox.UseSystemPasswordChar ? "显示" : "隐藏";
             };
             pwdCell.Controls.Add(btnShowPwd, 1, 0);
-            AddField(grid, ref row, "密码：", pwdCell);
+            AddField(grid, ref row, "密码：", pwdCell, fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
 
-            _urlBox = AddField(grid, ref row, "URL：", new AntdUI.Input());
-            _groupBox = AddField(grid, ref row, "分组：", new AntdUI.Input());
-            _hostBox = AddField(grid, ref row, "主机：", new AntdUI.Input());
-            _protocolBox = AddField(grid, ref row, "协议：", new AntdUI.Input());
+            _urlBox = AddField(grid, ref row, "URL：", new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
+            _groupBox = AddField(grid, ref row, "分组：", new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
+            _hostBox = AddField(grid, ref row, "主机：", new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
+            _protocolBox = AddField(grid, ref row, "协议：", new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
             if (string.IsNullOrEmpty(_protocolBox.Text)) _protocolBox.Text = "SSH";
             _portBox = AddField(grid, ref row, "端口：", new AntdUI.InputNumber {
                 Minimum = 0,
                 Maximum = 65535,
                 Value = 22
-            });
-            _autoTypeBox = AddField(grid, ref row, "AutoType：", new AntdUI.Input());
+            }, fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
+            _autoTypeBox = AddField(grid, ref row, "AutoType：", new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
             _notesBox = new AntdUI.Input {
                 Multiline = true,
-                Height = 64,
+                // 字驱动的多行高度，随 UI 字号增长而不裁剪文本
+                MinimumSize = new Size(0, notesH),
                 Dock = DockStyle.Fill,
-                Margin = new Padding(0, 4, 0, 4)
+                Margin = new Padding(0, ctrlPad, 0, ctrlPad)
             };
-            AddLabel(grid, row, "备注：");
+            AddLabel(grid, row, "备注：", labelPadL, labelPadTop, labelPadR);
             grid.Controls.Add(_notesBox, 1, row);
             row++;
 
@@ -473,21 +507,23 @@ namespace Gdterm.UI.Forms
             CancelButton = cancelButton;
         }
 
-        private static void AddLabel(TableLayoutPanel grid, int row, string text)
+        private static void AddLabel(TableLayoutPanel grid, int row, string text, int padL, int padTop, int padR)
         {
             grid.Controls.Add(new AntdUI.Label {
                 Text = text,
                 AutoSize = true,
                 Anchor = AnchorStyles.Left,
-                Margin = new Padding(3, 6, 8, 0)
+                Margin = new Padding(padL, padTop, padR, 0)
             }, 0, row);
         }
 
-        private T AddField<T>(TableLayoutPanel grid, ref int row, string labelText, T control) where T : Control
+        private T AddField<T>(TableLayoutPanel grid, ref int row, string labelText, T control, int fieldH, int pad, int padL, int padTop, int padR) where T : Control
         {
-            AddLabel(grid, row, labelText);
+            AddLabel(grid, row, labelText, padL, padTop, padR);
             control.Dock = DockStyle.Fill;
-            control.Margin = new Padding(0, 4, 0, 4);
+            // 最小高度按 38px 地板（与其余对话框一致），使输入框不被压矮
+            control.MinimumSize = new Size(0, fieldH);
+            control.Margin = new Padding(0, pad, 0, pad);
             grid.Controls.Add(control, 1, row);
             row++;
             return control;

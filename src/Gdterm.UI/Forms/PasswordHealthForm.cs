@@ -24,6 +24,9 @@ namespace Gdterm.UI.Forms
         public PasswordHealthForm(IKeePassService keepassService)
         {
             _keepassService = keepassService;
+            Font = Gdterm.UI.Services.FormFontPolicy.UiFont(); // 布局前先设全局字体，RowStep 才能按真实字号算行距
+            BackColor = GdtermColorTable.Background;
+            ForeColor = GdtermColorTable.Foreground;
             InitializeComponent();
             // 高/低 DPI 自适应：声明设计基准 96 DPI，让 .NET 自动按当前 DPI 缩放控件。
             Gdterm.UI.Services.FormFontPolicy.Apply(this);
@@ -38,15 +41,19 @@ namespace Gdterm.UI.Forms
             FormBorderStyle = FormBorderStyle.FixedDialog;
             Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             MaximizeBox = false;
-            BackColor = GdtermColorTable.Surface;
+            ShowInTaskbar = false;
+
+            // 字体驱动 + DPI 缩放：所有尺寸从 fieldH/rowH 派生
+            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int rowH = Math.Max(DpiScale.V(this, 28), fieldH);
 
             // 顶部评分区
             var headerPanel = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 80,
+                Height = DpiScale.V(this, 80),
                 BackColor = GdtermColorTable.Surface,
-                Padding = new Padding(15, 10, 15, 5)
+                Padding = new Padding(DpiScale.V(this, 15), DpiScale.V(this, 10), DpiScale.V(this, 15), DpiScale.V(this, 5))
             };
 
             _scoreLabel = new AntdUI.Label {
@@ -60,7 +67,8 @@ namespace Gdterm.UI.Forms
                 Text = "正在分析...",
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 Location = DpiScale.P(this, 15, 48),
-                Size = DpiScale.S(this, 650, 28)
+                Size = DpiScale.S(this, 650, rowH),
+                ForeColor = GdtermColorTable.Foreground
             };
 
             headerPanel.Controls.AddRange(new Control[] { _scoreLabel, _summaryLabel });
@@ -131,15 +139,15 @@ namespace Gdterm.UI.Forms
 
         private void AddIssueTab(string name, System.Collections.Generic.IList<PasswordIssue> issues, Color color)
         {
+            int rowH = Math.Max(DpiScale.V(this, 28), Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this)));
             var tab = new AntdUI.TabPage { Text = $"  {name} ({(issues != null ? issues.Count : 0)})  " };
 
             var table = new AntdUI.Table
             {
                 Dock = DockStyle.Fill,
-                Font = new Font("Consolas", 9.5f),
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
                 BorderWidth = 0,
-
-                RowHeight = 28
+                RowHeight = rowH
             };
             table.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left));
             table.Columns.Add(new AntdUI.Column("Username", "用户名", AntdUI.ColumnAlign.Left));
@@ -178,15 +186,15 @@ namespace Gdterm.UI.Forms
 
         private void AddDuplicateTab(string name, System.Collections.Generic.IList<DuplicatePasswordGroup> groups)
         {
+            int rowH = Math.Max(DpiScale.V(this, 28), Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this)));
             var tab = new AntdUI.TabPage { Text = $"  {name} ({groups.Count} 组)  " };
 
             var listView = new AntdUI.Table
             {
                 Dock = DockStyle.Fill,
-                Font = new Font("Consolas", 9.5f),
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
                 BorderWidth = 0,
-
-                RowHeight = 28
+                RowHeight = rowH
             };
             listView.Columns.Add(new AntdUI.Column("Hash", "密码哈希", AntdUI.ColumnAlign.Left));
             listView.Columns.Add(new AntdUI.Column("Title", "条目标题", AntdUI.ColumnAlign.Left));

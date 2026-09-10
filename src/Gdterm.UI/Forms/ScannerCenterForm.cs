@@ -53,6 +53,9 @@ namespace Gdterm.UI.Forms
 
             Text = "扫描中心（插件）";
             StartPosition = FormStartPosition.CenterParent;
+            BackColor = GdtermColorTable.Background;
+            ForeColor = GdtermColorTable.Foreground;
+            Font = Gdterm.UI.Services.FormFontPolicy.UiFont(); // 布局前先设全局字体，RowStep 才能按真实字号算行距
             Size = DpiScale.S(this, 960, 640);
             MinimumSize = DpiScale.S(this, 780, 520);
 
@@ -73,21 +76,34 @@ namespace Gdterm.UI.Forms
 
         private void BuildUi()
         {
+            // 字体驱动 + DPI 缩放：所有尺寸从 fieldH/rowH/pad 派生，避免固定像素在大字号/高 DPI 下挤压
+            int pad = DpiScale.V(this, 8);
+            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int rowH = Math.Max(DpiScale.V(this, 28), FormFontPolicy.RowStep(this));
+            int hintH = FormFontPolicy.LineBox(Font, this, 1.4f);
+            int headerH = Math.Max(DpiScale.V(this, 24), FormFontPolicy.LineBox(Font, this, 1.4f));
+            int btnPad = DpiScale.V(this, 8);
+            var btnPadding = new Padding(btnPad, DpiScale.V(this, 3), btnPad, DpiScale.V(this, 3));
+
             var top = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                Padding = new Padding(8, 6, 8, 6),
-                WrapContents = false
+                Padding = new Padding(pad, DpiScale.V(this, 6), pad, DpiScale.V(this, 6)),
+                WrapContents = false,
+                BackColor = GdtermColorTable.Background
             };
             top.Controls.Add(new AntdUI.Label {
                 Text = "目标:",
                 AutoSize = true,
-                Margin = new Padding(3, 8, 4, 0)
+                ForeColor = GdtermColorTable.Muted,
+                Anchor = AnchorStyles.Left,
+                Margin = new Padding(DpiScale.V(this, 3), 0, DpiScale.V(this, 4), 0)
             });
             _targetCombo = new AntdUI.Select {
-                Width = 250
+                // AntdUI.Select 无 AutoSize；宽度须覆盖文字 + 下拉箭头 + 内边距
+                Width = DpiScale.V(this, 250)
             };
             _targetCombo.Items.Add("本机（Windows）");
             _targetCombo.Items.Add("当前远程主机（SSH 已连）");
@@ -96,19 +112,19 @@ namespace Gdterm.UI.Forms
             _targetCombo.SelectedIndexChanged += (s, ev) => { UpdateWmiPanelVisibility(); UpdateRunButtonState(); };
             top.Controls.Add(_targetCombo);
 
-            _runButton = new AntdUI.Button { Text = "运行选中", Type = AntdUI.TTypeMini.Primary, AutoSize = true, Padding = new Padding(10, 4, 10, 4) };
+            _runButton = new AntdUI.Button { Text = "运行选中", Type = AntdUI.TTypeMini.Primary, AutoSize = true, Padding = btnPadding, Margin = new Padding(DpiScale.V(this, 2), 0, DpiScale.V(this, 2), 0) };
             _runButton.Click += OnRunClicked;
             top.Controls.Add(_runButton);
 
-            _reloadButton = new AntdUI.Button { Text = "重新加载插件", Type = AntdUI.TTypeMini.Default, AutoSize = true, Padding = new Padding(10, 4, 10, 4) };
+            _reloadButton = new AntdUI.Button { Text = "重新加载插件", Type = AntdUI.TTypeMini.Default, AutoSize = true, Padding = btnPadding, Margin = new Padding(DpiScale.V(this, 2), 0, DpiScale.V(this, 2), 0) };
             _reloadButton.Click += (s, ev) => _store.Reload();
             top.Controls.Add(_reloadButton);
 
-            _openFolderButton = new AntdUI.Button { Text = "打开插件目录", Type = AntdUI.TTypeMini.Default, AutoSize = true, Padding = new Padding(10, 4, 10, 4) };
+            _openFolderButton = new AntdUI.Button { Text = "打开插件目录", Type = AntdUI.TTypeMini.Default, AutoSize = true, Padding = btnPadding, Margin = new Padding(DpiScale.V(this, 2), 0, DpiScale.V(this, 2), 0) };
             _openFolderButton.Click += OnOpenPluginsFolder;
             top.Controls.Add(_openFolderButton);
 
-            _newPluginButton = new AntdUI.Button { Text = "新建插件模板", Type = AntdUI.TTypeMini.Default, AutoSize = true, Padding = new Padding(10, 4, 10, 4) };
+            _newPluginButton = new AntdUI.Button { Text = "新建插件模板", Type = AntdUI.TTypeMini.Default, AutoSize = true, Padding = btnPadding, Margin = new Padding(DpiScale.V(this, 2), 0, DpiScale.V(this, 2), 0) };
             _newPluginButton.Click += OnNewPluginTemplate;
             top.Controls.Add(_newPluginButton);
 
@@ -116,7 +132,8 @@ namespace Gdterm.UI.Forms
                 Text = "",
                 AutoSize = true,
                 ForeColor = GdtermColorTable.Success,
-                Margin = new Padding(6, 10, 3, 0)
+                Anchor = AnchorStyles.Left,
+                Margin = new Padding(DpiScale.V(this, 6), 0, DpiScale.V(this, 3), 0)
             };
             top.Controls.Add(_hotStateLabel);
             Controls.Add(top);
@@ -125,17 +142,17 @@ namespace Gdterm.UI.Forms
             {
                 Dock = DockStyle.Fill,
                 Orientation = Orientation.Vertical,
-                SplitterDistance = 300
+                SplitterDistance = DpiScale.V(this, 300),
+                BackColor = GdtermColorTable.Background
             };
 
             // 左：插件清单
-            var pluginPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(8) };
+            var pluginPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(pad), BackColor = GdtermColorTable.Background };
             _pluginTable = new AntdUI.Table
             {
                 Dock = DockStyle.Fill,
                 BorderWidth = 0,
-
-                RowHeight = 28
+                RowHeight = rowH
             };
             _pluginTable.Columns.Add(new AntdUI.Column("Name", "插件", AntdUI.ColumnAlign.Left));
             _pluginTable.Columns.Add(new AntdUI.Column("Target", "目标", AntdUI.ColumnAlign.Left));
@@ -148,8 +165,9 @@ namespace Gdterm.UI.Forms
             pluginPanel.Controls.Add(_pluginTable);
             var pluginHint = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
-                Height = 20,
+                Height = Math.Max(DpiScale.V(this, 20), hintH),
                 Text = "提示：双击运行；在 插件目录 增删改脚本即热更新（无需重启）",
+                TextAlign = ContentAlignment.MiddleLeft,
                 ForeColor = GdtermColorTable.Muted
             };
             pluginPanel.Controls.Add(pluginHint);
@@ -159,16 +177,16 @@ namespace Gdterm.UI.Forms
             var rightSplit = new SplitContainer
             {
                 Dock = DockStyle.Fill,
-                Orientation = Orientation.Horizontal
+                Orientation = Orientation.Horizontal,
+                BackColor = GdtermColorTable.Background
             };
 
-            var findingPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 8, 8, 0) };
+            var findingPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, DpiScale.V(this, 8), pad, 0), BackColor = GdtermColorTable.Background };
             _findingTable = new AntdUI.Table
             {
                 Dock = DockStyle.Fill,
                 BorderWidth = 0,
-
-                RowHeight = 28
+                RowHeight = rowH
             };
             _findingTable.Columns.Add(new AntdUI.Column("Severity", "级别", AntdUI.ColumnAlign.Left));
             _findingTable.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left));
@@ -176,24 +194,27 @@ namespace Gdterm.UI.Forms
             findingPanel.Controls.Add(_findingTable);
             var findingHeader = new AntdUI.Label {
                 Dock = DockStyle.Top,
-                Height = 24,
+                Height = headerH,
                 Text = "发现（0）",
-                Font = new Font(Font, FontStyle.Bold)
+                TextAlign = ContentAlignment.MiddleLeft,
+                Font = new Font(Font, FontStyle.Bold),
+                ForeColor = GdtermColorTable.Foreground
             };
             _findingHeader = findingHeader;
             findingPanel.Controls.Add(findingHeader);
             findingHeader.BringToFront();
             rightSplit.Panel1.Controls.Add(findingPanel);
 
-            var rawPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 8, 8, 8) };
+            var rawPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, DpiScale.V(this, 8), pad, pad), BackColor = GdtermColorTable.Background };
             _rawOutput = new AntdUI.Input {
                 Dock = DockStyle.Fill,
                 Multiline = true,
                 ReadOnly = true,
-                Font = new Font("Consolas", 8.5f)
+                // 等宽字体用于原始脚本输出（终端语义），字号跟随全局 UI 字号
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f)
             };
             rawPanel.Controls.Add(_rawOutput);
-            var rawHeader = new AntdUI.Label { Dock = DockStyle.Top, Height = 24, Text = "原始输出", Font = new Font(Font, FontStyle.Bold) };
+            var rawHeader = new AntdUI.Label { Dock = DockStyle.Top, Height = headerH, Text = "原始输出", TextAlign = ContentAlignment.MiddleLeft, Font = new Font(Font, FontStyle.Bold), ForeColor = GdtermColorTable.Foreground };
             rawPanel.Controls.Add(rawHeader);
             rawHeader.BringToFront();
             rightSplit.Panel2.Controls.Add(rawPanel);
@@ -287,22 +308,24 @@ namespace Gdterm.UI.Forms
         /// <summary>WMI 目标的主机/凭据行；仅选中 WMI 目标时显示。</summary>
         private Panel BuildWmiPanel()
         {
-            _wmiPanel = new Panel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Visible = false };
-            var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, Padding = new Padding(8, 4, 8, 4) };
-            flow.Controls.Add(new AntdUI.Label { Text = "主机:", AutoSize = true, Margin = new Padding(3, 9, 4, 0) });
-            _wmiHost = new AntdUI.Input { Width = 160 };
+            int pad = DpiScale.V(this, 8);
+            _wmiPanel = new Panel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Visible = false, BackColor = GdtermColorTable.Background };
+            var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, Padding = new Padding(pad, DpiScale.V(this, 4), pad, DpiScale.V(this, 4)), BackColor = GdtermColorTable.Background };
+            flow.Controls.Add(new AntdUI.Label { Text = "主机:", AutoSize = true, ForeColor = GdtermColorTable.Muted, Anchor = AnchorStyles.Left, Margin = new Padding(DpiScale.V(this, 3), 0, DpiScale.V(this, 4), 0) });
+            _wmiHost = new AntdUI.Input { Width = DpiScale.V(this, 160) };
             flow.Controls.Add(_wmiHost);
-            flow.Controls.Add(new AntdUI.Label { Text = "用户名:", AutoSize = true, Margin = new Padding(10, 9, 4, 0) });
-            _wmiUser = new AntdUI.Input { Width = 140 };
+            flow.Controls.Add(new AntdUI.Label { Text = "用户名:", AutoSize = true, ForeColor = GdtermColorTable.Muted, Anchor = AnchorStyles.Left, Margin = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 4), 0) });
+            _wmiUser = new AntdUI.Input { Width = DpiScale.V(this, 140) };
             flow.Controls.Add(_wmiUser);
-            flow.Controls.Add(new AntdUI.Label { Text = "密码:", AutoSize = true, Margin = new Padding(10, 9, 4, 0) });
-            _wmiPass = new AntdUI.Input { Width = 140, UseSystemPasswordChar = true };
+            flow.Controls.Add(new AntdUI.Label { Text = "密码:", AutoSize = true, ForeColor = GdtermColorTable.Muted, Anchor = AnchorStyles.Left, Margin = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 4), 0) });
+            _wmiPass = new AntdUI.Input { Width = DpiScale.V(this, 140), UseSystemPasswordChar = true };
             flow.Controls.Add(_wmiPass);
             flow.Controls.Add(new AntdUI.Label {
                 Text = "留空凭据=用当前身份；域账号格式 DOMAIN\\user；需目标管理员权限 + ADMIN$ 共享",
                 AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
-                Margin = new Padding(10, 9, 3, 0)
+                Anchor = AnchorStyles.Left,
+                Margin = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 3), 0)
             });
             _wmiPanel.Controls.Add(flow);
             return _wmiPanel;

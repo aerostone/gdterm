@@ -31,27 +31,35 @@ namespace Gdterm.UI.Controls
             MaximizeBox = false;
             MinimizeBox = false;
             ShowInTaskbar = false;
+            BackColor = GdtermColorTable.Background;
+            ForeColor = GdtermColorTable.Foreground;
+            Font = FormFontPolicy.UiFont(); // 布局前先设全局字体，RowStep 才能按真实字号算行距
 
             // 规范规则②：布局改用 Dock，禁绝对坐标；尺寸经 DpiScale（规范见 docs/UI-SCALING-CONVENTIONS.md）
+            int padH = DpiScale.V(this, 16);
+            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
 
             _titleLabel = new AntdUI.Label {
                 Text = title ?? "传输中…",
                 Dock = DockStyle.Top,
                 AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 16), DpiScale.V(this, 14), DpiScale.V(this, 16), 0),
-                Font = new Font(Font.FontFamily, Font.Size + 1f, FontStyle.Bold)
+                Padding = new Padding(padH, DpiScale.V(this, 14), padH, 0),
+                Font = new Font(Font.FontFamily, Font.Size + 1f, FontStyle.Bold),
+                ForeColor = GdtermColorTable.Foreground
             };
             _detailLabel = new AntdUI.Label {
                 Text = "准备中…",
                 Dock = DockStyle.Top,
                 AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 16), DpiScale.V(this, 8), DpiScale.V(this, 16), 0)
+                Padding = new Padding(padH, DpiScale.V(this, 8), padH, 0),
+                ForeColor = GdtermColorTable.Muted
             };
             var barHost = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = DpiScale.V(this, 30),
-                Padding = new Padding(DpiScale.V(this, 16), DpiScale.V(this, 10), DpiScale.V(this, 16), 0)
+                Height = fieldH + DpiScale.V(this, 10),
+                BackColor = GdtermColorTable.Background,
+                Padding = new Padding(padH, DpiScale.V(this, 10), padH, 0)
             };
             _bar = new ProgressBar
             {
@@ -65,20 +73,23 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Bottom,
                 FlowDirection = FlowDirection.RightToLeft,
-                Height = DpiScale.V(this, 44),
+                Height = fieldH + DpiScale.V(this, 12),
                 WrapContents = false,
-                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 8), DpiScale.V(this, 16), DpiScale.V(this, 8))
+                BackColor = GdtermColorTable.Background,
+                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 8), padH, DpiScale.V(this, 8))
             };
             _percentLabel = new AntdUI.Label {
                 Text = "0%",
                 AutoSize = true,
-                Margin = new Padding(3, 0, DpiScale.V(this, 12), 0),
+                ForeColor = GdtermColorTable.Muted,
+                Margin = new Padding(DpiScale.V(this, 3), 0, DpiScale.V(this, 12), 0),
                 Anchor = AnchorStyles.Left
             };
             _cancelButton = new AntdUI.Button {
                 Text = "取消",
                 AutoSize = true,
-                Type = AntdUI.TTypeMini.Default
+                Type = AntdUI.TTypeMini.Default,
+                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 4), DpiScale.V(this, 12), DpiScale.V(this, 4))
             };
             _cancelButton.Click += (s, e) =>
             {
@@ -97,7 +108,9 @@ namespace Gdterm.UI.Controls
             Controls.Add(_detailLabel);
             Controls.Add(_titleLabel);
 
-            ClientSize = new Size(DpiScale.V(this, 420), DpiScale.V(this, 150));
+            ClientSize = new Size(DpiScale.V(this, 420),
+                _titleLabel.PreferredSize.Height + _detailLabel.PreferredSize.Height
+                + barHost.Height + bottomFlow.Height + DpiScale.V(this, 4));
             Gdterm.UI.Services.FormFontPolicy.Apply(this);
         }
 

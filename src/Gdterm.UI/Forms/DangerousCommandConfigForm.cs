@@ -30,6 +30,9 @@ namespace Gdterm.UI.Forms
         public DangerousCommandConfigForm(DangerousCommandDetector detector)
         {
             _detector = detector;
+            Font = Gdterm.UI.Services.FormFontPolicy.UiFont(); // 布局前先设全局字体，RowStep 才能按真实字号算行距
+            BackColor = GdtermColorTable.Background;
+            ForeColor = GdtermColorTable.Foreground;
             InitializeComponent();
             // 高/低 DPI 自适应：声明设计基准 96 DPI，让 .NET 自动按当前 DPI 缩放控件。
             Gdterm.UI.Services.FormFontPolicy.Apply(this);
@@ -51,6 +54,14 @@ namespace Gdterm.UI.Forms
             MaximizeBox = false;
             BackColor = GdtermColorTable.Background;
 
+            // 字体驱动 + DPI 缩放：所有尺寸从 fieldH/rowH/pad 派生
+            int pad = DpiScale.V(this, 8);
+            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int rowH = Math.Max(DpiScale.V(this, 28), fieldH);
+            int btnPad = DpiScale.V(this, 10);
+            int btnMargin = DpiScale.V(this, 6);
+            var btnPadding = new Padding(btnPad, DpiScale.V(this, 4), btnPad, DpiScale.V(this, 4));
+
             // 工具栏
             var toolbar = new FlowLayoutPanel
             {
@@ -59,22 +70,22 @@ namespace Gdterm.UI.Forms
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = false,
-                Padding = new Padding(8, 5, 8, 5)
+                Padding = new Padding(pad, DpiScale.V(this, 5), pad, DpiScale.V(this, 5)),
+                BackColor = GdtermColorTable.Background
             };
-            toolbar.Controls.Add(MakeBtn("添加自定义规则", OnAddRuleClick, AntdUI.TTypeMini.Primary));
-            toolbar.Controls.Add(MakeBtn("编辑", OnEditRuleClick, AntdUI.TTypeMini.Default));
-            toolbar.Controls.Add(MakeBtn("删除", OnDeleteRuleClick, AntdUI.TTypeMini.Default));
-            toolbar.Controls.Add(MakeBtn("启用/禁用", OnToggleRuleClick, AntdUI.TTypeMini.Default));
-            toolbar.Controls.Add(MakeBtn("刷新", (s, e) => { LoadRules(); LoadWhitelist(); }, AntdUI.TTypeMini.Default));
+            toolbar.Controls.Add(MakeBtn("添加自定义规则", OnAddRuleClick, AntdUI.TTypeMini.Primary, btnPadding, btnMargin));
+            toolbar.Controls.Add(MakeBtn("编辑", OnEditRuleClick, AntdUI.TTypeMini.Default, btnPadding, btnMargin));
+            toolbar.Controls.Add(MakeBtn("删除", OnDeleteRuleClick, AntdUI.TTypeMini.Default, btnPadding, btnMargin));
+            toolbar.Controls.Add(MakeBtn("启用/禁用", OnToggleRuleClick, AntdUI.TTypeMini.Default, btnPadding, btnMargin));
+            toolbar.Controls.Add(MakeBtn("刷新", (s, e) => { LoadRules(); LoadWhitelist(); }, AntdUI.TTypeMini.Default, btnPadding, btnMargin));
 
             // 规则列表（Dock 布局：工具栏下、白名单上，随窗体伸缩）
             _ruleTable = new AntdUI.Table
             {
                 Dock = DockStyle.Fill,
-                Font = new Font("Consolas", 9f),
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f),
                 BorderWidth = 0,
-
-                RowHeight = 28
+                RowHeight = rowH
             };
             _ruleTable.Columns.Add(new AntdUI.Column("Name", "名称", AntdUI.ColumnAlign.Left));
             _ruleTable.Columns.Add(new AntdUI.Column("Pattern", "匹配模式", AntdUI.ColumnAlign.Left));
@@ -101,10 +112,14 @@ namespace Gdterm.UI.Forms
             var wlBtnRow = wlHeaderRow + DpiScale.V(this, 24) + 4;
             wlPanel.Height = wlBtnRow + DpiScale.V(this, 96) + DpiScale.V(this, 8);
 
+            // 白名单工具栏按钮统一字体驱动尺寸
+            var wlBtnPadding = new Padding(btnPad, DpiScale.V(this, 3), btnPad, DpiScale.V(this, 3));
+
             var whitelistHeader = new AntdUI.Label {
                 Text = "白名单（豁免命令）",
                 Font = Services.FormFontPolicy.UiFont(0.5f, FontStyle.Bold),
                 AutoSize = true,
+                ForeColor = GdtermColorTable.Foreground,
                 Margin = new Padding(0, 0, 0, DpiScale.V(this, 4))
             };
 
@@ -115,12 +130,13 @@ namespace Gdterm.UI.Forms
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 WrapContents = false,
+                BackColor = GdtermColorTable.Background,
                 Margin = new Padding(0, 0, 0, DpiScale.V(this, 4))
             };
-            var btnAddWhitelist = new AntdUI.Button { Text = "添加", Type = AntdUI.TTypeMini.Primary, AutoSize = true, Margin = new Padding(0, 0, DpiScale.V(this, 6), 0) };
+            var btnAddWhitelist = new AntdUI.Button { Text = "添加", Type = AntdUI.TTypeMini.Primary, AutoSize = true, Padding = wlBtnPadding, Margin = new Padding(0, 0, DpiScale.V(this, 6), 0) };
             btnAddWhitelist.Click += OnAddWhitelistClick;
 
-            var btnRemoveWhitelist = new AntdUI.Button { Text = "移除", Type = AntdUI.TTypeMini.Error, AutoSize = true };
+            var btnRemoveWhitelist = new AntdUI.Button { Text = "移除", Type = AntdUI.TTypeMini.Error, AutoSize = true, Padding = wlBtnPadding };
             btnRemoveWhitelist.Click += OnRemoveWhitelistClick;
             whitelistButtons.Controls.Add(btnAddWhitelist);
             whitelistButtons.Controls.Add(btnRemoveWhitelist);
@@ -129,7 +145,7 @@ namespace Gdterm.UI.Forms
             _whitelistBox = new AntdUI.Input {
                 Dock = DockStyle.Fill,
                 Margin = new Padding(0),
-                Font = new Font("Consolas", 9.5f),
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
                 Multiline = true,
                 ReadOnly = true
             };
@@ -141,7 +157,10 @@ namespace Gdterm.UI.Forms
             _statusLabel = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
                 AutoSize = true,
-                Text = "就绪"
+                Text = "就绪",
+                TextAlign = ContentAlignment.MiddleLeft,
+                ForeColor = GdtermColorTable.Muted,
+                Padding = new Padding(pad, DpiScale.V(this, 5), pad, DpiScale.V(this, 5))
             };
 
             // Dock 装配（WinForms 按添加逆序分配边缘，Fill 必须最后添加）
@@ -151,9 +170,9 @@ namespace Gdterm.UI.Forms
             Controls.Add(_ruleTable);     // Fill：规则列表拿剩余全部空间
         }
 
-        private static AntdUI.Button MakeBtn(string text, EventHandler onClick, AntdUI.TTypeMini type)
+        private static AntdUI.Button MakeBtn(string text, EventHandler onClick, AntdUI.TTypeMini type, Padding padding, int margin)
         {
-            var btn = new AntdUI.Button { Text = text, Type = type, Ghost = type != AntdUI.TTypeMini.Primary, AutoSize = true, Padding = new Padding(10, 4, 10, 4), Margin = new Padding(0, 0, 6, 0) };
+            var btn = new AntdUI.Button { Text = text, Type = type, Ghost = type != AntdUI.TTypeMini.Primary, AutoSize = true, Padding = padding, Margin = new Padding(0, 0, margin, 0) };
             btn.Click += onClick;
             return btn;
         }
