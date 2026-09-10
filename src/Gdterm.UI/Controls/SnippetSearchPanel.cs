@@ -54,7 +54,8 @@ namespace Gdterm.UI.Controls
             // 搜索框
             _txtSearch = new AntdUI.Input {
                 Dock = DockStyle.Top,
-                Height = 32,
+                // 高度与项目 38 地板统一（原先裸 32px，不跟 DPI/字号）
+                Height = Math.Max(DpiScale.V(this, 38), Services.FormFontPolicy.RowStep(this)),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 11f),
