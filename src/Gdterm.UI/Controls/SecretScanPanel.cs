@@ -67,8 +67,7 @@ namespace Gdterm.UI.Controls
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 5), DpiScale.V(this, 10), DpiScale.V(this, 5)),
                 Margin = new Padding(0, 0, DpiScale.V(this, 8), 0),
-                BackColor = GdtermColorTable.Accent,
-                ForeColor = GdtermColorTable.OnAccent,
+                Type = AntdUI.TTypeMini.Primary,
                 Font = Services.FormFontPolicy.UiFont(),
                 Cursor = Cursors.Hand
             };
@@ -78,8 +77,7 @@ namespace Gdterm.UI.Controls
                 Text = "停止",
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 5), DpiScale.V(this, 10), DpiScale.V(this, 5)),
-                BackColor = GdtermColorTable.Danger,
-                ForeColor = GdtermColorTable.OnDanger,
+                Type = AntdUI.TTypeMini.Error,
                 Font = Services.FormFontPolicy.UiFont(),
                 Enabled = false,
                 Cursor = Cursors.Hand

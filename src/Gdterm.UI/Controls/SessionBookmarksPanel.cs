@@ -310,8 +310,7 @@ namespace Gdterm.UI.Controls
                     DialogResult = DialogResult.OK,
                     Location = new Point(pad + DpiScale.V(this, 310) - DpiScale.V(this, 80), y),
                     Size = new Size(DpiScale.V(this, 80), btnH),
-                    BackColor = GdtermColorTable.Accent,
-                    ForeColor = GdtermColorTable.OnAccent
+                    Type = AntdUI.TTypeMini.Primary,
                 };
                 dlg.Controls.Add(lblName);
                 dlg.Controls.Add(nameBox);

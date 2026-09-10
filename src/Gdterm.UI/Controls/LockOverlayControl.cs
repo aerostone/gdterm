@@ -87,8 +87,7 @@ namespace Gdterm.UI.Controls
                 Text = "解锁",
                 Location = DpiScale.P(this, 110, 118),
                 Size = DpiScale.S(this, 100, 32),
-                BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Accent,
-                ForeColor = GdtermColorTable.OnAccent,
+                Type = AntdUI.TTypeMini.Primary,
             };
             _unlockButton.Click += (s, e) => OnUnlock();
             _centerPanel.Controls.Add(_unlockButton);

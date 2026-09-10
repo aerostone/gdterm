@@ -64,7 +64,7 @@ namespace Gdterm.UI.Controls
             _txtCommand = new AntdUI.Input { Width = DpiScale.V(this, 500), Height = DpiScale.V(this, 28), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f), Margin = new Padding(0, DpiScale.V(this, 1), DpiScale.V(this, 8), 0)};
             _txtCommand.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { ExecuteCommand(); e.SuppressKeyPress = true; } };
 
-            _btnExecute = new AntdUI.Button { Text = "▶ 执行", AutoSize = true, Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)), BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent, Font = font, Margin = new Padding(0, 0, DpiScale.V(this, 8), 0) };
+            _btnExecute = new AntdUI.Button { Text = "▶ 执行", AutoSize = true, Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)), Type = AntdUI.TTypeMini.Primary,, Font = font, Margin = new Padding(0, 0, DpiScale.V(this, 8), 0) };
             _btnExecute.Click += (s, e) => ExecuteCommand();
 
             _lblStatus = new AntdUI.Label { Text = "", AutoSize = true, Margin = new Padding(0, DpiScale.V(this, 6), 0, 0), Font = font, ForeColor = GdtermColorTable.Muted };

@@ -214,7 +214,7 @@ namespace Gdterm.UI.Controls
             y += stepBtnH + DpiScale.V(this, 12);
 
             int btnH = Math.Max(DpiScale.V(this, 30), fieldH);
-            var btnOk = new AntdUI.Button { Text = "确定", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(form, 340, y), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent };
+            var btnOk = new AntdUI.Button { Text = "确定", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(form, 340, y), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary, };
             var btnCancel = new AntdUI.Button { Text = "取消", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(form, 430, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
@@ -263,7 +263,7 @@ namespace Gdterm.UI.Controls
             stepY += stepRowH + DpiScale.V(this, 8);
 
             int stepBtnH = Math.Max(DpiScale.V(this, 30), stepFieldH);
-            var btnOk = new AntdUI.Button { Text = "确定", Size = new Size(DpiScale.V(this, 70), stepBtnH), Location = new Point(DpiScale.V(this, 170), stepY), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent };
+            var btnOk = new AntdUI.Button { Text = "确定", Size = new Size(DpiScale.V(this, 70), stepBtnH), Location = new Point(DpiScale.V(this, 170), stepY), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary, };
             var btnCancel = new AntdUI.Button { Text = "取消", Size = new Size(DpiScale.V(this, 70), stepBtnH), Location = new Point(DpiScale.V(this, 250), stepY), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
