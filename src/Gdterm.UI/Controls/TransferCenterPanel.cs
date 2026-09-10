@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Controls
 {
@@ -28,14 +29,14 @@ namespace Gdterm.UI.Controls
                 Height = 28,
                 Font = Services.FormFontPolicy.UiFont(+1f, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(8, 0, 0, 0)
+                Padding = new Padding(DpiScale.V(this, 8), 0, 0, 0)
             };
             _list = new ListBox
             {
                 Dock = DockStyle.Fill,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", 9f),
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f),
                 IntegralHeight = false
             };
             var tip = new AntdUI.Label {
@@ -44,7 +45,7 @@ namespace Gdterm.UI.Controls
                 Text = "上传/下载完成后会出现在此列表",
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(8, 0, 0, 0)
+                Padding = new Padding(DpiScale.V(this, 8), 0, 0, 0)
             };
             Controls.Add(_list);
             Controls.Add(tip);

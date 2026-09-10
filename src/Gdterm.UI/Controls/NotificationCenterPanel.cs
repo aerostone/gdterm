@@ -42,7 +42,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", 9f),
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f),
                 IntegralHeight = false
             };
 
@@ -51,7 +51,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Top,
                 Height = 28,
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(8, 0, 0, 0),
+                Padding = new Padding(DpiScale.V(this, 8), 0, 0, 0),
                 Font = Services.FormFontPolicy.UiFont(+1f, FontStyle.Bold)
             };
 

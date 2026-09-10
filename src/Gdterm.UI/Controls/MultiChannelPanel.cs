@@ -93,7 +93,7 @@ namespace Gdterm.UI.Controls
             _commandInput = new AntdUI.Input {
                 Dock = DockStyle.Top,
                 Height = DpiScale.V(this, 28),
-                Font = new Font("Consolas", 9f)
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f)
             };
 
             var inputHint = new AntdUI.Label {

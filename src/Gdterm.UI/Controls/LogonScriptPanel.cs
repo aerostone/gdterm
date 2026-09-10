@@ -141,7 +141,7 @@ namespace Gdterm.UI.Controls
             var form = new Form
             {
                 Text = existing == null ? "添加登录脚本" : "编辑登录脚本",
-                Size = DpiScale.S(this, 550, 450),
+                // ClientSize 在按钮行后按行高动态计算（见下方）
                 StartPosition = FormStartPosition.CenterParent,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
@@ -150,34 +150,39 @@ namespace Gdterm.UI.Controls
             };
 
             var font = Services.FormFontPolicy.UiFont();
+            // P0-1：固定 y 步进→字体驱动行高（原先 30/3/210/40 在大字号下重叠）
+            int fieldH = Math.Max(DpiScale.V(this, 30), Services.FormFontPolicy.RowStep(this));
+            int rowH = fieldH + DpiScale.V(this, 6);
+            int stepBtnH = Math.Max(DpiScale.V(this, 24), fieldH - DpiScale.V(this, 6));
             int y = 12;
 
-            var lblName = Lbl("名称:", 12, y, form); var txtName = Txt(100, y, 200, form);
+            var lblName = Lbl("名称:", 12, y, form); var txtName = Txt(100, y, 200, form, fieldH);
             var chkEnabled = new AntdUI.Checkbox { Text = "启用", Location = DpiScale.P(form, 320, y + 2), AutoSize = true, Font = font, ForeColor = GdtermColorTable.Foreground, Checked = true }; form.Controls.Add(chkEnabled);
-            y += 30;
+            y += rowH;
 
-            var lblDesc = Lbl("说明:", 12, y, form); var txtDesc = Txt(100, y, 410, form); y += 30;
+            var lblDesc = Lbl("说明:", 12, y, form); var txtDesc = Txt(100, y, 410, form, fieldH); y += rowH;
 
-            var lblSteps = Lbl("步骤:", 12, y, form); y += 3;
+            var lblSteps = Lbl("步骤:", 12, y, form); y += DpiScale.V(this, 3);
+            int lvH = Math.Max(DpiScale.V(this, 200), fieldH * 5);
             var lvSteps = new ListView
             {
-                Location = DpiScale.P(form, 100, y), Size = DpiScale.S(this, 410, 200),
+                Location = DpiScale.P(form, 100, y), Size = new Size(DpiScale.V(this, 410), lvH),
                 View = View.Details, FullRowSelect = true,
                 BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", 8.5f)
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 8.5f)
             };
             lvSteps.Columns.Add("类型", 60);
             lvSteps.Columns.Add("内容/关键词", 180);
             lvSteps.Columns.Add("超时(ms)", 80);
             lvSteps.Columns.Add("说明", 80);
             form.Controls.Add(lvSteps);
-            y += 210;
+            y += lvH + DpiScale.V(this, 6);
 
             // 步骤操作按钮
-            var btnAddStep = new AntdUI.Button { Text = "+", Location = DpiScale.P(form, 100, y), Size = DpiScale.S(this, 28, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Success };
-            var btnDelStep = new AntdUI.Button { Text = "−", Location = DpiScale.P(form, 132, y), Size = DpiScale.S(this, 28, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Danger };
-            var btnUp = new AntdUI.Button { Text = "↑", Location = DpiScale.P(form, 170, y), Size = DpiScale.S(this, 28, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
-            var btnDown = new AntdUI.Button { Text = "↓", Location = DpiScale.P(form, 202, y), Size = DpiScale.S(this, 28, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+            var btnAddStep = new AntdUI.Button { Text = "+", Location = DpiScale.P(form, 100, y), Size = new Size(DpiScale.V(this, 28), stepBtnH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Success };
+            var btnDelStep = new AntdUI.Button { Text = "−", Location = DpiScale.P(form, 132, y), Size = new Size(DpiScale.V(this, 28), stepBtnH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Danger };
+            var btnUp = new AntdUI.Button { Text = "↑", Location = DpiScale.P(form, 170, y), Size = new Size(DpiScale.V(this, 28), stepBtnH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+            var btnDown = new AntdUI.Button { Text = "↓", Location = DpiScale.P(form, 202, y), Size = new Size(DpiScale.V(this, 28), stepBtnH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnAddStep, btnDelStep, btnUp, btnDown });
 
             var steps = new List<LogonStep>();
@@ -206,12 +211,15 @@ namespace Gdterm.UI.Controls
             {
                 if (lvSteps.SelectedItems.Count > 0) { steps.Remove(lvSteps.SelectedItems[0].Tag as LogonStep); refreshSteps(); }
             };
-            y += 40;
+            y += stepBtnH + DpiScale.V(this, 12);
 
-            var btnOk = new AntdUI.Button { Text = "确定", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(form, 340, y), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent };
-            var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(form, 430, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
+            int btnH = Math.Max(DpiScale.V(this, 30), fieldH);
+            var btnOk = new AntdUI.Button { Text = "确定", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(form, 340, y), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent };
+            var btnCancel = new AntdUI.Button { Text = "取消", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(form, 430, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
+            // 客户区高度随行高自适应（原先固定 450 在大字号下裁剪）
+            form.ClientSize = new Size(DpiScale.V(this, 550), y + btnH + DpiScale.V(this, 16));
 
             if (existing != null)
             {
@@ -262,7 +270,7 @@ namespace Gdterm.UI.Controls
         }
 
         private static AntdUI.Label Lbl(string t, int x, int y, Form f) { var l = new AntdUI.Label { Text = t, Location = DpiScale.P(f, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }; f.Controls.Add(l); return l; }
-        private static AntdUI.Input Txt(int x, int y, int w, Form f) { var t = new AntdUI.Input { Location = DpiScale.P(f, x, y), Size = DpiScale.S(f, w, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f)}; f.Controls.Add(t); return t; }
+        private static AntdUI.Input Txt(int x, int y, int w, Form f, int fieldH) { var t = new AntdUI.Input { Location = DpiScale.P(f, x, y), Size = new Size(DpiScale.V(f, w), fieldH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f)}; f.Controls.Add(t); return t; }
 
         protected override void Dispose(bool disposing) { base.Dispose(disposing); }
     }

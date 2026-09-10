@@ -85,7 +85,7 @@ namespace Gdterm.UI.Forms
             _apiKeyBox = new AntdUI.Input {
                 Location = new Point(boxX, y),
                 Size = new Size(boxW - DpiScale.V(this, 76), fieldH),
-                Font = new Font("Consolas", 9.5f),
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
                 UseSystemPasswordChar = true
             };
             _showKeyCheck = new AntdUI.Checkbox {

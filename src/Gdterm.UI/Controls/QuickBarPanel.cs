@@ -118,7 +118,7 @@ namespace Gdterm.UI.Controls
                 AutoSize = true,
                 FlowDirection = FlowDirection.LeftToRight,
                 BackColor = GdtermColorTable.Surface,
-                Padding = new Padding(4, 4, 0, 4),
+                Padding = new Padding(DpiScale.V(this, 4), DpiScale.V(this, 4), 0, DpiScale.V(this, 4)),
                 WrapContents = false
             };
 
@@ -128,7 +128,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 FlowDirection = FlowDirection.LeftToRight,
                 BackColor = GdtermColorTable.Surface,
-                Padding = new Padding(4, 3, 4, 3),
+                Padding = new Padding(DpiScale.V(this, 4), DpiScale.V(this, 3), DpiScale.V(this, 4), DpiScale.V(this, 3)),
                 WrapContents = true,
                 AutoScroll = false
             };

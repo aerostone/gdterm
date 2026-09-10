@@ -49,6 +49,9 @@ namespace Gdterm.UI.Controls
 
         private void InitializeComponent()
         {
+            // P1-4：显式设 token 色，跟随 Dark/Darker/OLED 切换（StatusStrip 用 ManagerRenderMode 取全局 renderer）
+            BackColor = GdtermColorTable.Background;
+            ForeColor = GdtermColorTable.Foreground;
             var statusStrip = new StatusStrip();
             try
             {

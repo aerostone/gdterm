@@ -99,7 +99,7 @@ namespace Gdterm.UI.Controls
             var btn = new AntdUI.Button {
                 Text = text,
                 AutoSize = true,
-                Padding = new Padding(1, 0, 1, 0),
+                Padding = new Padding(DpiScale.V(this, 1), 0, DpiScale.V(this, 1), 0),
                 MinimumSize = new Size(DpiScale.V(this, 26), DpiScale.V(this, 24)),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground

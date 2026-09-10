@@ -61,7 +61,7 @@ namespace Gdterm.UI.Controls
             };
 
             var lblCmd = new AntdUI.Label { Text = "命令:", AutoSize = true, Margin = new Padding(0, DpiScale.V(this, 6), DpiScale.V(this, 8), 0), Font = font, ForeColor = GdtermColorTable.Foreground };
-            _txtCommand = new AntdUI.Input { Width = DpiScale.V(this, 500), Height = DpiScale.V(this, 28), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f), Margin = new Padding(0, DpiScale.V(this, 1), DpiScale.V(this, 8), 0)};
+            _txtCommand = new AntdUI.Input { Width = DpiScale.V(this, 500), Height = DpiScale.V(this, 28), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f), Margin = new Padding(0, DpiScale.V(this, 1), DpiScale.V(this, 8), 0)};
             _txtCommand.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { ExecuteCommand(); e.SuppressKeyPress = true; } };
 
             _btnExecute = new AntdUI.Button { Text = "▶ 执行", AutoSize = true, Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)), BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent, Font = font, Margin = new Padding(0, 0, DpiScale.V(this, 8), 0) };
@@ -88,7 +88,7 @@ namespace Gdterm.UI.Controls
                 CheckBoxes = true,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", 8.5f),
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 8.5f),
                 FullRowSelect = true
             };
             _lvSessions.Columns.Add("会话", 200);
@@ -103,7 +103,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", 9f),
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f),
                 ReadOnly = true,
                 WordWrap = false
             };

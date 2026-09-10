@@ -132,7 +132,7 @@ namespace Gdterm.UI.Forms
             _resultBox = new AntdUI.Input {
                 Location = new Point(pad, y),
                 Size = new Size(DpiScale.V(this, 300), resultH),
-                Font = new Font("Consolas", 14f, FontStyle.Bold),
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 14f, FontStyle.Bold),
                 ReadOnly = true
             };
             Controls.Add(_resultBox);
@@ -184,7 +184,7 @@ namespace Gdterm.UI.Forms
             _historyBox = new AntdUI.Input {
                 Location = new Point(pad, y),
                 Size = new Size(clientW - pad * 2, historyH),
-                Font = new Font("Consolas", 10f),
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 10f),
                 ReadOnly = true,
                 Multiline = true
             };

@@ -44,7 +44,7 @@ namespace Gdterm.UI.Controls
                 ForeColor = GdtermColorTable.Foreground,
                 Font = Services.FormFontPolicy.UiFont(+1f, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(8, 0, 0, 0)
+                Padding = new Padding(DpiScale.V(this, 8), 0, 0, 0)
             };
 
             _searchBox = new AntdUI.Input {
@@ -62,7 +62,7 @@ namespace Gdterm.UI.Controls
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 WrapContents = false,
                 BackColor = GdtermColorTable.Surface,
-                Padding = new Padding(4, 2, 4, 2)
+                Padding = new Padding(DpiScale.V(this, 4), DpiScale.V(this, 2), DpiScale.V(this, 4), DpiScale.V(this, 2))
             };
             var addBtn = MakeButton("添加书签");
             addBtn.Click += OnAddBookmark;
@@ -80,7 +80,7 @@ namespace Gdterm.UI.Controls
                 ForeColor = GdtermColorTable.Muted,
                 Font = Services.FormFontPolicy.UiFont(-0.5f),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(8, 0, 0, 0)
+                Padding = new Padding(DpiScale.V(this, 8), 0, 0, 0)
             };
 
             var split = new SplitContainer
@@ -109,7 +109,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Top,
                 Height = 20,
                 ForeColor = GdtermColorTable.Muted,
-                Padding = new Padding(6, 2, 0, 0)
+                Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 2), 0, 0)
             };
             bmHost.Controls.Add(_bookmarksList);
             bmHost.Controls.Add(bmLabel);
@@ -127,7 +127,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Top,
                 Height = 20,
                 ForeColor = GdtermColorTable.Muted,
-                Padding = new Padding(6, 2, 0, 0)
+                Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 2), 0, 0)
             };
             recentHost.Controls.Add(_recentList);
             recentHost.Controls.Add(recentLabel);
@@ -171,7 +171,7 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 Margin = new Padding(2),
-                Padding = new Padding(8, 3, 8, 3)
+                Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3))
             };
         }
 

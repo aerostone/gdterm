@@ -108,12 +108,13 @@ namespace Gdterm.UI.Controls
             bottomPanel.Controls.AddRange(new Control[] { _btnAdd, _btnEdit, _btnDelete, _btnReset });
 
             // ── 中间：绑定列表 ──
+            // P1-7：RowHeight 跟字（28 硬编码→ Max(28, fieldH 地板）），Consolas 字号跟随全局 UI 字号
             _table = new AntdUI.Table
             {
                 Dock = DockStyle.Fill,
-                Font = new Font("Consolas", 9f),
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f),
                 BorderWidth = 0,
-                RowHeight = 28
+                RowHeight = Math.Max(DpiScale.V(this, 28), Math.Max(DpiScale.V(this, 38), Gdterm.UI.Services.FormFontPolicy.RowStep(this)))
             };
             _table.Columns.Add(new AntdUI.Column("Name", "名称", AntdUI.ColumnAlign.Left));
             _table.Columns.Add(new AntdUI.Column("Combo", "按键组合", AntdUI.ColumnAlign.Left));
@@ -303,50 +304,54 @@ namespace Gdterm.UI.Controls
             using (var form = new AntdUI.Window())
             {
                 form.Text = existing == null ? "添加快捷键" : "编辑快捷键";
-                form.Size = DpiScale.S(this, 470, 500);
+                // ClientSize 在按钮行后按行高动态计算（见下方）
                 form.StartPosition = FormStartPosition.CenterParent;
                 form.FormBorderStyle = FormBorderStyle.FixedDialog;
                 form.MaximizeBox = false;
                 form.MinimizeBox = false;
 
+                // P0-1：固定 y 步进→字体驱动行高（原先 50/52/62 在大字号下重叠）
+                int fieldH = Math.Max(DpiScale.V(this, 36), Gdterm.UI.Services.FormFontPolicy.RowStep(this));
+                int rowH = fieldH + DpiScale.V(this, 10);
+                int lblOff = DpiScale.V(this, 8);
                 int y = 20;
-                var lblName = new AntdUI.Label { Text = "名称", Location = DpiScale.P(this, 15, y + 8), AutoSize = true };
-                var txtName = new AntdUI.Input { Location = DpiScale.P(this, 100, y), Size = DpiScale.S(this, 330, 36) };
-                y += 50;
+                var lblName = new AntdUI.Label { Text = "名称", Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
+                var txtName = new AntdUI.Input { Location = DpiScale.P(this, 100, y), Size = new Size(DpiScale.V(this, 330), fieldH) };
+                y += rowH;
 
-                var lblCombo = new AntdUI.Label { Text = "按键组合", Location = DpiScale.P(this, 15, y + 8), AutoSize = true };
-                var chkCtrl = new AntdUI.Checkbox { Text = "Ctrl", Location = DpiScale.P(this, 100, y + 8), AutoSize = true };
-                var chkAlt = new AntdUI.Checkbox { Text = "Alt", Location = DpiScale.P(this, 160, y + 8), AutoSize = true };
-                var chkShift = new AntdUI.Checkbox { Text = "Shift", Location = DpiScale.P(this, 218, y + 8), AutoSize = true };
-                var cmbKey = new AntdUI.Select { Location = DpiScale.P(this, 275, y), Size = DpiScale.S(this, 155, 36) };
+                var lblCombo = new AntdUI.Label { Text = "按键组合", Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
+                var chkCtrl = new AntdUI.Checkbox { Text = "Ctrl", Location = DpiScale.P(this, 100, y + lblOff), AutoSize = true };
+                var chkAlt = new AntdUI.Checkbox { Text = "Alt", Location = DpiScale.P(this, 160, y + lblOff), AutoSize = true };
+                var chkShift = new AntdUI.Checkbox { Text = "Shift", Location = DpiScale.P(this, 218, y + lblOff), AutoSize = true };
+                var cmbKey = new AntdUI.Select { Location = DpiScale.P(this, 275, y), Size = new Size(DpiScale.V(this, 155), fieldH) };
                 FillKeyCombo(cmbKey);
-                y += 50;
+                y += rowH;
 
-                var lblType = new AntdUI.Label { Text = "类型", Location = DpiScale.P(this, 15, y + 8), AutoSize = true };
-                var cmbType = new AntdUI.Select { Location = DpiScale.P(this, 100, y), Size = DpiScale.S(this, 155, 36) };
+                var lblType = new AntdUI.Label { Text = "类型", Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
+                var cmbType = new AntdUI.Select { Location = DpiScale.P(this, 100, y), Size = new Size(DpiScale.V(this, 155), fieldH) };
                 cmbType.Items.AddRange(new object[] { "Sequence (转义序列)", "Text (字面文本)", "Action (内置动作)" });
-                y += 50;
+                y += rowH;
 
-                var lblValue = new AntdUI.Label { Text = "发送内容", Location = DpiScale.P(this, 15, y + 8), AutoSize = true };
-                var txtValue = new AntdUI.Input { Location = DpiScale.P(this, 100, y), Size = DpiScale.S(this, 330, 36), Font = new Font("Consolas", 9f) };
-                y += 50;
+                var lblValue = new AntdUI.Label { Text = "发送内容", Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
+                var txtValue = new AntdUI.Input { Location = DpiScale.P(this, 100, y), Size = new Size(DpiScale.V(this, 330), fieldH), Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f) };
+                y += rowH;
 
-                var lblDesc = new AntdUI.Label { Text = "描述", Location = DpiScale.P(this, 15, y + 8), AutoSize = true };
-                var txtDesc = new AntdUI.Input { Location = DpiScale.P(this, 100, y), Size = DpiScale.S(this, 330, 36) };
-                y += 52;
+                var lblDesc = new AntdUI.Label { Text = "描述", Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
+                var txtDesc = new AntdUI.Input { Location = DpiScale.P(this, 100, y), Size = new Size(DpiScale.V(this, 330), fieldH) };
+                y += rowH + DpiScale.V(this, 2);
 
                 var lblHint = new AntdUI.Label {
                     Text = "Sequence: \\x1b[1;5A (Ctrl+Up)\nText: ls -la\\r\nAction: copy/paste/clear/scroll_up/scroll_down/find",
                     Location = DpiScale.P(this, 15, y),
-                    Size = DpiScale.S(this, 420, 52),
+                    Size = new Size(DpiScale.V(this, 420), Gdterm.UI.Services.FormFontPolicy.RowStep(this) * 2 + DpiScale.V(this, 8)),
                     AutoSize = false
                 };
-                y += 62;
+                y += Gdterm.UI.Services.FormFontPolicy.RowStep(this) * 2 + DpiScale.V(this, 14);
 
                 var btnOk = new AntdUI.Button {
                     Text = "确定",
                     Type = AntdUI.TTypeMini.Primary,
-                    Size = DpiScale.S(this, 84, 36),
+                    Size = new Size(DpiScale.V(this, 84), fieldH),
                     Location = DpiScale.P(this, 250, y)
                 };
                 btnOk.Click += (s, e) =>
@@ -363,9 +368,11 @@ namespace Gdterm.UI.Controls
                 var btnCancel = new AntdUI.Button {
                     Text = "取消",
                     Type = AntdUI.TTypeMini.Default,
-                    Size = DpiScale.S(this, 84, 36),
+                    Size = new Size(DpiScale.V(this, 84), fieldH),
                     Location = DpiScale.P(this, 346, y)
                 };
+                // 客户区高度随行高自适应（原先固定 500 在大字号下裁剪）
+                form.ClientSize = new Size(DpiScale.V(this, 470), y + fieldH + DpiScale.V(this, 16));
                 btnCancel.Click += (s, e) => { form.DialogResult = DialogResult.Cancel; form.Close(); };
 
                 // 填充现有值

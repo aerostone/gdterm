@@ -169,18 +169,20 @@ namespace Gdterm.UI.Forms
             CancelButton = cancelButton;
         }
 
-        private static AntdUI.Label MakeFieldLabel(string text, int x, int y, int fieldH)
+        private AntdUI.Label MakeFieldLabel(string text, int x, int y, int fieldH)
         {
-            int offset = Math.Max(4, (fieldH - 17) / 2);
+            // P0-2：与 AiSettingsForm/QuickCommandEditorForm 对齐，用真实 FontHeight 代替写死 17
+            int offset = Math.Max(4, (fieldH - FontHeight) / 2);
             return new AntdUI.Label { Text = text, AutoSize = true, Location = new Point(x, y + offset) };
         }
 
         private AntdUI.Input MakePasswordBox(int x, int y, int width, int fieldH)
         {
+            // P1-8：Consolas 字号跟随全局 UI 字号（原先 11f 写死）
             return new AntdUI.Input {
                 Location = new Point(x, y),
                 Size = new Size(width, fieldH),
-                Font = new Font("Consolas", 11f),
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 11f),
                 UseSystemPasswordChar = true
             };
         }

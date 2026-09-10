@@ -247,6 +247,11 @@ namespace Gdterm.UI.Services
             else if (property.PropertyType == typeof(decimal)) property.SetValue(control, (decimal)value, null);
         }
 
+        /// <summary>
+        /// P0-3：保留 size delta——子控件若已用 UiFont(+N) 设了标题字号，Apply 只换字体族、
+        /// 按“当前字号相对旧基准的差”平移，不再压回全局基准（原先标题与正文一样大）。
+        /// 基准 = 调用时的全局字号 size；delta = c.Font.Size - size。
+        /// </summary>
         private static void ReplaceChildFonts(Control.ControlCollection controls, string name, float size, bool replaceAllUiFonts)
         {
             if (controls == null) return;
@@ -257,7 +262,9 @@ namespace Gdterm.UI.Services
                     var f = c.Font;
                     if (f != null && !string.IsNullOrEmpty(f.Name) && IsReplaceableUiFont(f.Name, replaceAllUiFonts))
                     {
-                        c.Font = new Font(name, size, f.Style);
+                        float delta = f.Size - size;
+                        float target = delta > 0.25f ? size + delta : size;
+                        c.Font = new Font(name, target, f.Style);
                     }
                 }
                 catch { }

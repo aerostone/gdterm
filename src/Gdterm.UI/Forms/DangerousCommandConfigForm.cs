@@ -521,7 +521,7 @@ namespace Gdterm.UI.Forms
             _inputBox = new AntdUI.Input {
                 Location = new Point(pad, y),
                 Size = new Size(clientW - pad * 2, fieldH),
-                Font = new Font("Consolas", 10f)
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 10f)
             };
             Controls.Add(_inputBox);
             y += fieldH + DpiScale.V(this, 18);

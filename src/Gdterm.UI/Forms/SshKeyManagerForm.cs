@@ -91,7 +91,7 @@ namespace Gdterm.UI.Forms
                 Size = new Size(boxW, previewH),
                 Multiline = true,
                 ReadOnly = true,
-                Font = new Font("Consolas", 8.5f)
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 8.5f)
             };
             Controls.Add(_preview);
             y += previewH + DpiScale.V(this, 16);

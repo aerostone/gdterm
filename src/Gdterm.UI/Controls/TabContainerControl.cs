@@ -132,13 +132,18 @@ namespace Gdterm.UI.Controls
 
         private void InitializeComponent()
         {
+            // P1-4：显式设 token 色，跟随 Dark/Darker/OLED 切换（原先无 BackColor，靠默认原生色）
+            BackColor = GdtermColorTable.Background;
+            ForeColor = GdtermColorTable.Foreground;
             _tabControl = new TabControl
             {
                 Dock = DockStyle.Fill,
                 DrawMode = TabDrawMode.OwnerDrawFixed,
                 SizeMode = TabSizeMode.Fixed,
                 ItemSize = DpiScale.S(this, 120, 24),
-                Padding = DpiScale.P(this, 10, 3)
+                Padding = DpiScale.P(this, 10, 3),
+                BackColor = GdtermColorTable.Background,
+                ForeColor = GdtermColorTable.Foreground
             };
             _tabControl.FontChanged += (s, e) => ApplyElasticTabWidth();
             _tabControl.DrawItem += OnDrawTab;

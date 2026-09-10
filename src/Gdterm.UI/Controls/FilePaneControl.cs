@@ -82,7 +82,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", 9f)
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f)
             };
             _pathBox.KeyDown += (s, e) =>
             {
@@ -106,7 +106,7 @@ namespace Gdterm.UI.Controls
                 HeaderStyle = ColumnHeaderStyle.Clickable,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", 9.5f),
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
                 AllowDrop = true
             };
             _list.Columns.Add("名称", DpiScale.V(this, 240));
@@ -146,7 +146,7 @@ namespace Gdterm.UI.Controls
                 ForeColor = GdtermColorTable.Muted,
                 Text = " ",
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(6, 0, 0, 0)
+                Padding = new Padding(DpiScale.V(this, 6), 0, 0, 0)
             };
 
             _list.ContextMenuStrip = BuildContextMenu();
@@ -403,10 +403,10 @@ namespace Gdterm.UI.Controls
             })
             {
                 f.ClientSize = new Size(DpiScale.V(f, 380), DpiScale.V(f, 128));
-                var lbl = new AntdUI.Label { Text = label, Dock = DockStyle.Top, Height = 28, Padding = new Padding(12, 8, 12, 0), ForeColor = GdtermColorTable.Muted };
+                var lbl = new AntdUI.Label { Text = label, Dock = DockStyle.Top, Height = 28, Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 8), DpiScale.V(this, 12), 0), ForeColor = GdtermColorTable.Muted };
                 var box = new AntdUI.Input {
                     Dock = DockStyle.Top,
-                    Font = new Font("Consolas", 9.5f),
+                    Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
                     BackColor = GdtermColorTable.Surface,
                     ForeColor = GdtermColorTable.Foreground,
                 };

@@ -57,7 +57,7 @@ namespace Gdterm.UI.Controls
                 Height = 32,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", 11f),
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 11f),
             };
             _txtSearch.TextChanged += (s, e) => FilterResults();
             _txtSearch.KeyDown += OnSearchKeyDown;
@@ -225,23 +225,29 @@ namespace Gdterm.UI.Controls
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false, MinimizeBox = false
             };
-            form.Size = DpiScale.S(form, 400, 40 + placeholders.Count * 40 + 60);
+            // P0-1：固定 y 步进→字体驱动行高（原先 y+=36 在大字号下输入框与标签重叠）
+            int fieldH = Math.Max(DpiScale.V(form, 30), Services.FormFontPolicy.RowStep(form));
+            int rowH = fieldH + DpiScale.V(form, 6);
 
             var inputs = new Dictionary<string, AntdUI.Input>();
             int y = 15;
             foreach (var ph in placeholders)
             {
-                var lbl = new AntdUI.Label { Text = ph + ":", Location = new Point(15, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground };
-                var txt = new AntdUI.Input { Location = DpiScale.P(form, 100, y), Size = DpiScale.S(form, 260, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f)};
+                var lbl = new AntdUI.Label { Text = ph + ":", Location = new Point(15, y + Math.Max(4, (fieldH - form.FontHeight) / 2)), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground };
+                var txt = new AntdUI.Input { Location = DpiScale.P(form, 100, y), Size = new Size(DpiScale.V(form, 260), fieldH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f)};
                 form.Controls.AddRange(new Control[] { lbl, txt });
                 inputs[ph] = txt;
-                y += 36;
+                y += rowH;
             }
+            y += DpiScale.V(form, 4);
 
-            var btnOk = new AntdUI.Button { Text = "执行", Size = DpiScale.S(form, 80, 28), Location = DpiScale.P(form, 190, y), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent };
-            var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(form, 80, 28), Location = DpiScale.P(form, 280, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
+            int btnH = Math.Max(DpiScale.V(form, 30), fieldH);
+            var btnOk = new AntdUI.Button { Text = "执行", Size = new Size(DpiScale.V(form, 80), btnH), Location = DpiScale.P(form, 190, y), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent };
+            var btnCancel = new AntdUI.Button { Text = "取消", Size = new Size(DpiScale.V(form, 80), btnH), Location = DpiScale.P(form, 280, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
+            // 客户区高度随行数自适应（原先 40+n*40+60 写死行高 40，大字号下裁剪）
+            form.ClientSize = new Size(DpiScale.V(form, 400), y + btnH + DpiScale.V(form, 16));
 
             if (form.ShowDialog(this) != DialogResult.OK) return null;
 

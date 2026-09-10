@@ -170,22 +170,25 @@ namespace Gdterm.UI.Controls
             var form = new Form
             {
                 Text = existing == null ? "添加高亮规则" : "编辑高亮规则",
-                Size = DpiScale.S(this, 420, 350),
-                StartPosition = FormStartPosition.CenterParent,
+                StartPosition = FormStartPosition.CenterParent, // ClientSize 在按钮行后按行高动态计算（见下方）
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false, MinimizeBox = false
             };
             var font = Services.FormFontPolicy.UiFont();
+            // P0-1：固定 y 步进→字体驱动行高（原先 32/28/40 在大字号下重叠）
+            int fieldH = Math.Max(DpiScale.V(this, 30), Services.FormFontPolicy.RowStep(this));
+            int rowH = fieldH + DpiScale.V(this, 6);
+            int rowHChk = Math.Max(DpiScale.V(this, 28), fieldH);
             int y = 15;
 
-            var lblName = Lbl("名称:", 15, y); var txtName = Txt(100, y, 285); y += 32;
-            var lblPattern = Lbl("匹配模式:", 15, y); var txtPattern = Txt(100, y, 285); y += 32;
-            var chkRegex = Chk("正则表达式", 100, y); var chkCase = Chk("区分大小写", 220, y); y += 28;
-            var lblFg = Lbl("前景色:", 15, y); var txtFg = Txt(100, y, 100); txtFg.PlaceholderText = "#FF4444";
-            var lblBg = Lbl("背景色:", 220, y); var txtBg = Txt(290, y, 95); txtBg.PlaceholderText = "#330000"; y += 32;
-            var chkBold = Chk("加粗", 100, y); y += 40;
+            var lblName = Lbl("名称:", 15, y); var txtName = Txt(100, y, 285, fieldH); y += rowH;
+            var lblPattern = Lbl("匹配模式:", 15, y); var txtPattern = Txt(100, y, 285, fieldH); y += rowH;
+            var chkRegex = Chk("正则表达式", 100, y); var chkCase = Chk("区分大小写", 220, y); y += rowHChk;
+            var lblFg = Lbl("前景色:", 15, y); var txtFg = Txt(100, y, 100, fieldH); txtFg.PlaceholderText = "#FF4444";
+            var lblBg = Lbl("背景色:", 220, y); var txtBg = Txt(290, y, 95, fieldH); txtBg.PlaceholderText = "#330000"; y += rowH;
+            var chkBold = Chk("加粗", 100, y); y += rowHChk + DpiScale.V(this, 12);
 
             if (existing != null)
             {
@@ -198,11 +201,14 @@ namespace Gdterm.UI.Controls
                 chkBold.Checked = existing.Bold;
             }
 
-            var btnOk = new AntdUI.Button { Text = "确定", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(this, 220, y), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent };
-            var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(this, 310, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
+            int btnH = Math.Max(DpiScale.V(this, 30), fieldH);
+            var btnOk = new AntdUI.Button { Text = "确定", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 220, y), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent };
+            var btnCancel = new AntdUI.Button { Text = "取消", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 310, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
 
             form.Controls.AddRange(new Control[] { lblName, txtName, lblPattern, txtPattern, chkRegex, chkCase, lblFg, txtFg, lblBg, txtBg, chkBold, btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
+            // 客户区高度随行高自适应（原先固定 350 在大字号下裁剪）
+            form.ClientSize = new Size(DpiScale.V(this, 420), y + btnH + DpiScale.V(this, 16));
 
             if (form.ShowDialog(this) != DialogResult.OK || string.IsNullOrWhiteSpace(txtName.Text)) return null;
             return new HighlightRule
@@ -216,7 +222,7 @@ namespace Gdterm.UI.Controls
         }
 
         private AntdUI.Label Lbl(string t, int x, int y) => new AntdUI.Label { Text = t, Location = DpiScale.P(this, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground };
-        private AntdUI.Input Txt(int x, int y, int w) => new AntdUI.Input { Location = DpiScale.P(this, x, y), Size = DpiScale.S(this, w, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f)};
+        private AntdUI.Input Txt(int x, int y, int w, int fieldH) => new AntdUI.Input { Location = DpiScale.P(this, x, y), Size = new Size(DpiScale.V(this, w), fieldH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f)};
         private AntdUI.Checkbox Chk(string t, int x, int y) { var c = new AntdUI.Checkbox { Text = t, Location = DpiScale.P(this, x, y), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }; Controls.Add(c); return c; }
 
         protected override void Dispose(bool disposing) { base.Dispose(disposing); }

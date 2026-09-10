@@ -70,7 +70,7 @@ namespace Gdterm.UI.Controls
                 FullRowSelect = true,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", 9f)
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f)
             };
             _lvRules.Columns.Add("类型", 60);
             _lvRules.Columns.Add("名称", 120);
@@ -116,26 +116,33 @@ namespace Gdterm.UI.Controls
         {
             var form = new Form
             {
-                Text = "添加端口转发规则", Size = DpiScale.S(this, 400, 320),
+                Text = "添加端口转发规则", // ClientSize 在按钮行后按行高动态计算（见下方）
                 StartPosition = FormStartPosition.CenterParent,
                 BackColor = GdtermColorTable.Background, ForeColor = GdtermColorTable.Foreground,
                 FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false
             };
-            var font = Services.FormFontPolicy.UiFont(); int y = 15;
-            var cmbType = new AntdUI.Select { Location = DpiScale.P(this, 110, y - 3), Size = DpiScale.S(this, 250, 25), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = font };
+            var font = Services.FormFontPolicy.UiFont();
+            // P0-1：固定 y 步进→字体驱动行高（原先 32/50 在大字号下重叠）
+            int fieldH = Math.Max(DpiScale.V(this, 30), Services.FormFontPolicy.RowStep(this));
+            int rowH = fieldH + DpiScale.V(this, 6);
+            int y = 15;
+            var cmbType = new AntdUI.Select { Location = DpiScale.P(this, 110, y), Size = new Size(DpiScale.V(this, 250), fieldH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = font };
             cmbType.Items.AddRange(new object[] { "Local（本地转发）", "Remote（远程转发）", "Dynamic（SOCKS5）" });
             cmbType.SelectedIndex = 0;
-            Lbl(form, "类型:", 15, y); form.Controls.Add(cmbType); y += 32;
-            var txtName = Txt(form, 110, y, 250); Lbl(form, "名称:", 15, y); y += 32;
-            var txtLocalHost = Txt(form, 110, y, 120); txtLocalHost.Text = "127.0.0.1"; Lbl(form, "本地地址:", 15, y);
-            var txtLocalPort = Txt(form, 280, y, 80); Lbl(form, "端口:", 245, y); y += 32;
-            var txtRemoteHost = Txt(form, 110, y, 120); txtRemoteHost.Text = "127.0.0.1"; Lbl(form, "远程地址:", 15, y);
-            var txtRemotePort = Txt(form, 280, y, 80); Lbl(form, "端口:", 245, y); y += 50;
+            Lbl(form, "类型:", 15, y); form.Controls.Add(cmbType); y += rowH;
+            var txtName = Txt(form, 110, y, 250, fieldH); Lbl(form, "名称:", 15, y); y += rowH;
+            var txtLocalHost = Txt(form, 110, y, 120, fieldH); txtLocalHost.Text = "127.0.0.1"; Lbl(form, "本地地址:", 15, y);
+            var txtLocalPort = Txt(form, 280, y, 80, fieldH); Lbl(form, "端口:", 245, y); y += rowH;
+            var txtRemoteHost = Txt(form, 110, y, 120, fieldH); txtRemoteHost.Text = "127.0.0.1"; Lbl(form, "远程地址:", 15, y);
+            var txtRemotePort = Txt(form, 280, y, 80, fieldH); Lbl(form, "端口:", 245, y); y += rowH + DpiScale.V(this, 12);
 
-            var btnOk = new AntdUI.Button { Text = "确定", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(this, 200, y), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent };
-            var btnCancel = new AntdUI.Button { Text = "取消", Size = DpiScale.S(this, 80, 28), Location = DpiScale.P(this, 290, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
+            int btnH = Math.Max(DpiScale.V(this, 30), fieldH);
+            var btnOk = new AntdUI.Button { Text = "确定", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 200, y), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent };
+            var btnCancel = new AntdUI.Button { Text = "取消", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 290, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
+            // 客户区高度随行高自适应（原先固定 320 在大字号下裁剪）
+            form.ClientSize = new Size(DpiScale.V(this, 400), y + btnH + DpiScale.V(this, 16));
 
             if (form.ShowDialog(this) == DialogResult.OK)
             {
@@ -188,7 +195,7 @@ namespace Gdterm.UI.Controls
         }
 
         private static void Lbl(Form f, string t, int x, int y) { f.Controls.Add(new AntdUI.Label { Text = t, Location = DpiScale.P(f, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }); }
-        private static AntdUI.Input Txt(Form f, int x, int y, int w) { var t = new AntdUI.Input { Location = DpiScale.P(f, x, y), Size = DpiScale.S(f, w, 24), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", 9f)}; f.Controls.Add(t); return t; }
+        private static AntdUI.Input Txt(Form f, int x, int y, int w, int fieldH) { var t = new AntdUI.Input { Location = DpiScale.P(f, x, y), Size = new Size(DpiScale.V(f, w), fieldH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f)}; f.Controls.Add(t); return t; }
 
         protected override void Dispose(bool disposing)
         {
