@@ -5,6 +5,7 @@ using Gdterm.KeePass;
 using Gdterm.Security;
 using Gdterm.Tunnel;
 using Gdterm.Security.Models;
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Controls
 {

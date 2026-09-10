@@ -252,7 +252,9 @@ namespace Gdterm.UI.Controls
             cmbType.Items.AddRange(new object[] { "Send（发送文本）", "Wait（等待关键词）", "Delay（延时）" });
             cmbType.SelectedIndex = 0;
             Lbl("类型:", 12, 15, form); form.Controls.Add(cmbType);
-            var txtValue = Txt(100, 48, 220, form); Lbl("内容:", 12, 51, form);
+            // AddStepDialog 是独立小窗，用自身 fieldH（与主编辑器行高解耦）
+            int stepFieldH = Math.Max(DpiScale.V(this, 24), Services.FormFontPolicy.RowStep(this));
+            var txtValue = Txt(100, 48, 220, form, stepFieldH); Lbl("内容:", 12, 51, form);
             var numTimeout = new AntdUI.InputNumber { Location = DpiScale.P(this, 100, 82), Size = DpiScale.S(this, 100, 25), Maximum = 60000, Value = 10000, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = font }; Lbl("超时:", 12, 85, form); form.Controls.Add(numTimeout);
 
             var btnOk = new AntdUI.Button { Text = "确定", Size = DpiScale.S(this, 70, 26), Location = DpiScale.P(this, 170, 140), DialogResult = DialogResult.OK, BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent };

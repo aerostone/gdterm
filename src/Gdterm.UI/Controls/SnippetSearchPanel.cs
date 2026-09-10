@@ -233,7 +233,9 @@ namespace Gdterm.UI.Controls
             int y = 15;
             foreach (var ph in placeholders)
             {
-                var lbl = new AntdUI.Label { Text = ph + ":", Location = new Point(15, y + Math.Max(4, (fieldH - form.FontHeight) / 2)), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground };
+                // 标签垂直居中：用已知的 UiFont 行高代替受保护的 FontHeight
+                int lblOff = Math.Max(4, (fieldH - Services.FormFontPolicy.RowStep(form)) / 2);
+                var lbl = new AntdUI.Label { Text = ph + ":", Location = new Point(15, y + lblOff), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground };
                 var txt = new AntdUI.Input { Location = DpiScale.P(form, 100, y), Size = new Size(DpiScale.V(form, 260), fieldH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f)};
                 form.Controls.AddRange(new Control[] { lbl, txt });
                 inputs[ph] = txt;

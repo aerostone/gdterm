@@ -162,7 +162,7 @@ namespace Gdterm.UI.Controls
             };
         }
 
-        private static AntdUI.Button MakeButton(string text)
+        private AntdUI.Button MakeButton(string text)
         {
             return new AntdUI.Button
             {

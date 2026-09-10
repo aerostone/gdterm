@@ -403,7 +403,7 @@ namespace Gdterm.UI.Controls
             })
             {
                 f.ClientSize = new Size(DpiScale.V(f, 380), DpiScale.V(f, 128));
-                var lbl = new AntdUI.Label { Text = label, Dock = DockStyle.Top, Height = 28, Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 8), DpiScale.V(this, 12), 0), ForeColor = GdtermColorTable.Muted };
+                var lbl = new AntdUI.Label { Text = label, Dock = DockStyle.Top, Height = 28, Padding = new Padding(DpiScale.V(f, 12), DpiScale.V(f, 8), DpiScale.V(f, 12), 0), ForeColor = GdtermColorTable.Muted };
                 var box = new AntdUI.Input {
                     Dock = DockStyle.Top,
                     Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
