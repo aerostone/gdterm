@@ -101,7 +101,7 @@ namespace Gdterm.UI.Controls
                 item.SubItems.Add(r.Bold ? "✓" : "");
                 item.SubItems.Add(r.Enabled ? "✓" : "✗");
                 item.Tag = r;
-                if (!r.Enabled) item.ForeColor = GdtermColorTable.Border;
+                if (!r.Enabled) item.ForeColor = GdtermColorTable.Muted; // 禁用行置灰：Border 太深看不见，Muted 才是状态文字色
                 _lvRules.Items.Add(item);
             }
         }

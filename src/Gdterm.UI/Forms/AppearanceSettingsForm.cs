@@ -185,13 +185,14 @@ namespace Gdterm.UI.Forms
             y += rowH;
 
             // ── 底部按钮条：主(保存) + 恢复默认 + 取消 ──
-            _btnOk = new AntdUI.Button { Text = "保存", Type = AntdUI.TTypeMini.Primary, Size = new Size(DpiScale.V(this, 88), _fieldHeight), BackColor = GdtermColorTable.Accent, ForeColor = GdtermColorTable.OnAccent };
+            // Type 自绘：手写 BackColor/ForeColor 会被 AntdUI 绘制管线忽略，只留 Type
+            _btnOk = new AntdUI.Button { Text = "保存", Type = AntdUI.TTypeMini.Primary, Size = new Size(DpiScale.V(this, 88), _fieldHeight) };
             _btnOk.Click += (s, e) => SaveResult();
 
-            _btnReset = new AntdUI.Button { Text = "恢复默认", Type = AntdUI.TTypeMini.Default, Size = new Size(DpiScale.V(this, 96), _fieldHeight), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+            _btnReset = new AntdUI.Button { Text = "恢复默认", Type = AntdUI.TTypeMini.Default, Size = new Size(DpiScale.V(this, 96), _fieldHeight) };
             _btnReset.Click += (s, e) => ResetToDefaults();
 
-            _btnCancel = new AntdUI.Button { Text = "取消", Type = AntdUI.TTypeMini.Default, Size = new Size(DpiScale.V(this, 88), _fieldHeight), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+            _btnCancel = new AntdUI.Button { Text = "取消", Type = AntdUI.TTypeMini.Default, Size = new Size(DpiScale.V(this, 88), _fieldHeight) };
             _btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
 
             int btnTotal = DpiScale.V(this, 88 + 8 + 96 + 8 + 88);
