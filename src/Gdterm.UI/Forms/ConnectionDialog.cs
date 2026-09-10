@@ -183,14 +183,14 @@ namespace Gdterm.UI.Forms
                 Text = "选择凭据...",
                 Type = AntdUI.TTypeMini.Primary,
                 AutoSize = true,
-                Margin = new Padding(0, 2, 6, 0)
+                Margin = new Padding(0, DpiScale.V(this, 2), DpiScale.V(this, 6), 0)
             };
             btnPickCred.Click += OnPickCredential;
             var btnClearCred = new AntdUI.Button {
                 Text = "清除",
                 Type = AntdUI.TTypeMini.Default,
                 AutoSize = true,
-                Margin = new Padding(0, 2, 0, 0)
+                Margin = new Padding(0, DpiScale.V(this, 2), 0, 0)
             };
             btnClearCred.Click += OnClearCredential;
             credBtns.Controls.Add(btnPickCred);
@@ -225,7 +225,7 @@ namespace Gdterm.UI.Forms
             // --- SSH 区 ---
             _secSsh = MakeSection("SSH 隧道 / 跳板");
             var sshLayout = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true };
-            sshLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
+            sshLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
             sshLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             _tunnelCheck = new AntdUI.Checkbox { Text = "使用 SSH 隧道（跳板机）", AutoSize = true };
             sshLayout.Controls.Add(_tunnelCheck, 0, 0); sshLayout.SetColumnSpan(_tunnelCheck, 2);
@@ -238,7 +238,7 @@ namespace Gdterm.UI.Forms
             // --- RDP 区 ---
             _secRdp = MakeSection("RDP 选项");
             var rdpGrid = new TableLayoutPanel { ColumnCount = 2, AutoSize = true };
-            rdpGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
+            rdpGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
             rdpGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             // 域名仅 RDP 域账户有意义——从基本信息移到这里
             _domainBox = AddRow(rdpGrid, 0, "RDP域名", new AntdUI.Input());
@@ -255,7 +255,7 @@ namespace Gdterm.UI.Forms
             rdpChecks.Controls.AddRange(new Control[] { _rdpDriveCheck, _rdpClipboardCheck, _rdpPrinterCheck, _rdpFullScreenCheck, _rdpNlaCheck, _rdpForceNlaCheck, _rdpTcpDumpCheck });
             var depthPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 4) };
             depthPanel.Controls.Add(new AntdUI.Label { Text = "色深:", AutoSize = true });
-            _rdpColorDepth = new AntdUI.InputNumber { Minimum = 8, Maximum = 32, Value = 32, Increment = 8, Width = 60 };
+            _rdpColorDepth = new AntdUI.InputNumber { Minimum = 8, Maximum = 32, Value = 32, Increment = 8, Width = DpiScale.V(this, 60) };
             depthPanel.Controls.Add(_rdpColorDepth);
             rdpGrid.Controls.Add(rdpChecks, 1, 1);
             rdpGrid.Controls.Add(depthPanel, 1, 2);
@@ -263,14 +263,14 @@ namespace Gdterm.UI.Forms
             // 系统自带 mstsc（ActiveX 嵌入）是微软自家实现，兼容性最好
             var enginePanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 4) };
             enginePanel.Controls.Add(new AntdUI.Label { Text = "渲染引擎:", AutoSize = true });
-            _rdpEngineCombo = new AntdUI.Select { Width = 170 };
+            _rdpEngineCombo = new AntdUI.Select { Width = DpiScale.V(this, 170) };
             _rdpEngineCombo.Items.AddRange(new object[] { "自动（优先 FreeRDP）", "FreeRDP 进程嵌入", "系统 mstsc（兼容模式）" });
             enginePanel.Controls.Add(_rdpEngineCombo);
             rdpGrid.Controls.Add(enginePanel, 1, 3);
             // 负载均衡 token：堡垒机/NetScaler 下发的 LB_LOAD_BALANCE_INFO Cookie（如 tsv://... 或 Cookie: msts=...）
             var lbPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, 4) };
             lbPanel.Controls.Add(new AntdUI.Label { Text = "负载均衡:", AutoSize = true });
-            _rdpLoadBalanceBox = new AntdUI.Input { Width = 230 };
+            _rdpLoadBalanceBox = new AntdUI.Input { Width = DpiScale.V(this, 230) };
             _rdpLoadBalanceBox.PlaceholderText = "如 Cookie: msts=NSFVERIFYHASH=... (选填)";
             lbPanel.Controls.Add(_rdpLoadBalanceBox);
             rdpGrid.Controls.Add(lbPanel, 1, 4);
@@ -280,7 +280,7 @@ namespace Gdterm.UI.Forms
             // --- Serial 区 ---
             _secSerial = MakeSection("串口参数");
             var serialLayout = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true };
-            serialLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 100));
+            serialLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
             serialLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             _serialPortCombo = AddRow(serialLayout, 0, "端口", new AntdUI.Select());
             _serialPortCombo.Items.AddRange(new object[] { "COM1", "COM2", "COM3", "COM4", "/dev/ttyS0", "/dev/ttyUSB0" });
@@ -423,7 +423,7 @@ namespace Gdterm.UI.Forms
         /// <summary>折叠态的合理最低高度：按顶部面板首选高度 + 按钮栏推算。</summary>
         private int MinimumTrackingHeight()
         {
-            return 330; // 设计基准值，防止异常情况下窗体塌成一条线
+            return DpiScale.V(this, 330); // 设计基准值，防止异常情况下窗体塌成一条线
         }
 
         protected override void OnShown(EventArgs e)
