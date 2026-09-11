@@ -57,8 +57,15 @@ namespace Gdterm.Tests.Ui
                         Check(rhv >= 24 && rhv <= 34, "表 RowHeight=" + rhv + " 在 24-34");
                         // 列宽：5 列百分比之和 100%，实得像素宽之和 >0
                         var cols = table.GetType().GetProperty("Columns");
-                        var colList = cols != null ? cols.GetValue(table, null) as System.Collections.IList : null;
-                        Check(colList != null && colList.Count == 5, "表列=5（实际" + (colList == null ? -1 : colList.Count) + ")");
+                        object colObj = cols != null ? cols.GetValue(table, null) : null;
+                        int colCount = -1;
+                        if (colObj is System.Collections.ICollection cc) colCount = cc.Count;
+                        else if (colObj != null)
+                        {
+                            var cp = colObj.GetType().GetProperty("Count");
+                            if (cp != null) colCount = (int)cp.GetValue(colObj, null);
+                        }
+                        Check(colCount == 5, "表列=5（实际" + colCount + ")");
                     }
                     Shot(f, Path.Combine(outDir, "keepass-manager.png"));
                     var closeBtn = FindByName(f, "KeePassCloseButton") as Control;
