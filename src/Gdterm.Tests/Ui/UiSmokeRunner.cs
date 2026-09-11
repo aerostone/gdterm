@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -38,12 +38,13 @@ namespace Gdterm.Tests.Ui
                     Application.DoEvents();
                     Thread.Sleep(400);
                     Application.DoEvents();
-                    var table = FindByName(f, "KeePassEntryTable") as Control;
+                    var table = FindByName(f, "KeePassEntryTable");
                     Check(table != null, "KeePassEntryTable 可定位");
                     if (table != null)
                     {
-                        dynamic dt = table;
-                        Check((int)dt.RowCount == 2, "表行=2（实际" + dt.RowCount + ")");
+                        var pi = table.GetType().GetProperty("RowCount");
+                        int rc = pi != null ? (int)pi.GetValue(table, null) : -1;
+                        Check(rc == 2, "表行=2（实际" + rc + ")");
                     }
                     Shot(f, Path.Combine(outDir, "keepass-manager.png"));
                     var closeBtn = FindByName(f, "KeePassCloseButton") as Control;
