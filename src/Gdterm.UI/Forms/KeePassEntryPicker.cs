@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -157,7 +157,7 @@ namespace Gdterm.UI.Forms
         private void PopulateList(IList<KeePassEntrySummary> items)
         {
             _rows.Clear();
-            var rows = new AntdUI.AntList<EntryRow>();
+            var rows = new List<EntryRow>();
             foreach (var e in items)
             {
                 _rows.Add(e);

@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.Core.Models;
@@ -177,7 +178,7 @@ namespace Gdterm.UI.Controls
         private void RefreshList()
         {
             _rows.Clear();
-            var rows = new AntdUI.AntList<BindingRow>();
+            var rows = new List<BindingRow>();
             foreach (var b in _store.GetActiveBindings())
             {
                 _rows.Add(b);

@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.KeePass;
@@ -155,7 +156,7 @@ namespace Gdterm.UI.Forms
             table.Columns.Add(new AntdUI.Column("Issue", "问题", AntdUI.ColumnAlign.Left));
             table.Columns.Add(new AntdUI.Column("Strength", "强度", AntdUI.ColumnAlign.Left));
 
-            var rows = new AntdUI.AntList<IssueRow>();
+            var rows = new List<IssueRow>();
             if (issues != null)
             {
                 foreach (var issue in issues)
@@ -201,7 +202,7 @@ namespace Gdterm.UI.Forms
             listView.Columns.Add(new AntdUI.Column("Username", "用户名", AntdUI.ColumnAlign.Left));
             listView.Columns.Add(new AntdUI.Column("GroupPath", "分组", AntdUI.ColumnAlign.Left));
 
-            var rows = new AntdUI.AntList<DupRow>();
+            var rows = new List<DupRow>();
             foreach (var group in groups)
             {
                 bool first = true;

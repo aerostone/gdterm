@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.KeePass;
@@ -142,7 +143,7 @@ namespace Gdterm.UI.Forms
             {
                 var entries = _keepassService.ListEntries() ?? new System.Collections.Generic.List<KeePassEntrySummary>();
                 _entries.Clear();
-                var rows = new AntdUI.AntList<EntryRow>();
+                var rows = new List<EntryRow>();
                 foreach (var entry in entries)
                 {
                     var title = entry.Title ?? "(无标题)";

@@ -278,7 +278,7 @@ namespace Gdterm.UI.Forms
         private void RefreshPluginList()
         {
             _pluginRows.Clear();
-            var rows = new AntdUI.AntList<PluginRow>();
+            var rows = new List<PluginRow>();
             foreach (var p in _store.Plugins)
             {
                 _pluginRows.Add(p);
@@ -533,7 +533,7 @@ namespace Gdterm.UI.Forms
             _running = true;
             UpdateRunButtonState();
             _findingRows.Clear();
-            _findingTable.DataSource = new AntdUI.AntList<FindingRow>();
+            _findingTable.DataSource = new List<FindingRow>();
             SetFindingCount(0);
             _rawOutput.Text = "";
 
@@ -582,7 +582,7 @@ namespace Gdterm.UI.Forms
             {
                 _findingRows.Add(f);
             }
-            var rows = new AntdUI.AntList<FindingRow>();
+            var rows = new List<FindingRow>();
             foreach (var f in _findingRows)
             {
                 rows.Add(new FindingRow { Severity = SeverityLabel(f.Severity), Title = f.Title, Detail = f.Detail });

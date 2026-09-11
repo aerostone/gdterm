@@ -1,4 +1,5 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.Security;
@@ -201,7 +202,7 @@ namespace Gdterm.UI.Forms
             try
             {
                 var rules = _detector.GetAllRules();
-                var rows = new AntdUI.AntList<RuleRow>();
+                var rows = new List<RuleRow>();
                 foreach (var rule in rules)
                 {
                     _ruleRows.Add(rule);
