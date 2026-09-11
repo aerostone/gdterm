@@ -73,7 +73,7 @@ def main():
         return 1
 
     for fn in files:
-        with open(os.path.join(d, fn), encoding="utf-8") as fp:
+        with open(os.path.join(d, fn), encoding="utf-8-sig") as fp:
             tree = json.load(fp)
         print("--- " + fn + " (" + tree.get("form", "?") + ") ---")
         all_nodes = walk(tree)

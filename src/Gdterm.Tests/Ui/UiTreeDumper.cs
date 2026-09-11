@@ -55,6 +55,7 @@ namespace Gdterm.Tests.Ui
             sb.Append("\"font\":\"").Append(Esc(c.Font.Name + " " + c.Font.SizeInPoints.ToString("0.##") + "pt")).Append("\",");
             // AntdUI 特有：RowHeight / BorderWidth / Type（反射读，有则记）
             sb.Append("\"extra\":{");
+            BeginExtra();
             AppendProp(c, sb, "RowHeight");
             AppendProp(c, sb, "BorderWidth");
             AppendProp(c, sb, "Type");
@@ -79,10 +80,17 @@ namespace Gdterm.Tests.Ui
                 var pi = c.GetType().GetProperty(prop);
                 if (pi == null) return;
                 object v = pi.GetValue(c, null);
-                sb.Append("\"").Append(prop).Append("\":\"").Append(Esc(v == null ? "null" : v.ToString())).Append("\",");
+                if (_extraCount > 0) sb.Append(",");
+                sb.Append("\"").Append(prop).Append("\":\"").Append(Esc(v == null ? "null" : v.ToString())).Append("\"");
+                _extraCount++;
             }
             catch { }
         }
+
+        [System.ThreadStatic]
+        private static int _extraCount;
+
+        private static void BeginExtra() { _extraCount = 0; }
 
         private static int DpiOf(Control c)
         {
