@@ -154,12 +154,12 @@ namespace Gdterm.UI.Forms
                 BorderWidth = 0,
                 RowHeight = rowH
             };
-            _pluginTable.Columns.Add(new AntdUI.Column("Name", "插件", AntdUI.ColumnAlign.Left));
-            _pluginTable.Columns.Add(new AntdUI.Column("Target", "目标", AntdUI.ColumnAlign.Left));
-            _pluginTable.Columns.Add(new AntdUI.Column("Category", "分类", AntdUI.ColumnAlign.Left));
-            _pluginTable.Columns.Add(new AntdUI.Column("Source", "来源", AntdUI.ColumnAlign.Left));
-            _pluginTable.Columns.Add(new AntdUI.Column("Trust", "签名", AntdUI.ColumnAlign.Left));
-            _pluginTable.Columns.Add(new AntdUI.Column("Version", "版本", AntdUI.ColumnAlign.Left));
+            _pluginTable.Columns.Add(new AntdUI.Column("Name", "插件", AntdUI.ColumnAlign.Left) { Width = "24%" });
+            _pluginTable.Columns.Add(new AntdUI.Column("Target", "目标", AntdUI.ColumnAlign.Left) { Width = "18%" });
+            _pluginTable.Columns.Add(new AntdUI.Column("Category", "分类", AntdUI.ColumnAlign.Left) { Width = "14%" });
+            _pluginTable.Columns.Add(new AntdUI.Column("Source", "来源", AntdUI.ColumnAlign.Left) { Width = "16%" });
+            _pluginTable.Columns.Add(new AntdUI.Column("Trust", "签名", AntdUI.ColumnAlign.Left) { Width = "12%" });
+            _pluginTable.Columns.Add(new AntdUI.Column("Version", "版本", AntdUI.ColumnAlign.Left) { Width = "16%" });
             _pluginTable.CheckedChanged += (s, ev) => UpdateRunButtonState();
             _pluginTable.CellDoubleClick += (s, ev) => { if (!_running && SelectedRunnablePlugins().Count > 0) OnRunClicked(null, null); };
             pluginPanel.Controls.Add(_pluginTable);
@@ -188,9 +188,9 @@ namespace Gdterm.UI.Forms
                 BorderWidth = 0,
                 RowHeight = rowH
             };
-            _findingTable.Columns.Add(new AntdUI.Column("Severity", "级别", AntdUI.ColumnAlign.Left));
-            _findingTable.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left));
-            _findingTable.Columns.Add(new AntdUI.Column("Detail", "详情", AntdUI.ColumnAlign.Left));
+            _findingTable.Columns.Add(new AntdUI.Column("Severity", "级别", AntdUI.ColumnAlign.Left) { Width = "12%" });
+            _findingTable.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left) { Width = "28%" });
+            _findingTable.Columns.Add(new AntdUI.Column("Detail", "详情", AntdUI.ColumnAlign.Left) { Width = "60%" });
             findingPanel.Controls.Add(_findingTable);
             var findingHeader = new AntdUI.Label {
                 Dock = DockStyle.Top,

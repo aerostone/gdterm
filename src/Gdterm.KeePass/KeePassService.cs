@@ -235,6 +235,21 @@ namespace Gdterm.KeePass
             if (entry.SshPrivateKeyPassphrase != null)
                 pwEntry.Strings.Set(SshKeyPassFieldName, new ProtectedString(true, entry.SshPrivateKeyPassphrase));
 
+            // 分组移动：编辑对话框改了分组路径时，把条目搬到目标组（不存在则创建）
+            if (entry.GroupPath != null)
+            {
+                var currentPath = GetGroupPath(pwEntry.ParentGroup);
+                if (!string.Equals(currentPath, entry.GroupPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    var targetGroup = GetOrCreateGroup(entry.GroupPath);
+                    if (pwEntry.ParentGroup != targetGroup)
+                    {
+                        pwEntry.ParentGroup.Entries.Remove(pwEntry);
+                        targetGroup.AddEntry(pwEntry, true);
+                    }
+                }
+            }
+
             SaveDatabase();
         }
 

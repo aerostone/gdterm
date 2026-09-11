@@ -150,11 +150,11 @@ namespace Gdterm.UI.Forms
                 BorderWidth = 0,
                 RowHeight = rowH
             };
-            table.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left));
-            table.Columns.Add(new AntdUI.Column("Username", "用户名", AntdUI.ColumnAlign.Left));
-            table.Columns.Add(new AntdUI.Column("GroupPath", "分组", AntdUI.ColumnAlign.Left));
-            table.Columns.Add(new AntdUI.Column("Issue", "问题", AntdUI.ColumnAlign.Left));
-            table.Columns.Add(new AntdUI.Column("Strength", "强度", AntdUI.ColumnAlign.Left));
+            table.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left) { Width = "22%" });
+            table.Columns.Add(new AntdUI.Column("Username", "用户名", AntdUI.ColumnAlign.Left) { Width = "18%" });
+            table.Columns.Add(new AntdUI.Column("GroupPath", "分组", AntdUI.ColumnAlign.Left) { Width = "20%" });
+            table.Columns.Add(new AntdUI.Column("Issue", "问题", AntdUI.ColumnAlign.Left) { Width = "25%" });
+            table.Columns.Add(new AntdUI.Column("Strength", "强度", AntdUI.ColumnAlign.Left) { Width = "15%" });
 
             var rows = new List<IssueRow>();
             if (issues != null)
@@ -197,10 +197,10 @@ namespace Gdterm.UI.Forms
                 BorderWidth = 0,
                 RowHeight = rowH
             };
-            listView.Columns.Add(new AntdUI.Column("Hash", "密码哈希", AntdUI.ColumnAlign.Left));
-            listView.Columns.Add(new AntdUI.Column("Title", "条目标题", AntdUI.ColumnAlign.Left));
-            listView.Columns.Add(new AntdUI.Column("Username", "用户名", AntdUI.ColumnAlign.Left));
-            listView.Columns.Add(new AntdUI.Column("GroupPath", "分组", AntdUI.ColumnAlign.Left));
+            listView.Columns.Add(new AntdUI.Column("Hash", "密码哈希", AntdUI.ColumnAlign.Left) { Width = "30%" });
+            listView.Columns.Add(new AntdUI.Column("Title", "条目标题", AntdUI.ColumnAlign.Left) { Width = "25%" });
+            listView.Columns.Add(new AntdUI.Column("Username", "用户名", AntdUI.ColumnAlign.Left) { Width = "20%" });
+            listView.Columns.Add(new AntdUI.Column("GroupPath", "分组", AntdUI.ColumnAlign.Left) { Width = "25%" });
 
             var rows = new List<DupRow>();
             foreach (var group in groups)

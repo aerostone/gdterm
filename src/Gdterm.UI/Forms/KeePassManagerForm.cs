@@ -77,11 +77,11 @@ namespace Gdterm.UI.Forms
                 BorderWidth = 0,
                 RowHeight = rowH
             };
-            _entryTable.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left));
-            _entryTable.Columns.Add(new AntdUI.Column("Username", "用户名", AntdUI.ColumnAlign.Left));
-            _entryTable.Columns.Add(new AntdUI.Column("GroupPath", "分组路径", AntdUI.ColumnAlign.Left));
-            _entryTable.Columns.Add(new AntdUI.Column("Url", "URL", AntdUI.ColumnAlign.Left));
-            _entryTable.Columns.Add(new AntdUI.Column("Modified", "最后修改", AntdUI.ColumnAlign.Left));
+            _entryTable.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left) { Width = "20%" });
+            _entryTable.Columns.Add(new AntdUI.Column("Username", "用户名", AntdUI.ColumnAlign.Left) { Width = "20%" });
+            _entryTable.Columns.Add(new AntdUI.Column("GroupPath", "分组路径", AntdUI.ColumnAlign.Left) { Width = "25%" });
+            _entryTable.Columns.Add(new AntdUI.Column("Url", "URL", AntdUI.ColumnAlign.Left) { Width = "20%" });
+            _entryTable.Columns.Add(new AntdUI.Column("Modified", "最后修改", AntdUI.ColumnAlign.Left) { Width = "15%" });
             _entryTable.CellClick += OnEntryCellClicked;         // 单击=选中（高亮自动跟随，状态栏回显）
             _entryTable.CellDoubleClick += OnEntryCellDoubleClicked; // 双击=复制密码
 
@@ -95,9 +95,34 @@ namespace Gdterm.UI.Forms
                 Padding = new Padding(pad, DpiScale.V(this, 5), pad, DpiScale.V(this, 5))
             };
 
+            // 底部关闭条（RightToLeft：关闭在右，ESC 快捷关闭）
+            var bottomPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Bottom,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false,
+                BackColor = GdtermColorTable.Background,
+                Padding = new Padding(0, DpiScale.V(this, 4), pad, DpiScale.V(this, 4))
+            };
+            var closeButton = new AntdUI.Button
+            {
+                Text = "关闭",
+                AutoSize = true,
+                Type = AntdUI.TTypeMini.Default,
+                Padding = btnPadding,
+                Margin = new Padding(0)
+            };
+            closeButton.Click += (s, e) => Close();
+            bottomPanel.Controls.Add(closeButton);
+
             Controls.Add(_entryTable);
             Controls.Add(toolbar);
+            Controls.Add(bottomPanel);
             Controls.Add(_statusLabel);
+
+            CancelButton = closeButton;
         }
 
         private static AntdUI.Button MakeToolBtn(string text, EventHandler onClick, Padding padding, Padding margin)

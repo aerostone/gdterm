@@ -88,12 +88,12 @@ namespace Gdterm.UI.Forms
                 BorderWidth = 0,
                 RowHeight = rowH
             };
-            _ruleTable.Columns.Add(new AntdUI.Column("Name", "名称", AntdUI.ColumnAlign.Left));
-            _ruleTable.Columns.Add(new AntdUI.Column("Pattern", "匹配模式", AntdUI.ColumnAlign.Left));
-            _ruleTable.Columns.Add(new AntdUI.Column("Type", "匹配类型", AntdUI.ColumnAlign.Left));
-            _ruleTable.Columns.Add(new AntdUI.Column("Level", "危险等级", AntdUI.ColumnAlign.Left));
-            _ruleTable.Columns.Add(new AntdUI.Column("Category", "分类", AntdUI.ColumnAlign.Left));
-            _ruleTable.Columns.Add(new AntdUI.Column("Enabled", "启用", AntdUI.ColumnAlign.Left));
+            _ruleTable.Columns.Add(new AntdUI.Column("Name", "名称", AntdUI.ColumnAlign.Left) { Width = "16%" });
+            _ruleTable.Columns.Add(new AntdUI.Column("Pattern", "匹配模式", AntdUI.ColumnAlign.Left) { Width = "28%" });
+            _ruleTable.Columns.Add(new AntdUI.Column("Type", "匹配类型", AntdUI.ColumnAlign.Left) { Width = "12%" });
+            _ruleTable.Columns.Add(new AntdUI.Column("Level", "危险等级", AntdUI.ColumnAlign.Left) { Width = "12%" });
+            _ruleTable.Columns.Add(new AntdUI.Column("Category", "分类", AntdUI.ColumnAlign.Left) { Width = "16%" });
+            _ruleTable.Columns.Add(new AntdUI.Column("Enabled", "启用", AntdUI.ColumnAlign.Left) { Width = "16%" });
             _ruleTable.CellDoubleClick += (s, e) => OnEditRuleClick(s, e);
 
             // —— 白名单区（底部组合面板，Dock=Bottom，字体驱动高度）——

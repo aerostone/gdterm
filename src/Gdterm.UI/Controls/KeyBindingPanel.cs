@@ -117,13 +117,13 @@ namespace Gdterm.UI.Controls
                 BorderWidth = 0,
                 RowHeight = Math.Max(DpiScale.V(this, 28), Math.Max(DpiScale.V(this, 38), Gdterm.UI.Services.FormFontPolicy.RowStep(this)))
             };
-            _table.Columns.Add(new AntdUI.Column("Name", "名称", AntdUI.ColumnAlign.Left));
-            _table.Columns.Add(new AntdUI.Column("Combo", "按键组合", AntdUI.ColumnAlign.Left));
-            _table.Columns.Add(new AntdUI.Column("Type", "类型", AntdUI.ColumnAlign.Left));
-            _table.Columns.Add(new AntdUI.Column("Value", "发送内容", AntdUI.ColumnAlign.Left));
-            _table.Columns.Add(new AntdUI.Column("Group", "分组", AntdUI.ColumnAlign.Left));
-            _table.Columns.Add(new AntdUI.Column("State", "状态", AntdUI.ColumnAlign.Left));
-            _table.Columns.Add(new AntdUI.Column("Desc", "描述", AntdUI.ColumnAlign.Left));
+            _table.Columns.Add(new AntdUI.Column("Name", "名称", AntdUI.ColumnAlign.Left) { Width = "14%" });
+            _table.Columns.Add(new AntdUI.Column("Combo", "按键组合", AntdUI.ColumnAlign.Left) { Width = "16%" });
+            _table.Columns.Add(new AntdUI.Column("Type", "类型", AntdUI.ColumnAlign.Left) { Width = "10%" });
+            _table.Columns.Add(new AntdUI.Column("Value", "发送内容", AntdUI.ColumnAlign.Left) { Width = "24%" });
+            _table.Columns.Add(new AntdUI.Column("Group", "分组", AntdUI.ColumnAlign.Left) { Width = "12%" });
+            _table.Columns.Add(new AntdUI.Column("State", "状态", AntdUI.ColumnAlign.Left) { Width = "8%" });
+            _table.Columns.Add(new AntdUI.Column("Desc", "描述", AntdUI.ColumnAlign.Left) { Width = "16%" });
             _table.CellDoubleClick += (s, e) => OnEdit(s, e);
 
             Controls.Add(_table);
