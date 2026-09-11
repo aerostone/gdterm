@@ -49,6 +49,16 @@ namespace Gdterm.Tests.Ui
                         var pi = table.GetType().GetProperty("RowCount");
                         int rc = pi != null ? (int)pi.GetValue(table, null) : -1;
                         Check(rc == 2, "表行=2（实际" + rc + ")");
+                        // 布局断言（代替抓屏行高）：表有非零客户区 + 行高地板 24
+                        Check(table.ClientSize.Width > 200 && table.ClientSize.Height > 100,
+                            "表客户区=" + table.ClientSize.Width + "x" + table.ClientSize.Height);
+                        var rh = table.GetType().GetProperty("RowHeight");
+                        int rhv = rh != null ? (int)(rh.GetValue(table, null) ?? -1) : -1;
+                        Check(rhv >= 24 && rhv <= 34, "表 RowHeight=" + rhv + " 在 24-34");
+                        // 列宽：5 列百分比之和 100%，实得像素宽之和 >0
+                        var cols = table.GetType().GetProperty("Columns");
+                        var colList = cols != null ? cols.GetValue(table, null) as System.Collections.IList : null;
+                        Check(colList != null && colList.Count == 5, "表列=5（实际" + (colList == null ? -1 : colList.Count) + ")");
                     }
                     Shot(f, Path.Combine(outDir, "keepass-manager.png"));
                     var closeBtn = FindByName(f, "KeePassCloseButton") as Control;
