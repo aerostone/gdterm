@@ -60,7 +60,9 @@ namespace Gdterm.UI.Controls
                 BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Surface,
                 ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Foreground,
                 Font = ResolveDefaultFont(),
-                Height = 24
+                // 原生 TextBox 高度：Dock.Top 行内由字体自动定高，显式 Height 会被忽略；
+                // 跟随字号的唯一方式是 MinimumSize 地板（与 AntdUI 输入框 38 地板同一语义）
+                MinimumSize = new Size(0, Math.Max(Services.DpiScale.V(this, 30), Services.FormFontPolicy.RowStep(this)))
             };
             try { Gdterm.UI.Diagnostics.WinFormsCompat.SetCueBanner(_filterBox, "输入主机/名称/分组过滤…"); }
             catch { }
