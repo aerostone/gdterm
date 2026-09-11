@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Text;
@@ -61,13 +61,18 @@ namespace Gdterm.Tests.Ui
             AppendProp(c, sb, "Type");
             AppendProp(c, sb, "RowCount");
             sb.Append("},");
-            // 子树
+            // 子树：先走 Controls；AntdUI.Window 自绘容器可能把内容藏在内部字段，穿透找
             sb.Append("\"children\":[");
             bool cf = true;
             try
             {
                 foreach (Control ch in c.Controls)
                     DumpControl(ch, sb, ref cf, depth + 1);
+                if (c.Controls.Count == 0)
+                {
+                    foreach (var ch in InnerControls(c))
+                        DumpControl(ch, sb, ref cf, depth + 1);
+                }
             }
             catch { }
             sb.Append("]}");
@@ -91,6 +96,31 @@ namespace Gdterm.Tests.Ui
         private static int _extraCount;
 
         private static void BeginExtra() { _extraCount = 0; }
+
+        private static System.Collections.Generic.IEnumerable<Control> InnerControls(Control c)
+        {
+            // AntdUI.Window/BaseForm 内部容器字段名随版本变，逐个试
+            string[] fields = { "innerPanel", "_innerPanel", "panel", "_panel", "container", "_container", "bodyPanel", "_body", "contentPanel" };
+            foreach (var fn in fields)
+            {
+                try
+                {
+                    var fi = c.GetType().GetField(fn, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                    if (fi == null) continue;
+                    if (fi.GetValue(c) is Control inner && inner != c)
+                    {
+                        foreach (Control ch in inner.Controls) yield return ch;
+                        yield break;
+                    }
+                    if (fi.GetValue(c) is System.Collections.IEnumerable list)
+                    {
+                        foreach (var it in list) if (it is Control cc && cc != c) yield return cc;
+                        yield break;
+                    }
+                }
+                catch { }
+            }
+        }
 
         private static int DpiOf(Control c)
         {
