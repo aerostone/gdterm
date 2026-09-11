@@ -361,8 +361,10 @@ namespace Gdterm.UI.Forms
         private List<ScanPlugin> SelectedRunnablePlugins()
         {
             var result = new List<ScanPlugin>();
-            foreach (var idx in _pluginTable.SelectedIndexs)
+            // AntdUI Table 行号 1 开始（表头占 0），映射 _pluginRows 须减 1
+            foreach (var raw in _pluginTable.SelectedIndexs)
             {
+                var idx = raw - 1;
                 if (idx >= 0 && idx < _pluginRows.Count && _pluginRows[idx].IsRunnable)
                     result.Add(_pluginRows[idx]);
             }

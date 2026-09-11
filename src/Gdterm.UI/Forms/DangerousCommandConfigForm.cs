@@ -187,10 +187,11 @@ namespace Gdterm.UI.Forms
             public string Enabled { get; set; }
         }
 
-        /// <summary>取当前选中规则；无选中返回 null。</summary>
+        /// <summary>取当前选中规则；无选中返回 null。
+        /// AntdUI Table 行号 1 开始（表头占 0），映射 _ruleRows 须减 1。</summary>
         private DangerousCommandRule SelectedRule()
         {
-            var idx = _ruleTable.SelectedIndex;
+            var idx = _ruleTable.SelectedIndex - 1;
             if (idx >= 0 && idx < _ruleRows.Count) return _ruleRows[idx];
             return null;
         }

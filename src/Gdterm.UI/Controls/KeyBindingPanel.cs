@@ -197,7 +197,8 @@ namespace Gdterm.UI.Controls
 
         private TerminalKeyBinding SelectedBinding()
         {
-            var idx = _table.SelectedIndex;
+            // AntdUI Table 行号 1 开始（表头占 0），映射 _rows 须减 1
+            var idx = _table.SelectedIndex - 1;
             return idx >= 0 && idx < _rows.Count ? _rows[idx] : null;
         }
 

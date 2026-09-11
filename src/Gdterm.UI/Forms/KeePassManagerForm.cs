@@ -81,8 +81,8 @@ namespace Gdterm.UI.Forms
             _entryTable.Columns.Add(new AntdUI.Column("GroupPath", "分组路径", AntdUI.ColumnAlign.Left));
             _entryTable.Columns.Add(new AntdUI.Column("Url", "URL", AntdUI.ColumnAlign.Left));
             _entryTable.Columns.Add(new AntdUI.Column("Modified", "最后修改", AntdUI.ColumnAlign.Left));
-            _entryTable.CellClick += OnEntryCellClick;
-            _entryTable.CellDoubleClick += OnEntryCellClick;   // 双击=复制密码
+            _entryTable.CellClick += OnEntryCellClicked;         // 单击=选中（高亮自动跟随，状态栏回显）
+            _entryTable.CellDoubleClick += OnEntryCellDoubleClicked; // 双击=复制密码
 
             // 状态栏（等宽字体行高，底部左对齐内边距）
             _statusLabel = new AntdUI.Label {
@@ -106,11 +106,24 @@ namespace Gdterm.UI.Forms
             return btn;
         }
 
-        /// <summary>AntdUI.Table 单元格点击：取行数据条目 Id 执行复制密码。</summary>
-        private void OnEntryCellClick(object sender, AntdUI.TableClickEventArgs e)
+        /// <summary>AntdUI.Table 单元格单击：仅回显选中行，不复制（避免误触）。
+        /// 行号语义：表头行占 INDEX 0（Table.Layout AddRowsHeader rows.Insert(0)），
+        /// 数据行从 1 开始（Layout row.INDEX = row_i），SelectedIndex/RowIndex 均为 1 开始，
+        /// 故映射到 _entries 必须减 1；RowIndex 0（点表头）直接忽略。</summary>
+        private void OnEntryCellClicked(object sender, AntdUI.TableClickEventArgs e)
         {
-            if (e.RowIndex < 0 || e.RowIndex >= _entries.Count) return;
-            CopyEntryPassword(_entries[e.RowIndex].Id);
+            int idx = e.RowIndex - 1;
+            if (idx < 0 || idx >= _entries.Count) return;
+            var row = _entries[idx];
+            _statusLabel.Text = "已选中：" + (row.Title ?? "(无标题)");
+        }
+
+        /// <summary>AntdUI.Table 单元格双击：复制该行密码（行号同上减 1）。</summary>
+        private void OnEntryCellDoubleClicked(object sender, AntdUI.TableClickEventArgs e)
+        {
+            int idx = e.RowIndex - 1;
+            if (idx < 0 || idx >= _entries.Count) return;
+            CopyEntryPassword(_entries[idx].Id);
         }
 
         private sealed class EntryRow
@@ -156,11 +169,13 @@ namespace Gdterm.UI.Forms
             }
         }
 
-        /// <summary>取当前选中（或最后点击）的条目 Id；无选中返回 null。</summary>
+        /// <summary>取当前选中（或最后点击）的条目 Id；无选中返回 null。
+        /// AntdUI Table 行号 1 开始（表头占 0），映射 _entries 须减 1。</summary>
         private string SelectedEntryId()
         {
-            if (_entryTable.SelectedIndex >= 0 && _entryTable.SelectedIndex < _entries.Count)
-                return _entries[_entryTable.SelectedIndex].Id;
+            int idx = _entryTable.SelectedIndex - 1;
+            if (idx >= 0 && idx < _entries.Count)
+                return _entries[idx].Id;
             return null;
         }
 
