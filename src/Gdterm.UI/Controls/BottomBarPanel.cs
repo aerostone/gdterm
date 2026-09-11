@@ -245,6 +245,8 @@ namespace Gdterm.UI.Controls
             _statusStrip.AutoSize = true;
             _pinBtn.Dock = DockStyle.Right;
             _groupBtn.Dock = DockStyle.Left;
+            // 命令宿主上下各留 2px（DPI），按钮行不贴栏底——修"最后一行太靠下"
+            _cmdHost.Padding = new Padding(0, DpiScale.V(this, 2), 0, DpiScale.V(this, 2));
 
             RefreshCommands();
         }
@@ -372,7 +374,8 @@ namespace Gdterm.UI.Controls
 
             if (_isTmux)
             {
-                _groupBtn.Text = "tmux ▾";
+                // 钉住态直接写在分组钮上，用户看得见 pin 生效（修"点击就恢复"的误解）
+                _groupBtn.Text = _tmuxPinned ? "tmux 📌 ▾" : "tmux ▾";
                 _groupBtn.ForeColor = GdtermColorTable.Accent;
                 _pinBtn.Visible = true;
                 _pinBtn.ForeColor = _tmuxPinned ? GdtermColorTable.Accent : GdtermColorTable.Muted;
@@ -465,11 +468,13 @@ namespace Gdterm.UI.Controls
             // 且一旦关 AutoSize，PreferredSize 退化为 base(≈MinimumSize)，拿不到文字度量。
             // → 完全自算宽高，显式 Size + 锁 MinimumSize，绕开 AntdUI 一切自动度量。
             int w = FittedWidth(c.Text, c.Font, innerPx);
-            int h = Math.Max(FittedHeight(c.Text, c.Font), DpiScale.V(this, 24));
+            // y 按宿主居中：_cmdHost 是 Fill 区，行高=栏高-两端留白，不再用整栏 Height 贴底算
+            int hostH = _cmdHost.ClientSize.Height > 0 ? _cmdHost.ClientSize.Height : Height;
+            int h = Math.Max(FittedHeight(c.Text, c.Font), DpiScale.V(this, 22));
             c.AutoSize = false;
             c.MinimumSize = new Size(w, h);
             c.Size = new Size(w, h);
-            c.Location = new Point(x, Math.Max(0, (Height - c.Height) / 2));
+            c.Location = new Point(x, Math.Max(0, (hostH - c.Height) / 2));
             return x + w + DpiScale.V(this, 6);
         }
 
@@ -527,7 +532,17 @@ namespace Gdterm.UI.Controls
             };
             var miEdit = new ToolStripMenuItem("编辑"); miEdit.Click += (s, e) => EditRequested?.Invoke(cmd);
             var miCopy = new ToolStripMenuItem("复制命令"); miCopy.Click += (s, e) => { try { Clipboard.SetText(ResolveCommand(cmd)); } catch { } };
-            var miDel = new ToolStripMenuItem("删除"); miDel.Click += (s, e) => RemoveCommand(cmd.Id);
+            var miDel = new ToolStripMenuItem("删除"); miDel.Click += (s, e) =>
+            {
+                // 先落盘再刷内存：有注入走 store.Delete（失败则不动），无注入仅内存删
+                if (DeletePersisted != null)
+                {
+                    bool ok = false;
+                    try { ok = DeletePersisted(cmd.Id); } catch { }
+                    if (ok) RemoveCommand(cmd.Id);
+                }
+                else RemoveCommand(cmd.Id);
+            };
             ctx.Items.Add(miEdit); ctx.Items.Add(miCopy); ctx.Items.Add(miDel);
             btn.ContextMenuStrip = ctx;
 
@@ -564,11 +579,14 @@ namespace Gdterm.UI.Controls
 
             var groups = new[]
             {
-                new[] { new TmuxKey{Label="◀Win",Key="p",Tip="prev window"}, new TmuxKey{Label="Win▶",Key="n",Tip="next window"} },
+                // window：前后窗 + 重命名 + 杀窗口（PC 高频，,& 不用翻菜单找）
+                new[] { new TmuxKey{Label="◀Win",Key="p",Tip="prev window"}, new TmuxKey{Label="Win▶",Key="n",Tip="next window"}, new TmuxKey{Label="改名,",Key=",",Tip="rename window"}, new TmuxKey{Label="杀窗&",Key="&",Tip="kill window"} },
                 new[] { new TmuxKey{Label="▲Buf",Key="[",Tip="copy mode ↑"}, new TmuxKey{Label="PgUp",Raw="\u001b[5~",Tip="page up"}, new TmuxKey{Label="PgDn",Raw="\u001b[6~",Tip="page down"} },
-                new[] { new TmuxKey{Label="|Pane",Key="%",Tip="split vertical"}, new TmuxKey{Label="—Pane",Key="\"",Tip="split horizontal"}, new TmuxKey{Label="Zoom",Key="z",Tip="zoom pane"}, new TmuxKey{Label="Kill○",Key="x",Tip="kill pane"} },
+                // pane：o 轮切是 PC 最高频，切 pane 不翻菜单
+                new[] { new TmuxKey{Label="|Pane",Key="%",Tip="split vertical"}, new TmuxKey{Label="—Pane",Key="\"",Tip="split horizontal"}, new TmuxKey{Label="o切换",Key="o",Tip="next pane"}, new TmuxKey{Label="Zoom",Key="z",Tip="zoom pane"}, new TmuxKey{Label="Kill○",Key="x",Tip="kill pane"} },
                 new[] { new TmuxKey{Label="Copy",Key="[",Tip="copy mode"}, new TmuxKey{Label="Paste",Key="]",Tip="paste buffer"} },
-                new[] { new TmuxKey{Label="NewWin",Key="c",Tip="new window"}, new TmuxKey{Label="List",Key="w",Tip="list windows"}, new TmuxKey{Label="Detach",Key="d",Tip="detach"} }
+                // session：s 会话列表 / : 命令模式 / t 时钟是 PC 高频
+                new[] { new TmuxKey{Label="NewWin",Key="c",Tip="new window"}, new TmuxKey{Label="List",Key="w",Tip="list windows"}, new TmuxKey{Label="s会话",Key="s",Tip="list sessions"}, new TmuxKey{Label=":命令",Key=":",Tip="command prompt"}, new TmuxKey{Label="Detach",Key="d",Tip="detach"} }
             };
 
             // 展平为「键 / 组分隔」序列：放不下时把剩余整段搬进「…」菜单，绝不静默丢键
@@ -585,8 +603,8 @@ namespace Gdterm.UI.Controls
                 if (slots[i] is TmuxKey)
                 {
                     var key = (TmuxKey)slots[i];
-                    if (x + FittedWidth(key.Label, keyFont, 8) > avail) break; // 从此键起溢出
-                    x = PlaceControl(MakeTmuxKeyButton(key, pfx, keyFont), x, dpi, 8);
+                    if (x + FittedWidth(key.Label, keyFont, 10) > avail) break; // 从此键起溢出
+                    x = PlaceControl(MakeTmuxKeyButton(key, pfx, keyFont), x, dpi, 10); // 3-4字键用10防折行
                 }
                 else
                 {
@@ -742,6 +760,9 @@ namespace Gdterm.UI.Controls
             RefreshGroupMenu();
             RefreshCommands();
         }
+
+        /// <summary>右键删除 → 同步落盘（由 MainForm 注入，无注入时仅内存删）。</summary>
+        public Func<string, bool> DeletePersisted { get; set; }
 
         private void FlashButton(AntdUI.Button btn, Color flashColor)
         {

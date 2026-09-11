@@ -184,6 +184,13 @@ namespace Gdterm.UI.Forms
             catch { }
         }
 
+        /// <summary>快捷命令 store 安全重载（失败回空列表，不炸 UI）。</summary>
+        private List<QuickCommand> SafeLoadQuickCommands()
+        {
+            try { return _quickCommandStore?.LoadAll() ?? new List<QuickCommand>(); }
+            catch { return new List<QuickCommand>(); }
+        }
+
         private void InitializeComponent()
         {
             Text = "gdterm - 绿色运维客户端";
@@ -284,6 +291,40 @@ namespace Gdterm.UI.Forms
                 if (tc == null) return;
                 var line = cmd.EndsWith("\r") || cmd.EndsWith("\n") ? cmd : cmd + "\r";
                 tc.SendInput(line);
+            };
+            // 快捷命令增删改：编辑器对话框 → store 落盘 → 底栏重载（接上 BottomBarPanel 的 AddRequested/EditRequested）
+            _statusBar.AddRequested += (groupName) =>
+            {
+                try
+                {
+                    using (var dlg = new QuickCommandEditorForm(null, groupName))
+                    {
+                        if (dlg.ShowDialog(this) != DialogResult.OK || dlg.Result == null) return;
+                        try { _quickCommandStore?.Add(dlg.Result); } catch { }
+                        _statusBar.SetCommands(SafeLoadQuickCommands());
+                    }
+                }
+                catch (Exception ex) { Gdterm.UI.Diagnostics.DiagLog.Swallowed("QuickBar.Add", ex); }
+            };
+            _statusBar.EditRequested += (cmd) =>
+            {
+                try
+                {
+                    using (var dlg = new QuickCommandEditorForm(cmd))
+                    {
+                        if (dlg.ShowDialog(this) != DialogResult.OK || dlg.Result == null) return;
+                        dlg.Result.Id = cmd.Id; // 编辑保持原 Id，Update 才能命中
+                        try { _quickCommandStore?.Update(dlg.Result); } catch { }
+                        _statusBar.SetCommands(SafeLoadQuickCommands());
+                    }
+                }
+                catch (Exception ex) { Gdterm.UI.Diagnostics.DiagLog.Swallowed("QuickBar.Edit", ex); }
+            };
+            // 右键删除落盘：store.Delete 成功才刷内存，失败不动（防误删）
+            _statusBar.DeletePersisted = (id) =>
+            {
+                try { return _quickCommandStore != null && _quickCommandStore.Delete(id); }
+                catch { return false; }
             };
             _statusBar.UpdateSecurityStatus(_securityManager.IsLocked);
             _statusBar.UpdateKeePassStatus(_keepassService.IsUnlocked);
