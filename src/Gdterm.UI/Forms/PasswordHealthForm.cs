@@ -165,7 +165,7 @@ namespace Gdterm.UI.Forms
 
         private void AddIssueTab(string name, System.Collections.Generic.IList<PasswordIssue> issues, Color color)
         {
-            int rowH = Math.Max(DpiScale.V(this, 28), Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this)));
+            int rowH = Math.Max(DpiScale.V(this, 24), FormFontPolicy.RowStep(this)); // 表格阅读行：24 地板
             var tab = new AntdUI.TabPage { Text = $"  {name} ({(issues != null ? issues.Count : 0)})  " };
 
             var table = new AntdUI.Table
@@ -212,7 +212,7 @@ namespace Gdterm.UI.Forms
 
         private void AddDuplicateTab(string name, System.Collections.Generic.IList<DuplicatePasswordGroup> groups)
         {
-            int rowH = Math.Max(DpiScale.V(this, 28), Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this)));
+            int rowH = Math.Max(DpiScale.V(this, 24), FormFontPolicy.RowStep(this)); // 表格阅读行：24 地板
             var tab = new AntdUI.TabPage { Text = $"  {name} ({groups.Count} 组)  " };
 
             var listView = new AntdUI.Table

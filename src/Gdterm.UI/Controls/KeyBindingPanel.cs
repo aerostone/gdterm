@@ -115,7 +115,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f),
                 BorderWidth = 0,
-                RowHeight = Math.Max(DpiScale.V(this, 28), Math.Max(DpiScale.V(this, 38), Gdterm.UI.Services.FormFontPolicy.RowStep(this)))
+                RowHeight = Math.Max(DpiScale.V(this, 24), Gdterm.UI.Services.FormFontPolicy.RowStep(this)) // 表格阅读行：24 地板
             };
             _table.Columns.Add(new AntdUI.Column("Name", "名称", AntdUI.ColumnAlign.Left) { Width = "14%" });
             _table.Columns.Add(new AntdUI.Column("Combo", "按键组合", AntdUI.ColumnAlign.Left) { Width = "16%" });

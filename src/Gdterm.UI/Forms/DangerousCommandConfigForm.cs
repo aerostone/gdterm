@@ -58,7 +58,7 @@ namespace Gdterm.UI.Forms
             // 字体驱动 + DPI 缩放：所有尺寸从 fieldH/rowH/pad 派生
             int pad = DpiScale.V(this, 8);
             int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
-            int rowH = Math.Max(DpiScale.V(this, 28), fieldH);
+            int rowH = Math.Max(DpiScale.V(this, 24), FormFontPolicy.RowStep(this)); // 表格阅读行：24 地板，不复用输入框 38
             int btnPad = DpiScale.V(this, 10);
             int btnMargin = DpiScale.V(this, 6);
             var btnPadding = new Padding(btnPad, DpiScale.V(this, 4), btnPad, DpiScale.V(this, 4));

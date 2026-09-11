@@ -69,7 +69,7 @@ namespace Gdterm.UI.Forms
                 Dock = DockStyle.Fill,
                 BorderWidth = 0,
 
-                RowHeight = Math.Max(DpiScale.V(this, 28), FormFontPolicy.RowStep(this))
+                RowHeight = Math.Max(DpiScale.V(this, 24), FormFontPolicy.RowStep(this)) // 表格阅读行：24 地板
             };
             _table.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left) { Width = "30%" });
             _table.Columns.Add(new AntdUI.Column("Username", "用户名", AntdUI.ColumnAlign.Left) { Width = "30%" });

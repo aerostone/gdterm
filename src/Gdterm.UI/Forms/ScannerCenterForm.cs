@@ -79,7 +79,7 @@ namespace Gdterm.UI.Forms
             // 字体驱动 + DPI 缩放：所有尺寸从 fieldH/rowH/pad 派生，避免固定像素在大字号/高 DPI 下挤压
             int pad = DpiScale.V(this, 8);
             int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
-            int rowH = Math.Max(DpiScale.V(this, 28), FormFontPolicy.RowStep(this));
+            int rowH = Math.Max(DpiScale.V(this, 24), FormFontPolicy.RowStep(this)); // 表格阅读行：24 地板
             int hintH = FormFontPolicy.LineBox(Font, this, 1.4f);
             int headerH = Math.Max(DpiScale.V(this, 24), FormFontPolicy.LineBox(Font, this, 1.4f));
             int btnPad = DpiScale.V(this, 8);
