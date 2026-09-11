@@ -66,6 +66,7 @@ namespace Gdterm.UI.Forms
             // 列表
             _table = new AntdUI.Table
             {
+                Name = "KeePassPickerTable",
                 Dock = DockStyle.Fill,
                 BorderWidth = 0,
 

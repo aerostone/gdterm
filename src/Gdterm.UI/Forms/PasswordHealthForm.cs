@@ -94,6 +94,7 @@ namespace Gdterm.UI.Forms
             };
             var closeButton = new AntdUI.Button
             {
+                Name = "HealthCloseButton",
                 Text = "关闭",
                 AutoSize = true,
                 Type = AntdUI.TTypeMini.Default,

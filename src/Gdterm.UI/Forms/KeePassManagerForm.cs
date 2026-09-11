@@ -72,6 +72,7 @@ namespace Gdterm.UI.Forms
             // 条目表（AntdUI.Table）
             _entryTable = new AntdUI.Table
             {
+                Name = "KeePassEntryTable",
                 Dock = DockStyle.Fill,
                 Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
                 BorderWidth = 0,
@@ -108,6 +109,7 @@ namespace Gdterm.UI.Forms
             };
             var closeButton = new AntdUI.Button
             {
+                Name = "KeePassCloseButton",
                 Text = "关闭",
                 AutoSize = true,
                 Type = AntdUI.TTypeMini.Default,

@@ -46,6 +46,12 @@ test_script:
       Write-Host "Running $testExe"
       & $testExe
       if ($LASTEXITCODE -ne 0) { throw "Tests failed exit=$LASTEXITCODE" }
+      # ===== UI 冒烟：起窗体截图 + 断言（要桌面会话，AppVeyor VS2022 默认有）=====
+      $smokeDir = "$env:APPVEYOR_BUILD_FOLDER\ui-smoke"
+      Write-Host "Running UI smoke -> $smokeDir"
+      & $testExe --ui-smoke "$smokeDir"
+      if ($LASTEXITCODE -ne 0) { throw "UI smoke failed exit=$LASTEXITCODE" }
+      Get-ChildItem $smokeDir -Filter *.png | ForEach-Object { Push-AppveyorArtifact $_.FullName -FileName ("ui-smoke/" + $_.Name) }
 
 after_test:
   - ps: |

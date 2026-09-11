@@ -150,6 +150,7 @@ namespace Gdterm.UI.Forms
             var pluginPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(pad), BackColor = GdtermColorTable.Background };
             _pluginTable = new AntdUI.Table
             {
+                Name = "ScannerPluginTable",
                 Dock = DockStyle.Fill,
                 BorderWidth = 0,
                 RowHeight = rowH
@@ -184,6 +185,7 @@ namespace Gdterm.UI.Forms
             var findingPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, DpiScale.V(this, 8), pad, 0), BackColor = GdtermColorTable.Background };
             _findingTable = new AntdUI.Table
             {
+                Name = "ScannerFindingTable",
                 Dock = DockStyle.Fill,
                 BorderWidth = 0,
                 RowHeight = rowH

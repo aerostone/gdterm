@@ -83,6 +83,7 @@ namespace Gdterm.UI.Forms
             // 规则列表（Dock 布局：工具栏下、白名单上，随窗体伸缩）
             _ruleTable = new AntdUI.Table
             {
+                Name = "DangerRuleTable",
                 Dock = DockStyle.Fill,
                 Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f),
                 BorderWidth = 0,

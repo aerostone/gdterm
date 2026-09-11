@@ -112,6 +112,7 @@ namespace Gdterm.UI.Controls
             // P1-7：RowHeight 跟字（28 硬编码→ Max(28, fieldH 地板）），Consolas 字号跟随全局 UI 字号
             _table = new AntdUI.Table
             {
+                Name = "KeyBindingTable",
                 Dock = DockStyle.Fill,
                 Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f),
                 BorderWidth = 0,
