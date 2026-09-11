@@ -35,6 +35,10 @@ namespace Gdterm.Tests.Ui
                 using (var f = new KeePassManagerForm(new FakeKeePassService()))
                 {
                     f.Show();
+                    f.BringToFront();
+                    f.Activate();
+                    Application.DoEvents();
+                    Thread.Sleep(800);
                     Application.DoEvents();
                     Thread.Sleep(400);
                     Application.DoEvents();
@@ -59,6 +63,10 @@ namespace Gdterm.Tests.Ui
                 using (var f = new PasswordHealthForm(new FakeKeePassService()))
                 {
                     f.Show();
+                    f.BringToFront();
+                    f.Activate();
+                    Application.DoEvents();
+                    Thread.Sleep(800);
                     Application.DoEvents();
                     Thread.Sleep(400);
                     Application.DoEvents();
@@ -76,6 +84,10 @@ namespace Gdterm.Tests.Ui
                     () => null))
                 {
                     f.Show();
+                    f.BringToFront();
+                    f.Activate();
+                    Application.DoEvents();
+                    Thread.Sleep(800);
                     Application.DoEvents();
                     Thread.Sleep(400);
                     Application.DoEvents();
