@@ -100,6 +100,8 @@ namespace Gdterm.Tests.Ui
         private static System.Collections.Generic.IEnumerable<Control> InnerControls(Control c)
         {
             // AntdUI.Window/BaseForm 内部容器字段名随版本变，逐个试
+            // （yield 不能在 try/catch 里：先收集再返回）
+            var found = new System.Collections.Generic.List<Control>();
             string[] fields = { "innerPanel", "_innerPanel", "panel", "_panel", "container", "_container", "bodyPanel", "_body", "contentPanel" };
             foreach (var fn in fields)
             {
@@ -109,17 +111,18 @@ namespace Gdterm.Tests.Ui
                     if (fi == null) continue;
                     if (fi.GetValue(c) is Control inner && inner != c)
                     {
-                        foreach (Control ch in inner.Controls) yield return ch;
-                        yield break;
+                        foreach (Control ch in inner.Controls) found.Add(ch);
+                        break;
                     }
                     if (fi.GetValue(c) is System.Collections.IEnumerable list)
                     {
-                        foreach (var it in list) if (it is Control cc && cc != c) yield return cc;
-                        yield break;
+                        foreach (var it in list) if (it is Control cc && cc != c) found.Add(cc);
+                        break;
                     }
                 }
                 catch { }
             }
+            return found;
         }
 
         private static int DpiOf(Control c)
