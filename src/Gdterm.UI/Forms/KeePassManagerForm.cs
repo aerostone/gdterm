@@ -187,7 +187,7 @@ namespace Gdterm.UI.Forms
                     });
                 }
                 _entryTable.DataSource = rows;
-                _statusLabel.Text = $"共 {rows.Count} 个条目 | 表行={_entryTable.RowCount}";
+                _statusLabel.Text = $"共 {rows.Count} 个条目";
             }
             catch (Exception ex)
             {

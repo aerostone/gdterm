@@ -81,8 +81,33 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.UiFont(+0.5f)
             };
 
+            // 底部关闭条（RightToLeft：关闭在右，ESC 快捷关闭）
+            var bottomPanel = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Bottom,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false,
+                BackColor = GdtermColorTable.Background,
+                Padding = new Padding(0, DpiScale.V(this, 4), DpiScale.V(this, 12), DpiScale.V(this, 4))
+            };
+            var closeButton = new AntdUI.Button
+            {
+                Text = "关闭",
+                AutoSize = true,
+                Type = AntdUI.TTypeMini.Default,
+                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
+                Margin = new Padding(0)
+            };
+            closeButton.Click += (s, e) => Close();
+            bottomPanel.Controls.Add(closeButton);
+
             Controls.Add(_tabControl);
+            Controls.Add(bottomPanel);
             Controls.Add(headerPanel);
+
+            CancelButton = closeButton;
         }
 
         private void LoadReport()
@@ -219,6 +244,7 @@ namespace Gdterm.UI.Forms
                 }
             }
             listView.DataSource = rows;
+            tab.Controls.Add(listView);
             _tabControl.Pages.Add(tab);
         }
     }
