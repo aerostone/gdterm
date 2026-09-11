@@ -60,14 +60,14 @@ namespace Gdterm.UI.Forms
             _scoreLabel = new AntdUI.Label {
                 Text = "健康评分：—",
                 Font = Services.FormFontPolicy.UiFont(+9f, FontStyle.Bold),
-                Location = DpiScale.P(this, 15, 10),
-                Size = DpiScale.S(this, 250, 40)
+                Location = DpiScale.P(this, 15, 8),
+                Size = DpiScale.S(this, 250, 32)
             };
 
             _summaryLabel = new AntdUI.Label {
                 Text = "正在分析...",
                 Font = Services.FormFontPolicy.UiFont(+1f),
-                Location = DpiScale.P(this, 15, 48),
+                Location = DpiScale.P(this, 15, 40),
                 Size = DpiScale.S(this, 650, rowH),
                 ForeColor = GdtermColorTable.Foreground
             };

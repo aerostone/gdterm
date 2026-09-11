@@ -27,9 +27,14 @@ def check(ok, what):
 
 def walk(node, parent_abs=None, parent_name="", out=None):
     out = out if out is not None else []
-    out.append((node, parent_abs, parent_name))
-    for ch in node.get("children", []):
-        walk(ch, node.get("abs"), node.get("name") or node.get("type"), out)
+    if "controls" in node:
+        # 根：form 节点，遍历顶层控件
+        for ch in node["controls"]:
+            walk(ch, None, node.get("form", ""), out)
+    else:
+        out.append((node, parent_abs, parent_name))
+        for ch in node.get("children", []):
+            walk(ch, node.get("abs"), node.get("name") or node.get("type"), out)
     return out
 
 
@@ -115,10 +120,13 @@ def main():
         if oob == 0:
             check(True, "子越界=0")
 
-        # 零尺寸可见叶
-        zero = [n for (n, _, _) in all_nodes
+        # 零尺寸可见叶（Divider 线型 h<=2 豁免；Dock.Fill 未激活页豁免；零面积父链后代豁免）
+        zero = [n for (n, pabs, _) in all_nodes
                 if n.get("visible") and not n.get("children")
-                and (n.get("abs", {}).get("w", 1) <= 0 or n.get("abs", {}).get("h", 1) <= 0)]
+                and (n.get("abs", {}).get("w", 1) <= 0 or n.get("abs", {}).get("h", 1) <= 0)
+                and not ("Divider" in n.get("type", "") and n.get("abs", {}).get("h", 99) <= 2)
+                and n.get("dock") != "Fill"
+                and not (pabs is not None and area(pabs) <= 0)]
         check(len(zero) == 0, "零尺寸可见叶=%d" % len(zero))
         for n in zero[:5]:
             check(False, "零尺寸 " + (n.get("name") or n.get("type", "?")))

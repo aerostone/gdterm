@@ -102,8 +102,9 @@ namespace Gdterm.UI.Forms
                 Margin = new Padding(DpiScale.V(this, 3), 0, DpiScale.V(this, 4), 0)
             });
             _targetCombo = new AntdUI.Select {
-                // AntdUI.Select 无 AutoSize；宽度须覆盖文字 + 下拉箭头 + 内边距
-                Width = DpiScale.V(this, 250)
+                // AntdUI.Select 无 AutoSize；宽度须覆盖文字 + 下拉箭头 + 内边距；高度锁 38 地板
+                Width = DpiScale.V(this, 250),
+                MinimumSize = new Size(0, fieldH)
             };
             _targetCombo.Items.Add("本机（Windows）");
             _targetCombo.Items.Add("当前远程主机（SSH 已连）");
@@ -205,6 +206,9 @@ namespace Gdterm.UI.Forms
             _findingHeader = findingHeader;
             findingPanel.Controls.Add(findingHeader);
             findingHeader.BringToFront();
+            // Dock 同边叠放时后加的先布局：_findingTable Fill 已占满会盖住 Top 头，
+            // 必须把 Fill 表 SendToBack 让 Top 头先占位（同 rawPanel）。
+            _findingTable.SendToBack();
             rightSplit.Panel1.Controls.Add(findingPanel);
 
             var rawPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, DpiScale.V(this, 8), pad, pad), BackColor = GdtermColorTable.Background };
@@ -219,6 +223,8 @@ namespace Gdterm.UI.Forms
             var rawHeader = new AntdUI.Label { Dock = DockStyle.Top, Height = headerH, Text = "原始输出", TextAlign = ContentAlignment.MiddleLeft, Font = new Font(Font, FontStyle.Bold), ForeColor = GdtermColorTable.Foreground };
             rawPanel.Controls.Add(rawHeader);
             rawHeader.BringToFront();
+            // 同 findingPanel：Fill 输入先占满会盖住 Top 头，SendToBack 让头先占位。
+            _rawOutput.SendToBack();
             rightSplit.Panel2.Controls.Add(rawPanel);
             _split.Panel2.Controls.Add(rightSplit);
             // Dock 按添加逆序布局：先加 Fill，再加两个 Top，视觉自上而下 = top / wmi / split
@@ -311,16 +317,17 @@ namespace Gdterm.UI.Forms
         private Panel BuildWmiPanel()
         {
             int pad = DpiScale.V(this, 8);
+            int wmiFieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
             _wmiPanel = new Panel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Visible = false, BackColor = GdtermColorTable.Background };
             var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, Padding = new Padding(pad, DpiScale.V(this, 4), pad, DpiScale.V(this, 4)), BackColor = GdtermColorTable.Background };
             flow.Controls.Add(new AntdUI.Label { Text = "主机:", AutoSize = true, ForeColor = GdtermColorTable.Muted, Anchor = AnchorStyles.Left, Margin = new Padding(DpiScale.V(this, 3), 0, DpiScale.V(this, 4), 0) });
-            _wmiHost = new AntdUI.Input { Width = DpiScale.V(this, 160) };
+            _wmiHost = new AntdUI.Input { Width = DpiScale.V(this, 160), MinimumSize = new Size(0, wmiFieldH) };
             flow.Controls.Add(_wmiHost);
             flow.Controls.Add(new AntdUI.Label { Text = "用户名:", AutoSize = true, ForeColor = GdtermColorTable.Muted, Anchor = AnchorStyles.Left, Margin = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 4), 0) });
-            _wmiUser = new AntdUI.Input { Width = DpiScale.V(this, 140) };
+            _wmiUser = new AntdUI.Input { Width = DpiScale.V(this, 140), MinimumSize = new Size(0, wmiFieldH) };
             flow.Controls.Add(_wmiUser);
             flow.Controls.Add(new AntdUI.Label { Text = "密码:", AutoSize = true, ForeColor = GdtermColorTable.Muted, Anchor = AnchorStyles.Left, Margin = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 4), 0) });
-            _wmiPass = new AntdUI.Input { Width = DpiScale.V(this, 140), UseSystemPasswordChar = true };
+            _wmiPass = new AntdUI.Input { Width = DpiScale.V(this, 140), MinimumSize = new Size(0, wmiFieldH), UseSystemPasswordChar = true };
             flow.Controls.Add(_wmiPass);
             flow.Controls.Add(new AntdUI.Label {
                 Text = "留空凭据=用当前身份；域账号格式 DOMAIN\\user；需目标管理员权限 + ADMIN$ 共享",
