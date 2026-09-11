@@ -42,10 +42,21 @@ def main():
     shot = sys.argv[1] if len(sys.argv) > 1 else "ui-smoke"
     print("=== ui-check on " + shot + " ===")
 
+    # DrawToBitmap 对 AntdUI 自绘无效时表区全黑——先验表区非空，否则行高断言无意义
+    def table_has_content(img, what):
+        h, w, _ = img.shape
+        gray = img.mean(axis=2)
+        band = gray[h // 4:3 * h // 4, :]
+        n = (band > 60).sum()
+        ok = n > 500
+        check(ok, what + "表中部内容像素=%d(>500, PrintWindow 实抓)" % n)
+        return ok
+
     # 1) 密码管理器：表区存在 + 行高 <= 30px(24地板+DPI余量) + 无大面积纯白豆腐块
     p = os.path.join(shot, "keepass-manager.png")
     img = load(p)
     if img is not None:
+        table_has_content(img, "密码管理器")
         h, w, _ = img.shape
         check(h > 300 and w > 400, "密码管理器截图尺寸合理 %dx%d" % (w, h))
         # 行高：取中部水平带，找文字行(暗背景+亮字 → 行内方差大)的周期

@@ -127,12 +127,34 @@ namespace Gdterm.Tests.Ui
 
         private static void Shot(Form f, string path)
         {
-            using (var bmp = new Bitmap(f.Width, f.Height))
+            // AntdUI 自绘控件 DrawToBitmap 抓不到内容，必须用 Win32 PrintWindow 抓真实渲染。
+            // PW_CLIENTONLY(0x1): 只抓客户区；失败时回退 DrawToBitmap（至少有窗口框架）。
+            try
             {
-                f.DrawToBitmap(bmp, new Rectangle(0, 0, bmp.Width, bmp.Height));
-                bmp.Save(path, ImageFormat.Png);
+                var rect = f.RectangleToScreen(f.ClientRectangle);
+                using (var bmp = new Bitmap(rect.Width, rect.Height))
+                {
+                    using (var g = Graphics.FromImage(bmp))
+                    {
+                        IntPtr hdc = g.GetHdc();
+                        try { PrintWindow(f.Handle, hdc, 0x1); }
+                        finally { g.ReleaseHdc(hdc); }
+                    }
+                    bmp.Save(path, ImageFormat.Png);
+                }
+            }
+            catch
+            {
+                using (var bmp = new Bitmap(f.Width, f.Height))
+                {
+                    f.DrawToBitmap(bmp, new Rectangle(0, 0, bmp.Width, bmp.Height));
+                    bmp.Save(path, ImageFormat.Png);
+                }
             }
             Console.WriteLine("  shot: " + path);
         }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint nFlags);
     }
 }
