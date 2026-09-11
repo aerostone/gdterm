@@ -52,6 +52,7 @@ test_script:
       & $testExe --ui-smoke "$smokeDir"
       if ($LASTEXITCODE -ne 0) { throw "UI smoke failed exit=$LASTEXITCODE" }
       Get-ChildItem $smokeDir -Filter *.png | ForEach-Object { Push-AppveyorArtifact $_.FullName -FileName ("ui-smoke/" + $_.Name) }
+      Get-ChildItem $smokeDir -Filter *.json | ForEach-Object { Push-AppveyorArtifact $_.FullName -FileName ("ui-smoke/" + $_.Name) }
 
 after_test:
   - ps: |

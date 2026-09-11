@@ -68,6 +68,8 @@ namespace Gdterm.Tests.Ui
                         Check(colCount == 5, "表列=5（实际" + colCount + ")");
                     }
                     Shot(f, Path.Combine(outDir, "keepass-manager.png"));
+                    File.WriteAllText(Path.Combine(outDir, "keepass-manager.json"), UiTreeDumper.Dump(f), System.Text.Encoding.UTF8);
+                    Console.WriteLine("  dump: keepass-manager.json");
                     var closeBtn = FindByName(f, "KeePassCloseButton") as Control;
                     Check(closeBtn != null, "关闭按钮可定位");
                     Check(f.CancelButton != null, "ESC(CancelButton)已绑");
@@ -90,6 +92,8 @@ namespace Gdterm.Tests.Ui
                     Check(FindByName(f, "HealthCloseButton") != null, "关闭按钮可定位");
                     Check(f.CancelButton != null, "ESC(CancelButton)已绑");
                     Shot(f, Path.Combine(outDir, "password-health.png"));
+                    File.WriteAllText(Path.Combine(outDir, "password-health.json"), UiTreeDumper.Dump(f), System.Text.Encoding.UTF8);
+                    Console.WriteLine("  dump: password-health.json");
                 }
             });
 
@@ -111,6 +115,8 @@ namespace Gdterm.Tests.Ui
                     Check(FindByName(f, "ScannerPluginTable") != null, "插件表可定位");
                     Check(FindByName(f, "ScannerFindingTable") != null, "结果表可定位");
                     Shot(f, Path.Combine(outDir, "scanner-center.png"));
+                    File.WriteAllText(Path.Combine(outDir, "scanner-center.json"), UiTreeDumper.Dump(f), System.Text.Encoding.UTF8);
+                    Console.WriteLine("  dump: scanner-center.json");
                 }
             });
 
