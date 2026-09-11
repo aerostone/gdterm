@@ -461,13 +461,14 @@ namespace Gdterm.UI.Controls
             return PlaceControl(more, x, dpi);
         }
 
-        private int PlaceControl(Control c, int x, int dpi, int innerPx = 10)
+        private int PlaceControl(Control c, int x, int dpi, int innerPx = 6)
         {
             _cmdHost.Controls.Add(c);
             // AntdUI.Button 的 AutoSize(PSize)=文字宽+固定gap(文字高×1.02)，不看 Padding；
             // 且一旦关 AutoSize，PreferredSize 退化为 base(≈MinimumSize)，拿不到文字度量。
             // → 完全自算宽高，显式 Size + 锁 MinimumSize，绕开 AntdUI 一切自动度量。
-            int w = FittedWidth(c.Text, c.Font, innerPx);
+            // 宽预算见 FittedWidth：Padding.Horizontal + sps双侧 + wave边框 + GDI差 + innerPx×2。
+            int w = FittedWidth(c.Text, c.Font, innerPx, c.Padding);
             // y 按宿主居中：_cmdHost 是 Fill 区，行高=栏高-两端留白，不再用整栏 Height 贴底算
             int hostH = _cmdHost.ClientSize.Height > 0 ? _cmdHost.ClientSize.Height : Height;
             int h = Math.Max(FittedHeight(c.Text, c.Font), DpiScale.V(this, 22));
@@ -478,15 +479,28 @@ namespace Gdterm.UI.Controls
             return x + w + DpiScale.V(this, 6);
         }
 
-        /// <summary>实测文字宽 + 左右各 innerPx(DPI) 内边距 + 1px 边框×2，保证文字不贴边。</summary>
-        private int FittedWidth(string text, Font font, int innerPx)
+        /// <summary>
+        /// 实测文字宽 + 库内扣减全预算 + 1px 边框×2，保证文字不贴边不换行。
+        /// AntdUI Button 绘制链（Button.cs OnDraw → PaintTextLoading）：
+        ///   文字区 = Width − Padding.Horizontal − ReadRect(wave+边框≈5px) − sps双侧(文字高×0.8≈10px)。
+        ///   另 GDI(TextRenderer) vs GDI+(AntdUI) 量尺差约 3px。
+        /// 旧公式 textW + innerPx×2 + 2 在 innerPx=10/Padding(4) 下余量 20px，
+        /// 库内吃掉 8+10+5+3=26px → 负预算 → 窄键(◀Win/改名,/o切换/:命令)换行/遮住。
+        /// 新公式：余量 = Padding.Horizontal(是什么给什么) + sps双侧(按真实字高算) + wave边框5 + GDI差4。
+        /// </summary>
+        private int FittedWidth(string text, Font font, int innerPx, Padding pad)
         {
             int textW = string.IsNullOrEmpty(text) ? DpiScale.V(this, 8)
                 : TextRenderer.MeasureText(text, font, new Size(int.MaxValue, int.MaxValue),
                     TextFormatFlags.NoPadding | TextFormatFlags.SingleLine).Width;
-            return textW + DpiScale.V(this, innerPx * 2) + 2;
+            int textH = TextRenderer.MeasureText(string.IsNullOrEmpty(text) ? " " : text, font).Height;
+            int spsBoth = (int)Math.Ceiling(textH * 0.8);          // 库内 sps 双侧
+            const int waveBorder = 5;                              // ReadRect: WaveSize(4)+边框(1)
+            const int gdiSlop = 4;                                 // GDI vs GDI+ 量尺差
+            return textW + pad.Horizontal + spsBoth + DpiScale.V(this, waveBorder + gdiSlop)
+                + DpiScale.V(this, innerPx * 2) + 2;
         }
-        private int FittedWidth(Control c) { return FittedWidth(c.Text, c.Font, 10); }
+        private int FittedWidth(Control c) { return FittedWidth(c.Text, c.Font, 10, c.Padding); }
 
         private int FittedHeight(string text, Font font)
         {
@@ -573,8 +587,8 @@ namespace Gdterm.UI.Controls
             var keyFont = FormFontPolicy.UiFont(-0.5f);
 
             // 前缀选择器：tmux(C-b) 与 screen(C-a) 都兼容，点选切换 _prefix
-            x = PlaceControl(CreatePrefixButton("C-b", "\u0002", "tmux 默认前缀 C-b"), x, dpi, 8);
-            x = PlaceControl(CreatePrefixButton("C-a", "\u0001", "screen 默认前缀 C-a"), x, dpi, 8);
+            x = PlaceControl(CreatePrefixButton("C-b", "\u0002", "tmux 默认前缀 C-b"), x, dpi);
+            x = PlaceControl(CreatePrefixButton("C-a", "\u0001", "screen 默认前缀 C-a"), x, dpi);
             x = PlaceTmuxSeparator(x);
 
             var groups = new[]
@@ -603,8 +617,8 @@ namespace Gdterm.UI.Controls
                 if (slots[i] is TmuxKey)
                 {
                     var key = (TmuxKey)slots[i];
-                    if (x + FittedWidth(key.Label, keyFont, 10) > avail) break; // 从此键起溢出
-                    x = PlaceControl(MakeTmuxKeyButton(key, pfx, keyFont), x, dpi, 10); // 3-4字键用10防折行
+                    if (x + FittedWidth(key.Label, keyFont, 6, TmuxKeyPadding()) > avail) break; // 从此键起溢出
+                    x = PlaceControl(MakeTmuxKeyButton(key, pfx, keyFont), x, dpi, 6);
                 }
                 else
                 {
@@ -626,6 +640,12 @@ namespace Gdterm.UI.Controls
             return x + 1 + DpiScale.V(this, 6);
         }
 
+        /// <summary>tmux 键统一 Padding（放置与溢出判定同源）。</summary>
+        private Padding TmuxKeyPadding()
+        {
+            return new Padding(DpiScale.V(this, 6), DpiScale.V(this, 2), DpiScale.V(this, 6), DpiScale.V(this, 2));
+        }
+
         private AntdUI.Button MakeTmuxKeyButton(TmuxKey k, string pfx, Font font)
         {
             var btn = new AntdUI.Button
@@ -638,7 +658,8 @@ namespace Gdterm.UI.Controls
                 Font = font,
                 Cursor = Cursors.Hand,
                 TabStop = false,
-                Padding = new Padding(DpiScale.V(this, 4), DpiScale.V(this, 2), DpiScale.V(this, 4), DpiScale.V(this, 2))
+                // Padding(6)：与 FittedWidth 预算同源，窄键(◀Win/改名,/o切换/:命令)不换行
+                Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 2), DpiScale.V(this, 6), DpiScale.V(this, 2))
             };
             btn.Click += (s, e) => SendTmuxKey(k.Raw ?? (_prefix + k.Key));
             btn.ToolTipText2("tmux/screen · " + k.Tip + (k.Raw == null ? " (" + pfx + "+" + k.Key + ")" : ""));
@@ -671,7 +692,7 @@ namespace Gdterm.UI.Controls
             }
             more.ContextMenuStrip = menu;
             more.Click += (s, e) => menu.Show(more, new Point(0, more.Height));
-            return PlaceControl(more, x, dpi, 8);
+            return PlaceControl(more, x, dpi);
         }
 
         /// <summary>前缀切换按钮（C-b/C-a）。激活态：Surface2 底 + Accent 粗体字；关态 Muted。宽度走 PlaceControl 实测。</summary>

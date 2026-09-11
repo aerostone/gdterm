@@ -20,7 +20,9 @@ namespace Gdterm.UI.Services
     {
         public const int CloseButtonWidth = 16;
         public const int CloseButtonHeight = 18;
-        public const int CloseButtonRightMargin = 18;
+        // × 右边距 18→22：旧值下 × 右沿距标签右沿仅 2px，视觉贴边；
+        // 新值右边留 6px，textRightPad 同步，× 不再挤边缘。
+        public const int CloseButtonRightMargin = 22;
         public const int CloseButtonTopOffset = 2;
 
         // L1 弹性宽度档位（设计 px，调用方按 DPI 缩放）
