@@ -258,7 +258,9 @@ namespace Gdterm.UI.Forms
             rdpChecks.Controls.AddRange(new Control[] { _rdpDriveCheck, _rdpClipboardCheck, _rdpPrinterCheck, _rdpFullScreenCheck, _rdpNlaCheck, _rdpForceNlaCheck, _rdpTcpDumpCheck });
             var depthPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, DpiScale.V(this, 4)) };
             depthPanel.Controls.Add(new AntdUI.Label { Text = "色深:", AutoSize = true });
-            _rdpColorDepth = new AntdUI.InputNumber { Minimum = 8, Maximum = 32, Value = 32, Increment = 8, Width = DpiScale.V(this, 60) };
+            _rdpColorDepth = new AntdUI.InputNumber { Minimum = 8, Maximum = 32, Value = 32, Increment = 8, Width = DpiScale.V(this, 60),
+                // Flow 子无 Dock 高会被压 0（288 dump 实测 h=0）→ MinimumSize 保底 38 行
+                MinimumSize = new Size(0, Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this))) };
             depthPanel.Controls.Add(_rdpColorDepth);
             rdpGrid.Controls.Add(rdpChecks, 1, 1);
             rdpGrid.Controls.Add(depthPanel, 1, 2);
@@ -266,14 +268,16 @@ namespace Gdterm.UI.Forms
             // 系统自带 mstsc（ActiveX 嵌入）是微软自家实现，兼容性最好
             var enginePanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, DpiScale.V(this, 4)) };
             enginePanel.Controls.Add(new AntdUI.Label { Text = "渲染引擎:", AutoSize = true });
-            _rdpEngineCombo = new AntdUI.Select { Width = DpiScale.V(this, 170) };
+            _rdpEngineCombo = new AntdUI.Select { Width = DpiScale.V(this, 170),
+                MinimumSize = new Size(0, Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this))) };
             _rdpEngineCombo.Items.AddRange(new object[] { "自动（优先 FreeRDP）", "FreeRDP 进程嵌入", "系统 mstsc（兼容模式）" });
             enginePanel.Controls.Add(_rdpEngineCombo);
             rdpGrid.Controls.Add(enginePanel, 1, 3);
             // 负载均衡 token：堡垒机/NetScaler 下发的 LB_LOAD_BALANCE_INFO Cookie（如 tsv://... 或 Cookie: msts=...）
             var lbPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, DpiScale.V(this, 4)) };
             lbPanel.Controls.Add(new AntdUI.Label { Text = "负载均衡:", AutoSize = true });
-            _rdpLoadBalanceBox = new AntdUI.Input { Width = DpiScale.V(this, 230) };
+            _rdpLoadBalanceBox = new AntdUI.Input { Width = DpiScale.V(this, 230),
+                MinimumSize = new Size(0, Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this))) };
             _rdpLoadBalanceBox.PlaceholderText = "如 Cookie: msts=NSFVERIFYHASH=... (选填)";
             lbPanel.Controls.Add(_rdpLoadBalanceBox);
             rdpGrid.Controls.Add(lbPanel, 1, 4);

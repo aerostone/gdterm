@@ -25,16 +25,16 @@ def check(ok, what):
         FAIL.append(what)
 
 
-def walk(node, parent_abs=None, parent_name="", out=None):
+def walk(node, parent_abs=None, parent_name="", parent_node=None, out=None):
     out = out if out is not None else []
     if "controls" in node:
         # 根：form 节点，遍历顶层控件
         for ch in node["controls"]:
-            walk(ch, None, node.get("form", ""), out)
+            walk(ch, None, node.get("form", ""), None, out)
     else:
-        out.append((node, parent_abs, parent_name))
+        out.append((node, parent_abs, parent_name, parent_node))
         for ch in node.get("children", []):
-            walk(ch, node.get("abs"), node.get("name") or node.get("type"), out)
+            walk(ch, node.get("abs"), node.get("name") or node.get("type"), node, out)
     return out
 
 
@@ -119,7 +119,7 @@ def main():
 
         # 按父分组查兄弟重叠
         by_parent = {}
-        for n, pabs, pname in all_nodes:
+        for n, pabs, pname, pnode in all_nodes:
             by_parent.setdefault(pname, []).append((n, pabs, pname))
         overlaps = 0
         for pname, group in by_parent.items():
@@ -139,8 +139,9 @@ def main():
         # 越界：子超出父（Dock.Fill / AutoScroll 豁免）
         # 免判2条（285 实测结论）：①父 h<=1 的 AntdUI 自绘容器（StackPanel/__IN__ 未布局量测局限）；
         # ②文本为 … 的溢出钮（它是窄窗下剩余命令唯一入口，无处可收，设计取舍）。
+        # ③父 AutoScroll=true（滚动容器内容高出是正常态，如 ConnectionDialog 高级区，288 实测）。
         oob = 0
-        for n, pabs, pname in all_nodes:
+        for n, pabs, pname, pnode in all_nodes:
             if pabs is None or not n.get("visible"):
                 continue
             if n.get("dock") == "Fill":
@@ -152,6 +153,8 @@ def main():
                 continue
             if pabs.get("h", 99) <= 1:
                 continue
+            if pnode is not None and (pnode.get("extra") or {}).get("AutoScroll") == "True":
+                continue
             if not contains(a, b):
                 oob += 1
                 check(False, "越界 %s[%s]%s 超出父 %s%s" % (
@@ -160,7 +163,7 @@ def main():
             check(True, "子越界=0")
 
         # 零尺寸可见叶（Divider 线型 h<=2 豁免；Dock.Fill 未激活页豁免；零面积父链后代豁免）
-        zero = [n for (n, pabs, _) in all_nodes
+        zero = [n for (n, pabs, _, _pnode) in all_nodes
                 if n.get("visible") and not n.get("children")
                 and (n.get("abs", {}).get("w", 1) <= 0 or n.get("abs", {}).get("h", 1) <= 0)
                 # 空文本 AutoSize Label 正常态（如 errorLabel，有错才撑开）
@@ -177,7 +180,7 @@ def main():
             continue
 
         # 表行高
-        for n, _, _ in all_nodes:
+        for n, _, _, _ in all_nodes:
             rh = (n.get("extra") or {}).get("RowHeight", "")
             if rh and rh != "null" and rh != "":
                 try:
@@ -187,7 +190,7 @@ def main():
                     pass
 
         # AntdUI.Button 全零 padding 告警
-        for n, _, _ in all_nodes:
+        for n, _, _, _ in all_nodes:
             t = n.get("type", "")
             if "AntdUI" in t and "Button" in t:
                 # 固定尺寸钮靠库内 sps 居中（字高*0.4/侧），Padding=0 不贴边；只判 AutoSize 钮
