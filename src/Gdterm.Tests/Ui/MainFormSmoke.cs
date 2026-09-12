@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Threading;
 using System.Windows.Forms;
@@ -48,6 +48,7 @@ namespace Gdterm.Tests.Ui
             var toolRegistry = new Gdterm.Tools.ToolRegistry();
             var secretScanner = new SecretScanner(SecretScanConfig.GetDefault());
 
+            log("构造 MainForm...");
             using (var f = new MainForm(
                 connectionStore, tunnelManager, terminalFactory, sftpFactory,
                 keepassService, auditLogger, aiService, securityManager,
@@ -56,6 +57,7 @@ namespace Gdterm.Tests.Ui
                 keyBindingStore, highlightStore, reconnectWatchdog,
                 multiChannelManager, toolRegistry, secretScanner))
             {
+                log("构造完成，Show...");
                 f.Show();
                 f.BringToFront();
                 f.Activate();
@@ -65,6 +67,7 @@ namespace Gdterm.Tests.Ui
                 Thread.Sleep(600);
                 Application.DoEvents();
 
+                log("Show 完成，开始断言...");
                 // 主窗 layout 断言：菜单/树/Tab/底栏/状态齐备
                 int count = CountControls(f);
                 check(count > 40, "主窗控件总数=" + count + " (>40)");
