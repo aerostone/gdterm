@@ -142,6 +142,14 @@ namespace Gdterm.Tests.Ui
                 if (workerEx != null) throw workerEx;
             });
 
+            // 5) 独立对话框群：12 小窗 Show + dump（主线程顺序跑，单窗异常只记该窗 FAIL）
+            RunCase("Dialogs", () =>
+            {
+                int p0 = _passes, f0 = _fails;
+                DialogsSmoke.Run(outDir, s => Console.WriteLine("  " + s), (ok, what) => Check(ok, what));
+                Console.WriteLine("  dialogs done");
+            });
+
             Console.WriteLine();
             Console.WriteLine("UI smoke Passed: {0}  Failed: {1}", _passes, _fails);
             foreach (var m in _messages) Console.WriteLine(m);
