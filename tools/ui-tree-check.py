@@ -69,6 +69,38 @@ def siblings_overlap(nodes):
     return bad
 
 
+def mainform_rules(tree, check):
+    """主窗外壳盒模型（96dpi 基准）：菜单 Top/树 Left250/底栏 Bottom≈30/Tab Fill 余量。"""
+    nodes = []
+    def walk(n, pabs, pname):
+        nodes.append((n, pabs, pname))
+        for c in n.get("children", []):
+            walk(c, n.get("abs"), n.get("name") or n.get("type", "?"))
+    walk(tree, None, "")
+    bytype = {}
+    for n, _, _ in nodes:
+        bytype.setdefault(n.get("type", "").split(".")[-1], []).append(n)
+    # 1) 树宽 250（pin 态）
+    for t in bytype.get("ConnectionTreeControl", []):
+        w = t.get("abs", {}).get("w", 0)
+        check(240 <= w <= 260, "连接树宽=%d≈250" % w)
+    # 2) 底栏高≈30（GetPreferredHeight=Max(30,RowStep)）
+    for b in bytype.get("BottomBarPanel", []):
+        h = b.get("abs", {}).get("h", 0)
+        check(28 <= h <= 44, "底栏高=%d≈30" % h)
+    # 3) Tab 容器 Fill：宽≈窗宽-树-缝，高≈窗高-菜单-底栏
+    fw = tree.get("abs", {}).get("w", 0)
+    fh = tree.get("abs", {}).get("h", 0)
+    for t in bytype.get("TabContainerControl", []):
+        a = t.get("abs", {})
+        check(abs(a.get("w", 0) - (fw - 250 - 4)) <= 24, "Tab宽=%d≈窗宽-254" % a.get("w", 0))
+        check(a.get("h", 0) >= fh - 24 - 44 - 24, "Tab高=%d吃掉余量" % a.get("h", 0))
+    # 4) 欢迎页与锁遮罩 Fill 且互斥可见（无 tab 时欢迎可见）
+    for w in bytype.get("WelcomePanel", []):
+        a = w.get("abs", {})
+        check(a.get("w", 0) >= fw - 250 - 4 - 24, "欢迎页宽=%d≈Fill" % a.get("w", 0))
+
+
 def main():
     d = sys.argv[1] if len(sys.argv) > 1 else "ui-smoke"
     files = sorted(f for f in os.listdir(d) if f.endswith(".json"))
@@ -81,6 +113,7 @@ def main():
         with open(os.path.join(d, fn), encoding="utf-8-sig") as fp:
             tree = json.load(fp)
         print("--- " + fn + " (" + tree.get("form", "?") + ") ---")
+        fname = fn
         all_nodes = walk(tree)
         print("  控件总数=%d" % len(all_nodes))
 
@@ -130,6 +163,10 @@ def main():
         check(len(zero) == 0, "零尺寸可见叶=%d" % len(zero))
         for n in zero[:5]:
             check(False, "零尺寸 " + (n.get("name") or n.get("type", "?")))
+
+        if fname.startswith("mainform"):
+            mainform_rules(tree, check)
+            continue
 
         # 表行高
         for n, _, _ in all_nodes:

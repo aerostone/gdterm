@@ -120,10 +120,26 @@ namespace Gdterm.Tests.Ui
                 }
             });
 
-            // 4) 主窗 layout：全依赖临时目录构造，dump 整棵树
+            // 4) 主窗 layout：全依赖临时目录构造，dump 整棵树。
+            // 主窗构造链长（hotkey/托盘/欢迎页/会话恢复），独立 STA 线程 + 8 分钟硬超时，
+            // 超时只记 FAIL 不卡 job，后续 job（artifact/树检）照常跑。
             RunCase("MainForm", () =>
             {
-                MainFormSmoke.Run(outDir, s => Console.WriteLine("  " + s), (ok, what) => Check(ok, what));
+                Exception workerEx = null;
+                var t = new System.Threading.Thread(() =>
+                {
+                    try { MainFormSmoke.Run(outDir, s => Console.WriteLine("  " + s), (ok, what) => Check(ok, what)); }
+                    catch (Exception ex) { workerEx = ex; }
+                });
+                t.SetApartmentState(System.Threading.ApartmentState.STA);
+                t.IsBackground = true;
+                t.Start();
+                if (!t.Join(TimeSpan.FromMinutes(8)))
+                {
+                    try { t.Abort(); } catch { }
+                    throw new TimeoutException("主窗冒烟 8 分钟未返回（构造/会话恢复疑似阻塞），记 FAIL，job 继续");
+                }
+                if (workerEx != null) throw workerEx;
             });
 
             Console.WriteLine();
