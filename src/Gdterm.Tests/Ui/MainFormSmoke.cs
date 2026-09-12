@@ -33,7 +33,8 @@ namespace Gdterm.Tests.Ui
             var auditLogger = new AuditLogger(Path.Combine(tmp, "logs"));
             var aiService = new AiAssistantService(new AiConfiguration());
             var securityManager = new SecurityManager();
-            try { securityManager.Unlock("smoke"); } catch { }
+            // 保持锁定：解锁会走 Shown→SessionState.Restore（空 session 下仍可能弹连接），冒烟只验 layout 不连主机。
+            // 锁定时 _lockOverlay 可见，dump 照做（遮罩也是盒模型的一部分）。
             var dangerousCmdDetector = new DangerousCommandDetector(Path.Combine(tmp, "dangerous.json"));
             var folderCredStore = new FolderCredentialStoreJson(Path.Combine(tmp, "folder.json"));
             var sessionStore = new SessionStateStore(Path.Combine(tmp, "session.json"));
@@ -48,7 +49,7 @@ namespace Gdterm.Tests.Ui
             var toolRegistry = new Gdterm.Tools.ToolRegistry();
             var secretScanner = new SecretScanner(SecretScanConfig.GetDefault());
 
-            log("构造 MainForm...");
+            log("STEP mainform-construct");
             using (var f = new MainForm(
                 connectionStore, tunnelManager, terminalFactory, sftpFactory,
                 keepassService, auditLogger, aiService, securityManager,
@@ -57,7 +58,7 @@ namespace Gdterm.Tests.Ui
                 keyBindingStore, highlightStore, reconnectWatchdog,
                 multiChannelManager, toolRegistry, secretScanner))
             {
-                log("构造完成，Show...");
+                log("STEP mainform-show");
                 f.Show();
                 f.BringToFront();
                 f.Activate();
@@ -67,16 +68,16 @@ namespace Gdterm.Tests.Ui
                 Thread.Sleep(600);
                 Application.DoEvents();
 
-                log("Show 完成，开始断言...");
+                log("STEP mainform-assert");
                 // 主窗 layout 断言：菜单/树/Tab/底栏/状态齐备
                 int count = CountControls(f);
-                check(count > 40, "主窗控件总数=" + count + " (>40)");
-                check(FindByType(f, "ConnectionTreeControl") != null, "连接树可定位");
-                check(FindByType(f, "TabContainerControl") != null, "Tab容器可定位");
-                check(FindByType(f, "BottomBarPanel") != null, "底栏可定位");
-                check(FindByType(f, "StatusBarControl") != null || FindByName(f, "BottomBarPanel") != null, "状态条可定位");
-                check(f.MainMenuStrip != null, "主菜单可定位");
-                log("dump: mainform.json");
+                check(count > 40, "mainform-controls=" + count + " (>40)");
+                check(FindByType(f, "ConnectionTreeControl") != null, "tree-found");
+                check(FindByType(f, "TabContainerControl") != null, "tabs-found");
+                check(FindByType(f, "BottomBarPanel") != null, "bottombar-found");
+                check(FindByType(f, "StatusBarControl") != null || FindByName(f, "BottomBarPanel") != null, "status-found");
+                check(f.MainMenuStrip != null, "menu-found");
+                log("STEP mainform-dump");
                 File.WriteAllText(Path.Combine(outDir, "mainform.json"), UiTreeDumper.Dump(f), System.Text.Encoding.UTF8);
             }
 

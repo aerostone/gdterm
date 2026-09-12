@@ -136,8 +136,8 @@ namespace Gdterm.Tests.Ui
                 t.Start();
                 if (!t.Join(TimeSpan.FromMinutes(8)))
                 {
-                    try { t.Abort(); } catch { }
-                    throw new TimeoutException("主窗冒烟 8 分钟未返回（构造/会话恢复疑似阻塞），记 FAIL，job 继续");
+                    // 不 Abort（STA 窗体半残句柄风险）：后台线程随进程退出回收，只记 FAIL 让 job 继续。
+                    throw new TimeoutException("mainform-smoke timeout 8min (construct/restore suspected), job continues");
                 }
                 if (workerEx != null) throw workerEx;
             });
@@ -159,10 +159,31 @@ namespace Gdterm.Tests.Ui
             catch (Exception ex)
             {
                 _fails++;
-                string msg = "[FAIL] " + name + ": " + ex.GetType().Name + " " + ex.Message;
+                string msg = "[FAIL] " + name + ": " + FlatEx(ex);
                 _messages.Add(msg);
                 Console.WriteLine(msg);
             }
+        }
+
+        // 异常链拍平为 ASCII（CI 日志 GBK 下中文变 ??，用英文 + HResult 定位）
+        internal static string FlatEx(Exception ex)
+        {
+            try
+            {
+                var parts = new System.Collections.Generic.List<string>();
+                int depth = 0;
+                while (ex != null && depth < 4)
+                {
+                    string m = ex.Message ?? "";
+                    var sb = new System.Text.StringBuilder();
+                    foreach (char ch in m) sb.Append(ch < 128 ? ch : '?');
+                    parts.Add(ex.GetType().Name + "(HR=0x" + ex.HResult.ToString("X8") + "):" + sb.ToString());
+                    ex = ex.InnerException;
+                    depth++;
+                }
+                return string.Join(" <- ", parts.ToArray());
+            }
+            catch { return "FlatEx-failed"; }
         }
 
         private static void Check(bool ok, string what)
