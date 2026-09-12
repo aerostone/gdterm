@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Windows.Forms;
 using Gdterm.AI;
+using Gdterm.AI.Models;
 using Gdterm.Connections;
 using Gdterm.Logging;
 using Gdterm.Security;
