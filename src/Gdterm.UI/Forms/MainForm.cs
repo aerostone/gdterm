@@ -282,6 +282,7 @@ namespace Gdterm.UI.Forms
             // v2 单栏合并底栏（原型方案 A+B2 验收通过）：三行 89px → 一行 30px。
             // 分组下拉单选 + 命令横排 + webtmux 风格 tmux 键组（可钉住）+ 彩点状态项。
             _statusBar = new BottomBarPanel();
+            _statusBar.Name = "BottomBarPanel";
             _statusBar.Dock = DockStyle.Bottom;
             List<QuickCommand> cmds = null;
             try { cmds = _quickCommandStore?.LoadAll(); } catch { }

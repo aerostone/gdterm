@@ -75,7 +75,8 @@ namespace Gdterm.Tests.Ui
                 check(FindByType(f, "ConnectionTreeControl") != null, "tree-found");
                 check(FindByType(f, "TabContainerControl") != null, "tabs-found");
                 check(FindByType(f, "BottomBarPanel") != null, "bottombar-found");
-                check(FindByType(f, "StatusBarControl") != null || FindByName(f, "BottomBarPanel") != null, "status-found");
+                // v2 单栏：StatusBarControl 已合并进 BottomBarPanel（独立状态条不存在），状态项由底栏承载
+                check(FindByType(f, "BottomBarPanel") != null, "status-found");
                 check(f.MainMenuStrip != null, "menu-found");
                 log("STEP mainform-dump");
                 File.WriteAllText(Path.Combine(outDir, "mainform.json"), UiTreeDumper.Dump(f), System.Text.Encoding.UTF8);
