@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """全控件树盒模型断言：读 CI 产出的 *.json（UiTreeDumper），查：
 1. 重叠：同父容器下两个可见兄弟控件 abs 矩形交叠面积 > 阈值（默认 4px²，过滤包含关系）
@@ -137,14 +137,20 @@ def main():
             check(True, "兄弟重叠=0")
 
         # 越界：子超出父（Dock.Fill / AutoScroll 豁免）
+        # 免判2条（285 实测结论）：①父 h<=1 的 AntdUI 自绘容器（StackPanel/__IN__ 未布局量测局限）；
+        # ②文本为 … 的溢出钮（它是窄窗下剩余命令唯一入口，无处可收，设计取舍）。
         oob = 0
         for n, pabs, pname in all_nodes:
             if pabs is None or not n.get("visible"):
                 continue
             if n.get("dock") == "Fill":
                 continue
+            if (n.get("text") or "") == "\u2026":
+                continue
             a, b = pabs, n.get("abs")
             if area(b) <= 0:
+                continue
+            if pabs.get("h", 99) <= 1:
                 continue
             if not contains(a, b):
                 oob += 1
