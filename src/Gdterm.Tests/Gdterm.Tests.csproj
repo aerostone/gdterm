@@ -75,6 +75,22 @@
       <Project>{F6A7B8C9-D0E1-2345-ABCD-789012345678}</Project>
       <Name>Gdterm.KeePass</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Gdterm.AI\Gdterm.AI.csproj">
+      <Project>{B8C9D0E1-F2A3-4567-BCDE-901234567890}</Project>
+      <Name>Gdterm.AI</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Gdterm.Sftp\Gdterm.Sftp.csproj">
+      <Project>{E5F6A7B8-C9D0-1234-ABCD-678901234567}</Project>
+      <Name>Gdterm.Sftp</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Gdterm.Tunnel\Gdterm.Tunnel.csproj">
+      <Project>{C3D4E5F6-A7B8-9012-CDEF-123456789012}</Project>
+      <Name>Gdterm.Tunnel</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Gdterm.Rdp\Gdterm.Rdp.csproj">
+      <Project>{D0E1F2A3-B4C5-6789-DEF0-123456789012}</Project>
+      <Name>Gdterm.Rdp</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Gdterm.UI\Gdterm.UI.csproj">
       <Project>{E1F2A3B4-C5D6-7890-EF01-234567890123}</Project>
       <Name>Gdterm.UI</Name>
