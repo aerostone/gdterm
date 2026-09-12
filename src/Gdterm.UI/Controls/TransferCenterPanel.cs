@@ -47,8 +47,22 @@ namespace Gdterm.UI.Controls
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(DpiScale.V(this, 8), 0, 0, 0)
             };
+            // 清空按钮（此前只有 Record/Reload，无清空入口，用户报 Record-only）
+            var clear = new AntdUI.Button {
+                Text = "清空",
+                Dock = DockStyle.Bottom,
+                Height = Math.Max(DpiScale.V(this, 28), FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this)),
+                BackColor = GdtermColorTable.Surface,
+                ForeColor = GdtermColorTable.Foreground
+            };
+            clear.Click += (s, e) =>
+            {
+                lock (Sync) Jobs.Clear();
+                Reload();
+            };
             Controls.Add(_list);
             Controls.Add(tip);
+            Controls.Add(clear);
             Controls.Add(title);
             Reload();
         }
