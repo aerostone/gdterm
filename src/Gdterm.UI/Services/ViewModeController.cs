@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Controls;
@@ -59,8 +59,8 @@ namespace Gdterm.UI.Services
             _exitFocusButton = new AntdUI.Button {
                 Text = "退出专注 (Esc/F11)",
                 AutoSize = true,
-                BackColor = GdtermColorTable.Accent,
-                ForeColor = GdtermColorTable.OnAccent,
+                // 隐式 Default 钮会忽略 BackColor（Accent 底画不出 + OnAccent 深字 = 隐形钮，见 509df1b 教训）→ 显式 Primary
+                Type = AntdUI.TTypeMini.Primary,
                 Font = Services.FormFontPolicy.UiFont(0f, FontStyle.Bold),
                 Padding = new Padding(10, 4, 10, 4),
                 Visible = false,

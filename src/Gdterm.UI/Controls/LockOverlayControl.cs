@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.Security;
@@ -36,9 +36,20 @@ namespace Gdterm.UI.Controls
             Dock = DockStyle.Fill;
 
             // 中心面板：暗色 surface，与全局主题一致
+            // 面板高跟随内容：按钮底 + 20（默认字号下约 190；大字号自动长高）
+            // 注意：LineBox/RowStep 返回的是当前 DPI 下像素，V() 同样返回当前 DPI 像素，两者可直接相加。
+            var titleLabelFont = new Font(Font.FontFamily, Font.Size + 2, FontStyle.Bold);
+            int lockTitleH = Math.Max(DpiScale.V(this, 24),
+                Gdterm.UI.Services.FormFontPolicy.LineBox(titleLabelFont, this, 1.25f));
+            int lockMsgBoxH = Math.Max(DpiScale.V(this, 20),
+                Gdterm.UI.Services.FormFontPolicy.LineBox(Font, this, 1.25f));
+            int lockInputY2 = DpiScale.V(this, 52) + lockMsgBoxH + DpiScale.V(this, 10);
+            int lockInputH2 = Math.Max(DpiScale.V(this, 30), Gdterm.UI.Services.FormFontPolicy.RowStep(this));
+            int lockBtnY2 = lockInputY2 + lockInputH2 + DpiScale.V(this, 10);
+            int lockPanelH = lockBtnY2 + DpiScale.V(this, 32) + DpiScale.V(this, 20);
             _centerPanel = new Panel
             {
-                Size = DpiScale.S(this, 320, 170),
+                Size = new Size(DpiScale.V(this, 320), lockPanelH),
                 BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Surface
             };
             _centerPanel.Location = new Point(
@@ -46,31 +57,32 @@ namespace Gdterm.UI.Controls
                 (Height - _centerPanel.Height) / 2);
             Controls.Add(_centerPanel);
 
-            // 标题标签
+            // 标题标签：盒高取行盒（11pt 字跟随 UI 字号放大时不裁字）
             var titleLabel = new AntdUI.Label {
                 Text = "应用已锁定",
-                Location = DpiScale.P(this, 20, 18),
-                Size = DpiScale.S(this, 280, 24),
+                Location = new Point(DpiScale.V(this, 20), DpiScale.V(this, 18)),
+                Size = new Size(DpiScale.V(this, 280), lockTitleH),
                 TextAlign = ContentAlignment.MiddleCenter,
                 ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Foreground,
-                Font = new Font(Font.FontFamily, Font.Size + 2, FontStyle.Bold)
+                Font = titleLabelFont
             };
             _centerPanel.Controls.Add(titleLabel);
 
-            // 消息标签（错误提示用，初始为说明文字）
+            // 消息标签（错误提示用，初始为说明文字）：盒高取行盒，大字号不裁字
             _messageLabel = new AntdUI.Label {
                 Text = "请输入主密码解锁",
-                Location = DpiScale.P(this, 20, 52),
-                Size = DpiScale.S(this, 280, 20),
+                Location = new Point(DpiScale.V(this, 20), DpiScale.V(this, 52)),
+                Size = new Size(DpiScale.V(this, 280), lockMsgBoxH),
                 TextAlign = ContentAlignment.MiddleCenter,
                 ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Muted
             };
             _centerPanel.Controls.Add(_messageLabel);
 
             // 密码输入框：暗色 surface + 浅色前景，圆点遮罩（高度字体驱动，原先 26 在大字号下文字被裁）
+            // y 随消息行盒加高下移 52+LineBox(≈20)+10=82，保证 10px 间隙
             _passwordBox = new AntdUI.Input {
-                Location = DpiScale.P(this, 20, 78),
-                Size = new Size(DpiScale.V(this, 280), Math.Max(DpiScale.V(this, 30), Gdterm.UI.Services.FormFontPolicy.RowStep(this))),
+                Location = new Point(DpiScale.V(this, 20), lockInputY2),
+                Size = new Size(DpiScale.V(this, 280), lockInputH2),
                 UseSystemPasswordChar = true,
                 BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Background,
                 ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Foreground,
@@ -82,11 +94,11 @@ namespace Gdterm.UI.Controls
             };
             _centerPanel.Controls.Add(_passwordBox);
 
-            // 解锁按钮：accent 强调色
+            // 解锁按钮：accent 强调色；y 跟随输入框（输入y+输入高+10），面板底留 20
             _unlockButton = new AntdUI.Button {
                 Text = "解锁",
-                Location = DpiScale.P(this, 110, 118),
-                Size = DpiScale.S(this, 100, 32),
+                Location = new Point(DpiScale.V(this, 110), lockBtnY2),
+                Size = new Size(DpiScale.V(this, 100), DpiScale.V(this, 32)),
                 Type = AntdUI.TTypeMini.Primary,
             };
             _unlockButton.Click += (s, e) => OnUnlock();

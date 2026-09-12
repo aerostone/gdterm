@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.Security;
@@ -61,8 +61,8 @@ namespace Gdterm.UI.Services
                     Text = "验证",
                     Size = DpiScale.S(dialog, 80, 32),
                     Location = DpiScale.P(dialog, 270, 105),
-                    BackColor = GdtermColorTable.Accent,
-                    ForeColor = GdtermColorTable.OnAccent
+                    // 隐式 Default 钮忽略 BackColor（深字深底隐形，见 509df1b）→ 显式 Primary
+                    Type = AntdUI.TTypeMini.Primary
                 };
                 okBtn.Click += (s, ev) =>
                 {

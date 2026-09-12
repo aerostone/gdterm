@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -530,7 +530,6 @@ namespace Gdterm.UI.Controls
                 AutoSize = true,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
-                BorderWidth = 1f,
                 Font = FormFontPolicy.UiFont(-0.5f),
                 Cursor = Cursors.Hand,
                 TabStop = false,
@@ -654,7 +653,6 @@ namespace Gdterm.UI.Controls
                 AutoSize = true,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
-                BorderWidth = 1f,
                 Font = font,
                 Cursor = Cursors.Hand,
                 TabStop = false,
@@ -674,7 +672,6 @@ namespace Gdterm.UI.Controls
                 AutoSize = true,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Muted,
-                BorderWidth = 1f,
                 Font = font,
                 Cursor = Cursors.Hand,
                 TabStop = false,
@@ -705,7 +702,6 @@ namespace Gdterm.UI.Controls
                 AutoSize = true,
                 BackColor = active ? GdtermColorTable.Surface2 : GdtermColorTable.Surface,
                 ForeColor = active ? GdtermColorTable.Accent : GdtermColorTable.Muted,
-                BorderWidth = 1f,
                 Font = active ? FormFontPolicy.UiFont(-0.5f, FontStyle.Bold) : FormFontPolicy.UiFont(-0.5f),
                 Cursor = Cursors.Hand,
                 TabStop = false,

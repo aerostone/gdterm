@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
@@ -198,13 +198,14 @@ namespace Gdterm.UI.Forms
             // app.manifest 声明 PerMonitorV2 让 WinForms 按屏自动缩放；不要在这里再叠手工 Scale，
             // 否则控件会被缩放两次导致字号超大、布局错乱（DpiHelper 已废弃）。
             // 同理：主窗体自身尺寸不手工缩放，交给系统 PerMonitorV2（豁免清单见 docs/UI-SCALING-CONVENTIONS.md）。,
+            // 主窗自身尺寸交给 PerMonitorV2（同 ConnectionDialog 固定窗规则，不叠手工 Scale）。
             Size = new Size(1200, 800);
             MinimumSize = new Size(800, 600);
             StartPosition = FormStartPosition.CenterScreen;
 
             _connectionTree = new ConnectionTreeControl(_connectionStore, _keepassService);
             _connectionTree.Dock = DockStyle.Left;
-            _connectionTree.Width = 250;
+            _connectionTree.Width = 250; // 标准模式树宽；Compact 模式由 ViewModeController 置 200
 
             var mainSplitter = new Splitter
             {

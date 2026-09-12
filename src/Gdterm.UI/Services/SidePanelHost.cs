@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Controls;
@@ -33,6 +33,7 @@ namespace Gdterm.UI.Services
             var host = new Panel
             {
                 Dock = DockStyle.Right,
+                // 侧板宿主宽 360 设计 px：内容面板多为 300+ 列，窄于 320 会挤；同样不叠手工 Scale。
                 Width = 360,
                 Visible = false,
                 BackColor = GdtermColorTable.Background
@@ -40,10 +41,12 @@ namespace Gdterm.UI.Services
             var sideClose = new AntdUI.Button {
                 Text = "✕ 关闭面板",
                 Dock = DockStyle.Top,
+                // 固定 28 在大字号下裁字 → 字体驱动（host 建成后才有字号，此处先给 28 地板，Show 时校准）
                 Height = 28,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground
             };
+            sideClose.Name = "SidePanelCloseButton";
             if (onCloseClick != null)
                 sideClose.Click += onCloseClick;
             host.Controls.Add(sideClose);
@@ -64,6 +67,14 @@ namespace Gdterm.UI.Services
             panel.BringToFront();
             _host.Visible = true;
             _host.Width = Math.Max(320, _host.Width);
+            // 关闭钮高随字号校准（CreateHost 静态时无字号上下文，此处 host 已有 Font）
+            try
+            {
+                var close = _host.Controls["SidePanelCloseButton"];
+                if (close != null)
+                    close.Height = Math.Max(28, FormFontPolicy.RowStep(_host));
+            }
+            catch { }
         }
 
         public void Hide()
