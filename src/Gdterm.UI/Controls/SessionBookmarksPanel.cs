@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
@@ -50,6 +50,7 @@ namespace Gdterm.UI.Controls
             _searchBox = new AntdUI.Input {
                 Dock = DockStyle.Top,
                 AutoSize = true,
+                MinimumSize = new Size(0, Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this))),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
             };
@@ -107,7 +108,7 @@ namespace Gdterm.UI.Controls
             var bmLabel = new AntdUI.Label {
                 Text = "收藏书签",
                 Dock = DockStyle.Top,
-                Height = 20,
+                Height = Math.Max(DpiScale.V(this, 20), FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this)),
                 ForeColor = GdtermColorTable.Muted,
                 Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 2), 0, 0)
             };
@@ -125,7 +126,7 @@ namespace Gdterm.UI.Controls
             var recentLabel = new AntdUI.Label {
                 Text = "最近连接",
                 Dock = DockStyle.Top,
-                Height = 20,
+                Height = Math.Max(DpiScale.V(this, 20), FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this)),
                 ForeColor = GdtermColorTable.Muted,
                 Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 2), 0, 0)
             };

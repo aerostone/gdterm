@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
@@ -50,7 +50,7 @@ namespace Gdterm.UI.Controls
             var title = new AntdUI.Label {
                 Text = "通知中心",
                 Dock = DockStyle.Top,
-                Height = 28,
+                Height = Math.Max(DpiScale.V(this, 28), FormFontPolicy.LineBox(FormFontPolicy.UiFont(+1f), this)),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(DpiScale.V(this, 8), 0, 0, 0),
                 Font = Services.FormFontPolicy.UiFont(+1f, FontStyle.Bold)

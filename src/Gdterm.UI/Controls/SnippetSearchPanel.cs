@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -67,7 +67,7 @@ namespace Gdterm.UI.Controls
             _lblHint = new AntdUI.Label {
                 Text = "输入关键词搜索快捷命令 | Enter 执行 | Esc 关闭",
                 Dock = DockStyle.Top,
-                Height = 22,
+                Height = Math.Max(DpiScale.V(this, 22), FormFontPolicy.LineBox(FormFontPolicy.UiFont(-1f), this)),
                 Font = Services.FormFontPolicy.UiFont(-1f),
                 ForeColor = GdtermColorTable.Muted,
                 BackColor = GdtermColorTable.Background,

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
@@ -48,13 +48,16 @@ namespace Gdterm.UI.Controls
 
             _searchBox = new AntdUI.Input {
                 Width = DpiScale.V(this, 150),
-                AutoSize = true
+                AutoSize = true,
+                // 工具条输入无高会被压矮 → 38 地板
+                MinimumSize = new Size(0, Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this)))
             };
             _searchBox.PlaceholderText = "搜索命令...";
 
             _hostFilter = new AntdUI.Select {
                 Width = DpiScale.V(this, 120),
                 AutoSize = true,
+                MinimumSize = new Size(0, Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this))),
             };
             _hostFilter.Items.Add("所有主机");
             _hostFilter.SelectedIndex = 0;

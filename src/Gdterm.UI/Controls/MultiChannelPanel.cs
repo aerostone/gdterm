@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.Terminal;
@@ -92,7 +92,8 @@ namespace Gdterm.UI.Controls
 
             _commandInput = new AntdUI.Input {
                 Dock = DockStyle.Top,
-                Height = DpiScale.V(this, 28),
+                // 原 28 在大字号下裁字 → 38 地板（用户点名的"多通道没做完"区）
+                Height = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this)),
                 Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f)
             };
 

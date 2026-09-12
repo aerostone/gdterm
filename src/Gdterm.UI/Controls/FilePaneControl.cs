@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -142,7 +142,8 @@ namespace Gdterm.UI.Controls
 
             _status = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
-                Height = 22,
+                // 固定 22 在大字号下裁字 → 行盒跟随（其余 Dock 标题同）
+                Height = Math.Max(DpiScale.V(this, 22), FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this)),
                 ForeColor = GdtermColorTable.Muted,
                 Text = " ",
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -406,6 +407,7 @@ namespace Gdterm.UI.Controls
                 var lbl = new AntdUI.Label { Text = label, Dock = DockStyle.Top, Height = 28, Padding = new Padding(DpiScale.V(f, 12), DpiScale.V(f, 8), DpiScale.V(f, 12), 0), ForeColor = GdtermColorTable.Muted };
                 var box = new AntdUI.Input {
                     Dock = DockStyle.Top,
+                    MinimumSize = new Size(0, Math.Max(DpiScale.V(f, 38), Services.FormFontPolicy.RowStep(f))),
                     Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
                     BackColor = GdtermColorTable.Surface,
                     ForeColor = GdtermColorTable.Foreground,

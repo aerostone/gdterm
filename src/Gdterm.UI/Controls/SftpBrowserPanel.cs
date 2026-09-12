@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.IO;
 using System.Threading;
@@ -135,7 +135,7 @@ namespace Gdterm.UI.Controls
 
             _status = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
-                Height = 22,
+                Height = Math.Max(DpiScale.V(this, 22), FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this)),
                 ForeColor = GdtermColorTable.Muted,
                 Text = "正在连接..."
             };
@@ -377,8 +377,11 @@ namespace Gdterm.UI.Controls
             {
                 f.Size = DpiScale.S(f, 360, 140);
                 var lbl = new AntdUI.Label { Text = label, ForeColor = GdtermColorTable.Foreground, Location = DpiScale.P(f, 12, 12), AutoSize = true };
-                var box = new AntdUI.Input { Location = DpiScale.P(f, 12, 40), Width = 320, BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
-                var ok = new AntdUI.Button { Text = "确定", DialogResult = DialogResult.OK, Location = DpiScale.P(f, 250, 70) };
+                var box = new AntdUI.Input { Location = DpiScale.P(f, 12, 40), Width = DpiScale.V(f, 320),
+                    MinimumSize = new Size(0, Math.Max(DpiScale.V(f, 38), Services.FormFontPolicy.RowStep(f))),
+                    BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+                var ok = new AntdUI.Button { Text = "确定", DialogResult = DialogResult.OK, Location = DpiScale.P(f, 250, 76),
+                    Size = DpiScale.S(f, 84, 32) };
                 f.Controls.AddRange(new Control[] { lbl, box, ok });
                 f.AcceptButton = ok;
                 return f.ShowDialog() == DialogResult.OK ? box.Text : null;

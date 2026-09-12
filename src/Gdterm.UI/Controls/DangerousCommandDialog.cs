@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.Core.Models;
@@ -83,7 +83,7 @@ namespace Gdterm.UI.Controls
                 Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 10f),
                 ReadOnly = true,
                 Dock = DockStyle.Top,
-                Height = DpiScale.V(this, 35),
+                Height = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this)),
                 TextAlign = HorizontalAlignment.Center
             };
 

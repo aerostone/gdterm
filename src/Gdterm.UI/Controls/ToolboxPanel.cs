@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
@@ -53,7 +53,7 @@ namespace Gdterm.UI.Controls
 
             _lblTitle = new AntdUI.Label {
                 Dock = DockStyle.Top,
-                Height = 35,
+                Height = Math.Max(Services.DpiScale.V(this, 35), Services.FormFontPolicy.LineBox(Services.FormFontPolicy.UiFont(+5f), this)),
                 Font = Services.FormFontPolicy.UiFont(+5f, FontStyle.Bold),
                 ForeColor = GdtermColorTable.Foreground,
                 Text = "运维工具箱"
@@ -61,7 +61,7 @@ namespace Gdterm.UI.Controls
 
             _lblDescription = new AntdUI.Label {
                 Dock = DockStyle.Top,
-                Height = 25,
+                Height = Math.Max(Services.DpiScale.V(this, 25), Services.FormFontPolicy.LineBox(Services.FormFontPolicy.UiFont(), this)),
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = GdtermColorTable.Muted,
                 Text = "选择左侧工具开始使用"

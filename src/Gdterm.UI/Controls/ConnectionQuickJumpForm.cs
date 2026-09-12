@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -38,6 +38,7 @@ namespace Gdterm.UI.Controls
 
             _filter = new AntdUI.Input {
                 Dock = DockStyle.Top,
+                MinimumSize = new Size(0, Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this))),
                 PlaceholderText = "输入名称 / 主机 / 分组…",
                 AllowClear = true,
                 Font = Services.FormFontPolicy.UiFont(+1f)

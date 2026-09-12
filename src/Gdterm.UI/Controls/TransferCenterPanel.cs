@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
@@ -26,7 +26,7 @@ namespace Gdterm.UI.Controls
             var title = new AntdUI.Label {
                 Text = "传输中心",
                 Dock = DockStyle.Top,
-                Height = 28,
+                Height = Math.Max(DpiScale.V(this, 28), FormFontPolicy.LineBox(FormFontPolicy.UiFont(+1f), this)),
                 Font = Services.FormFontPolicy.UiFont(+1f, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(DpiScale.V(this, 8), 0, 0, 0)
@@ -41,7 +41,7 @@ namespace Gdterm.UI.Controls
             };
             var tip = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
-                Height = 22,
+                Height = Math.Max(DpiScale.V(this, 22), FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this)),
                 Text = "上传/下载完成后会出现在此列表",
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleLeft,
