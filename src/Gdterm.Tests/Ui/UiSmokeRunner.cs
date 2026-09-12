@@ -120,6 +120,12 @@ namespace Gdterm.Tests.Ui
                 }
             });
 
+            // 4) 主窗 layout：全依赖临时目录构造，dump 整棵树
+            RunCase("MainForm", () =>
+            {
+                MainFormSmoke.Run(outDir, s => Console.WriteLine("  " + s), (ok, what) => Check(ok, what));
+            });
+
             Console.WriteLine();
             Console.WriteLine("UI smoke Passed: {0}  Failed: {1}", _passes, _fails);
             foreach (var m in _messages) Console.WriteLine(m);

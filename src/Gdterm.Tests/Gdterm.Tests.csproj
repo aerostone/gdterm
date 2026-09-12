@@ -94,6 +94,7 @@
     <Compile Include="Scanning\ScanPluginTests.cs" />
     <Compile Include="Ui\UiSmokeRunner.cs" />
     <Compile Include="Ui\UiTreeDumper.cs" />
+    <Compile Include="Ui\MainFormSmoke.cs" />
     <Compile Include="Ui\FakeKeePassService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
