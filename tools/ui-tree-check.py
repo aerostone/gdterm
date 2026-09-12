@@ -163,7 +163,9 @@ def main():
         zero = [n for (n, pabs, _) in all_nodes
                 if n.get("visible") and not n.get("children")
                 and (n.get("abs", {}).get("w", 1) <= 0 or n.get("abs", {}).get("h", 1) <= 0)
+                # 空文本 AutoSize Label 正常态（如 errorLabel，有错才撑开）
                 and not ("Divider" in n.get("type", "") and n.get("abs", {}).get("h", 99) <= 2)
+                and not ("Label" in n.get("type", "") and not (n.get("text") or ""))
                 and n.get("dock") != "Fill"
                 and not (pabs is not None and area(pabs) <= 0)]
         check(len(zero) == 0, "零尺寸可见叶=%d" % len(zero))
@@ -188,6 +190,9 @@ def main():
         for n, _, _ in all_nodes:
             t = n.get("type", "")
             if "AntdUI" in t and "Button" in t:
+                # 固定尺寸钮靠库内 sps 居中（字高*0.4/侧），Padding=0 不贴边；只判 AutoSize 钮
+                if not n.get("autoSize"):
+                    continue
                 p = n.get("padding", {})
                 if p.get("l", 1) == 0 and p.get("r", 1) == 0:
                     check(False, "按钮左右padding=0(贴边风险) %s[%s]" % (n.get("name") or "?", n.get("text", "")))

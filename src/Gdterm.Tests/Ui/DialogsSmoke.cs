@@ -30,7 +30,7 @@ namespace Gdterm.Tests.Ui
             Show("ai-settings", () => (Form)new AiSettingsForm(new AiModelStore(Path.Combine(tmp, "ai.json"))), outDir, log, check);
             Show("appearance-settings", () => (Form)new AppearanceSettingsForm(tmp), outDir, log, check);
             Show("change-masterpwd", () => (Form)new ChangeMasterPasswordForm(security), outDir, log, check);
-            Show("connection-new", () => (Form)new ConnectionDialog((ConnectionConfig)null, keepass), outDir, log, check);
+            ShowConnectionVariants(keepass, outDir, log, check);
             Show("dangerous-cmd", () => (Form)new DangerousCommandConfigForm(detector), outDir, log, check);
             Show("keepass-picker", () => (Form)new KeePassEntryPicker(keepass), outDir, log, check);
             Show("keepass-unlock", () => (Form)new KeePassUnlockForm(keepass), outDir, log, check);
@@ -44,6 +44,49 @@ namespace Gdterm.Tests.Ui
             try { Directory.Delete(tmp, true); } catch { }
             try { detector.Dispose(); } catch { }
             try { security.Dispose(); } catch { }
+        }
+
+        // 新建连接三协议各 dump 一次：反射展开高级区 + 切换协议（折叠态量不到 RDP/串口区真实尺寸）
+        private static void ShowConnectionVariants(FakeKeePassService keepass, string outDir, Action<string> log, Action<bool, string> check)
+        {
+            string[] protos = new string[] { "SSH", "RDP", "Serial" };
+            string[] names = new string[] { "connection-ssh", "connection-rdp", "connection-serial" };
+            for (int i = 0; i < protos.Length; i++)
+            {
+                string name = names[i], proto = protos[i];
+                try
+                {
+                    using (var f = new ConnectionDialog((ConnectionConfig)null, keepass))
+                    {
+                        f.Show();
+                        Application.DoEvents();
+                        Thread.Sleep(300);
+                        Application.DoEvents();
+                        var t = f.GetType();
+                        var combo = t.GetField("_protocolCombo", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(f);
+                        combo.GetType().GetProperty("SelectedValue").SetValue(combo, proto, null);
+                        Application.DoEvents();
+                        Thread.Sleep(300);
+                        Application.DoEvents();
+                        t.GetMethod("ToggleAdvanced", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).Invoke(f, null);
+                        Application.DoEvents();
+                        Thread.Sleep(500);
+                        Application.DoEvents();
+                        int n = Count(f);
+                        check(n > 5, name + "-controls=" + n + " (>5)");
+                        check(f.ClientSize.Width > 200 && f.ClientSize.Height > 150,
+                            name + "-client=" + f.ClientSize.Width + "x" + f.ClientSize.Height);
+                        File.WriteAllText(Path.Combine(outDir, name + ".json"), UiTreeDumper.Dump(f), System.Text.Encoding.UTF8);
+                        log("dump: " + name + ".json");
+                    }
+                    log("[PASS] " + name);
+                }
+                catch (Exception ex)
+                {
+                    _oneFails++;
+                    log("[FAIL-ONE] dialog-" + name + "-failed: " + UiSmokeRunner.FlatEx(ex));
+                }
+            }
         }
 
         private static void Show(string name, Func<Form> make, string outDir, Action<string> log, Action<bool, string> check)

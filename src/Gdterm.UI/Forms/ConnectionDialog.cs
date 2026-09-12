@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI;
@@ -183,6 +183,8 @@ namespace Gdterm.UI.Forms
                 Text = "选择凭据...",
                 Type = AntdUI.TTypeMini.Primary,
                 AutoSize = true,
+                // AutoSize 钮显式 Padding：无 Padding 时高 36 与 38 行不齐（287 dump 实测）
+                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
                 Margin = new Padding(0, DpiScale.V(this, 2), DpiScale.V(this, 6), 0)
             };
             btnPickCred.Click += OnPickCredential;
@@ -190,6 +192,7 @@ namespace Gdterm.UI.Forms
                 Text = "清除",
                 Type = AntdUI.TTypeMini.Default,
                 AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
                 Margin = new Padding(0, DpiScale.V(this, 2), 0, 0)
             };
             btnClearCred.Click += OnClearCredential;

@@ -111,6 +111,7 @@ namespace Gdterm.UI.Forms
                 Text = "新建凭据",
                 Type = AntdUI.TTypeMini.Default,
                 AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
                 Margin = new Padding(0)
             };
             btnNew.Click += (s, e) => CreateNewEntry();
@@ -118,6 +119,7 @@ namespace Gdterm.UI.Forms
                 Text = "选择",
                 Type = AntdUI.TTypeMini.Primary,
                 AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
                 Margin = new Padding(8, 0, 0, 0),
                 Enabled = false
             };
@@ -126,6 +128,7 @@ namespace Gdterm.UI.Forms
                 Text = "取消",
                 Type = AntdUI.TTypeMini.Default,
                 AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
                 Margin = new Padding(8, 0, 0, 0)
             };
             btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
