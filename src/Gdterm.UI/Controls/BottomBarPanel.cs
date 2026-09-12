@@ -405,21 +405,25 @@ namespace Gdterm.UI.Controls
                     x = PlaceControl(btn, x, dpi);
                 }
 
-                // 「+」添加按钮
-                var add = new AntdUI.Button
+                // 「+」添加按钮：极窄窗下放不下就跳过（… 菜单尾部已有"添加快捷命令"入口兜底，不静默丢功能）
+                int addNeed = x + FittedWidth("+", Font, 6, AddButtonPadding()) + DpiScale.V(this, 8);
+                if (addNeed <= avail)
                 {
-                    Text = "+",
-                    AutoSize = true,
-                    BackColor = GdtermColorTable.Background,
-                    ForeColor = GdtermColorTable.Muted,
-                    Font = FormFontPolicy.UiFont(-0.5f),
-                    Cursor = Cursors.Hand,
-                    TabStop = false,
-                    Padding = new Padding(DpiScale.V(this, 7), DpiScale.V(this, 2), DpiScale.V(this, 7), DpiScale.V(this, 2))
-                };
-                add.Click += (s, e) => AddRequested?.Invoke(_activeGroup ?? "自定义");
-                add.ToolTipText2("添加快捷命令");
-                x = PlaceControl(add, x, dpi);
+                    var add = new AntdUI.Button
+                    {
+                        Text = "+",
+                        AutoSize = true,
+                        BackColor = GdtermColorTable.Background,
+                        ForeColor = GdtermColorTable.Muted,
+                        Font = FormFontPolicy.UiFont(-0.5f),
+                        Cursor = Cursors.Hand,
+                        TabStop = false,
+                        Padding = AddButtonPadding()
+                    };
+                    add.Click += (s, e) => AddRequested?.Invoke(_activeGroup ?? "自定义");
+                    add.ToolTipText2("添加快捷命令");
+                    x = PlaceControl(add, x, dpi);
+                }
             }
 
             // 分组按钮：同样绕开 AntdUI AutoSize（它不看 Padding），显式按实测文字宽预留
@@ -427,6 +431,11 @@ namespace Gdterm.UI.Controls
             int gw = FittedWidth(_groupBtn);
             _groupBtn.MinimumSize = new Size(gw, 0);
             _groupBtn.Width = gw;
+        }
+
+        private Padding AddButtonPadding()
+        {
+            return new Padding(DpiScale.V(this, 7), DpiScale.V(this, 2), DpiScale.V(this, 7), DpiScale.V(this, 2));
         }
 
         /// <summary>溢出命令收进「…」弹出菜单（不裁剪不滚动）。</summary>
@@ -456,6 +465,11 @@ namespace Gdterm.UI.Controls
                 item.Click += (s, e) => SendCommand(c, more);
                 menu.Items.Add(item);
             }
+            // 兜底：+ 钮在极窄窗被跳过时，用户仍可从此处添加
+            menu.Items.Add(new ToolStripSeparator());
+            var addItem = new ToolStripMenuItem("添加快捷命令…");
+            addItem.Click += (s, e) => AddRequested?.Invoke(_activeGroup ?? "自定义");
+            menu.Items.Add(addItem);
             more.ContextMenuStrip = menu;
             more.Click += (s, e) => menu.Show(more, new Point(0, more.Height));
             return PlaceControl(more, x, dpi);
