@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -8,6 +8,7 @@ using Gdterm.Terminal;
 using TerminalControl = Gdterm.UI.Controls.TerminalControl;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.UI.Diagnostics;
 namespace Gdterm.UI.Controls
 {
     /// <summary>
@@ -89,7 +90,7 @@ namespace Gdterm.UI.Controls
             {
                 if (_clickAwayFilter != null)
                 {
-                    try { Application.RemoveMessageFilter(_clickAwayFilter); } catch { }
+                    try { Application.RemoveMessageFilter(_clickAwayFilter); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("BottomBarPanel", exSwallowed); } catch { } }
                     _clickAwayFilter = null;
                 }
             }
@@ -146,7 +147,7 @@ namespace Gdterm.UI.Controls
                 _terminalSizeLabel.Text = columns > 0 && rows > 0 ? (columns + "×" + rows) : "";
                 _encodingLabel.Text = string.IsNullOrEmpty(encoding) ? "" : encoding;
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("BottomBarPanel", exSwallowed); } catch { } }
         }
 
         public void UpdateSecurityStatus(bool locked)
@@ -311,7 +312,7 @@ namespace Gdterm.UI.Controls
 
         private static void SetStatusTip(ToolStripStatusLabel label, string tip)
         {
-            try { label.ToolTipText = tip; } catch { }
+            try { label.ToolTipText = tip; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("BottomBarPanel", exSwallowed); } catch { } }
         }
 
         // ═══════════ 分组单选（B2）═══════════
@@ -558,14 +559,14 @@ namespace Gdterm.UI.Controls
                 ForeColor = GdtermColorTable.Foreground
             };
             var miEdit = new ToolStripMenuItem("编辑"); miEdit.Click += (s, e) => EditRequested?.Invoke(cmd);
-            var miCopy = new ToolStripMenuItem("复制命令"); miCopy.Click += (s, e) => { try { Clipboard.SetText(ResolveCommand(cmd)); } catch { } };
+            var miCopy = new ToolStripMenuItem("复制命令"); miCopy.Click += (s, e) => { try { Clipboard.SetText(ResolveCommand(cmd)); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("BottomBarPanel", exSwallowed); } catch { } } };
             var miDel = new ToolStripMenuItem("删除"); miDel.Click += (s, e) =>
             {
                 // 先落盘再刷内存：有注入走 store.Delete（失败则不动），无注入仅内存删
                 if (DeletePersisted != null)
                 {
                     bool ok = false;
-                    try { ok = DeletePersisted(cmd.Id); } catch { }
+                    try { ok = DeletePersisted(cmd.Id); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("BottomBarPanel", exSwallowed); } catch { } }
                     if (ok) RemoveCommand(cmd.Id);
                 }
                 else RemoveCommand(cmd.Id);
@@ -729,10 +730,10 @@ namespace Gdterm.UI.Controls
         private void SendTmuxKey(string payload)
         {
             // tmux 控制序列不是 shell 命令行，走 TrySendInput 绕过危险命令闸门
-            try { _activeTerminal?.TrySendInput(payload); } catch { }
+            try { _activeTerminal?.TrySendInput(payload); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("BottomBarPanel", exSwallowed); } catch { } }
             if (_activeTerminal == null)
             {
-                try { _activeSession?.SendInput(payload); } catch { }
+                try { _activeSession?.SendInput(payload); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("BottomBarPanel", exSwallowed); } catch { } }
             }
         }
 
@@ -840,7 +841,7 @@ namespace Gdterm.UI.Controls
                 var pos = Cursor.Position;
                 if (!bar.ContainsScreenPoint(pos)) bar.NotifyClickAway();
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("BottomBarPanel", exSwallowed); } catch { } }
             return false; // 不吞消息，仅观察
         }
     }

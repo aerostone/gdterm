@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
@@ -146,7 +146,7 @@ namespace Gdterm.UI.Forms
                             " retries=" + e.RetryCount +
                             " err=" + (e.ErrorMessage ?? ""));
                     }
-                    catch { }
+                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
                 };
             }
 
@@ -181,7 +181,7 @@ namespace Gdterm.UI.Forms
                     iconStream.Dispose();
                 }
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
         }
 
         /// <summary>快捷命令 store 安全重载（失败回空列表，不炸 UI）。</summary>
@@ -247,7 +247,7 @@ namespace Gdterm.UI.Forms
             _tabContainer.ActiveSessionChanged += OnActiveSessionChanged;
             _tabContainer.SessionClosed += OnSessionClosed;
             _tabContainer.SearchRequested += (s, e) => _sidePanels?.AttachSearchBar(_tabContainer);
-            _tabContainer.BlankAreaDoubleClicked += (s, e) => { try { _openCoord.NewConnection(); } catch { } };
+            _tabContainer.BlankAreaDoubleClicked += (s, e) => { try { _openCoord.NewConnection(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } } };
             _tabContainer.ExportRequested += (s, e) => ExportActiveTerminalBuffer();
             _tabContainer.AppearanceSettingsRequested += (s, e) => _toolsDialogs.OpenAppearanceSettings();
             // 终端尺寸/编码变化→状态栏显示
@@ -259,7 +259,7 @@ namespace Gdterm.UI.Forms
                     var enc = tc != null ? tc.CurrentEncoding : "UTF-8";
                     _statusBar?.UpdateTerminalInfo(size.Width, size.Height, enc);
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
             };
             // ReconnectRequested 已由 TabContainerControl 内部直走 ReconnectActiveTab，无需重复。
 
@@ -285,7 +285,7 @@ namespace Gdterm.UI.Forms
             _statusBar.Name = "BottomBarPanel";
             _statusBar.Dock = DockStyle.Bottom;
             List<QuickCommand> cmds = null;
-            try { cmds = _quickCommandStore?.LoadAll(); } catch { }
+            try { cmds = _quickCommandStore?.LoadAll(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
             _statusBar.SetCommands(cmds ?? new List<QuickCommand>());
             _statusBar.CommandSent += (cmd, group) =>
             {
@@ -302,7 +302,7 @@ namespace Gdterm.UI.Forms
                     using (var dlg = new QuickCommandEditorForm(null, groupName))
                     {
                         if (dlg.ShowDialog(this) != DialogResult.OK || dlg.Result == null) return;
-                        try { _quickCommandStore?.Add(dlg.Result); } catch { }
+                        try { _quickCommandStore?.Add(dlg.Result); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
                         _statusBar.SetCommands(SafeLoadQuickCommands());
                     }
                 }
@@ -316,7 +316,7 @@ namespace Gdterm.UI.Forms
                     {
                         if (dlg.ShowDialog(this) != DialogResult.OK || dlg.Result == null) return;
                         dlg.Result.Id = cmd.Id; // 编辑保持原 Id，Update 才能命中
-                        try { _quickCommandStore?.Update(dlg.Result); } catch { }
+                        try { _quickCommandStore?.Update(dlg.Result); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
                         _statusBar.SetCommands(SafeLoadQuickCommands());
                     }
                 }
@@ -374,7 +374,7 @@ namespace Gdterm.UI.Forms
                 ToggleTreePin = (s, e) =>
                 {
                     try { _connectionTree?.TogglePin(); }
-                    catch { }
+                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
                 },
                 SplitHorizontal = (s, e) => _tabContainer.SplitHorizontal(),
                 SplitVertical = (s, e) => _tabContainer.SplitVertical(),
@@ -385,7 +385,7 @@ namespace Gdterm.UI.Forms
                 ToggleTmuxBar = (s, e) =>
                 {
                     // v2：tmux 键组并入单栏底栏，菜单项改为切到 tmux 组（与 Alt+8 同效）
-                    try { _statusBar?.ToggleTmuxGroup(); } catch { }
+                    try { _statusBar?.ToggleTmuxGroup(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
                 },
                 ShowSearch = (s, e) => _sidePanels?.AttachSearchBar(_tabContainer),
                 ShowSnippet = (s, e) => _sidePanelHost?.ShowSnippetSearch(_sidePanels, _tabContainer),
@@ -416,8 +416,8 @@ namespace Gdterm.UI.Forms
                 ToggleDebugMode = (s, e) => ToggleDebugMode(),
                 About = (s, e) => _toolsDialogs.ShowAbout(),
                 SshKeyManager = (s, e) => { try { _toolsDialogs?.OpenSshKeyManager(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.SshKey", ex); } },
-                ShowTransferCenter = (s, e) => { try { _sidePanelHost?.Show(_sidePanels?.CreateTransferCenterPanel()); } catch { } },
-                ShowNotificationCenter = (s, e) => { try { _sidePanelHost?.Show(_sidePanels?.CreateNotificationCenterPanel()); } catch { } },
+                ShowTransferCenter = (s, e) => { try { _sidePanelHost?.Show(_sidePanels?.CreateTransferCenterPanel()); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } } },
+                ShowNotificationCenter = (s, e) => { try { _sidePanelHost?.Show(_sidePanels?.CreateNotificationCenterPanel()); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } } },
                 QuickJump = (s, e) => OpenQuickJump()
             });
             _menuStrip = menuBuilt.Menu;
@@ -430,7 +430,7 @@ namespace Gdterm.UI.Forms
                 _menuStrip.BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Background;
                 _menuStrip.ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Foreground;
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
 
             _viewMode = new ViewModeController(
                 _connectionTree,
@@ -447,7 +447,7 @@ namespace Gdterm.UI.Forms
                 _tabContainer, _sidePanels, _sidePanelHost, _viewMode);
 
             // Toast / 落地页 / 托盘
-            try { ToastNotifier.Bind(this); } catch { }
+            try { ToastNotifier.Bind(this); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
             try { SetupWelcomePanel(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.Welcome", ex); }
             try { SetupTrayIcon(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.Tray", ex); }
             try
@@ -457,7 +457,7 @@ namespace Gdterm.UI.Forms
                     _tabContainer.TabCountChanged += (s, e) => UpdateWelcomeVisibility();
                 }
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
 
             Controls.Add(_tabContainer);
             Controls.Add(sideSplitter);
@@ -470,7 +470,7 @@ namespace Gdterm.UI.Forms
             _lockOverlay.BringToFront();
 
             // 主界面统一字体（微软雅黑妖会被镜像发给终端，这里只给 UI 侧）。
-            try { ApplyGlobalUIFont(); } catch { }
+            try { ApplyGlobalUIFont(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
 
             _sessionState = new SessionStateCoordinator(
                 _sessionStore,
@@ -507,21 +507,21 @@ namespace Gdterm.UI.Forms
                     "font=" + font.Name + "/" + size.ToString("0.#") + "pt applied=" + font.SizeInPoints.ToString("0.#") +
                     "pt dpi=" + uiDpi.ToString("0") + " formClient=" + ClientSize.Width + "x" + ClientSize.Height);
             }
-            catch { }
-            try { this.Font = font; } catch { }
-            if (_menuStrip != null) try { _menuStrip.Font = font; } catch { }
-            if (_statusBar != null) try { _statusBar.Font = font; } catch { }
-            if (_connectionTree != null) try { _connectionTree.ApplyUIFont(name, size); } catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
+            try { this.Font = font; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
+            if (_menuStrip != null) try { _menuStrip.Font = font; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
+            if (_statusBar != null) try { _statusBar.Font = font; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
+            if (_connectionTree != null) try { _connectionTree.ApplyUIFont(name, size); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
 
             // 运行中切换字号时，显式字体的子控件不会自动继承新的 Form.Font。
             // 仅替换 UI 字体，保留 Consolas 等终端/代码字体的语义字号。
-            try { Services.FormFontPolicy.ApplyChildUIFont(this, name, size); } catch { }
+            try { Services.FormFontPolicy.ApplyChildUIFont(this, name, size); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
 
             try
             {
                 if (_statusBar != null) _statusBar.Height = _statusBar.GetPreferredHeight();
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
         }
 
         private void SetupEventHandlers()
@@ -577,7 +577,7 @@ namespace Gdterm.UI.Forms
         private void OnSessionClosed(object sender, string sessionId)
         {
             if (string.IsNullOrEmpty(sessionId) || _multiChannelManager == null) return;
-            try { _multiChannelManager.Unregister(sessionId); } catch { }
+            try { _multiChannelManager.Unregister(sessionId); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
         }
 
         private void OnActiveSessionChanged(object sender, EventArgs e)
@@ -652,7 +652,7 @@ namespace Gdterm.UI.Forms
             };
             _welcomePanel.NewConnectionRequested += () =>
             {
-                try { _openCoord?.NewConnection(); } catch { }
+                try { _openCoord?.NewConnection(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
             };
             _welcomePanel.OpenLocalTerminalRequested += () =>
             {
@@ -667,11 +667,11 @@ namespace Gdterm.UI.Forms
                         if (cfg != null) _openCoord?.OpenConnection(cfg);
                     }));
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
             };
             _welcomePanel.OpenKeePassRequested += () =>
             {
-                try { _toolsDialogs?.OpenKeePassManager(); } catch { }
+                try { _toolsDialogs?.OpenKeePassManager(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
             };
             _welcomePanel.OpenConnectionRequested += cfg =>
             {
@@ -680,7 +680,7 @@ namespace Gdterm.UI.Forms
                     if (cfg != null) _openCoord?.OpenConnection(cfg);
                     UpdateWelcomeVisibility();
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
             };
             Controls.Add(_welcomePanel);
             _welcomePanel.BringToFront();
@@ -692,7 +692,7 @@ namespace Gdterm.UI.Forms
             try
             {
                 int tabs = 0;
-                try { tabs = _tabContainer != null ? _tabContainer.OpenTabCount : 0; } catch { }
+                try { tabs = _tabContainer != null ? _tabContainer.OpenTabCount : 0; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
                 bool show = tabs <= 0;
                 if (_welcomePanel != null && !_welcomePanel.IsDisposed)
                 {
@@ -718,7 +718,7 @@ namespace Gdterm.UI.Forms
             }
             catch
             {
-                try { _trayIcon.Icon = SystemIcons.Application; } catch { }
+                try { _trayIcon.Icon = SystemIcons.Application; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
             }
 
             var menu = new ContextMenuStrip();
@@ -732,7 +732,7 @@ namespace Gdterm.UI.Forms
             menu.Items.Add("退出", null, (s, e) =>
             {
                 _confirmExitPending = true;
-                try { _trayIcon.Visible = false; } catch { }
+                try { _trayIcon.Visible = false; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
                 Close();
             });
             _trayIcon.ContextMenuStrip = menu;
@@ -748,7 +748,7 @@ namespace Gdterm.UI.Forms
                 Activate();
                 ShowInTaskbar = true;
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
         }
 
         protected override void OnResize(EventArgs e)
@@ -765,10 +765,10 @@ namespace Gdterm.UI.Forms
                         _trayIcon.ShowBalloonTip(1200, "gdterm",
                             "已最小化到托盘，双击图标恢复。", ToolTipIcon.Info);
                     }
-                    catch { }
+                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
                 }
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
         }
 
 
@@ -801,7 +801,7 @@ namespace Gdterm.UI.Forms
 
             // 用户确认退出：标记后重新 Close，绕过再次确认
             _confirmExitPending = true;
-            try { if (_trayIcon != null) _trayIcon.Visible = false; } catch { }
+            try { if (_trayIcon != null) _trayIcon.Visible = false; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
             Close();
         }
 

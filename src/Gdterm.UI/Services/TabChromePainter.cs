@@ -52,7 +52,7 @@ namespace Gdterm.UI.Services
                     if (need > ideal) ideal = need;
                 }
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabChromePainter", exSwallowed); } catch { } }
 
             // 可视宽约束：总宽不超过标签行可用宽（留 8px 余量给新增按钮区）
             int avail = (int)Math.Floor(tabControl.ClientRectangle.Width / dpi) - 8;

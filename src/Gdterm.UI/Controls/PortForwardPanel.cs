@@ -6,6 +6,7 @@ using Gdterm.Core.Models;
 using Gdterm.Tunnel;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Controls
 {
@@ -31,7 +32,7 @@ namespace Gdterm.UI.Controls
         public void SetPortForwardHost(ISshPortForwardHost host)
         {
             _host = host;
-            try { _manager.Bind(host); } catch { }
+            try { _manager.Bind(host); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("PortForwardPanel", exSwallowed); } catch { } }
         }
 
         /// <summary>兼容旧名：内部仍转 Bind</summary>
@@ -170,7 +171,7 @@ namespace Gdterm.UI.Controls
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
-            try { _manager.Bind(_host); } catch { }
+            try { _manager.Bind(_host); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("PortForwardPanel", exSwallowed); } catch { } }
             var rule = _lvRules.SelectedItems[0].Tag as PortForwardRule;
             if (rule == null) return;
             bool ok = rule.Type == PortForwardType.Local
@@ -184,14 +185,14 @@ namespace Gdterm.UI.Controls
         {
             if (_lvRules.SelectedItems.Count == 0) return;
             var rule = _lvRules.SelectedItems[0].Tag as PortForwardRule;
-            if (rule != null) { try { _manager.Bind(_host); } catch { } _manager.Stop(rule.Id); RefreshList(); }
+            if (rule != null) { try { _manager.Bind(_host); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("PortForwardPanel", exSwallowed); } catch { } } _manager.Stop(rule.Id); RefreshList(); }
         }
 
         private void DeleteSelected()
         {
             if (_lvRules.SelectedItems.Count == 0) return;
             var rule = _lvRules.SelectedItems[0].Tag as PortForwardRule;
-            if (rule != null) { try { _manager.Bind(_host); } catch { } _manager.Stop(rule.Id); _rules.Remove(rule); RefreshList(); }
+            if (rule != null) { try { _manager.Bind(_host); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("PortForwardPanel", exSwallowed); } catch { } } _manager.Stop(rule.Id); _rules.Remove(rule); RefreshList(); }
         }
 
         private static void Lbl(Form f, string t, int x, int y) { f.Controls.Add(new AntdUI.Label { Text = t, Location = DpiScale.P(f, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }); }
@@ -201,9 +202,9 @@ namespace Gdterm.UI.Controls
         {
             if (disposing)
             {
-                try { _manager?.Dispose(); } catch { }
+                try { _manager?.Dispose(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("PortForwardPanel", exSwallowed); } catch { } }
                 _host = null;
-                try { _manager?.Unbind(); } catch { }
+                try { _manager?.Unbind(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("PortForwardPanel", exSwallowed); } catch { } }
             }
             base.Dispose(disposing);
         }

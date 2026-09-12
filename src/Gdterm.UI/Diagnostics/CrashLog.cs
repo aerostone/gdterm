@@ -124,13 +124,13 @@ namespace Gdterm.UI.Diagnostics
                 if (fi.Exists && fi.Length > 5 * 1024 * 1024)
                 {
                     var bak = path + ".1";
-                    try { if (File.Exists(bak)) File.Delete(bak); } catch { }
-                    try { File.Move(path, bak); } catch { }
+                    try { if (File.Exists(bak)) File.Delete(bak); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("CrashLog", exSwallowed); } catch { } }
+                    try { File.Move(path, bak); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("CrashLog", exSwallowed); } catch { } }
                 }
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("CrashLog", exSwallowed); } catch { } }
 
-            try { File.AppendAllText(path, text, Encoding.UTF8); } catch { }
+            try { File.AppendAllText(path, text, Encoding.UTF8); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("CrashLog", exSwallowed); } catch { } }
         }
 
         public static int WrittenCount => _written;

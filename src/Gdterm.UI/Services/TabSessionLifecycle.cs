@@ -10,6 +10,7 @@ using Gdterm.Tunnel;
 using Gdterm.UI.Controls;
 using TerminalControl = Gdterm.UI.Controls.TerminalControl;
 using Gdterm.Connections;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Services
 {
@@ -72,15 +73,15 @@ namespace Gdterm.UI.Services
                                 SecurityEvent.ApplicationError,
                                 "logon script failed on " + config.Host + ": " + ex.Message);
                         }
-                        catch { }
+                        catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabSessionLifecycle", exSwallowed); } catch { } }
                     }
                     finally
                     {
-                        try { engine.Dispose(); } catch { }
+                        try { engine.Dispose(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabSessionLifecycle", exSwallowed); } catch { } }
                     }
                 });
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabSessionLifecycle", exSwallowed); } catch { } }
         }
 
         /// <summary>
@@ -94,7 +95,7 @@ namespace Gdterm.UI.Services
             Action<string> onLost = null)
         {
             if (session == null) return null;
-            try { previous?.Dispose(); } catch { }
+            try { previous?.Dispose(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabSessionLifecycle", exSwallowed); } catch { } }
 
             var monitor = new ConnectionHealthMonitor(session)
             {
@@ -116,10 +117,10 @@ namespace Gdterm.UI.Services
                         if (onLost != null) onLost(sessionId);
                         else _reconnectWatchdog?.NotifyConnectionLost(sessionId);
                     }
-                    catch { }
+                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabSessionLifecycle", exSwallowed); } catch { } }
                 };
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabSessionLifecycle", exSwallowed); } catch { } }
             monitor.Start(5000);
             _reconnectWatchdog?.Watch(sessionId, session);
             return monitor;
@@ -128,13 +129,13 @@ namespace Gdterm.UI.Services
         /// <summary>重连成功后重新武装健康监控（P0-02）。</summary>
         public static void MarkReconnected(ConnectionHealthMonitor monitor)
         {
-            try { monitor?.RecordReconnect(); } catch { }
+            try { monitor?.RecordReconnect(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabSessionLifecycle", exSwallowed); } catch { } }
         }
 
         /// <summary>锁屏解锁后重新武装所有监控（P1-03）。</summary>
         public static void RearmMonitor(ConnectionHealthMonitor monitor)
         {
-            try { monitor?.Rearm(); } catch { }
+            try { monitor?.Rearm(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabSessionLifecycle", exSwallowed); } catch { } }
         }
 
         /// <summary>
@@ -173,7 +174,7 @@ namespace Gdterm.UI.Services
             {
                 _auditLogger?.LogConnection(connectionId, host, protocol, ConnectionAction.Close);
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabSessionLifecycle", exSwallowed); } catch { } }
         }
     }
 }

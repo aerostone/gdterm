@@ -8,6 +8,7 @@ using Gdterm.Security;
 using Gdterm.Terminal;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Controls
 {
@@ -164,12 +165,12 @@ namespace Gdterm.UI.Controls
                             }
                             if (dlg.RememberChoice)
                             {
-                                try { _dangerousDetector.AddToWhitelist(command); } catch { }
+                                try { _dangerousDetector.AddToWhitelist(command); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("BatchCommandPanel", exSwallowed); } catch { } }
                             }
                         }
                     }
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("BatchCommandPanel", exSwallowed); } catch { } }
             }
 
             _btnExecute.Enabled = false;

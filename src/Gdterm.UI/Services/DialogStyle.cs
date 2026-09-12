@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Services
 {
@@ -42,7 +43,7 @@ namespace Gdterm.UI.Services
             float grow = FormFontPolicy.UiFontSize / 9f;
             int w = DpiScale.V(f, designClientWidth);
             int h = DpiScale.V(f, (int)Math.Round(designClientHeight * Math.Max(1f, grow)));
-            try { f.ClientSize = new Size(w, h); } catch { }
+            try { f.ClientSize = new Size(w, h); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("DialogStyle", exSwallowed); } catch { } }
 
             f.FormBorderStyle = FormBorderStyle.FixedDialog;
             f.StartPosition = FormStartPosition.CenterParent;

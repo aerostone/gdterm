@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
@@ -6,6 +6,7 @@ using Gdterm.Connections;
 using Gdterm.Core.Models;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Controls
 {
@@ -244,7 +245,7 @@ namespace Gdterm.UI.Controls
                     _recentList.Items.Add(item);
                 }
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SessionBookmarksPanel", exSwallowed); } catch { } }
             finally
             {
                 _recentList.EndUpdate();
@@ -396,7 +397,7 @@ namespace Gdterm.UI.Controls
             }
             bm.ConnectCount++;
             bm.LastConnectedAt = DateTime.UtcNow;
-            try { _bookmarkStore.Update(bm); } catch { }
+            try { _bookmarkStore.Update(bm); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SessionBookmarksPanel", exSwallowed); } catch { } }
             OpenConnectionRequested?.Invoke(cfg);
         }
 

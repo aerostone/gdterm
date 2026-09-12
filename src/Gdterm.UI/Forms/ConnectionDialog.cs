@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI;
@@ -53,6 +53,8 @@ namespace Gdterm.UI.Forms
         private AntdUI.Select _rdpEngineCombo;
         /// <summary>抓包：通过本地 TCP 代理中转，hex dump 双向流量到 logs/rdp-dump/（仅调试模式可见）</summary>
         private AntdUI.Checkbox _rdpTcpDumpCheck;
+        /// <summary>命令行传密码（FreeRDP /p: 自动登录；关闭则零凭据首连，由服务器/堡垒机登录页输入。F01 opt-out）</summary>
+        private AntdUI.Checkbox _rdpPasslineCheck;
 
         // Serial
         private AntdUI.Select _serialPortCombo;
@@ -255,7 +257,8 @@ namespace Gdterm.UI.Forms
             _rdpForceNlaCheck = new AntdUI.Checkbox { Text = "强制 NLA", AutoSize = true, Checked = false };
             _rdpTcpDumpCheck = new AntdUI.Checkbox { Text = "抓包（TCP dump）", AutoSize = true, Checked = false,
                 Visible = Program.DebugConfig != null && Program.DebugConfig.Enabled };
-            rdpChecks.Controls.AddRange(new Control[] { _rdpDriveCheck, _rdpClipboardCheck, _rdpPrinterCheck, _rdpFullScreenCheck, _rdpNlaCheck, _rdpForceNlaCheck, _rdpTcpDumpCheck });
+            _rdpPasslineCheck = new AntdUI.Checkbox { Text = "命令行传密码（自动登录；任务管理器可见）", AutoSize = true, Checked = true };
+            rdpChecks.Controls.AddRange(new Control[] { _rdpDriveCheck, _rdpClipboardCheck, _rdpPrinterCheck, _rdpFullScreenCheck, _rdpNlaCheck, _rdpForceNlaCheck, _rdpTcpDumpCheck, _rdpPasslineCheck });
             var depthPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, DpiScale.V(this, 4)) };
             depthPanel.Controls.Add(new AntdUI.Label { Text = "色深:", AutoSize = true });
             _rdpColorDepth = new AntdUI.InputNumber { Minimum = 8, Maximum = 32, Value = 32, Increment = 8, Width = DpiScale.V(this, 60),
@@ -468,7 +471,8 @@ namespace Gdterm.UI.Forms
                      || (_config.Metadata.ContainsKey("rdp_loadbalance") && !string.IsNullOrEmpty(_config.Metadata["rdp_loadbalance"]))
                      || (_config.Metadata.ContainsKey("rdp_clipboard") && _config.Metadata["rdp_clipboard"] == "false")
                      || (_config.Metadata.ContainsKey("rdp_engine") && _config.Metadata["rdp_engine"] != "auto")
-                     || (_config.Metadata.ContainsKey("rdp_tcp_dump") && _config.Metadata["rdp_tcp_dump"] == "true")))
+                     || (_config.Metadata.ContainsKey("rdp_tcp_dump") && _config.Metadata["rdp_tcp_dump"] == "true")
+                     || (_config.Metadata.ContainsKey("rdp_passline") && _config.Metadata["rdp_passline"] == "false")))
                 || _config.Serial != null
                 || (_config.Metadata != null && _config.Metadata.ContainsKey("notes")
                     && !string.IsNullOrEmpty(_config.Metadata["notes"]));
@@ -558,6 +562,7 @@ namespace Gdterm.UI.Forms
                 _rdpNlaCheck.Checked = !_config.Metadata.ContainsKey("rdp_nla") || _config.Metadata["rdp_nla"] != "false";
                 _rdpForceNlaCheck.Checked = _config.Metadata.ContainsKey("rdp_force_nla") && _config.Metadata["rdp_force_nla"] == "true";
                 _rdpTcpDumpCheck.Checked = _config.Metadata.ContainsKey("rdp_tcp_dump") && _config.Metadata["rdp_tcp_dump"] == "true";
+                _rdpPasslineCheck.Checked = !_config.Metadata.ContainsKey("rdp_passline") || _config.Metadata["rdp_passline"] != "false";
                 if (_config.Metadata.ContainsKey("rdp_loadbalance"))
                     _rdpLoadBalanceBox.Text = _config.Metadata["rdp_loadbalance"];
                 string eng;
@@ -594,6 +599,7 @@ namespace Gdterm.UI.Forms
             _config.Metadata["rdp_nla"] = _rdpNlaCheck.Checked.ToString().ToLower();
             _config.Metadata["rdp_force_nla"] = _rdpForceNlaCheck.Checked.ToString().ToLower();
             _config.Metadata["rdp_tcp_dump"] = _rdpTcpDumpCheck.Checked.ToString().ToLower();
+            _config.Metadata["rdp_passline"] = _rdpPasslineCheck.Checked.ToString().ToLower();
             _config.Metadata["rdp_loadbalance"] = _rdpLoadBalanceBox.Text?.Trim() ?? "";
             _config.Metadata["rdp_engine"] = _rdpEngineCombo.SelectedIndex == 2 ? "mstscax"
                                            : _rdpEngineCombo.SelectedIndex == 1 ? "freerdp" : "auto";

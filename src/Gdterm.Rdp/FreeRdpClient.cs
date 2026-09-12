@@ -27,7 +27,9 @@ namespace Gdterm.Rdp
     ///
     /// 嵌入方式：wfreerdp /parent-window:&lt;面板 HWND&gt; 把远程画面渲染进我们的 Panel。
     /// 键盘输入依赖 FreeRDP ≥ 2.7（PR #7790 修复 parent-window 模式键盘事件）。
-    /// 注意：凭据经命令行传给子进程（同桌面会话内可见），KeePass CredWrite 通道继续保留。
+    /// 注意：凭据默认经命令行传给子进程（同桌面会话内可见）；连接级 rdp_passline=false 可关闭，
+    /// 关闭后走零凭据首连，由服务器/堡垒机登录页输入（FreeRDP 2.x CLI 只有 /p: 明文一种传密方式，无安全通道可换）。
+    /// KeePass CredWrite 通道继续保留（供 mstscax 引擎）。
     /// </summary>
     public sealed class FreeRdpClient : IRdpClient
     {
@@ -412,10 +414,22 @@ namespace Gdterm.Rdp
             // 一致，不再把保存的旧凭据带到转发目标（v0.1.149 实测：LB token 重连
             // 若仍带旧自动登录凭据，0.1s 内即被 LOGOFF_BY_USER 踢线）。
             if (!string.IsNullOrEmpty(username)) AddArg(args, logArgs, "/u:" + Q(username));
+            // F01：默认保持自动登录（现有 KeePass 链路）；rdp_passline=false 显式关闭命令行密码
+            bool passCmdline = _startConfig == null || _startConfig.Metadata == null
+                || !_startConfig.Metadata.ContainsKey("rdp_passline")
+                || _startConfig.Metadata["rdp_passline"] != "false";
             if (!string.IsNullOrEmpty(credential != null ? credential.Password : null))
             {
-                args.Add("/p:" + Q(credential.Password));
-                logArgs.Add("/p:***");
+                if (passCmdline)
+                {
+                    args.Add("/p:" + Q(credential.Password));
+                    logArgs.Add("/p:***");
+                }
+                else
+                {
+                    logArgs.Add("/p:<skipped-by-rdp_passline=false>");
+                    RdpLog.Info("FreeRdp.Start", "rdp_passline=false：跳过命令行密码，等待登录页输入");
+                }
             }
             if (!string.IsNullOrEmpty(domain)) AddArg(args, logArgs, "/d:" + Q(domain));
             if (CurrentOptions.RedirectClipboard) AddArg(args, logArgs, "/clipboard");

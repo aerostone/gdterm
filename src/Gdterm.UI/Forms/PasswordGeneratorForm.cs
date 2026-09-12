@@ -292,7 +292,7 @@ namespace Gdterm.UI.Forms
                     timer.Tick += (s, ev) => { btn.Text = originalText; timer.Stop(); timer.Dispose(); };
                     timer.Start();
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("PasswordGeneratorForm", exSwallowed); } catch { } }
             }
         }
 
@@ -329,7 +329,7 @@ namespace Gdterm.UI.Forms
                 if (line.Length > 0)
                     ClipboardProtector.SetTextWithTtl(line);
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("PasswordGeneratorForm", exSwallowed); } catch { } }
         }
 
         private void AddToHistory(string password)

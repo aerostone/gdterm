@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Runtime.CompilerServices;
 using System.Windows.Forms;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Services
 {
@@ -19,6 +20,52 @@ namespace Gdterm.UI.Services
     /// </summary>
     public static class FormFontPolicy
     {
+        // F03：行高量测缓存——RowStep/LineBox 每次 CreateGraphics 在底栏逐钮/树节点/标签页等高频路径重复创建 GDI 对象。
+        // 键含 DPI（跨屏拖动 DPI 变则失效重算），64 条上限防字体枚举攻击撑内存，命中直接返回。
+        private static readonly System.Collections.Generic.Dictionary<string, int> LineHeightCache =
+            new System.Collections.Generic.Dictionary<string, int>(64);
+        private static readonly object LineHeightLock = new object();
+
+        private static int CachedLineHeight(Font f, Control c)
+        {
+            float dpi = 96f;
+            try
+            {
+                if (c != null)
+                {
+                    using (var g = c.CreateGraphics()) dpi = g.DpiX;
+                }
+            }
+            catch { dpi = 96f; }
+            string key = (f != null ? f.Name : "?") + "|" + (f != null ? f.Size : 0f).ToString("F2")
+                + "|" + (f != null ? (int)f.Style : 0) + "|" + dpi.ToString("F0");
+            lock (LineHeightLock)
+            {
+                int hit;
+                if (LineHeightCache.TryGetValue(key, out hit)) return hit;
+            }
+            int h;
+            try
+            {
+                // 无宿主时退回无参重载（与旧行为一致）；有宿主用其 Graphics 保证 DPI 一致
+                if (c != null)
+                {
+                    using (var g = c.CreateGraphics())
+                        h = TextRenderer.MeasureText(g, "M建g", f).Height;
+                }
+                else
+                {
+                    h = TextRenderer.MeasureText("M建g", f).Height;
+                }
+            }
+            catch { h = 16; }
+            lock (LineHeightLock)
+            {
+                if (LineHeightCache.Count >= 64) LineHeightCache.Clear();
+                LineHeightCache[key] = h;
+            }
+            return h;
+        }
         private static readonly ConditionalWeakTable<Control, ControlEventHandler> AntdShapeHooks =
             new ConditionalWeakTable<Control, ControlEventHandler>();
 
@@ -108,16 +155,7 @@ namespace Gdterm.UI.Services
         public static int RowStep(Control c)
         {
             var f = c != null && c.Font != null ? c.Font : UiFont();
-            int h;
-            try
-            {
-                using (var g = c != null ? c.CreateGraphics() : null)
-                {
-                    h = g != null ? TextRenderer.MeasureText(g, "M建g", f).Height
-                                  : TextRenderer.MeasureText("M建g", f).Height;
-                }
-            }
-            catch { h = 16; }
+            int h = CachedLineHeight(f, c);
             // 行高 + 9px 间距；小字号时保底 30（维持既有密度观感）
             return Math.Max(30, h + 9);
         }
@@ -140,16 +178,7 @@ namespace Gdterm.UI.Services
         public static int LineBox(Font font, Control c, float rhythm = 1.25f)
         {
             var f = font ?? UiFont();
-            int h;
-            try
-            {
-                using (var g = c != null ? c.CreateGraphics() : null)
-                {
-                    h = g != null ? TextRenderer.MeasureText(g, "M建g", f).Height
-                                  : TextRenderer.MeasureText("M建g", f).Height;
-                }
-            }
-            catch { h = 16; }
+            int h = CachedLineHeight(f, c);
             double box = h * (double)rhythm;
             if (box < 1) box = 1;
             return (int)Math.Round(box);
@@ -197,7 +226,7 @@ namespace Gdterm.UI.Services
                 {
                     ApplyAntdShape(c);
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("FormFontPolicy", exSwallowed); } catch { } }
                 HookAntdShapeChanges(c);
                 foreach (Control child in c.Controls) stack.Push(child);
             }
@@ -267,7 +296,7 @@ namespace Gdterm.UI.Services
                         c.Font = new Font(name, target, f.Style);
                     }
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("FormFontPolicy", exSwallowed); } catch { } }
                 ReplaceChildFonts(c.Controls, name, size, replaceAllUiFonts);
             }
         }

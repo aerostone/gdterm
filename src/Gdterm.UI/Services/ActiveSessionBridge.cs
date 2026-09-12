@@ -3,6 +3,7 @@ using Gdterm.Tools;
 using Gdterm.Tunnel;
 using Gdterm.UI.Controls;
 using TerminalControl = Gdterm.UI.Controls.TerminalControl;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Services
 {
@@ -47,7 +48,7 @@ namespace Gdterm.UI.Services
         public void BindToolbox(ToolboxPanel panel)
         {
             if (panel == null) return;
-            try { panel.SetRemoteSession(GetRemoteSession()); } catch { }
+            try { panel.SetRemoteSession(GetRemoteSession()); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ActiveSessionBridge", exSwallowed); } catch { } }
         }
 
         public void BindPortForward(PortForwardPanel panel)
@@ -56,7 +57,7 @@ namespace Gdterm.UI.Services
             var host = GetPortForwardHost();
             if (host != null)
             {
-                try { panel.SetPortForwardHost(host); } catch { }
+                try { panel.SetPortForwardHost(host); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ActiveSessionBridge", exSwallowed); } catch { } }
             }
         }
     }

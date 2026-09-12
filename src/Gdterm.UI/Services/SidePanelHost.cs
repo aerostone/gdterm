@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Controls;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Services
 {
@@ -59,7 +60,7 @@ namespace Gdterm.UI.Services
             if (_active != null)
             {
                 _host.Controls.Remove(_active);
-                try { _active.Dispose(); } catch { }
+                try { _active.Dispose(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SidePanelHost", exSwallowed); } catch { } }
             }
             _active = panel;
             panel.Dock = DockStyle.Fill;
@@ -74,7 +75,7 @@ namespace Gdterm.UI.Services
                 if (close != null)
                     close.Height = Math.Max(28, FormFontPolicy.RowStep(_host));
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SidePanelHost", exSwallowed); } catch { } }
         }
 
         public void Hide()
@@ -83,7 +84,7 @@ namespace Gdterm.UI.Services
             if (_active != null)
             {
                 _host.Controls.Remove(_active);
-                try { _active.Dispose(); } catch { }
+                try { _active.Dispose(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SidePanelHost", exSwallowed); } catch { } }
                 _active = null;
             }
             _host.Visible = false;

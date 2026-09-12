@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using Gdterm.Terminal;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Controls
 {
@@ -123,7 +124,7 @@ namespace Gdterm.UI.Controls
                     _lblReconnects.Text = snapshot.ReconnectCount.ToString();
                 }));
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("HealthMonitorPanel", exSwallowed); } catch { } }
         }
 
         private void OnPaintGraph(object sender, PaintEventArgs e)

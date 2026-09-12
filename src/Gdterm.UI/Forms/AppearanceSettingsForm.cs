@@ -125,7 +125,7 @@ namespace Gdterm.UI.Forms
                     }
                 }
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("AppearanceSettingsForm", exSwallowed); } catch { } }
             _cjkFontCombo.Location = new Point(colValue, y);
             Controls.Add(_cjkFontCombo);
             y += rowH;
@@ -408,7 +408,7 @@ namespace Gdterm.UI.Forms
             }
             catch
             {
-                try { _preview.Font = new Font("Consolas", 12f, FontStyle.Regular, GraphicsUnit.Point); } catch { }
+                try { _preview.Font = new Font("Consolas", 12f, FontStyle.Regular, GraphicsUnit.Point); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("AppearanceSettingsForm", exSwallowed); } catch { } }
             }
         }
     }
@@ -470,7 +470,7 @@ namespace Gdterm.UI.Forms
                     }
                 }
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("AppearanceSettingsForm", exSwallowed); } catch { } }
             return s;
         }
 

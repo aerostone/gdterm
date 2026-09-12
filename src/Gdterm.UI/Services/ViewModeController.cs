@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Forms;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Services
 {
@@ -17,14 +18,13 @@ namespace Gdterm.UI.Services
         private readonly Control _statusBar; // v2：BottomBarPanel 单栏底栏（只需 Visible 语义）
         private readonly MenuStrip _menuStrip;
         private readonly Control _quickBar; // v2：已并入单栏底栏，可空
-        private readonly TmuxBarPanel _tmuxBar;
+        // F02：TmuxBarPanel 已删（tmux 并入 BottomBarPanel），此处不再持有旧类型
         private readonly Action _hideSidePanel;
         private readonly ToolStripMenuItem _viewStandardItem;
         private readonly ToolStripMenuItem _viewFocusItem;
         private readonly ToolStripMenuItem _viewCompactItem;
         private readonly Control _host;
         private AntdUI.Button _exitFocusButton;
-        private bool _tmuxBarWasVisible;
 
         private ViewMode _current = ViewMode.Standard;
 
@@ -37,14 +37,12 @@ namespace Gdterm.UI.Services
             ToolStripMenuItem viewStandardItem,
             ToolStripMenuItem viewFocusItem,
             ToolStripMenuItem viewCompactItem,
-            Control host = null,
-            TmuxBarPanel tmuxBar = null)
+            Control host = null)
         {
             _connectionTree = connectionTree;
             _statusBar = statusBar;
             _menuStrip = menuStrip;
             _quickBar = quickBar;
-            _tmuxBar = tmuxBar;
             _hideSidePanel = hideSidePanel;
             _viewStandardItem = viewStandardItem;
             _viewFocusItem = viewFocusItem;
@@ -74,7 +72,7 @@ namespace Gdterm.UI.Services
                 _exitFocusButton.BringToFront();
                 _host.Resize += (s, e) => PositionExitButton();
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ViewModeController", exSwallowed); } catch { } }
         }
 
         private void PositionExitButton()
@@ -87,7 +85,7 @@ namespace Gdterm.UI.Services
                     DpiScale.V(_host, 8));
                 _exitFocusButton.BringToFront();
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ViewModeController", exSwallowed); } catch { } }
         }
 
         private void SetExitButtonVisible(bool visible)
@@ -102,7 +100,7 @@ namespace Gdterm.UI.Services
                     _exitFocusButton.BringToFront();
                 }
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ViewModeController", exSwallowed); } catch { } }
         }
 
         public ViewMode Current
@@ -128,7 +126,6 @@ namespace Gdterm.UI.Services
                     if (_statusBar != null) _statusBar.Visible = true;
                     if (_menuStrip != null) _menuStrip.Visible = true;
                     if (_quickBar != null) _quickBar.Visible = true;
-                    if (_tmuxBar != null) _tmuxBar.Visible = _tmuxBarWasVisible; // 恢复用户偏好（默认隐藏）
                     SetExitButtonVisible(false);
                     break;
                 case ViewMode.Focus:
@@ -136,12 +133,7 @@ namespace Gdterm.UI.Services
                     if (_statusBar != null) _statusBar.Visible = false;
                     if (_menuStrip != null) _menuStrip.Visible = false;
                     if (_quickBar != null) _quickBar.Visible = false;
-                    if (_tmuxBar != null)
-                    {
-                        _tmuxBarWasVisible = _tmuxBar.Visible; // 记住用户偏好，Standard 恢复
-                        _tmuxBar.Visible = false;
-                    }
-                    try { _hideSidePanel?.Invoke(); } catch { }
+                    try { _hideSidePanel?.Invoke(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ViewModeController", exSwallowed); } catch { } }
                     SetExitButtonVisible(true);
                     break;
                 case ViewMode.Compact:

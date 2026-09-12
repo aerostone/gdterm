@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
@@ -124,7 +124,7 @@ namespace Gdterm.UI.Controls
                 if (entries.Length == 0) return;
                 var data = new DataObject();
                 data.SetData("GdtermFileEntries", false, entries);
-                try { _list.DoDragDrop(data, DragDropEffects.Copy); } catch { }
+                try { _list.DoDragDrop(data, DragDropEffects.Copy); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("FilePaneControl", exSwallowed); } catch { } }
             };
 
             // 拖拽目标：接收另一面板的条目（上传/下载）

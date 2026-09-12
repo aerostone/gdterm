@@ -154,19 +154,19 @@ namespace Gdterm.UI.Diagnostics
                     _ticks++;
                     if (_ticks >= _maxTicks)
                     {
-                        try { _timer.Stop(); } catch { }
-                        try { Close(); } catch { }
+                        try { _timer.Stop(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ToastNotifier", exSwallowed); } catch { } }
+                        try { Close(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ToastNotifier", exSwallowed); } catch { } }
                     }
                     else if (_ticks > _maxTicks - 10)
                     {
                         // 淡出
                         try { Opacity = Math.Max(0.15, 0.96 * (1.0 - (_ticks - (_maxTicks - 10)) / 10.0)); }
-                        catch { }
+                        catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ToastNotifier", exSwallowed); } catch { } }
                     }
                 };
                 _timer.Start();
-                Click += (s, e) => { try { Close(); } catch { } };
-                label.Click += (s, e) => { try { Close(); } catch { } };
+                Click += (s, e) => { try { Close(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ToastNotifier", exSwallowed); } catch { } } };
+                label.Click += (s, e) => { try { Close(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ToastNotifier", exSwallowed); } catch { } } };
             }
 
             protected override CreateParams CreateParams
@@ -195,8 +195,8 @@ namespace Gdterm.UI.Diagnostics
             {
                 if (disposing)
                 {
-                    try { _timer.Stop(); } catch { }
-                    try { _timer.Dispose(); } catch { }
+                    try { _timer.Stop(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ToastNotifier", exSwallowed); } catch { } }
+                    try { _timer.Dispose(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ToastNotifier", exSwallowed); } catch { } }
                 }
                 base.Dispose(disposing);
             }

@@ -27,7 +27,7 @@ namespace Gdterm.UI.Services
                     "selected=" + (selected != null ? selected.Text : "<none>") +
                     " sessions=" + sessions.Count);
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabSelectionCoordinator", exSwallowed); } catch { } }
             foreach (var kvp in sessions)
             {
                 bool isSelected = kvp.Key == selected;
@@ -50,7 +50,7 @@ namespace Gdterm.UI.Services
                         (isSelected ? "resume" : "pause") + " proto=" + state.Protocol +
                         " id=" + state.SessionId + " terminals=" + terminals.Count);
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabSelectionCoordinator", exSwallowed); } catch { } }
 
                 if (state.HealthMonitor != null)
                     state.HealthMonitor.IsPaused = !isSelected;

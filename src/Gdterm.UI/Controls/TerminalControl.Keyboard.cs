@@ -18,7 +18,7 @@ namespace Gdterm.UI.Controls
                 try { DiagLog.Info("TerminalControl.OnKeyPress.GuardDrop",
                     "connected=" + (_session != null && _session.IsConnected) +
                     " backend=" + ((_session as LocalTerminalSession)?.BackendName ?? "non-local") +
-                    " keyCharCode=0x" + (e.KeyChar == '\0' ? "0" : ((int)e.KeyChar).ToString("X"))); } catch { }
+                    " keyCharCode=0x" + (e.KeyChar == '\0' ? "0" : ((int)e.KeyChar).ToString("X"))); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                 return;
             }
 
@@ -31,13 +31,13 @@ namespace Gdterm.UI.Controls
                     // TUI：优先 VtNetCore KeyPressed；失败则明文
                     var keyName = e.KeyChar.ToString();
                     bool handled = false;
-                    try { handled = _cellRenderer.TryKeyPressed(keyName, false, false); } catch { }
+                    try { handled = _cellRenderer.TryKeyPressed(keyName, false, false); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                     if (!handled)
                         SafeSend(keyName);
                 }
                 else if (UseLocalLineBuffer)
                 {
-                    try { _renderer?.Write(e.KeyChar.ToString()); } catch { }
+                    try { _renderer?.Write(e.KeyChar.ToString()); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                 }
                 else
                 {
@@ -55,7 +55,7 @@ namespace Gdterm.UI.Controls
                 {
                     try { DiagLog.Info("TerminalControl.OnKeyDown.GuardDrop",
                         "kc=" + e.KeyCode + " connected=" + (_session != null && _session.IsConnected) +
-                        " backend=" + ((_session as LocalTerminalSession)?.BackendName ?? "non-local")); } catch { }
+                        " backend=" + ((_session as LocalTerminalSession)?.BackendName ?? "non-local")); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                 }
                 return;
             }
@@ -131,7 +131,7 @@ namespace Gdterm.UI.Controls
                         if (!string.IsNullOrWhiteSpace(cmd))
                         {
                             try { _auditLogger?.LogCommand(_config?.Id ?? "", cmd); }
-                            catch { }
+                            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                         }
                         e.Handled = true;
                         break;
@@ -141,7 +141,7 @@ namespace Gdterm.UI.Controls
                             _commandLine.Length--;
                         if (UseLocalLineBuffer)
                         {
-                            try { _renderer?.Write("\b \b"); } catch { }
+                            try { _renderer?.Write("\b \b"); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                         }
                         else if (_cellRenderer != null)
                         {
@@ -236,7 +236,7 @@ namespace Gdterm.UI.Controls
                     e.Handled = true;
                 }
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
         }
 
         /// <summary>VtNetCore 键名映射；成功则已通过 SendToHost 发往会话。</summary>
@@ -280,7 +280,7 @@ namespace Gdterm.UI.Controls
                 if (_cellRenderer.TryKeyPressed(name, e.Control, e.Shift))
                     return true;
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
             return false;
         }
 }

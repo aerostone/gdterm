@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Services
 {
@@ -98,7 +99,7 @@ namespace Gdterm.UI.Services
                         var img = MenuIconFactory.Get(icon);
                         if (img != null) it.Image = img;
                     }
-                    catch { }
+                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainFormMenuBuilder", exSwallowed); } catch { } }
                 }
                 return it;
             }
@@ -236,7 +237,7 @@ namespace Gdterm.UI.Services
                 var img = MenuIconFactory.Get(icon);
                 if (img != null) item.Image = img;
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainFormMenuBuilder", exSwallowed); } catch { } }
         }
     }
 }

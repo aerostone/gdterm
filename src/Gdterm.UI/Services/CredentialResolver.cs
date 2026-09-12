@@ -5,6 +5,7 @@ using Gdterm.Core.Enums;
 using Gdterm.Core.Models;
 using Gdterm.KeePass;
 using Gdterm.KeePass.Models;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Services
 {
@@ -36,7 +37,7 @@ namespace Gdterm.UI.Services
                 if (!string.IsNullOrEmpty(config.CredentialRefId))
                 {
                     try { entry = GetKeePassEntry(config.CredentialRefId); }
-                    catch { }
+                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("CredentialResolver", exSwallowed); } catch { } }
                 }
 
                 if (entry == null && _folderCredStore != null && !string.IsNullOrEmpty(config.GroupPath))
@@ -47,7 +48,7 @@ namespace Gdterm.UI.Services
                         if (!string.IsNullOrEmpty(inheritedRefId))
                             entry = GetKeePassEntry(inheritedRefId);
                     }
-                    catch { }
+                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("CredentialResolver", exSwallowed); } catch { } }
                 }
 
                 if (entry == null)
@@ -107,7 +108,7 @@ namespace Gdterm.UI.Services
                         }
                     }
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("CredentialResolver", exSwallowed); } catch { } }
             }
             if (pwdMap != null)
                 credential.HopPasswordsByRefId = pwdMap;

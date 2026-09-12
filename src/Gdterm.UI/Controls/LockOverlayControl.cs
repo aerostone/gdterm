@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.Security;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Controls
 {
@@ -123,7 +124,7 @@ namespace Gdterm.UI.Controls
             base.OnVisibleChanged(e);
             if (Visible)
             {
-                try { _passwordBox?.Focus(); } catch { }
+                try { _passwordBox?.Focus(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("LockOverlayControl", exSwallowed); } catch { } }
             }
         }
 

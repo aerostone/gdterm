@@ -111,7 +111,7 @@ namespace Gdterm.UI.Controls
 
             HandleCreated += (s, e) =>
             {
-                try { _split.SplitterDistance = Math.Max(100, _split.Width / 2); } catch { }
+                try { _split.SplitterDistance = Math.Max(100, _split.Width / 2); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SftpDualPanePanel", exSwallowed); } catch { } }
             };
         }
 
@@ -162,7 +162,7 @@ namespace Gdterm.UI.Controls
             {
                 _connStatus.Text = "  连接失败: " + ex.Message + "  （关闭此标签页后重试）";
                 _connStatus.ForeColor = GdtermColorTable.Danger;
-                try { DiagLog.Info("SftpDualPane.Connect", "failed: " + ex.Message); } catch { }
+                try { DiagLog.Info("SftpDualPane.Connect", "failed: " + ex.Message); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SftpDualPanePanel", exSwallowed); } catch { } }
             }
         }
 
@@ -241,7 +241,7 @@ namespace Gdterm.UI.Controls
         {
             if (InvokeRequired)
             {
-                try { BeginInvoke(new Action(() => ReportQueue(text))); } catch { }
+                try { BeginInvoke(new Action(() => ReportQueue(text))); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SftpDualPanePanel", exSwallowed); } catch { } }
                 return;
             }
             _queueLabel.Text = "  " + text;
@@ -310,8 +310,8 @@ namespace Gdterm.UI.Controls
         {
             if (disposing)
             {
-                try { _sftp?.Disconnect(); } catch { }
-                try { _sftp?.Dispose(); } catch { }
+                try { _sftp?.Disconnect(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SftpDualPanePanel", exSwallowed); } catch { } }
+                try { _sftp?.Dispose(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SftpDualPanePanel", exSwallowed); } catch { } }
             }
             base.Dispose(disposing);
         }

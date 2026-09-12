@@ -90,7 +90,7 @@ namespace Gdterm.UI.Services
                     });
                 }
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabCloseService", exSwallowed); } catch { } }
 
             var disposable = session.Control as IDisposable;
             if (disposable != null)

@@ -13,6 +13,7 @@ using Gdterm.Tools;
 using Gdterm.Tunnel;
 using Gdterm.UI.Controls;
 using TerminalControl = Gdterm.UI.Controls.TerminalControl;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Services
 {
@@ -80,7 +81,7 @@ namespace Gdterm.UI.Services
             if (_bridge != null) _bridge.BindToolbox(panel);
             else
             {
-                try { panel.SetRemoteSession(_tabs.GetActiveRemoteSession()); } catch { }
+                try { panel.SetRemoteSession(_tabs.GetActiveRemoteSession()); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SidePanelFactory", exSwallowed); } catch { } }
             }
             return panel;
         }
@@ -175,7 +176,7 @@ namespace Gdterm.UI.Services
         public Control CreateSnippetSearchPanel(Action<string> onSend)
         {
             List<QuickCommand> cmds = null;
-            try { cmds = _quickCommandStore?.LoadAll(); } catch { }
+            try { cmds = _quickCommandStore?.LoadAll(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SidePanelFactory", exSwallowed); } catch { } }
             var panel = new SnippetSearchPanel(cmds ?? new List<QuickCommand>());
             var snipTc = _tabs?.GetActiveTerminalControl();
             if (snipTc != null)
@@ -231,7 +232,7 @@ namespace Gdterm.UI.Services
                 foreach (var kv in all)
                     _multiChannelManager.Register(kv.Key, kv.Value, kv.Key, null);
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SidePanelFactory", exSwallowed); } catch { } }
         }
 
         private void OnBroadcastCommandRequested(object sender, string cmd)
@@ -253,12 +254,12 @@ namespace Gdterm.UI.Services
                                     SecurityEvent.DangerousCommandBlocked,
                                     "broadcast blocked: " + cmd);
                             }
-                            catch { }
+                            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SidePanelFactory", exSwallowed); } catch { } }
                             return;
                         }
                         if (dlg.RememberChoice)
                         {
-                            try { _dangerousDetector.AddToWhitelist(cmd); } catch { }
+                            try { _dangerousDetector.AddToWhitelist(cmd); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SidePanelFactory", exSwallowed); } catch { } }
                         }
                     }
                 }
@@ -274,7 +275,7 @@ namespace Gdterm.UI.Services
                     IsBroadcast = true
                 });
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SidePanelFactory", exSwallowed); } catch { } }
         }
 
         public Control CreateBookmarksPanel(Action<ConnectionConfig> onOpen)

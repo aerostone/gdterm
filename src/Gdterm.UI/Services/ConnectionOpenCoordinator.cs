@@ -47,7 +47,7 @@ namespace Gdterm.UI.Services
                     "request id=" + (config.Id ?? "") + " host=" + (config.Host ?? "") +
                     " proto=" + config.Protocol);
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionOpenCoordinator", exSwallowed); } catch { } }
             try
             {
                 _tabs.OpenConnection(config);
@@ -79,7 +79,7 @@ namespace Gdterm.UI.Services
                 if (dlg.ShowDialog(_owner) == DialogResult.OK && dlg.Result != null)
                 {
                     _store?.Add(dlg.Result);
-                    try { _tree?.LoadConnections(); } catch { }
+                    try { _tree?.LoadConnections(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionOpenCoordinator", exSwallowed); } catch { } }
                 }
             }
         }

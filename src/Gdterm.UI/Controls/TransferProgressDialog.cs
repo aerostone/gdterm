@@ -121,7 +121,7 @@ namespace Gdterm.UI.Controls
             if (InvokeRequired)
             {
                 try { BeginInvoke(new Action(() => Report(transferred, total, detail))); }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TransferProgressDialog", exSwallowed); } catch { } }
                 return;
             }
 
@@ -141,7 +141,7 @@ namespace Gdterm.UI.Controls
                     ? string.Format("{0}%  ({1} / {2})", pct, FormatBytes(transferred), FormatBytes(total))
                     : FormatBytes(transferred);
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TransferProgressDialog", exSwallowed); } catch { } }
         }
 
         public void Complete(bool success, string message = null)
@@ -150,7 +150,7 @@ namespace Gdterm.UI.Controls
             if (InvokeRequired)
             {
                 try { BeginInvoke(new Action(() => Complete(success, message))); }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TransferProgressDialog", exSwallowed); } catch { } }
                 return;
             }
 
@@ -160,7 +160,7 @@ namespace Gdterm.UI.Controls
             _cancelButton.Click -= null;
             // 重新绑定为关闭
             foreach (EventHandler h in new EventHandler[] { }) { }
-            _cancelButton.Click += (s, e) => { try { DialogResult = success ? DialogResult.OK : DialogResult.Cancel; Close(); } catch { } };
+            _cancelButton.Click += (s, e) => { try { DialogResult = success ? DialogResult.OK : DialogResult.Cancel; Close(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TransferProgressDialog", exSwallowed); } catch { } } };
             if (success)
             {
                 _bar.Value = 100;

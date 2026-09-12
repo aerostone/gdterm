@@ -163,7 +163,7 @@ namespace Gdterm.UI.Controls
             AddCtxItem(_tabContextMenu, "水平拆分(&H)", "splith", (s, e) => SplitHorizontal());
             AddCtxItem(_tabContextMenu, "垂直拆分(&V)", "splitv", (s, e) => SplitVertical());
             _tabContextMenu.Items.Add("-");
-            AddCtxItem(_tabContextMenu, "重连当前(&E)", "reconnect", (s, e) => { try { ReconnectActiveTab(); } catch { } });
+            AddCtxItem(_tabContextMenu, "重连当前(&E)", "reconnect", (s, e) => { try { ReconnectActiveTab(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } } });
         }
 
         public void OpenConnection(ConnectionConfig config)
@@ -178,7 +178,7 @@ namespace Gdterm.UI.Controls
                     // 重复打开同一连接：切到已有标签。仍需强制激活——若该标签上次创建后
                     // 从未连上（懒连接未触发/中途失败），仅 SelectTab 会让它永远空白。
                     try { DiagLog.Info("TabContainer.OpenConnection",
-                        "duplicate id=" + (config.Id ?? "") + " → activate existing tab"); } catch { }
+                        "duplicate id=" + (config.Id ?? "") + " → activate existing tab"); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
                     _tabControl.SelectedTab = existingTab;
 
                     // 已断开的 RDP 标签（服务器踢下线/掉线后重开同一连接）：
@@ -187,7 +187,7 @@ namespace Gdterm.UI.Controls
                     if (session.Protocol == ProtocolType.RDP && !session.IsConnected && session.PendingConnect == null)
                     {
                         try { DiagLog.Info("TabContainer.OpenConnection", "duplicate disconnected RDP → reconnect id=" + (config.Id ?? "")); }
-                        catch { }
+                        catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
                         var _ = ReconnectByIdAsync(config.Id);
                         return;
                     }
@@ -200,7 +200,7 @@ namespace Gdterm.UI.Controls
 
             try { DiagLog.Info("TabContainer.OpenConnection",
                 "creating id=" + (config.Id ?? "") + " host=" + (config.Host ?? "") +
-                " proto=" + config.Protocol); } catch { }
+                " proto=" + config.Protocol); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
 
             var opened = _opener.CreateForConnection(config);
             if (opened == null || opened.Page == null || opened.Session == null)
@@ -210,7 +210,7 @@ namespace Gdterm.UI.Controls
                     "ABORT create returned incomplete id=" + (config.Id ?? "") +
                     " opened=" + (opened != null) +
                     " page=" + (opened != null && opened.Page != null) +
-                    " session=" + (opened != null && opened.Session != null)); } catch { }
+                    " session=" + (opened != null && opened.Session != null)); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
                 return;
             }
 
@@ -227,17 +227,17 @@ namespace Gdterm.UI.Controls
                     "opened id=" + (config.Id ?? "") + " host=" + (config.Host ?? "") +
                     " proto=" + config.Protocol);
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
         }
 
         public void OpenLocalTerminal(string shellPath = null)
         {
             try { DiagLog.Info("TabContainer.OpenLocalTerminal",
-                "shellPath=" + (shellPath ?? "<default>")); } catch { }
+                "shellPath=" + (shellPath ?? "<default>")); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
             var opened = _opener.CreateLocal(shellPath);
             if (opened == null)
             {
-                try { DiagLog.Info("TabContainer.OpenLocalTerminal", "ABORT create returned null"); } catch { }
+                try { DiagLog.Info("TabContainer.OpenLocalTerminal", "ABORT create returned null"); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
                 return;
             }
             _sessions[opened.Page] = opened.Session;
@@ -246,17 +246,17 @@ namespace Gdterm.UI.Controls
             _tabControl.SelectedTab = opened.Page;
             ForceActivateSession(opened.Page);
             ActiveSessionChanged?.Invoke(this, EventArgs.Empty);
-            try { DiagLog.Info("TabContainer.OpenLocalTerminal", "opened"); } catch { }
+            try { DiagLog.Info("TabContainer.OpenLocalTerminal", "opened"); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
         }
 
         public void OpenSftpBrowser(ConnectionConfig config)
         {
             try { DiagLog.Info("TabContainer.OpenSftpBrowser",
-                "id=" + (config != null ? config.Id ?? "" : "<null>")); } catch { }
+                "id=" + (config != null ? config.Id ?? "" : "<null>")); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
             var opened = _opener.CreateSftp(config);
             if (opened == null)
             {
-                try { DiagLog.Info("TabContainer.OpenSftpBrowser", "ABORT create returned null"); } catch { }
+                try { DiagLog.Info("TabContainer.OpenSftpBrowser", "ABORT create returned null"); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
                 return;
             }
             _sessions[opened.Page] = opened.Session;
@@ -264,7 +264,7 @@ namespace Gdterm.UI.Controls
             RaiseTabCountChanged();
             _tabControl.SelectedTab = opened.Page;
             ActiveSessionChanged?.Invoke(this, EventArgs.Empty);
-            try { DiagLog.Info("TabContainer.OpenSftpBrowser", "opened"); } catch { }
+            try { DiagLog.Info("TabContainer.OpenSftpBrowser", "opened"); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
         }
 
         private void HandleTerminalConnected(TabPage tab, TerminalControl terminalControl, ConnectionConfig config)
@@ -283,7 +283,7 @@ namespace Gdterm.UI.Controls
                 terminalControl.ReconnectRequested += (s, e) =>
                 {
                     // 直接走当前活动标签重连；重连路径已 awaited。
-                    try { ReconnectActiveTab(); } catch { }
+                    try { ReconnectActiveTab(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
                     ReconnectRequested?.Invoke(terminalControl, e);
                 };
                 terminalControl.ExportRequested += (s, e) => ExportRequested?.Invoke(terminalControl, e);
@@ -291,7 +291,7 @@ namespace Gdterm.UI.Controls
                 // 终端尺寸/编码变化转发到状态栏
                 terminalControl.TerminalInfoChanged += (s, size) =>
                 {
-                    try { TerminalInfoChanged?.Invoke(terminalControl, size); } catch { }
+                    try { TerminalInfoChanged?.Invoke(terminalControl, size); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
                 };
                 // 连上后立即推送一次尺寸 + 编码给状态栏
                 try
@@ -299,7 +299,7 @@ namespace Gdterm.UI.Controls
                     var info = terminalControl.GetCurrentTerminalInfo();
                     TerminalInfoChanged?.Invoke(terminalControl, info);
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
             }
         }
 
@@ -322,7 +322,7 @@ namespace Gdterm.UI.Controls
         public void CloseAllTabs()
         {
             _closeService.CloseAllTabs(_tabControl, _sessions);
-            try { ActiveSessionChanged?.Invoke(this, EventArgs.Empty); } catch { }
+            try { ActiveSessionChanged?.Invoke(this, EventArgs.Empty); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
         }
 
         private void CloseTab(TabPage tab)
@@ -330,9 +330,9 @@ namespace Gdterm.UI.Controls
             var sessionId = _closeService.CloseTab(tab, _sessions, _tabControl);
             if (!string.IsNullOrEmpty(sessionId))
             {
-                try { SessionClosed?.Invoke(this, sessionId); } catch { }
+                try { SessionClosed?.Invoke(this, sessionId); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
             }
-            try { ActiveSessionChanged?.Invoke(this, EventArgs.Empty); } catch { }
+            try { ActiveSessionChanged?.Invoke(this, EventArgs.Empty); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
         }
 
         private void OnDrawTab(object sender, DrawItemEventArgs e)
@@ -349,7 +349,7 @@ namespace Gdterm.UI.Controls
             if (idx != _chrome.HoverIndex)
             {
                 _chrome.HoverIndex = idx;
-                try { _tabControl.Invalidate(); } catch { }
+                try { _tabControl.Invalidate(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
             }
         }
 
@@ -358,7 +358,7 @@ namespace Gdterm.UI.Controls
             if (_chrome.HoverIndex != -1)
             {
                 _chrome.HoverIndex = -1;
-                try { _tabControl.Invalidate(); } catch { }
+                try { _tabControl.Invalidate(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
             }
         }
 
@@ -376,7 +376,7 @@ namespace Gdterm.UI.Controls
                 if (cur.Width != px || cur.Height != h)
                     _tabControl.ItemSize = new Size(px, h);
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
         }
 
         /// <summary>右键菜单条目 + 手绘图标（失败回退纯文本）。</summary>
@@ -384,7 +384,7 @@ namespace Gdterm.UI.Controls
         {
             var item = new ToolStripMenuItem(text, null, onClick);
             try { var img = Gdterm.UI.Services.MenuIconFactory.Get(icon); if (img != null) item.Image = img; }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
             menu.Items.Add(item);
         }
 
@@ -400,7 +400,7 @@ namespace Gdterm.UI.Controls
                     if (_tabControl.GetTabRect(i).Contains(e.Location)) { onTab = true; break; }
                 if (onHeaderRow && !onTab)
                 {
-                    try { BlankAreaDoubleClicked?.Invoke(this, EventArgs.Empty); } catch { }
+                    try { BlankAreaDoubleClicked?.Invoke(this, EventArgs.Empty); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
                     return;
                 }
             }
@@ -412,8 +412,8 @@ namespace Gdterm.UI.Controls
                 {
                     if (_tabControl.GetTabRect(i).Contains(e.Location))
                     {
-                        try { _tabControl.SelectedIndex = i; } catch { }
-                        try { _tabContextMenu.Show(_tabControl, e.Location); } catch { }
+                        try { _tabControl.SelectedIndex = i; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
+                        try { _tabContextMenu.Show(_tabControl, e.Location); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
                         return;
                     }
                 }
@@ -523,14 +523,14 @@ namespace Gdterm.UI.Controls
             {
                 var state = kvp.Value;
                 if (state == null) continue;
-                try { state.Credential?.ClearSecrets(); } catch { }
+                try { state.Credential?.ClearSecrets(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
                 state.Credential = null;
                 var terminals = new System.Collections.Generic.List<TerminalControl>();
                 TabActiveSessionQuery.CollectSessionTerminals(state, terminals);
                 foreach (var tc in terminals)
                 {
                     if (tc == null) continue;
-                    try { tc.ClearCachedCredentials(); } catch { }
+                    try { tc.ClearCachedCredentials(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
                 }
             }
         }
@@ -550,7 +550,7 @@ namespace Gdterm.UI.Controls
                 foreach (var tc in terminals)
                 {
                     if (tc == null) continue;
-                    try { tc.ApplyCurrentAppearance(); } catch { }
+                    try { tc.ApplyCurrentAppearance(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
                 }
             }
         }
@@ -560,7 +560,7 @@ namespace Gdterm.UI.Controls
         {
             foreach (var kvp in _sessions)
             {
-                try { kvp.Value?.HealthMonitor?.Rearm(); } catch { }
+                try { kvp.Value?.HealthMonitor?.Rearm(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
             }
         }
 
@@ -602,7 +602,7 @@ namespace Gdterm.UI.Controls
         {
             WireHealthAndReconnect(session, terminalSession);
             // P0-02：重连成功后重新武装健康监控
-            try { session?.HealthMonitor?.RecordReconnect(); } catch { }
+            try { session?.HealthMonitor?.RecordReconnect(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
         }
 
         private IEnumerable<TabPage> EnumTabs()
@@ -628,7 +628,7 @@ namespace Gdterm.UI.Controls
                 var h = TabCountChanged;
                 if (h != null) h(this, EventArgs.Empty);
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
         }
 
         public int ActiveTabIndex

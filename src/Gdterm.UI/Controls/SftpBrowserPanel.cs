@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.IO;
 using System.Threading;
@@ -234,7 +234,7 @@ namespace Gdterm.UI.Controls
                             await Task.Delay(100);
                             if (progressDlg.IsCancelled)
                             {
-                                try { cts.Cancel(); } catch { }
+                                try { cts.Cancel(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SftpBrowserPanel", exSwallowed); } catch { } }
                                 break;
                             }
                             Application.DoEvents();
@@ -290,7 +290,7 @@ namespace Gdterm.UI.Controls
                             await Task.Delay(100);
                             if (progressDlg.IsCancelled)
                             {
-                                try { cts.Cancel(); } catch { }
+                                try { cts.Cancel(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SftpBrowserPanel", exSwallowed); } catch { } }
                                 break;
                             }
                             Application.DoEvents();
@@ -395,8 +395,8 @@ namespace Gdterm.UI.Controls
                 _disposed = true;
                 if (disposing)
                 {
-                    try { _sftp?.Disconnect(); } catch { }
-                    try { _sftp?.Dispose(); } catch { }
+                    try { _sftp?.Disconnect(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SftpBrowserPanel", exSwallowed); } catch { } }
+                    try { _sftp?.Dispose(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SftpBrowserPanel", exSwallowed); } catch { } }
                 }
             }
             base.Dispose(disposing);

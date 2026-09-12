@@ -96,7 +96,7 @@ namespace Gdterm.UI.Controls
                         AppDomain.CurrentDomain.BaseDirectory, "logs", "terminal");
                     EnableAutoLog(logDir);
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
             }
         }
 
@@ -124,10 +124,10 @@ namespace Gdterm.UI.Controls
                 if (c != null)
                 {
                     c.TabStop = true;
-                    BeginInvoke(new Action(() => { try { c.Focus(); } catch { } }));
+                    BeginInvoke(new Action(() => { try { c.Focus(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } } }));
                 }
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
         }
 
         private void InitializeComponent()
@@ -168,7 +168,7 @@ namespace Gdterm.UI.Controls
                         && !string.Equals(_profile.FontName, "Consolas", StringComparison.OrdinalIgnoreCase)) ? "profile" : (ga != null && !string.IsNullOrWhiteSpace(ga.FontName) ? "global" : "default")) +
                     " cjk=" + (string.IsNullOrEmpty(cjkFontName) ? "-" : cjkFontName));
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
 
             int rows = 24;
             int cols = 80;
@@ -181,7 +181,7 @@ namespace Gdterm.UI.Controls
                 _cellRenderer.SendToHost += OnCellSendToHost;
                 _cellRenderer.TerminalResized += OnCellTerminalResized;
                 _renderer = _cellRenderer;
-                try { _cellRenderer.ApplyFont(fontName, fontSize, cjkFontName); } catch { }
+                try { _cellRenderer.ApplyFont(fontName, fontSize, cjkFontName); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 LogFontMetrics("cell");
             }
             else
@@ -193,7 +193,7 @@ namespace Gdterm.UI.Controls
                     var light = _renderer as LightweightRenderer;
                     if (light != null) light.ApplyFont(fontName, fontSize);
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 LogFontMetrics("light");
             }
 
@@ -235,7 +235,7 @@ namespace Gdterm.UI.Controls
             {
                 // 动态启用/禁用：没选中禁用复制；没连接禁用粘贴/重连/导出
                 bool hasSel = false;
-                try { hasSel = !string.IsNullOrWhiteSpace(GetSelection()); } catch { }
+                try { hasSel = !string.IsNullOrWhiteSpace(GetSelection()); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 SetMenuItemEnabled("_copyItem", hasSel);
                 SetMenuItemEnabled("_pasteItem", IsConnected && ClipboardContainsText());
                 SetMenuItemEnabled("_clearItem", IsConnected);
@@ -284,7 +284,7 @@ namespace Gdterm.UI.Controls
             searchItem.Name = "_searchItem";
             searchItem.Click += (s, e) =>
             {
-                try { SearchRequested?.Invoke(this, EventArgs.Empty); } catch { }
+                try { SearchRequested?.Invoke(this, EventArgs.Empty); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
             };
             _termMenu.Items.Add(searchItem);
             _termMenu.Items.Add(new ToolStripSeparator());
@@ -293,7 +293,7 @@ namespace Gdterm.UI.Controls
             reconnectItem.Name = "_reconnectItem";
             reconnectItem.Click += (s, e) =>
             {
-                try { ReconnectRequested?.Invoke(this, EventArgs.Empty); } catch { }
+                try { ReconnectRequested?.Invoke(this, EventArgs.Empty); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
             };
             _termMenu.Items.Add(reconnectItem);
 
@@ -301,7 +301,7 @@ namespace Gdterm.UI.Controls
             exportItem.Name = "_exportItem";
             exportItem.Click += (s, e) =>
             {
-                try { ExportRequested?.Invoke(this, EventArgs.Empty); } catch { }
+                try { ExportRequested?.Invoke(this, EventArgs.Empty); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
             };
             _termMenu.Items.Add(exportItem);
             _termMenu.Items.Add(new ToolStripSeparator());
@@ -310,7 +310,7 @@ namespace Gdterm.UI.Controls
             settingsItem.Name = "_settingsItem";
             settingsItem.Click += (s, e) =>
             {
-                try { AppearanceSettingsRequested?.Invoke(this, EventArgs.Empty); } catch { }
+                try { AppearanceSettingsRequested?.Invoke(this, EventArgs.Empty); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
             };
             _termMenu.Items.Add(settingsItem);
 
@@ -338,7 +338,7 @@ namespace Gdterm.UI.Controls
             {
                 try { DiagLog.Info("TerminalControl.OnCellSendToHost.Drop",
                     "sessionNull=" + (_session == null) + " connected=" + (_session != null && _session.IsConnected) +
-                    " backend=" + ((_session as LocalTerminalSession)?.BackendName ?? "non-local")); } catch { }
+                    " backend=" + ((_session as LocalTerminalSession)?.BackendName ?? "non-local")); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 return;
             }
             try { _session.SendBytes(data); }
@@ -384,7 +384,7 @@ namespace Gdterm.UI.Controls
                         {
                             using (var g = c.CreateGraphics()) liveDpi = g.DpiX;
                         }
-                        catch { }
+                        catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                     }
                 }
                 string msg;
@@ -415,11 +415,11 @@ namespace Gdterm.UI.Controls
                     if (ga2 != null)
                         msg += " uiFont=" + (string.IsNullOrEmpty(ga2.UIFontName) ? "Microsoft YaHei UI" : ga2.UIFontName) + "/" + (ga2.UIFontSize > 0 ? ga2.UIFontSize : 9) + "pt";
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 msg += " " + DescribeOcclusion(c);
                 DiagLog.Info("TerminalControl.FontMetrics", msg);
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
         }
 
         /// <summary>
@@ -483,7 +483,7 @@ namespace Gdterm.UI.Controls
                     LogFontMetrics("cell-layout");
                 }
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
             if (_session == null || !_session.IsConnected) return;
             try
             {
@@ -506,11 +506,11 @@ namespace Gdterm.UI.Controls
                     _fontMetricsLoggedVisible = true;
                     BeginInvoke(new Action(() =>
                     {
-                        try { if (!_disposed) LogFontMetrics("cell-visible"); } catch { }
+                        try { if (!_disposed) LogFontMetrics("cell-visible"); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                     }));
                 }
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
         }
 
         private void OnCellMouseDown(object sender, MouseEventArgs e)
@@ -534,16 +534,16 @@ namespace Gdterm.UI.Controls
             bool mouseTracking = _cellRenderer.IsMouseTrackingEnabled;
             if (e.Button == MouseButtons.Left && !mouseTracking)
             {
-                try { _cellRenderer.ClearSelection(); } catch { } // 新选区从空开始
+                try { _cellRenderer.ClearSelection(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } } // 新选区从空开始
                 _selecting = true;
-                try { _cellRenderer.BeginSelection(e.X, e.Y); } catch { }
+                try { _cellRenderer.BeginSelection(e.X, e.Y); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 return;
             }
             if (e.Button == MouseButtons.Left && mouseTracking && (ModifierKeys & Keys.Shift) != 0)
             {
                 // Shift+左键在鼠标应用里仍允许本地拖选（强制选择）
                 _selecting = true;
-                try { _cellRenderer.BeginSelection(e.X, e.Y); } catch { }
+                try { _cellRenderer.BeginSelection(e.X, e.Y); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 return;
             }
 
@@ -558,7 +558,7 @@ namespace Gdterm.UI.Controls
                     (ModifierKeys & Keys.Control) != 0,
                     (ModifierKeys & Keys.Shift) != 0);
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
         }
 
         private void OnCellMouseUp(object sender, MouseEventArgs e)
@@ -569,7 +569,7 @@ namespace Gdterm.UI.Controls
             if (_selecting)
             {
                 _selecting = false;
-                try { _cellRenderer.ExtendSelection(e.X, e.Y); } catch { }
+                try { _cellRenderer.ExtendSelection(e.X, e.Y); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 return;
             }
 
@@ -583,7 +583,7 @@ namespace Gdterm.UI.Controls
                     (ModifierKeys & Keys.Control) != 0,
                     (ModifierKeys & Keys.Shift) != 0);
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
         }
 
         private void OnCellMouseMove(object sender, MouseEventArgs e)
@@ -592,7 +592,7 @@ namespace Gdterm.UI.Controls
             // 本地拖选扩展
             if (_selecting)
             {
-                try { _cellRenderer.ExtendSelection(e.X, e.Y); } catch { }
+                try { _cellRenderer.ExtendSelection(e.X, e.Y); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 return;
             }
             if (!_mouseDown) return;
@@ -604,7 +604,7 @@ namespace Gdterm.UI.Controls
                     (ModifierKeys & Keys.Control) != 0,
                     (ModifierKeys & Keys.Shift) != 0);
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
         }
 
         private static int MapMouseButton(MouseButtons b)
@@ -637,7 +637,7 @@ namespace Gdterm.UI.Controls
                         }
                     }
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
 
                 if (session is LocalTerminalSession)
                 {
@@ -645,12 +645,12 @@ namespace Gdterm.UI.Controls
                     {
                         _renderer?.Write("\r\n\x1b[32m[本地终端] 可输入命令；输入 exit 退出\x1b[0m\r\n");
                     }
-                    catch { }
+                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 }
             }
             catch (Exception ex)
             {
-                try { _renderer?.Write("\r\n\x1b[31m本地终端启动失败: " + ex.Message + "\x1b[0m\r\n"); } catch { }
+                try { _renderer?.Write("\r\n\x1b[31m本地终端启动失败: " + ex.Message + "\x1b[0m\r\n"); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 DiagLog.Swallowed("TerminalControl.AttachLocal", ex);
             }
         }
@@ -658,7 +658,7 @@ namespace Gdterm.UI.Controls
 public async void Connect()
         {
             try { await ConnectAsyncCore().ConfigureAwait(true); }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
         }
 
         public Task ConnectAsyncIfNeeded()
@@ -668,7 +668,7 @@ public async void Connect()
             if (_connectTask != null && !_connectTask.IsCompleted)
             {
                 try { DiagLog.Info("TerminalControl.ConnectAsyncIfNeeded",
-                    "skip: connect already running id=" + (_config != null ? _config.Id : "")); } catch { }
+                    "skip: connect already running id=" + (_config != null ? _config.Id : "")); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 return _connectTask;
             }
             _connectTask = ConnectAsyncCore();
@@ -686,7 +686,7 @@ public async void Connect()
                     " host=" + (_config != null ? _config.Host : "") +
                     " proto=" + (_config != null ? _config.Protocol.ToString() : ""));
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
 
             try
             {
@@ -712,7 +712,7 @@ public async void Connect()
                         else WarnNoCred();
                     }
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 ITerminalSession session;
 
                 int rows = _renderer != null ? Math.Max(1, _renderer.Rows) : 24;
@@ -753,7 +753,7 @@ public async void Connect()
 
                 if (_disposed)
                 {
-                    try { session.Dispose(); } catch { }
+                    try { session.Dispose(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                     return;
                 }
 
@@ -765,7 +765,7 @@ public async void Connect()
                 if (_cellRenderer != null)
                 {
                     try { _session.Resize(_cellRenderer.Columns, _cellRenderer.Rows); }
-                    catch { }
+                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 }
 
                 if (_profile.AutoRunCommands != null)
@@ -829,7 +829,7 @@ public async void Connect()
             if (_disposed) return;
             void Raise()
             {
-                try { SessionDisconnected?.Invoke(this, EventArgs.Empty); } catch { }
+                try { SessionDisconnected?.Invoke(this, EventArgs.Empty); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
             }
             if (InvokeRequired) BeginInvoke(new Action(Raise));
             else Raise();
@@ -843,7 +843,7 @@ public async void Connect()
                 MaxFileSizeBytes = 10 * 1024 * 1024,
                 MaxFileCount = 3
             };
-            try { _autoLogger.StartRecording(_config?.Host ?? "session", _config?.Name); } catch { }
+            try { _autoLogger.StartRecording(_config?.Host ?? "session", _config?.Name); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
         }
 
         public void PauseRendering()
@@ -870,19 +870,19 @@ public async void Connect()
                     DiagLog.Info("TerminalControl.ResumeRendering",
                         "lazy-connect id=" + (_config != null ? _config.Id : ""));
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 ConnectAsyncIfNeeded();
             }
             else if (_session != null && !_session.IsConnected && _session is LocalTerminalSession local)
             {
                 // 本地终端已 Attach 但进程未起
                 try { DiagLog.Info("TerminalControl.ResumeRendering",
-                    "local-start id=" + (_config != null ? _config.Id : "")); } catch { }
+                    "local-start id=" + (_config != null ? _config.Id : "")); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 try { local.ConnectLocal(); }
                 catch (Exception ex)
                 {
                     DiagLog.Swallowed("TerminalControl.ResumeRendering.Local", ex);
-                    try { _renderer?.Write("\r\n\x1b[31m本地终端启动失败: " + ex.Message + "\x1b[0m\r\n"); } catch { }
+                    try { _renderer?.Write("\r\n\x1b[31m本地终端启动失败: " + ex.Message + "\x1b[0m\r\n"); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 }
             }
             else
@@ -896,7 +896,7 @@ public async void Connect()
                         " connecting=" + _connecting +
                         " connected=" + (_session != null && _session.IsConnected));
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
             }
         }
 
@@ -918,7 +918,7 @@ public async void Connect()
             if (isCommandLine && !string.IsNullOrWhiteSpace(trimmed))
             {
                 try { _auditLogger?.LogCommand(_config?.Id ?? "", trimmed); }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
             }
 
             return true;
@@ -972,7 +972,7 @@ public async void Connect()
                         SecurityEvent.DangerousCommandBlocked,
                         "detector error on " + (_config?.Host ?? "?") + ": " + ex.Message);
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 try
                 {
                     MessageBox.Show(
@@ -982,7 +982,7 @@ public async void Connect()
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 return false;
             }
 
@@ -1000,12 +1000,12 @@ public async void Connect()
                             SecurityEvent.DangerousCommandBlocked,
                             "blocked command on " + (_config?.Host ?? "?") + ": " + command);
                     }
-                    catch { }
+                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                     return false;
                 }
                 if (dlg.RememberChoice)
                 {
-                    try { _dangerousDetector.AddToWhitelist(command); } catch { }
+                    try { _dangerousDetector.AddToWhitelist(command); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 }
             }
             return true;
@@ -1018,7 +1018,7 @@ public async void Connect()
                 var erase = new StringBuilder();
                 for (int i = 0; i < _commandLine.Length; i++)
                     erase.Append("\b \b");
-                try { _renderer?.Write(erase.ToString()); } catch { }
+                try { _renderer?.Write(erase.ToString()); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
             }
             _commandLine.Clear();
         }
@@ -1059,20 +1059,20 @@ public async void Connect()
             // （CellGdiRenderer.Write 在 Pause 时只 Feed，不启动 timer）
             if (_isPaused)
             {
-                try { _renderer?.Write(e.Text); } catch { }
-                try { _autoLogger?.LogOutput(e.Text); } catch { }
+                try { _renderer?.Write(e.Text); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+                try { _autoLogger?.LogOutput(e.Text); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 return;
             }
 
             if (InvokeRequired)
             {
                 try { BeginInvoke(new Action(() => OnTerminalOutput(sender, e))); }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 return;
             }
 
             _renderer?.Write(e.Text);
-            try { _autoLogger?.LogOutput(e.Text); } catch { }
+            try { _autoLogger?.LogOutput(e.Text); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
         }
 
 
@@ -1091,8 +1091,8 @@ public async void Connect()
                     Credentials = null;
                     if (_cellRenderer != null)
                     {
-                        try { _cellRenderer.SendToHost -= OnCellSendToHost; } catch { }
-                        try { _cellRenderer.TerminalResized -= OnCellTerminalResized; } catch { }
+                        try { _cellRenderer.SendToHost -= OnCellSendToHost; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+                        try { _cellRenderer.TerminalResized -= OnCellTerminalResized; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                     }
                     if (_session != null)
                     {
@@ -1103,7 +1103,7 @@ public async void Connect()
                         });
                         DiagLog.Try("TerminalControl.Dispose.Session", () => _session.Dispose());
                         _session = null;
-                        try { SessionDisconnected?.Invoke(this, EventArgs.Empty); } catch { }
+                        try { SessionDisconnected?.Invoke(this, EventArgs.Empty); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                     }
                     DiagLog.Try("TerminalControl.Dispose.AutoLog", () => _autoLogger?.Dispose());
                     DiagLog.Try("TerminalControl.Dispose.Renderer", () =>

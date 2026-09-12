@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using Gdterm.Core.Models;
 using Gdterm.Terminal.Rendering;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Controls
 {
@@ -47,15 +48,15 @@ namespace Gdterm.UI.Controls
 
             if (_cellRenderer != null)
             {
-                try { _cellRenderer.ApplyFont(fontName, fontSize, cjkFontName); } catch { }
+                try { _cellRenderer.ApplyFont(fontName, fontSize, cjkFontName); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Profile", exSwallowed); } catch { } }
                 LogFontMetrics("cell");
             }
             else if (_renderer is LightweightRenderer light)
             {
-                try { light.ApplyFont(fontName, fontSize); } catch { }
+                try { light.ApplyFont(fontName, fontSize); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Profile", exSwallowed); } catch { } }
                 LogFontMetrics("light");
             }
-            try { _renderer.GetControl()?.Invalidate(); } catch { }
+            try { _renderer.GetControl()?.Invalidate(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Profile", exSwallowed); } catch { } }
         }
     }
 }

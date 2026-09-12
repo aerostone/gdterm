@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Services
 {
@@ -43,7 +44,7 @@ namespace Gdterm.UI.Services
                 using (var pen = new Pen(Ink, W) { StartCap = LineCap.Round, EndCap = LineCap.Round, LineJoin = LineJoin.Round })
                 using (var fill = new SolidBrush(Ink))
                 {
-                    try { Draw(g, pen, fill, key); } catch { }
+                    try { Draw(g, pen, fill, key); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MenuIconFactory", exSwallowed); } catch { } }
                 }
             }
             return bmp;

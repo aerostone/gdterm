@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
@@ -124,12 +124,10 @@
     <Compile Include="Controls\TabContainerControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
-    <Compile Include="Controls\StatusBarControl.cs">
-      <SubType>UserControl</SubType>
-    </Compile>
     <Compile Include="Controls\BottomBarPanel.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Include="Controls\SharedMenuTip.cs" />
     <Compile Include="Controls\LockOverlayControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
@@ -142,8 +140,6 @@
     <Compile Include="Hotkeys\GlobalHotkeyManager.cs" />
     <Compile Include="Controls\SecretScanPanel.cs" />
     <Compile Include="Controls\KeyBindingPanel.cs" />
-    <Compile Include="Controls\QuickBarPanel.cs" />
-    <Compile Include="Controls\TmuxBarPanel.cs" />
     <Compile Include="Forms\QuickCommandEditorForm.cs" />
     <Compile Include="Controls\HighlightRulePanel.cs" />
     <Compile Include="Controls\TerminalSearchBar.cs" />

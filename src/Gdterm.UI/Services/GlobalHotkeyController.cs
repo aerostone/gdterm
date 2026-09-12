@@ -1,6 +1,7 @@
 using System;
 using System.Windows.Forms;
 using Gdterm.UI.Hotkeys;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Services
 {
@@ -27,7 +28,7 @@ namespace Gdterm.UI.Services
                 _toggleHotkeyId = _manager.Register(HotkeyModifiers.Control, Keys.Oemtilde);
                 _manager.HotkeyPressed += OnHotkeyPressed;
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("GlobalHotkeyController", exSwallowed); } catch { } }
         }
 
         private void OnHotkeyPressed(object sender, HotkeyPressedEventArgs e)
@@ -62,7 +63,7 @@ namespace Gdterm.UI.Services
                     _manager.Dispose();
                 }
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("GlobalHotkeyController", exSwallowed); } catch { } }
             _manager = null;
         }
     }

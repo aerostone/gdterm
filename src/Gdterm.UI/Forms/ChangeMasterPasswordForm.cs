@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using Gdterm.Security;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Forms
 {
@@ -53,7 +54,7 @@ namespace Gdterm.UI.Forms
                     iconStream.Dispose();
                 }
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ChangeMasterPasswordForm", exSwallowed); } catch { } }
         }
 
         private void InitializeComponent()

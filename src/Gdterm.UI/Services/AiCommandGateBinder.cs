@@ -5,6 +5,7 @@ using Gdterm.Terminal;
 using Gdterm.UI.Controls;
 using TerminalControl = Gdterm.UI.Controls.TerminalControl;
 using Gdterm.Security;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Services
 {
@@ -42,7 +43,7 @@ namespace Gdterm.UI.Services
                         if (!dlg.IsConfirmed) return false;
                         if (dlg.RememberChoice)
                         {
-                            try { detector.AddToWhitelist(cmd); } catch { }
+                            try { detector.AddToWhitelist(cmd); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("AiCommandGateBinder", exSwallowed); } catch { } }
                         }
                         return true;
                     }
@@ -59,7 +60,7 @@ namespace Gdterm.UI.Services
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Warning);
                     }
-                    catch { }
+                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("AiCommandGateBinder", exSwallowed); } catch { } }
                     return false;
                 }
             };

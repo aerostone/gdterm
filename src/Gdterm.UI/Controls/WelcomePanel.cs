@@ -115,7 +115,7 @@ namespace Gdterm.UI.Controls
                     }
                 }
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("WelcomePanel", exSwallowed); } catch { } }
 
             if (_recentHost.Controls.Count == 0)
                 AddEmpty(_recentHost, "暂无最近连接 — 双击左侧树或点「新建连接」开始");
@@ -149,7 +149,7 @@ namespace Gdterm.UI.Controls
                     }
                 }
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("WelcomePanel", exSwallowed); } catch { } }
 
             if (_favHost.Controls.Count == 0)
                 AddEmpty(_favHost, "暂无收藏 — 在书签面板中标记收藏后显示在这里");

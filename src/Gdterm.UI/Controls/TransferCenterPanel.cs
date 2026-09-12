@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
@@ -75,7 +75,7 @@ namespace Gdterm.UI.Controls
                 Jobs.Insert(0, line);
                 while (Jobs.Count > 100) Jobs.RemoveAt(Jobs.Count - 1);
             }
-            try { NotificationCenterPanel.Push("XFER", message); } catch { }
+            try { NotificationCenterPanel.Push("XFER", message); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TransferCenterPanel", exSwallowed); } catch { } }
         }
 
         public void Reload()

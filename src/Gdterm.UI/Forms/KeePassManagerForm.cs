@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
@@ -232,7 +232,7 @@ namespace Gdterm.UI.Forms
                         _keepassService.CreateEntry(entry);
                         LoadEntries();
                         _statusLabel.Text = "条目已创建";
-                        try { ToastNotifier.Success("凭据已创建"); } catch { }
+                        try { ToastNotifier.Success("凭据已创建"); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("KeePassManagerForm", exSwallowed); } catch { } }
                     }
                     catch (Exception ex)
                     {
@@ -279,7 +279,7 @@ namespace Gdterm.UI.Forms
                         _keepassService.UpdateEntry(full);
                         LoadEntries();
                         _statusLabel.Text = "条目已更新：" + full.Title;
-                        try { ToastNotifier.Success("凭据已保存：" + full.Title); } catch { }
+                        try { ToastNotifier.Success("凭据已保存：" + full.Title); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("KeePassManagerForm", exSwallowed); } catch { } }
                     }
                 }
             }
@@ -309,7 +309,7 @@ namespace Gdterm.UI.Forms
                     _keepassService.DeleteEntry(entryId);
                     LoadEntries();
                     _statusLabel.Text = $"已删除：{title}";
-                    try { ToastNotifier.Warning("已删除：" + title); } catch { }
+                    try { ToastNotifier.Warning("已删除：" + title); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("KeePassManagerForm", exSwallowed); } catch { } }
                 }
                 catch (Exception ex)
                 {
@@ -361,7 +361,7 @@ namespace Gdterm.UI.Forms
                     Clipboard.SetText(username);
                     _statusLabel.Text = "用户名已复制到剪贴板";
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("KeePassManagerForm", exSwallowed); } catch { } }
             }
             else
             {

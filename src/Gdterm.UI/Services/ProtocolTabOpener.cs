@@ -108,7 +108,7 @@ namespace Gdterm.UI.Services
                         " hasKey=" + hasKey +
                         " user=" + (credential != null ? credential.Username : config.Username));
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ProtocolTabOpener", exSwallowed); } catch { } }
             }
 
             switch (config.Protocol)
@@ -185,7 +185,7 @@ namespace Gdterm.UI.Services
                 {
                     if (RdpDumpProxy.IsRunning)
                     {
-                        try { RdpDumpProxy.Stop(); } catch { }
+                        try { RdpDumpProxy.Stop(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ProtocolTabOpener", exSwallowed); } catch { } }
                     }
                     var dumpDir = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "logs", "rdp-dump");
                     var proxyPort = RdpDumpProxy.StartFor(
@@ -222,8 +222,8 @@ namespace Gdterm.UI.Services
             // mstsc 引擎才需要 Windows 凭据（TERMSRV/<host>，供 mstscax 自动登录）。
             // 抓包时用 connectConfig.Host（127.0.0.1）——mstscax 实际连接的地址，
             // 否则凭据目标 TERMSRV/<原host> 与连接目标不匹配，自动登录不生效。
-            // FreeRDP 引擎（含默认 auto）不注入：有凭据走 /u /p，无凭据走零凭据首连
-            // （mstsc 仿真，堡垒机自渲染登录页）。
+            // FreeRDP 引擎（含默认 auto）不注入：有凭据走 /u /p（rdp_passline=false 则跳过 /p 走零凭据首连），
+            // 无凭据走零凭据首连（mstsc 仿真，堡垒机自渲染登录页）。
             // auto + wfreerdp.exe 缺失时工厂会静默回退 mstscax，仍需注入。
             string engineMeta = null;
             if (config != null && config.Metadata != null)
@@ -238,7 +238,7 @@ namespace Gdterm.UI.Services
                     _keepassService?.InjectRdpCredential(
                         connectConfig.Host, credential.Username, credential.Password);
                 }
-                catch { }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ProtocolTabOpener", exSwallowed); } catch { } }
             }
 
             var rdp = _rdpFactory.CreateFor(connectConfig);
@@ -282,7 +282,7 @@ namespace Gdterm.UI.Services
                         session.IsConnected = false;
                         DiagLog.Info("RdpTab.StateChanged", "disconnected reason=" + ev.Reason + " msg=" + ev.ErrorMessage);
                         // 抓包代理：连接断开时自动停止
-                        if (tcpDump) { try { RdpDumpProxy.Stop(); } catch { } }
+                        if (tcpDump) { try { RdpDumpProxy.Stop(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ProtocolTabOpener", exSwallowed); } catch { } } }
                         if (ev.Reason == "closed") return;
                         if (tab.IsDisposed) return;
                         MessageBox.Show("RDP 已断开: " + (ev.ErrorMessage ?? ev.Reason), "远程桌面",
@@ -327,7 +327,7 @@ namespace Gdterm.UI.Services
                             ProtocolType.RDP.ToString(),
                             ConnectionAction.Open);
                     }
-                    catch { }
+                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ProtocolTabOpener", exSwallowed); } catch { } }
                 }
                 catch (Exception ex)
                 {
@@ -340,7 +340,7 @@ namespace Gdterm.UI.Services
                             ProtocolType.RDP.ToString(),
                             ConnectionAction.Error);
                     }
-                    catch { }
+                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ProtocolTabOpener", exSwallowed); } catch { } }
                     MessageBox.Show("RDP 连接失败: " + ex.Message, "错误",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
@@ -392,7 +392,7 @@ namespace Gdterm.UI.Services
             var terminal = new TerminalControl(local, _auditLogger);
             terminal.Dock = DockStyle.Fill;
             // 本地终端构造时已 Attach；再 Resume 确保 canvas 可输入并补启 shell
-            try { terminal.ResumeRendering(); } catch { }
+            try { terminal.ResumeRendering(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ProtocolTabOpener", exSwallowed); } catch { } }
             tab.Controls.Add(terminal);
 
             var session = new TabSessionState

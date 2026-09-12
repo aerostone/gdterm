@@ -10,6 +10,7 @@ using Gdterm.KeePass;
 using Gdterm.UI.Forms;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Controls
 {
@@ -65,7 +66,7 @@ namespace Gdterm.UI.Controls
                 MinimumSize = new Size(0, Math.Max(Services.DpiScale.V(this, 30), Services.FormFontPolicy.RowStep(this)))
             };
             try { Gdterm.UI.Diagnostics.WinFormsCompat.SetCueBanner(_filterBox, "输入主机/名称/分组过滤…"); }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionTreeControl", exSwallowed); } catch { } }
             _filterBox.TextChanged += (s, e) => ApplyFilter(_filterBox.Text);
 
             _treeView = new TreeView
@@ -278,7 +279,7 @@ namespace Gdterm.UI.Controls
                 if (ga != null && !string.IsNullOrEmpty(ga.UIFontName) && ga.UIFontSize >= 8 && ga.UIFontSize <= 24)
                     return new Font(ga.UIFontName, ga.UIFontSize, FontStyle.Regular);
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionTreeControl", exSwallowed); } catch { } }
             return Services.FormFontPolicy.UiFont(); // 回到全局默认（含未加载 GlobalAppearance 时的安全值）
         }
 
@@ -485,7 +486,7 @@ namespace Gdterm.UI.Controls
         {
             if (e.Item is TreeNode node && IsConnectionNode(node))
             {
-                try { _treeView.DoDragDrop(node, DragDropEffects.Move); } catch { }
+                try { _treeView.DoDragDrop(node, DragDropEffects.Move); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionTreeControl", exSwallowed); } catch { } }
             }
         }
 
@@ -619,7 +620,7 @@ namespace Gdterm.UI.Controls
             if (!IsConnectionNode(_rightClickedNode)) return;
             var cfg = _rightClickedNode.Tag as ConnectionConfig;
             if (cfg == null || string.IsNullOrEmpty(cfg.Host)) return;
-            try { Clipboard.SetText(cfg.Host); } catch { }
+            try { Clipboard.SetText(cfg.Host); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionTreeControl", exSwallowed); } catch { } }
         }
 
         // ===== 拖拽归组 =====
@@ -629,7 +630,7 @@ namespace Gdterm.UI.Controls
             // 仅允许拖动连接节点；分组层级由 GroupPath 推导，不支持手动重排分组
             var node = e.Item as TreeNode;
             if (!IsConnectionNode(node)) return;
-            try { _treeView.DoDragDrop(node, DragDropEffects.Move); } catch { }
+            try { _treeView.DoDragDrop(node, DragDropEffects.Move); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionTreeControl", exSwallowed); } catch { } }
         }
 
         private void OnTreeDragEnter(object sender, DragEventArgs e)
@@ -706,7 +707,7 @@ namespace Gdterm.UI.Controls
         private static void AttachMenuIcon(ToolStripMenuItem item, string icon)
         {
             try { var img = Gdterm.UI.Services.MenuIconFactory.Get(icon); if (img != null) item.Image = img; }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionTreeControl", exSwallowed); } catch { } }
         }
 
         /// <summary>按 Tag 查找上下文菜单项，不依赖硬编码索引。</summary>

@@ -178,7 +178,7 @@ namespace Gdterm.UI.Diagnostics
                 toolStrip.BackColor = GdtermColorTable.Background;
                 toolStrip.ForeColor = GdtermColorTable.Foreground;
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("GdtermColorTable", exSwallowed); } catch { } }
         }
 
         protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)

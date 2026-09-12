@@ -5,6 +5,7 @@ using Gdterm.Connections;
 using Gdterm.Core.Models;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Forms;
+using Gdterm.UI.Diagnostics;
 
 namespace Gdterm.UI.Services
 {
@@ -93,7 +94,7 @@ namespace Gdterm.UI.Services
                         _tabs.SetActiveTabIndex(state.ActiveTabIndex);
                 }
             }
-            catch { }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SessionStateCoordinator", exSwallowed); } catch { } }
         }
     }
 }
