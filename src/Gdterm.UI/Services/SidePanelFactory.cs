@@ -209,6 +209,31 @@ namespace Gdterm.UI.Services
             tabHost.Controls.Add(bar);
             bar.BringToFront();
             bar.ShowAndFocus();
+            // 查找接线（F-查找）：SearchRequested 用 TerminalSearchEngine 跑缓冲匹配并计数，
+            // NavigateRequested 切上/下一个。注：两渲染器均无行滚动 API，暂只定位计数不跳行。
+            Gdterm.Terminal.TerminalSearchEngine engine = null;
+            bar.SearchRequested += (pattern, caseSensitive, useRegex, wholeWord) =>
+            {
+                try
+                {
+                    var lines = tc.GetRecentLines(500);
+                    engine = new Gdterm.Terminal.TerminalSearchEngine(new System.Collections.Generic.List<string>(lines));
+                    int n = engine.Search(pattern, caseSensitive, useRegex, wholeWord);
+                    int cur = engine.HasResults ? engine.CurrentIndex : -1;
+                    bar.UpdateMatchCount(cur, n);
+                }
+                catch { bar.UpdateMatchCount(-1, 0); }
+            };
+            bar.NavigateRequested += (next) =>
+            {
+                try
+                {
+                    if (engine == null || !engine.HasResults) return;
+                    var m = next ? engine.Next() : engine.Previous();
+                    if (m != null) bar.UpdateMatchCount(engine.CurrentIndex, engine.TotalMatches);
+                }
+                catch { }
+            };
             bar.CloseRequested += () =>
             {
                 tabHost.Controls.Remove(bar);

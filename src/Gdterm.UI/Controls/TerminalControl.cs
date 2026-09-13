@@ -1051,6 +1051,18 @@ public async void Connect()
             return _renderer?.GetRecentLines(count) ?? new string[0];
         }
 
+        /// <summary>下发关键词高亮规则到渲染器（Lightweight 生效；CellGdi 暂不支持）。
+        /// 规则来源：HighlightStore.Load().Rules。</summary>
+        public void SetHighlightRules(System.Collections.Generic.List<Gdterm.Core.Models.HighlightRule> rules)
+        {
+            try
+            {
+                var light = _renderer as Gdterm.Terminal.Rendering.LightweightRenderer;
+                if (light != null) light.SetHighlightRules(rules);
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+        }
+
         private void OnTerminalOutput(object sender, TerminalOutputEventArgs e)
         {
             if (_disposed || e == null || string.IsNullOrEmpty(e.Text)) return;

@@ -50,6 +50,9 @@ namespace Gdterm.Terminal.Rendering
         // 配色方案
         private TerminalColorScheme _scheme;
 
+        // 关键词高亮（HighlightRulePanel 配的规则，行封口时切 span；null=关闭）
+        private HighlightEngine _highlight;
+
         private const int MaxBufferLines = 300;
         private int _charWidth = 8;
         private int _lineHeight = 16;
@@ -220,6 +223,17 @@ namespace Gdterm.Terminal.Rendering
             return string.Empty;
         }
 
+        /// <summary>设置关键词高亮规则（null/空=关闭）。只影响此后封行的新行。</summary>
+        public void SetHighlightRules(System.Collections.Generic.List<Gdterm.Core.Models.HighlightRule> rules)
+        {
+            lock (_lock)
+            {
+                if (rules == null || rules.Count == 0) { _highlight = null; return; }
+                if (_highlight == null) _highlight = new HighlightEngine();
+                _highlight.LoadRules(rules);
+            }
+        }
+
         public string[] GetRecentLines(int lineCount)
         {
             lock (_lock)
@@ -381,7 +395,7 @@ namespace Gdterm.Terminal.Rendering
             foreach (var span in line.Spans)
             {
                 var brush = GetBrush(span.Color);
-                g.DrawString(span.Text, _font, brush, x, y, StringFormat.GenericTypographic);
+                g.DrawString(span.Text, span.Bold && _boldFont != null ? _boldFont : _font, brush, x, y, StringFormat.GenericTypographic);
                 x += span.Text.Length * _charWidth;
             }
         }
@@ -398,7 +412,7 @@ namespace Gdterm.Terminal.Rendering
             foreach (var span in spans)
             {
                 var brush = GetBrush(span.Color);
-                g.DrawString(span.Text, _font, brush, x, y, StringFormat.GenericTypographic);
+                g.DrawString(span.Text, span.Bold && _boldFont != null ? _boldFont : _font, brush, x, y, StringFormat.GenericTypographic);
                 x += span.Text.Length * _charWidth;
             }
         }
@@ -454,16 +468,45 @@ namespace Gdterm.Terminal.Rendering
             }
         }
 
+        /// <summary>行封口高亮：有匹配则按匹配切 span 覆盖颜色（首匹配优先，重叠取首个）。
+        /// 只改 Color/Bold，不动 Text（x 推进按字符数，保证与 GDI 等宽一致）。</summary>
+        private void ApplyHighlight(string lineText, List<ColorSpan> spans)
+        {
+            var hl = _highlight;
+            if (hl == null || string.IsNullOrEmpty(lineText) || spans == null || spans.Count == 0) return;
+            List<HighlightMatch> matches;
+            try { matches = hl.MatchLine(lineText); }
+            catch { return; }
+            if (matches == null || matches.Count == 0) return;
+            // 取首个有效匹配（MatchLine 已按位置+SortOrder 排序）
+            foreach (var m in matches)
+            {
+                if (m == null || m.Length <= 0) continue;
+                if (m.StartIndex < 0 || m.StartIndex + m.Length > spans.Count) continue;
+                Color fg = m.Foreground;
+                if (fg.IsEmpty) continue;
+                for (int i = m.StartIndex; i < m.StartIndex + m.Length; i++)
+                {
+                    spans[i].Color = fg;
+                    if (m.Bold) spans[i].Bold = true;
+                }
+                break; // 首匹配优先，一行只染一段（WindTerm 行为：首个关键词着色）
+            }
+        }
+
         private void AppendPlainText(string text)
         {
             foreach (char ch in text)
             {
                 if (ch == '\n')
                 {
+                    var lineText = _currentLine.ToString();
+                    var spans = new List<ColorSpan>(_currentSpans);
+                    ApplyHighlight(lineText, spans);
                     _lineBuffer.Add(new ColoredLine
                     {
-                        Text = _currentLine.ToString(),
-                        Spans = new List<ColorSpan>(_currentSpans)
+                        Text = lineText,
+                        Spans = spans
                     });
                     _currentLine.Clear();
                     _currentSpans.Clear();
@@ -545,6 +588,7 @@ namespace Gdterm.Terminal.Rendering
         {
             public string Text { get; set; }
             public Color Color { get; set; }
+            public bool Bold { get; set; }
         }
     }
 }
