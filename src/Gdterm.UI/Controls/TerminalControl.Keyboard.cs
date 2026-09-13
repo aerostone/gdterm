@@ -155,6 +155,9 @@ namespace Gdterm.UI.Controls
                         e.Handled = true;
                         break;
                     case Keys.Tab:
+                        // 本地补全优先：有候选则补首个并吃掉；无候选走原直通过程
+                        try { if (TryCompleteOnTab()) { e.Handled = true; break; } }
+                        catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                         if (UseLocalLineBuffer && _commandLine.Length > 0)
                         {
                             var partial = _commandLine.ToString();

@@ -31,6 +31,10 @@ namespace Gdterm.UI.Controls
         private readonly DangerousCommandDetector _dangerousDetector;
         private readonly TerminalKeyBindingResolver _keyResolver = new TerminalKeyBindingResolver();
         private readonly StringBuilder _commandLine = new StringBuilder();
+        private TerminalCompletion _completion;
+        /// <summary>补全数据源（可选，不设则只用内置常用命令）。由 TabContainer.HandleTerminalConnected 下发。</summary>
+        public Gdterm.Logging.CommandHistoryStore HistoryStore { get; set; }
+        public Gdterm.Connections.QuickCommandStore QuickStore { get; set; }
 
         private ITerminalSession _session;
         private IRenderer _renderer;
@@ -1049,6 +1053,58 @@ public async void Connect()
         public string[] GetRecentLines(int count)
         {
             return _renderer?.GetRecentLines(count) ?? new string[0];
+        }
+
+        /// <summary>Tab 补全：有候选则补首个（回显擦写），无则返回 false 由调用方直通远端。
+        /// 双渲染器通用（_commandLine 两边都攒）。本地回显擦写：退格擦 prefix 再写全词。</summary>
+        public bool TryCompleteOnTab()
+        {
+            try
+            {
+                if (_completion == null)
+                {
+                    var hs = HistoryStore;
+                    var qs = QuickStore;
+                    _completion = new TerminalCompletion(
+                        hs != null ? (Func<System.Collections.Generic.IList<string>>)(() => hs.GetRecentCommands(50)) : null,
+                        qs != null ? (Func<System.Collections.Generic.IList<string>>)(() =>
+                        {
+                            var list = new System.Collections.Generic.List<string>();
+                            try
+                            {
+                                var all = qs.LoadAll();
+                                if (all != null) foreach (var q in all)
+                                {
+                                    if (q != null && !string.IsNullOrWhiteSpace(q.Command)) list.Add(q.Command);
+                                }
+                            }
+                            catch { }
+                            return list;
+                        }) : null);
+                }
+                string line = _commandLine.ToString();
+                string prefix;
+                var cands = _completion.Complete(line, out prefix);
+                if (cands == null || cands.Count == 0 || string.IsNullOrEmpty(prefix)) return false;
+                string top = cands[0];
+                string rest = top.Substring(prefix.Length);
+                if (string.IsNullOrEmpty(rest)) return false;
+                // 本地行缓冲追加 + 回显
+                _commandLine.Append(rest);
+                if (_cellRenderer == null)
+                {
+                    try { _renderer?.Write(rest); }
+                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+                }
+                else
+                {
+                    // cell 路径字符已直通远端：补全后缀直发（远端行编辑器自行回显）
+                    SafeSend(rest);
+                }
+                return true;
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+            return false;
         }
 
         /// <summary>下发关键词高亮规则到渲染器（Lightweight 生效；CellGdi 暂不支持）。

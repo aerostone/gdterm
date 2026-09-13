@@ -29,6 +29,8 @@ namespace Gdterm.UI.Controls
         private readonly AutoReconnectWatchdog _reconnectWatchdog;
         private readonly IConnectionStore _connectionStore;
         private readonly Gdterm.Connections.HighlightStore _highlightStore;
+        private readonly Gdterm.Logging.CommandHistoryStore _historyStore;
+        private readonly Gdterm.Connections.QuickCommandStore _quickStore;
         private readonly TabSessionLifecycle _lifecycle;
         private readonly ProtocolTabOpener _opener;
         private readonly TabReconnectService _reconnectService;
@@ -73,13 +75,17 @@ namespace Gdterm.UI.Controls
             AutoReconnectWatchdog reconnectWatchdog = null,
             IConnectionStore connectionStore = null,
             IRdpClientFactory rdpFactory = null,
-            Gdterm.Connections.HighlightStore highlightStore = null)
+            Gdterm.Connections.HighlightStore highlightStore = null,
+            Gdterm.Logging.CommandHistoryStore historyStore = null,
+            Gdterm.Connections.QuickCommandStore quickStore = null)
         {
             // aiService 保留构造参数以兼容 Program/MainForm 签名；协议侧不直接消费
             _ = aiService;
             _reconnectWatchdog = reconnectWatchdog;
             _connectionStore = connectionStore;
             _highlightStore = highlightStore;
+            _historyStore = historyStore;
+            _quickStore = quickStore;
             _lifecycle = new TabSessionLifecycle(auditLogger, reconnectWatchdog);
             _opener = new ProtocolTabOpener(
                 tunnelManager,
@@ -278,6 +284,16 @@ namespace Gdterm.UI.Controls
                 WireHealthAndReconnect(ts, terminalControl != null ? terminalControl.Session : null);
             }
             _lifecycle.TryRunLogonScript(terminalControl, config);
+            // 补全数据源下发：历史 + 快捷命令（缺省则只用内置）
+            try
+            {
+                if (terminalControl != null)
+                {
+                    terminalControl.HistoryStore = _historyStore;
+                    terminalControl.QuickStore = _quickStore;
+                }
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
             // 高亮规则下发：连上即按当前规则染 Lightweight 新行
             try
             {

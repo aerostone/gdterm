@@ -226,7 +226,9 @@ namespace Gdterm.UI.Forms
                 _reconnectWatchdog,
                 _connectionStore,
                 _rdpFactory,
-                _highlightStore);
+                _highlightStore,
+                _commandHistoryStore,
+                _quickCommandStore);
             _sessionBridge = new ActiveSessionBridge(_tabContainer);
             _sidePanels = new SidePanelFactory(
                 _tabContainer,
