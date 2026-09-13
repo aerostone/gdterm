@@ -163,6 +163,7 @@
     <Compile Include="DebugConfig.cs" />
     <Compile Include="Diagnostics\CrashLog.cs" />
     <Compile Include="Diagnostics\DiagLog.cs" />
+    <Compile Include="Forms\SftpPermissionForm.cs">
     <Compile Include="Forms\SshKeyManagerForm.cs">
       <SubType>Form</SubType>
     </Compile>

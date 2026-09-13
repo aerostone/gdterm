@@ -69,6 +69,11 @@ namespace Gdterm.Sftp
         Task RenameAsync(string oldPath, string newPath, CancellationToken ct);
 
         /// <summary>
+        /// 修改远端权限（SFTP 协议 ChangePermissions，不走 shell；octalMode 为十进制位形式如 755）。
+        /// </summary>
+        Task ChmodAsync(string remotePath, int octalMode, CancellationToken ct);
+
+        /// <summary>
         /// 断开连接
         /// </summary>
         void Disconnect();

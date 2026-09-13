@@ -106,6 +106,7 @@
     <Compile Include="Security\SecretFindingTests.cs" />
     <Compile Include="Security\SecurityManagerHashTests.cs" />
     <Compile Include="Sftp\SftpSyncPlannerTests.cs" />
+    <Compile Include="Sftp\SftpPermissionTests.cs" />
     <Compile Include="Terminal\VtTerminalEngineTests.cs" />
     <Compile Include="Terminal\ZmodemReceiverTests.cs" />
     <Compile Include="Core\TerminalProfileTests.cs" />

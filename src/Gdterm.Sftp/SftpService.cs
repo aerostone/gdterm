@@ -81,7 +81,7 @@ namespace Gdterm.Sftp
                     IsDirectory = e.IsDirectory,
                     SizeBytes = (long)e.Length,
                     LastModified = e.LastWriteTime,
-                    Permissions = e.OwnerCanRead.ToString(), // 简化权限表示
+                    Permissions = ToRwx(e),
                     Owner = e.UserId.ToString(),
                     Group = e.GroupId.ToString()
                 })
@@ -90,6 +90,22 @@ namespace Gdterm.Sftp
                 .ToList();
 
             return Task.FromResult<IList<SftpFileInfo>>(result);
+        }
+
+        /// <summary>rwx 九字符（SSH.NET SftpFile 三元组实证：Owner/Group/Others × CanRead/Write/Execute）。</summary>
+        internal static string ToRwx(Renci.SshNet.Sftp.SftpFile f)
+        {
+            var sb = new System.Text.StringBuilder(9);
+            sb.Append(f.OwnerCanRead ? 'r' : '-');
+            sb.Append(f.OwnerCanWrite ? 'w' : '-');
+            sb.Append(f.OwnerCanExecute ? 'x' : '-');
+            sb.Append(f.GroupCanRead ? 'r' : '-');
+            sb.Append(f.GroupCanWrite ? 'w' : '-');
+            sb.Append(f.GroupCanExecute ? 'x' : '-');
+            sb.Append(f.OthersCanRead ? 'r' : '-');
+            sb.Append(f.OthersCanWrite ? 'w' : '-');
+            sb.Append(f.OthersCanExecute ? 'x' : '-');
+            return sb.ToString();
         }
 
         /// <summary>
@@ -320,6 +336,20 @@ namespace Gdterm.Sftp
         {
             EnsureConnected();
             _client.RenameFile(oldPath, newPath);
+            return Task.CompletedTask;
+        }
+
+        /// <summary>修改远端权限（SFTP 协议 ChangePermissions，不走 shell；octalMode 十进制位如 755）。</summary>
+        public Task ChmodAsync(string remotePath, int octalMode, CancellationToken ct)
+        {
+            EnsureConnected();
+            if (string.IsNullOrEmpty(remotePath)) throw new ArgumentNullException("remotePath");
+            int mode = 0;
+            int d0 = (octalMode / 100) % 10, d1 = (octalMode / 10) % 10, d2 = octalMode % 10;
+            if (d0 < 0 || d0 > 7 || d1 < 0 || d1 > 7 || d2 < 0 || d2 > 7)
+                throw new ArgumentOutOfRangeException("octalMode", "权限位须为 000-777（如 755）。");
+            mode = (d0 << 6) | (d1 << 3) | d2;
+            _client.ChangePermissions(remotePath, (short)mode);
             return Task.CompletedTask;
         }
 

@@ -163,6 +163,8 @@ namespace Gdterm.UI.Controls
 
         public string Title { get { return _title; } }
 
+        internal Gdterm.Sftp.ISftpService Sftp { get { return _sftp; } }
+
         public string HomePath { get { return "/"; } }
 
         public List<FileEntry> List(string path)

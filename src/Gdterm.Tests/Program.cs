@@ -30,6 +30,7 @@ namespace Gdterm.Tests
             SecretFindingTests.Run();
             SecurityManagerHashTests.Run();
             SftpSyncPlannerTests.Run();
+            SftpPermissionTests.Run();
             TerminalProfileTests.Run();
             VtTerminalEngineTests.Run();
             ZmodemReceiverTests.Run();

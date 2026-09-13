@@ -171,6 +171,10 @@ namespace Gdterm.UI.Controls
             miMkdir.Click += (s, e) => Mkdir();
             var miDelete = new ToolStripMenuItem("删除") { Enabled = false };
             miDelete.Click += (s, e) => DeleteSelected();
+            var miPreview = new ToolStripMenuItem("预览 (F3)") { Enabled = false };
+            miPreview.Click += (s, e) => PreviewSelected();
+            var miProps = new ToolStripMenuItem("属性...") { Enabled = false };
+            miProps.Click += (s, e) => ShowPropsSelected();
             var miRefresh = new ToolStripMenuItem("刷新");
             miRefresh.Click += (s, e) => Refresh();
 
@@ -180,11 +184,15 @@ namespace Gdterm.UI.Controls
                 miTransfer.Enabled = has;
                 miRename.Enabled = has;
                 miDelete.Enabled = has;
+                miPreview.Enabled = has;
+                miProps.Enabled = has;
                 UpdateStatus();
             };
 
             ctx.Items.Add(miTransfer);
             ctx.Items.Add(miRename);
+            ctx.Items.Add(miPreview);
+            ctx.Items.Add(miProps);
             ctx.Items.Add(new ToolStripSeparator());
             ctx.Items.Add(miMkdir);
             ctx.Items.Add(miDelete);
@@ -199,6 +207,7 @@ namespace Gdterm.UI.Controls
             else if (e.KeyCode == Keys.F7) { Mkdir(); e.Handled = true; }
             else if (e.KeyCode == Keys.F2) { RenameSelected(); e.Handled = true; }
             else if (e.KeyCode == Keys.Delete) { DeleteSelected(); e.Handled = true; }
+            else if (e.KeyCode == Keys.F3) { PreviewSelected(); e.Handled = true; }
             else if (e.KeyCode == Keys.Back) { NavigateUp(); e.Handled = true; }
         }
 
@@ -235,6 +244,7 @@ namespace Gdterm.UI.Controls
             var entry = _list.SelectedItems[0].Tag as FileEntry;
             if (entry == null) return;
             if (entry.IsDirectory) Navigate(entry.FullPath);
+            else PreviewSelected();
         }
 
         public FileEntry[] SelectedEntries()
@@ -345,6 +355,110 @@ namespace Gdterm.UI.Controls
             }, refresh: true);
         }
 
+        /// <summary>预览选中文件：远端文本→下载预览，远端图片→外部打开；本地文本→直接读，本地其他→外部打开。</summary>
+        private void PreviewSelected()
+        {
+            if (_list.SelectedItems.Count == 0) return;
+            var entry = _list.SelectedItems[0].Tag as FileEntry;
+            if (entry == null || entry.IsDirectory) return;
+            var sftpProvider = _provider as SftpFilePaneProvider;
+            if (sftpProvider != null)
+            {
+                var sftp = sftpProvider.Sftp;
+                if (sftp == null || !sftp.IsConnected) return;
+                if (Gdterm.Sftp.SftpEnhancements.IsImageFile(entry.Name))
+                {
+                    // 图片：下载到 temp，外部打开（WinSCP 行为）
+                    var tmp = Path.Combine(Path.GetTempPath(), "gdterm_img_" + Guid.NewGuid().ToString("N") + Path.GetExtension(entry.Name));
+                    try
+                    {
+                        sftp.DownloadAsync(entry.FullPath, tmp, null, CancellationToken.None).GetAwaiter().GetResult();
+                        try { System.Diagnostics.Process.Start(tmp); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("FilePaneControl", exSwallowed); } catch { } }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(FindForm(), "图片打开失败:\n" + ex.Message,
+                            "预览", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                    return;
+                }
+                if (!Gdterm.Sftp.SftpEnhancements.IsTextFile(entry.Name))
+                {
+                    MessageBox.Show(FindForm(), "该类型暂不支持预览（仅文本/图片）。", "预览",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+                _status.Text = "预览加载 " + entry.Name + " …";
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        return await Gdterm.Sftp.SftpEnhancements.PreviewTextFileAsync(
+                            sftp, entry.FullPath, 100, CancellationToken.None);
+                    }
+                    catch (Exception ex) { return "预览失败: " + ex.Message; }
+                }).ContinueWith(t =>
+                {
+                    _status.Text = entry.FullPath;
+                    PreviewBox.Show(FindForm(), entry.Name, t.Result ?? "");
+                }, TaskScheduler.FromCurrentSynchronizationContext());
+                return;
+            }
+            // 本地
+            try
+            {
+                var ext = Path.GetExtension(entry.Name).ToLower();
+                if (Gdterm.Sftp.SftpEnhancements.IsImageFile(entry.Name)
+                    || (!Gdterm.Sftp.SftpEnhancements.IsTextFile(entry.Name) && ext != ""))
+                {
+                    try { System.Diagnostics.Process.Start(entry.FullPath); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("FilePaneControl", exSwallowed); } catch { } }
+                    return;
+                }
+                var lines = new List<string>();
+                using (var reader = new StreamReader(entry.FullPath, System.Text.Encoding.UTF8, true))
+                {
+                    string line;
+                    int count = 0;
+                    while ((line = reader.ReadLine()) != null && count < 100) { lines.Add(line); count++; }
+                    if (!reader.EndOfStream) lines.Add("... （仅显示前 100 行）");
+                }
+                PreviewBox.Show(FindForm(), entry.Name, string.Join("\n", lines));
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(FindForm(), "预览失败:\n" + ex.Message,
+                    "预览", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>属性：远端→权限对话框走 SFTP chmod；本地→简单信息。</summary>
+        private void ShowPropsSelected()
+        {
+            if (_list.SelectedItems.Count == 0) return;
+            var entry = _list.SelectedItems[0].Tag as FileEntry;
+            if (entry == null) return;
+            var sftpProvider = _provider as SftpFilePaneProvider;
+            if (sftpProvider != null)
+            {
+                var sftp = sftpProvider.Sftp;
+                if (sftp == null || !sftp.IsConnected) return;
+                int octal = Gdterm.Sftp.SftpEnhancements.ParsePermissionToOctal(entry.Permissions ?? "");
+                using (var dlg = new Gdterm.UI.Forms.SftpPermissionForm(entry.Name, entry.Permissions, octal))
+                {
+                    if (dlg.ShowDialog(FindForm()) != DialogResult.OK) return;
+                    RunFsOp("修改权限", () =>
+                    {
+                        sftp.ChmodAsync(entry.FullPath, dlg.OctalMode, CancellationToken.None).GetAwaiter().GetResult();
+                    }, refresh: true);
+                }
+                return;
+            }
+            MessageBox.Show(FindForm(),
+                "名称: " + entry.Name + "\n大小: " + FormatSize(entry.SizeBytes)
+                + "\n修改: " + (entry.LastModified == DateTime.MinValue ? "-" : entry.LastModified.ToString("yyyy-MM-dd HH:mm")),
+                "属性", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+
         private void RunFsOp(string opName, Action op, bool refresh)
         {
             if (_busy || _currentPath == null) return;
@@ -383,6 +497,46 @@ namespace Gdterm.UI.Controls
             if (bytes < 1024 * 1024) return (bytes / 1024.0).ToString("0.0") + " K";
             if (bytes < 1024L * 1024 * 1024) return (bytes / (1024.0 * 1024)).ToString("0.0") + " M";
             return (bytes / (1024.0 * 1024 * 1024)).ToString("0.00") + " G";
+        }
+    }
+
+    /// <summary>暗色主题的只读文本预览框（SFTP/本地文件预览共用）。</summary>
+    internal static class PreviewBox
+    {
+        public static void Show(IWin32Window owner, string title, string text)
+        {
+            using (var f = new Form
+            {
+                Text = "预览：" + (title ?? ""),
+                StartPosition = FormStartPosition.CenterParent,
+                FormBorderStyle = FormBorderStyle.Sizable,
+                MaximizeBox = true,
+                MinimizeBox = false,
+                ShowInTaskbar = false,
+                BackColor = GdtermColorTable.Background,
+                ForeColor = GdtermColorTable.Foreground
+            })
+            {
+                f.ClientSize = new Size(DpiScale.V(f, 640), DpiScale.V(f, 440));
+                f.MinimumSize = new Size(DpiScale.V(f, 420), DpiScale.V(f, 300));
+                var box = new AntdUI.Input {
+                    Dock = DockStyle.Fill,
+                    Multiline = true,
+                    ReadOnly = true,
+                    Text = text ?? "",
+                    Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
+                    BackColor = GdtermColorTable.Surface,
+                    ForeColor = GdtermColorTable.Foreground,
+                };
+                var flow = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(DpiScale.V(f, 12), DpiScale.V(f, 6), DpiScale.V(f, 12), DpiScale.V(f, 6)) };
+                var close = new AntdUI.Button { Text = "关闭", DialogResult = DialogResult.OK, AutoSize = true, Padding = new Padding(DpiScale.V(f, 12), DpiScale.V(f, 4), DpiScale.V(f, 12), DpiScale.V(f, 4)), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+                flow.Controls.Add(close);
+                f.Controls.Add(box);
+                f.Controls.Add(flow);
+                f.AcceptButton = close;
+                f.CancelButton = close;
+                f.ShowDialog(owner);
+            }
         }
     }
 
