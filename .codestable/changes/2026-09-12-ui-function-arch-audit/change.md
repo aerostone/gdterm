@@ -62,11 +62,18 @@ total_findings: 4
 - **arch-drift**：零偏离。Forms 零直接 `new` 业务类；RDP 经 `IRdpClientFactory`；attention 禁止事项（业务回 MainForm/TabContainer、Ctrl 抢键、新原生控件）全守。
 - **功能完整性**：菜单 46/46 实现；Controls handler 全非空；右键/托盘全接线；扫描插件签名链完整。
 
+## 关闭（2026-09-13，commit d81f42a，AppVeyor 292 绿：单元114/114 + 冒烟5/5）
+
+| # | 修法 | 验证 |
+|---|---|---|
+| F01 | ConnectionDialog 加"命令行传密码"复选框（默认开，保持自动登录）+ `rdp_passline` metadata；FreeRdpClient 条件跳过 `/p:` + `RdpLog.Info` 留痕；ProtocolTabOpener 注释同步 | 编译过；Windows 侧需手验：默认连（自动登录不变）+ 关选项重连（登录页输入） |
+| F02 | `ButtonTipExtension`+`DarkMenuRenderer` 迁 `SharedMenuTip.cs`；删 QuickBar/TmuxBar/StatusBar 三 orphan；ViewModeController 去 TmuxBar 类型；csproj 同步 | 残留引用零命中；Windows 侧需手验：F11/专注/紧凑切换 + 底栏菜单深色 |
+| F03 | FormFontPolicy `(字体名\|字号\|样式\|DPI)` 键行高缓存，64 条上限，RowStep/LineBox 改走缓存 | 纯加法，旧公式保留在未命中路径 |
+| F04 | UI 内 247 处空 catch → `DiagLog.Swallowed(文件名)`（23 文件补 using；DiagLog 自身 + Program/DebugConfig 启动路径 10 处有理由保留） | 四关校验：命名/可见性/平衡/using 全过 |
+
 ## 下一步
 
-1. P1：Finding 01 → `cs-issue`（RDP 凭据通道）。
-2. P2：Finding 02 → `cs-refactor`（删 orphan，需 CI 验）。
-3. P2：Finding 03/04 → 排期，profiling 先行 / 顺手带。
+无。4 finding 全关，本审计 close。
 
 ## Verification Evidence
 
