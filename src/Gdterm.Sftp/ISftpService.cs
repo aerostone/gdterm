@@ -42,6 +42,18 @@ namespace Gdterm.Sftp
         Task DownloadAsync(string remotePath, string localPath, IProgress<FileTransferProgress> progress, CancellationToken ct);
 
         /// <summary>
+        /// 上传文件（断点续传）：远端存在半截文件则从断点追加；大小一致视为已是最新返回 false；
+        /// 远端更大（脏文件）或不存在则整传覆盖。返回 true=实际传输，false=跳过。
+        /// </summary>
+        Task<bool> UploadResumeAsync(string localPath, string remotePath, IProgress<FileTransferProgress> progress, CancellationToken ct);
+
+        /// <summary>
+        /// 下载文件（断点续传）：本地存在半截文件则从断点追加；大小一致视为已是最新返回 false；
+        /// 本地更大（脏文件）则整传覆盖。返回 true=实际传输，false=跳过。
+        /// </summary>
+        Task<bool> DownloadResumeAsync(string remotePath, string localPath, IProgress<FileTransferProgress> progress, CancellationToken ct);
+
+        /// <summary>
         /// 删除文件或目录
         /// </summary>
         Task DeleteAsync(string remotePath, bool recursive, CancellationToken ct);

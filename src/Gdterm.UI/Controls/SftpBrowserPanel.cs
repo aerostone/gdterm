@@ -93,6 +93,8 @@ namespace Gdterm.UI.Controls
             var btnDownload = MakeBtn("下载", (s, e) => Download());
             var btnMkdir = MakeBtn("新建目录", (s, e) => Mkdir());
             var btnRename = MakeBtn("重命名", (s, e) => RenameSelected());
+            var btnSyncUp = MakeBtn("同步上传", (s, e) => SyncUpload());
+            var btnSyncDown = MakeBtn("同步下载", (s, e) => SyncDownload());
             var btnDelete = MakeBtn("删除", (s, e) => DeleteSelected());
 
             var buttons = new FlowLayoutPanel
@@ -103,7 +105,7 @@ namespace Gdterm.UI.Controls
                 WrapContents = false,
                 Margin = new Padding(DpiScale.V(this, 2))
             };
-            buttons.Controls.AddRange(new Control[] { btnUp, btnRefresh, btnUpload, btnDownload, btnMkdir, btnRename, btnDelete });
+            buttons.Controls.AddRange(new Control[] { btnUp, btnRefresh, btnUpload, btnDownload, btnMkdir, btnRename, btnSyncUp, btnSyncDown, btnDelete });
 
             top.Controls.Add(_pathBox, 0, 0);
             top.Controls.Add(buttons, 1, 0);
@@ -217,6 +219,101 @@ namespace Gdterm.UI.Controls
             }
         }
 
+        /// <summary>同步上传：选本地文件夹 → 与当前远端目录比对 → 确认 → 逐文件续传。</summary>
+        private async void SyncUpload()
+        {
+            if (_sftp == null || !_sftp.IsConnected) return;
+            using (var dlg = new FolderBrowserDialog { Description = "选择要同步上传的本地文件夹" })
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                string localDir = dlg.SelectedPath;
+                string remoteBase = string.IsNullOrEmpty(_currentPath) ? "/" : _currentPath;
+                _status.Text = "比对中…";
+                try
+                {
+                    var cts = new CancellationTokenSource();
+                    var tree = await Gdterm.Sftp.SftpSyncRunner.ListRemoteTreeAsync(_sftp, remoteBase, cts.Token);
+                    var plan = Gdterm.Sftp.SftpSyncPlanner.PlanUpload(localDir, remoteBase, tree);
+                    int need = 0;
+                    foreach (var item in plan) if (item.Action == Gdterm.Sftp.SyncAction.Transfer) need++;
+                    if (plan.Count == 0) { _status.Text = "本地无文件"; return; }
+                    if (need == 0)
+                    {
+                        _status.Text = "已是最新";
+                        ToastNotifier.Success("同步上传：两端一致，无需传输");
+                        TransferCenterPanel.Record("同步上传跳过（已是最新）  " + localDir + " → " + remoteBase);
+                        return;
+                    }
+                    if (MessageBox.Show("需传输 " + need + " 个文件（共 " + plan.Count + " 个），开始同步？", "同步上传",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    using (var progressDlg = new TransferProgressDialog("同步上传 " + need + " 个文件"))
+                    {
+                        progressDlg.Show(this);
+                        var progress = new TransferProgressAdapter(progressDlg, "同步上传");
+                        var result = await Gdterm.Sftp.SftpSyncRunner.RunUploadAsync(_sftp, plan, progress, cts.Token);
+                        progressDlg.Complete(result.Failed == 0, "传 " + result.Transferred + " 跳过 " + result.Skipped + " 失败 " + result.Failed);
+                        _status.Text = "同步完成";
+                        ToastNotifier.Success("同步上传完成：传 " + result.Transferred + " 跳过 " + result.Skipped + " 失败 " + result.Failed);
+                        TransferCenterPanel.Record("同步上传完成  " + localDir + " → " + remoteBase + "  传" + result.Transferred + " 跳过" + result.Skipped + " 失败" + result.Failed);
+                        RefreshList();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _status.Text = "同步失败";
+                    ToastNotifier.Error("同步上传失败: " + ex.Message);
+                    TransferCenterPanel.Record("同步上传失败  " + localDir + " → " + remoteBase + "  " + ex.Message);
+                }
+            }
+        }
+
+        /// <summary>同步下载：当前远端目录 → 选本地文件夹 → 比对 → 确认 → 逐文件续传。</summary>
+        private async void SyncDownload()
+        {
+            if (_sftp == null || !_sftp.IsConnected) return;
+            using (var dlg = new FolderBrowserDialog { Description = "选择同步下载到的本地文件夹" })
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                string localDir = dlg.SelectedPath;
+                string remoteBase = string.IsNullOrEmpty(_currentPath) ? "/" : _currentPath;
+                _status.Text = "比对中…";
+                try
+                {
+                    var cts = new CancellationTokenSource();
+                    var tree = await Gdterm.Sftp.SftpSyncRunner.ListRemoteTreeAsync(_sftp, remoteBase, cts.Token);
+                    var plan = Gdterm.Sftp.SftpSyncPlanner.PlanDownload(tree, localDir, remoteBase);
+                    int need = 0;
+                    foreach (var item in plan) if (item.Action == Gdterm.Sftp.SyncAction.Transfer) need++;
+                    if (plan.Count == 0) { _status.Text = "远端无文件"; return; }
+                    if (need == 0)
+                    {
+                        _status.Text = "已是最新";
+                        ToastNotifier.Success("同步下载：两端一致，无需传输");
+                        TransferCenterPanel.Record("同步下载跳过（已是最新）  " + remoteBase + " → " + localDir);
+                        return;
+                    }
+                    if (MessageBox.Show("需传输 " + need + " 个文件（共 " + plan.Count + " 个），开始同步？", "同步下载",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+                    using (var progressDlg = new TransferProgressDialog("同步下载 " + need + " 个文件"))
+                    {
+                        progressDlg.Show(this);
+                        var progress = new TransferProgressAdapter(progressDlg, "同步下载");
+                        var result = await Gdterm.Sftp.SftpSyncRunner.RunDownloadAsync(_sftp, plan, progress, cts.Token);
+                        progressDlg.Complete(result.Failed == 0, "传 " + result.Transferred + " 跳过 " + result.Skipped + " 失败 " + result.Failed);
+                        _status.Text = "同步完成";
+                        ToastNotifier.Success("同步下载完成：传 " + result.Transferred + " 跳过 " + result.Skipped + " 失败 " + result.Failed);
+                        TransferCenterPanel.Record("同步下载完成  " + remoteBase + " → " + localDir + "  传" + result.Transferred + " 跳过" + result.Skipped + " 失败" + result.Failed);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _status.Text = "同步失败";
+                    ToastNotifier.Error("同步下载失败: " + ex.Message);
+                    TransferCenterPanel.Record("同步下载失败  " + remoteBase + " → " + localDir + "  " + ex.Message);
+                }
+            }
+        }
+
         private async void Upload()
         {
             if (_sftp == null || !_sftp.IsConnected) return;
@@ -234,7 +331,7 @@ namespace Gdterm.UI.Controls
                         var progress = new TransferProgressAdapter(progressDlg, name);
                         var cts = new CancellationTokenSource();
                         // 轮询取消
-                        var task = _sftp.UploadAsync(dlg.FileName, remote, progress, cts.Token);
+                        var task = _sftp.UploadResumeAsync(dlg.FileName, remote, progress, cts.Token);
                         while (!task.IsCompleted)
                         {
                             await Task.Delay(100);
@@ -245,8 +342,16 @@ namespace Gdterm.UI.Controls
                             }
                             Application.DoEvents();
                         }
-                        await task;
-                        if (progressDlg.IsCancelled)
+                        bool uploaded = await task;
+                        if (!uploaded && !progressDlg.IsCancelled)
+                        {
+                            progressDlg.Complete(true, "已是最新，无需上传");
+                            _status.Text = "已是最新";
+                            ToastNotifier.Success("已是最新: " + name);
+                            TransferCenterPanel.Record("上传跳过（已是最新）  " + name + " → " + remote);
+                            RefreshList();
+                        }
+                        else if (progressDlg.IsCancelled)
                         {
                             progressDlg.Complete(false, "已取消");
                             _status.Text = "上传已取消";
@@ -290,7 +395,7 @@ namespace Gdterm.UI.Controls
                         _status.Text = "下载中 " + info.Name;
                         var progress = new TransferProgressAdapter(progressDlg, info.Name);
                         var cts = new CancellationTokenSource();
-                        var task = _sftp.DownloadAsync(remote, dlg.FileName, progress, cts.Token);
+                        var task = _sftp.DownloadResumeAsync(remote, dlg.FileName, progress, cts.Token);
                         while (!task.IsCompleted)
                         {
                             await Task.Delay(100);
@@ -301,8 +406,15 @@ namespace Gdterm.UI.Controls
                             }
                             Application.DoEvents();
                         }
-                        await task;
-                        if (progressDlg.IsCancelled)
+                        bool downloaded = await task;
+                        if (!downloaded && !progressDlg.IsCancelled)
+                        {
+                            progressDlg.Complete(true, "已是最新，无需下载");
+                            _status.Text = "已是最新";
+                            ToastNotifier.Success("已是最新: " + info.Name);
+                            TransferCenterPanel.Record("下载跳过（已是最新）  " + remote + " → " + dlg.FileName);
+                        }
+                        else if (progressDlg.IsCancelled)
                         {
                             progressDlg.Complete(false, "已取消");
                             _status.Text = "下载已取消";

@@ -152,6 +152,131 @@ namespace Gdterm.Sftp
         }
 
         /// <summary>
+        /// 上传断点续传（SSH.NET 无 reput 原生支持：Open Append + 本地 Seek 手工实现）。
+        /// </summary>
+        public Task<bool> UploadResumeAsync(string localPath, string remotePath, IProgress<FileTransferProgress> progress, CancellationToken ct)
+        {
+            EnsureConnected();
+
+            if (!File.Exists(localPath))
+                throw new FileNotFoundException("本地文件不存在", localPath);
+
+            var localSize = new FileInfo(localPath).Length;
+
+            // 远端大小：Get 不存在时抛异常→视为全新上传（项目内已用模式，见 DownloadAsync）
+            long remoteSize = 0;
+            bool remoteExists = true;
+            try { remoteSize = (long)_client.Get(remotePath).Length; }
+            catch { remoteExists = false; remoteSize = 0; }
+
+            if (remoteExists && localSize > 0 && remoteSize == localSize)
+                return Task.FromResult(false); // 已是最新，跳过
+            if (remoteExists && remoteSize > 0 && remoteSize < localSize)
+            {
+                // 断点追加
+                var stopwatch = Stopwatch.StartNew();
+                using (var local = new FileStream(localPath, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (var remote = _client.Open(remotePath, FileMode.Append, FileAccess.Write))
+                {
+                    local.Seek(remoteSize, SeekOrigin.Begin);
+                    var buf = new byte[81920];
+                    long done = remoteSize;
+                    int n;
+                    while ((n = local.Read(buf, 0, buf.Length)) > 0)
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        remote.Write(buf, 0, n);
+                        done += n;
+                        if (progress != null) progress.Report(new FileTransferProgress
+                        {
+                            BytesTransferred = done,
+                            TotalBytes = localSize,
+                            Elapsed = stopwatch.Elapsed
+                        });
+                    }
+                }
+                return Task.FromResult(true);
+            }
+
+            // 全新/脏文件整传覆盖（复用 UploadFile 路径）
+            var totalBytes = localSize;
+            var sw = Stopwatch.StartNew();
+            using (var fileStream = File.OpenRead(localPath))
+            {
+                _client.UploadFile(fileStream, remotePath, true, uploadedBytes =>
+                {
+                    ct.ThrowIfCancellationRequested();
+                    if (progress != null) progress.Report(new FileTransferProgress
+                    {
+                        BytesTransferred = (long)uploadedBytes,
+                        TotalBytes = totalBytes,
+                        Elapsed = sw.Elapsed
+                    });
+                });
+            }
+            return Task.FromResult(true);
+        }
+
+        /// <summary>
+        /// 下载断点续传（SSH.NET 无 reget 原生支持：OpenRead + 双端 Seek 手工实现）。
+        /// </summary>
+        public Task<bool> DownloadResumeAsync(string remotePath, string localPath, IProgress<FileTransferProgress> progress, CancellationToken ct)
+        {
+            EnsureConnected();
+
+            // Get 不存在时抛异常→与原 DownloadAsync 行为一致（直接抛给调用方）
+            var remoteSize = (long)_client.Get(remotePath).Length;
+            long localSize = File.Exists(localPath) ? new FileInfo(localPath).Length : 0;
+
+            if (remoteSize > 0 && localSize == remoteSize)
+                return Task.FromResult(false); // 已是最新，跳过
+            if (localSize > 0 && localSize < remoteSize)
+            {
+                // 断点追加
+                var stopwatch = Stopwatch.StartNew();
+                using (var remote = _client.OpenRead(remotePath))
+                using (var local = new FileStream(localPath, FileMode.Append, FileAccess.Write, FileShare.None))
+                {
+                    remote.Seek(localSize, SeekOrigin.Begin);
+                    var buf = new byte[81920];
+                    long done = localSize;
+                    int n;
+                    while ((n = remote.Read(buf, 0, buf.Length)) > 0)
+                    {
+                        ct.ThrowIfCancellationRequested();
+                        local.Write(buf, 0, n);
+                        done += n;
+                        if (progress != null) progress.Report(new FileTransferProgress
+                        {
+                            BytesTransferred = done,
+                            TotalBytes = remoteSize,
+                            Elapsed = stopwatch.Elapsed
+                        });
+                    }
+                }
+                return Task.FromResult(true);
+            }
+
+            // 全新/脏文件整传覆盖（复用 DownloadFile 路径）
+            var totalBytes = remoteSize;
+            var sw = Stopwatch.StartNew();
+            using (var fileStream = File.Create(localPath))
+            {
+                _client.DownloadFile(remotePath, fileStream, downloadedBytes =>
+                {
+                    ct.ThrowIfCancellationRequested();
+                    if (progress != null) progress.Report(new FileTransferProgress
+                    {
+                        BytesTransferred = (long)downloadedBytes,
+                        TotalBytes = totalBytes,
+                        Elapsed = sw.Elapsed
+                    });
+                });
+            }
+            return Task.FromResult(true);
+        }
+
+        /// <summary>
         /// 删除文件或目录
         /// </summary>
         public Task DeleteAsync(string remotePath, bool recursive, CancellationToken ct)

@@ -4,6 +4,7 @@ using Gdterm.Tests.Core;
 using Gdterm.Tests.Logging;
 using Gdterm.Tests.Scanning;
 using Gdterm.Tests.Security;
+using Gdterm.Tests.Sftp;
 using Gdterm.Tests.Terminal;
 using Gdterm.Tests.Ui;
 
@@ -28,6 +29,7 @@ namespace Gdterm.Tests
             CredentialPayloadTests.Run();
             SecretFindingTests.Run();
             SecurityManagerHashTests.Run();
+            SftpSyncPlannerTests.Run();
             TerminalProfileTests.Run();
             VtTerminalEngineTests.Run();
             ScanPluginTests.Run();
