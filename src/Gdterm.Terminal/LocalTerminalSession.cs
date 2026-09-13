@@ -376,19 +376,19 @@ namespace Gdterm.Terminal
             switch (_backend)
             {
                 case LocalBackend.ConPty:
-                    try { _conpty?.Resize((short)_cols, (short)_rows); }
-
-        public bool IsZmodemReceiving { get { return false; } }
-
-        public void StartZmodemReceive(string saveDirectory)
-        {
-            throw new NotSupportedException("Zmodem 接收仅支持 SSH 会话（当前：" + "本地终端" + "）。");
-        } catch { }
+                    try { _conpty?.Resize((short)_cols, (short)_rows); } catch { }
                     return;
                 case LocalBackend.WinPty:
                     try { _winpty?.Resize((short)_cols, (short)_rows); } catch { }
                     return;
             }
+        }
+
+        public bool IsZmodemReceiving { get { return false; } }
+
+        public void StartZmodemReceive(string saveDirectory)
+        {
+            throw new NotSupportedException("Zmodem 接收仅支持 SSH 会话（当前：本地终端）。");
         }
 
         public void SendBreak(int durationMs = 100)

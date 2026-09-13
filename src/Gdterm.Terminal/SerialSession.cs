@@ -116,7 +116,7 @@ namespace Gdterm.Terminal
 
         public void StartZmodemReceive(string saveDirectory)
         {
-            throw new NotSupportedException("Zmodem 接收仅支持 SSH 会话（当前：" + "串口" + "）。");
+            throw new NotSupportedException("Zmodem 接收仅支持 SSH 会话（当前：串口）。");
         }
 
         /// <summary>
