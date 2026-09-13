@@ -84,6 +84,7 @@ namespace Gdterm.Tunnel.Models
 
             connInfo.Timeout = TimeSpan.FromSeconds(30);
             var client = new SshClient(connInfo);
+            SshKeepAlive.Apply(client, SshKeepAlive.DefaultSeconds); // hop 无连接级配置，用默认 30s
             try
             {
                 client.Connect();
@@ -151,6 +152,7 @@ namespace Gdterm.Tunnel.Models
 
             connInfo.Timeout = TimeSpan.FromSeconds(30);
             var client = new SshClient(connInfo);
+            SshKeepAlive.Apply(client, config);
             client.Connect();
             _hopClients.Add(client);
         }

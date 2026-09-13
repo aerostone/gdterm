@@ -36,6 +36,7 @@ namespace Gdterm.Sftp
                 credential);
 
             _client = new SftpClient(connInfo);
+            Gdterm.Tunnel.SshKeepAlive.Apply(_client, config);
             _client.Connect();
 
             return Task.CompletedTask;
@@ -57,6 +58,7 @@ namespace Gdterm.Sftp
                 credential);
 
             _client = new SftpClient(connInfo);
+            Gdterm.Tunnel.SshKeepAlive.Apply(_client, config);
             _client.Connect();
 
             return Task.CompletedTask;

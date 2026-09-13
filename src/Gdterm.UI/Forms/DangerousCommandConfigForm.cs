@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
@@ -494,7 +494,7 @@ namespace Gdterm.UI.Forms
 
         public string InputText { get { return _inputBox.Text; } }
 
-        public TextInputForm(string title, string prompt)
+        public TextInputForm(string title, string prompt, string initialValue = null)
         {
             Text = title;
             StartPosition = FormStartPosition.CenterParent;
@@ -524,7 +524,8 @@ namespace Gdterm.UI.Forms
             _inputBox = new AntdUI.Input {
                 Location = new Point(pad, y),
                 Size = new Size(clientW - pad * 2, fieldH),
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 10f)
+                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 10f),
+                Text = initialValue ?? ""
             };
             Controls.Add(_inputBox);
             y += fieldH + DpiScale.V(this, 18);

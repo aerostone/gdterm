@@ -65,6 +65,7 @@ namespace Gdterm.Terminal
                 credential);
 
             _sshClient = new SshClient(connInfo);
+            Gdterm.Tunnel.SshKeepAlive.Apply(_sshClient, config);
             LogConnect("direct", connInfo, credential);
             try { _sshClient.Connect(); }
             catch (Exception ex)
@@ -100,6 +101,7 @@ namespace Gdterm.Terminal
                 credential);
 
             _sshClient = new SshClient(connInfo);
+            Gdterm.Tunnel.SshKeepAlive.Apply(_sshClient, config);
             LogConnect("tunnel->" + tunnelEndpoint.LocalHost + ":" + tunnelEndpoint.LocalPort, connInfo, credential);
             try { _sshClient.Connect(); }
             catch (Exception ex)

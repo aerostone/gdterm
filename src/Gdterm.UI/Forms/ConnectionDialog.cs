@@ -36,6 +36,7 @@ namespace Gdterm.UI.Forms
         private AntdUI.Input _tunnelHostBox;
         private AntdUI.InputNumber _tunnelPortBox;
         private AntdUI.Input _tunnelUserBox;
+        private AntdUI.InputNumber _keepaliveBox; // SSH 保活秒数（0=关闭，缺省 30）
 
         // RDP
         private AntdUI.Input _domainBox;
@@ -237,6 +238,7 @@ namespace Gdterm.UI.Forms
             _tunnelHostBox = AddRow(sshLayout, 1, "跳板主机", new AntdUI.Input());
             _tunnelPortBox = AddRow(sshLayout, 2, "跳板端口", new AntdUI.InputNumber { Minimum = 1, Maximum = 65535, Value = 22 });
             _tunnelUserBox = AddRow(sshLayout, 3, "跳板用户", new AntdUI.Input());
+            _keepaliveBox = AddRow(sshLayout, 4, "保活秒数", new AntdUI.InputNumber { Minimum = 0, Maximum = 3600, Value = 30 });
             SectionContent(_secSsh, sshLayout);
             _advFlow.Controls.Add(_secSsh);
 
@@ -463,7 +465,8 @@ namespace Gdterm.UI.Forms
         private void MaybeAutoExpand()
         {
             bool hasAdvanced =
-                (_config.JumpChain != null && _config.JumpChain.Hops != null && _config.JumpChain.Hops.Count > 0)
+                ((_config.JumpChain != null && _config.JumpChain.Hops != null && _config.JumpChain.Hops.Count > 0)
+                 || (_config.Metadata != null && _config.Metadata.ContainsKey("ssh_keepalive") && _config.Metadata["ssh_keepalive"] != "30"))
                 || (_config.Metadata != null &&
                     (_config.Metadata.ContainsKey("rdp_drives") || _config.Metadata.ContainsKey("rdp_fullscreen")
                      || (_config.Metadata.ContainsKey("rdp_nla") && _config.Metadata["rdp_nla"] == "false")
@@ -531,6 +534,15 @@ namespace Gdterm.UI.Forms
             // 备注（从 Metadata 取）
             if (_config.Metadata != null && _config.Metadata.ContainsKey("notes"))
                 _notesBox.Text = _config.Metadata["notes"];
+
+            // SSH 保活（metadata ssh_keepalive，缺省 30）
+            if (_config.Metadata != null)
+            {
+                string ka;
+                int kas;
+                if (_config.Metadata.TryGetValue("ssh_keepalive", out ka) && int.TryParse((ka ?? "").Trim(), out kas) && kas >= 0)
+                    _keepaliveBox.Value = Math.Min(kas, 3600);
+            }
 
             // SSH 跳板（JumpChain 首跳）
             if (_config.JumpChain != null && _config.JumpChain.Hops != null && _config.JumpChain.Hops.Count > 0)
@@ -603,6 +615,10 @@ namespace Gdterm.UI.Forms
             _config.Metadata["rdp_loadbalance"] = _rdpLoadBalanceBox.Text?.Trim() ?? "";
             _config.Metadata["rdp_engine"] = _rdpEngineCombo.SelectedIndex == 2 ? "mstscax"
                                            : _rdpEngineCombo.SelectedIndex == 1 ? "freerdp" : "auto";
+
+            // SSH 保活（0=关闭；30=缺省可不存，照存保持所见即所得）
+            if (_config.Metadata == null) _config.Metadata = new System.Collections.Generic.Dictionary<string, string>();
+            _config.Metadata["ssh_keepalive"] = ((int)_keepaliveBox.Value).ToString();
 
             // JumpChain hop (SSH jump host UI)
             if (_tunnelCheck.Checked && !string.IsNullOrWhiteSpace(_tunnelHostBox.Text))

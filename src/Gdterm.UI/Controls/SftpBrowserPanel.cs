@@ -92,6 +92,7 @@ namespace Gdterm.UI.Controls
             var btnUpload = MakeBtn("上传", (s, e) => Upload());
             var btnDownload = MakeBtn("下载", (s, e) => Download());
             var btnMkdir = MakeBtn("新建目录", (s, e) => Mkdir());
+            var btnRename = MakeBtn("重命名", (s, e) => RenameSelected());
             var btnDelete = MakeBtn("删除", (s, e) => DeleteSelected());
 
             var buttons = new FlowLayoutPanel
@@ -102,7 +103,7 @@ namespace Gdterm.UI.Controls
                 WrapContents = false,
                 Margin = new Padding(DpiScale.V(this, 2))
             };
-            buttons.Controls.AddRange(new Control[] { btnUp, btnRefresh, btnUpload, btnDownload, btnMkdir, btnDelete });
+            buttons.Controls.AddRange(new Control[] { btnUp, btnRefresh, btnUpload, btnDownload, btnMkdir, btnRename, btnDelete });
 
             top.Controls.Add(_pathBox, 0, 0);
             top.Controls.Add(buttons, 1, 0);
@@ -131,7 +132,12 @@ namespace Gdterm.UI.Controls
                     _pathBox.Text = _currentPath;
                     RefreshList();
                 }
+                else
+                {
+                    Download(); // 双击文件 = 下载（WindTerm 惯例）
+                }
             };
+            _list.ContextMenuStrip = BuildContextMenu();
 
             _status = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
@@ -353,6 +359,56 @@ namespace Gdterm.UI.Controls
             catch (Exception ex)
             {
                 MessageBox.Show("删除失败: " + ex.Message, "SFTP", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private ContextMenuStrip BuildContextMenu()
+        {
+            var menu = new ContextMenuStrip
+            {
+                BackColor = GdtermColorTable.Surface2,
+                ForeColor = GdtermColorTable.Foreground
+            };
+            var miDownload = new ToolStripMenuItem("下载");
+            miDownload.Click += (s, e) => Download();
+            var miRename = new ToolStripMenuItem("重命名...");
+            miRename.Click += (s, e) => RenameSelected();
+            var miDelete = new ToolStripMenuItem("删除");
+            miDelete.Click += (s, e) => DeleteSelected();
+            menu.Items.Add(miDownload);
+            menu.Items.Add(miRename);
+            menu.Items.Add(miDelete);
+            menu.Items.Add(new ToolStripSeparator());
+            var miRefresh = new ToolStripMenuItem("刷新");
+            miRefresh.Click += (s, e) => RefreshList();
+            menu.Items.Add(miRefresh);
+            return menu;
+        }
+
+        private void RenameSelected()
+        {
+            if (_sftp == null || !_sftp.IsConnected || _list.SelectedItems.Count == 0) return;
+            var info = _list.SelectedItems[0].Tag as SftpFileInfo;
+            if (info == null) return;
+            using (var dlg = new Gdterm.UI.Forms.TextInputForm("重命名", "新名称：", info.Name))
+            {
+                if (dlg.ShowDialog(FindForm()) != DialogResult.OK) return;
+                var newName = (dlg.InputText ?? "").Trim();
+                if (string.IsNullOrEmpty(newName) || newName == info.Name) return;
+                if (newName.IndexOf('/') >= 0 || newName.IndexOf('\\') >= 0)
+                {
+                    MessageBox.Show("名称不能包含路径分隔符。", "SFTP", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                try
+                {
+                    _sftp.RenameAsync(Combine(_currentPath, info.Name), Combine(_currentPath, newName), CancellationToken.None).GetAwaiter().GetResult();
+                    RefreshList();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show("重命名失败: " + ex.Message, "SFTP", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
         }
 
