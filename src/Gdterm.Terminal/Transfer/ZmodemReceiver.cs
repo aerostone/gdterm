@@ -54,7 +54,7 @@ namespace Gdterm.Terminal.Transfer
             return t;
         }
 
-        internal static ushort Crc16(byte[] data, int offset, int count)
+        public static ushort Crc16(byte[] data, int offset, int count)
         {
             int crc = 0;
             for (int i = 0; i < count; i++)
@@ -63,7 +63,7 @@ namespace Gdterm.Terminal.Transfer
         }
 
         /// <summary>构造 ZHEX 应答帧（** ZDLE 'B' + type hex + p0..p3 hex + crc hex + CRLF）。协议常量。</summary>
-        internal static byte[] BuildHexReply(byte frameType, uint p0)
+        public static byte[] BuildHexReply(byte frameType, uint p0)
         {
             var head = new byte[] { frameType, (byte)(p0 & 0xFF), (byte)((p0 >> 8) & 0xFF), (byte)((p0 >> 16) & 0xFF), (byte)((p0 >> 24) & 0xFF) };
             ushort crc = Crc16(head, 0, head.Length);
