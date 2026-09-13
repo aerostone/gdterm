@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
-using Gdterm.AI;
 using Gdterm.Core.Models;
 using Gdterm.Terminal.Models;
 
