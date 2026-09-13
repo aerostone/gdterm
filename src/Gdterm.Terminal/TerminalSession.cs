@@ -15,6 +15,8 @@ namespace Gdterm.Terminal
     {
         private SshClient _sshClient;
         private ShellStream _shellStream;
+        private readonly Transfer.ZmodemHandler _zmodem = new Transfer.ZmodemHandler();
+        private bool _zmodemHinted;
         private readonly List<string> _outputBuffer = new List<string>();
         private readonly StringBuilder _lineBuilder = new StringBuilder();
         private readonly object _lock = new object();
@@ -279,6 +281,21 @@ namespace Gdterm.Terminal
             {
                 try
                 {
+                    // Zmodem 检测（F-Zmodem）：远端 rz/sz 起传时提示转 SFTP（完整 ZDATA 协议栈未实现，不伪造）。
+                    try
+                    {
+                        if (!_zmodemHinted && e != null && e.Data != null
+                            && _zmodem.DetectZmodemStart(e.Data, 0, e.Data.Length))
+                        {
+                            _zmodemHinted = true;
+                            OutputReceived?.Invoke(this, new TerminalOutputEventArgs
+                            {
+                                Text = "\r\n[Zmodem] 检测到远端 rz/sz 传输请求。gdterm 暂未实现 Zmodem 二进制收发，请用 SFTP 浏览器传文件。\r\n",
+                                Timestamp = DateTime.UtcNow
+                            });
+                        }
+                    }
+                    catch { }
                     var text = Encoding.UTF8.GetString(e.Data);
                     ProcessOutput(text);
                 }
