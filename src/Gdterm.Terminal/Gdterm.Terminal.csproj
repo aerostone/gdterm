@@ -63,6 +63,7 @@
     <Compile Include="TerminalSession.cs" />
     <Compile Include="SshConnectionInfoFactory.cs" />
     <Compile Include="SerialSession.cs" />
+    <Compile Include="TelnetSession.cs" />
     <Compile Include="TerminalEndpoint.cs" />
     <Compile Include="TerminalKeyBindingResolver.cs" />
     <Compile Include="HighlightEngine.cs" />

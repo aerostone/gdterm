@@ -106,6 +106,7 @@ namespace Gdterm.Connections
                 new ConnectionTemplate { Id = "tpl-ssh-jump", Name = "跳板机 SSH", Description = "通过跳板机的 SSH 连接", Protocol = ProtocolType.SSH, DefaultPort = 22, DefaultUsername = "root", RequiresTunnel = true, Icon = "server-jump", IsBuiltIn = true },
                 new ConnectionTemplate { Id = "tpl-rdp-windows", Name = "Windows RDP", Description = "Windows 远程桌面", Protocol = ProtocolType.RDP, DefaultPort = 3389, DefaultUsername = "Administrator", Icon = "monitor", IsBuiltIn = true },
                 new ConnectionTemplate { Id = "tpl-serial", Name = "串口设备", Description = "串口终端连接", Protocol = ProtocolType.Serial, DefaultPort = 0, Icon = "serial", IsBuiltIn = true },
+                new ConnectionTemplate { Id = "tpl-telnet", Name = "Telnet 设备", Description = "老交换机/工控明文终端（无加密）", Protocol = ProtocolType.Telnet, DefaultPort = 23, Icon = "telnet", IsBuiltIn = true },
                 new ConnectionTemplate { Id = "tpl-ssh-centos", Name = "CentOS SSH", Description = "CentOS/RHEL SSH", Protocol = ProtocolType.SSH, DefaultPort = 22, DefaultUsername = "root", OsType = "CentOS", Icon = "server-linux", IsBuiltIn = true },
                 new ConnectionTemplate { Id = "tpl-ssh-ubuntu", Name = "Ubuntu SSH", Description = "Ubuntu/Debian SSH", Protocol = ProtocolType.SSH, DefaultPort = 22, DefaultUsername = "ubuntu", OsType = "Ubuntu", Icon = "server-linux", IsBuiltIn = true }
             };

@@ -149,7 +149,7 @@ namespace Gdterm.UI.Forms
             _nameBox = AddRow(basicLayout, 0, "名称", new AntdUI.Input());
             _nameBox.PlaceholderText = "可选，留空则用 主机:端口";
             _protocolCombo = AddRow(basicLayout, 1, "协议", new AntdUI.Select());
-            _protocolCombo.Items.AddRange(new object[] { "SSH", "RDP", "Serial" });
+            _protocolCombo.Items.AddRange(new object[] { "SSH", "RDP", "Serial", "Telnet" });
             _protocolCombo.SelectedIndexChanged += OnProtocolChanged;
             _hostBox = AddRow(basicLayout, 2, "主机", new AntdUI.Input());
             _hostBox.PlaceholderText = "IP 或主机名，如 192.168.1.10";
@@ -511,9 +511,9 @@ namespace Gdterm.UI.Forms
         private void OnProtocolChanged(object sender, EventArgs e)
         {
             var proto = (string)_protocolCombo.SelectedValue;
-            _portBox.Value = proto == "SSH" ? 22 : proto == "RDP" ? 3389 : 9600;
-            // 高级区只显示当前协议相关的分节
-            bool isSsh = proto == "SSH", isRdp = proto == "RDP", isSerial = proto == "Serial";
+            _portBox.Value = proto == "SSH" ? 22 : proto == "RDP" ? 3389 : proto == "Telnet" ? 23 : 9600;
+            // 高级区只显示当前协议相关的分节（Telnet 无专属分节，与 SSH 同走跳板/保活区）
+            bool isSsh = proto == "SSH" || proto == "Telnet", isRdp = proto == "RDP", isSerial = proto == "Serial";
             _secSsh.Visible = isSsh;
             _secRdp.Visible = isRdp;
             _secSerial.Visible = isSerial;
@@ -554,7 +554,8 @@ namespace Gdterm.UI.Forms
         {
             _nameBox.Text = _config.Name ?? "";
             _protocolCombo.SelectedValue = _config.Protocol == ProtocolType.RDP ? "RDP" :
-                                          _config.Protocol == ProtocolType.Serial ? "Serial" : "SSH";
+                                          _config.Protocol == ProtocolType.Serial ? "Serial" :
+                                          _config.Protocol == ProtocolType.Telnet ? "Telnet" : "SSH";
             _hostBox.Text = _config.Host ?? "";
             _portBox.Value = _config.Port > 0 ? _config.Port : 22;
             _usernameBox.Text = _config.Username ?? "";
@@ -622,7 +623,7 @@ namespace Gdterm.UI.Forms
         {
             _config.Name = _nameBox.Text.Trim();
             var proto = (string)_protocolCombo.SelectedValue;
-            _config.Protocol = proto == "RDP" ? ProtocolType.RDP : proto == "Serial" ? ProtocolType.Serial : ProtocolType.SSH;
+            _config.Protocol = proto == "RDP" ? ProtocolType.RDP : proto == "Serial" ? ProtocolType.Serial : proto == "Telnet" ? ProtocolType.Telnet : ProtocolType.SSH;
             _config.Host = _hostBox.Text.Trim();
             _config.Port = (int)_portBox.Value;
             _config.Username = _usernameBox.Text.Trim();

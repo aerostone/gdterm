@@ -1,4 +1,5 @@
 using System;
+using Gdterm.AI;
 using Gdterm.Connections;
 using Gdterm.Core.Models;
 using System.Collections.Generic;
@@ -121,6 +122,20 @@ namespace Gdterm.UI.Services
             if (_commandHistoryStore == null)
                 return Unavailable("命令历史未初始化");
             return new CommandHistoryPanel(_commandHistoryStore);
+        }
+
+        public Control CreateAiChatPanel(Func<TerminalControl> getActiveTerminal, IAiAssistantService aiService)
+        {
+            if (aiService == null)
+                return Unavailable("AI 服务未初始化");
+            return new AiChatPanel(aiService, getActiveTerminal ?? (() => _tabs != null ? _tabs.GetActiveTerminalControl() : null));
+        }
+
+        public Control CreateCommandTemplatePanel(Func<TerminalControl> getActiveTerminal, CommandTemplateStore store)
+        {
+            if (store == null)
+                return Unavailable("命令模板库未初始化");
+            return new CommandTemplatePanel(store, getActiveTerminal ?? (() => _tabs != null ? _tabs.GetActiveTerminalControl() : null));
         }
 
         public Control CreateHealthPanel()

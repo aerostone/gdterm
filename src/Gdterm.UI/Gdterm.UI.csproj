@@ -149,6 +149,12 @@
     <Compile Include="Controls\HealthMonitorPanel.cs" />
     <Compile Include="Controls\BatchCommandPanel.cs" />
     <Compile Include="Controls\MacroPanel.cs" />
+    <Compile Include="Controls\AiChatPanel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Controls\CommandTemplatePanel.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
     <Compile Include="Controls\LogonScriptPanel.cs" />
     <Compile Include="Controls\SnippetSearchPanel.cs" />
     <Compile Include="Controls\MultiChannelPanel.cs" />

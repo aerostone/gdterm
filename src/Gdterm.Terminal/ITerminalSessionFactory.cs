@@ -14,6 +14,8 @@ namespace Gdterm.Terminal
         /// <summary>创建串口会话</summary>
         ITerminalSession CreateSerial();
 
+        ITerminalSession CreateTelnet();
+
         /// <summary>创建本地终端会话</summary>
         ITerminalSession CreateLocal(string shellPath = null, string workingDirectory = null);
     }

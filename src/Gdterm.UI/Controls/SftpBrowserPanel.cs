@@ -483,11 +483,17 @@ namespace Gdterm.UI.Controls
             };
             var miDownload = new ToolStripMenuItem("下载");
             miDownload.Click += (s, e) => Download();
+            var miPreview = new ToolStripMenuItem("预览");
+            miPreview.Click += (s, e) => PreviewSelected();
+            var miPerm = new ToolStripMenuItem("权限...");
+            miPerm.Click += (s, e) => EditPermissionSelected();
             var miRename = new ToolStripMenuItem("重命名...");
             miRename.Click += (s, e) => RenameSelected();
             var miDelete = new ToolStripMenuItem("删除");
             miDelete.Click += (s, e) => DeleteSelected();
             menu.Items.Add(miDownload);
+            menu.Items.Add(miPreview);
+            menu.Items.Add(miPerm);
             menu.Items.Add(miRename);
             menu.Items.Add(miDelete);
             menu.Items.Add(new ToolStripSeparator());
@@ -520,6 +526,67 @@ namespace Gdterm.UI.Controls
                 catch (Exception ex)
                 {
                     MessageBox.Show("重命名失败: " + ex.Message, "SFTP", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+        }
+
+        /// <summary>预览选中文件：文本前 100 行弹窗，图片下载到 temp 外部打开（与 FilePaneControl 同行为）。</summary>
+        private void PreviewSelected()
+        {
+            if (_sftp == null || !_sftp.IsConnected || _list.SelectedItems.Count == 0) return;
+            var info = _list.SelectedItems[0].Tag as SftpFileInfo;
+            if (info == null || info.IsDirectory) return;
+            if (Gdterm.Sftp.SftpEnhancements.IsImageFile(info.Name))
+            {
+                var tmp = Path.Combine(Path.GetTempPath(), "gdterm_img_" + Guid.NewGuid().ToString("N") + Path.GetExtension(info.Name));
+                try
+                {
+                    _sftp.DownloadAsync(Combine(_currentPath, info.Name), tmp, null, CancellationToken.None).GetAwaiter().GetResult();
+                    try { System.Diagnostics.Process.Start(tmp); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SftpBrowserPanel", exSwallowed); } catch { } }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(FindForm(), "图片打开失败:\n" + ex.Message, "预览", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+                return;
+            }
+            if (!Gdterm.Sftp.SftpEnhancements.IsTextFile(info.Name))
+            {
+                MessageBox.Show(FindForm(), "该类型暂不支持预览（仅文本/图片）。", "预览", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            _status.Text = "预览加载 " + info.Name + " …";
+            var remote = Combine(_currentPath, info.Name);
+            Task.Run(async () =>
+            {
+                try { return await Gdterm.Sftp.SftpEnhancements.PreviewTextFileAsync(_sftp, remote, 100, CancellationToken.None); }
+                catch (Exception ex) { return "预览失败: " + ex.Message; }
+            }).ContinueWith(t =>
+            {
+                _status.Text = remote;
+                PreviewBoxShim.Show(FindForm(), info.Name, t.Result ?? "");
+            }, TaskScheduler.FromCurrentSynchronizationContext());
+        }
+
+        /// <summary>权限：WinSCP 式 3x3 对话框走 SFTP chmod（与 FilePaneControl.ShowPropsSelected 同行为）。</summary>
+        private void EditPermissionSelected()
+        {
+            if (_sftp == null || !_sftp.IsConnected || _list.SelectedItems.Count == 0) return;
+            var info = _list.SelectedItems[0].Tag as SftpFileInfo;
+            if (info == null) return;
+            int octal = Gdterm.Sftp.SftpEnhancements.ParsePermissionToOctal(info.Permissions ?? "");
+            using (var dlg = new Gdterm.UI.Forms.SftpPermissionForm(info.Name, info.Permissions, octal))
+            {
+                if (dlg.ShowDialog(FindForm()) != DialogResult.OK) return;
+                try
+                {
+                    _sftp.ChmodAsync(Combine(_currentPath, info.Name), dlg.OctalMode, CancellationToken.None).GetAwaiter().GetResult();
+                    _status.Text = "权限已修改";
+                    RefreshList();
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(FindForm(), "修改权限失败: " + ex.Message, "SFTP", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }

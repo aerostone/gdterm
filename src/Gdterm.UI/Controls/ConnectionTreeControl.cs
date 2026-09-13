@@ -149,7 +149,7 @@ namespace Gdterm.UI.Controls
         private void BuildImageList()
         {
             _imageList = new ImageList { ImageSize = DpiScale.S(this, 16, 16), ColorDepth = ColorDepth.Depth32Bit };
-            var names = new[] { "folder", "ssh", "rdp", "serial", "server", "group" };
+            var names = new[] { "folder", "ssh", "rdp", "serial", "telnet", "server", "group" };
             foreach (var name in names)
             {
                 var bmp = new Bitmap(16, 16);
@@ -209,6 +209,16 @@ namespace Gdterm.UI.Controls
                         g.DrawLine(pen, 6, 10, 10, 10);
                     }
                     break;
+                case "telnet":
+                    // 明文终端：方框 + T 字母（与 serial 插头区分；Warning 色提示无加密）
+                    using (var pen = new Pen(GdtermColorTable.Warning, 1.5f))
+                        g.DrawRectangle(pen, 3, 2, 10, 12);
+                    using (var fg = new SolidBrush(GdtermColorTable.Warning))
+                    {
+                        var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+                        g.DrawString("T", new Font("Consolas", 7f, FontStyle.Bold), fg, new RectangleF(3, 2, 10, 12), sf);
+                    }
+                    break;
                 case "server":
                     using (var bg = new SolidBrush(GdtermColorTable.Border))
                         g.FillRectangle(bg, 2, 1, 12, 14);
@@ -245,6 +255,7 @@ namespace Gdterm.UI.Controls
                 case ProtocolType.SSH: return "ssh";
                 case ProtocolType.RDP: return "rdp";
                 case ProtocolType.Serial: return "serial";
+                case ProtocolType.Telnet: return "telnet";
                 default: return "server";
             }
         }

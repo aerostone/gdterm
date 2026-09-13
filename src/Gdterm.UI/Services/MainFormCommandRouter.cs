@@ -14,19 +14,22 @@ namespace Gdterm.UI.Services
         private readonly SidePanelHost _sideHost;
         private readonly ViewModeController _viewMode;
         private readonly Action _toggleTmuxGroup;
+        private readonly Action _showAiChat;
 
         public MainFormCommandRouter(
             TabContainerControl tabs,
             SidePanelFactory sidePanels,
             SidePanelHost sideHost,
             ViewModeController viewMode,
-            Action toggleTmuxGroup = null)
+            Action toggleTmuxGroup = null,
+            Action showAiChat = null)
         {
             _tabs = tabs;
             _sidePanels = sidePanels;
             _sideHost = sideHost;
             _viewMode = viewMode;
             _toggleTmuxGroup = toggleTmuxGroup;
+            _showAiChat = showAiChat;
         }
 
         /// <summary>处理快捷键；返回 true 表示已消费。</summary>
@@ -94,6 +97,14 @@ namespace Gdterm.UI.Services
             if (keyData == (Keys.Control | Keys.Shift | Keys.H))
             {
                 try { _sideHost?.Show(_sidePanels.CreateMacroPanel()); }
+                catch { }
+                return true;
+            }
+
+            // Ctrl+Shift+G：AI 助手聊天（G 空闲；普通 Ctrl+G 留 shell，UI 快捷键一律 Ctrl+Shift+字母）
+            if (keyData == (Keys.Control | Keys.Shift | Keys.G))
+            {
+                try { if (_showAiChat != null) _showAiChat(); }
                 catch { }
                 return true;
             }

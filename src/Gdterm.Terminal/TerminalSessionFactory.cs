@@ -21,6 +21,11 @@ namespace Gdterm.Terminal
             return new SerialSession();
         }
 
+        public ITerminalSession CreateTelnet()
+        {
+            return new TelnetSession();
+        }
+
         public ITerminalSession CreateLocal(string shellPath = null, string workingDirectory = null)
         {
             return new LocalTerminalSession(shellPath, workingDirectory);

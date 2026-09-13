@@ -54,6 +54,7 @@ namespace Gdterm.UI.Forms
         private readonly MultiChannelManager _multiChannelManager;
         private readonly ToolRegistry _toolRegistry;
         private readonly SecretScanner _secretScanner;
+        private readonly CommandTemplateStore _commandTemplateStore;
 
         private ConnectionTreeControl _connectionTree;
         private TabContainerControl _tabContainer;
@@ -102,7 +103,8 @@ namespace Gdterm.UI.Forms
             AutoReconnectWatchdog reconnectWatchdog = null,
             MultiChannelManager multiChannelManager = null,
             ToolRegistry toolRegistry = null,
-            SecretScanner secretScanner = null)
+            SecretScanner secretScanner = null,
+            CommandTemplateStore commandTemplateStore = null)
         {
             _connectionStore = connectionStore;
             _tunnelManager = tunnelManager;
@@ -125,6 +127,7 @@ namespace Gdterm.UI.Forms
             _multiChannelManager = multiChannelManager ?? new MultiChannelManager();
             _toolRegistry = toolRegistry;
             _secretScanner = secretScanner;
+            _commandTemplateStore = commandTemplateStore;
 
             // 消除重绘闪烁：DoubleBuffered + 指定一致暗色背景。
             // 这是「发虚」的第二根因——重绘时 GDI 一帧帧走，看起来不稳重。,
@@ -189,6 +192,18 @@ namespace Gdterm.UI.Forms
         {
             try { return _quickCommandStore?.LoadAll() ?? new List<QuickCommand>(); }
             catch { return new List<QuickCommand>(); }
+        }
+
+        /// <summary>AI 助手聊天侧栏（Ctrl+Shift+G / 终端菜单）。后端流式 + 会话上下文早已存在，此处只挂 UI。</summary>
+        private void ShowAiChatPanel()
+        {
+            try
+            {
+                _sidePanelHost?.Show(_sidePanels.CreateAiChatPanel(
+                    () => _tabContainer != null ? _tabContainer.GetActiveTerminalControl() : null,
+                    _aiService));
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
         }
 
         private bool _restoringBottomBar;
@@ -460,6 +475,17 @@ namespace Gdterm.UI.Forms
                 ShowBatch = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateBatchPanel()),
                 ShowMacro = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateMacroPanel()),
                 ShowHistory = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateHistoryPanel()),
+                ShowAiChat = (s, e) => ShowAiChatPanel(),
+                ShowCmdTemplates = (s, e) =>
+                {
+                    try
+                    {
+                        _sidePanelHost?.Show(_sidePanels.CreateCommandTemplatePanel(
+                            () => _tabContainer != null ? _tabContainer.GetActiveTerminalControl() : null,
+                            _commandTemplateStore));
+                    }
+                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
+                },
                 ShowHealth = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateHealthPanel()),
                 ShowPortForward = (s, e) => _sidePanelHost?.Show(_sidePanels.CreatePortForwardPanel()),
                 ShowToolbox = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateToolboxPanel()),
@@ -510,7 +536,8 @@ namespace Gdterm.UI.Forms
 
             _cmdRouter = new MainFormCommandRouter(
                 _tabContainer, _sidePanels, _sidePanelHost, _viewMode,
-                () => { try { _statusBar?.ToggleTmuxGroup(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } } });
+                () => { try { _statusBar?.ToggleTmuxGroup(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } } },
+                () => ShowAiChatPanel());
 
             // Toast / 落地页 / 托盘
             try { ToastNotifier.Bind(this); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }

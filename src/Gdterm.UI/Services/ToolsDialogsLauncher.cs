@@ -220,6 +220,7 @@ namespace Gdterm.UI.Services
                 "Ctrl + Shift + W    关闭当前标签\n" +
                 "Ctrl + Shift + F    终端查找\n" +
                 "Ctrl + Shift + H    宏录制\n" +
+                "Ctrl + Shift + G    AI 助手聊天\n" +
                 "Ctrl + Shift + P    片段搜索\n" +
                 "Ctrl + Shift + M    tmux 快捷面板（底栏 tmux 键组切换）\n" +
                 "Alt + 8             tmux 键组与全部之间快速切换\n" +

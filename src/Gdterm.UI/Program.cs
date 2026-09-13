@@ -176,6 +176,7 @@ namespace Gdterm.UI
             var folderCredPath = Path.Combine(dataDir, "folder-credentials.json");
             var sessionStatePath = Path.Combine(dataDir, "session-state.json");
             var quickCmdPath = Path.Combine(dataDir, "quick-commands.json");
+            var cmdTemplatePath = Path.Combine(dataDir, "command-templates.json");
             var keybindPath = Path.Combine(configDir, "keybindings.json");
             var highlightPath = Path.Combine(configDir, "highlights.json");
 
@@ -265,6 +266,8 @@ namespace Gdterm.UI
             var bookmarkStore = new BookmarkStoreJson(dataDir);
             var commandHistoryStore = new CommandHistoryStore(commandHistoryDir);
             var quickCommandStore = new QuickCommandStore(quickCmdPath);
+            var cmdTemplateStore = new CommandTemplateStore(cmdTemplatePath);
+            try { cmdTemplateStore.Load(); } catch { }
             var keyBindingStore = new TerminalKeyBindingStore(keybindPath);
             var highlightStore = new HighlightStore(highlightPath);
             var reconnectWatchdog = new AutoReconnectWatchdog { MaxRetries = 5 };
@@ -312,7 +315,8 @@ namespace Gdterm.UI
                 reconnectWatchdog,
                 multiChannelManager,
                 toolRegistry,
-                secretScanner);
+                secretScanner,
+                cmdTemplateStore);
 
             // finding-03：旧 SHA256 解锁升级为 PBKDF2 后立刻落盘
             securityManager.LockStateChanged += (s, e) =>

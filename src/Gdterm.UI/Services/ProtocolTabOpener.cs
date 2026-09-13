@@ -119,6 +119,8 @@ namespace Gdterm.UI.Services
                     return CreateRdp(config, credential);
                 case ProtocolType.Serial:
                     return CreateSerial(config);
+                case ProtocolType.Telnet:
+                    return CreateTelnet(config);
                 default:
                     MessageBox.Show("不支持的协议: " + config.Protocol, "错误",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -371,6 +373,36 @@ namespace Gdterm.UI.Services
                 Control = terminalControl,
                 PrimaryTerminal = terminalControl,
                 Protocol = ProtocolType.Serial,
+                IsConnected = false,
+                SessionId = config.Id ?? Guid.NewGuid().ToString("N")
+            };
+
+            return new OpenedTab { Page = tab, Session = session };
+        }
+
+        /// <summary>Telnet 明文标签：与 Serial 同走 TerminalControl 文本通道，会话由工厂 CreateTelnet 提供。</summary>
+        public OpenedTab CreateTelnet(ConnectionConfig config)
+        {
+            var tab = new TabPage(config.Name)
+            {
+                ToolTipText = "Telnet: " + (config.Host ?? "Unknown") + ":" + (config.Port > 0 ? config.Port : 23) + "（明文）"
+            };
+
+            var terminalControl = new TerminalControl(
+                config, _terminalFactory, _tunnelManager, _auditLogger, _dangerousDetector);
+            terminalControl.Dock = DockStyle.Fill;
+            terminalControl.SessionConnected += (s, e) =>
+            {
+                OnTerminalConnected?.Invoke(tab, terminalControl, config);
+            };
+            tab.Controls.Add(terminalControl);
+
+            var session = new TabSessionState
+            {
+                Config = config,
+                Control = terminalControl,
+                PrimaryTerminal = terminalControl,
+                Protocol = ProtocolType.Telnet,
                 IsConnected = false,
                 SessionId = config.Id ?? Guid.NewGuid().ToString("N")
             };

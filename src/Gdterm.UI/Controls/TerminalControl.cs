@@ -740,6 +740,27 @@ public async void Connect()
                     session = _terminalFactory.CreateSerial();
                     await Task.Run(() => session.Connect(_config, credential, rows, cols)).ConfigureAwait(false);
                 }
+                else if (_config.Protocol == ProtocolType.Telnet)
+                {
+                    // Telnet 明文：仅直连/跳板转发入口；凭据仅取 Username（交换机 login 仍由设备交互式提示）。
+                    if (_terminalFactory == null)
+                        throw new InvalidOperationException("ITerminalSessionFactory 未注入，无法创建 Telnet 会话");
+                    session = _terminalFactory.CreateTelnet();
+                    bool needTunnelTelnet = _tunnelManager != null && (
+                        (_config.JumpChain != null && _config.JumpChain.Hops != null && _config.JumpChain.Hops.Count > 0)
+                        || _config.Tunnel != null);
+                    if (needTunnelTelnet)
+                    {
+                        var tunnelEndpoint = await _tunnelManager.EstablishAsync(
+                            _config, credential, System.Threading.CancellationToken.None).ConfigureAwait(false);
+                        await Task.Run(() => session.ConnectViaTunnel(_config, credential, tunnelEndpoint, rows, cols))
+                            .ConfigureAwait(false);
+                    }
+                    else
+                    {
+                        await Task.Run(() => session.Connect(_config, credential, rows, cols)).ConfigureAwait(false);
+                    }
+                }
                 else
                 {
                     if (_terminalFactory == null)

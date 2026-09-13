@@ -110,7 +110,8 @@ namespace Gdterm.UI.Services
                 var tc = tabs != null ? tabs.GetActiveTerminalControl() : null;
                 if (tc == null) return;
                 var line = cmd.EndsWith("\r") || cmd.EndsWith("\n") ? cmd : cmd + "\r";
-                tc.SendInput(line);
+                // SnippetSearchPanel 已做变量填充；此处经 TerminalControl 命令行闸门发送（带危险确认+审计，原直发 session 不过确认）。
+                try { tc.TrySendInput(line, isCommandLine: true); } catch { }
             });
             Show(panel);
             var snip = panel as SnippetSearchPanel;

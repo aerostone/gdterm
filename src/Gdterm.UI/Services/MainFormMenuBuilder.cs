@@ -50,6 +50,8 @@ namespace Gdterm.UI.Services
             public EventHandler ShowBatch { get; set; }
             public EventHandler ShowMacro { get; set; }
             public EventHandler ShowHistory { get; set; }
+            public EventHandler ShowAiChat { get; set; }
+            public EventHandler ShowCmdTemplates { get; set; }
             public EventHandler ShowHealth { get; set; }
             public EventHandler ShowPortForward { get; set; }
             public EventHandler ShowToolbox { get; set; }
@@ -178,6 +180,8 @@ namespace Gdterm.UI.Services
             termMenu.DropDownItems.Add(Mk("批量命令", cb.ShowBatch, "batch"));
             termMenu.DropDownItems.Add(Mk("宏录制 Ctrl+Shift+H", cb.ShowMacro, "macro"));
             termMenu.DropDownItems.Add(Mk("命令历史", cb.ShowHistory, "history"));
+            termMenu.DropDownItems.Add(Mk("AI 助手 Ctrl+Shift+G", cb.ShowAiChat, "ai"));
+            termMenu.DropDownItems.Add(Mk("命令模板库", cb.ShowCmdTemplates, "template"));
             termMenu.DropDownItems.Add(new ToolStripSeparator());
             termMenu.DropDownItems.Add(Mk("健康监控", cb.ShowHealth, "health"));
             termMenu.DropDownItems.Add(Mk("端口转发", cb.ShowPortForward, "forward"));
