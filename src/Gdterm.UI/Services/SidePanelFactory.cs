@@ -210,7 +210,7 @@ namespace Gdterm.UI.Services
             bar.BringToFront();
             bar.ShowAndFocus();
             // 查找接线（F-查找）：SearchRequested 用 TerminalSearchEngine 跑缓冲匹配并计数，
-            // NavigateRequested 切上/下一个。注：两渲染器均无行滚动 API，暂只定位计数不跳行。
+            // NavigateRequested 切上/下一个：计数切换 + Cell 视口滚动到匹配行。
             Gdterm.Terminal.TerminalSearchEngine engine = null;
             bar.SearchRequested += (pattern, caseSensitive, useRegex, wholeWord) =>
             {
@@ -230,7 +230,17 @@ namespace Gdterm.UI.Services
                 {
                     if (engine == null || !engine.HasResults) return;
                     var m = next ? engine.Next() : engine.Previous();
-                    if (m != null) bar.UpdateMatchCount(engine.CurrentIndex, engine.TotalMatches);
+                    if (m == null) return;
+                    bar.UpdateMatchCount(engine.CurrentIndex, engine.TotalMatches);
+                    // 跳行：用匹配行文本锚滚动 Cell 视口（Lightweight 已可见，无操作）
+                    try
+                    {
+                        string anchor = m.LineText ?? "";
+                        anchor = anchor.Trim();
+                        if (anchor.Length > 40) anchor = anchor.Substring(0, 40);
+                        if (anchor.Length > 0) tc.ScrollToMatch(anchor, next);
+                    }
+                    catch { }
                 }
                 catch { }
             };

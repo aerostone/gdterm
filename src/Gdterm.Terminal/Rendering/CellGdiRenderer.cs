@@ -30,6 +30,8 @@ namespace Gdterm.Terminal.Rendering
         internal const float PadY = 6f;
         private TerminalColorScheme _scheme;
         private VtPageSnapshot _page;
+        // 关键词高亮（HighlightRulePanel 规则；绘制时按列覆盖前景，选区反色优先）
+        private HighlightEngine _highlight;
         private bool _isPaused;
         private bool _disposed;
         private bool _needsRedraw;
@@ -59,6 +61,34 @@ namespace Gdterm.Terminal.Rendering
         public event EventHandler TerminalResized;
 
         public VtTerminalEngine Engine { get { return _engine; } }
+
+        /// <summary>查找跳行：滚动到匹配行，返回屏内行号（-1=未命中）。</summary>
+        public int ScrollToMatch(string text, bool searchDown)
+        {
+            try
+            {
+                int hit;
+                lock (_lock) hit = _engine.FindAndScrollTo(text, searchDown);
+                if (hit >= 0)
+                {
+                    lock (_lock) { _page = _engine.SnapshotVisible(); }
+                    try { if (_canvas != null && !_canvas.IsDisposed) _canvas.Invalidate(); } catch { }
+                }
+                return hit;
+            }
+            catch { return -1; }
+        }
+
+        /// <summary>设置关键词高亮规则（null/空=关闭）。下次重绘即生效。</summary>
+        public void SetHighlightRules(System.Collections.Generic.List<Gdterm.Core.Models.HighlightRule> rules)
+        {
+            lock (_lock)
+            {
+                if (rules == null || rules.Count == 0) { _highlight = null; return; }
+                if (_highlight == null) _highlight = new HighlightEngine();
+                _highlight.LoadRules(rules);
+            }
+        }
 
         public int Rows { get { return _engine.Rows; } }
         public int Columns { get { return _engine.Columns; } }
@@ -469,6 +499,41 @@ namespace Gdterm.Terminal.Rendering
                     selEnd = (r == er) ? ec : int.MaxValue;
                 }
                 int colCursor = 0;
+                // 行高亮：拼行文本取首匹配列区间（选区段不染色）
+                int hlStart = -1, hlLen = 0;
+                System.Drawing.Color hlColor = System.Drawing.Color.Empty;
+                bool hlBold = false;
+                try
+                {
+                    var hl = _highlight;
+                    if (hl != null && line != null && line.Spans != null)
+                    {
+                        var sb = new StringBuilder();
+                        foreach (var sp in line.Spans)
+                        {
+                            if (sp == null || sp.Hidden) continue;
+                            sb.Append(sp.Text ?? "");
+                        }
+                        string lineText = sb.ToString();
+                        if (lineText.Length > 0)
+                        {
+                            var matches = hl.MatchLine(lineText);
+                            if (matches != null)
+                            {
+                                foreach (var m in matches)
+                                {
+                                    if (m == null || m.Length <= 0) continue;
+                                    if (m.StartIndex < 0 || m.StartIndex + m.Length > lineText.Length) continue;
+                                    if (m.Foreground.IsEmpty) continue;
+                                    hlStart = m.StartIndex; hlLen = m.Length;
+                                    hlColor = m.Foreground; hlBold = m.Bold;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+                catch { hlStart = -1; }
                 if (line != null && line.Spans != null)
                 {
                     foreach (var span in line.Spans)
@@ -502,19 +567,45 @@ namespace Gdterm.Terminal.Rendering
 
                         if (selS < 0)
                         {
-                            DrawSpanCell(g, span.Text, font, cjkFont,
-                                span.Background, span.Foreground, span.Underline, false, ref x, y);
+                            Font hlFont = font;
+                            System.Drawing.Color hlFg = span.Foreground;
+                            if (hlStart >= 0 && colCursor + spanLen > hlStart && colCursor < hlStart + hlLen)
+                            {
+                                hlFg = hlColor;
+                                if (hlBold) hlFont = span.Bold ? font : _boldFont;
+                            }
+                            DrawSpanCell(g, span.Text, hlFont, cjkFont,
+                                span.Background, hlFg, span.Underline, false, ref x, y);
                         }
                         else
                         {
                             if (selS > 0)
-                                DrawSpanCell(g, span.Text.Substring(0, selS), font, cjkFont,
-                                    span.Background, span.Foreground, span.Underline, false, ref x, y);
+                            {
+                                Font hlFont3 = font;
+                                System.Drawing.Color hlFg3 = span.Foreground;
+                                if (hlStart >= 0 && colCursor + selS > hlStart && colCursor < hlStart + hlLen)
+                                {
+                                    hlFg3 = hlColor;
+                                    if (hlBold) hlFont3 = span.Bold ? font : _boldFont;
+                                }
+                                DrawSpanCell(g, span.Text.Substring(0, selS), hlFont3, cjkFont,
+                                    span.Background, hlFg3, span.Underline, false, ref x, y);
+                            }
                             DrawSpanCell(g, span.Text.Substring(selS, selE - selS), font, cjkFont,
                                 _scheme.SelectionBackground, _scheme.SelectionForeground, span.Underline, true, ref x, y);
                             if (selE < spanLen)
-                                DrawSpanCell(g, span.Text.Substring(selE), font, cjkFont,
-                                    span.Background, span.Foreground, span.Underline, false, ref x, y);
+                            {
+                                // 后段列偏移 colCursor+selE：与匹配区间相交则染
+                                Font hlFont2 = font;
+                                System.Drawing.Color hlFg2 = span.Foreground;
+                                if (hlStart >= 0 && colCursor + spanLen > hlStart && colCursor + selE < hlStart + hlLen)
+                                {
+                                    hlFg2 = hlColor;
+                                    if (hlBold) hlFont2 = span.Bold ? font : _boldFont;
+                                }
+                                DrawSpanCell(g, span.Text.Substring(selE), hlFont2, cjkFont,
+                                    span.Background, hlFg2, span.Underline, false, ref x, y);
+                            }
                         }
 
                         colCursor += spanLen;

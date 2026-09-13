@@ -169,6 +169,92 @@ namespace Gdterm.Terminal.Rendering.Vt
             }
         }
 
+        /// <summary>查找并滚动到匹配行（Cell 视口）：从当前页向上/向下逐页扫 scrollback，
+        /// 命中则把 TopRow 置到该页并返回屏内行号；未命中返回 -1。
+        /// TopRow 写经反射（VirtualTerminalViewPort.set_TopRow，strings 已验证存在）。</summary>
+        public int FindAndScrollTo(string text, bool searchDown)
+        {
+            if (string.IsNullOrEmpty(text) || _disposed) return -1;
+            lock (_lock)
+            {
+                try
+                {
+                    int rows = Rows;
+                    int cols = Columns;
+                    int curTop = _controller.ViewPort.TopRow;
+                    int maxTop = curTop;
+                    // 上限：MaximumHistoryLines 行对应的页数
+                    int maxPages = Math.Max(1, MaximumHistoryLines / Math.Max(1, rows) + 1);
+                    if (searchDown)
+                    {
+                        // 向下：当前页先找，未中则逐页往下（不超过当前 top）
+                        for (int top = curTop; top <= maxTop; top += rows)
+                        {
+                            int hit = FindInPage(top, rows, cols, text);
+                            if (hit >= 0)
+                            {
+                                if (top != curTop) SetTopRow(top);
+                                return hit;
+                            }
+                            if (top >= maxTop) break;
+                        }
+                    }
+                    else
+                    {
+                        // 向上：当前页先找，未中则逐页往上
+                        int pages = 0;
+                        for (int top = curTop; top >= 0 && pages < maxPages; top -= rows, pages++)
+                        {
+                            int hit = FindInPage(top, rows, cols, text);
+                            if (hit >= 0)
+                            {
+                                if (top != curTop) SetTopRow(top);
+                                return hit;
+                            }
+                            if (top <= 0) break;
+                        }
+                    }
+                    return -1;
+                }
+                catch { return -1; }
+            }
+        }
+
+        private int FindInPage(int top, int rows, int cols, string text)
+        {
+            var pageRows = _controller.GetPageSpans(top, rows, cols, null);
+            if (pageRows == null) return -1;
+            int r = 0;
+            foreach (var layoutRow in pageRows)
+            {
+                if (layoutRow != null && layoutRow.Spans != null)
+                {
+                    var sb = new StringBuilder();
+                    foreach (LayoutSpan span in layoutRow.Spans)
+                    {
+                        if (span == null || span.Hidden) continue;
+                        sb.Append(span.Text ?? "");
+                    }
+                    if (sb.ToString().IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0)
+                        return r;
+                }
+                r++;
+            }
+            return -1;
+        }
+
+        private void SetTopRow(int top)
+        {
+            try
+            {
+                var vp = _controller.ViewPort;
+                if (vp == null) return;
+                var prop = vp.GetType().GetProperty("TopRow");
+                if (prop != null && prop.CanWrite) prop.SetValue(vp, Math.Max(0, top), null);
+            }
+            catch { }
+        }
+
         /// <summary>可见区域纯文本（调试/测试用）。</summary>
         public string GetScreenText()
         {

@@ -1193,12 +1193,26 @@ public async void Connect()
 
         /// <summary>下发关键词高亮规则到渲染器（Lightweight 生效；CellGdi 暂不支持）。
         /// 规则来源：HighlightStore.Load().Rules。</summary>
+        /// <summary>查找跳行（Cell 视口有效；Lightweight 当前行永远可见，返回 0 表示已可见）。
+        /// 返回屏内行号，-1=未命中。</summary>
+        public int ScrollToMatch(string text, bool searchDown)
+        {
+            try
+            {
+                if (_cellRenderer != null) return _cellRenderer.ScrollToMatch(text, searchDown);
+                return 0;
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+            return -1;
+        }
+
         public void SetHighlightRules(System.Collections.Generic.List<Gdterm.Core.Models.HighlightRule> rules)
         {
             try
             {
                 var light = _renderer as Gdterm.Terminal.Rendering.LightweightRenderer;
                 if (light != null) light.SetHighlightRules(rules);
+                if (_cellRenderer != null) _cellRenderer.SetHighlightRules(rules);
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
         }
