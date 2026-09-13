@@ -501,13 +501,13 @@ namespace Gdterm.UI.Controls
         }
     }
 
-    /// <summary>暗色主题的只读文本预览框（SFTP/本地文件预览共用）。</summary>
+    /// <summary>暗色主题的只读文本预览框（SFTP/本地文件预览共用；SftpBrowserPanel 经 PreviewBoxShim 调用）。</summary>
     internal static class PreviewBoxShim
     {
-        /// <summary>SftpBrowserPanel 共用 FilePaneControl.PreviewBox（internal）的公开垫片。</summary>
+        /// <summary>SftpBrowserPanel 共用的公开垫片（PreviewBox 与 FilePaneControl 同文件同程序集，internal 可见）。</summary>
         public static void Show(IWin32Window owner, string title, string text)
         {
-            FilePaneControl.PreviewBox.Show(owner, title, text);
+            PreviewBox.Show(owner, title, text);
         }
     }
 
