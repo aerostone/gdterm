@@ -287,6 +287,8 @@ namespace Gdterm.UI.Forms
 
         private void SaveResult()
         {
+            // 底栏分组/钉住不在本对话框编辑：必须透传旧值，否则 Save 会清掉 MainForm 已落盘的 bottom-bar 状态。
+            var old = AppearanceSettings.Load(_iniPath);
             Result = new AppearanceSettings
             {
                 FontName = _fontCombo.SelectedValue != null ? _fontCombo.SelectedValue.ToString() : "Consolas",
@@ -296,7 +298,9 @@ namespace Gdterm.UI.Forms
                 UiTheme = _uiThemeCombo.SelectedValue != null ? _uiThemeCombo.SelectedValue.ToString() : "Dark",
                 DpiAware = _dpiAwareCheck.Checked,
                 UIFontName = _uiFontCombo.SelectedValue != null ? _uiFontCombo.SelectedValue.ToString() : FormFontPolicy.UiFontName,
-                UIFontSize = (int)_uiSizeNum.Value
+                UIFontSize = (int)_uiSizeNum.Value,
+                QuickBarGroup = old != null ? old.QuickBarGroup : null,
+                PinTmux = old != null && old.PinTmux
             };
             try
             {
@@ -329,6 +333,9 @@ namespace Gdterm.UI.Forms
             var d = new AppearanceSettings(); // 出厂默认
             try
             {
+                // 恢复默认只重置外观字段：底栏分组/钉住是 MainForm 运行时状态，不随外观重置清空。
+                var cur = AppearanceSettings.Load(_iniPath);
+                if (cur != null) { d.QuickBarGroup = cur.QuickBarGroup; d.PinTmux = cur.PinTmux; }
                 d.Save(_iniPath);
                 DiagLog.Info("Appearance.Reset", "restored factory appearance defaults");
             }
