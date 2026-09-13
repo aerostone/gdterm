@@ -1056,6 +1056,40 @@ public async void Connect()
             return _renderer?.GetRecentLines(count) ?? new string[0];
         }
 
+        /// <summary>Zmodem 接收：选保存目录 → session 开始接收（仅 SSH 会话；串口/本地提示不支持）。</summary>
+        public void RequestZmodemReceive()
+        {
+            try
+            {
+                if (_session == null || !_session.IsConnected)
+                {
+                    System.Windows.Forms.MessageBox.Show(FindForm(), "请先连接终端。", "Zmodem 接收",
+                        System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    return;
+                }
+                if (_session.IsZmodemReceiving)
+                {
+                    System.Windows.Forms.MessageBox.Show(FindForm(), "已有接收在进行中。", "Zmodem 接收",
+                        System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    return;
+                }
+                using (var dlg = new System.Windows.Forms.FolderBrowserDialog { Description = "选择 Zmodem 接收保存目录" })
+                {
+                    if (dlg.ShowDialog(FindForm()) != System.Windows.Forms.DialogResult.OK) return;
+                    try
+                    {
+                        _session.StartZmodemReceive(dlg.SelectedPath);
+                    }
+                    catch (NotSupportedException nse)
+                    {
+                        System.Windows.Forms.MessageBox.Show(FindForm(), nse.Message, "Zmodem 接收",
+                            System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
+                    }
+                }
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+        }
+
         /// <summary>确保补全器已按当前 store 构建（懒初始化）。</summary>
         private void EnsureCompletion()
         {

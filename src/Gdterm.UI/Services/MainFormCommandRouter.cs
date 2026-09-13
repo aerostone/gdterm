@@ -87,6 +87,18 @@ namespace Gdterm.UI.Services
                 return true;
             }
 
+            // Ctrl+Shift+Z：Zmodem 接收（远端 sz 起传后按此键选目录接收）
+            if (keyData == (Keys.Control | Keys.Shift | Keys.Z))
+            {
+                try
+                {
+                    var tc = _tabs != null ? _tabs.GetActiveTerminalControl() : null;
+                    if (tc != null) tc.RequestZmodemReceive();
+                }
+                catch { }
+                return true;
+            }
+
             return false;
         }
     }

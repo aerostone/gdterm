@@ -112,6 +112,13 @@ namespace Gdterm.Terminal
             // no-op
         }
 
+        public bool IsZmodemReceiving { get { return false; } }
+
+        public void StartZmodemReceive(string saveDirectory)
+        {
+            throw new NotSupportedException("Zmodem 接收仅支持 SSH 会话（当前：" + "串口" + "）。");
+        }
+
         /// <summary>
         /// 发送 Break 信号（用于某些设备的中断）
         /// </summary>

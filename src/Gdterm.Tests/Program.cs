@@ -32,6 +32,7 @@ namespace Gdterm.Tests
             SftpSyncPlannerTests.Run();
             TerminalProfileTests.Run();
             VtTerminalEngineTests.Run();
+            ZmodemReceiverTests.Run();
             ScanPluginTests.Run();
 
             // UI 冒烟：--ui-smoke [outDir] 才跑（要桌面会话，默认单元测试不跑）

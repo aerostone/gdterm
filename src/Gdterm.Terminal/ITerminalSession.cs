@@ -79,6 +79,14 @@ namespace Gdterm.Terminal
         /// </summary>
         void Resize(int columns, int rows);
 
+        /// <summary>是否正在 Zmodem 接收中。</summary>
+        bool IsZmodemReceiving { get; }
+
+        /// <summary>
+        /// 开始 Zmodem 接收（SSH 会话有效；串口/本地抛 NotSupportedException）。
+        /// </summary>
+        void StartZmodemReceive(string saveDirectory);
+
         /// <summary>
         /// 终端输出事件（AI 实时订阅，UI 订阅用于渲染）
         /// </summary>

@@ -17,6 +17,8 @@ namespace Gdterm.Terminal
         private ShellStream _shellStream;
         private readonly Transfer.ZmodemHandler _zmodem = new Transfer.ZmodemHandler();
         private bool _zmodemHinted;
+        private Transfer.ZmodemReceiver _zmodemRx;
+        private bool _zmodemEventsWired;
         private readonly List<string> _outputBuffer = new List<string>();
         private readonly StringBuilder _lineBuilder = new StringBuilder();
         private readonly object _lock = new object();
@@ -156,6 +158,69 @@ namespace Gdterm.Terminal
             _shellStream.Flush();
         }
 
+        public bool IsZmodemReceiving
+        {
+            get { return _zmodemRx != null; }
+        }
+
+        /// <summary>开始 Zmodem 接收（用户确认后调用）：后续远端字节进 Receiver，含帧包抑制渲染。</summary>
+        public void StartZmodemReceive(string saveDirectory)
+        {
+            if (!IsConnected) throw new InvalidOperationException("终端未连接");
+            if (string.IsNullOrEmpty(saveDirectory)) throw new ArgumentNullException("saveDirectory");
+            if (_zmodemRx != null) throw new InvalidOperationException("已有接收在进行中");
+            var rx = new Transfer.ZmodemReceiver();
+            rx.Start(saveDirectory);
+            if (!_zmodemEventsWired)
+            {
+                _zmodemEventsWired = true;
+            }
+            rx.FileStarted += (s, fe) =>
+            {
+                try
+                {
+                    OutputReceived?.Invoke(this, new TerminalOutputEventArgs
+                    {
+                        Text = "\r\n[Zmodem] 开始接收 " + (fe != null ? fe.FileName : "") + "（" + (fe != null ? fe.FileSize : 0) + " 字节）…\r\n",
+                        Timestamp = DateTime.UtcNow
+                    });
+                }
+                catch { }
+            };
+            rx.FileCompleted += (s, fe) =>
+            {
+                try
+                {
+                    OutputReceived?.Invoke(this, new TerminalOutputEventArgs
+                    {
+                        Text = "\r\n[Zmodem] 接收完成 " + (fe != null ? fe.FileName : "") + "（" + (fe != null ? fe.FileSize : 0) + " 字节）。\r\n",
+                        Timestamp = DateTime.UtcNow
+                    });
+                }
+                catch { }
+            };
+            rx.Error += (s, ee) =>
+            {
+                try
+                {
+                    OutputReceived?.Invoke(this, new TerminalOutputEventArgs
+                    {
+                        Text = "\r\n[Zmodem] 接收失败：" + (ee != null ? ee.Error : "?") + "\r\n",
+                        Timestamp = DateTime.UtcNow
+                    });
+                }
+                catch { }
+            };
+            _zmodemRx = rx;
+            // 立即把 Start 排队的 ZRINIT 发出去
+            try
+            {
+                byte[] reply;
+                while ((reply = rx.TakeReply()) != null) SendBytes(reply);
+            }
+            catch { }
+        }
+
         /// <summary>
         /// SSH.NET 2024 ShellStream 无公开 window-change API；
         /// 尽力用反射调用 ChannelSession.SendWindowChangeRequest；失败则静默（本地 cell 仍会 resize）。
@@ -281,7 +346,29 @@ namespace Gdterm.Terminal
             {
                 try
                 {
-                    // Zmodem 检测（F-Zmodem）：远端 rz/sz 起传时提示转 SFTP（完整 ZDATA 协议栈未实现，不伪造）。
+                    // Zmodem 接收中：字节喂 Receiver，应答回写，含帧的包抑制渲染
+                    var rx = _zmodemRx;
+                    if (rx != null && e != null && e.Data != null && e.Data.Length > 0)
+                    {
+                        try
+                        {
+                            bool consumed = rx.Feed(e.Data, 0, e.Data.Length);
+                            byte[] reply;
+                            while ((reply = rx.TakeReply()) != null)
+                            {
+                                try { SendBytes(reply); } catch { break; }
+                            }
+                            if (rx.State == Transfer.ZmodemReceiver.RecvState.Done
+                                || rx.State == Transfer.ZmodemReceiver.RecvState.Aborted)
+                            {
+                                _zmodemRx = null;
+                                try { rx.Dispose(); } catch { }
+                            }
+                            if (consumed) return;
+                        }
+                        catch { }
+                    }
+                    // Zmodem 检测：远端 sz 起传时提示（接收子集已实现，不再转 SFTP）
                     try
                     {
                         if (!_zmodemHinted && e != null && e.Data != null
@@ -290,7 +377,7 @@ namespace Gdterm.Terminal
                             _zmodemHinted = true;
                             OutputReceived?.Invoke(this, new TerminalOutputEventArgs
                             {
-                                Text = "\r\n[Zmodem] 检测到远端 rz/sz 传输请求。gdterm 暂未实现 Zmodem 二进制收发，请用 SFTP 浏览器传文件。\r\n",
+                                Text = "\r\n[Zmodem] 检测到远端 sz 发送请求。按 Ctrl+Shift+Z 接收（或用 SFTP 浏览器传文件）。\r\n",
                                 Timestamp = DateTime.UtcNow
                             });
                         }

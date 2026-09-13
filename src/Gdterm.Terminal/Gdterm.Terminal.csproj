@@ -85,6 +85,7 @@
     <Compile Include="Interop\ConPTY.cs" />
     <Compile Include="Interop\WinPty.cs" />
     <Compile Include="Transfer\ZmodemHandler.cs" />
+    <Compile Include="Transfer\ZmodemReceiver.cs" />
     <Compile Include="ITerminalSessionFactory.cs" />
     <Compile Include="TerminalSessionFactory.cs" />
     <Compile Include="Themes\ColorSchemes.cs" />
