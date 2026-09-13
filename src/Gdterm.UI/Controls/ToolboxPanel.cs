@@ -77,6 +77,23 @@ namespace Gdterm.UI.Controls
                 Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f),
                 ReadOnly = true
             };
+            // 结果复制：右键菜单（全选/复制/清空），路线图 tools-ui“结果复制”口径。
+            var outputMenu = new ContextMenuStrip
+            {
+                BackColor = GdtermColorTable.Surface2,
+                ForeColor = GdtermColorTable.Foreground
+            };
+            var miCopyAll = new ToolStripMenuItem("复制全部");
+            miCopyAll.Click += (s, e) => { try { Clipboard.SetText(_txtOutput.Text ?? ""); } catch { } };
+            var miCopySel = new ToolStripMenuItem("复制选中");
+            miCopySel.Click += (s, e) => { try { if (!string.IsNullOrEmpty(_txtOutput.SelectedText)) Clipboard.SetText(_txtOutput.SelectedText); } catch { } };
+            var miClear = new ToolStripMenuItem("清空");
+            miClear.Click += (s, e) => { try { _txtOutput.Clear(); } catch { } };
+            outputMenu.Items.Add(miCopySel);
+            outputMenu.Items.Add(miCopyAll);
+            outputMenu.Items.Add(new ToolStripSeparator());
+            outputMenu.Items.Add(miClear);
+            _txtOutput.ContextMenuStrip = outputMenu;
 
             _pnlDetail.Controls.Add(_txtOutput);
             _pnlDetail.Controls.Add(outputSplit);

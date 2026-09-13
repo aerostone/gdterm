@@ -394,6 +394,19 @@ namespace Gdterm.Terminal
         }
 
         /// <summary>
+        /// 获取已注册会话实例（回放映射用；未注册/已注销返回 null）。
+        /// </summary>
+        public ITerminalSession GetSession(string sessionId)
+        {
+            lock (_lock)
+            {
+                ChannelSession s;
+                if (_sessions.TryGetValue(sessionId, out s)) return s.Session;
+                return null;
+            }
+        }
+
+        /// <summary>
         /// 获取所有分组名
         /// </summary>
         public IReadOnlyList<string> GetGroups()

@@ -30,6 +30,7 @@ namespace Gdterm.UI.Forms
         private AntdUI.Select _uiFontCombo;
         private AntdUI.InputNumber _uiSizeNum;
         private AntdUI.Select _uiThemeCombo;
+        private AntdUI.InputNumber _opacityNum;
         private int _fieldHeight = 38;
         private int _rowHeight = 44;
 
@@ -148,6 +149,13 @@ namespace Gdterm.UI.Forms
             _uiSizeNum.Location = new Point(colValue + valueW + DpiScale.V(this, 10), y);
             _uiSizeNum.Size = new Size(DpiScale.V(this, 70), _fieldHeight);
             Controls.Add(_uiSizeNum);
+            y += rowH;
+
+            // —— 窗口不透明度 30-100（路线图 terminal-enhancements；WinForms 整窗 Opacity，即时生效）——
+            Controls.Add(MakeLabel("不透明度 %", colLabel, y));
+            _opacityNum = MakeNumber(30, 100, 100);
+            _opacityNum.Location = new Point(colValue, y);
+            Controls.Add(_opacityNum);
             y += rowH;
 
             // —— DPI ——
@@ -299,6 +307,7 @@ namespace Gdterm.UI.Forms
                 DpiAware = _dpiAwareCheck.Checked,
                 UIFontName = _uiFontCombo.SelectedValue != null ? _uiFontCombo.SelectedValue.ToString() : FormFontPolicy.UiFontName,
                 UIFontSize = (int)_uiSizeNum.Value,
+                WindowOpacity = _opacityNum != null ? (int)_opacityNum.Value : 100,
                 QuickBarGroup = old != null ? old.QuickBarGroup : null,
                 PinTmux = old != null && old.PinTmux
             };
@@ -325,7 +334,7 @@ namespace Gdterm.UI.Forms
                 "将恢复以下默认值：\n" +
                 "  终端字体 Consolas 12pt / 配色 Classic\n" +
                 "  界面字体 " + FormFontPolicy.UiFontName + " 9pt / 界面主题 Dark\n" +
-                "  DPI 感知 开启\n\n确定恢复？",
+                "  不透明度 100% / DPI 感知 开启\n\n确定恢复？",
                 AntdUI.TType.Warn);
             if (dr != DialogResult.Yes && dr != DialogResult.OK)
                 return;
@@ -350,6 +359,7 @@ namespace Gdterm.UI.Forms
             _dpiAwareCheck.Checked = d.DpiAware;
             SelectCombo(_uiFontCombo, FormFontPolicy.UiFontName);
             _uiSizeNum.Value = ClampNum(_uiSizeNum, d.UIFontSize);
+            if (_opacityNum != null) _opacityNum.Value = ClampNum(_opacityNum, 100);
             UpdatePreview();
         }
 
@@ -382,6 +392,7 @@ namespace Gdterm.UI.Forms
             _dpiAwareCheck.Checked = s.DpiAware;
             SelectCombo(_uiFontCombo, s.UIFontName ?? FormFontPolicy.UiFontName);
             _uiSizeNum.Value = ClampNum(_uiSizeNum, s.UIFontSize > 0 ? s.UIFontSize : 9);
+            if (_opacityNum != null) _opacityNum.Value = ClampNum(_opacityNum, s.WindowOpacity >= 30 && s.WindowOpacity <= 100 ? s.WindowOpacity : 100);
             UpdatePreview();
         }
 
@@ -441,6 +452,8 @@ namespace Gdterm.UI.Forms
         public string QuickBarGroup { get; set; }
         /// <summary>tmux 键组钉住常驻。</summary>
         public bool PinTmux { get; set; }
+        /// <summary>窗口不透明度（整窗 Opacity；终端画布为不透明子控件，WinForms 下无逐区透明）。</summary>
+        public int WindowOpacity { get; set; } = 100;
 
         public static AppearanceSettings Load(string path)
         {
@@ -483,6 +496,12 @@ namespace Gdterm.UI.Forms
                         s.QuickBarGroup = val;
                     else if (string.Equals(key, "pinTmux", StringComparison.OrdinalIgnoreCase))
                         s.PinTmux = val == "1" || string.Equals(val, "true", StringComparison.OrdinalIgnoreCase);
+                    else if (string.Equals(key, "windowOpacity", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int n;
+                        // 路线图口径 30%-100%，非法值回 100（不透明）。
+                        if (int.TryParse(val, out n) && n >= 30 && n <= 100) s.WindowOpacity = n;
+                    }
                 }
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("AppearanceSettingsForm", exSwallowed); } catch { } }
@@ -504,7 +523,8 @@ namespace Gdterm.UI.Forms
                 "uiFontName=" + (UIFontName ?? "Microsoft YaHei UI") + "\r\n" +
                 "uiFontSize=" + UIFontSize + "\r\n" +
                 "quickBarGroup=" + (QuickBarGroup ?? "") + "\r\n" +
-                "pinTmux=" + (PinTmux ? "1" : "0") + "\r\n");
+                "pinTmux=" + (PinTmux ? "1" : "0") + "\r\n" +
+                "windowOpacity=" + WindowOpacity + "\r\n");
         }
 
         public static string DefaultPath

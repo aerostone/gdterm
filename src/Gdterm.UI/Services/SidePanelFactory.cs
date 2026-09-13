@@ -29,6 +29,7 @@ namespace Gdterm.UI.Services
         private readonly ToolRegistry _toolRegistry;
         private readonly SecretScanner _secretScanner;
         private readonly MultiChannelManager _multiChannelManager;
+        private readonly MultiChannelRecorder _syncRecorder;
         private readonly DangerousCommandDetector _dangerousDetector;
         private readonly IAuditLogger _auditLogger;
         private readonly CommandHistoryStore _commandHistoryStore;
@@ -55,7 +56,8 @@ namespace Gdterm.UI.Services
             IBookmarkStore bookmarkStore,
             IConnectionStore connectionStore,
             IWin32Window dialogOwner,
-            ISecurityManager securityManager = null)
+            ISecurityManager securityManager = null,
+            MultiChannelRecorder syncRecorder = null)
         {
             _tabs = tabs;
             _bridge = bridge;
@@ -72,6 +74,7 @@ namespace Gdterm.UI.Services
             _connectionStore = connectionStore;
             _dialogOwner = dialogOwner;
             _securityManager = securityManager;
+            _syncRecorder = syncRecorder;
         }
 
         public Control CreateToolboxPanel()
@@ -97,7 +100,7 @@ namespace Gdterm.UI.Services
         public Control CreateMultiChannelPanel()
         {
             SyncMultiChannelRegistrations();
-            var panel = new MultiChannelPanel(_multiChannelManager);
+            var panel = new MultiChannelPanel(_multiChannelManager, _syncRecorder);
             panel.BroadcastCommandRequested += OnBroadcastCommandRequested;
             return panel;
         }

@@ -52,6 +52,7 @@ namespace Gdterm.UI.Forms
         private readonly HighlightStore _highlightStore;
         private readonly AutoReconnectWatchdog _reconnectWatchdog;
         private readonly MultiChannelManager _multiChannelManager;
+        private readonly MultiChannelRecorder _syncRecorder;
         private readonly ToolRegistry _toolRegistry;
         private readonly SecretScanner _secretScanner;
         private readonly CommandTemplateStore _commandTemplateStore;
@@ -125,6 +126,7 @@ namespace Gdterm.UI.Forms
             _highlightStore = highlightStore;
             _reconnectWatchdog = reconnectWatchdog;
             _multiChannelManager = multiChannelManager ?? new MultiChannelManager();
+            _syncRecorder = new MultiChannelRecorder();
             _toolRegistry = toolRegistry;
             _secretScanner = secretScanner;
             _commandTemplateStore = commandTemplateStore;
@@ -309,7 +311,8 @@ namespace Gdterm.UI.Forms
                 _bookmarkStore,
                 _connectionStore,
                 this,
-                _securityManager);
+                _securityManager,
+                _syncRecorder);
             _tabContainer.Dock = DockStyle.Fill;
             _tabContainer.ActiveSessionChanged += OnActiveSessionChanged;
             _tabContainer.SessionClosed += OnSessionClosed;
@@ -564,6 +567,7 @@ namespace Gdterm.UI.Forms
 
             // 主界面统一字体（微软雅黑妖会被镜像发给终端，这里只给 UI 侧）。
             try { ApplyGlobalUIFont(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
+            try { ApplyWindowOpacity(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
 
             _sessionState = new SessionStateCoordinator(
                 _sessionStore,
@@ -613,6 +617,19 @@ namespace Gdterm.UI.Forms
             try
             {
                 if (_statusBar != null) _statusBar.Height = _statusBar.GetPreferredHeight();
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
+        }
+
+        /// <summary>窗口不透明度即时生效（路线图 terminal-enhancements：30%-100%，非法值回 100）。</summary>
+        public void ApplyWindowOpacity()
+        {
+            try
+            {
+                var ga = Gdterm.UI.Program.GlobalAppearance;
+                int pct = ga != null ? ga.WindowOpacity : 100;
+                if (pct < 30 || pct > 100) pct = 100;
+                Opacity = pct / 100.0;
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
         }

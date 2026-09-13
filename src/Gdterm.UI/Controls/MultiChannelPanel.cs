@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Drawing;
+using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 using Gdterm.Terminal;
 using Gdterm.UI.Services;
@@ -15,10 +18,15 @@ namespace Gdterm.UI.Controls
     public class MultiChannelPanel : UserControl
     {
         private readonly MultiChannelManager _manager;
+        private readonly MultiChannelRecorder _recorder;
+        private CancellationTokenSource _replayCts;
         private ListView _sessionList;
         private AntdUI.Button _btnSelectAll;
         private AntdUI.Button _btnDeselectAll;
         private AntdUI.Button _btnBroadcast;
+        private AntdUI.Button _btnRecord;
+        private AntdUI.Button _btnReplay;
+        private AntdUI.Button _btnExport;
         private AntdUI.Label _statusLabel;
         private AntdUI.Input _commandInput;
         private EventHandler<ChannelSessionEventArgs> _onSessionRegistered;
@@ -31,8 +39,15 @@ namespace Gdterm.UI.Controls
         public event EventHandler<string> BroadcastCommandRequested;
 
         public MultiChannelPanel(MultiChannelManager manager)
+            : this(manager, null)
+        {
+        }
+
+        /// <summary>录制器由持有人注入（MainForm 单例）；null 时录制按钮置灰，广播不受影响。</summary>
+        public MultiChannelPanel(MultiChannelManager manager, MultiChannelRecorder recorder)
         {
             _manager = manager ?? throw new ArgumentNullException(nameof(manager));
+            _recorder = recorder;
             InitializeComponent();
             WireEvents();
         }
@@ -57,8 +72,16 @@ namespace Gdterm.UI.Controls
             _btnDeselectAll = CreateToolbarButton("取消");
             _btnBroadcast = CreateToolbarButton("广播");
             _btnBroadcast.Enabled = false;
+            _btnRecord = CreateToolbarButton("录制");
+            _btnReplay = CreateToolbarButton("回放");
+            _btnExport = CreateToolbarButton("导出");
+            // 录制器未注入时录制链置灰（广播不受影响；SidePanelFactory 正常注入单例故常态可用）。
+            bool recOk = _recorder != null;
+            _btnRecord.Enabled = recOk;
+            _btnReplay.Enabled = recOk;
+            _btnExport.Enabled = recOk;
 
-            toolbar.Controls.AddRange(new Control[] { _btnSelectAll, _btnDeselectAll, _btnBroadcast });
+            toolbar.Controls.AddRange(new Control[] { _btnSelectAll, _btnDeselectAll, _btnBroadcast, _btnRecord, _btnReplay, _btnExport });
 
             // 会话列表
             _sessionList = new ListView
@@ -151,6 +174,9 @@ namespace Gdterm.UI.Controls
             };
 
             _btnBroadcast.Click += (s, e) => ExecuteBroadcast();
+            _btnRecord.Click += (s, e) => ToggleRecord();
+            _btnReplay.Click += (s, e) => ReplayRecording();
+            _btnExport.Click += (s, e) => ExportRecording();
 
             _sessionList.ItemCheck += OnSessionItemCheck;
 
@@ -226,8 +252,95 @@ namespace Gdterm.UI.Controls
             var command = _commandInput.Text;
             if (string.IsNullOrWhiteSpace(command)) return;
 
+            try { if (_recorder != null && _recorder.IsRecording) _recorder.RecordInput("broadcast", command); }
+            catch (System.Exception exSwallowed) { try { Gdterm.UI.Diagnostics.DiagLog.Swallowed("MultiChannel", exSwallowed); } catch { } }
             BroadcastCommandRequested?.Invoke(this, command);
             _commandInput.Clear();
+        }
+
+        private string RecordDir
+        {
+            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "sync-recordings"); }
+        }
+
+        /// <summary>录制开关：开始时注册当前全部会话名并记一条输入锚点；再按停止。</summary>
+        private void ToggleRecord()
+        {
+            if (_recorder == null) return;
+            try
+            {
+                if (_recorder.IsRecording)
+                {
+                    _recorder.StopRecording();
+                    _btnRecord.Text = "录制";
+                    _statusLabel.Text = "录制停止（" + _recorder.EntryCount + " 条）";
+                    return;
+                }
+                _recorder.StartRecording();
+                try
+                {
+                    foreach (var s in _manager.GetAllSessions())
+                        _recorder.RegisterSession(s.SessionId, s.DisplayName ?? s.SessionId);
+                }
+                catch (System.Exception exSwallowed) { try { Gdterm.UI.Diagnostics.DiagLog.Swallowed("MultiChannel", exSwallowed); } catch { } }
+                _btnRecord.Text = "停止";
+                _statusLabel.Text = "录制中…（广播输入记入时间线）";
+            }
+            catch (System.Exception ex) { _statusLabel.Text = "录制失败: " + ex.Message; }
+        }
+
+        /// <summary>回放：输入事件按原时间线重发到同名会话（1x）。输出事件仅记时间线不回显——远端状态已变，重放输出无意义。</summary>
+        private void ReplayRecording()
+        {
+            if (_recorder == null || _recorder.IsRecording) return;
+            if (_recorder.EntryCount == 0) { _statusLabel.Text = "无录制内容"; return; }
+            try
+            {
+                if (_replayCts != null) { try { _replayCts.Cancel(); } catch { } }
+                _replayCts = new CancellationTokenSource();
+                var token = _replayCts.Token;
+                _statusLabel.Text = "回放中…";
+                Task.Run(async () =>
+                {
+                    try
+                    {
+                        // 同名会话映射：录制 sessionId → 当前同显示名会话；找不到则跳过该条。
+                        var map = new System.Collections.Generic.Dictionary<string, ITerminalSession>();
+                        foreach (var s in _manager.GetAllSessions())
+                        {
+                            try
+                            {
+                                var sess = _manager.GetSession(s.SessionId);
+                                if (sess != null) map[s.SessionId] = sess;
+                            }
+                            catch { }
+                        }
+                        await _recorder.ReplayAsync(map, 1.0, null, token);
+                        BeginInvoke(new Action(() => { _statusLabel.Text = "回放完成"; }));
+                    }
+                    catch (OperationCanceledException) { BeginInvoke(new Action(() => { _statusLabel.Text = "回放已取消"; })); }
+                    catch (System.Exception ex) { BeginInvoke(new Action(() => { _statusLabel.Text = "回放失败: " + ex.Message; })); }
+                }, token);
+            }
+            catch (System.Exception ex) { _statusLabel.Text = "回放失败: " + ex.Message; }
+        }
+
+        /// <summary>导出：落盘 JSON 录制 + 同名 HTML 时间线报告（与宏录制 data/macros 分目录）。</summary>
+        private void ExportRecording()
+        {
+            if (_recorder == null || _recorder.IsRecording) return;
+            if (_recorder.EntryCount == 0) { _statusLabel.Text = "无录制内容"; return; }
+            try
+            {
+                Directory.CreateDirectory(RecordDir);
+                var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
+                var jsonPath = Path.Combine(RecordDir, "sync-" + stamp + ".gdrec");
+                var htmlPath = Path.Combine(RecordDir, "sync-" + stamp + ".html");
+                _recorder.SaveToFile(jsonPath);
+                File.WriteAllText(htmlPath, _recorder.ExportAsHtml(), System.Text.Encoding.UTF8);
+                _statusLabel.Text = "已导出 " + Path.GetFileName(jsonPath);
+            }
+            catch (System.Exception ex) { _statusLabel.Text = "导出失败: " + ex.Message; }
         }
 
         /// <summary>

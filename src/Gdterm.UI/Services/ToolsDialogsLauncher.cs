@@ -114,7 +114,10 @@ namespace Gdterm.UI.Services
                     try
                     {
                         if (_owner is Gdterm.UI.Forms.MainForm mf)
+                        {
                             mf.ApplyGlobalUIFont();
+                            mf.ApplyWindowOpacity();
+                        }
                     }
                     catch (Exception ex) { Gdterm.UI.Diagnostics.DiagLog.Swallowed("ToolsDialogs.ApplyUIFont", ex); }
                     try { Gdterm.UI.Diagnostics.ToastNotifier.Success("外观已保存（DPI 需重启）"); }
