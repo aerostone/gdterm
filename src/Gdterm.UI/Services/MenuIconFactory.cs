@@ -164,6 +164,11 @@ namespace Gdterm.UI.Services
                     g.DrawArc(p, 1.5f, 1.5f, 13f, 13f, -55f, 110f);
                     break;
 
+                case "macro": // 宏录制：圆点（录制键）
+                    g.FillEllipse(fill, 5f, 5f, 6f, 6f);
+                    g.DrawEllipse(p, 5f, 5f, 6f, 6f);
+                    break;
+
                 case "batch": // 批量命令：清单
                     L(g, p, 3, 4.5, 13, 4.5); L(g, p, 3, 8, 13, 8); L(g, p, 3, 11.5, 10, 11.5);
                     break;

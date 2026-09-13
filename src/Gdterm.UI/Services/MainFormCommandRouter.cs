@@ -87,6 +87,14 @@ namespace Gdterm.UI.Services
                 return true;
             }
 
+            // Ctrl+Shift+H：宏录制面板
+            if (keyData == (Keys.Control | Keys.Shift | Keys.H))
+            {
+                try { _sideHost?.Show(_sidePanels.CreateMacroPanel()); }
+                catch { }
+                return true;
+            }
+
             // Ctrl+Shift+Z：Zmodem 接收（远端 sz 起传后按此键选目录接收）
             if (keyData == (Keys.Control | Keys.Shift | Keys.Z))
             {

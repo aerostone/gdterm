@@ -48,6 +48,7 @@ namespace Gdterm.UI.Services
             public EventHandler ShowLogonScript { get; set; }
             public EventHandler ShowMultiChannel { get; set; }
             public EventHandler ShowBatch { get; set; }
+            public EventHandler ShowMacro { get; set; }
             public EventHandler ShowHistory { get; set; }
             public EventHandler ShowHealth { get; set; }
             public EventHandler ShowPortForward { get; set; }
@@ -175,6 +176,7 @@ namespace Gdterm.UI.Services
             termMenu.DropDownItems.Add(new ToolStripSeparator());
             termMenu.DropDownItems.Add(Mk("多通道广播", cb.ShowMultiChannel, "broadcast"));
             termMenu.DropDownItems.Add(Mk("批量命令", cb.ShowBatch, "batch"));
+            termMenu.DropDownItems.Add(Mk("宏录制 Ctrl+Shift+H", cb.ShowMacro, "macro"));
             termMenu.DropDownItems.Add(Mk("命令历史", cb.ShowHistory, "history"));
             termMenu.DropDownItems.Add(new ToolStripSeparator());
             termMenu.DropDownItems.Add(Mk("健康监控", cb.ShowHealth, "health"));

@@ -101,6 +101,12 @@ namespace Gdterm.UI.Services
             return panel;
         }
 
+        public Control CreateMacroPanel()
+        {
+            var dir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "macros");
+            return new MacroPanel(dir, () => _tabs != null ? _tabs.GetActiveTerminalControl() : null);
+        }
+
         public Control CreateBatchPanel()
         {
             var panel = new BatchCommandPanel();

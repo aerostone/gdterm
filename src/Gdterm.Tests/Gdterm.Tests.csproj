@@ -109,6 +109,7 @@
     <Compile Include="Sftp\SftpPermissionTests.cs" />
     <Compile Include="Terminal\VtTerminalEngineTests.cs" />
     <Compile Include="Terminal\ZmodemReceiverTests.cs" />
+    <Compile Include="Terminal\MacroRecorderTests.cs" />
     <Compile Include="Core\TerminalProfileTests.cs" />
     <Compile Include="Scanning\ScanPluginTests.cs" />
     <Compile Include="Ui\UiSmokeRunner.cs" />

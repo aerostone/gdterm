@@ -397,6 +397,7 @@ namespace Gdterm.UI.Forms
                 ShowLogonScript = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateLogonScriptPanel()),
                 ShowMultiChannel = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateMultiChannelPanel()),
                 ShowBatch = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateBatchPanel()),
+                ShowMacro = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateMacroPanel()),
                 ShowHistory = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateHistoryPanel()),
                 ShowHealth = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateHealthPanel()),
                 ShowPortForward = (s, e) => _sidePanelHost?.Show(_sidePanels.CreatePortForwardPanel()),

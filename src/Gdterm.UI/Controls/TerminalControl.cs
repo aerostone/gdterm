@@ -31,6 +31,7 @@ namespace Gdterm.UI.Controls
         private readonly DangerousCommandDetector _dangerousDetector;
         private readonly TerminalKeyBindingResolver _keyResolver = new TerminalKeyBindingResolver();
         private readonly StringBuilder _commandLine = new StringBuilder();
+        private MacroRecorder _macroRecorder;
         private TerminalCompletion _completion;
         private TerminalCompletionPopup _popup;
         /// <summary>补全数据源（可选，不设则只用内置常用命令）。由 TabContainer.HandleTerminalConnected 下发。</summary>
@@ -346,7 +347,16 @@ namespace Gdterm.UI.Controls
                     " backend=" + ((_session as LocalTerminalSession)?.BackendName ?? "non-local")); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 return;
             }
-            try { _session.SendBytes(data); }
+            try
+            {
+                _session.SendBytes(data);
+                try
+                {
+                    if (_macroRecorder != null && _macroRecorder.IsRecording)
+                        _macroRecorder.RecordInput(Encoding.UTF8.GetString(data));
+                }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Macro", exSwallowed); } catch { } }
+            }
             catch (Exception ex) { DiagLog.Swallowed("TerminalControl.CellSendToHost", ex); }
         }
 
@@ -1033,6 +1043,8 @@ public async void Connect()
             try
             {
                 _session.SendInput(text);
+                try { if (_macroRecorder != null && _macroRecorder.IsRecording) _macroRecorder.RecordInput(text); }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Macro", exSwallowed); } catch { } }
                 return true;
             }
             catch
@@ -1088,6 +1100,30 @@ public async void Connect()
                 }
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+        }
+
+        /// <summary>宏录制是否进行中（本标签页）。</summary>
+        public bool IsMacroRecording { get { return _macroRecorder != null && _macroRecorder.IsRecording; } }
+
+        /// <summary>当前录制步数（未录制返回 0）。</summary>
+        public int MacroStepCount { get { return _macroRecorder != null ? _macroRecorder.StepCount : 0; } }
+
+        /// <summary>当前录制时长（未录制返回 Zero）。</summary>
+        public TimeSpan MacroDuration { get { return _macroRecorder != null ? _macroRecorder.Duration : TimeSpan.Zero; } }
+
+        /// <summary>开始宏录制：旁录本标签页后续全部发送动作，正常发送不受影响。</summary>
+        public void StartMacroRecording()
+        {
+            if (_macroRecorder == null) _macroRecorder = new MacroRecorder();
+            _macroRecorder.StartRecording();
+        }
+
+        /// <summary>停止宏录制，返回录制器（可回放/保存；无录制返回 null）。</summary>
+        public MacroRecorder StopMacroRecording()
+        {
+            if (_macroRecorder == null || !_macroRecorder.IsRecording) return null;
+            _macroRecorder.StopRecording();
+            return _macroRecorder;
         }
 
         /// <summary>确保补全器已按当前 store 构建（懒初始化）。</summary>

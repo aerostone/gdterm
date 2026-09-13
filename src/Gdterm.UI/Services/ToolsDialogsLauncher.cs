@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Windows.Forms;
 using Gdterm.AI;
@@ -219,6 +219,7 @@ namespace Gdterm.UI.Services
                 "Ctrl + Shift + R    重连当前标签\n" +
                 "Ctrl + Shift + W    关闭当前标签\n" +
                 "Ctrl + Shift + F    终端查找\n" +
+                "Ctrl + Shift + H    宏录制\n" +
                 "Ctrl + Shift + P    片段搜索\n" +
                 "Ctrl + Tab          下一个标签（Ctrl+Shift+Tab 上一个）\n" +
                 "Ctrl + Alt + 1..9   直达第 N 个标签\n" +
