@@ -32,6 +32,7 @@ namespace Gdterm.UI.Controls
         private readonly TerminalKeyBindingResolver _keyResolver = new TerminalKeyBindingResolver();
         private readonly StringBuilder _commandLine = new StringBuilder();
         private TerminalCompletion _completion;
+        private TerminalCompletionPopup _popup;
         /// <summary>补全数据源（可选，不设则只用内置常用命令）。由 TabContainer.HandleTerminalConnected 下发。</summary>
         public Gdterm.Logging.CommandHistoryStore HistoryStore { get; set; }
         public Gdterm.Connections.QuickCommandStore QuickStore { get; set; }
@@ -1055,33 +1056,116 @@ public async void Connect()
             return _renderer?.GetRecentLines(count) ?? new string[0];
         }
 
+        /// <summary>确保补全器已按当前 store 构建（懒初始化）。</summary>
+        private void EnsureCompletion()
+        {
+            try
+            {
+                if (_completion != null) return;
+                var hs = HistoryStore;
+                var qs = QuickStore;
+                _completion = new TerminalCompletion(
+                    hs != null ? (Func<System.Collections.Generic.IList<string>>)(() => hs.GetRecentCommands(50)) : null,
+                    qs != null ? (Func<System.Collections.Generic.IList<string>>)(() =>
+                    {
+                        var list = new System.Collections.Generic.List<string>();
+                        try
+                        {
+                            var all = qs.LoadAll();
+                            if (all != null) foreach (var q in all)
+                            {
+                                if (q != null && !string.IsNullOrWhiteSpace(q.Command)) list.Add(q.Command);
+                            }
+                        }
+                        catch { }
+                        return list;
+                    }) : null);
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+        }
+
+        /// <summary>按键后刷新补全弹窗（词长≥2 且有候选则显示，否则隐藏）。canvas 为渲染器画布。</summary>
+        public void UpdateCompletionPopup()
+        {
+            try
+            {
+                EnsureCompletion();
+                if (_completion == null) { HideCompletionPopup(); return; }
+                string prefix;
+                var cands = _completion.Complete(_commandLine.ToString(), out prefix);
+                if (cands == null || cands.Count == 0 || string.IsNullOrEmpty(prefix) || prefix.Length < 2)
+                {
+                    HideCompletionPopup();
+                    return;
+                }
+                if (_popup == null) _popup = new TerminalCompletionPopup();
+                var canvas = _renderer != null ? _renderer.GetControl() : null;
+                if (canvas == null && _cellRenderer != null) canvas = _cellRenderer.GetControl();
+                if (canvas == null) return;
+                _popup.ShowPopup(canvas, cands);
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+        }
+
+        public void HideCompletionPopup()
+        {
+            try { if (_popup != null) _popup.HidePopup(); }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+        }
+
+        public bool IsCompletionPopupShown
+        {
+            get
+            {
+                try { return _popup != null && _popup.IsShown; }
+                catch { return false; }
+            }
+        }
+
+        public void CompletionPopupMove(int delta)
+        {
+            try { if (_popup != null) _popup.MoveSelection(delta); }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+        }
+
+        /// <summary>确认弹窗选中项：把剩余后缀写入行缓冲 + 回显/直发。返回 false=无选中。</summary>
+        public bool ConfirmCompletionPopup()
+        {
+            try
+            {
+                if (_popup == null || !_popup.IsShown) return false;
+                string selected = _popup.SelectedCandidate;
+                HideCompletionPopup();
+                if (string.IsNullOrEmpty(selected)) return false;
+                string prefix = TerminalCompletion.LastWord(_commandLine.ToString());
+                if (string.IsNullOrEmpty(prefix) || !selected.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    return false;
+                string rest = selected.Substring(prefix.Length);
+                if (string.IsNullOrEmpty(rest)) return true;
+                _commandLine.Append(rest);
+                if (_cellRenderer == null)
+                {
+                    try { _renderer?.Write(rest); }
+                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+                }
+                else
+                {
+                    SafeSend(rest);
+                }
+                return true;
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+            return false;
+        }
+
         /// <summary>Tab 补全：有候选则补首个（回显擦写），无则返回 false 由调用方直通远端。
         /// 双渲染器通用（_commandLine 两边都攒）。本地回显擦写：退格擦 prefix 再写全词。</summary>
         public bool TryCompleteOnTab()
         {
             try
             {
-                if (_completion == null)
-                {
-                    var hs = HistoryStore;
-                    var qs = QuickStore;
-                    _completion = new TerminalCompletion(
-                        hs != null ? (Func<System.Collections.Generic.IList<string>>)(() => hs.GetRecentCommands(50)) : null,
-                        qs != null ? (Func<System.Collections.Generic.IList<string>>)(() =>
-                        {
-                            var list = new System.Collections.Generic.List<string>();
-                            try
-                            {
-                                var all = qs.LoadAll();
-                                if (all != null) foreach (var q in all)
-                                {
-                                    if (q != null && !string.IsNullOrWhiteSpace(q.Command)) list.Add(q.Command);
-                                }
-                            }
-                            catch { }
-                            return list;
-                        }) : null);
-                }
+                EnsureCompletion();
+                if (_completion == null) return false;
                 string line = _commandLine.ToString();
                 string prefix;
                 var cands = _completion.Complete(line, out prefix);

@@ -129,6 +129,7 @@
     </Compile>
     <Compile Include="Controls\SharedMenuTip.cs" />
     <Compile Include="Controls\TerminalCompletion.cs" />
+    <Compile Include="Controls\TerminalCompletionPopup.cs" />
     <Compile Include="Controls\LockOverlayControl.cs">
       <SubType>UserControl</SubType>
     </Compile>

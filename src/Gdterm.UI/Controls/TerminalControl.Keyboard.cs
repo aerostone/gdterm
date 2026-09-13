@@ -44,6 +44,8 @@ namespace Gdterm.UI.Controls
                     SafeSend(e.KeyChar.ToString());
                 }
                 e.Handled = true;
+                try { UpdateCompletionPopup(); }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
             }
         }
 
@@ -90,6 +92,16 @@ namespace Gdterm.UI.Controls
                 {
                     case Keys.Enter:
                     {
+                        // 弹窗可见时 Enter=确认选中（不发 \r）
+                        try
+                        {
+                            if (IsCompletionPopupShown)
+                            {
+                                if (ConfirmCompletionPopup()) { e.Handled = true; break; }
+                                HideCompletionPopup();
+                            }
+                        }
+                        catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                         var cmd = _commandLine.ToString();
                         if (UseLocalLineBuffer)
                         {
@@ -112,6 +124,8 @@ namespace Gdterm.UI.Controls
                             {
                                 SafeSend("\x03");
                                 e.Handled = true;
+                                try { HideCompletionPopup(); }
+                                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                                 return;
                             }
                             if (_cellRenderer == null || !_cellRenderer.TryKeyPressed("Enter", e.Control, e.Shift))
@@ -124,6 +138,8 @@ namespace Gdterm.UI.Controls
                             {
                                 SafeSend("\x03");
                                 e.Handled = true;
+                                try { HideCompletionPopup(); }
+                                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                                 return;
                             }
                             SafeSend("\r");
@@ -134,6 +150,8 @@ namespace Gdterm.UI.Controls
                             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                         }
                         e.Handled = true;
+                        try { HideCompletionPopup(); _commandLine.Clear(); }
+                        catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                         break;
                     }
                     case Keys.Back:
@@ -153,10 +171,19 @@ namespace Gdterm.UI.Controls
                             SafeSend("\b");
                         }
                         e.Handled = true;
+                        try { UpdateCompletionPopup(); }
+                        catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                         break;
                     case Keys.Tab:
-                        // 本地补全优先：有候选则补首个并吃掉；无候选走原直通过程
-                        try { if (TryCompleteOnTab()) { e.Handled = true; break; } }
+                        // 弹窗确认优先，其次本地首候选；无候选走原直通过程
+                        try
+                        {
+                            if (IsCompletionPopupShown)
+                            {
+                                if (ConfirmCompletionPopup()) { e.Handled = true; break; }
+                            }
+                            else if (TryCompleteOnTab()) { e.Handled = true; break; }
+                        }
                         catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                         if (UseLocalLineBuffer && _commandLine.Length > 0)
                         {
@@ -176,15 +203,46 @@ namespace Gdterm.UI.Controls
                         e.Handled = true;
                         break;
                     case Keys.Escape:
+                        // 弹窗可见时 Esc=关弹窗并吃掉；否则保持原行为（专注模式退出）
+                        try
+                        {
+                            if (IsCompletionPopupShown)
+                            {
+                                HideCompletionPopup();
+                                e.Handled = true;
+                                break;
+                            }
+                        }
+                        catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                         // 不在此消费 Esc：交给 MainForm ProcessCmdKey 退出专注模式
                         // （终端应用如 vim 仍可用其它快捷键；专注模式优先可退出）
                         break;
                     case Keys.Up:
+                        try
+                        {
+                            if (IsCompletionPopupShown)
+                            {
+                                CompletionPopupMove(-1);
+                                e.Handled = true;
+                                break;
+                            }
+                        }
+                        catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                         ClearLocalLine(eraseDisplay: UseLocalLineBuffer);
                         SafeSend("\x1b[A");
                         e.Handled = true;
                         break;
                     case Keys.Down:
+                        try
+                        {
+                            if (IsCompletionPopupShown)
+                            {
+                                CompletionPopupMove(1);
+                                e.Handled = true;
+                                break;
+                            }
+                        }
+                        catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                         ClearLocalLine(eraseDisplay: UseLocalLineBuffer);
                         SafeSend("\x1b[B");
                         e.Handled = true;
