@@ -122,13 +122,11 @@ namespace Gdterm.UI.Forms
             int clientW = pad + labelW + DpiScale.V(this, 8) + 3 * (chkW + DpiScale.V(this, 8)) + pad;
             ClientSize = new Size(clientW, y + btnH + pad);
 
-            // 初值：rwx → 勾选 → octal 联动
-            OctalMode = initialOctal;
-            ApplyRwx(rwx, initialOctal);
+            // 初值：rwx → 勾选 → octal 联动（initialOctal 是位值如 493，转十进制位 755 再存 OctalMode）
             FormFontPolicy.Apply(this);
         }
 
-        private void ApplyRwx(string rwx, int octal)
+        private void ApplyRwx(string rwx, int octalBits)
         {
             _syncing = true;
             try
@@ -141,9 +139,8 @@ namespace Gdterm.UI.Forms
                 }
                 else
                 {
-                    // rwx 缺失时按 octal 反推
-                    int d0 = (octal / 100) % 10, d1 = (octal / 10) % 10, d2 = octal % 10;
-                    int[] ds = { d0, d1, d2 };
+                    // rwx 缺失时按位值反推（位运算，非十进制位）
+                    int[] ds = { (octalBits >> 6) & 7, (octalBits >> 3) & 7, octalBits & 7 };
                     for (int r = 0; r < 3; r++)
                     {
                         _chk[r, 0].Checked = (ds[r] & 4) != 0;
@@ -151,7 +148,7 @@ namespace Gdterm.UI.Forms
                         _chk[r, 2].Checked = (ds[r] & 1) != 0;
                     }
                 }
-                _octalBox.Value = OctalMode;
+                SyncFromChecks(); // 复选→OctalMode（十进制位）+ octalBox 联动，单点换算
             }
             finally { _syncing = false; }
         }
