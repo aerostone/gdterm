@@ -196,14 +196,14 @@ namespace Gdterm.UI.Controls
                             if (e.IsDirectory)
                                 await UploadDirectoryRecursive(e.FullPath, targetPath, name);
                             else
-                                await _sftp.UploadAsync(e.FullPath, CombineRemote(targetPath, name), null, CancellationToken.None);
+                                await _sftp.UploadResumeAsync(e.FullPath, CombineRemote(targetPath, name), null, CancellationToken.None);
                         }
                         else
                         {
                             if (e.IsDirectory)
                                 await DownloadDirectoryRecursive(e.FullPath, targetPath, name);
                             else
-                                await _sftp.DownloadAsync(e.FullPath, Path.Combine(targetPath, name), null, CancellationToken.None);
+                                await _sftp.DownloadResumeAsync(e.FullPath, Path.Combine(targetPath, name), null, CancellationToken.None);
                         }
                         ok++;
                     }
@@ -279,7 +279,7 @@ namespace Gdterm.UI.Controls
             var remoteDir = CombineRemote(remoteBase, name);
             await EnsureRemoteDir(remoteDir);
             foreach (var file in Directory.EnumerateFiles(localDir))
-                await _sftp.UploadAsync(file, CombineRemote(remoteDir, Path.GetFileName(file)), null, CancellationToken.None);
+                await _sftp.UploadResumeAsync(file, CombineRemote(remoteDir, Path.GetFileName(file)), null, CancellationToken.None);
             foreach (var dir in Directory.EnumerateDirectories(localDir))
                 await UploadDirectoryRecursive(dir, remoteDir, Path.GetFileName(dir));
         }
@@ -295,7 +295,7 @@ namespace Gdterm.UI.Controls
                 if (f.IsDirectory)
                     await DownloadDirectoryRecursive(f.FullPath, localDir, f.Name);
                 else
-                    await _sftp.DownloadAsync(f.FullPath, Path.Combine(localDir, f.Name), null, CancellationToken.None);
+                    await _sftp.DownloadResumeAsync(f.FullPath, Path.Combine(localDir, f.Name), null, CancellationToken.None);
             }
         }
 

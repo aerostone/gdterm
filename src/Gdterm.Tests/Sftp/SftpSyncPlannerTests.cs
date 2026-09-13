@@ -32,8 +32,10 @@ namespace Gdterm.Tests.Sftp
         {
             string reason;
             var now = DateTime.UtcNow;
-            var a = SftpSyncPlanner.Decide(10, now, true, 10, now.AddSeconds(-1), out reason);
-            Assert.Equal(SyncAction.Skip, a, "mtime-within-tolerance-skips");
+            // 大小不同→传输（即使 mtime 一致也不跳过；此前此处重复断言 mtime 容差，size-diff 无覆盖）
+            var a = SftpSyncPlanner.Decide(100, now, true, 200, now, out reason);
+            Assert.Equal(SyncAction.Transfer, a, "size-diff-transfers");
+            Assert.Equal("大小不同", reason, "size-diff-reason");
         }
 
         private static void DecideSourceNewer()
