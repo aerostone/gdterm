@@ -93,7 +93,7 @@ namespace Gdterm.Sftp
         }
 
         /// <summary>rwx 九字符（SSH.NET SftpFile 三元组实证：Owner/Group/Others × CanRead/Write/Execute）。</summary>
-        internal static string ToRwx(Renci.SshNet.Sftp.SftpFile f)
+        internal static string ToRwx(Renci.SshNet.Sftp.ISftpFile f)
         {
             var sb = new System.Text.StringBuilder(9);
             sb.Append(f.OwnerCanRead ? 'r' : '-');
