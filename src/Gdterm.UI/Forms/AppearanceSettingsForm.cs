@@ -430,6 +430,10 @@ namespace Gdterm.UI.Forms
         public string UIFontName { get; set; } = "Microsoft YaHei UI";
         /// <summary>界面字号。</summary>
         public int UIFontSize { get; set; } = 9;
+        /// <summary>底栏快捷命令分组回放（null/空=全部；"__tmux__"=tmux 键组）。</summary>
+        public string QuickBarGroup { get; set; }
+        /// <summary>tmux 键组钉住常驻。</summary>
+        public bool PinTmux { get; set; }
 
         public static AppearanceSettings Load(string path)
         {
@@ -468,6 +472,10 @@ namespace Gdterm.UI.Forms
                         int n;
                         if (int.TryParse(val, out n) && n >= 8 && n <= 24) s.UIFontSize = n;
                     }
+                    else if (string.Equals(key, "quickBarGroup", StringComparison.OrdinalIgnoreCase))
+                        s.QuickBarGroup = val;
+                    else if (string.Equals(key, "pinTmux", StringComparison.OrdinalIgnoreCase))
+                        s.PinTmux = val == "1" || string.Equals(val, "true", StringComparison.OrdinalIgnoreCase);
                 }
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("AppearanceSettingsForm", exSwallowed); } catch { } }
@@ -487,7 +495,9 @@ namespace Gdterm.UI.Forms
                 "uiTheme=" + (UiTheme ?? "Dark") + "\r\n" +
                 "dpiAware=" + (DpiAware ? "1" : "0") + "\r\n" +
                 "uiFontName=" + (UIFontName ?? "Microsoft YaHei UI") + "\r\n" +
-                "uiFontSize=" + UIFontSize + "\r\n");
+                "uiFontSize=" + UIFontSize + "\r\n" +
+                "quickBarGroup=" + (QuickBarGroup ?? "") + "\r\n" +
+                "pinTmux=" + (PinTmux ? "1" : "0") + "\r\n");
         }
 
         public static string DefaultPath

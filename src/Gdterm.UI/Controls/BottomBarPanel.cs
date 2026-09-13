@@ -61,8 +61,9 @@ namespace Gdterm.UI.Controls
         // ── 分组单选状态 ──
         private string _activeGroup;     // null = 全部
         private bool _isTmux;            // 当前展示 tmux 键组
-        private bool _tmuxPinned;        // tmux 组钉住
+        private bool _tmuxPinned;        // tmux 组钉住（内存态；跨重启持久化走 PinTmuxChanged 事件 → appearance.ini pinTmux）
         private string _prefix = "\u0002"; // tmux 前缀 C-b
+        private bool _suppressPinEvent;
         private bool _filterInstalled;
         private BarClickAwayFilter _clickAwayFilter;
 
@@ -114,6 +115,8 @@ namespace Gdterm.UI.Controls
 
         // ═══════════ 公共 API（对齐原 QuickBarPanel / StatusBarControl）═══════════
 
+        private string _osType = "";
+
         /// <summary>绑定活动终端控件（优先，发送走 TerminalControl 危险命令闸门）。</summary>
         public void SetActiveTerminal(TerminalControl terminal, string host = null, string user = null)
         {
@@ -121,6 +124,14 @@ namespace Gdterm.UI.Controls
             _activeSession = terminal != null ? terminal.Session : null;
             if (host != null) _hostName = host;
             if (user != null) _userName = user;
+            // OsType 由会话来（SSH 常为 Unknown 不再自动 uname；串口=Serial；本地=Windows/Linux）
+            try
+            {
+                var os = _activeSession != null ? _activeSession.OsType : null;
+                if (!string.IsNullOrEmpty(os) && os != _osType) { _osType = os; RefreshCommands(); }
+                else if (string.IsNullOrEmpty(os) && !string.IsNullOrEmpty(_osType)) { _osType = ""; RefreshCommands(); }
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("BottomBarPanel", exSwallowed); } catch { } }
         }
 
         public void SetActiveSession(ITerminalSession session, string host = null, string user = null)
@@ -164,11 +175,44 @@ namespace Gdterm.UI.Controls
             SetStatusTip(_keepassStatus, unlocked ? "密码库: 已解锁" : "密码库: 锁定");
         }
 
+        /// <summary>钉住态变化（供 MainForm 落盘 appearance.ini pinTmux；_suppressPinEvent 压住回放期的重复写）。</summary>
+        public event Action<bool> PinTmuxChanged;
+
+        public void SetPinSilent(bool pinned)
+        {
+            _suppressPinEvent = true;
+            try { _tmuxPinned = pinned; RefreshCommands(); }
+            finally { _suppressPinEvent = false; }
+        }
+
+        private void SetPin(bool pinned)
+        {
+            if (_tmuxPinned == pinned) { RefreshCommands(); return; }
+            _tmuxPinned = pinned;
+            RefreshCommands();
+            if (!_suppressPinEvent)
+            {
+                try { PinTmuxChanged?.Invoke(pinned); }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("BottomBarPanel", exSwallowed); } catch { } }
+            }
+        }
+
+        /// <summary>分组变化（供 MainForm 落盘 appearance.ini quickBarGroup；回放时外部直接 SelectGroup 外加静默不适用故仅事件）。</summary>
+        public event Action<string> ActiveGroupChanged;
+
+        public bool IsTmuxActive { get { return _isTmux; } }
+
         /// <summary>Alt+8 / 状态栏 ⚡：tmux 键组与全部之间快速切换。</summary>
         public void ToggleTmuxGroup()
         {
             if (_isTmux) { SelectGroup(null); }
             else SelectGroup("__tmux__");
+        }
+
+        /// <summary>外部回放持久化分组：null=全部，"__tmux__"=tmux 键组（钉住态由调用方另行 SetPinSilent）。</summary>
+        public void SelectGroupExternal(string key)
+        {
+            SelectGroup(key);
         }
 
         /// <summary>字体/行高变化后重算高度（由 MainForm.ApplyGlobalUIFont 调用）。</summary>
@@ -234,7 +278,7 @@ namespace Gdterm.UI.Controls
                 Margin = new Padding(DpiScale.V(this, 4), 0, DpiScale.V(this, 4), 0),
                 TabStop = false
             };
-            _pinBtn.Click += (s, e) => { _tmuxPinned = !_tmuxPinned; RefreshCommands(); };
+            _pinBtn.Click += (s, e) => SetPin(!_tmuxPinned);
 
             // 布局：Dock 顺序 Fill 必须最先 Add（z-order 语义）
             Controls.Add(_cmdHost);
@@ -358,10 +402,14 @@ namespace Gdterm.UI.Controls
             {
                 _isTmux = false;
                 _activeGroup = key;
-                if (key != null) _tmuxPinned = false; // 离开 tmux 组时取消钉住
+                // 离开 tmux 组时取消钉住：走 SetPin 统一发 PinTmuxChanged 落盘（回放期 _suppressPinEvent 压住）。
+                if (key != null && _tmuxPinned) SetPin(false);
             }
             RefreshGroupMenu();
             RefreshCommands();
+            // 分组变化上报 MainForm 落盘（tmux 键组用哨兵 "__tmux__"，与回放 SelectGroupExternal 对齐）。
+            try { ActiveGroupChanged?.Invoke(_isTmux ? "__tmux__" : _activeGroup); }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("BottomBarPanel", exSwallowed); } catch { } }
         }
 
         // ═══════════ 命令区渲染 ═══════════
@@ -389,9 +437,15 @@ namespace Gdterm.UI.Controls
                 _groupBtn.ForeColor = _activeGroup == null ? GdtermColorTable.Muted : GdtermColorTable.Accent;
                 _pinBtn.Visible = false;
 
-                var filtered = _activeGroup == null
-                    ? _commands.OrderBy(c => c.Group).ThenBy(c => c.SortOrder).ToList()
-                    : _commands.Where(c => c.Group == _activeGroup).OrderBy(c => c.SortOrder).ToList();
+                // OsType 兼容过滤：会话 Unknown/空（SSH 未探测）时不过滤，只在明确不匹配时隐藏
+                // （如命令标 Windows 而会话是 Serial；命令无 OsType 标记恒显示）。
+                var filtered = (_activeGroup == null
+                    ? _commands.OrderBy(c => c.Group).ThenBy(c => c.SortOrder)
+                    : _commands.Where(c => c.Group == _activeGroup).OrderBy(c => c.SortOrder))
+                    .Where(c => string.IsNullOrEmpty(c.OsType)
+                        || string.IsNullOrEmpty(_osType) || _osType == "Unknown"
+                        || string.Equals(c.OsType, _osType, StringComparison.OrdinalIgnoreCase))
+                    .ToList();
 
                 foreach (var cmd in filtered)
                 {
@@ -539,12 +593,14 @@ namespace Gdterm.UI.Controls
 
         private AntdUI.Button CreateCommandButton(QuickCommand cmd)
         {
+            // RequiresRoot 标识：命令名前缀 "#"（sudo 语义），沿用预置"失败登录"等命令的提示传统；
+            // 之前 CreateCommandButton 有空 if (cmd.RequiresRoot) 死分支，root 命令零视觉区分。
             var btn = new AntdUI.Button
             {
-                Text = cmd.Name,
+                Text = (cmd.RequiresRoot ? "# " : "") + cmd.Name,
                 AutoSize = true,
                 BackColor = GdtermColorTable.Surface,
-                ForeColor = GdtermColorTable.Foreground,
+                ForeColor = cmd.RequiresRoot ? GdtermColorTable.Warning : GdtermColorTable.Foreground,
                 Font = FormFontPolicy.UiFont(-0.5f),
                 Cursor = Cursors.Hand,
                 TabStop = false,

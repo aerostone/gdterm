@@ -191,6 +191,55 @@ namespace Gdterm.UI.Forms
             catch { return new List<QuickCommand>(); }
         }
 
+        private bool _restoringBottomBar;
+
+        /// <summary>底栏分组/钉住回放：钉住优先进 tmux 组；非钉住按 quickBarGroup 回放（未知分组名回全部）。</summary>
+        private void RestoreBottomBarState()
+        {
+            var ga = Gdterm.UI.Program.GlobalAppearance;
+            if (ga == null || _statusBar == null) return;
+            _restoringBottomBar = true;
+            try
+            {
+                if (ga.PinTmux)
+                {
+                    _statusBar.SelectGroupExternal("__tmux__");
+                    _statusBar.SetPinSilent(true);
+                    return;
+                }
+                var g = ga.QuickBarGroup;
+                if (string.IsNullOrEmpty(g)) return; // 空=全部，底栏默认态无需回放
+                if (g == "__tmux__") { _statusBar.SelectGroupExternal(g); return; }
+                bool known = false;
+                try
+                {
+                    foreach (var c in SafeLoadQuickCommands())
+                    {
+                        if (c != null && c.Group == g) { known = true; break; }
+                    }
+                }
+                catch { known = false; }
+                _statusBar.SelectGroupExternal(known ? g : null);
+            }
+            finally { _restoringBottomBar = false; }
+        }
+
+        /// <summary>底栏分组/钉住落盘到 appearance.ini（groupKey 透传 ActiveGroupChanged 的 key；pin 透传 PinTmuxChanged）。</summary>
+        private void SaveBottomBarState(string groupKey, bool? pin)
+        {
+            if (_restoringBottomBar) return;
+            try
+            {
+                var ga = Gdterm.UI.Program.GlobalAppearance;
+                if (ga == null) return;
+                // ActiveGroupChanged 在 SelectGroup 尾部必带准确 key：普通分组名 / null(全部) / "__tmux__"，直接记不猜。
+                if (groupKey != null || pin == null) ga.QuickBarGroup = groupKey == "__tmux__" ? "__tmux__" : groupKey;
+                if (pin.HasValue) ga.PinTmux = pin.Value;
+                ga.Save(AppearanceSettings.DefaultPath);
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.BottomBarSave", exSwallowed); } catch { } }
+        }
+
         private void InitializeComponent()
         {
             Text = "gdterm - 绿色运维客户端";
@@ -274,6 +323,12 @@ namespace Gdterm.UI.Forms
 
             var sideHostPanel = SidePanelHost.CreateHost((s, e) => _sidePanelHost?.Hide());
             _sidePanelHost = new SidePanelHost(sideHostPanel);
+            // 工具箱会话重绑：Show 工具箱时按当前活动标签取远程会话（切标签不再拿旧会话跑命令）。
+            _sidePanelHost.ToolboxSessionProvider = () =>
+            {
+                try { return _tabContainer != null ? _tabContainer.GetActiveRemoteSession() : null; }
+                catch { return null; }
+            };
 
             var sideSplitter = new Splitter
             {
@@ -333,6 +388,12 @@ namespace Gdterm.UI.Forms
             };
             _statusBar.UpdateSecurityStatus(_securityManager.IsLocked);
             _statusBar.UpdateKeePassStatus(_keepassService.IsUnlocked);
+            // 底栏分组/钉住持久化：事件落盘 appearance.ini，启动时回放（钉住优先 tmux 组）。
+            // ActiveGroupChanged 自带 key（含普通分组名），直接透传入保存；回放期 _restoringBottomBar 压住回写。
+            _statusBar.ActiveGroupChanged += (key) => SaveBottomBarState(key, null);
+            _statusBar.PinTmuxChanged += (pinned) => SaveBottomBarState(null, pinned);
+            try { RestoreBottomBarState(); }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.BottomBarRestore", exSwallowed); } catch { } }
 
             _lockOverlay = new LockOverlayControl(_securityManager);
             _lockOverlay.Dock = DockStyle.Fill;
@@ -448,7 +509,8 @@ namespace Gdterm.UI.Forms
                 host: this);
 
             _cmdRouter = new MainFormCommandRouter(
-                _tabContainer, _sidePanels, _sidePanelHost, _viewMode);
+                _tabContainer, _sidePanels, _sidePanelHost, _viewMode,
+                () => { try { _statusBar?.ToggleTmuxGroup(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } } });
 
             // Toast / 落地页 / 托盘
             try { ToastNotifier.Bind(this); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }

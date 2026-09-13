@@ -442,6 +442,8 @@ namespace Gdterm.UI.Forms
         {
             base.OnShown(e);
             EnsureCollapsedClientHeight();
+            try { RefreshSerialPorts(); }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnDialog", exSwallowed); } catch { } }
             // 可见性必须同时检查横向和纵向——0.1.118 只查了纵向，按钮横向飞出时误报 true
             bool visOk = _okBtn.Bottom <= ClientSize.Height && _okBtn.Height > 0
                          && _okBtn.Left >= 0 && _okBtn.Right <= ClientSize.Width && _okBtn.Width > 0;
@@ -517,6 +519,35 @@ namespace Gdterm.UI.Forms
             _secSerial.Visible = isSerial;
             _domainBox.Enabled = isRdp;
             if (_advancedHost.Visible) _advancedHost.PerformLayout();
+        }
+
+        /// <summary>串口下拉合并本机枚举：GetPortNames 结果并入固定候选（去重），缺省回 COM1。</summary>
+        private void RefreshSerialPorts()
+        {
+            if (_serialPortCombo == null) return;
+            string keep = null;
+            try { keep = _serialPortCombo.Text; } catch { keep = null; }
+            var merged = new System.Collections.Generic.List<string>();
+            try
+            {
+                foreach (var p in System.IO.Ports.SerialPort.GetPortNames())
+                {
+                    if (string.IsNullOrEmpty(p)) continue;
+                    if (!merged.Contains(p)) merged.Add(p);
+                }
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnDialog", exSwallowed); } catch { } }
+            foreach (var d in new[] { "COM1", "COM2", "COM3", "COM4", "/dev/ttyS0", "/dev/ttyUSB0" })
+            {
+                if (!merged.Contains(d)) merged.Add(d);
+            }
+            try
+            {
+                _serialPortCombo.Items.Clear();
+                _serialPortCombo.Items.AddRange(merged.ToArray());
+                _serialPortCombo.Text = !string.IsNullOrEmpty(keep) ? keep : "COM1";
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnDialog", exSwallowed); } catch { } }
         }
 
         private void LoadFromConfig()

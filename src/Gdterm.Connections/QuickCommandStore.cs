@@ -108,6 +108,8 @@ namespace Gdterm.Connections
                 Create("安全", "最近登录", "last -n 20", "登录审计"),
                 Create("安全", "失败登录", "lastb -n 20 2>/dev/null || echo '需要 root'", "安全审计"),
                 Create("安全", "sudo 日志", "grep sudo /var/log/auth.log | tail -20", "权限审计"),
+                // 公司脚本封装：时钟同步一键（chrony/ntpdate/timedatectl 链式兜底，与 TimeSyncTool 远程命令同源）
+                Create("系统", "时钟同步", "(chronyc -a 'burst 3/4' && chronyc -a makestep 2>/dev/null) || (ntpdate ntp.aliyun.com 2>/dev/null) || (timedatectl set-ntp true 2>/dev/null) && date '+%Y-%m-%d %H:%M:%S'", "时钟同步"),
                 Create("Docker", "容器列表", "docker ps -a", "容器管理"),
                 Create("Docker", "镜像列表", "docker images", "镜像管理"),
                 Create("Docker", "磁盘占用", "docker system df", "存储清理"),

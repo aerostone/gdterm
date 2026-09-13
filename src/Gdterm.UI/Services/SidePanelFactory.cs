@@ -271,7 +271,18 @@ namespace Gdterm.UI.Services
                         _multiChannelManager.Unregister(info.SessionId);
                 }
                 foreach (var kv in all)
-                    _multiChannelManager.Register(kv.Key, kv.Value, kv.Key, null);
+                {
+                    // 显示名用人话：Hostname（RDP/SSH 来自 config.Host，串口是端口名，本地是 localhost），
+                    // 之前直接拿 kv.Key（sessionId/connectionId）当显示名，多通道列表里全是 Guid 味的字符串。
+                    string displayName = kv.Key;
+                    try
+                    {
+                        var hn = kv.Value != null ? kv.Value.Hostname : null;
+                        if (!string.IsNullOrEmpty(hn)) displayName = hn;
+                    }
+                    catch { displayName = kv.Key; }
+                    _multiChannelManager.Register(kv.Key, kv.Value, displayName, null);
+                }
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SidePanelFactory", exSwallowed); } catch { } }
         }

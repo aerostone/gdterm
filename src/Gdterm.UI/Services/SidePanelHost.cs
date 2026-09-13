@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using Gdterm.Tools;
 using Gdterm.UI.Controls;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 using Gdterm.UI.Diagnostics;
@@ -23,6 +24,9 @@ namespace Gdterm.UI.Services
         public Panel Host { get { return _host; } }
 
         public Control ActivePanel { get { return _active; } }
+
+        /// <summary>工具箱会话提供器（MainForm 注入 _tabContainer.GetActiveRemoteSession；Show 工具箱时重绑）。</summary>
+        public System.Func<ISshRemoteSession> ToolboxSessionProvider { get; set; }
 
         public bool IsVisible
         {
@@ -66,6 +70,14 @@ namespace Gdterm.UI.Services
             panel.Dock = DockStyle.Fill;
             _host.Controls.Add(panel);
             panel.BringToFront();
+            // 工具箱是会话相关的：每次 Show 时按当前活动会话重绑，否则切标签后工具还拿着旧会话跑远程命令。
+            try
+            {
+                var toolbox = panel as ToolboxPanel;
+                if (toolbox != null && ToolboxSessionProvider != null)
+                    toolbox.SetRemoteSession(ToolboxSessionProvider());
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SidePanelHost", exSwallowed); } catch { } }
             _host.Visible = true;
             _host.Width = Math.Max(320, _host.Width);
             // 关闭钮高随字号校准（CreateHost 静态时无字号上下文，此处 host 已有 Font）

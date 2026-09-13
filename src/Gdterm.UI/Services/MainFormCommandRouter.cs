@@ -13,17 +13,20 @@ namespace Gdterm.UI.Services
         private readonly SidePanelFactory _sidePanels;
         private readonly SidePanelHost _sideHost;
         private readonly ViewModeController _viewMode;
+        private readonly Action _toggleTmuxGroup;
 
         public MainFormCommandRouter(
             TabContainerControl tabs,
             SidePanelFactory sidePanels,
             SidePanelHost sideHost,
-            ViewModeController viewMode)
+            ViewModeController viewMode,
+            Action toggleTmuxGroup = null)
         {
             _tabs = tabs;
             _sidePanels = sidePanels;
             _sideHost = sideHost;
             _viewMode = viewMode;
+            _toggleTmuxGroup = toggleTmuxGroup;
         }
 
         /// <summary>处理快捷键；返回 true 表示已消费。</summary>
@@ -103,6 +106,14 @@ namespace Gdterm.UI.Services
                     var tc = _tabs != null ? _tabs.GetActiveTerminalControl() : null;
                     if (tc != null) tc.RequestZmodemReceive();
                 }
+                catch { }
+                return true;
+            }
+
+            // Alt+8：tmux 键组与全部之间快速切换（与菜单 tmux 快捷面板同效，经回调走 BottomBarPanel.ToggleTmuxGroup）
+            if (keyData == (Keys.Alt | Keys.D8))
+            {
+                try { if (_toggleTmuxGroup != null) _toggleTmuxGroup(); }
                 catch { }
                 return true;
             }
