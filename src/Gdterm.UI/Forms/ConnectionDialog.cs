@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI;
@@ -133,6 +133,7 @@ namespace Gdterm.UI.Forms
             MaximizeBox = false;
             MinimizeBox = false;
             BackColor = GdtermColorTable.Background;
+            // 布局铁律（skill C）：窗体字体必须在任何 AddRow/RowStep 布局计算之前确定。
             Font = Services.FormFontPolicy.UiFont();
 
             // ===== 顶部：基本信息 + 凭据 + 更多选项开关 =====
@@ -250,7 +251,9 @@ namespace Gdterm.UI.Forms
             // 域名仅 RDP 域账户有意义——从基本信息移到这里
             _domainBox = AddRow(rdpGrid, 0, "RDP域名", new AntdUI.Input());
             _domainBox.PlaceholderText = "域账户如 CONTOSO，普通账户留空";
-            var rdpChecks = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = true, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 4, 0, 4) };
+            var rdpChecks = new TableLayoutPanel { ColumnCount = 2, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 4, 0, 4) };
+            rdpChecks.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
+            rdpChecks.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
             _rdpDriveCheck = new AntdUI.Checkbox { Text = "本地磁盘", AutoSize = true };
             _rdpClipboardCheck = new AntdUI.Checkbox { Text = "剪贴板", AutoSize = true, Checked = true };
             _rdpPrinterCheck = new AntdUI.Checkbox { Text = "打印机", AutoSize = true };
@@ -260,31 +263,44 @@ namespace Gdterm.UI.Forms
             _rdpTcpDumpCheck = new AntdUI.Checkbox { Text = "抓包（TCP dump）", AutoSize = true, Checked = false,
                 Visible = Program.DebugConfig != null && Program.DebugConfig.Enabled };
             _rdpPasslineCheck = new AntdUI.Checkbox { Text = "命令行传密码（自动登录；任务管理器可见）", AutoSize = true, Checked = true };
-            rdpChecks.Controls.AddRange(new Control[] { _rdpDriveCheck, _rdpClipboardCheck, _rdpPrinterCheck, _rdpFullScreenCheck, _rdpNlaCheck, _rdpForceNlaCheck, _rdpTcpDumpCheck, _rdpPasslineCheck });
-            var depthPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, DpiScale.V(this, 4)) };
-            depthPanel.Controls.Add(new AntdUI.Label { Text = "色深:", AutoSize = true });
-            _rdpColorDepth = new AntdUI.InputNumber { Minimum = 8, Maximum = 32, Value = 32, Increment = 8, Width = DpiScale.V(this, 60),
+            var rdpCheckList = new Control[] { _rdpDriveCheck, _rdpClipboardCheck, _rdpPrinterCheck, _rdpFullScreenCheck, _rdpNlaCheck, _rdpForceNlaCheck, _rdpTcpDumpCheck, _rdpPasslineCheck };
+            for (int ci = 0; ci < rdpCheckList.Length; ci++)
+            {
+                rdpCheckList[ci].Margin = new Padding(0, DpiScale.V(this, 2), DpiScale.V(this, 8), DpiScale.V(this, 2));
+                rdpChecks.Controls.Add(rdpCheckList[ci], ci % 2, ci / 2);
+            }
+            // 长文本复选框（命令行传密码说明）独占一行，避免把同行挤成两行
+            rdpChecks.SetColumnSpan(_rdpPasslineCheck, 2);
+            var depthPanel = new TableLayoutPanel { ColumnCount = 2, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, DpiScale.V(this, 4)) };
+            depthPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
+            depthPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            depthPanel.Controls.Add(new AntdUI.Label { Text = "色深:", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight }, 0, 0);
+            _rdpColorDepth = new AntdUI.InputNumber { Minimum = 8, Maximum = 32, Value = 32, Increment = 8, Width = DpiScale.V(this, 60), Dock = DockStyle.Left,
                 // Flow 子无 Dock 高会被压 0（288 dump 实测 h=0）→ MinimumSize 保底 38 行
                 MinimumSize = new Size(0, Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this))) };
-            depthPanel.Controls.Add(_rdpColorDepth);
+            depthPanel.Controls.Add(_rdpColorDepth, 1, 0);
             rdpGrid.Controls.Add(rdpChecks, 1, 1);
             rdpGrid.Controls.Add(depthPanel, 1, 2);
             // 引擎选择：旧堡垒机/代理常与 FreeRDP 不兼容（重定向 PDU 处理差异），
             // 系统自带 mstsc（ActiveX 嵌入）是微软自家实现，兼容性最好
-            var enginePanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, DpiScale.V(this, 4)) };
-            enginePanel.Controls.Add(new AntdUI.Label { Text = "渲染引擎:", AutoSize = true });
-            _rdpEngineCombo = new AntdUI.Select { Width = DpiScale.V(this, 170),
+            var enginePanel = new TableLayoutPanel { ColumnCount = 2, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, DpiScale.V(this, 4)) };
+            enginePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
+            enginePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            enginePanel.Controls.Add(new AntdUI.Label { Text = "渲染引擎:", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight }, 0, 0);
+            _rdpEngineCombo = new AntdUI.Select { Width = DpiScale.V(this, 170), Dock = DockStyle.Left,
                 MinimumSize = new Size(0, Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this))) };
             _rdpEngineCombo.Items.AddRange(new object[] { "自动（优先 FreeRDP）", "FreeRDP 进程嵌入", "系统 mstsc（兼容模式）" });
-            enginePanel.Controls.Add(_rdpEngineCombo);
+            enginePanel.Controls.Add(_rdpEngineCombo, 1, 0);
             rdpGrid.Controls.Add(enginePanel, 1, 3);
             // 负载均衡 token：堡垒机/NetScaler 下发的 LB_LOAD_BALANCE_INFO Cookie（如 tsv://... 或 Cookie: msts=...）
-            var lbPanel = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, DpiScale.V(this, 4)) };
-            lbPanel.Controls.Add(new AntdUI.Label { Text = "负载均衡:", AutoSize = true });
+            var lbPanel = new TableLayoutPanel { ColumnCount = 2, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, DpiScale.V(this, 4)) };
+            lbPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
+            lbPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            lbPanel.Controls.Add(new AntdUI.Label { Text = "负载均衡:", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight }, 0, 0);
             _rdpLoadBalanceBox = new AntdUI.Input { Width = DpiScale.V(this, 230),
                 MinimumSize = new Size(0, Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this))) };
             _rdpLoadBalanceBox.PlaceholderText = "如 Cookie: msts=NSFVERIFYHASH=... (选填)";
-            lbPanel.Controls.Add(_rdpLoadBalanceBox);
+            lbPanel.Controls.Add(_rdpLoadBalanceBox, 1, 0);
             rdpGrid.Controls.Add(lbPanel, 1, 4);
             SectionContent(_secRdp, rdpGrid);
             _advFlow.Controls.Add(_secRdp);
