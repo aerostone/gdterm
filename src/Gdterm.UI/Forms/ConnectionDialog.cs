@@ -380,7 +380,9 @@ namespace Gdterm.UI.Forms
             CancelButton = cancelBtn;
         }
 
-        /// <summary>高级区小节：标题行 + 内容行（TableLayoutPanel 避免绝对定位重叠）。</summary>
+        /// <summary>高级区小节：标题行 + 内容行（TableLayoutPanel 避免绝对定位重叠）。
+        /// 宽度必须显式定死 516：AutoSize 只按内容收缩，RDP/SSH/串口三区会量出 176~472 不等宽，
+        /// 导致高级区忽窄忽宽（CI 318 实测）。</summary>
         private TableLayoutPanel MakeSection(string title)
         {
             var t = new TableLayoutPanel
@@ -389,6 +391,8 @@ namespace Gdterm.UI.Forms
                 RowCount = 2,
                 AutoSize = true,
                 Width = DpiScale.V(this, 516),
+                // 只锁宽度下限：AutoSize 高度仍随内容撑高，宽度不因内容窄而收缩（CI 318 实测三区 176~472 不等宽）
+                MinimumSize = new Size(DpiScale.V(this, 516), 0),
                 Margin = new Padding(0, 0, 0, 10)
             };
             t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
