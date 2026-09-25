@@ -16,31 +16,4 @@ namespace Gdterm.UI.Controls
             Tip.SetToolTip(c, text);
         }
     }
-
-    /// <summary>深色菜单渲染器（ContextMenuStrip 深色主题）。
-    /// F02 自 QuickBarPanel.cs 迁移：BottomBarPanel 的 …/右键菜单仍在用，orphan 删除后共用件保留于此。</summary>
-    internal class DarkMenuRenderer : ToolStripProfessionalRenderer
-    {
-        protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
-        {
-            e.Item.BackColor = e.Item.Selected ? GdtermColorTable.Border : GdtermColorTable.Surface;
-            e.Item.ForeColor = GdtermColorTable.Foreground;
-        }
-
-        protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
-        {
-            e.Graphics.FillRectangle(new SolidBrush(GdtermColorTable.Surface), e.AffectedBounds);
-        }
-
-        protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)
-        {
-            e.Graphics.FillRectangle(new SolidBrush(GdtermColorTable.Border), 0, 3, e.Item.Width, 1);
-        }
-
-        protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
-        {
-            e.TextColor = GdtermColorTable.Foreground;
-            base.OnRenderItemText(e);
-        }
-    }
 }
