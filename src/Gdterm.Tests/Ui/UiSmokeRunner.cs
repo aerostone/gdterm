@@ -263,7 +263,7 @@ namespace Gdterm.Tests.Ui
         /// “停靠对不算重叠”而漏判，故在 C# 侧落门（CI 真跑得到；tools/ui-tree-check.py 不参与流水线）。
         /// 免判：Fill 与 Fill 兄弟（同格覆盖层，如 KeePass 空库引导）不算遮挡。
         /// </summary>
-        private static void AssertNoDockOverlap(Control root, string where)
+        internal static void AssertNoDockOverlap(Control root, string where)
         {
             int bad = 0;
             var stack = new Stack<Control>();

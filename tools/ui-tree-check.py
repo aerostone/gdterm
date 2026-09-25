@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """全控件树盒模型断言：读 CI 产出的 *.json（UiTreeDumper），查：
-1. 重叠：同父容器下两个可见兄弟控件 abs 矩形交叠面积 > 阈值（默认 4px²，过滤包含关系）
-2. 越界：子控件 abs 超出父 abs（容差 2px；Dock.Fill/AutoScroll 容器豁免）
-3. 零尺寸：可见叶控件 w<=0 或 h<=0
-4. 行高：extra.RowHeight 在 24-34（表）/输入框 h>=30
-5. 按钮边距：AntdUI.Button 的 padding 全 0 告警（文字贴边风险）
+
+R1 触击目标：可见且 enabled 的交互叶，abs 宽高二者同时小于 HIT_MIN(32) 才算失败
+   （曾评估 either-dim，会立刻命中主窗 10 个 109-118x25 合法紧凑控件，故否决）；
+   Label/Divider/Panel/Splitter 等展示型控件不参与，省略号溢出钮豁免。
+R2 焦点链：同一父容器实例内 tabIndex 非零值不得重复（0=WinForms 默认无序，跳过；
+   缺 tabIndex 字段的旧 dump 跳过）。
+R3 关闭绑定：每窗至少一个名含 Close/Cancel/OK/确定/取消/关闭 的控件；无关闭语义的窗体走前缀豁免。
+R4 键盘可达性：交互叶 TabStop=false 数必须为 0（精确短名匹配，见该段注释）；mainform 走独立分支。
+R5 停靠遮挡：同父可见兄弟中 Dock=Fill 与边停靠(Top/Bottom/Left/Right)不得相交 ——
+   "工具栏/表头盖住表体"类布局 bug 的可测签名；Fill vs Fill 豁免（同格覆盖层靠可见性互斥）。
+
+另含：兄弟重叠（交叠面积 > OVERLAP_MIN(16px²)，过滤包含关系）、子越界（容差 TOL(2px)）、
+零尺寸可见叶、表行高 24-34、AntdUI.Button 左右 padding 全 0。
 
 用法: python3 tools/ui-tree-check.py <jsonDir>
 退出码 0=全过，1=有失败。
@@ -292,31 +300,30 @@ def main():
         # R5 停靠遮挡（change 2026-09-25 D5 新增）：同父可见兄弟中 Dock=Fill 与非 Fill 边停靠
         # （Top/Bottom/Left/Right）不得相交 —— 这是“工具栏/表头盖住表体”类布局 bug 的可测签名，
         # 原重叠规则因“Dock!=None 一律跳过”漏判（CI 321 scanner-center 工具栏盖住两表表头 56px 即此）。
-        # 口径来自 CI 321 全量实测：命中仅 scanner-center（本次修复）与 dangerous-cmd 3 处（存量债、
-        # 不在本 change 范围，登记待后续 change 处理，故按前缀豁免）；其余 16 份 dump 零命中。
-        # 注：C# 侧 UiSmokeRunner.AssertNoDockOverlap 同口径且真在 CI 里跑，本规则用于事后审查产物。
+        # 口径来自 CI 321/323 全量实测：除 scanner-center（2026-09-25-ux-empty-focus 已修）与
+        # dangerous-cmd 外，其余 dump 零命中。dangerous-cmd 的 3 处已由
+        # 2026-09-25-dangerous-cmd-dock-overlap 修复并撤销前缀豁免——规则对已知违例不再失灵。
+        # 注：C# 侧 UiSmokeRunner.AssertNoDockOverlap 同口径且真在 CI 里跑（DialogsSmoke 全量对话框），
+        # 本规则用于事后审查产物。
         EDGE = ("Top", "Bottom", "Left", "Right")
-        if fname.startswith("dangerous-cmd"):
-            check(True, "停靠遮挡免判(dangerous-cmd 存量债)")
-        else:
-            dock_ov = 0
-            # tree 自身（窗体根）也要比：scanner-center 的工具栏 vs SplitContainer 就是根级兄弟
-            for parent, _pa, _pn, _pnode, _pkey in [(tree, None, "", None, "ROOT")] + walk(tree):
-                vis = [c for c in _kids(parent) if c.get("visible")]
-                for i in range(len(vis)):
-                    for j in range(i + 1, len(vis)):
-                        a, b = vis[i], vis[j]
-                        da, db = a.get("dock"), b.get("dock")
-                        if not ((da == "Fill" and db in EDGE) or (db == "Fill" and da in EDGE)):
-                            continue
-                        ov = intersect(a.get("abs", {}), b.get("abs", {}))
-                        if ov > 0:
-                            dock_ov += 1
-                            check(False, "停靠遮挡 %s[%s](%s) vs %s[%s](%s) 交叠%dpx²" % (
-                                _nm(a), a.get("type", "").split(".")[-1], da,
-                                _nm(b), b.get("type", "").split(".")[-1], db, ov))
-            if dock_ov == 0:
-                check(True, "停靠无遮挡=0")
+        dock_ov = 0
+        # tree 自身（窗体根）也要比：scanner-center 的工具栏 vs SplitContainer 就是根级兄弟
+        for parent, _pa, _pn, _pnode, _pkey in [(tree, None, "", None, "ROOT")] + walk(tree):
+            vis = [c for c in _kids(parent) if c.get("visible")]
+            for i in range(len(vis)):
+                for j in range(i + 1, len(vis)):
+                    a, b = vis[i], vis[j]
+                    da, db = a.get("dock"), b.get("dock")
+                    if not ((da == "Fill" and db in EDGE) or (db == "Fill" and da in EDGE)):
+                        continue
+                    ov = intersect(a.get("abs", {}), b.get("abs", {}))
+                    if ov > 0:
+                        dock_ov += 1
+                        check(False, "停靠遮挡 %s[%s](%s) vs %s[%s](%s) 交叠%dpx²" % (
+                            _nm(a), a.get("type", "").split(".")[-1], da,
+                            _nm(b), b.get("type", "").split(".")[-1], db, ov))
+        if dock_ov == 0:
+            check(True, "停靠无遮挡=0")
 
     print()
     if FAIL:

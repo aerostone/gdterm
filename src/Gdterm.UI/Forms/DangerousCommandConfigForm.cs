@@ -165,11 +165,15 @@ namespace Gdterm.UI.Forms
                 Padding = new Padding(pad, DpiScale.V(this, 5), pad, DpiScale.V(this, 5))
             };
 
-            // Dock 装配（WinForms 按添加逆序分配边缘，Fill 必须最后添加）
-            Controls.Add(_statusLabel);   // Bottom：最底状态条
-            Controls.Add(wlPanel);        // Bottom：白名单区（在状态条之上）
+            // Dock 装配：布局引擎按 Controls 集合从最大索引向 0 迭代分配，索引越大越先分配；
+            // 且 Dock=Fill 拿的是"此刻尚未被边缘兄弟消耗的剩余区"、它自己并不消耗剩余区——
+            // 于是 Fill 若不是最低索引（最先 Add），它就先吃掉整个客户区，而后处理的边缘兄弟
+            // 仍停在算出来的正确位置、只是与它重叠（工具栏/白名单/状态条压在表体上）。
+            // 原注释"Fill 必须最后添加"已被真实 dump 几何证伪（CI 323 dangerous-cmd 三处遮挡），勿改回。
+            Controls.Add(_ruleTable);     // Fill：最先添加 → 最后参与分配，拿中间剩余区
             Controls.Add(toolbar);        // Top：工具栏
-            Controls.Add(_ruleTable);     // Fill：规则列表拿剩余全部空间
+            Controls.Add(wlPanel);        // Bottom：白名单区
+            Controls.Add(_statusLabel);   // Bottom：最底状态条（最后添加 → 最先分配，贴最底）
         }
 
         private static AntdUI.Button MakeBtn(string text, EventHandler onClick, AntdUI.TTypeMini type, Padding padding, int margin)

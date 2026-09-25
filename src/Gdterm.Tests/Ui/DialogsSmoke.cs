@@ -78,6 +78,11 @@ namespace Gdterm.Tests.Ui
                             name + "-client=" + f.ClientSize.Width + "x" + f.ClientSize.Height);
                         File.WriteAllText(Path.Combine(outDir, name + ".json"), UiTreeDumper.Dump(f), System.Text.Encoding.UTF8);
                         log("dump: " + name + ".json");
+                        // 停靠遮挡门(change 2026-09-25-dangerous-cmd-dock-overlap D3):CI 全量 dump 实测除
+                        // scanner-center 与 dangerous-cmd 外零命中,故对全部对话框挂载是零噪声的;
+                        // 只挂单个窗体则下个窗体复发仍要人眼发现。
+                        // 放在 dump 写出之后：门一旦失败(dump 已落盘)仍有产物可诊断。
+                        UiSmokeRunner.AssertNoDockOverlap(f, name);
                     }
                     log("[PASS] " + name);
                 }
@@ -111,8 +116,12 @@ namespace Gdterm.Tests.Ui
                         check(f.CancelButton != null, name + "-cancelbtn(ESC绑定)");
                     check(f.ClientSize.Width > 200 && f.ClientSize.Height > 150,
                         name + "-client=" + f.ClientSize.Width + "x" + f.ClientSize.Height);
+                    // 停靠遮挡门(change 2026-09-25-dangerous-cmd-dock-overlap D3):CI 全量 dump 实测除
+                    // scanner-center 与 dangerous-cmd 外零命中,故对全部对话框挂载是零噪声的;
+                    // 只挂单个窗体则下个窗体复发仍要人眼发现。
                     File.WriteAllText(Path.Combine(outDir, name + ".json"), UiTreeDumper.Dump(f), System.Text.Encoding.UTF8);
                     log("dump: " + name + ".json");
+                    UiSmokeRunner.AssertNoDockOverlap(f, name);
                 }
                 log("[PASS] " + name);
             }
