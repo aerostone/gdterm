@@ -1,6 +1,6 @@
 ---
 workflow_mode: standard
-baseline_mode: off
+baseline_mode: "off"
 standards:
   required_files: []
   forbidden_paths: []

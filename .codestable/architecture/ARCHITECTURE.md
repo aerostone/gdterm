@@ -1,3 +1,15 @@
+---
+doc_type: architecture
+slug: architecture
+scope: "gdterm 全系统架构总入口：模块划分、依赖方向、代码锚点与边界索引"
+summary: "Windows 绿色便携运维客户端（.NET Framework 4.6.2 + WinForms + AntdUI）的当前系统地图"
+status: current
+last_reviewed: 2026-09-25
+tags: [architecture, overview]
+depends_on: []
+implements: []
+---
+
 # gdterm 架构总入口
 
 > 状态：已回填（与 2026-07-25 代码现状对齐）  
