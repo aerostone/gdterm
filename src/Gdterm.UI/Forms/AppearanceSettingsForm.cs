@@ -236,7 +236,7 @@ namespace Gdterm.UI.Forms
         private AntdUI.InputNumber MakeNumber(int min, int max, int value)
         {
             return new AntdUI.InputNumber {
-                Size = new Size(86, _fieldHeight),
+                Size = new Size(DpiScale.V(this, 86), _fieldHeight),
                 Minimum = min,
                 Maximum = max,
                 Value = value,

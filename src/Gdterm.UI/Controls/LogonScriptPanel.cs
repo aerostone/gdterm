@@ -211,6 +211,29 @@ namespace Gdterm.UI.Controls
             {
                 if (lvSteps.SelectedItems.Count > 0) { steps.Remove(lvSteps.SelectedItems[0].Tag as LogonStep); refreshSteps(); }
             };
+            // 上移/下移：选中项与相邻项交换后重刷列表并保持选中（审计 F1：原版按钮从未接线，纯死钮）
+            btnUp.Click += (s, e) =>
+            {
+                if (lvSteps.SelectedItems.Count == 0) return;
+                int i = lvSteps.SelectedItems[0].Index;
+                if (i <= 0) return;
+                var cur = lvSteps.SelectedItems[0].Tag as LogonStep;
+                steps.Remove(cur);
+                steps.Insert(i - 1, cur);
+                refreshSteps();
+                lvSteps.Items[i - 1].Selected = true;
+            };
+            btnDown.Click += (s, e) =>
+            {
+                if (lvSteps.SelectedItems.Count == 0) return;
+                int i = lvSteps.SelectedItems[0].Index;
+                if (i >= steps.Count - 1) return;
+                var cur = lvSteps.SelectedItems[0].Tag as LogonStep;
+                steps.Remove(cur);
+                steps.Insert(i + 1, cur);
+                refreshSteps();
+                lvSteps.Items[i + 1].Selected = true;
+            };
             y += stepBtnH + DpiScale.V(this, 12);
 
             int btnH = Math.Max(DpiScale.V(this, 30), fieldH);

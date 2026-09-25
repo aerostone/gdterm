@@ -42,9 +42,11 @@ namespace Gdterm.UI.Services
                     Location = DpiScale.P(dialog, 15, 15),
                     Size = DpiScale.S(dialog, 340, 25)
                 };
+                // 高度走 fieldH 口径（审计 F4：原 28px 硬编码既低于全仓 ≥38 地板，大字号下裁字）
+                int fieldH = Math.Max(DpiScale.V(dialog, 38), FormFontPolicy.RowStep(dialog));
                 var pwdBox = new AntdUI.Input {
                     Location = DpiScale.P(dialog, 15, 45),
-                    Size = DpiScale.S(dialog, 335, 28),
+                    Size = DpiScale.S(dialog, 335, fieldH),
                     Font = new Font("Consolas", DpiScale.Factor(dialog) * 11f),
                     UseSystemPasswordChar = true,
                     BackColor = GdtermColorTable.Surface,
@@ -78,12 +80,27 @@ namespace Gdterm.UI.Services
                         pwdBox.Focus();
                     }
                 };
+                var cancelBtn = new AntdUI.Button {
+                    Text = "取消",
+                    Size = DpiScale.S(dialog, 80, 32),
+                    Location = DpiScale.P(dialog, 185, 105),
+                    DialogResult = DialogResult.Cancel,
+                    BackColor = GdtermColorTable.Hover,
+                    ForeColor = GdtermColorTable.Foreground
+                };
+                cancelBtn.Click += (s, ev) =>
+                {
+                    dialog.DialogResult = DialogResult.Cancel;
+                    dialog.Close();
+                };
                 pwdBox.KeyDown += (s, ev) =>
                 {
                     if (ev.KeyCode == Keys.Enter) okBtn.PerformClick();
                 };
-                dialog.Controls.AddRange(new Control[] { label, pwdBox, errorLabel, okBtn });
+                dialog.Controls.AddRange(new Control[] { label, pwdBox, errorLabel, okBtn, cancelBtn });
                 dialog.AcceptButton = okBtn;
+                // ESC/取消双通道（审计 F4：原版只有 AcceptButton，安全验证框关不掉）
+                dialog.CancelButton = cancelBtn;
                 FormFontPolicy.Apply(dialog);
                 return dialog.ShowDialog(owner) == DialogResult.OK;
             }
