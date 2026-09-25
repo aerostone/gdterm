@@ -2,7 +2,7 @@
 doc_type: change
 kind: issue
 slug: 2026-09-25-ci-tree-gate
-status: in-progress
+status: accepted
 phase: analyzed
 mode: standard
 summary: 把已存在但从不执行的全控件树校验器接进 CI，让"停靠遮挡/触击目标/焦点链/关闭绑定"四类缺陷不再假绿
@@ -213,4 +213,46 @@ VS2022 镜像自带 python，故 `throw` 分支在实践中不会触发；它存
 
 ## 验收结果
 
-（accept 阶段追加）
+**动态证据：AppVeyor 构建 0.1.329（commit `5a2623a`，success，2026-09-25T08:58:23→09:04:39Z）**
+
+| 项 | 结果 |
+|---|---|
+| 构建结果 | success（**门已接上且未拖红主线**） |
+| 构建时长 | 6m16s（较常规 ~1m55s 显著变长——`appveyor.yml` 改动使 `freerdp-bin` 缓存失效，重编 FreeRDP，属 D1 已接受的代价） |
+| 单测 / 冒烟 | 与前一构建一致全绿 |
+| **门是否被执行** | 日志第 1600 行 `Running ui-tree-check gate -> C:\projects\gdterm\ui-smoke`，第 1601 行 `=== ui-tree-check on C:\projects\gdterm\ui-smoke (19 files) ===`，第 1798 行 `UI-TREE-CHECK ALL OK` |
+| 门覆盖内容 | 19 个窗体段、157 条 `ok`、**0 条 FAIL**；含 `停靠无遮挡=0`×18、`触击目标=0`×18、`键盘可达性 TabStop=false 数=0`×18、`关闭路径`×13 + `关闭绑定免判`×5 |
+
+**S1｜门被执行｜通过**：全量 dump 逐个出规则结论，收尾 ASCII 汇总行 `UI-TREE-CHECK ALL OK`（该行 ASCII，故在 CI 日志里可直接 grep 到）。
+
+**S2｜门在产物上传之后｜通过（日志时序直接可证）**
+
+```
+00:05:59 Uploading artifact transfer-progress.json (3,050 bytes)...100%   ← 最后一个产物落地
+00:05:59 Running ui-tree-check gate -> C:\projects\gdterm\ui-smoke      ← 门才开始
+00:05:59 UI-TREE-CHECK ALL OK
+```
+
+**S3｜非零退出即红｜通过**：`ui-tree-check` 对已知缺陷夹具 exit 1（2026-09-25-dangerous-cmd-dock-overlap 的 S1 已用**真实修复前产物**证实）；PowerShell 侧 `if ($LASTEXITCODE -ne 0) { throw }` 与已多次生效的单测/冒烟步骤同一机制。CI 329 的 exit 0 与该行的未触发一致。
+
+**S4｜不静默跳过｜通过**：解析分支 `Get-Command python` → `py -3` → `throw "python not found ..."`；CI 329 未出现该 throw，说明解释器解析成功（AppVeyor VS2022 镜像自带 python）。
+
+**S5｜ASCII 安全｜通过**：`tools/ui-tree-check.py` 非 GBK 字符由 4 个 `²` 降为 **0**（驱动 S1），且 CI 侧在 `PYTHONIOENCODING=utf-8` / `PYTHONUTF8=1` 下**未发生 `UnicodeEncodeError`**（门跑完全部 19 个窗体并正常收尾）。
+
+**S6｜口径未变｜通过**：改字符后对 CI 327 的 19 份 dump 复跑 `UI-TREE-CHECK ALL OK` exit 0；CI 329 的 157 条 `ok` 与前次构建逐条同构。
+
+**意外收益（值得记录）：日志保真度从"有损"升为"可还原"**
+
+设了 `PYTHONIOENCODING=utf-8` 后，门的输出在 CI 日志里不再是 C# 侧那种不可逆的 `?` 压缩，而是 **UTF-8 字节被按 cp437 解释的 mojibake**——可以字节级还原：
+
+```
+ok: σü£Θ¥áµùáΘü«µîí=0     --cp437→utf-8-->     ok: 停靠无遮挡=0
+```
+
+本仓此前为"中文断言名被压成 `?` 以致 grep 失效"反复付代价；本包让**门这一步的输出可完整还原**（157/157 条 `ok` 全部还原成功，逐条含中文规则名）。C# 侧冒烟段仍是有损 `?`（未纳入本包范围）。
+
+**反向检查｜通过**：改动范围仅 `appveyor.yml`、`tools/ui-tree-check.py`、`.codestable/.runtime/current-package`；`src/` 零改动；`tools/ui-check.py` 零改动；校验器 import 仍为 `json,os,sys`；`--phase accept` 通过。
+
+**本地驱动**：`fixtures/check-ci-gate.py`，`CI-GATE-CHECK ALL OK`，20 项检查（S1 编码安全 3 + S2 口径不变 2 + S3 门结构 8 + S4 字节卫生/零依赖/未越界 7），其中"门在产物上传之后"一条经临时挪位验证有牙齿后逐字节还原。
+
+**残余缺口（登记，不在本包）**：`tools/ui-check.py` 未参数化、不覆盖 `keepass-manager-empty.png`，且其 Pillow/numpy 依赖与"CI 只跑零依赖校验器"冲突；`ui-tree-check.py` 的 dump 文件名清单仍硬编码（驱动已改为从该清单派生以避免第二份清单漂移）。
