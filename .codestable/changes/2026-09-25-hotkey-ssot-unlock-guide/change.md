@@ -2,7 +2,7 @@
 doc_type: change
 kind: feature
 slug: 2026-09-25-hotkey-ssot-unlock-guide
-status: in-progress
+status: accepted
 mode: standard
 summary: F7 快捷键 SSOT(路由表化,帮助/菜单同源) + F8 未解锁死端提示改直达解锁流程 + SharedMenuTip 改名 MenuTip
 tags: [ux, hotkey, ssot, keepass, rename]
@@ -107,4 +107,14 @@ Step1 RED 驱动(断言表存在+帮助同源+解锁引导在)→ Step2 router �
 - Step5 GREEN:驱动 14 checks ALL OK exit 0。
 
 ## 验收结果 (accept 阶段追加)
+
+CI 0.1.339(commit cdd08e5)success:单元 163/0、UI 冒烟 6/0、ui-tree-check/encoding 双门 ALL OK。编译通过+全部回归绿:
+
+- S1 ✓ 驱动 green:表结构+8 平表项+特例链四保留点全 ok(行为等价由编译+回归侧面覆盖)。
+- S2 ✓ 硬编码键位串清零,router 暴露 RenderHelpLines;launcher 残留固定行仅为特例键(` / L / M / Alt+8 / Ctrl+Tab 等,不入平表——见 D2)。
+- S3 ✓ EnsureKeePassUnlocked 收口三方法;死端提示 3→0。
+- S4 ✓ git mv 改名落地,零残留。
+- S5 ✓ balance ok;CI 绿。
+- 动态体验(实际按键路由、解锁框→窗体直达)留 Windows 实测;表驱动等价性由 S1 分支保留断言+编译+163 回归共同背书。
+
 
