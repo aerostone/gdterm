@@ -13,15 +13,23 @@ namespace Gdterm.Tests.Ui
     /// </summary>
     internal sealed class FakeKeePassService : IKeePassService
     {
-        public bool IsUnlocked => true;
+        private readonly IList<KeePassEntrySummary> _entries;
 
-        public IList<KeePassEntrySummary> ListEntries()
+        /// <summary>默认 2 条固定条目；<paramref name="empty"/> = true 时返回空库（空状态冒烟用）。</summary>
+        public FakeKeePassService(bool empty = false)
         {
-            return new List<KeePassEntrySummary>
+            _entries = empty ? new List<KeePassEntrySummary>() : new List<KeePassEntrySummary>
             {
                 new KeePassEntrySummary { Id = "smoke-1", Title = "冒烟条目一", Username = "alice", GroupPath = "/服务器", Url = "ssh://host1", LastModified = DateTime.Now },
                 new KeePassEntrySummary { Id = "smoke-2", Title = "冒烟条目二", Username = "bob", GroupPath = "/数据库", Url = "", LastModified = DateTime.Now },
             };
+        }
+
+        public bool IsUnlocked => true;
+
+        public IList<KeePassEntrySummary> ListEntries()
+        {
+            return _entries;
         }
 
         public PasswordHealthReport AnalyzeHealth()

@@ -20,6 +20,8 @@ namespace Gdterm.UI.Forms
         private readonly IKeePassService _keepassService;
         private AntdUI.Label _scoreLabel;
         private AntdUI.Label _summaryLabel;
+        /// <summary>“上次扫描”状态行（UX change 2026-09-25）：区分未扫描与扫描完 0 问题。</summary>
+        private AntdUI.Label _scanStateLabel;
         private AntdUI.Tabs _tabControl;
 
         public PasswordHealthForm(IKeePassService keepassService)
@@ -72,7 +74,19 @@ namespace Gdterm.UI.Forms
                 ForeColor = GdtermColorTable.Foreground
             };
 
-            headerPanel.Controls.AddRange(new Control[] { _scoreLabel, _summaryLabel });
+            // 上次扫描状态行（UX change 2026-09-25）：区分“从未扫描”与“扫描完 0 个问题”，
+            // 否则 0 行 + 规则文案让人误以为功能未跑。
+            _scanStateLabel = new AntdUI.Label {
+                Name = "HealthScanStateLabel",
+                Text = "上次扫描：—",
+                // 与评分同行右侧（显式 Location 不吃 Panel.Padding，abs 左缘=面板左+275）
+                Location = DpiScale.P(this, 275, 10),
+                Size = DpiScale.S(this, 395, 24),
+                TextAlign = ContentAlignment.MiddleRight,
+                ForeColor = GdtermColorTable.Muted
+            };
+
+            headerPanel.Controls.AddRange(new Control[] { _scoreLabel, _scanStateLabel, _summaryLabel });
 
             // 标签页容器
             _tabControl = new AntdUI.Tabs
@@ -123,6 +137,7 @@ namespace Gdterm.UI.Forms
                 _scoreLabel.Text = "分析失败";
                 _scoreLabel.ForeColor = GdtermColorTable.Danger;
                 _summaryLabel.Text = ex.Message;
+                if (_scanStateLabel != null) _scanStateLabel.Text = "上次扫描：失败";
             }
         }
 
@@ -138,6 +153,8 @@ namespace Gdterm.UI.Forms
             _scoreLabel.Text = $"健康评分：{report.HealthScore}/100";
             _scoreLabel.ForeColor = scoreColor;
             _summaryLabel.Text = $"{report.Summary}（共 {report.TotalEntries} 个条目）";
+            if (_scanStateLabel != null)
+                _scanStateLabel.Text = $"上次扫描：{DateTime.Now:HH:mm:ss} · {report.TotalEntries} 个条目";
 
             // 清空标签页
             _tabControl.Pages.Clear();

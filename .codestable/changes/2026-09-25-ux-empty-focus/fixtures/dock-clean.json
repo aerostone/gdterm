@@ -1,0 +1,358 @@
+{
+ "form": "ScannerLikeForm",
+ "text": "ScannerLikeForm",
+ "clientSize": {
+  "w": 800,
+  "h": 600
+ },
+ "dpi": 96,
+ "controls": [
+  {
+   "type": "System.Windows.Forms.SplitContainer",
+   "name": "",
+   "text": "",
+   "bounds": {
+    "x": 0,
+    "y": 0,
+    "w": 800,
+    "h": 544
+   },
+   "abs": {
+    "x": 0,
+    "y": 56,
+    "w": 800,
+    "h": 544
+   },
+   "clientSize": {
+    "w": 800,
+    "h": 544
+   },
+   "margin": {
+    "l": 3,
+    "t": 3,
+    "r": 3,
+    "b": 3
+   },
+   "padding": {
+    "l": 0,
+    "t": 0,
+    "r": 0,
+    "b": 0
+   },
+   "dock": "Fill",
+   "anchor": "Top, Left",
+   "autoSize": false,
+   "tabIndex": 0,
+   "tabStop": true,
+   "visible": true,
+   "enabled": true,
+   "font": "Microsoft YaHei UI 9pt",
+   "extra": {},
+   "children": [
+    {
+     "type": "System.Windows.Forms.Panel",
+     "name": "",
+     "text": "",
+     "bounds": {
+      "x": 0,
+      "y": 0,
+      "w": 800,
+      "h": 544
+     },
+     "abs": {
+      "x": 0,
+      "y": 56,
+      "w": 800,
+      "h": 544
+     },
+     "clientSize": {
+      "w": 800,
+      "h": 544
+     },
+     "margin": {
+      "l": 3,
+      "t": 3,
+      "r": 3,
+      "b": 3
+     },
+     "padding": {
+      "l": 0,
+      "t": 0,
+      "r": 0,
+      "b": 0
+     },
+     "dock": "Fill",
+     "anchor": "Top, Left",
+     "autoSize": false,
+     "tabIndex": 0,
+     "tabStop": true,
+     "visible": true,
+     "enabled": true,
+     "font": "Microsoft YaHei UI 9pt",
+     "extra": {},
+     "children": [
+      {
+       "type": "AntdUI.Table",
+       "name": "FindingTable",
+       "text": "",
+       "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 800,
+        "h": 496
+       },
+       "abs": {
+        "x": 0,
+        "y": 80,
+        "w": 800,
+        "h": 496
+       },
+       "clientSize": {
+        "w": 800,
+        "h": 520
+       },
+       "margin": {
+        "l": 3,
+        "t": 3,
+        "r": 3,
+        "b": 3
+       },
+       "padding": {
+        "l": 0,
+        "t": 0,
+        "r": 0,
+        "b": 0
+       },
+       "dock": "Fill",
+       "anchor": "Top, Left",
+       "autoSize": false,
+       "tabIndex": 0,
+       "tabStop": true,
+       "visible": true,
+       "enabled": true,
+       "font": "Microsoft YaHei UI 9pt",
+       "extra": {},
+       "children": []
+      },
+      {
+       "type": "AntdUI.Label",
+       "name": "FindingHeader",
+       "text": "发现（0）",
+       "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 800,
+        "h": 24
+       },
+       "abs": {
+        "x": 0,
+        "y": 56,
+        "w": 800,
+        "h": 24
+       },
+       "clientSize": {
+        "w": 800,
+        "h": 24
+       },
+       "margin": {
+        "l": 3,
+        "t": 3,
+        "r": 3,
+        "b": 3
+       },
+       "padding": {
+        "l": 0,
+        "t": 0,
+        "r": 0,
+        "b": 0
+       },
+       "dock": "Top",
+       "anchor": "Top, Left",
+       "autoSize": false,
+       "tabIndex": 0,
+       "tabStop": true,
+       "visible": true,
+       "enabled": true,
+       "font": "Microsoft YaHei UI 9pt",
+       "extra": {},
+       "children": []
+      },
+      {
+       "type": "AntdUI.Label",
+       "name": "FindingEmptyHint",
+       "text": "还没有发现",
+       "bounds": {
+        "x": 0,
+        "y": 0,
+        "w": 800,
+        "h": 24
+       },
+       "abs": {
+        "x": 0,
+        "y": 576,
+        "w": 800,
+        "h": 24
+       },
+       "clientSize": {
+        "w": 800,
+        "h": 24
+       },
+       "margin": {
+        "l": 3,
+        "t": 3,
+        "r": 3,
+        "b": 3
+       },
+       "padding": {
+        "l": 0,
+        "t": 0,
+        "r": 0,
+        "b": 0
+       },
+       "dock": "Bottom",
+       "anchor": "Top, Left",
+       "autoSize": false,
+       "tabIndex": 0,
+       "tabStop": true,
+       "visible": true,
+       "enabled": true,
+       "font": "Microsoft YaHei UI 9pt",
+       "extra": {},
+       "children": []
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "type": "System.Windows.Forms.FlowLayoutPanel",
+   "name": "",
+   "text": "",
+   "bounds": {
+    "x": 0,
+    "y": 0,
+    "w": 800,
+    "h": 56
+   },
+   "abs": {
+    "x": 0,
+    "y": 0,
+    "w": 800,
+    "h": 56
+   },
+   "clientSize": {
+    "w": 800,
+    "h": 56
+   },
+   "margin": {
+    "l": 3,
+    "t": 3,
+    "r": 3,
+    "b": 3
+   },
+   "padding": {
+    "l": 8,
+    "t": 6,
+    "r": 8,
+    "b": 6
+   },
+   "dock": "Top",
+   "anchor": "Top, Left",
+   "autoSize": false,
+   "tabIndex": 0,
+   "tabStop": true,
+   "visible": true,
+   "enabled": true,
+   "font": "Microsoft YaHei UI 9pt",
+   "extra": {},
+   "children": [
+    {
+     "type": "AntdUI.Button",
+     "name": "RunBtn",
+     "text": "运行选中",
+     "bounds": {
+      "x": 0,
+      "y": 0,
+      "w": 90,
+      "h": 36
+     },
+     "abs": {
+      "x": 8,
+      "y": 10,
+      "w": 90,
+      "h": 36
+     },
+     "clientSize": {
+      "w": 90,
+      "h": 36
+     },
+     "margin": {
+      "l": 3,
+      "t": 3,
+      "r": 3,
+      "b": 3
+     },
+     "padding": {
+      "l": 10,
+      "t": 4,
+      "r": 10,
+      "b": 4
+     },
+     "dock": "None",
+     "anchor": "Top, Left",
+     "autoSize": false,
+     "tabIndex": 1,
+     "tabStop": true,
+     "visible": true,
+     "enabled": true,
+     "font": "Microsoft YaHei UI 9pt",
+     "extra": {},
+     "children": []
+    }
+   ]
+  },
+  {
+   "type": "AntdUI.Button",
+   "name": "Close",
+   "text": "关闭",
+   "bounds": {
+    "x": 0,
+    "y": 0,
+    "w": 90,
+    "h": 36
+   },
+   "abs": {
+    "x": 700,
+    "y": 560,
+    "w": 90,
+    "h": 36
+   },
+   "clientSize": {
+    "w": 90,
+    "h": 36
+   },
+   "margin": {
+    "l": 3,
+    "t": 3,
+    "r": 3,
+    "b": 3
+   },
+   "padding": {
+    "l": 10,
+    "t": 4,
+    "r": 10,
+    "b": 4
+   },
+   "dock": "None",
+   "anchor": "Top, Left",
+   "autoSize": false,
+   "tabIndex": 2,
+   "tabStop": true,
+   "visible": true,
+   "enabled": true,
+   "font": "Microsoft YaHei UI 9pt",
+   "extra": {},
+   "children": []
+  }
+ ]
+}

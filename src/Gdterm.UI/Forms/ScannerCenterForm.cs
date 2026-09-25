@@ -35,6 +35,10 @@ namespace Gdterm.UI.Forms
         private AntdUI.Label _findingHeader;
         private AntdUI.Input _rawOutput;
         private SplitContainer _split;
+        /// <summary>空状态引导（UX change 2026-09-25）：0 插件 / 0 发现 / 空输出时各显一条，指向已有入口。</summary>
+        private AntdUI.Label _pluginEmptyHint;
+        private AntdUI.Label _findingEmptyHint;
+        private AntdUI.Label _rawEmptyHint;
 
         // WMI 免 SSH 通道的连接参数行（仅该目标可见）
         private Panel _wmiPanel;
@@ -58,6 +62,10 @@ namespace Gdterm.UI.Forms
             Font = Gdterm.UI.Services.FormFontPolicy.UiFont(); // 布局前先设全局字体，RowStep 才能按真实字号算行距
             Size = DpiScale.S(this, 960, 640);
             MinimumSize = DpiScale.S(this, 780, 520);
+            // 上下文 ESC（UX change 2026-09-25）：工具窗无 CancelButton（R3 免判），
+            // 键盘用户唯一退路是 ESC；运行时按 ESC 不硬关以免丢输出。
+            KeyPreview = true;
+            KeyDown += OnFormKeyDown;
 
             BuildUi();
             Gdterm.UI.Services.FormFontPolicy.Apply(this);
@@ -72,6 +80,23 @@ namespace Gdterm.UI.Forms
             base.OnFormClosed(e);
         }
 
+        /// <summary>
+        /// 上下文 ESC：空闲时关窗；扫描进行中不硬关（ScanRunner 无取消 API，硬关会丢已产出结果），
+        /// 只提示请等待完成。change 2026-09-25 D3 的记录差异：设计写“运行中→停扫描”，
+        /// 实测 ScanRunner 无 CancellationToken，改为“不关 + 提示”。
+        /// </summary>
+        private void OnFormKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode != Keys.Escape) return;
+            e.Handled = true;
+            if (_running)
+            {
+                AntdUI.Message.warn(this, "扫描进行中，请等待本次扫描完成后再关闭");
+                return;
+            }
+            Close();
+        }
+
         // ===== UI 构建 =====
 
         private void BuildUi()
@@ -83,6 +108,7 @@ namespace Gdterm.UI.Forms
             int hintH = FormFontPolicy.LineBox(Font, this, 1.4f);
             int headerH = Math.Max(DpiScale.V(this, 24), FormFontPolicy.LineBox(Font, this, 1.4f));
             int btnPad = DpiScale.V(this, 8);
+            int rightPad = pad; // 右列左缘与左列同 pad（原为 0，空态下左右不对称）
             var btnPadding = new Padding(btnPad, DpiScale.V(this, 3), btnPad, DpiScale.V(this, 3));
 
             var top = new FlowLayoutPanel
@@ -137,7 +163,9 @@ namespace Gdterm.UI.Forms
                 Margin = new Padding(DpiScale.V(this, 6), 0, DpiScale.V(this, 3), 0)
             };
             top.Controls.Add(_hotStateLabel);
-            Controls.Add(top);
+            // 注意：top 不在此处 Add，见 BuildUi 末尾 —— Dock 按添加逆序布局，
+            // 工具栏必须在 Fill(_split) 之后添加才能占住顶部空间（否则盖住两表表头，
+            // CI 321 像素实测：表头 24px 被工具栏遮住，左表整行表头不可见）。
 
             _split = new SplitContainer
             {
@@ -165,7 +193,20 @@ namespace Gdterm.UI.Forms
             _pluginTable.CheckedChanged += (s, ev) => UpdateRunButtonState();
             _pluginTable.CellDoubleClick += (s, ev) => { if (!_running && SelectedRunnablePlugins().Count > 0) OnRunClicked(null, null); };
             pluginPanel.Controls.Add(_pluginTable);
+            // 空清单引导：0 插件时指向已有入口（打开插件目录/新建模板），不改布局层级
+            _pluginEmptyHint = new AntdUI.Label
+            {
+                Name = "ScannerPluginEmptyHint",
+                Dock = DockStyle.Bottom,
+                Height = Math.Max(DpiScale.V(this, 20), hintH),
+                Text = "还没有插件：先放入脚本文件（下方提示有入口）",  // 左列仅 ~284px，长文案会被硬裁
+                TextAlign = ContentAlignment.MiddleLeft,
+                ForeColor = GdtermColorTable.Muted,
+                Visible = false
+            };
+            pluginPanel.Controls.Add(_pluginEmptyHint);
             var pluginHint = new AntdUI.Label {
+                Name = "ScannerPluginTipHint",
                 Dock = DockStyle.Bottom,
                 Height = Math.Max(DpiScale.V(this, 20), hintH),
                 Text = "提示：双击运行；在 插件目录 增删改脚本即热更新（无需重启）",
@@ -183,7 +224,7 @@ namespace Gdterm.UI.Forms
                 BackColor = GdtermColorTable.Background
             };
 
-            var findingPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, DpiScale.V(this, 8), pad, 0), BackColor = GdtermColorTable.Background };
+            var findingPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(rightPad, DpiScale.V(this, 8), pad, 0), BackColor = GdtermColorTable.Background };
             _findingTable = new AntdUI.Table
             {
                 Name = "ScannerFindingTable",
@@ -196,6 +237,7 @@ namespace Gdterm.UI.Forms
             _findingTable.Columns.Add(new AntdUI.Column("Detail", "详情", AntdUI.ColumnAlign.Left) { Width = "60%" });
             findingPanel.Controls.Add(_findingTable);
             var findingHeader = new AntdUI.Label {
+                Name = "ScannerFindingHeader",
                 Dock = DockStyle.Top,
                 Height = headerH,
                 Text = "发现（0）",
@@ -205,14 +247,24 @@ namespace Gdterm.UI.Forms
             };
             _findingHeader = findingHeader;
             findingPanel.Controls.Add(findingHeader);
-            findingHeader.BringToFront();
-            // Dock 同边叠放时后加的先布局：_findingTable Fill 已占满会盖住 Top 头，
-            // 必须把 Fill 表 SendToBack 让 Top 头先占位（同 rawPanel）。
-            _findingTable.SendToBack();
+            // 空结果引导：Layout 按“后加的先占位”排 Dock，Top 头后加即先占位、Fill 表取余量。
+            // 原 BringToFront/SendToBack 把手写成了反的，导致头盖住表首行 24px（CI 321 像素实测）。
+            _findingEmptyHint = new AntdUI.Label
+            {
+                Name = "ScannerFindingEmptyHint",
+                Dock = DockStyle.Bottom,
+                Height = Math.Max(DpiScale.V(this, 20), hintH),
+                Text = "还没有发现：选好目标后点『运行选中』开始扫描",
+                TextAlign = ContentAlignment.MiddleLeft,
+                ForeColor = GdtermColorTable.Muted,
+                Visible = false
+            };
+            findingPanel.Controls.Add(_findingEmptyHint);
             rightSplit.Panel1.Controls.Add(findingPanel);
 
-            var rawPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, DpiScale.V(this, 8), pad, pad), BackColor = GdtermColorTable.Background };
+            var rawPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(rightPad, DpiScale.V(this, 8), pad, pad), BackColor = GdtermColorTable.Background };
             _rawOutput = new AntdUI.Input {
+                Name = "ScannerRawOutput",
                 Dock = DockStyle.Fill,
                 Multiline = true,
                 ReadOnly = true,
@@ -220,16 +272,26 @@ namespace Gdterm.UI.Forms
                 Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f)
             };
             rawPanel.Controls.Add(_rawOutput);
-            var rawHeader = new AntdUI.Label { Dock = DockStyle.Top, Height = headerH, Text = "原始输出", TextAlign = ContentAlignment.MiddleLeft, Font = new Font(Font, FontStyle.Bold), ForeColor = GdtermColorTable.Foreground };
+            var rawHeader = new AntdUI.Label { Name = "ScannerRawHeader", Dock = DockStyle.Top, Height = headerH, Text = "原始输出", TextAlign = ContentAlignment.MiddleLeft, Font = new Font(Font, FontStyle.Bold), ForeColor = GdtermColorTable.Foreground };
             rawPanel.Controls.Add(rawHeader);
-            rawHeader.BringToFront();
-            // 同 findingPanel：Fill 输入先占满会盖住 Top 头，SendToBack 让头先占位。
-            _rawOutput.SendToBack();
+            _rawEmptyHint = new AntdUI.Label
+            {
+                Name = "ScannerRawEmptyHint",
+                Dock = DockStyle.Bottom,
+                Height = Math.Max(DpiScale.V(this, 20), hintH),
+                Text = "还没有输出：扫描完成后在此显示脚本原始输出",
+                TextAlign = ContentAlignment.MiddleLeft,
+                ForeColor = GdtermColorTable.Muted,
+                Visible = false
+            };
+            rawPanel.Controls.Add(_rawEmptyHint);
             rightSplit.Panel2.Controls.Add(rawPanel);
             _split.Panel2.Controls.Add(rightSplit);
-            // Dock 按添加逆序布局：先加 Fill，再加两个 Top，视觉自上而下 = top / wmi / split
+            // Dock 按添加逆序布局：最后一个添加的最先占位。视觉自上而下 = top / wmi / split，
+            // 故顺序必须是 split(Fill) → wmi(Top) → top(Top)；先加 top 会让工具栏盖住两表表头。
             Controls.Add(_split);
             Controls.Add(BuildWmiPanel());
+            Controls.Add(top);
             UpdateWmiPanelVisibility();
 
             // 必须在停靠生效（获得真实尺寸）后再设，否则构造期默认尺寸过小会拋参数异常；
@@ -304,6 +366,15 @@ namespace Gdterm.UI.Forms
             _pluginTable.DataSource = rows;
             UpdateHotStateLabel();
             UpdateRunButtonState();
+            UpdateEmptyHints();
+        }
+
+        /// <summary>0 插件 / 0 发现 / 空输出三处空状态引导集中开关（UX change 2026-09-25）。</summary>
+        private void UpdateEmptyHints()
+        {
+            if (_pluginEmptyHint != null) _pluginEmptyHint.Visible = _store.Plugins.Count == 0;
+            if (_findingEmptyHint != null) _findingEmptyHint.Visible = _findingRows.Count == 0;
+            if (_rawEmptyHint != null) _rawEmptyHint.Visible = string.IsNullOrEmpty(_rawOutput.Text);
         }
 
         private void UpdateHotStateLabel()
@@ -545,6 +616,7 @@ namespace Gdterm.UI.Forms
             _findingTable.DataSource = new List<FindingRow>();
             SetFindingCount(0);
             _rawOutput.Text = "";
+            UpdateEmptyHints();
 
             // finding-03：try/finally 保证任何路径下 _running 都能复位；
             // 渲染前检查句柄存活性，避免批量运行中窗体被关闭后打在已释放控件上。
@@ -602,6 +674,7 @@ namespace Gdterm.UI.Forms
             if (!string.IsNullOrEmpty(r.RawOutput)) _rawOutput.AppendText(r.RawOutput + Environment.NewLine);
             // finding-16：改用 AppendRawLine，删除下方与私有方法重复的扩展类
             if (!string.IsNullOrEmpty(r.ErrorOutput)) AppendRawLine("[stderr] " + r.ErrorOutput.TrimEnd());
+            UpdateEmptyHints();
         }
 
         private void AppendRawLine(string line)
@@ -612,6 +685,7 @@ namespace Gdterm.UI.Forms
         private void SetFindingCount(int n)
         {
             if (_findingHeader != null) _findingHeader.Text = "发现（" + n + "）";
+            UpdateEmptyHints();
         }
 
         // ===== 展示辅助 =====

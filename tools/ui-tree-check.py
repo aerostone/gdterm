@@ -40,6 +40,15 @@ def walk(node, parent_abs=None, parent_name="", parent_node=None, parent_key="RO
     return out
 
 
+def _kids(node):
+    """子节点：root 用 controls、其余用 children（UiTreeDumper 的两种键）。"""
+    return node.get("children") or node.get("controls") or []
+
+
+def _nm(n):
+    return n.get("name") or (n.get("text") or "")[:12] or "?"
+
+
 def area(r):
     return max(0, r["w"]) * max(0, r["h"])
 
@@ -261,6 +270,53 @@ def main():
                          if any(k in (n.get("name") or "") + (n.get("text") or "")
                                  for k in ("Close", "Cancel", "OK", "Ok", "确定", "取消", "关闭"))]
             check(len(closelike) > 0, "关闭路径=%d(>0, Close/Cancel/OK/确定/取消/关闭)" % len(closelike))
+
+        # R4 键盘可达性（change 2026-09-25 D2 spike 定稿）
+        # ① “聚焦是否可见”（AntdUI 自绘焦点框）在控件树 dump 里不可观测 → 不能成规则，故不落。
+        # ② 可观测代理 = 交互叶 TabStop=false（键盘不可达）。spike 证据（CI 321 全 18 份 dump）：
+        #    主窗以外零命中；主窗 11 处（快捷卡片 109x25 与两个隐藏覆盖钮）走 mainform 分支本规则不覆盖。
+        #    故当前口径零误报，直接落为硬门：任何对话框新增 TabStop=false 的交互控件即 CI 红。
+        #    例外通道：确需不可 Tab（如仅鼠标/快捷键可达的覆盖钮）时在此前缀豁免表登记原因。
+        INTER_TYPES = ("Button", "Input", "Select", "Combo", "Checkbox", "Radio", "Table", "Tabs")
+        # 类型必须精确比对短名：Panel/TableLayoutPanel 等不可聚焦容器 TabStop 恒 false，
+        # 子串匹配（"Table" 命中 TableLayoutPanel）会造出一堆假告警（首版实测 connection-rdp 9 处空名容器）。
+        unreachable = [n for (n, _a, _b, _c, _d) in all_nodes
+                       if n.get("visible") and n.get("enabled", True)
+                       and (n.get("type") or "").split(".")[-1] in INTER_TYPES
+                       and n.get("tabStop") is False]
+        check(len(unreachable) == 0, "键盘可达性: 交互叶 TabStop=false 数=%d" % len(unreachable))
+        for n in unreachable[:5]:
+            check(False, "键盘不可达 %s[%s]" % (n.get("name") or n.get("type", "?").split(".")[-1],
+                                                n.get("text") or ""))
+
+        # R5 停靠遮挡（change 2026-09-25 D5 新增）：同父可见兄弟中 Dock=Fill 与非 Fill 边停靠
+        # （Top/Bottom/Left/Right）不得相交 —— 这是“工具栏/表头盖住表体”类布局 bug 的可测签名，
+        # 原重叠规则因“Dock!=None 一律跳过”漏判（CI 321 scanner-center 工具栏盖住两表表头 56px 即此）。
+        # 口径来自 CI 321 全量实测：命中仅 scanner-center（本次修复）与 dangerous-cmd 3 处（存量债、
+        # 不在本 change 范围，登记待后续 change 处理，故按前缀豁免）；其余 16 份 dump 零命中。
+        # 注：C# 侧 UiSmokeRunner.AssertNoDockOverlap 同口径且真在 CI 里跑，本规则用于事后审查产物。
+        EDGE = ("Top", "Bottom", "Left", "Right")
+        if fname.startswith("dangerous-cmd"):
+            check(True, "停靠遮挡免判(dangerous-cmd 存量债)")
+        else:
+            dock_ov = 0
+            # tree 自身（窗体根）也要比：scanner-center 的工具栏 vs SplitContainer 就是根级兄弟
+            for parent, _pa, _pn, _pnode, _pkey in [(tree, None, "", None, "ROOT")] + walk(tree):
+                vis = [c for c in _kids(parent) if c.get("visible")]
+                for i in range(len(vis)):
+                    for j in range(i + 1, len(vis)):
+                        a, b = vis[i], vis[j]
+                        da, db = a.get("dock"), b.get("dock")
+                        if not ((da == "Fill" and db in EDGE) or (db == "Fill" and da in EDGE)):
+                            continue
+                        ov = intersect(a.get("abs", {}), b.get("abs", {}))
+                        if ov > 0:
+                            dock_ov += 1
+                            check(False, "停靠遮挡 %s[%s](%s) vs %s[%s](%s) 交叠%dpx²" % (
+                                _nm(a), a.get("type", "").split(".")[-1], da,
+                                _nm(b), b.get("type", "").split(".")[-1], db, ov))
+            if dock_ov == 0:
+                check(True, "停靠无遮挡=0")
 
     print()
     if FAIL:
