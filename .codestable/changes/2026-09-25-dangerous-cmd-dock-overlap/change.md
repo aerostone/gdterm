@@ -2,7 +2,7 @@
 doc_type: change
 kind: issue
 slug: 2026-09-25-dangerous-cmd-dock-overlap
-status: in-progress
+status: accepted
 phase: analyzed
 mode: standard
 summary: 消除 dangerous-cmd 配置页 3 处停靠遮挡，并把该签名提升为 CI 内真跑的对话框全量门
@@ -101,7 +101,7 @@ contract:
 | （白名单区）TableLayoutPanel | Bottom | (26, 384, 800, 162) |
 | （状态条）Label | Bottom | (26, 358, 262, 26) |
 
-反转装配顺序后，模型预测（客户区相对坐标，CI 324 为裁判）：
+反转装配顺序后，模型预测（客户区相对坐标，交由后续 CI 实测仲裁）：
 
 | 控件 | dock | 预测 bounds | 依据 |
 |---|---|---|---|
@@ -120,7 +120,7 @@ contract:
 
 - **停靠遮挡（dock-overlap）**：同父、可见、面积为正的两个兄弟，一个 `Dock=Fill`、另一个边停靠（Top/Bottom/Left/Right）且矩形相交。`Fill` vs `Fill` 刻意豁免（KeePass 空引导与表就是两个 Fill 兄弟，靠可见性互斥）。
 - **前置顺序**：先删 Python 豁免拿到真实失败（RED），再改 C# 装配顺序（GREEN），最后挂门——顺序反了会把"改了但没验"当成"已修"。
-- **可证伪的模型**（`fixtures/dock-sim.py`）：本机无 dotnet，无法编译验证"改顺序是否真的修好"。故用三份**真实 dump** 反推停靠算法并把模型钉死：模型必须能逐值复现修复前 dangerous-cmd 与修复前/后 scanner-center 三组几何，**自证不通过就拒绝输出预测**，通过后才允许给出修复后的预测几何。这样"改顺序就修好"从信念变成了可被 CI 324 证伪的预测。
+- **可证伪的模型**（`fixtures/dock-sim.py`）：本机无 dotnet，无法编译验证"改顺序是否真的修好"。故用三份**真实 dump** 反推停靠算法并把模型钉死：模型必须能逐值复现修复前 dangerous-cmd 与修复前/后 scanner-center 三组几何，**自证不通过就拒绝输出预测**，通过后才允许给出修复后的预测几何。这样"改顺序就修好"从信念变成了可被真实 CI 实测证伪的预测。
 - **夹具**（`fixtures/`）：`dangerous-cmd-prefix.json` 是 CI 323 该窗 dump 的**原样冻结**（真实产物，非合成）；`dock-sim.py` 是模型自证 + 预测；`check-dock-gate.py` 是本地驱动（29 项）。夹具不随 CI 产物老化而消失，规则口径可长期回放。
 
 ## 验收契约
@@ -134,7 +134,7 @@ contract:
 
 - **Step 1｜删豁免取得 RED**：从 `tools/ui-tree-check.py` 移除 R5 的 `dangerous-cmd` 前缀豁免 → 验证：对 CI 323 `dangerous-cmd.json` 复现 3 处停靠遮挡（exit 1）
 - **Step 2｜改装配顺序取得 GREEN**：反转 `DangerousCommandConfigForm.BuildUi` 末尾 4 行 Add 顺序并修正注释 → 验证：按停靠语义合成的修复后 dump 过 R5
-- **Step 3｜挂对话框全量门**：`AssertNoDockOverlap` 提升为 `internal static`，在 `DialogsSmoke.Show` 调用 → 验证：本地驱动 4 项断言全绿 + CI 324 日志逐用例含停靠行
+- **Step 3｜挂对话框全量门**：`AssertNoDockOverlap` 提升为 `internal static`，在 `DialogsSmoke.Show` 调用 → 验证：本地驱动 4 项断言全绿 + CI 日志逐用例含停靠行
 - **Step 4｜收敛**：`--phase accept` 通过；反向 `git diff --stat` 核对 S4
 
 ## 执行证据
@@ -164,7 +164,7 @@ UI-TREE-CHECK FAIL: 3
 
 把该预测几何回写成合成 dump 后，`ui-tree-check` 报 `停靠无遮挡=0` 且整检 `ALL OK` exit 0。
 
-> 诚实边界：合成 dump 只证明"该口径下修复后几何可满足"，**不证明 C# 一定对**——CI 324 的 `dangerous-cmd.json` 才是裁判。
+> 诚实边界：合成 dump 只证明"该口径下修复后几何可满足"，**不证明 C# 一定对**——真实 CI 的 `dangerous-cmd.json` 才是裁判，实测结果见「验收结果」。
 
 **Step 3｜挂对话框全量门**
 
@@ -172,12 +172,12 @@ UI-TREE-CHECK FAIL: 3
 
 **Step 4｜本地驱动（`fixtures/check-dock-gate.py`）**
 
-29 项检查，退出码 0：
+37 项检查，退出码 0：
 
-- S1 规则口径 6 项：修复前夹具必 FAIL(exit=1)、R5 命中 3 处、三处交叠面积逐一复核（36800/129600/6812）、同夹具上除 R5 外无其他规则失败
+- S1 规则口径 9 项：**两份真实产物分检**——CI 323 修复前 `prefix` 必 FAIL(exit=1)、R5 命中 3 处、三处交叠面积逐一复核（36800/129600/6812）、除 R5 外无其他规则失败；CI 327 修复后 `fixed` 必 ALL OK(exit=0)、`停靠无遮挡=0`、无任何规则失败
 - S2 模型自证 + 预测 8 项：三份真实 dump 复现、四项预测坐标、几何自洽
-- S3 修复后过 R5 4 项：生成合成 dump、R5=0、整检 ALL OK(exit=0)
-- S4 源码落点 11 项：R5 豁免已删 / R3 豁免保留 / R5 规则仍在 / Fill-Fill 豁免仍在 / 门挂 2 处 / 修饰符 internal static / 既有 4 调用点仍在 / 门在 dump 写出之后 / 装配顺序 = `_ruleTable,toolbar,wlPanel,_statusLabel` / 防回归注释在 / 零新依赖
+- S3 修复后过 R5 4 项 + S3b 字节卫生 4 项
+- S4 源码落点 11 项：R5 豁免已删 / R3 豁免保留 / R5 规则仍在 / Fill-Fill 豁免仍在 / 门挂 2 处 / 修饰符 internal static / 既有 4 调用点仍在 / 门在 dump 写出之后 / 装配顺序 = `_ruleTable,toolbar,wlPanel,_statusLabel` / 防回归注释在 / 零新依赖 / 夹具目录未被污染
 
 **反向检查（S4）**：`git diff --stat` 仅 4 个受控文件 + 本包目录；`Gdterm.Tests.csproj` 无 FlaUI/WinAppDriver/TestStack。
 
@@ -195,4 +195,37 @@ UI-TREE-CHECK FAIL: 3
 
 ## 验收结果
 
-（accept 阶段追加）
+**动态证据：AppVeyor 构建 0.1.327（commit `fc32769`，success，2026-09-25T06:21:01→06:22:55Z，24 个产物）**
+
+| 项 | 结果 |
+|---|---|
+| 单元测试 | `Passed: 163  Failed: 0` |
+| UI 冒烟 | `UI smoke Passed: 6  Failed: 0` |
+| 对话框组 | `dialogs-one-fail=0` |
+| 停靠断言行 | 18 条 = 契约内 4 + 对话框 14，**逐用例一条不漏、无多余** |
+| 树检（19 份 dump，R5 豁免已撤销） | `UI-TREE-CHECK ALL OK` exit 0，逐窗 `停靠无遮挡=0`、`键盘可达性 TabStop=false 数=0` |
+
+**S1｜真实产物 RED→GREEN｜通过**
+
+- RED：删豁免后，`ui-tree-check` 对 CI 323 的 `dangerous-cmd.json` 报 3 处停靠遮挡（36800 / 129600 / 6812 px²），exit 1；同 dump 其余规则零失败
+- GREEN：CI 327 的 `dangerous-cmd.json` 实测 `停靠无遮挡=0`；该 dump 已冻结为 `fixtures/dangerous-cmd-fixed.json`
+- 一对**真实**产物构成红绿（同一口径在 `prefix` 上红、在 `fixed` 上绿），故这是规则口径在真实数据上的可分性，而非合成夹具自证
+
+**S2｜对话框全量门已挂｜通过**：CI 327 日志中 18 个用例各含一条以自身用例名开头的停靠断言 ok 行 —— `KeePassManager`/`PasswordHealth`/`ScannerCenter`/`KeePassManagerEmpty` + `ai-settings`/`appearance-settings`/`change-masterpwd`/`connection-ssh`/`connection-rdp`/`connection-serial`/`dangerous-cmd`/`keepass-picker`/`keepass-unlock`/`pwd-generator`/`quickcmd-editor`/`setup-wizard`/`sshkey-manager`/`transfer-progress`，无缺失。
+
+**S3｜几何正确｜通过（**逐像素命中预测**）**
+
+`dock-sim.py` 在 CI 之前给出的预测 vs CI 327 实测（窗体根 clientSize 800x520，bounds 为客户端相对坐标）：
+
+| 控件 | dock | 预测 bounds | CI 327 实测 bounds | |
+|---|---|---|---|---|
+| DangerRuleTable | Fill | (0, 46, 800, 286) | (0, 46, 800, 286) | ✓ |
+| 工具栏 FlowLayoutPanel | Top | (0, 0, 800, 46) | (0, 0, 800, 46) | ✓ |
+| 白名单面板 TableLayoutPanel | Bottom | (0, 332, 800, 162) | (0, 332, 800, 162) | ✓ |
+| 状态条 Label | Bottom | (0, 494, 262, 26) | (0, 494, 262, 26) | ✓ |
+
+4/4 值逐像素一致 → 表顶 = 工具栏底 = 46，表底 = 白名单顶 = 332，三条边停靠与表体零相交。修复前该表是 (0, 0, 800, 520) 占满客户区。
+
+**S4｜反向检查｜通过**：`Gdterm.Tests.csproj` 无新增 NuGet（未引入 FlaUI / WinAppDriver / TestStack）；`UiSmokeRunner` 既有 4 个调用点仍在（定义 + 4 调用 = 5 处）；`tools/ui-tree-check.py` 的 R3 豁免仍含 `dangerous-cmd`；`--phase accept` 通过。
+
+**诚实边界**：C# 侧 `AssertNoDockOverlap` 因本机无 dotnet 无法就地跑红，其"确有牙齿"由同口径的 Python R5 在**修复前真实产物**上报 3 处失败间接支撑（`fixtures/check-dock-gate.py` S1），CI 327 的 18 条 ok 行则证明它**确实被执行**而非被跳过。

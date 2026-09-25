@@ -40,17 +40,34 @@ def read(rel):
         return fh.read()
 
 
-print("=== S1 规则口径：R5 对危险签名红、对修复后几何绿（真实 CI 产物夹具）===")
-rc, out = run([sys.executable, CHECKER, FIX])
-ok(rc == 1, "修复前夹具必须 FAIL(exit=1)", "exit=%d" % rc)
-n_r5 = out.count("FAIL: 停靠遮挡")
-ok(n_r5 == 3, "R5 命中 3 处（工具栏/白名单/状态条 各压住表体）", "命中=%d" % n_r5)
+print("=== S1 规则口径：同一口径对修复前必红、对修复后必绿（两份真实 CI 产物）===")
+
+
+def only(fixture):
+    """把单个夹具放进独立临时目录送检 —— 两份夹具必须分开检，
+    否则负向夹具的 3 处失败会混进正向结果里（首版即栽在此）。"""
+    d = tempfile.mkdtemp(prefix="dockgate-one-")
+    shutil.copy(os.path.join(FIX, fixture), d)
+    rc, out = run([sys.executable, CHECKER, d])
+    shutil.rmtree(d, ignore_errors=True)
+    return rc, out
+
+
+rc, out = only("dangerous-cmd-prefix.json")
+ok(rc == 1, "[负向] CI 323 修复前产物必须 FAIL(exit=1)", "exit=%d" % rc)
+ok(out.count("FAIL: 停靠遮挡") == 3, "[负向] R5 命中 3 处（工具栏/白名单/状态条 各压住表体）",
+   "命中=%d" % out.count("FAIL: 停靠遮挡"))
 for kw, label in (("36800", "工具栏 Top vs 表 Fill 36800px²"),
                   ("129600", "白名单 Bottom vs 表 Fill 129600px²"),
                   ("6812", "状态条 Bottom vs 表 Fill 6812px²")):
-    ok(kw in out, "交叠面积复核 " + label)
+    ok(kw in out, "[负向] 交叠面积复核 " + label)
 other = [ln for ln in out.splitlines() if ln.startswith("  FAIL:") and "停靠遮挡" not in ln]
-ok(not other, "同一夹具上除 R5 外无其他规则失败", "其他失败=%d" % len(other))
+ok(not other, "[负向] 同夹具上除 R5 外无其他规则失败", "其他失败=%d" % len(other))
+
+rc, out = only("dangerous-cmd-fixed.json")
+ok(rc == 0, "[正向] CI 327 修复后产物必须 ALL OK(exit=0)", "exit=%d" % rc)
+ok("停靠无遮挡=0" in out, "[正向] R5 报 0 处遮挡")
+ok(not [ln for ln in out.splitlines() if ln.startswith("  FAIL:")], "[正向] 无任何规则失败")
 
 print("=== S2 停靠模型自证 + 修复后几何预测（可证伪）===")
 # 注意：SIM 会把预测几何写成 dump 文件，故一律指向临时目录，绝不写进 fixtures/
@@ -111,7 +128,7 @@ try:
 except SyntaxError as e:
     ok(False, "tools/ui-tree-check.py 语法可解析", str(e))
 
-print("=== S4 源码落点（静态断言，动态由 CI 324 仲裁）===")
+print("=== S4 源码落点（静态断言，动态由 CI 实测仲裁）===")
 chk = read("tools/ui-tree-check.py")
 ok("停靠遮挡免判(dangerous-cmd" not in chk, "R5 的危险命令前缀豁免已撤销（规则不再对已修缺陷失灵）")
 ok('"dangerous-cmd"' in chk, "R3 关闭绑定豁免仍保留 dangerous-cmd（无关闭语义属设计）")
@@ -142,9 +159,9 @@ csproj = read("src/Gdterm.Tests/Gdterm.Tests.csproj")
 ok("FlaUI" not in csproj and "WinAppDriver" not in csproj and "TestStack" not in csproj,
    "零新依赖：未引入 FlaUI/WinAppDriver/TestStack")
 
-gen = [f for f in os.listdir(FIX) if f.endswith(".json")] 
-ok(gen == ["dangerous-cmd-prefix.json"],
-   "驱动未向 fixtures/ 写入生成物（只留真实产物夹具）", "实际=" + ",".join(sorted(gen)))
+gen = sorted(f for f in os.listdir(FIX) if f.endswith(".json"))
+ok(gen == ["dangerous-cmd-fixed.json", "dangerous-cmd-prefix.json"],
+   "驱动未向 fixtures/ 写入生成物（只留两份真实产物夹具）", "实际=" + ",".join(gen))
 
 print()
 print("DOCK-GATE-CHECK %s  (%d 项检查，%d 失败)" %
