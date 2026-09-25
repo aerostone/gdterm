@@ -186,7 +186,7 @@ sequenceDiagram
   （键盘可达），证据 = CI 321 全 18 份 dump（主窗以外零命中；主窗 11 处走 mainform 分支不覆盖）；
   规则落在 ui-tree-check.py R4，注释里写明口径来源。
 - S6 停靠遮挡（D5）：PostFix 的 scanner-center dump 中"Fill vs 边停靠"交叠 = 0，且 C# 冒烟
-  `AssertNoDockOverlap` 在 4 个用例全 ok（CI 322 证据）；反向：dock-overlap.json 夹具必须报错。
+  `AssertNoDockOverlap` 在 4 个用例全 ok（CI 323 证据）；反向：dock-overlap.json 夹具必须报错。
 - 反向核对：不新增 NuGet（grep csproj 无新增 PackageReference）；不改 MainForm（git diff 无 MainForm.cs）；不断言"点了真关"之外的关闭语义变更。
 
 ### 4. 与项目级架构文档的关系

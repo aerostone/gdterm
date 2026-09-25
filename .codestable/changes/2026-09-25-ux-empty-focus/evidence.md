@@ -13,7 +13,7 @@ created: 2026-09-25
 ### 阶段：impl（2026-09-25）
 
 **本地约束**：本机无 dotnet/mono/msbuild/wine，WinForms 不可编译、不可运行。故本地证据 = 静态契约驱动 +
-夹具（Python），动态证据 = CI 322 的冒烟截图/dump。与 2026-09-24 可交互性 change 同一模式。
+夹具（Python），动态证据 = CI 323 的冒烟截图/dump（CI 322 是上一包口径修正的构建）。与 2026-09-24 可交互性 change 同一模式。
 
 **1) RED（实现前）**：`fixtures/check-ux-empty.py` 一份驱动对三个窗体 + 冒烟 + 树检做 26 项契约检查，
 实现前 15 项 S1–S4 全红（exit 1），逐条对应 S1 引导 Name/文案/两态显隐、S2 空态开关与右列 pad、
@@ -56,8 +56,8 @@ S3 状态行字段与两处赋值、S4 KeyPreview/Escape/两分支。
 - 偏离 5（范围）：发现并修复 scanner-center 根级 Dock 顺序 + 右列表头遮挡（D5），两者均在设计决策之外，
   按"发现即记录"处理：写进 D5 + 行为增量 + 本节，并补 CI 门与树检规则，而非静默扩大改动。
 
-**7) 尚未取证（等 CI 322）**：C# 侧 4 处 `AssertNoDockOverlap`、三种空态断言、ESC/KeyPreview 断言、
-`keepass-manager-empty.png/json` 新 artifact——需 CI 322 全绿才算 S1/S2/S4/S6 闭环。
+**7) 动态取证（已由 CI 323 完成，见下）**：C# 侧 4 处 `AssertNoDockOverlap`、三种空态断言、ESC/KeyPreview 断言、
+`keepass-manager-empty.png/json` 新 artifact——CI 323 全绿后 S1/S2/S4/S6 已闭环（见 accept 段）。
 
 ### 阶段：accept（2026-09-25）
 
