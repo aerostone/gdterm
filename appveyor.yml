@@ -53,6 +53,21 @@ test_script:
       if ($LASTEXITCODE -ne 0) { throw "UI smoke failed exit=$LASTEXITCODE" }
       Get-ChildItem $smokeDir -Filter *.png | ForEach-Object { Push-AppveyorArtifact $_.FullName -FileName ("ui-smoke/" + $_.Name) }
       Get-ChildItem $smokeDir -Filter *.json | ForEach-Object { Push-AppveyorArtifact $_.FullName -FileName ("ui-smoke/" + $_.Name) }
+      # ===== 全控件树校验门（R1-R5）=====
+      # 刻意放在产物上传之后：门即使红了，PNG/JSON 仍在产物里可诊断（先留证据、再宣判）
+      # 零第三方依赖（仅 stdlib），故无需 pip install
+      $py = (Get-Command python -ErrorAction SilentlyContinue).Source
+      $pyArgs = @()
+      if (-not $py) {
+        $py = (Get-Command py -ErrorAction SilentlyContinue).Source
+        if ($py) { $pyArgs = @("-3") }
+      }
+      if (-not $py) { throw "python not found - ui-tree-check gate cannot run (refusing to silently skip)" }
+      $env:PYTHONIOENCODING = "utf-8"
+      $env:PYTHONUTF8 = "1"
+      Write-Host "Running ui-tree-check gate -> $smokeDir"
+      & $py @pyArgs tools\ui-tree-check.py $smokeDir
+      if ($LASTEXITCODE -ne 0) { throw "ui-tree-check gate failed exit=$LASTEXITCODE" }
 
 after_test:
   - ps: |

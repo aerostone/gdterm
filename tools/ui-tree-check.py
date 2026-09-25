@@ -12,7 +12,7 @@ R4 键盘可达性：交互叶 TabStop=false 数必须为 0（精确短名匹配
 R5 停靠遮挡：同父可见兄弟中 Dock=Fill 与边停靠(Top/Bottom/Left/Right)不得相交 ——
    "工具栏/表头盖住表体"类布局 bug 的可测签名；Fill vs Fill 豁免（同格覆盖层靠可见性互斥）。
 
-另含：兄弟重叠（交叠面积 > OVERLAP_MIN(16px²)，过滤包含关系）、子越界（容差 TOL(2px)）、
+另含：兄弟重叠（交叠面积 > OVERLAP_MIN(16px2)，过滤包含关系）、子越界（容差 TOL(2px)）、
 零尺寸可见叶、表行高 24-34、AntdUI.Button 左右 padding 全 0。
 
 用法: python3 tools/ui-tree-check.py <jsonDir>
@@ -24,7 +24,7 @@ import sys
 
 FAIL = []
 TOL = 2          # 越界容差 px
-OVERLAP_MIN = 16  # 重叠告警阈值 px²（4x4）
+OVERLAP_MIN = 16  # 重叠告警阈值 px2（4x4）
 HIT_MIN = 32      # 最小触击目标 px（R1；change 2026-09-24 定稿，44 噪音过大否决）
 
 
@@ -149,7 +149,7 @@ def main():
                 if a.get("dock") != "None" or b.get("dock") != "None":
                     continue
                 overlaps += 1
-                check(False, "重叠 %s[%s]%s vs %s[%s]%s 交叠%dpx²" % (
+                check(False, "重叠 %s[%s]%s vs %s[%s]%s 交叠%dpx2" % (
                     a.get("name") or "?", a.get("type", "").split(".")[-1], a.get("abs"),
                     b.get("name") or "?", b.get("type", "").split(".")[-1], b.get("abs"), ov))
         if overlaps == 0:
@@ -319,7 +319,7 @@ def main():
                     ov = intersect(a.get("abs", {}), b.get("abs", {}))
                     if ov > 0:
                         dock_ov += 1
-                        check(False, "停靠遮挡 %s[%s](%s) vs %s[%s](%s) 交叠%dpx²" % (
+                        check(False, "停靠遮挡 %s[%s](%s) vs %s[%s](%s) 交叠%dpx2" % (
                             _nm(a), a.get("type", "").split(".")[-1], da,
                             _nm(b), b.get("type", "").split(".")[-1], db, ov))
         if dock_ov == 0:
