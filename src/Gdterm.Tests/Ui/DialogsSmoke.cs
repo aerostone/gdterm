@@ -103,6 +103,10 @@ namespace Gdterm.Tests.Ui
                     Application.DoEvents();
                     int n = Count(f);
                     check(n > 5, name + "-controls=" + n + " (>5)");
+                    // R3 关闭绑定（change 2026-09-24）：免判清单——transfer-progress（进度窗无
+                    // 关闭语义）、pwd-generator（工具小窗点×关）、setup-wizard（向导[上一步/下一步]导航）。
+                    if (name != "transfer-progress" && name != "pwd-generator" && name != "setup-wizard")
+                        check(f.CancelButton != null, name + "-cancelbtn(ESC绑定)");
                     check(f.ClientSize.Width > 200 && f.ClientSize.Height > 150,
                         name + "-client=" + f.ClientSize.Width + "x" + f.ClientSize.Height);
                     File.WriteAllText(Path.Combine(outDir, name + ".json"), UiTreeDumper.Dump(f), System.Text.Encoding.UTF8);

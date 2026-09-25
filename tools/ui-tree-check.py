@@ -17,6 +17,7 @@ import sys
 FAIL = []
 TOL = 2          # 越界容差 px
 OVERLAP_MIN = 16  # 重叠告警阈值 px²（4x4）
+HIT_MIN = 32      # 最小触击目标 px（R1；change 2026-09-24 定稿，44 噪音过大否决）
 
 
 def check(ok, what):
@@ -199,6 +200,61 @@ def main():
                 p = n.get("padding", {})
                 if p.get("l", 1) == 0 and p.get("r", 1) == 0:
                     check(False, "按钮左右padding=0(贴边风险) %s[%s]" % (n.get("name") or "?", n.get("text", "")))
+
+        # R1 最小触击目标：可见可交互控件 abs 宽高至少一维 >= HIT_MIN。
+        # 口径：visible && enabled && 子节点为空（叶）&& 非线型（Divider h<=2 豁免沿用零尺寸口径）。
+        # 免判 R1-1：文本为 … 的溢出钮（窄窗唯一入口，设计取舍，沿用越界免判②）。
+        small = 0
+        for n, _, _, _ in all_nodes:
+            if not n.get("visible") or not n.get("enabled", True):
+                continue
+            if n.get("children"):
+                continue
+            a = n.get("abs", {})
+            if a.get("w", 0) <= 0 or a.get("h", 0) <= 0:
+                continue  # 零尺寸规则已判，不重复
+            if "Divider" in n.get("type", "") and a.get("h", 99) <= 2:
+                continue
+            if (n.get("text") or "") == "\u2026":
+                continue
+            if a.get("w", 0) < HIT_MIN and a.get("h", 0) < HIT_MIN:
+                small += 1
+                check(False, "触击过小 %s[%s]%dx%d<%d" % (
+                    n.get("name") or "?", n.get("type", "").split(".")[-1],
+                    a.get("w", 0), a.get("h", 0), HIT_MIN))
+        if small == 0:
+            check(True, "触击目标=0")
+
+        # R2 焦点链：同父容器 TabStop=true 控件 TabIndex 无重复（缺字段的老 dump 跳过）。
+        dup = 0
+        by_parent_tab = {}
+        for n, _pabs, pname, _pnode in all_nodes:
+            if not n.get("visible"):
+                continue
+            if not n.get("tabStop"):
+                continue
+            if "tabIndex" not in n:
+                continue  # 老 dump 无字段：跳过，不断言
+            by_parent_tab.setdefault(pname, {}).setdefault(n.get("tabIndex"), []).append(n)
+        for pname, idxmap in by_parent_tab.items():
+            for idx, group in idxmap.items():
+                if len(group) > 1:
+                    dup += 1
+                    check(False, "TabIndex重复 %s 在容器 %s (%d个)" % (
+                        idx, pname, len(group)))
+        if dup == 0:
+            check(True, "焦点链无重复TabIndex")
+
+        # R3 关闭绑定：每窗至少一个关闭路径（名含 Close/Cancel/OK/确定/取消/关闭其一）。
+        # 免判 R3-1（2026-09-24 定稿）：transfer-progress（进度窗）、pwd-generator（工具小窗）、
+        # setup-wizard（向导上一步/下一步导航，无关闭语义）。
+        if fname.startswith(("transfer-progress", "pwd-generator", "setup-wizard")):
+            check(True, "关闭绑定免判(" + fname + ")")
+        else:
+            closelike = [n for (n, _, _, _) in all_nodes
+                         if any(k in (n.get("name") or "") + (n.get("text") or "")
+                                 for k in ("Close", "Cancel", "OK", "Ok", "确定", "取消", "关闭"))]
+            check(len(closelike) > 0, "关闭路径=%d(>0, Close/Cancel/OK/确定/取消/关闭)" % len(closelike))
 
     print()
     if FAIL:

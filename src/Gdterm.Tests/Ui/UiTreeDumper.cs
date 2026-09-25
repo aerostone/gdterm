@@ -50,6 +50,8 @@ namespace Gdterm.Tests.Ui
             sb.Append("\"dock\":\"").Append(c.Dock).Append("\",");
             sb.Append("\"anchor\":\"").Append(c.Anchor).Append("\",");
             sb.Append("\"autoSize\":").Append(c.AutoSize ? "true" : "false").Append(",");
+            sb.Append("\"tabIndex\":").Append(c.TabIndex).Append(",");
+            sb.Append("\"tabStop\":").Append(c.TabStop ? "true" : "false").Append(",");
             sb.Append("\"visible\":").Append(c.Visible ? "true" : "false").Append(",");
             sb.Append("\"enabled\":").Append(c.Enabled ? "true" : "false").Append(",");
             sb.Append("\"font\":\"").Append(Esc(c.Font.Name + " " + c.Font.SizeInPoints.ToString("0.##") + "pt")).Append("\",");
