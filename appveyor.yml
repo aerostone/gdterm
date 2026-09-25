@@ -68,6 +68,11 @@ test_script:
       Write-Host "Running ui-tree-check gate -> $smokeDir"
       & $py @pyArgs tools\ui-tree-check.py $smokeDir
       if ($LASTEXITCODE -ne 0) { throw "ui-tree-check gate failed exit=$LASTEXITCODE" }
+      # ===== 编码守卫：全仓文本必须是合法 UTF-8，BOM 只许出现在白名单内 =====
+      # 与 .editorconfig 同口径（.ps1 带 BOM，其余纯 UTF-8）；仅 stdlib，无 pip 依赖
+      Write-Host "Running encoding guard"
+      & $py @pyArgs tools\check-encoding.py
+      if ($LASTEXITCODE -ne 0) { throw "encoding guard failed exit=$LASTEXITCODE" }
 
 after_test:
   - ps: |

@@ -1,4 +1,4 @@
-# pack-release.ps1 — build portable single-folder release for gdterm
+﻿# pack-release.ps1 — build portable single-folder release for gdterm
 # Requires: Windows + MSBuild (VS 2017+ / Build Tools) + .NET Framework 4.6.2 targeting pack
 #
 # Usage (from repo root):

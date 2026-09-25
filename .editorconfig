@@ -1,0 +1,21 @@
+# .editorconfig — 编码与换行的单一事实来源
+# 机检同口径实现：tools/check-encoding.py（已接入 AppVeyor 的 test_script 门）
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+# 文本源码与文档：纯 UTF-8，不带 BOM。
+# 依据：Roslyn 对无 BOM 源码先按 UTF-8 严格解码（EncodedStringText.cs），
+# 失败才回退系统码页；.md 的 frontmatter 解析依赖首字节为 '---'；
+# .py 的 shebang 必须在第 0 字节（BOM 会让 ast.parse 直接报 U+FEFF）。
+[*.{cs,csproj,sln,md,json,yml,yaml,txt,sh,xml,nuspec}]
+charset = utf-8
+
+# Windows PowerShell 5.1 对无 BOM 脚本按系统 ANSI 码页解释，含中文即乱码
+# （tools/pack-release.ps1 曾因此把提示文本读坏）。故 .ps1 一律带 BOM，
+# 与 tools/build-freerdp.ps1 的既有形态一致。
+[*.ps1]
+charset = utf-8-bom
