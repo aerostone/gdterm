@@ -2,7 +2,7 @@
 doc_type: change
 kind: feature
 slug: 2026-09-25-ux-empty-focus
-status: in-progress
+status: accepted
 mode: standard
 summary: 空状态引导 + 焦点可见性 R4 + 工具窗可达性补齐
 tags: [ux, empty-state, focus, a11y]
@@ -202,51 +202,40 @@ sequenceDiagram
 
 ## 执行证据
 
-### 阶段：impl（2026-09-25）
+详见 `evidence.md`（拆出以遵守 change.md ≤300 行）。要点：
 
-**本地约束**：本机无 dotnet/mono/msbuild/wine，WinForms 不可编译、不可运行。故本地证据 = 静态契约驱动 +
-夹具（Python），动态证据 = CI 322 的冒烟截图/dump。与 2026-09-24 可交互性 change 同一模式。
+- **本地约束**：本机无 dotnet/mono/msbuild/wine，WinForms 不可编译 → 本地证据 = 静态契约驱动
+  `fixtures/check-ux-empty.py`（26 项，RED 15 红 → GREEN 全绿）+ 把新控件按 `UiTreeDumper` 口径合成进
+  CI 真实 dump 后用 `tools/ui-tree-check.py` 复验几何。
+- **RED（实现前）**：驱动 15 项全红（exit 1）；`R5 停靠遮挡` 对 CI 321 真实产物报 3 处 FAIL（exit 1）。
+- **GREEN**：驱动 26 项全 ok（exit 0）；`fixtures/dock-overlap.json` 报 2 FAIL、`dock-clean.json` 全绿；
+  对 CI 323 全量 dump 报 `UI-TREE-CHECK ALL OK`。
+- **实现期偏离 5 条**（KeePass 无"连接库"入口 → 用已有 添加/刷新；ScanRunner 不可取消 → ESC 改上下文守卫；
+  健康状态行改与评分同行；TLP 补 ColumnStyles 否则内容偏左；scanner 根级 Dock 顺序与右列遮挡属设计外
+  新发现，已登记并补门）逐条记在 evidence.md。
+- **未取证项**（本地不可得）：C# 运行期断言、截图、dump → 由 CI 提供。
 
-**1) RED（实现前）**：`fixtures/check-ux-empty.py` 一份驱动对三个窗体 + 冒烟 + 树检做 26 项契约检查，
-实现前 15 项 S1–S4 全红（exit 1），逐条对应 S1 引导 Name/文案/两态显隐、S2 空态开关与右列 pad、
-S3 状态行字段与两处赋值、S4 KeyPreview/Escape/两分支。
+## 验收结果
 
-**2) GREEN（实现后）**：同一驱动 26 项全 ok（exit 0）。命令：
-`python .codestable/changes/2026-09-25-ux-empty-focus/fixtures/check-ux-empty.py`（需在仓库根跑）。
+对照 `### 3. 验收契约` 的 S1–S6 逐条判定（证据与命令见 `evidence.md`）：**6/6 通过**。
 
-**3) 几何验证（本机可做的最强近似）**：把新控件按 `UiTreeDumper` 的口径合成进 CI 321 的真实 dump，
-再用 `tools/ui-tree-check.py` 复验，避免"本地不可跑 → 上线才发现重叠/越界"：
-- `password-health`：新状态行 abs=(405,140,395,24)，与评分标签 x 向隔 10px、与摘要标签 y 向隔 6px、
-  右缘 800 < 父右缘 830 → 全绿（首版按 12/26 放会与摘要标签交叠 3000px²，被树检当场判红后改位）。
-- `keepass-manager`：空库引导层按"与表同格 + Dock=Fill"合成 → 兄弟重叠 0、越界 0、R1/R2/R4 均 0。
-- `scanner-center`：空态提示 + 右列 pad 对齐合成 → 全绿。
+**CI 323**（Appveyor build 0.1.323，commit 82eb57c，24 artifacts）：单测 `Passed 163 / Failed 0`；
+UI 冒烟 `Passed 6 / Failed 0`（含新用例 KeePassManagerEmpty）；`dialogs-one-fail=0`。
 
-**4) D5 新规则的红绿（真实产物，非构造）**：
-- RED：`python tools/ui-tree-check.py /tmp/ci321`（CI 321 原始 18 份 dump）→ `UI-TREE-CHECK FAIL: 3`，
-  全部来自 scanner-center：工具栏(Top) vs SplitContainer(Fill) 交叠 53760px²、FindingHeader(Top) vs
-  FindingTable(Fill) 15552px²、原始输出(Top) vs Input(Fill) 15552px²。**其中第一处正是"表头看不见"的根因**
-  ——旧重叠规则对"Dock≠None 的一律跳过"结构性地看不见它，只有像素探针才暴露。
-- GREEN（夹具）：`fixtures/dock-overlap.json` → 2 FAIL（exit 1）；`fixtures/dock-clean.json` → 全绿（exit 0）。
-  命令：`python tools/ui-tree-check.py .codestable/changes/2026-09-25-ux-empty-focus/fixtures`。
-- 全量 18 份 dump 的该签名命中统计：scanner 3（本次修复）+ dangerous-cmd 3（存量、非本 change 文件、
-  已在树检按前缀豁免并登记）+ 其余 16 份 0。
+| 场景 | 判据 | 结果 |
+|---|---|---|
+| S1 空态引导 | 空库时引导层可见、有条目时不可见 | ✅ dump：空库可见（标题中心 = 父中心 376，水平居中），2 条目时 `visible=false` |
+| S2 空态与对齐 | 三处空态提示可见 + 右列左距一致 | ✅ 三提示均 ok；两表 `Left=8/8` |
+| S3 健康状态行 | 文案以 `上次扫描：` 开头且非占位符 | ✅ 实测 `上次扫描：04:22:11 · 2 个条目` |
+| S4 scanner ESC | KeyPreview + 运行中不关/空闲关 | ✅ CI 断言 KeyPreview；分支逻辑见 evidence.md |
+| S5 R4 键盘可达性 | 交互叶 TabStop=false 数 = 0 | ✅ 19 份 dump 逐份 0 |
+| S6 停靠遮挡门 | C# 门 4 用例实跑 0 处 + R5 全绿 | ✅ 4 用例打印 `停靠无遮挡(0 处)` |
+| 反向 | 无新 NuGet / 无 MainForm 改动 / 改动全在契约内 | ✅ 5 源文件 + tools/ui-tree-check.py |
 
-**5) 反向核对**：`git diff --stat` 只含 5 个契约内文件（三窗体 + UiSmokeRunner + FakeKeePassService）
-与 tools/ui-tree-check.py；无新增 PackageReference；无 MainForm.cs 改动；无新 NuGet。
-`/tmp/cs-balance.py`（剥离字符串/注释后做括号配平）对 5 个 C# 文件全部 ok。
+**P0 表头遮挡修复前后（scanner-center 绝对几何）**：左插件表 y 164→220（不再被工具栏压 56px）；
+右列 `发现（0）` 从与表同原点 → 表上方 y220（表 y244）；R5 停靠遮挡 3 处 → 0 处。
 
-**6) 实现期偏离（对已批准设计的修正，逐条留痕）**：
-- 偏离 1（D1）：设计写"空引导按钮调用 OnAddClick/打开入口"，但 KeePassManagerForm 无"连接/切换库"入口
-  （IKeePassService 无该能力，kdbx 路径在 Program.cs:215 决定）。改为 [添加第一条]+[刷新] 两个**已存在**动作
-  + 说明文案，未新增能力，D1 语义不变。
-- 偏离 2（D3）：设计设想的"运行中 ESC → 停扫描"不可实现——`ScanRunner` 无 CancellationToken/Cancel API
-  （RunOne 不可中断）。改为上下文守卫：运行中 ESC 提示"请等待本次扫描完成"且不关窗（保护在飞输出），空闲 ESC 关窗。
-- 偏离 3（D4）：设计说"表头高度抬到 stateY+rowH+padding"，实测 headerPanel 高 80 + rowH 38 已贴边，
-  改为与评分同行右侧（275,10 395x24 右对齐），不动面板高度，几何经真实 dump 复验。
-- 偏离 4（实现细节）：KeePass 引导的 TableLayoutPanel 显式补 `ColumnStyles` 100%——不写列样式时 TLP 列按内容
-  AutoSize，内容会偏左而非居中（"居中引导"是本条的验收点）。
-- 偏离 5（范围）：发现并修复 scanner-center 根级 Dock 顺序 + 右列表头遮挡（D5），两者均在设计决策之外，
-  按"发现即记录"处理：写进 D5 + 行为增量 + 本节，并补 CI 门与树检规则，而非静默扩大改动。
-
-**7) 尚未取证（等 CI 322）**：C# 侧 4 处 `AssertNoDockOverlap`、三种空态断言、ESC/KeyPreview 断言、
-`keepass-manager-empty.png/json` 新 artifact——需 CI 322 全绿才算 S1/S2/S4/S6 闭环。
+**遗留（已登记，不属本 change）**：dangerous-cmd 存量 3 处停靠遮挡；ScannerCenterForm 639 行编排/WMI/插件
+管理未拆（另立 cs-refactor）；AntdUI.Table 浅底外观债；仓库级既有合规失败 2 条
+（`attention.baseline_mode` 布尔解析、`architecture.read` 无 frontmatter——在已关闭的 2026-09-24 包上同样复现，
+修 ARCHITECTURE frontmatter 会连带触发其正文 `文件:行号` 锚点校验，故另立任务）。
