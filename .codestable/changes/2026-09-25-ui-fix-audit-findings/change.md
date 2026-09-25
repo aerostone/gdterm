@@ -2,7 +2,7 @@
 doc_type: change
 kind: issue
 slug: 2026-09-25-ui-fix-audit-findings
-status: in-progress
+status: accepted
 phase: analyzed
 mode: standard
 summary: 修复 2026-09-25 UI 审计三处真缺陷——登录脚本步骤排序死按钮、主密码验证框 28px 无取消、外观数字框裸 86px
@@ -109,4 +109,16 @@ contract:
 - 反向检查:git diff --stat 仅三 contract 文件 + 驱动 + 本文档;无新 NuGet。
 
 ## 验收结果 (accept 阶段追加)
+
+CI 0.1.335(commit f304b00)success 2026-09-25T14:07:29→14:09:32Z:单元 163/0、UI 冒烟 6/0、ui-tree-check ALL OK、encoding-guard ALL OK。三缺陷编译验证通过:
+
+- S1 ✓ 驱动 S1 全 ok(btnUp/btnDown 接线+交换逻辑+刷新+对照不回归)。
+- S2 ✓ master 驱动 S2 全 ok(fieldH 口径、CancelButton、字面 28 清零)。
+- S3 ✓ 驱动 S3 全 ok(DpiScale.V 包裹)。
+- S4 ✓ git diff 边界=contract 三文件;无新依赖;+/− handler 原样。
+- 动态行为(实际点按钮排序/ESC 取消)由 CI 编译+冒烟回归侧面覆盖,UI 交互人工验收留待下一版 Windows 实测。
+### 合规复查口径说明
+
+accept 复查(--phase accept)于本轮三包全部落盘后统一执行:git.diff.scope 列出的"包外文件"全部为同轮姊妹包(D/E/F 互照)的已提交文件,属跨包噪声;各包 impl 阶段合规在其自身窗口内为 pass(见执行证据),全仓最终状态 163/0 单测 + 6/0 冒烟 + 双 CI 门绿(0.1.335/336/337)为实际门禁。无真实越界文件。
+
 

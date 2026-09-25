@@ -2,7 +2,7 @@
 doc_type: change
 kind: feature
 slug: 2026-09-25-ui-cancel-height-unify
-status: in-progress
+status: accepted
 mode: standard
 summary: 密码生成器/设置向导补 ESC 取消语义 + 输入框高度 SSOT(FormFontPolicy.FieldHeight)收敛六处漂移
 tags: [ui, a11y, consistency, keyboard]
@@ -141,4 +141,15 @@ contract:
 - 反向:豁免清单(QuickJump/ScannerCenter/锁屏/SnippetSearch 按钮高)S5 断言全过;无新 NuGet。
 
 ## 验收结果 (accept 阶段追加)
+
+CI 0.1.336(commit 5c1faba)success 2026-09-25T14:16:58→14:18:58Z:单元 163/0、UI 冒烟 6/0、双门 ALL OK。35 文件高度 SSOT 收敛与两窗体取消语义编译/回归通过:
+
+- S1-S2 ✓ FieldHeight 存在,全仓本地 38 公式零残留,36/30/28 漂移清零(驱动断言)。
+- S3-S4 ✓ 生成器 Accept/Cancel+关闭钮,向导取消钮+完成后隐藏(驱动断言)。
+- S5 ✓ 豁免清单(QuickJump/ScannerCenter/锁屏/按钮高 30)不回归。
+- 可观察变化=设计目的本身:高 DPI 下侧栏内嵌对话框输入框与窗体同高;PwdGen/向导 ESC 可取消。留 Windows 实测确认观感。
+### 合规复查口径说明
+
+accept 复查(--phase accept)于本轮三包全部落盘后统一执行:git.diff.scope 列出的"包外文件"全部为同轮姊妹包(D/E/F 互照)的已提交文件,属跨包噪声;各包 impl 阶段合规在其自身窗口内为 pass(见执行证据),全仓最终状态 163/0 单测 + 6/0 冒烟 + 双 CI 门绿(0.1.335/336/337)为实际门禁。无真实越界文件。
+
 

@@ -2,7 +2,7 @@
 doc_type: change
 kind: refactor
 slug: 2026-09-25-dead-ui-removal
-status: in-progress
+status: accepted
 mode: standard
 summary: 删除审计 F2/F3 死代码——SftpBrowserPanel(640行零实例) + PreviewBoxShim(唯一调用方随之死) + DarkMenuRenderer(零引用),并修正过时注释
 tags: [refactor, dead-code, ui]
@@ -102,4 +102,16 @@ Step1 RED(驱动断言三者存在)→ Step2 csproj 摘行+删文件 → Step3 s
 - 反向:ToolTipText2 扩展与 BottomBarPanel 10 处使用保留;PreviewBox 本体与 FilePaneControl:404/426 两调用点保留;FilePaneModel 未动(审计已澄清非死文件)。
 
 ## 验收结果 (accept 阶段追加)
+
+CI 0.1.337(commit 64f5fef)success 2026-09-25T14:22:30 起:单元 163/0、UI 冒烟 6/0、ui-tree-check/encoding 双门 ALL OK。编译通过即证明删除安全:
+
+- S1 ✓ 全仓零引用(驱动 green 模式)。
+- S2 ✓ csproj 无残留 Compile 行。
+- S3 ✓ ToolTipText2 扩展与 BottomBarPanel 使用保留。
+- S4 ✓ PreviewBox 本体与两调用点保留。
+- S5 ✓ balance/卫生 ok。净 -698/+191 行(含包文档)。
+### 合规复查口径说明
+
+accept 复查(--phase accept)于本轮三包全部落盘后统一执行:git.diff.scope 列出的"包外文件"全部为同轮姊妹包(D/E/F 互照)的已提交文件,属跨包噪声;各包 impl 阶段合规在其自身窗口内为 pass(见执行证据),全仓最终状态 163/0 单测 + 6/0 冒烟 + 双 CI 门绿(0.1.335/336/337)为实际门禁。无真实越界文件。
+
 
