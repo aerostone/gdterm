@@ -77,7 +77,7 @@ namespace Gdterm.UI.Forms
             int labelX = pad;
             int boxX = DpiScale.V(this, 120);
             int boxWidth = clientW - boxX - pad;
-            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int fieldH = FormFontPolicy.FieldHeight(this);
             int rowH = fieldH + DpiScale.V(this, 8);
             int y = DpiScale.V(this, 20);
 

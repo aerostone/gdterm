@@ -151,7 +151,7 @@ namespace Gdterm.UI.Controls
 
             var font = Services.FormFontPolicy.UiFont();
             // P0-1：固定 y 步进→字体驱动行高（原先 30/3/210/40 在大字号下重叠）
-            int fieldH = Math.Max(DpiScale.V(this, 30), Services.FormFontPolicy.RowStep(this));
+            int fieldH = FormFontPolicy.FieldHeight(this);
             int rowH = fieldH + DpiScale.V(this, 6);
             int stepBtnH = Math.Max(DpiScale.V(this, 24), fieldH - DpiScale.V(this, 6));
             int y = 12;
@@ -272,7 +272,7 @@ namespace Gdterm.UI.Controls
             };
             var font = Services.FormFontPolicy.UiFont();
             // AddStepDialog 是独立小窗，用自身 fieldH（与主编辑器行高解耦；原先 25/26 高控件在大字号下文字被裁）
-            int stepFieldH = Math.Max(DpiScale.V(this, 30), Services.FormFontPolicy.RowStep(this));
+            int stepFieldH = FormFontPolicy.FieldHeight(this);
             int stepRowH = stepFieldH + DpiScale.V(this, 10);
             int stepY = DpiScale.V(this, 12);
             var cmbType = new AntdUI.Select { Location = new Point(DpiScale.V(this, 100), stepY), Size = new Size(DpiScale.V(this, 220), stepFieldH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = font };

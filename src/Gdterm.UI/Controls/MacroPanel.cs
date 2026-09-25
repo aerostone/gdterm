@@ -80,7 +80,7 @@ namespace Gdterm.UI.Controls
             {
                 Width = DpiScale.V(this, 96),
                 AutoSize = true,
-                MinimumSize = new Size(0, Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this)))
+                MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this))
             };
             _speedBox.Items.AddRange(new object[] { "1x", "2x", "4x" });
             _speedBox.SelectedIndex = 0;

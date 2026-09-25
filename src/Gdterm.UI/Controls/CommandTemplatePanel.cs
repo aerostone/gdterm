@@ -43,7 +43,7 @@ namespace Gdterm.UI.Controls
         private void BuildUI()
         {
             Font = FormFontPolicy.UiFont();
-            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int fieldH = FormFontPolicy.FieldHeight(this);
 
             var topRow = new TableLayoutPanel
             {
@@ -234,7 +234,7 @@ namespace Gdterm.UI.Controls
                 MaximizeBox = false,
                 MinimizeBox = false
             };
-            int fieldH = Math.Max(DpiScale.V(form, 38), FormFontPolicy.RowStep(form));
+            int fieldH = FormFontPolicy.FieldHeight(form);
             var lbl = new AntdUI.Label
             {
                 Text = placeholder + ":",

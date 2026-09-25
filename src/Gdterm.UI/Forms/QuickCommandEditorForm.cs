@@ -49,7 +49,7 @@ namespace Gdterm.UI.Forms
             int y = DpiScale.V(this, 20);
             int lblX = DpiScale.V(this, 20), inputX = DpiScale.V(this, 115);
             int inputW = clientW - inputX - DpiScale.V(this, 20);
-            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int fieldH = FormFontPolicy.FieldHeight(this);
             int rowH = fieldH + DpiScale.V(this, 8);
 
             // 名称

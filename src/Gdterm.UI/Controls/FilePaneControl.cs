@@ -571,7 +571,7 @@ namespace Gdterm.UI.Controls
                 var lbl = new AntdUI.Label { Text = label, Dock = DockStyle.Top, Height = 28, Padding = new Padding(DpiScale.V(f, 12), DpiScale.V(f, 8), DpiScale.V(f, 12), 0), ForeColor = GdtermColorTable.Muted };
                 var box = new AntdUI.Input {
                     Dock = DockStyle.Top,
-                    MinimumSize = new Size(0, Math.Max(DpiScale.V(f, 38), Services.FormFontPolicy.RowStep(f))),
+                    MinimumSize = new Size(0, FormFontPolicy.FieldHeight(f)),
                     Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
                     BackColor = GdtermColorTable.Surface,
                     ForeColor = GdtermColorTable.Foreground,

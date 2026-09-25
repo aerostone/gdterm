@@ -67,7 +67,7 @@ namespace Gdterm.UI.Forms
             int colLabel = pad;
             int colValue = pad + DpiScale.V(this, 110);
             int valueW = DpiScale.V(this, 220);
-            _fieldHeight = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            _fieldHeight = FormFontPolicy.FieldHeight(this);
             _rowHeight = Math.Max(DpiScale.V(this, 44), _fieldHeight + DpiScale.V(this, 6));
             int rowH = _rowHeight;
             int y = 22;

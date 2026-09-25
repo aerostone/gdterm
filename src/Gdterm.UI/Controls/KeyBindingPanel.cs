@@ -314,7 +314,7 @@ namespace Gdterm.UI.Controls
                 form.MinimizeBox = false;
 
                 // P0-1：固定 y 步进→字体驱动行高（原先 50/52/62 在大字号下重叠）
-                int fieldH = Math.Max(DpiScale.V(this, 36), Gdterm.UI.Services.FormFontPolicy.RowStep(this));
+                int fieldH = FormFontPolicy.FieldHeight(this);
                 int rowH = fieldH + DpiScale.V(this, 10);
                 int lblOff = DpiScale.V(this, 8);
                 int y = 20;

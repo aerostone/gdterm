@@ -32,7 +32,7 @@ namespace Gdterm.UI.Forms
             ShowInTaskbar = false;
 
             int pad = DpiScale.V(this, 16);
-            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int fieldH = FormFontPolicy.FieldHeight(this);
             int rowH = fieldH + DpiScale.V(this, 8);
             int labelW = DpiScale.V(this, 64);
             int chkW = DpiScale.V(this, 60);

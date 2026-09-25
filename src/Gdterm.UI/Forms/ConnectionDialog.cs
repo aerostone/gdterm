@@ -277,7 +277,7 @@ namespace Gdterm.UI.Forms
             depthPanel.Controls.Add(new AntdUI.Label { Text = "色深:", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight }, 0, 0);
             _rdpColorDepth = new AntdUI.InputNumber { Minimum = 8, Maximum = 32, Value = 32, Increment = 8, Width = DpiScale.V(this, 60), Dock = DockStyle.Left,
                 // Flow 子无 Dock 高会被压 0（288 dump 实测 h=0）→ MinimumSize 保底 38 行
-                MinimumSize = new Size(0, Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this))) };
+                MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this)) };
             depthPanel.Controls.Add(_rdpColorDepth, 1, 0);
             rdpGrid.Controls.Add(rdpChecks, 1, 1);
             rdpGrid.Controls.Add(depthPanel, 1, 2);
@@ -288,7 +288,7 @@ namespace Gdterm.UI.Forms
             enginePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             enginePanel.Controls.Add(new AntdUI.Label { Text = "渲染引擎:", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight }, 0, 0);
             _rdpEngineCombo = new AntdUI.Select { Width = DpiScale.V(this, 170), Dock = DockStyle.Left,
-                MinimumSize = new Size(0, Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this))) };
+                MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this)) };
             _rdpEngineCombo.Items.AddRange(new object[] { "自动（优先 FreeRDP）", "FreeRDP 进程嵌入", "系统 mstsc（兼容模式）" });
             enginePanel.Controls.Add(_rdpEngineCombo, 1, 0);
             rdpGrid.Controls.Add(enginePanel, 1, 3);
@@ -298,7 +298,7 @@ namespace Gdterm.UI.Forms
             lbPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             lbPanel.Controls.Add(new AntdUI.Label { Text = "负载均衡:", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight }, 0, 0);
             _rdpLoadBalanceBox = new AntdUI.Input { Width = DpiScale.V(this, 230),
-                MinimumSize = new Size(0, Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this))) };
+                MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this)) };
             _rdpLoadBalanceBox.PlaceholderText = "如 Cookie: msts=NSFVERIFYHASH=... (选填)";
             lbPanel.Controls.Add(_rdpLoadBalanceBox, 1, 0);
             rdpGrid.Controls.Add(lbPanel, 1, 4);
@@ -511,7 +511,7 @@ namespace Gdterm.UI.Forms
                 text = text.TrimEnd(':', '：');
             // 字段高度与其余对话框统一：max(38 设计px, 字体行距)，行随控件自动撑高。
             // 旧值 24 使本对话框输入框比原型和所有其他对话框矮 14px，文字在矮框内被挤显小。
-            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int fieldH = FormFontPolicy.FieldHeight(this);
             int verticalMargin = DpiScale.V(this, 4);
             layout.Controls.Add(new AntdUI.Label {
                 Text = text,

@@ -103,7 +103,7 @@ namespace Gdterm.UI.Forms
         {
             // 字体驱动 + DPI 缩放：所有尺寸从 fieldH/rowH/pad 派生，避免固定像素在大字号/高 DPI 下挤压
             int pad = DpiScale.V(this, 8);
-            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int fieldH = FormFontPolicy.FieldHeight(this);
             int rowH = Math.Max(DpiScale.V(this, 24), FormFontPolicy.RowStep(this)); // 表格阅读行：24 地板
             int hintH = FormFontPolicy.LineBox(Font, this, 1.4f);
             int headerH = Math.Max(DpiScale.V(this, 24), FormFontPolicy.LineBox(Font, this, 1.4f));
@@ -388,7 +388,7 @@ namespace Gdterm.UI.Forms
         private Panel BuildWmiPanel()
         {
             int pad = DpiScale.V(this, 8);
-            int wmiFieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int wmiFieldH = FormFontPolicy.FieldHeight(this);
             _wmiPanel = new Panel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Visible = false, BackColor = GdtermColorTable.Background };
             var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, Padding = new Padding(pad, DpiScale.V(this, 4), pad, DpiScale.V(this, 4)), BackColor = GdtermColorTable.Background };
             flow.Controls.Add(new AntdUI.Label { Text = "主机:", AutoSize = true, ForeColor = GdtermColorTable.Muted, Anchor = AnchorStyles.Left, Margin = new Padding(DpiScale.V(this, 3), 0, DpiScale.V(this, 4), 0) });

@@ -51,7 +51,7 @@ namespace Gdterm.UI.Controls
             _searchBox = new AntdUI.Input {
                 Dock = DockStyle.Top,
                 AutoSize = true,
-                MinimumSize = new Size(0, Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this))),
+                MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this)),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
             };
@@ -280,7 +280,7 @@ namespace Gdterm.UI.Controls
                 dlg.Font = Services.FormFontPolicy.UiFont();
 
                 // 字体驱动行高（原先输入框高 24、按钮高 28，在大字号下文字被裁）
-                int fieldH = Math.Max(DpiScale.V(this, 30), Services.FormFontPolicy.RowStep(this));
+                int fieldH = FormFontPolicy.FieldHeight(this);
                 int rowH = fieldH + DpiScale.V(this, 12);
                 int pad = DpiScale.V(this, 15);
                 int y = DpiScale.V(this, 18);

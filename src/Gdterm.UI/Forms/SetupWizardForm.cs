@@ -20,6 +20,7 @@ namespace Gdterm.UI.Forms
         private Panel _stepPanel;
         private AntdUI.Label _stepIndicator;
         private AntdUI.Button _nextButton;
+        private AntdUI.Button _cancelButton;
         private int _currentStep = 0;
 
         // Step 1: 欢迎
@@ -152,6 +153,22 @@ namespace Gdterm.UI.Forms
             };
             _nextButton.Click += OnNextClick;
             buttonPanel.Controls.Add(_nextButton);
+
+            // 取消按钮（审计 F6）：完成前可见，点击/ESC 均走 Close() → 既有 FormClosing 确认；完成后隐藏
+            _cancelButton = new AntdUI.Button
+            {
+                Text = "取消",
+                AutoSize = true,
+                Cursor = Cursors.Hand,
+                Name = "cancelButton",
+                BackColor = GdtermColorTable.Hover,
+                ForeColor = GdtermColorTable.Foreground,
+                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5)),
+                Margin = new Padding(0, 0, DpiScale.V(this, 12), 0)
+            };
+            _cancelButton.Click += (s, e) => Close();
+            buttonPanel.Controls.Add(_cancelButton);
+            CancelButton = _cancelButton; // ESC 与按钮同路：均触发 FormClosing 确认，不绕过主密码未设防贪EXIT
 
             // —— 步骤内容区 ——
             _stepPanel = new Panel
@@ -434,6 +451,8 @@ namespace Gdterm.UI.Forms
 
                 case 2:
                     IsCompleted = true;
+                    // 完成后取消钮失去意义，隐藏（避免完成态还能"取消"已完成的向导）
+                    if (_cancelButton != null) _cancelButton.Visible = false;
                     DialogResult = DialogResult.OK;
                     Close();
                     break;

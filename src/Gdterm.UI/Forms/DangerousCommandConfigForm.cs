@@ -57,7 +57,7 @@ namespace Gdterm.UI.Forms
 
             // 字体驱动 + DPI 缩放：所有尺寸从 fieldH/rowH/pad 派生
             int pad = DpiScale.V(this, 8);
-            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int fieldH = FormFontPolicy.FieldHeight(this);
             int rowH = Math.Max(DpiScale.V(this, 24), FormFontPolicy.RowStep(this)); // 表格阅读行：24 地板，不复用输入框 38
             int btnPad = DpiScale.V(this, 10);
             int btnMargin = DpiScale.V(this, 6);
@@ -386,7 +386,7 @@ namespace Gdterm.UI.Forms
             int labelX = DpiScale.V(this, 18);
             int boxX = DpiScale.V(this, 110);
             int boxW = clientW - boxX - labelX;
-            int fieldH = Math.Max(DpiScale.V(this, 38), Gdterm.UI.Services.FormFontPolicy.RowStep(this));
+            int fieldH = FormFontPolicy.FieldHeight(this);
             int rowH = fieldH + DpiScale.V(this, 10);
             int y = DpiScale.V(this, 20);
 
@@ -514,7 +514,7 @@ namespace Gdterm.UI.Forms
             // 字体驱动 + DPI 缩放布局（修复：固定坐标在大字号/高 DPI 下控件挤压）
             int clientW = DpiScale.V(this, 420);
             int pad = DpiScale.V(this, 18);
-            int fieldH = Math.Max(DpiScale.V(this, 38), Gdterm.UI.Services.FormFontPolicy.RowStep(this));
+            int fieldH = FormFontPolicy.FieldHeight(this);
             int y = pad;
 
             var promptLabel = new AntdUI.Label {

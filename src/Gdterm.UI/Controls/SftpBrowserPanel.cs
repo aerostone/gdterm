@@ -613,7 +613,7 @@ namespace Gdterm.UI.Controls
                 f.Size = DpiScale.S(f, 360, 140);
                 var lbl = new AntdUI.Label { Text = label, ForeColor = GdtermColorTable.Foreground, Location = DpiScale.P(f, 12, 12), AutoSize = true };
                 var box = new AntdUI.Input { Location = DpiScale.P(f, 12, 40), Width = DpiScale.V(f, 320),
-                    MinimumSize = new Size(0, Math.Max(DpiScale.V(f, 38), Services.FormFontPolicy.RowStep(f))),
+                    MinimumSize = new Size(0, FormFontPolicy.FieldHeight(f)),
                     BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
                 var ok = new AntdUI.Button { Text = "确定", DialogResult = DialogResult.OK, Location = DpiScale.P(f, 250, 76),
                     Size = DpiScale.S(f, 84, 32) };

@@ -47,7 +47,7 @@ namespace Gdterm.UI.Forms
             ShowInTaskbar = false;
 
             // 字体驱动 + DPI 缩放：所有尺寸从 fieldH/rowH 派生
-            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int fieldH = FormFontPolicy.FieldHeight(this);
             int rowH = Math.Max(DpiScale.V(this, 28), fieldH);
 
             // 顶部评分区

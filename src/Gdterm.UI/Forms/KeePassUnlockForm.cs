@@ -48,7 +48,7 @@ namespace Gdterm.UI.Forms
             // 字体驱动 + DPI 缩放布局（修复：固定坐标在大字号/高 DPI 下控件挤压）
             int clientW = DpiScale.V(this, 440);
             int pad = DpiScale.V(this, 24);
-            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int fieldH = FormFontPolicy.FieldHeight(this);
             int y = DpiScale.V(this, 24);
 
             // ── 标题区 ──

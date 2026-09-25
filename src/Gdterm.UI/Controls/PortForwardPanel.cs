@@ -124,7 +124,7 @@ namespace Gdterm.UI.Controls
             };
             var font = Services.FormFontPolicy.UiFont();
             // P0-1：固定 y 步进→字体驱动行高（原先 32/50 在大字号下重叠）
-            int fieldH = Math.Max(DpiScale.V(this, 30), Services.FormFontPolicy.RowStep(this));
+            int fieldH = FormFontPolicy.FieldHeight(this);
             int rowH = fieldH + DpiScale.V(this, 6);
             int y = 15;
             var cmbType = new AntdUI.Select { Location = DpiScale.P(this, 110, y), Size = new Size(DpiScale.V(this, 250), fieldH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = font };

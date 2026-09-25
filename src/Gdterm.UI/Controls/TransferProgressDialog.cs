@@ -37,7 +37,7 @@ namespace Gdterm.UI.Controls
 
             // 规范规则②：布局改用 Dock，禁绝对坐标；尺寸经 DpiScale（规范见 docs/UI-SCALING-CONVENTIONS.md）
             int padH = DpiScale.V(this, 16);
-            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int fieldH = FormFontPolicy.FieldHeight(this);
 
             _titleLabel = new AntdUI.Label {
                 Text = title ?? "传输中…",

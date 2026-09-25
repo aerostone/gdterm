@@ -43,7 +43,7 @@ namespace Gdterm.UI.Services
                     Size = DpiScale.S(dialog, 340, 25)
                 };
                 // 高度走 fieldH 口径（审计 F4：原 28px 硬编码既低于全仓 ≥38 地板，大字号下裁字）
-                int fieldH = Math.Max(DpiScale.V(dialog, 38), FormFontPolicy.RowStep(dialog));
+                int fieldH = FormFontPolicy.FieldHeight(dialog);
                 var pwdBox = new AntdUI.Input {
                     Location = DpiScale.P(dialog, 15, 45),
                     Size = DpiScale.S(dialog, 335, fieldH),

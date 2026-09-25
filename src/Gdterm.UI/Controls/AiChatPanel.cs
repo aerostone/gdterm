@@ -91,7 +91,7 @@ namespace Gdterm.UI.Controls
             bottomRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             bottomRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
-            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int fieldH = FormFontPolicy.FieldHeight(this);
             _inputBox = new AntdUI.Input
             {
                 Dock = DockStyle.Fill,

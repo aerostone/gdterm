@@ -50,14 +50,14 @@ namespace Gdterm.UI.Controls
                 Width = DpiScale.V(this, 150),
                 AutoSize = true,
                 // 工具条输入无高会被压矮 → 38 地板
-                MinimumSize = new Size(0, Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this)))
+                MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this))
             };
             _searchBox.PlaceholderText = "搜索命令...";
 
             _hostFilter = new AntdUI.Select {
                 Width = DpiScale.V(this, 120),
                 AutoSize = true,
-                MinimumSize = new Size(0, Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this))),
+                MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this)),
             };
             _hostFilter.Items.Add("所有主机");
             _hostFilter.SelectedIndex = 0;

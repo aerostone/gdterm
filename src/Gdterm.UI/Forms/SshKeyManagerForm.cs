@@ -45,7 +45,7 @@ namespace Gdterm.UI.Forms
             int pad = DpiScale.V(this, 20);
             int boxX = DpiScale.V(this, 120);
             int boxW = clientW - boxX - pad;
-            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int fieldH = FormFontPolicy.FieldHeight(this);
             int rowH = fieldH + DpiScale.V(this, 12);
             int y = DpiScale.V(this, 20);
             _title = Labeled(ref y, "条目标题", "SSH Key", boxX, boxW, fieldH, rowH);

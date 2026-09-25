@@ -145,6 +145,17 @@ namespace Gdterm.UI.Services
         }
 
         /// <summary>
+        /// 输入框统一高度 SSOT —— max(DPI 缩放 38px 地板, 字体行步进)。
+        /// 背景（审计 2026-09-25-ui-coverage-input-audit F5）：此前 17 窗体各自本地写
+        /// Math.Max(DpiScale.V(this,38), RowStep(this))，另有 36/30/28 三种漂移口径。
+        /// 新代码一律用本方法；锁屏覆盖层（LockOverlayControl 30 地板）为显式豁免。
+        /// </summary>
+        public static int FieldHeight(Control c)
+        {
+            return Math.Max(DpiScale.V(c, 38), RowStep(c));
+        }
+
+        /// <summary>
         /// 字体驱动的表单行距——按当前全局 UI 字体实际行高推导每行步进。
         ///
         /// 背景：大量手写对话框用固定 y += 35 步进布局。该步进按 9pt@96dpi 设计；

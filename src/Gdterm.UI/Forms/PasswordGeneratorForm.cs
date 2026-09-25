@@ -61,7 +61,7 @@ namespace Gdterm.UI.Forms
             // 字体驱动 + DPI 缩放布局（修复：固定 520x600 下历史框底部被裁剪）
             int clientW = DpiScale.V(this, 520);
             int pad = DpiScale.V(this, 20);
-            int fieldH = Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this));
+            int fieldH = FormFontPolicy.FieldHeight(this);
             int rowH = fieldH + DpiScale.V(this, 8);
             int y = DpiScale.V(this, 22);
 
@@ -169,6 +169,16 @@ namespace Gdterm.UI.Forms
             };
             generate10Btn.Click += OnBatchGenerate;
             Controls.Add(generate10Btn);
+            // 关闭按钮（审计 F6：本窗体无提交概念，不加"确定"；ESC/按钮双通道关闭）
+            var closeBtn = new AntdUI.Button {
+                Text = "关闭",
+                Location = new Point(clientW - pad - DpiScale.V(this, 130), y),
+                Size = new Size(DpiScale.V(this, 130), fieldH),
+                DialogResult = DialogResult.Cancel,
+                BackColor = GdtermColorTable.Hover,
+                ForeColor = GdtermColorTable.Foreground
+            };
+            Controls.Add(closeBtn);
             y += rowH + DpiScale.V(this, 4);
 
             // 历史记录（只读多行 Input，双击复制整行由 KeyDown/MouseUp 简化为一键复制全部）
@@ -194,6 +204,10 @@ namespace Gdterm.UI.Forms
 
             // 客户区高度随内容自适应（修复：固定高度下历史框底部被裁剪）
             ClientSize = new Size(clientW, y + DpiScale.V(this, 20));
+
+            // 键盘语义（审计 F6）：Enter=重新生成（高频主操作），ESC=关闭
+            AcceptButton = generateBtn;
+            CancelButton = closeBtn;
         }
 
         private AntdUI.Checkbox CreateCheck(string text, int x, int y)
