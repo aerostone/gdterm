@@ -21,6 +21,8 @@ namespace Gdterm.UI.Services
         private readonly Action _applyAppearanceToTerminals;
         private readonly Func<Gdterm.Tools.ISshRemoteSession> _remoteSessionFactory;
         private readonly Gdterm.Tools.Scanning.ScanPluginStore _scanPluginStore;
+        // 审计 F7 SSOT：MainForm 构造 router 后注入其表渲染结果,帮助文本不再手抄键位
+        private Func<string> _hotkeyTableLines;
 
         public ToolsDialogsLauncher(
             IWin32Window owner,
@@ -47,14 +49,66 @@ namespace Gdterm.UI.Services
             return MasterPasswordPrompt.Confirm(_owner, _securityManager, action);
         }
 
+
+        /// <summary>MainForm 在创建 MainFormCommandRouter 后调用,把路由表投影喂给帮助窗。</summary>
+        public void SetHotkeyTableSource(Func<string> tableLines)
+        {
+            _hotkeyTableLines = tableLines;
+        }
+
+        /// <summary>帮助文本=路由表投影(平表部分)+特例键(不入平表的参数化/全局热键),杜绝两处手抄漂移。</summary>
+        private string BuildHotkeyHelpText()
+        {
+            string tableLines = null;
+            try { tableLines = _hotkeyTableLines != null ? _hotkeyTableLines() : null; } catch { }
+            return "快捷键（UI 动作均为 Ctrl+Shift 组合，普通 Ctrl 留给终端）：\n\n" +
+                   "Ctrl + `            呼出/隐藏窗口\n" +
+                   (tableLines ?? "") + "\n" +
+                   "Ctrl + Shift + L    切换连接面板\n" +
+                   "Ctrl + Shift + M    tmux 快捷面板（底栏 tmux 键组切换）\n" +
+                   "Alt + 8             tmux 键组与全部之间快速切换\n" +
+                   "Ctrl + Tab          下一个标签（Ctrl+Shift+Tab 上一个）\n" +
+                   "Ctrl + Alt + 1..9   直达第 N 个标签\n" +
+                   "中键点标签头        关闭该标签\n" +
+                   "Esc / F11           退出专注模式\n" +
+                   "右上角按钮          退出专注（专注模式下可见）\n\n" +
+                   "提示：在终端里，普通 Ctrl 组合直接发给 shell，\n" +
+                   "例如 Ctrl+R 反向搜索历史、Ctrl+W 删词、Ctrl+L 清屏。";
+        }
+
+        /// <summary>
+        /// 审计 F8：未解锁时不再死端弹窗，而是弹既有 KeePassUnlockForm 引导解锁（仿 ProtocolTabOpener 先例），
+        /// 成功后放行原目标窗体。返回 false 表示用户放弃或服务缺失。
+        /// </summary>
+        private bool EnsureKeePassUnlocked(string action)
+        {
+            if (_keepassService == null)
+            {
+                MessageBox.Show(_owner, "密码服务不可用", action, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+            if (_keepassService.IsUnlocked) return true;
+            try
+            {
+                using (var unlock = new KeePassUnlockForm(_keepassService))
+                {
+                    if (unlock.ShowDialog(_owner) != DialogResult.OK || !_keepassService.IsUnlocked)
+                        return false; // 用户取消或解锁失败：静默放弃，不重复打扰
+                }
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Gdterm.UI.Diagnostics.DiagLog.Swallowed("ToolsDialogs.KeePassUnlock", ex);
+                MessageBox.Show(_owner, "解锁失败: " + ex.Message, action, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return false;
+            }
+        }
+
         public void OpenKeePassManager()
         {
             if (!ReAuthenticate("访问密码库管理")) return;
-            if (_keepassService == null || !_keepassService.IsUnlocked)
-            {
-                MessageBox.Show(_owner, "密码库未解锁", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+            if (!EnsureKeePassUnlocked("密码库管理")) return;
             using (var form = new KeePassManagerForm(_keepassService))
                 form.ShowDialog(_owner);
         }
@@ -62,11 +116,7 @@ namespace Gdterm.UI.Services
         public void OpenPasswordHealth()
         {
             if (!ReAuthenticate("查看密码健康报告")) return;
-            if (_keepassService == null || !_keepassService.IsUnlocked)
-            {
-                MessageBox.Show(_owner, "密码库未解锁", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+            if (!EnsureKeePassUnlocked("密码健康报告")) return;
             using (var form = new PasswordHealthForm(_keepassService))
                 form.ShowDialog(_owner);
         }
@@ -74,11 +124,7 @@ namespace Gdterm.UI.Services
         public void OpenSshKeyManager()
         {
             if (!ReAuthenticate("管理 SSH 密钥")) return;
-            if (_keepassService == null || !_keepassService.IsUnlocked)
-            {
-                MessageBox.Show(_owner, "密码库未解锁", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
+            if (!EnsureKeePassUnlocked("SSH 密钥管理")) return;
             using (var form = new SshKeyManagerForm(_keepassService))
                 form.ShowDialog(_owner);
         }
@@ -215,25 +261,7 @@ namespace Gdterm.UI.Services
         {
             MessageBox.Show(
                 _owner,
-                "快捷键（UI 动作均为 Ctrl+Shift 组合，普通 Ctrl 留给终端）：\n\n" +
-                "Ctrl + `            呼出/隐藏窗口\n" +
-                "Ctrl + Shift + K    快速跳转连接\n" +
-                "Ctrl + Shift + L    切换连接面板\n" +
-                "Ctrl + Shift + R    重连当前标签\n" +
-                "Ctrl + Shift + W    关闭当前标签\n" +
-                "Ctrl + Shift + F    终端查找\n" +
-                "Ctrl + Shift + H    宏录制\n" +
-                "Ctrl + Shift + G    AI 助手聊天\n" +
-                "Ctrl + Shift + P    片段搜索\n" +
-                "Ctrl + Shift + M    tmux 快捷面板（底栏 tmux 键组切换）\n" +
-                "Alt + 8             tmux 键组与全部之间快速切换\n" +
-                "Ctrl + Tab          下一个标签（Ctrl+Shift+Tab 上一个）\n" +
-                "Ctrl + Alt + 1..9   直达第 N 个标签\n" +
-                "中键点标签头        关闭该标签\n" +
-                "Esc / F11           退出专注模式\n" +
-                "右上角按钮          退出专注（专注模式下可见）\n\n" +
-                "提示：在终端里，普通 Ctrl 组合直接发给 shell，\n" +
-                "例如 Ctrl+R 反向搜索历史、Ctrl+W 删词、Ctrl+L 清屏。",
+                BuildHotkeyHelpText(),
                 "快捷键", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 

@@ -541,6 +541,9 @@ namespace Gdterm.UI.Forms
                 _tabContainer, _sidePanels, _sidePanelHost, _viewMode,
                 () => { try { _statusBar?.ToggleTmuxGroup(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } } },
                 () => ShowAiChatPanel());
+            // 审计 F7 SSOT：把路由表投影喂给帮助窗（帮助=表的渲染，不再手抄键位）
+            try { _toolsDialogs.SetHotkeyTableSource(() => _cmdRouter.RenderHelpLines()); }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.HotkeyHelp", exSwallowed); } catch { } }
 
             // Toast / 落地页 / 托盘
             try { ToastNotifier.Bind(this); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
