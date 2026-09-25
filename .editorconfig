@@ -19,3 +19,13 @@ charset = utf-8
 # 与 tools/build-freerdp.ps1 的既有形态一致。
 [*.ps1]
 charset = utf-8-bom
+
+# ── 关于唯一保留的非 .ps1 例外：见守卫 bom_allowed() ────────────────────
+# .codestable/changes/*/fixtures/*.json 允许带 BOM：它们是控件树 dumper 用
+# Encoding.UTF8 写的逐字节冻结产物，BOM 正是其输出形状，消费者按 utf-8-sig 读。
+#
+# 另：曾评估把这两个 .ps1 的 BOM 也清掉以做到"全仓零 BOM"，结论是**不做**。
+# 它们的非 ASCII 全在注释/消息里（build-freerdp.ps1 1948 字符 / 151 行），
+# 全仓没有第二处记录这些补丁的抓包依据与替换锚点；把注释翻译成英文或搬到
+# docs/ 都会让依据离开它描述的代码行。判据与复核条件见：
+#   .codestable/compound/2026-09-25-decision-ps1-encoding-policy.md

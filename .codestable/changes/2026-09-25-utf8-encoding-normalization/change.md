@@ -39,6 +39,7 @@ contract:
     - tools/check-encoding.py
     - tools/pack-release.ps1
     - .codestable/changes/2026-09-25-utf8-encoding-normalization/**
+    - .codestable/compound/2026-09-25-decision-ps1-encoding-policy.md
   exclude: []
   preexisting_changes:
     - .codestable/.runtime/current-package
@@ -112,6 +113,10 @@ contract:
 | `.ps1` 且含非 ASCII | **必须带 BOM** | Windows PowerShell 5.1 对无 BOM 脚本按系统 ANSI 码页解释（与 Roslyn、pwsh 的行为都不同） |
 | `third_party/`、`lib/`、`vendor/` | **允许带 BOM** | 上游/随包形状，改了会永久污染与上游的 diff |
 | `.codestable/changes/*/fixtures/*` | **允许带 BOM** | 控件树 dumper 用 `Encoding.UTF8` 写出，产物天然带 BOM（见 D2） |
+
+> `.ps1` 的 BOM **保留**（曾评估「连它一起清掉」并否定），依据与复核条件见
+> [`.codestable/compound/2026-09-25-decision-ps1-encoding-policy.md`](../../compound/2026-09-25-decision-ps1-encoding-policy.md)。
+
 
 ### D2 夹具保留 BOM —— 对我前一版方案的一处修正（减项）
 
@@ -233,3 +238,25 @@ ENCODING-CHECK ALL OK
    故纯 ASCII 的 `gen-version.ps1` 保持无 BOM 不会被判错。
 4. **白名单粒度是目录级**（见实施偏离 3）：`/fixtures/` 下目前只有 2 个 `.json` 带 BOM、无越界，
    但规则本身许可更宽。
+
+## 补记（验收后追加）
+
+**问题**：归一后仍有 2 个 `.ps1` 带 BOM，能否顺手清掉、做到「仓库里零 BOM」？
+
+**实测**（`git ls-files` 口径，`tools/build-freerdp.ps1` 与 `tools/pack-release.ps1`）：
+非 ASCII 共 1948 + 33 个字符，**全部落在注释与消息文本里，代码行 0 处**——
+其中 `build-freerdp.ps1` 有 36 个注释块、151 行中文。因此「改成纯 ASCII」在语法上绝对安全，
+但它不是编码问题，而是「要不要把这些中文说明翻译掉／搬走」的问题。
+
+**决定：不清，`.ps1` 保留 BOM。** Windows PowerShell 5.1 的无 BOM 按 ANSI 读是运行时约束，
+`.ps1` 只能在「带 BOM 且可用非 ASCII」与「纯 ASCII」之间二选一；而 `build-freerdp.ps1` 的注释是
+全仓**唯一**记录 FreeRDP 补丁抓包依据与替换锚点（`锚A/锚B/锚C`、`c57179` vs `c64267` 帧长、
+sha256 pin 判据理由、`v0.1.183` 等回归坐标）的地方，且逐条紧贴其描述的 `Replace` 代码。
+翻译成英文（会造出全仓唯一英文注释的文件，且要赌抓包数字不出错）或搬到 `docs/`
+（依据离开代码现场）都是拿**不可再生资产**换**形式统一**，不划算。
+
+判据、被否方案与复核触发条件已固化为
+[`.codestable/compound/2026-09-25-decision-ps1-encoding-policy.md`](../../compound/2026-09-25-decision-ps1-encoding-policy.md)，
+并在 `.editorconfig` 的 `[*.ps1]` 段旁落了指针，避免下次重新估算一遍。该文档是**验收后新增**的交付物，故本补记同时把它补进 `contract.include`（原契约只含归一涉及的字节层文件与守卫本体）——属于范围增补，在此显式记录而非静默扩范围。本补记**不改守卫口径**：
+R3（非 ASCII `.ps1` 必须带 BOM）与 `bom_allowed()` 白名单三条（`third_party/`·`lib/`·`vendor/`、
+`/fixtures/`、`.ps1`）不变。
