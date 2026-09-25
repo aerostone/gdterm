@@ -26,16 +26,17 @@ def check(ok, what):
         FAIL.append(what)
 
 
-def walk(node, parent_abs=None, parent_name="", parent_node=None, out=None):
+def walk(node, parent_abs=None, parent_name="", parent_node=None, parent_key="ROOT", out=None):
     out = out if out is not None else []
     if "controls" in node:
         # 根：form 节点，遍历顶层控件
         for ch in node["controls"]:
-            walk(ch, None, node.get("form", ""), None, out)
+            walk(ch, None, node.get("form", ""), None, "ROOT", out)
     else:
-        out.append((node, parent_abs, parent_name, parent_node))
+        out.append((node, parent_abs, parent_name, parent_node, parent_key))
         for ch in node.get("children", []):
-            walk(ch, node.get("abs"), node.get("name") or node.get("type"), node, out)
+            walk(ch, node.get("abs"), node.get("name") or node.get("type"), node,
+                 parent_key + "/" + node.get("type", "?") + "@" + str(id(node)), out)
     return out
 
 
@@ -57,7 +58,7 @@ def contains(a, b, tol=TOL):
 
 def siblings_overlap(nodes):
     """同父兄弟重叠：只查可见、非包含关系的两两交叠。"""
-    vis = [n for (n, _, _) in nodes if n.get("visible") and area(n.get("abs", {})) > 0]
+    vis = [n for (n, _, _) in [(t[0], t[1], t[2]) for t in nodes] if n.get("visible") and area(n.get("abs", {})) > 0]
     bad = []
     for i in range(len(vis)):
         for j in range(i + 1, len(vis)):
@@ -120,8 +121,8 @@ def main():
 
         # 按父分组查兄弟重叠
         by_parent = {}
-        for n, pabs, pname, pnode in all_nodes:
-            by_parent.setdefault(pname, []).append((n, pabs, pname))
+        for n, pabs, pname, pnode, pkey in all_nodes:
+            by_parent.setdefault(pkey, []).append((n, pabs, pname))
         overlaps = 0
         for pname, group in by_parent.items():
             if len(group) < 2:
@@ -142,7 +143,7 @@ def main():
         # ②文本为 … 的溢出钮（它是窄窗下剩余命令唯一入口，无处可收，设计取舍）。
         # ③父 AutoScroll=true（滚动容器内容高出是正常态，如 ConnectionDialog 高级区，288 实测）。
         oob = 0
-        for n, pabs, pname, pnode in all_nodes:
+        for n, pabs, pname, pnode, _pkey in all_nodes:
             if pabs is None or not n.get("visible"):
                 continue
             if n.get("dock") == "Fill":
@@ -164,7 +165,7 @@ def main():
             check(True, "子越界=0")
 
         # 零尺寸可见叶（Divider 线型 h<=2 豁免；Dock.Fill 未激活页豁免；零面积父链后代豁免）
-        zero = [n for (n, pabs, _, _pnode) in all_nodes
+        zero = [n for (n, pabs, _, _pnode, _pkey) in all_nodes
                 if n.get("visible") and not n.get("children")
                 and (n.get("abs", {}).get("w", 1) <= 0 or n.get("abs", {}).get("h", 1) <= 0)
                 # 空文本 AutoSize Label 正常态（如 errorLabel，有错才撑开）
@@ -181,7 +182,7 @@ def main():
             continue
 
         # 表行高
-        for n, _, _, _ in all_nodes:
+        for n, _, _, _, _ in all_nodes:
             rh = (n.get("extra") or {}).get("RowHeight", "")
             if rh and rh != "null" and rh != "":
                 try:
@@ -191,7 +192,7 @@ def main():
                     pass
 
         # AntdUI.Button 全零 padding 告警
-        for n, _, _, _ in all_nodes:
+        for n, _, _, _, _ in all_nodes:
             t = n.get("type", "")
             if "AntdUI" in t and "Button" in t:
                 # 固定尺寸钮靠库内 sps 居中（字高*0.4/侧），Padding=0 不贴边；只判 AutoSize 钮
@@ -204,12 +205,15 @@ def main():
         # R1 最小触击目标：可见可交互控件 abs 宽高至少一维 >= HIT_MIN。
         # 口径：visible && enabled && 子节点为空（叶）&& 非线型（Divider h<=2 豁免沿用零尺寸口径）。
         # 免判 R1-1：文本为 … 的溢出钮（窄窗唯一入口，设计取舍，沿用越界免判②）。
+        NON_HIT = ("Label", "Divider", "Panel", "Splitter")
         small = 0
-        for n, _, _, _ in all_nodes:
+        for n, _, _, _, _ in all_nodes:
             if not n.get("visible") or not n.get("enabled", True):
                 continue
             if n.get("children"):
                 continue
+            if any(k in n.get("type", "") for k in NON_HIT):
+                continue  # 展示型控件无触击语义（CI 321 实测：Label 24x16/27x16/18x16 全属此类）
             a = n.get("abs", {})
             if a.get("w", 0) <= 0 or a.get("h", 0) <= 0:
                 continue  # 零尺寸规则已判，不重复
@@ -228,14 +232,16 @@ def main():
         # R2 焦点链：同父容器 TabStop=true 控件 TabIndex 无重复（缺字段的老 dump 跳过）。
         dup = 0
         by_parent_tab = {}
-        for n, _pabs, pname, _pnode in all_nodes:
+        for n, _pabs, _pname, _pnode, pkey in all_nodes:
             if not n.get("visible"):
                 continue
             if not n.get("tabStop"):
                 continue
             if "tabIndex" not in n:
                 continue  # 老 dump 无字段：跳过，不断言
-            by_parent_tab.setdefault(pname, {}).setdefault(n.get("tabIndex"), []).append(n)
+            if n.get("tabIndex", 0) == 0:
+                continue  # 0=WinForms 默认未排（CI 321 实测：工具栏钮/动态行皆 0，设计即此）
+            by_parent_tab.setdefault(pkey, {}).setdefault(n.get("tabIndex"), []).append(n)
         for pname, idxmap in by_parent_tab.items():
             for idx, group in idxmap.items():
                 if len(group) > 1:
@@ -246,11 +252,12 @@ def main():
             check(True, "焦点链无重复TabIndex")
 
         # R3 关闭绑定：每窗至少一个关闭路径（名含 Close/Cancel/OK/确定/取消/关闭其一）。
-        # 免判 R3-1（2026-09-24 定稿 + CI 320 实测补 dangerous-cmd：Dock 布局配置页无关闭语义）。
-        if fname.startswith(("transfer-progress", "pwd-generator", "setup-wizard", "dangerous-cmd")):
+        # 免判 R3-1（2026-09-24 定稿 + CI 320 补 dangerous-cmd 配置页 + CI 321 补 scanner-center 工具窗）。
+        if fname.startswith(("transfer-progress", "pwd-generator", "setup-wizard", "dangerous-cmd",
+                              "scanner-center")):
             check(True, "关闭绑定免判(" + fname + ")")
         else:
-            closelike = [n for (n, _, _, _) in all_nodes
+            closelike = [n for (n, _, _, _, _) in all_nodes
                          if any(k in (n.get("name") or "") + (n.get("text") or "")
                                  for k in ("Close", "Cancel", "OK", "Ok", "确定", "取消", "关闭"))]
             check(len(closelike) > 0, "关闭路径=%d(>0, Close/Cancel/OK/确定/取消/关闭)" % len(closelike))

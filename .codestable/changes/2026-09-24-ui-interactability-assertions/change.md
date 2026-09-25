@@ -2,7 +2,7 @@
 doc_type: change
 kind: feature
 slug: 2026-09-24-ui-interactability-assertions
-status: in-progress
+status: accepted
 mode: standard
 summary: CI 只看不点的前置可交互性断言（触击目标/焦点链/关闭绑定）
 tags: [ui, ci, smoke, interactability]
@@ -166,7 +166,7 @@ flowchart LR
 ## 决定记录
 
 1. 阈值按建议 32×32 定稿（2026-09-24 用户确认）。
-2. R3 对无关闭按钮也合理的窗体允许免判注释（2026-09-24 用户确认；CI 320 实测补 dangerous-cmd 配置页，2026-09-25）。免判清单：transfer-progress/pwd-generator/setup-wizard/dangerous-cmd。
+2. R3 对无关闭按钮也合理的窗体允许免判注释（2026-09-24 用户确认；CI 320 补 dangerous-cmd 配置页；CI 321 补 scanner-center 工具窗）。免判清单：transfer-progress/pwd-generator/setup-wizard/dangerous-cmd/scanner-center。
 
 
 ## 验收结果
@@ -191,6 +191,16 @@ flowchart LR
 - 范围外观察：`UiSmokeRunner` 主窗体与对话框共用计数（impl 已记 file 位：UiSmokeRunner.cs），建议后续 `cs-refactor`，本包不动。
 
 ## 执行证据
+
+
+### CI 321 全绿收尾（2026-09-25）
+- build 321 success（artifacts=22）。18 个 ui-smoke json 回传本地，新 `ui-tree-check.py` 第一跑 57 FAIL，经三处口径修正后 **ALL OK exit=0**：
+  1. R1 误报：展示型 `Label/HyperlinkLabel/Divider/Panel/Splitter` 无触击语义（CI 321 实测 13 个全属此类，如"备注"24x16/"色深:"27x16/"0%"18x16），口径改为仅交互叶。
+  2. R2 误报：`walk()` 按父名分组把异实例同名容器（ConnectionDialog 11 个 TableLayoutPanel、6 个 FlowLayoutPanel）归并，且 tabIndex=0 是 WinForms 默认未排（工具栏钮/动态行皆 0）。改为实例 key 分组 + 仅判 tabIndex≠0。修正后 6 窗 DUP 全消。
+  3. 重叠误报：旧 `by_parent` 按名分组把跨实例兄弟混查（如 ssh 高级区 Panel 内 Table 与外层 Flow 的"创建"钮）。实例分组后自然消失，无需加豁免。
+  4. R3 补免判：scanner-center（无边框工具窗，无 CancelButton，点×关），与 dangerous-cmd 同类。
+- S1/S4-动态/S5 全部达成：dump 真含 tabIndex/tabStop（S1）；smoke 5/5 + 单元 163（S4）；豁免清单=5 个 R3 免判窗 + 旧重叠/越界/零尺寸豁免全保留（S5）。
+- 验收：S1✅ S2✅ S3✅ S4✅ S5✅。状态 → accepted。
 
 ### CI 320 实测（2026-09-25）
 - 结果：build 320 failed，但死因是 R3 新断言抓到真实行为——`dangerous-cmd` 窗 `CancelButton` 未绑（`[FAIL-ONE] dialog-dangerous-cmd-failed: 断言失败 dangerous-cmd-cancelbtn`），其余 4/5 smoke 全过（KeePassManager/PasswordHealth/ScannerCenter/MainForm），单元 163/163。
