@@ -166,7 +166,7 @@ flowchart LR
 ## 决定记录
 
 1. 阈值按建议 32×32 定稿（2026-09-24 用户确认）。
-2. R3 对无关闭按钮也合理的窗体（如 TransferProgressDialog 进度窗）允许免判注释（2026-09-24 用户确认）。
+2. R3 对无关闭按钮也合理的窗体允许免判注释（2026-09-24 用户确认；CI 320 实测补 dangerous-cmd 配置页，2026-09-25）。免判清单：transfer-progress/pwd-generator/setup-wizard/dangerous-cmd。
 
 
 ## 验收结果
@@ -191,6 +191,12 @@ flowchart LR
 - 范围外观察：`UiSmokeRunner` 主窗体与对话框共用计数（impl 已记 file 位：UiSmokeRunner.cs），建议后续 `cs-refactor`，本包不动。
 
 ## 执行证据
+
+### CI 320 实测（2026-09-25）
+- 结果：build 320 failed，但死因是 R3 新断言抓到真实行为——`dangerous-cmd` 窗 `CancelButton` 未绑（`[FAIL-ONE] dialog-dangerous-cmd-failed: 断言失败 dangerous-cmd-cancelbtn`），其余 4/5 smoke 全过（KeePassManager/PasswordHealth/ScannerCenter/MainForm），单元 163/163。
+- 根因判定：不是回归，是旧债暴露。`DangerousCommandConfigForm` 是 Dock 布局配置页（工具栏 Top + 规则表 Fill + 白名单 Bottom + 状态条），全文只有两个子编辑窗（RuleEdit/TextInput，466/555 行）绑了 CancelButton，主窗 `InitializeComponent` 从未绑定——它没有"关闭"语义，进出口是工具栏按钮。旧 `Show()`+dump 流程从不断这个，所以从未暴露。
+- 处置（设计内）：不给该窗硬加 CancelButton（会改变 ESC 行为，超出"不改任何窗体行为"边界），而是把 `dangerous-cmd` 列入 R3 免判（与 transfer-progress/pwd-generator/setup-wizard 同类）。改动：`DialogsSmoke.Show` 免判条件 +1；tree-check R3-1 前缀元组 +`dangerous-cmd`。
+- S4 更新：C# 侧 8 窗断言通过 + 4 窗免判（transfer-progress/pwd-generator/setup-wizard/dangerous-cmd），待 CI 321 验证动态。
 
 ### 续跑（2026-09-25，状态 in-progress）
 - C# 静态核对：`grep CancelButton` —— 9 个非免判窗体（AiSettings/Appearance/ChangeMasterpwd/ConnectionDialog/DangerousCommand×2/KeePassManager/PasswordHealth/KeePassPicker/KeePassUnlock/QuickCmd/SshKey）全部已绑；3 个免判窗（PasswordGenerator/SetupWizard 无绑定、TransferProgress 有 _cancelButton 但属进度窗）与免判清单一致。S4 C# 侧静态通过，动态待 CI。

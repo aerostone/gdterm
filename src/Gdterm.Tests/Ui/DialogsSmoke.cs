@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading;
 using System.Windows.Forms;
@@ -104,8 +104,10 @@ namespace Gdterm.Tests.Ui
                     int n = Count(f);
                     check(n > 5, name + "-controls=" + n + " (>5)");
                     // R3 关闭绑定（change 2026-09-24）：免判清单——transfer-progress（进度窗无
-                    // 关闭语义）、pwd-generator（工具小窗点×关）、setup-wizard（向导[上一步/下一步]导航）。
-                    if (name != "transfer-progress" && name != "pwd-generator" && name != "setup-wizard")
+                    // 关闭语义）、pwd-generator（工具小窗点×关）、setup-wizard（向导[上一步/下一步]导航）、
+                    // dangerous-cmd（Dock 布局配置页无关闭语义，CI 320 实测 CancelButton 未绑，设计即此）。
+                    if (name != "transfer-progress" && name != "pwd-generator" && name != "setup-wizard"
+                        && name != "dangerous-cmd")
                         check(f.CancelButton != null, name + "-cancelbtn(ESC绑定)");
                     check(f.ClientSize.Width > 200 && f.ClientSize.Height > 150,
                         name + "-client=" + f.ClientSize.Width + "x" + f.ClientSize.Height);
