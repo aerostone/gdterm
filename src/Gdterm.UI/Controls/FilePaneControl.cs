@@ -369,18 +369,29 @@ namespace Gdterm.UI.Controls
                 if (sftp == null || !sftp.IsConnected) return;
                 if (Gdterm.Sftp.SftpEnhancements.IsImageFile(entry.Name))
                 {
-                    // 图片：下载到 temp，外部打开（WinSCP 行为）
+                    // 图片：下载到 temp，外部打开（WinSCP 行为）。
+                    // A2：下载/打开移后台 + 30s 超时，禁止 UI 线程 GetResult（对齐下方文本预览路径）。
                     var tmp = Path.Combine(Path.GetTempPath(), "gdterm_img_" + Guid.NewGuid().ToString("N") + Path.GetExtension(entry.Name));
-                    try
+                    var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                    _status.Text = "预览加载图片 " + entry.Name + " …";
+                    Task.Run(async () =>
                     {
-                        sftp.DownloadAsync(entry.FullPath, tmp, null, CancellationToken.None).GetAwaiter().GetResult();
-                        try { System.Diagnostics.Process.Start(tmp); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("FilePaneControl", exSwallowed); } catch { } }
-                    }
-                    catch (Exception ex)
+                        try
+                        {
+                            await sftp.DownloadAsync(entry.FullPath, tmp, null, cts.Token).ConfigureAwait(false);
+                            try { System.Diagnostics.Process.Start(tmp); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("FilePaneControl", exSwallowed); } catch { } }
+                            return (string)null;
+                        }
+                        catch (OperationCanceledException) { return "下载超时（30s）"; }
+                        catch (Exception ex) { return ex.Message; }
+                    }).ContinueWith(t =>
                     {
-                        MessageBox.Show(FindForm(), "图片打开失败:\n" + ex.Message,
-                            "预览", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
+                        if (IsDisposed) return;
+                        _status.Text = entry.FullPath;
+                        if (t.Result != null)
+                            MessageBox.Show(FindForm(), "图片打开失败:\n" + t.Result,
+                                "预览", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }, TaskScheduler.FromCurrentSynchronizationContext());
                     return;
                 }
                 if (!Gdterm.Sftp.SftpEnhancements.IsTextFile(entry.Name))

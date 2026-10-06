@@ -28,7 +28,17 @@ namespace Gdterm.UI.Services
                 _toggleHotkeyId = _manager.Register(HotkeyModifiers.Control, Keys.Oemtilde);
                 _manager.HotkeyPressed += OnHotkeyPressed;
             }
-            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("GlobalHotkeyController", exSwallowed); } catch { } }
+            catch (System.Exception exSwallowed)
+            {
+                try { DiagLog.Swallowed("GlobalHotkeyController", exSwallowed); } catch { }
+                // A6：注册失败对用户可见（热键被其他程序占用时的唯一线索），一次性提示
+                try
+                {
+                    ToastNotifier.Show("全局热键 Ctrl+` 注册失败（可能已被其他程序占用）",
+                        ToastNotifier.Level.Warning);
+                }
+                catch (System.Exception exToast) { try { DiagLog.Swallowed("GlobalHotkeyController.Toast", exToast); } catch { } }
+            }
         }
 
         private void OnHotkeyPressed(object sender, HotkeyPressedEventArgs e)

@@ -76,6 +76,7 @@ namespace Gdterm.UI.Forms
         private LockStateCoordinator _lockCoord;
         private AppShutdownCoordinator _shutdown;
         private BottomBarPanel _statusBar; // v2 单栏合并底栏：快捷命令+tmux键组+状态三项合一
+        private ConnectionStateNotifier _connectionStateNotifier; // A1：watchdog 三事件 → DiagLog/状态段/Toast
         private LockOverlayControl _lockOverlay;
         private MenuStrip _menuStrip;
         private ToolStripMenuItem _debugModeMenuItem;
@@ -360,6 +361,16 @@ namespace Gdterm.UI.Forms
             _statusBar = new BottomBarPanel();
             _statusBar.Name = "BottomBarPanel";
             _statusBar.Dock = DockStyle.Bottom;
+            // A1：连接状态观测扇出——看门狗三事件 → DiagLog 轮次 + 状态栏连接段 + Toast（每断连一次/终态各一次）
+            _connectionStateNotifier = new ConnectionStateNotifier(
+                _reconnectWatchdog,
+                id => _tabContainer != null ? _tabContainer.TryGetDisplayName(id) : null,
+                id => _tabContainer != null && _tabContainer.IsActiveSessionId(id),
+                t => _statusBar?.UpdateConnectionStatus(t));
+            FormClosed += (s, e) =>
+            {
+                try { _connectionStateNotifier?.Dispose(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
+            };
             List<QuickCommand> cmds = null;
             try { cmds = _quickCommandStore?.LoadAll(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
             _statusBar.SetCommands(cmds ?? new List<QuickCommand>());
@@ -708,6 +719,8 @@ namespace Gdterm.UI.Forms
                     _statusBar?.SetActiveTerminal(tc, host, user);
                 else
                     _statusBar?.SetActiveSession(session, host, user);
+                // A1：切签后重放新活动会话的连接状态（无残留复位就绪）
+                _connectionStateNotifier?.RefreshStatusBar();
 
                 try { _sidePanels?.SyncMultiChannelRegistrations(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.SyncMultiChannel", ex); }
             }

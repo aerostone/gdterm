@@ -116,6 +116,7 @@
     <Compile Include="Ui\UiTreeDumper.cs" />
     <Compile Include="Ui\MainFormSmoke.cs" />
     <Compile Include="Ui\FakeKeePassService.cs" />
+    <Compile Include="Ui\ObservabilityTests.cs" />
     <Compile Include="Ui\DialogsSmoke.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

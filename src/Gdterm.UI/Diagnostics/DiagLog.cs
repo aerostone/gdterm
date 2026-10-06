@@ -15,7 +15,9 @@ namespace Gdterm.UI.Diagnostics
         {
             try
             {
-                CrashLog.Write("swallowed:" + (source ?? "unknown"), ex, isTerminating: false);
+                // A5：UI 前缀源的被吞异常同样镜像到 logs/ui.log（与 Info 同规则）
+                CrashLog.Write("swallowed:" + (source ?? "unknown"), ex, isTerminating: false,
+                    uiFile: IsUiSource(source));
             }
             catch
             {
@@ -24,7 +26,7 @@ namespace Gdterm.UI.Diagnostics
         }
 
         /// <summary>
-        /// UI 相关 source 前缀：命中时额外镜像一份到 logs/ui.log（主日志 diag.log 仍全量保留）。
+        /// UI 相关 source 前缀：命中时 Info 与 Swallowed 额外镜像一份到 logs/ui.log（主日志 diag.log 仍全量保留）。
         /// 覆盖对话框布局/字体缩放/标签页切换等界面排查场景。
         /// </summary>
         private static readonly string[] UiSourcePrefixes =

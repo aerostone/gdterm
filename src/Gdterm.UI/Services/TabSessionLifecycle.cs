@@ -114,6 +114,7 @@ namespace Gdterm.UI.Services
                 {
                     try
                     {
+                        try { DiagLog.Info("TabSessionLifecycle", "session disconnected id=" + sessionId); } catch { }
                         if (onLost != null) onLost(sessionId);
                         else _reconnectWatchdog?.NotifyConnectionLost(sessionId);
                     }
@@ -161,11 +162,19 @@ namespace Gdterm.UI.Services
                 }
             }
             if (stillUsing) return;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             try
             {
                 tunnelManager.CloseAsync(connectionId).GetAwaiter().GetResult();
             }
-            catch { /* best-effort */ }
+            catch (Exception ex) { DiagLog.Swallowed("TabSessionLifecycle.CloseTunnel", ex); }
+            finally
+            {
+                sw.Stop();
+                // 慢清理观测（A3）：>2s 说明同步 Dispose 卡在远端超时——为"是否改异步(案B)"提供实证
+                if (sw.ElapsedMilliseconds > 2000)
+                    DiagLog.Info("TabSessionLifecycle", "slow tunnel close conn=" + connectionId + " " + sw.ElapsedMilliseconds + "ms");
+            }
         }
 
         public void LogConnectionClose(string connectionId, string host, string protocol)

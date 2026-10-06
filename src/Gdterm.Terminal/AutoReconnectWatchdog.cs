@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Gdterm.Terminal.Diagnostics;
 
 namespace Gdterm.Terminal
 {
@@ -208,6 +209,8 @@ namespace Gdterm.Terminal
                 watched.Cts = new CancellationTokenSource();
             }
 
+            TerminalLog.Info("AutoReconnect", "loop start session=" + sessionId);
+
             // 启动后台重连任务
             Task.Run(() => ReconnectLoop(watched));
         }
@@ -230,6 +233,8 @@ namespace Gdterm.Terminal
                 {
                     // 达到最大重试次数
                     watched.IsReconnecting = false;
+                    TerminalLog.Info("AutoReconnect", "give up session=" + watched.SessionId +
+                        " attempts=" + (watched.RetryCount - 1) + " err=" + (watched.LastError ?? ""));
                     ReconnectFailed?.Invoke(this, new ReconnectEventArgs
                     {
                         SessionId = watched.SessionId,
@@ -244,6 +249,8 @@ namespace Gdterm.Terminal
                 var delay = Math.Min(BaseIntervalMs * (1 << (watched.RetryCount - 1)), MaxIntervalMs);
                 watched.NextRetryAt = DateTime.UtcNow.AddMilliseconds(delay);
 
+                TerminalLog.Info("AutoReconnect", "attempt session=" + watched.SessionId +
+                    " " + watched.RetryCount + "/" + MaxRetries + " in " + delay + "ms");
                 Reconnecting?.Invoke(this, new ReconnectEventArgs
                 {
                     SessionId = watched.SessionId,
@@ -281,6 +288,7 @@ namespace Gdterm.Terminal
                     {
                         watched.IsReconnecting = false;
                         watched.RetryCount = 0;
+                        TerminalLog.Info("AutoReconnect", "recovered session=" + watched.SessionId);
                         Reconnected?.Invoke(this, new ReconnectEventArgs
                         {
                             SessionId = watched.SessionId,
@@ -293,6 +301,8 @@ namespace Gdterm.Terminal
                 {
                     // 记录本轮失败原因，继续退避；达 MaxRetries 时再发 ReconnectFailed
                     watched.LastError = ex.Message;
+                    TerminalLog.Info("AutoReconnect", "attempt failed session=" + watched.SessionId +
+                        " " + watched.RetryCount + "/" + MaxRetries + " err=" + ex.Message);
                     Reconnecting?.Invoke(this, new ReconnectEventArgs
                     {
                         SessionId = watched.SessionId,

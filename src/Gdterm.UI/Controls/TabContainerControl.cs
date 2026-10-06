@@ -693,6 +693,44 @@ namespace Gdterm.UI.Controls
 
         public TerminalControl GetActiveTerminalControl() => _activeQuery.GetActiveTerminalControl();
         public ITerminalSession GetActiveSession() => _activeQuery.GetActiveSession();
+
+        /// <summary>SessionId → 可显示名（连接名或 Host）。重连状态提示用（A1）。</summary>
+        public string TryGetDisplayName(string sessionId)
+        {
+            if (string.IsNullOrEmpty(sessionId)) return sessionId;
+            try
+            {
+                foreach (var kv in _sessions)
+                {
+                    var ts = kv.Value;
+                    if (ts != null && ts.SessionId != null &&
+                        string.Equals(ts.SessionId, sessionId, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var cfg = ts.Config;
+                        if (cfg != null)
+                            return string.IsNullOrEmpty(cfg.Name) ? cfg.Host : cfg.Name;
+                        break;
+                    }
+                }
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
+            return sessionId;
+        }
+
+        /// <summary>该 SessionId 是否为当前选中标签的会话（状态栏只跟活动标签，A1）。</summary>
+        public bool IsActiveSessionId(string sessionId)
+        {
+            if (string.IsNullOrEmpty(sessionId)) return false;
+            try
+            {
+                var tab = _tabControl != null ? _tabControl.SelectedTab : null;
+                TabSessionState ts;
+                if (tab == null || !_sessions.TryGetValue(tab, out ts) || ts == null) return false;
+                return ts.SessionId != null &&
+                    string.Equals(ts.SessionId, sessionId, StringComparison.OrdinalIgnoreCase);
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } return false; }
+        }
         public ISshPortForwardHost GetActivePortForwardHost() => _activeQuery.GetActivePortForwardHost();
         public ISshRemoteSession GetActiveRemoteSession() => _activeQuery.GetActiveRemoteSession();
         public ISshPortForwardHost GetActiveSshClient() => GetActivePortForwardHost();

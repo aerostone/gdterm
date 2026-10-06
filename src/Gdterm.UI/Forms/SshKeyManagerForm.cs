@@ -156,8 +156,8 @@ namespace Gdterm.UI.Forms
                 if (!KeePassPasswordWarning.ConfirmSaveIfWeak(this, _keepass, entry.SshPrivateKeyPassphrase))
                     return; // 用户取消密钥短语强度警告
                 var created = _keepass.CreateEntry(entry);
+                // A4：通知中心留痕已由 ToastNotifier.Show 统一承接，删除此处直连（否则重复入中心）
                 ToastNotifier.Success("密钥已导入: " + entry.Title + " (" + (created != null ? created.Id : "") + ")");
-                NotificationCenterPanel.Push("KEY", "导入 SSH 密钥 " + entry.Title);
                 DialogResult = DialogResult.OK;
                 Close();
             }

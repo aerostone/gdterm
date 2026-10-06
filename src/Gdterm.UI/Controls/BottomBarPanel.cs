@@ -175,6 +175,27 @@ namespace Gdterm.UI.Controls
             SetStatusTip(_keepassStatus, unlocked ? "密码库: 已解锁" : "密码库: 锁定");
         }
 
+        /// <summary>连接状态段（A1）：空=就绪(Muted)；含"失败"=Danger；其余重连中=Warning。自带线程 marshal。</summary>
+        public void UpdateConnectionStatus(string text)
+        {
+            if (InvokeRequired) { BeginInvoke(new Action<string>(UpdateConnectionStatus), text ?? ""); return; }
+            if (_connectionStatus == null) return;
+            if (string.IsNullOrEmpty(text))
+            {
+                _connectionStatus.Text = "就绪";
+                _connectionStatus.ForeColor = GdtermColorTable.Muted;
+                SetStatusTip(_connectionStatus, "连接: 就绪");
+            }
+            else
+            {
+                _connectionStatus.Text = text;
+                _connectionStatus.ForeColor = text.IndexOf("失败", StringComparison.Ordinal) >= 0
+                    ? GdtermColorTable.Danger
+                    : GdtermColorTable.Warning;
+                SetStatusTip(_connectionStatus, "连接: " + text);
+            }
+        }
+
         /// <summary>钉住态变化（供 MainForm 落盘 appearance.ini pinTmux；_suppressPinEvent 压住回放期的重复写）。</summary>
         public event Action<bool> PinTmuxChanged;
 

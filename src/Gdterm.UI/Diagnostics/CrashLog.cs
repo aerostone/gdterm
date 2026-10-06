@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
@@ -16,8 +18,29 @@ namespace Gdterm.UI.Diagnostics
         private static string _uiPath;
         private static int _written;
 
+        // A9：有界队列 + 单消费线程批写——调用方（多为 UI 事件链）不再同步开文件。
+        // FATAL/ProcessExit 走 FlushSync 同步排空；队列满丢新并计数（_dropped）。
+        private const int QueueCapacity = 1000;
+        private static BlockingCollection<LogItem> _queue;
+        private static int _pending;   // 已入队未落盘
+        private static int _dropped;   // 满队列丢弃计数
+        private static int _exitHooked;
+        private static readonly ManualResetEventSlim _idle = new ManualResetEventSlim(true);
+
+        private struct LogItem
+        {
+            public string Text;
+            public bool Ui;
+        }
+
         public static void Initialize(string logsDirectory)
         {
+            if (_exitHooked == 0)
+            {
+                _exitHooked = 1;
+                // 进程退出前排空队列（正常退出路径；后台消费线程在 ProcessExit 期间仍存活）
+                try { AppDomain.CurrentDomain.ProcessExit += (s, e) => FlushSync(3000); } catch { }
+            }
             if (string.IsNullOrEmpty(logsDirectory))
                 return;
             try
@@ -60,10 +83,15 @@ namespace Gdterm.UI.Diagnostics
                     level = "WARN";
                     src = src.Substring(10);
                 }
-                else if (isTerminating || (ex != null && !(ex is Exception && string.IsNullOrEmpty(ex.Message))))
+                else if (isTerminating)
                 {
-                    if (ex != null && !src.StartsWith("info", StringComparison.OrdinalIgnoreCase))
-                        level = isTerminating ? "FATAL" : "ERROR";
+                    // A8：终止路径恒 FATAL（即使 ex 为空）
+                    level = "FATAL";
+                }
+                else if (ex != null && !src.StartsWith("info", StringComparison.OrdinalIgnoreCase))
+                {
+                    // A8：带异常一律 ERROR——原恒真死条件使空消息异常落到 INFO
+                    level = "ERROR";
                 }
                 if (ex != null && level == "INFO" && !string.IsNullOrEmpty(ex.Message)
                     && (src.IndexOf("Exception", StringComparison.OrdinalIgnoreCase) >= 0
@@ -99,19 +127,97 @@ namespace Gdterm.UI.Diagnostics
                 }
                 sb.AppendLine();
 
-                lock (_lock)
-                {
-                    Interlocked.Increment(ref _written);
-                    AppendWithRotate(_path, sb.ToString());
-                    if (uiFile)
-                        AppendWithRotate(_uiPath, sb.ToString());
-                }
+                Interlocked.Increment(ref _written);
+                Enqueue(sb.ToString(), uiFile);
+                // A9：FATAL 路径同步排空，确保崩溃记录先落盘再继续（MessageBox/退出）
+                if (isTerminating) FlushSync(3000);
             }
             catch
             {
                 // 绝不因日志本身再抛
             }
         }
+
+        /// <summary>入队（懒启动消费线程）。队列满丢新并计数，绝不阻塞调用方。</summary>
+        private static void Enqueue(string text, bool ui)
+        {
+            EnsureConsumer();
+            var q = _queue;
+            if (q == null) return;
+            Interlocked.Increment(ref _pending);
+            _idle.Reset();
+            if (!q.TryAdd(new LogItem { Text = text, Ui = ui }, 0))
+            {
+                Interlocked.Increment(ref _dropped);
+                if (Interlocked.Decrement(ref _pending) == 0) _idle.Set();
+            }
+        }
+
+        private static void EnsureConsumer()
+        {
+            if (_queue != null) return;
+            lock (_lock)
+            {
+                if (_queue != null) return;
+                var q = new BlockingCollection<LogItem>(QueueCapacity);
+                var t = new Thread(() => Consume(q)) { IsBackground = true, Name = "CrashLogWriter" };
+                _queue = q;
+                t.Start();
+            }
+        }
+
+        /// <summary>单消费线程：批 ≤64 条合并落盘（轮转检查每批一次）。</summary>
+        private static void Consume(BlockingCollection<LogItem> q)
+        {
+            var batch = new List<LogItem>(64);
+            while (true)
+            {
+                batch.Clear();
+                LogItem item;
+                try
+                {
+                    if (!q.TryTake(out item, 200)) continue;
+                }
+                catch (InvalidOperationException) { break; }
+                catch (ObjectDisposedException) { break; }
+                batch.Add(item);
+                LogItem more;
+                while (batch.Count < 64 && q.TryTake(out more, 0)) batch.Add(more);
+                try
+                {
+                    var main = new StringBuilder(batch.Count * 256);
+                    StringBuilder uiSb = null;
+                    for (int i = 0; i < batch.Count; i++)
+                    {
+                        main.Append(batch[i].Text);
+                        if (batch[i].Ui)
+                        {
+                            if (uiSb == null) uiSb = new StringBuilder(256);
+                            uiSb.Append(batch[i].Text);
+                        }
+                    }
+                    AppendWithRotate(_path, main.ToString());
+                    if (uiSb != null) AppendWithRotate(_uiPath, uiSb.ToString());
+                }
+                catch { }
+                finally
+                {
+                    for (int i = 0; i < batch.Count; i++)
+                        if (Interlocked.Decrement(ref _pending) == 0) _idle.Set();
+                }
+            }
+        }
+
+        /// <summary>同步排空队列（FATAL / 测试 / ProcessExit）。返回 true=已排空。</summary>
+        public static bool FlushSync(int timeoutMs = 5000)
+        {
+            if (_queue == null) return true;
+            try { return _idle.Wait(Math.Max(0, timeoutMs)); }
+            catch { return _pending == 0; }
+        }
+
+        /// <summary>满队列丢弃计数（A9 可观测性）。</summary>
+        public static int DroppedCount => _dropped;
 
         /// <summary>单文件追加 + 超 5MB 轮转（path 为 null/空时静默跳过）。</summary>
         private static void AppendWithRotate(string path, string text)

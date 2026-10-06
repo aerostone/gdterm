@@ -72,6 +72,12 @@ namespace Gdterm.UI.Controls
             }
         }
 
+        /// <summary>只读快照（测试与程序化读取用，A4）。</summary>
+        public static string[] Snapshot()
+        {
+            lock (Sync) return Buffer.ToArray();
+        }
+
         public void Reload()
         {
             _list.BeginUpdate();

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
+using Gdterm.UI.Controls;
 using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Diagnostics
@@ -53,6 +54,9 @@ namespace Gdterm.UI.Diagnostics
         public static void Show(string message, Level level = Level.Info, int durationMs = 3500)
         {
             if (string.IsNullOrWhiteSpace(message)) return;
+            // A4：Toast 级事件统一留痕通知中心（任何 Toast 都可在通知中心回看）
+            try { NotificationCenterPanel.Push(level.ToString().ToUpperInvariant(), message); }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ToastNotifier.Show", exSwallowed); } catch { } }
             try
             {
                 var owner = _owner;

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
+using Gdterm.Terminal.Diagnostics;
 
 namespace Gdterm.Terminal
 {
@@ -160,6 +161,7 @@ namespace Gdterm.Terminal
                     {
                         _lostRaised = true;
                         _wasConnected = false;
+                        TerminalLog.Info("ConnectionHealth", "lost host=" + (_session?.Hostname ?? "session"));
                         try { ConnectionLost?.Invoke(_session?.Hostname ?? "session"); } catch { }
                         // 注意：不清空 _connectedAt 永久闩；用 _lostRaised 防抖
                     }

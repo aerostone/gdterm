@@ -37,6 +37,9 @@ namespace Gdterm.Tests
             MacroRecorderTests.Run();
             ScanPluginTests.Run();
 
+            // 可观测性失败信号（A4/A5/A8/A9）——依赖 CrashLog.Initialize 改写全局路径，必须最后跑
+            ObservabilityTests.Run();
+
             // UI 冒烟：--ui-smoke [outDir] 才跑（要桌面会话，默认单元测试不跑）
             int uiIdx = Array.IndexOf(args, "--ui-smoke");
             if (uiIdx >= 0)

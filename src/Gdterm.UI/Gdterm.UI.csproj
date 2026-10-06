@@ -200,6 +200,7 @@
     <Compile Include="Services\DpiScale.cs" />
     <Compile Include="Services\MenuIconFactory.cs" />
     <Compile Include="Services\KeePassPasswordWarning.cs" />
+    <Compile Include="Services\ConnectionStateNotifier.cs" />
     <Compile Include="Services\TabSessionLifecycle.cs" />
     <Compile Include="Services\TabActiveSessionQuery.cs" />
     <Compile Include="Services\GlobalHotkeyController.cs" />

@@ -319,7 +319,13 @@ namespace Gdterm.UI.Forms
                     "font=" + Result.FontName + "/" + Result.FontSize + "pt cjk=" + (string.IsNullOrEmpty(Result.CjkFontName) ? "-" : Result.CjkFontName) +
                     " scheme=" + Result.ColorScheme + " uiFont=" + Result.UIFontName + "/" + Result.UIFontSize + "pt dpiAware=" + Result.DpiAware);
             }
-            catch (Exception ex) { DiagLog.Swallowed("Appearance.Save", ex); }
+            catch (Exception ex)
+            {
+                DiagLog.Swallowed("Appearance.Save", ex);
+                // A7：保存失败不落 OK、不关窗——否则调用方会误报"外观已保存"
+                AntdUI.Message.error(this, "外观保存失败: " + ex.Message);
+                return;
+            }
             DialogResult = DialogResult.OK;
             Close();
         }
@@ -348,7 +354,13 @@ namespace Gdterm.UI.Forms
                 d.Save(_iniPath);
                 DiagLog.Info("Appearance.Reset", "restored factory appearance defaults");
             }
-            catch (Exception ex) { DiagLog.Swallowed("Appearance.Reset", ex); }
+            catch (Exception ex)
+            {
+                DiagLog.Swallowed("Appearance.Reset", ex);
+                // A7：恢复失败不回显——d 未落盘，继续回显=展示未保存的假默认
+                AntdUI.Message.error(this, "恢复默认外观失败: " + ex.Message);
+                return;
+            }
 
             // 表单回显默认值（不关窗，用户可继续微调）
             SelectCombo(_fontCombo, d.FontName);
