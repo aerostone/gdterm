@@ -178,8 +178,7 @@ namespace Gdterm.UI.Diagnostics
                 {
                     if (!q.TryTake(out item, 200)) continue;
                 }
-                catch (InvalidOperationException) { break; }
-                catch (ObjectDisposedException) { break; }
+                catch (InvalidOperationException) { break; } // 含 ObjectDisposedException（其派生类）——分开写会 CS0160
                 batch.Add(item);
                 LogItem more;
                 while (batch.Count < 64 && q.TryTake(out more, 0)) batch.Add(more);
