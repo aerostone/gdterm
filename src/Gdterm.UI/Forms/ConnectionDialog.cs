@@ -104,7 +104,22 @@ namespace Gdterm.UI.Forms
         }
 
         /// <summary>
-        /// 新建连接，预填分组路径（供右键分组节点 “新建连接到本分组” 使用）。
+        /// 从密码条目一键新建连接（密码库管理器入口）：预填主机/用户名/协议/端口并绑定该凭据，
+        /// 让“密码库 → 连接”与“连接 → 密码库”两条路径对称（一体化 change 2026-09-26）。
+        /// 永远作为新建模式（不能链到 (ConnectionConfig,…) 重载：非 null 会进“编辑连接”分支）。
+        /// </summary>
+        public ConnectionDialog(Gdterm.KeePass.Models.KeePassEntry seedCredential, IKeePassService keepass = null)
+        {
+            _config = BuildSeedConfig(seedCredential);
+            _keepass = keepass;
+            _isNew = true;
+            InitializeComponent();
+            Gdterm.UI.Services.FormFontPolicy.Apply(this);
+            LoadFromConfig();
+            EnsureCollapsedClientHeight();
+        }
+
+        /// <summary>新建连接，预填分组路径（供右键分组节点 “新建连接到本分组” 使用）。
         /// 永远作为新建模式，不进入编辑分支。
         /// </summary>
         public ConnectionDialog(string defaultGroupPath, IKeePassService keepass = null)
@@ -116,6 +131,69 @@ namespace Gdterm.UI.Forms
             Gdterm.UI.Services.FormFontPolicy.Apply(this);
             LoadFromConfig();
             EnsureCollapsedClientHeight();
+        }
+
+        /// <summary>密码条目 → 连接配置种子：Hostname/Port 缺失时回退解析 URL（ssh://host:port）。</summary>
+        private static ConnectionConfig BuildSeedConfig(Gdterm.KeePass.Models.KeePassEntry cred)
+        {
+            var cfg = new ConnectionConfig
+            {
+                Name = !string.IsNullOrWhiteSpace(cred == null ? null : cred.Title) ? cred.Title : "",
+                Username = cred == null ? "" : cred.Username ?? "",
+                CredentialRefId = cred == null ? null : cred.Id,
+                Metadata = new System.Collections.Generic.Dictionary<string, string>()
+            };
+            string host = cred == null ? null : cred.Hostname;
+            int port = cred != null ? cred.Port : 0;
+            if (string.IsNullOrWhiteSpace(host) && !string.IsNullOrWhiteSpace(cred == null ? null : cred.Url))
+            {
+                string urlHost; int urlPort;
+                ParseHostPortFromUrl(cred.Url, out urlHost, out urlPort);
+                host = urlHost;
+                if (port <= 0) port = urlPort;
+            }
+            cfg.Protocol = ParseProtocolName(cred == null ? null : cred.Protocol);
+            cfg.Host = host ?? "";
+            cfg.Port = port > 0 ? Math.Min(port, 65535) : (cfg.Protocol == ProtocolType.RDP ? 3389 : 22);
+            if (string.IsNullOrEmpty(cfg.Name)) cfg.Name = cfg.Host;
+            // KeePass 分组 “/服务器” → 连接分组 “服务器”（同一 / 分隔，仅去首尾）
+            var grp = cred == null ? null : cred.GroupPath;
+            cfg.GroupPath = string.IsNullOrWhiteSpace(grp) ? "" : grp.Trim('/');
+            return cfg;
+        }
+
+        private static ProtocolType ParseProtocolName(string s)
+        {
+            if (string.Equals(s, "RDP", StringComparison.OrdinalIgnoreCase)) return ProtocolType.RDP;
+            if (string.Equals(s, "Serial", StringComparison.OrdinalIgnoreCase)) return ProtocolType.Serial;
+            if (string.Equals(s, "Telnet", StringComparison.OrdinalIgnoreCase)) return ProtocolType.Telnet;
+            return ProtocolType.SSH; // SSH / SFTP / 未知均按 SSH（SFTP 走 SSH 通道）
+        }
+
+        /// <summary>从 URL 提取 host/port；容忍裸 “host:port” 与无端口形式，解析失败不抛。</summary>
+        private static void ParseHostPortFromUrl(string url, out string host, out int port)
+        {
+            host = ""; port = 0;
+            if (string.IsNullOrWhiteSpace(url)) return;
+            try
+            {
+                var u = new Uri(url.Trim());
+                host = u.Host;
+                if (u.Port > 0) port = u.Port;
+                return;
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnDialog.UrlParse", exSwallowed); } catch { } }
+            var raw = url.Trim();
+            var idx = raw.LastIndexOf(':');
+            if (idx > 0 && int.TryParse(raw.Substring(idx + 1).TrimEnd('/'), out var p))
+            {
+                host = raw.Substring(0, idx);
+                port = p;
+            }
+            else
+            {
+                host = raw.TrimEnd('/');
+            }
         }
 
         private void InitializeComponent()
@@ -375,6 +453,11 @@ namespace Gdterm.UI.Forms
             Controls.Add(_advancedHost);
             Controls.Add(btnPanel);
             Controls.Add(topPanel);
+
+            // 自动匹配实时预览：主机/用户名/协议/端口任一变化即重算（一体化 change：让黑盒匹配可见）
+            _hostBox.TextChanged += (s, e) => UpdateAutoMatchPreview();
+            _usernameBox.TextChanged += (s, e) => UpdateAutoMatchPreview();
+            _portBox.ValueChanged += (s, e) => UpdateAutoMatchPreview();
 
             AcceptButton = okBtn;
             CancelButton = cancelBtn;
@@ -728,12 +811,21 @@ namespace Gdterm.UI.Forms
                 AntdUI.Message.warn(this, "密码库服务不可用。");
                 return;
             }
+            // 一体化 change：未解锁不再死端警告“请先解锁密码库”（用户得自己去工具菜单解锁再回来），
+            // 而是就地弹 KeePassUnlockForm（同 ProtocolTabOpener / ToolsDialogsLauncher 先例），
+            // 解锁成功直接续开选择器。
             if (!_keepass.IsUnlocked)
             {
-                AntdUI.Message.warn(this, "请先解锁密码库。");
-                return;
+                using (var unlock = new KeePassUnlockForm(_keepass))
+                {
+                    if (unlock.ShowDialog(this) != DialogResult.OK || !_keepass.IsUnlocked)
+                    {
+                        UpdateAutoMatchPreview(); // 解锁失败/取消后可能仍锁定，刷新提示文案
+                        return;
+                    }
+                }
             }
-            using (var picker = new KeePassEntryPicker(_keepass))
+            using (var picker = new KeePassEntryPicker(_keepass, BuildSeedEntryFromForm()))
             {
                 if (picker.ShowDialog(this) == DialogResult.OK && !string.IsNullOrEmpty(picker.SelectedEntryId))
                 {
@@ -741,6 +833,30 @@ namespace Gdterm.UI.Forms
                     RefreshCredentialTitle();
                 }
             }
+        }
+
+        /// <summary>当前表单值 → 新建凭据种子（主机/用户名/协议/端口/分组/URL 预填，避免二次录入）。</summary>
+        private Gdterm.KeePass.Models.KeePassEntry BuildSeedEntryFromForm()
+        {
+            var proto = (_protocolCombo.SelectedValue ?? "SSH") as string;
+            var protoName = string.IsNullOrEmpty(proto) ? "SSH" : proto;
+            var host = _hostBox.Text.Trim();
+            var port = (int)_portBox.Value;
+            // URL 记 host:port（智能匹配按 URL 命中），默认端口省略保持整洁
+            var defPort = protoName == "RDP" ? 3389 : protoName == "SSH" ? 22 : 0;
+            var url = string.IsNullOrEmpty(host) ? ""
+                : protoName.ToLowerInvariant() + "://" + host + (port > 0 && port != defPort ? ":" + port : "");
+            var grp = _groupPathBox.Text.Trim().Trim('/');
+            return new Gdterm.KeePass.Models.KeePassEntry
+            {
+                Title = string.IsNullOrWhiteSpace(_nameBox.Text) ? host : _nameBox.Text.Trim(),
+                Username = _usernameBox.Text.Trim(),
+                Hostname = host,
+                Port = port,
+                Protocol = protoName,
+                Url = url,
+                GroupPath = string.IsNullOrEmpty(grp) ? "/" : "/" + grp
+            };
         }
 
         private void OnClearCredential(object sender, EventArgs e)
@@ -757,8 +873,7 @@ namespace Gdterm.UI.Forms
             var uuid = _credentialRefBox.Text;
             if (string.IsNullOrWhiteSpace(uuid))
             {
-                _credentialTitleLabel.Text = "未选（按主机+用户名自动匹配）";
-                _credentialTitleLabel.ForeColor = GdtermColorTable.Muted;
+                UpdateAutoMatchPreview();
                 return;
             }
             if (_keepass == null || !_keepass.IsUnlocked)
@@ -786,6 +901,59 @@ namespace Gdterm.UI.Forms
             {
                 _credentialTitleLabel.Text = "已选 UUID: " + (uuid.Length > 12 ? uuid.Substring(0, 12) + "…" : uuid);
                 _credentialTitleLabel.ForeColor = GdtermColorTable.Foreground;
+            }
+        }
+
+        /// <summary>
+        /// 未显式选择凭据时，实时预览自动匹配结果（CredentialResolver 同款策略一：URL/标题/用户名匹配）。
+        /// 让“连接时到底会用哪条凭据”从黑盒变为所见即所得（一体化 change 2026-09-26）。
+        /// FakeKeePassService 等不支持 FindEntryByConnection 的实现会被整体吞掉，回退默认文案。
+        /// </summary>
+        private void UpdateAutoMatchPreview()
+        {
+            if (_credentialTitleLabel == null || _credentialRefBox == null) return;
+            if (!string.IsNullOrWhiteSpace(_credentialRefBox.Text)) return; // 已显式选择，展示由 RefreshCredentialTitle 负责
+            if (_keepass == null || !_keepass.IsUnlocked)
+            {
+                _credentialTitleLabel.Text = "未选（解锁密码库后按主机+用户名自动匹配）";
+                _credentialTitleLabel.ForeColor = GdtermColorTable.Muted;
+                return;
+            }
+            var host = _hostBox == null ? "" : _hostBox.Text.Trim();
+            if (string.IsNullOrEmpty(host))
+            {
+                _credentialTitleLabel.Text = "未选（按主机+用户名自动匹配）";
+                _credentialTitleLabel.ForeColor = GdtermColorTable.Muted;
+                return;
+            }
+            try
+            {
+                var draft = new ConnectionConfig
+                {
+                    Host = host,
+                    Port = _portBox == null ? 22 : (int)_portBox.Value,
+                    Username = _usernameBox == null ? "" : _usernameBox.Text.Trim(),
+                    Protocol = ParseProtocolName((_protocolCombo.SelectedValue ?? "SSH") as string)
+                };
+                var hit = _keepass.FindEntryByConnection(draft);
+                if (hit != null)
+                {
+                    var t = string.IsNullOrWhiteSpace(hit.Title) ? "(无标题)" : hit.Title;
+                    var u = string.IsNullOrWhiteSpace(hit.Username) ? "" : " — " + hit.Username;
+                    _credentialTitleLabel.Text = "自动匹配: " + t + u;
+                    _credentialTitleLabel.ForeColor = GdtermColorTable.Success;
+                }
+                else
+                {
+                    _credentialTitleLabel.Text = "未匹配到凭据（连接时需手输密码，或点『选择凭据』新建）";
+                    _credentialTitleLabel.ForeColor = GdtermColorTable.Warning;
+                }
+            }
+            catch (System.Exception exSwallowed)
+            {
+                try { DiagLog.Swallowed("ConnDialog.AutoMatch", exSwallowed); } catch { }
+                _credentialTitleLabel.Text = "未选（按主机+用户名自动匹配）";
+                _credentialTitleLabel.ForeColor = GdtermColorTable.Muted;
             }
         }
     }

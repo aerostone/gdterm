@@ -11,7 +11,11 @@ using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 namespace Gdterm.UI.Forms
 {
     /// <summary>
-    /// KeePass 凭据选择器——在连接设置中浏览/选择/新建凭据
+    /// KeePass 凭据选择器——在连接设置中浏览/选择/新建凭据。
+    /// 一体化 change 2026-09-26：
+    ///   1. 构造可选 seed（新建凭据预填当前连接的主机/用户名/协议/端口，免二次录入）；
+    ///   2. 底部新增「管理…」直通密码库管理器（选择器内可编辑/删除后再回来选）；
+    ///   3. 已选条目支持回车/双击确认（AcceptButton 原有行为保留）。
     /// </summary>
     public sealed class KeePassEntryPicker : AntdUI.Window
     {
@@ -22,13 +26,15 @@ namespace Gdterm.UI.Forms
         private AntdUI.Button _selectButton;
         private System.Collections.Generic.List<KeePassEntrySummary> _rows = new System.Collections.Generic.List<KeePassEntrySummary>();
         private IList<KeePassEntrySummary> _entries;
+        private readonly KeePassEntry _seed;
 
         /// <summary>选中的条目 UUID，未选择返回 null</summary>
         public string SelectedEntryId { get; private set; }
 
-        public KeePassEntryPicker(IKeePassService keepass)
+        public KeePassEntryPicker(IKeePassService keepass, KeePassEntry seed = null)
         {
             _keepass = keepass ?? throw new ArgumentNullException(nameof(keepass));
+            _seed = seed;
             InitializeComponent();
             Gdterm.UI.Services.FormFontPolicy.Apply(this);
             LoadEntries();
@@ -99,10 +105,11 @@ namespace Gdterm.UI.Forms
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = GdtermColorTable.Surface,
-                ColumnCount = 4,
+                ColumnCount = 5,
                 RowCount = 1,
                 Padding = new Padding(12, 7, 12, 7)
             };
+            btnPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             btnPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             btnPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             btnPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -115,6 +122,14 @@ namespace Gdterm.UI.Forms
                 Margin = new Padding(0)
             };
             btnNew.Click += (s, e) => CreateNewEntry();
+            var btnManage = new AntdUI.Button {
+                Text = "管理凭据…",
+                Type = AntdUI.TTypeMini.Default,
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
+                Margin = new Padding(DpiScale.V(this, 8), 0, 0, 0)
+            };
+            btnManage.Click += (s, e) => OpenManager();
             _selectButton = new AntdUI.Button {
                 Text = "选择",
                 Type = AntdUI.TTypeMini.Primary,
@@ -133,8 +148,9 @@ namespace Gdterm.UI.Forms
             };
             btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
             btnPanel.Controls.Add(btnNew, 0, 0);
-            btnPanel.Controls.Add(btnCancel, 2, 0);
-            btnPanel.Controls.Add(_selectButton, 3, 0);
+            btnPanel.Controls.Add(btnManage, 1, 0);
+            btnPanel.Controls.Add(btnCancel, 3, 0);
+            btnPanel.Controls.Add(_selectButton, 4, 0);
 
             // Dock 顺序：后添加的先布局——Top 先钉住，Bottom 再钉住，Fill 吃剩余空间
             Controls.Add(_table);
@@ -227,6 +243,9 @@ namespace Gdterm.UI.Forms
         {
             using (var dlg = new KeePassEntryEditForm())
             {
+                // 一体化 change：有 seed 时预填（当前连接的主机/用户名/协议/端口/分组/URL），
+                // 用户只需补密码——不再是空白表单二次录入。
+                if (_seed != null) dlg.LoadFrom(_seed);
                 if (dlg.ShowDialog(this) == DialogResult.OK)
                 {
                     var entry = new KeePassEntry
@@ -259,6 +278,30 @@ namespace Gdterm.UI.Forms
                         AntdUI.Message.error(this, "创建凭据失败: " + ex.Message);
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// 直通密码库管理器（模态）：编辑/删除后回来重载列表，之前选中的条目若仍存在则保持选中。
+        /// </summary>
+        private void OpenManager()
+        {
+            try
+            {
+                using (var mgr = new KeePassManagerForm(_keepass))
+                {
+                    mgr.ShowDialog(this);
+                }
+                var keep = SelectedEntryId;
+                LoadEntries();
+                ApplyFilter();
+                // 管理器里删了原选中条目时清空选中，避免“选中一个已消失的 UUID”
+                if (keep != null && _entries != null && !_entries.Any(e => e.Id == keep))
+                    UpdateSelectionState();
+            }
+            catch (Exception ex)
+            {
+                AntdUI.Message.error(this, "打开密码库管理器失败: " + ex.Message);
             }
         }
     }

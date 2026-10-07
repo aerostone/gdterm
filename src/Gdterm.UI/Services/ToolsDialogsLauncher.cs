@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Windows.Forms;
 using Gdterm.AI;
+using Gdterm.Connections;
 using Gdterm.KeePass;
 using Gdterm.Security;
 using Gdterm.UI.Diagnostics;
@@ -23,6 +24,9 @@ namespace Gdterm.UI.Services
         private readonly Gdterm.Tools.Scanning.ScanPluginStore _scanPluginStore;
         // 审计 F7 SSOT：MainForm 构造 router 后注入其表渲染结果,帮助文本不再手抄键位
         private Func<string> _hotkeyTableLines;
+        // 一体化 change 2026-09-26：密码库管理器注入连接库，启用「关联连接」列与「从凭据新建连接」
+        private IConnectionStore _connectionStore;
+        private Action _connectionsChanged;
 
         public ToolsDialogsLauncher(
             IWin32Window owner,
@@ -54,6 +58,13 @@ namespace Gdterm.UI.Services
         public void SetHotkeyTableSource(Func<string> tableLines)
         {
             _hotkeyTableLines = tableLines;
+        }
+
+        /// <summary>注入连接库与变更回调（一体化 change）：密码库管理器据此显示「关联连接」并支持从凭据建连接。</summary>
+        public void SetConnectionIntegration(IConnectionStore connectionStore, Action connectionsChanged)
+        {
+            _connectionStore = connectionStore;
+            _connectionsChanged = connectionsChanged;
         }
 
         /// <summary>帮助文本=路由表投影(平表部分)+特例键(不入平表的参数化/全局热键),杜绝两处手抄漂移。</summary>
@@ -109,7 +120,7 @@ namespace Gdterm.UI.Services
         {
             if (!ReAuthenticate("访问密码库管理")) return;
             if (!EnsureKeePassUnlocked("密码库管理")) return;
-            using (var form = new KeePassManagerForm(_keepassService))
+            using (var form = new KeePassManagerForm(_keepassService, _connectionStore, _connectionsChanged))
                 form.ShowDialog(_owner);
         }
 

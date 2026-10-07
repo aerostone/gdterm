@@ -433,6 +433,11 @@ namespace Gdterm.UI.Forms
                 () => _tabContainer.ApplyAppearanceToAllTerminals(),
                 () => _tabContainer.GetActiveRemoteSession(),
                 _scanPluginStore);
+            // 一体化 change 2026-09-26：密码库管理器接入连接库（关联连接列 + 从凭据新建连接）
+            _toolsDialogs.SetConnectionIntegration(_connectionStore, () =>
+            {
+                try { _connectionTree?.LoadConnections(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.ConnsChanged", exSwallowed); } catch { } }
+            });
 
             // 状态栏可点击：把二级菜单里的高频入口提为一击直达
             _statusBar.StatusClicked += (s, key) =>
