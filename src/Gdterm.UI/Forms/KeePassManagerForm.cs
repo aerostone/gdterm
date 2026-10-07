@@ -505,7 +505,7 @@ namespace Gdterm.UI.Forms
         {
             var entryId = SelectedEntryId();
             if (entryId == null) return;
-            var row = _view.Find(x => x.Id == entryId);
+            var row = _view.FirstOrDefault(x => x.Id == entryId); // IList<T> 无 Find，用 LINQ（.NET 4.6.2 兼容）
             var title = row != null ? (row.Title ?? "(无标题)") : entryId;
 
             // 一体化 change：被连接引用的凭据删除前提醒（否则连接静默回退自动匹配，用户无感）
@@ -570,7 +570,7 @@ namespace Gdterm.UI.Forms
         {
             var entryId = SelectedEntryId();
             if (entryId == null) return;
-            var row = _view.Find(x => x.Id == entryId);
+            var row = _view.FirstOrDefault(x => x.Id == entryId); // IList<T> 无 Find，用 LINQ（.NET 4.6.2 兼容）
             var username = row != null ? (row.Username ?? "") : "";
 
             if (!string.IsNullOrEmpty(username))
