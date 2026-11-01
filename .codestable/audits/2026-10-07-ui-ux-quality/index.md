@@ -158,3 +158,10 @@ R6 仍是 **warn-only 告警**（非阻断门）；L2 DPI×字号×主题矩阵�
   补 Padding(12,4,12,4)（本条修复随 0.1.350）
 - 经验：AppVeyor 匿名 API 对 build job log/artifacts 开放（302 跟随重定向），失败构建的
   留证产物可下载 → "首跑红逐条定性"全程无日志通道也能闭环
+
+## 2026-11-01 00:11 闭环确认：0.1.350 全绿
+
+- smoke：KeePassManager/PasswordHealth/ScannerCenter/KeePassManagerEmpty/**SidePanels(6 面板)**/**MainForm(标签+hitRegions+Dock 重叠)**/Dialogs(14 例) 全 [PASS]
+- tree-check：25 文件 **ALL OK**（0.1.349 的 2 条贴边 FAIL 消除）+ ENCODING-CHECK ALL OK
+- L0：ui-ux-lint（棘轮基线）+ gen-tokens --check 通过；二进制完整性校验通过
+- 0.1.345→0.1.350 共 7 轮（6 红 1 绿），每轮红均有产物/日志证据支撑的定点修复，无盲改
