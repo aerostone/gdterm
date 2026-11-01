@@ -38,6 +38,9 @@ standards:
   TabPage 无参构造（Text 属性赋值）；Divider 用 Thickness 非 Size；Input 有 PlaceholderText
   （不要用 SetCueBanner）。
 - **裸 0,122,204 品牌蓝禁用**：主操作色是终端绿（AntdUI SetPrimary #00B84A / 原生按钮 GdtermColorTable.Accent）。
+- **旧式 csproj 陷阱（2026-11-01 CI 0.1.345 实证）**：Gdterm.UI/Gdterm.Tests 均为非 SDK 式工程，
+  新增 .cs 必须手工加 `<Compile Include>` 清单，否则文件静默不参与编译（本地无 dotnet 发现不了，
+  CI 报 CS0246/CS0234）。新增文件后先 `grep -c 文件名 *.csproj` 验证。
 
 ### 技术栈与选型
 
