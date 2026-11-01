@@ -127,3 +127,34 @@ C# 侧改动（smoke/命中区）本机无 Windows 运行时，**目标运行时
 下次构建验证——若 R4 激活后首跑红，每个命中都是真实键盘可达性缺陷或需登记豁免。
 R6 仍是 **warn-only 告警**（非阻断门）；L2 DPI×字号×主题矩阵、L3 视觉基线 diff、
 余 8 处空态、SftpPermissionForm 仍为开放缺口。
+
+## 2026-11-01 复审：as-desktop-ui-verify 对验证体系本身的反向审计（8 项缺陷全修）
+
+按 `as-desktop-ui-verify` 技能的证据契约（判定器可达性/量纲校准/消除空过/最小闭环）反向审计
+本仓验证体系，技能 winforms.md 末段 gdterm 反例逐条命中：
+
+| # | 缺陷 | 修复 |
+|---|---|---|
+| 1 | R4/R6 死规则：dump 布尔是字符串 "true"/"false"，truthy 判断把假当真（tabStop is False 永不成立） | 检查器统一 sbool() |
+| 2 | L0 检查器自身反例未验证 | 10 个合成反例（96/192dpi）全命中 |
+| 3 | textfit 字符串布尔 | 同上 |
+| 4 | CI 冒烟只覆盖 18 对话框，4 个新侧栏+mainform 无硬门 | SidePanels 场景 6 面板 + mainform 标签/hitRegions 断言 |
+| 5 | 空态"找到才检查"反模式（无引导则静默绿） | expectEmpty 存在性断言（command-history/port-forward） |
+| 6 | CI 失败不留证（失败构建 artifacts 为空） | 先上传 dump/截图再 throw |
+| 7 | 参数解析：flag 置首即崩（sys.argv[1] 未过滤） | 过滤后取 argv |
+| 8 | 检查器在 AppVeyor 镜像 Python 3.11 兼容性 | 本地 3.9 实测全绿（3.9 语法子集） |
+
+## 2026-11-01 CI 闭环：0.1.345 → 0.1.350（匿名 API 全程可观测）
+
+- 0.1.345 红：5 个审计新增 .cs 未进旧式 csproj Compile 清单（dcaece5 修）
+- 0.1.346 红：GetHitRegions 用 IsVisible（Control 无此成员）→ Visible（67b55d3 修）
+- 0.1.347 红：Gdterm.Tests 3 类编译错误（a8f8945 修，csc 本地编译验证后提交）
+- 0.1.348 红：SidePanels 2/6——**空态首开永不显示**（EmptyStateView 初值 Visible=false，
+  SetEmpty 只在手动刷新调用，构造/工厂路径无人触发首刷 = C1 原症状残留）。
+  两面板构造尾部补初始刷新（e0c3250）。同轮确认：L0 全 OK、tree-check 23 文件 ALL OK（R4 复活后真数据通过）
+- 0.1.349 红：tree-check 2 FAIL——EmptyStateView 的 action 按钮（打开终端/新建规则）
+  AutoSize 且未设 Padding → R-贴边 规则命中。像素级验证（CI 产物截图）：AntdUI 内绘留 7-9px
+  视觉内边距，但组件未按设计语言显式声明 → 定性为组件缺陷（非误报），EmptyStateView._action
+  补 Padding(12,4,12,4)（本条修复随 0.1.350）
+- 经验：AppVeyor 匿名 API 对 build job log/artifacts 开放（302 跟随重定向），失败构建的
+  留证产物可下载 → "首跑红逐条定性"全程无日志通道也能闭环

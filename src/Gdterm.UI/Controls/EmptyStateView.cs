@@ -104,6 +104,9 @@ namespace Gdterm.UI.Controls
                     Type = AntdUI.TTypeMini.Primary,
                     AutoSize = true,
                     Cursor = Cursors.Hand,
+                    // CI 0.1.349 实证：AutoSize 钮不设 Padding 会被 tree-check R-贴边 规则红
+                    // （命令历史「打开终端」/ 端口转发「新建规则」双红）；对齐设计语言按钮内边距。
+                    Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 4), DpiScale.V(this, 12), DpiScale.V(this, 4)),
                     Margin = new Padding(0)
                 };
                 _action.AccessibleName = actionText;
