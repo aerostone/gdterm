@@ -502,7 +502,7 @@ namespace Gdterm.UI.Controls
         public System.Collections.Generic.List<Gdterm.UI.Services.HitRegion> GetHitRegions()
         {
             var list = new System.Collections.Generic.List<Gdterm.UI.Services.HitRegion>();
-            if (_tabControl == null || !IsVisible) return list;
+            if (_tabControl == null || !Visible) return list;
             try
             {
                 var dpi = DpiScale.Factor(_tabControl);
