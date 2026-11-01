@@ -85,7 +85,7 @@ namespace Gdterm.UI.Forms
             {
                 Name = "DangerRuleTable",
                 Dock = DockStyle.Fill,
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f),
+                Font = Services.FormFontPolicy.MonoFont(),
                 BorderWidth = 0,
                 RowHeight = rowH
             };
@@ -147,7 +147,7 @@ namespace Gdterm.UI.Forms
             _whitelistBox = new AntdUI.Input {
                 Dock = DockStyle.Fill,
                 Margin = new Padding(0),
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
+                Font = Services.FormFontPolicy.MonoFont(),
                 Multiline = true,
                 ReadOnly = true
             };
@@ -448,7 +448,7 @@ namespace Gdterm.UI.Forms
             int btnGap = DpiScale.V(this, 8);
             // 按钮（主按钮最右）
             var okButton = new AntdUI.Button {
-                Text = "确定",
+                Text = "保存",
                 Type = AntdUI.TTypeMini.Primary,
                 Size = new Size(btnW, fieldH),
                 Location = new Point(boxX + boxW - btnW * 2 - btnGap, y)
@@ -528,7 +528,7 @@ namespace Gdterm.UI.Forms
             _inputBox = new AntdUI.Input {
                 Location = new Point(pad, y),
                 Size = new Size(clientW - pad * 2, fieldH),
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 10f),
+                Font = Services.FormFontPolicy.MonoFont(),
                 Text = initialValue ?? ""
             };
             Controls.Add(_inputBox);
@@ -545,7 +545,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(cancelButton);
 
             var okButton = new AntdUI.Button {
-                Text = "确定",
+                Text = "保存",
                 Type = AntdUI.TTypeMini.Primary,
                 Size = new Size(btnW, fieldH),
                 Location = new Point(clientW - pad - btnW * 2 - btnGap, y)

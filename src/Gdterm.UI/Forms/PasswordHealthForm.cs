@@ -33,7 +33,9 @@ namespace Gdterm.UI.Forms
             InitializeComponent();
             // 高/低 DPI 自适应：声明设计基准 96 DPI，让 .NET 自动按当前 DPI 缩放控件。
             Gdterm.UI.Services.FormFontPolicy.Apply(this);
-            LoadReport();
+            // 审计 C2：KDBX 全量分析是几百毫秒到数秒的同步 I/O，原先在构造里跑 →
+            // 窗体现在 Shown 之后才分析，期间光标 Wait + 状态行给出「正在分析」。
+            Shown += (s, e) => LoadReportAsync();
         }
 
         private void InitializeComponent()
@@ -125,19 +127,39 @@ namespace Gdterm.UI.Forms
             CancelButton = closeButton;
         }
 
-        private void LoadReport()
+        private async void LoadReportAsync()
         {
-            try
+            using (var busy = BusyScope.Begin(this, "正在分析密码健康…"))
             {
-                var report = _keepassService.AnalyzeHealth();
-                DisplayReport(report);
-            }
-            catch (Exception ex)
-            {
-                _scoreLabel.Text = "分析失败";
-                _scoreLabel.ForeColor = GdtermColorTable.Danger;
-                _summaryLabel.Text = ex.Message;
-                if (_scanStateLabel != null) _scanStateLabel.Text = "上次扫描：失败";
+                if (_scanStateLabel != null) _scanStateLabel.Text = "正在分析…";
+                _scoreLabel.Text = "健康评分：分析中…";
+                _summaryLabel.Text = "正在读取密码库条目（重复/弱/过期检查）";
+
+                PasswordHealthReport report = null;
+                Exception failure = null;
+                var cts = busy.Token;
+                try
+                {
+                    report = await System.Threading.Tasks.Task.Run(() =>
+                    {
+                        cts.ThrowIfCancellationRequested();
+                        return _keepassService.AnalyzeHealth();
+                    }, cts);
+                }
+                catch (OperationCanceledException) { /* 窗口关闭/取消：直接收尾 */ }
+                catch (Exception ex) { failure = ex; }
+
+                if (IsDisposed || Disposing) return;
+
+                if (failure != null)
+                {
+                    _scoreLabel.Text = "分析失败";
+                    _scoreLabel.ForeColor = GdtermColorTable.Danger;
+                    _summaryLabel.Text = failure.Message;
+                    if (_scanStateLabel != null) _scanStateLabel.Text = "上次扫描：失败";
+                    return;
+                }
+                if (report != null) DisplayReport(report);
             }
         }
 
@@ -189,7 +211,7 @@ namespace Gdterm.UI.Forms
             var table = new AntdUI.Table
             {
                 Dock = DockStyle.Fill,
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
+                Font = Services.FormFontPolicy.MonoFont(),
                 BorderWidth = 0,
                 RowHeight = rowH
             };
@@ -236,7 +258,7 @@ namespace Gdterm.UI.Forms
             var listView = new AntdUI.Table
             {
                 Dock = DockStyle.Fill,
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
+                Font = Services.FormFontPolicy.MonoFont(),
                 BorderWidth = 0,
                 RowHeight = rowH
             };

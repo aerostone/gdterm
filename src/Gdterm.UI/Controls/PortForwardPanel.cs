@@ -16,6 +16,7 @@ namespace Gdterm.UI.Controls
     public class PortForwardPanel : UserControl
     {
         private ListView _lvRules;
+        private EmptyStateView _empty;
         private readonly PortForwardManager _manager;
         private readonly List<PortForwardRule> _rules = new List<PortForwardRule>();
         private ISshPortForwardHost _host;
@@ -71,7 +72,7 @@ namespace Gdterm.UI.Controls
                 FullRowSelect = true,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f)
+                Font = Services.FormFontPolicy.MonoFont()
             };
             _lvRules.Columns.Add("类型", 60);
             _lvRules.Columns.Add("名称", 120);
@@ -82,6 +83,11 @@ namespace Gdterm.UI.Controls
 
             Controls.Add(_lvRules);
             Controls.Add(toolbar);
+
+            // 审计 C1：空隧道列表给出下一步动作（此前只有一排禁用按钮，用户不知道要干什么）
+            _empty = EmptyStateView.Attach(this, "还没有端口转发规则",
+                "把本地端口映射到远端服务（ssh -L），用于内网数据库/Web 面板",
+                "新建规则", (s2, e2) => AddRule());
         }
 
         private AntdUI.Button CreateBtn(string text)
@@ -111,6 +117,7 @@ namespace Gdterm.UI.Controls
                 if (_manager.IsActive(r.Id)) item.ForeColor = GdtermColorTable.Success;
                 _lvRules.Items.Add(item);
             }
+            if (_empty != null) _empty.SetEmpty(_rules.Count == 0);
         }
 
         private void AddRule()
@@ -138,8 +145,8 @@ namespace Gdterm.UI.Controls
             var txtRemotePort = Txt(form, 280, y, 80, fieldH); Lbl(form, "端口:", 245, y); y += rowH + DpiScale.V(this, 12);
 
             int btnH = Math.Max(DpiScale.V(this, 30), fieldH);
-            var btnOk = new AntdUI.Button { Text = "确定", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 200, y), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary, };
-            var btnCancel = new AntdUI.Button { Text = "取消", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 290, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
+            var btnOk = new AntdUI.Button { Text = "保存", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 200, y), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary, };
+            var btnCancel = new AntdUI.Button { Text = "取消", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 290, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Surface2, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
             // 客户区高度随行高自适应（原先固定 320 在大字号下裁剪）
@@ -196,7 +203,7 @@ namespace Gdterm.UI.Controls
         }
 
         private static void Lbl(Form f, string t, int x, int y) { f.Controls.Add(new AntdUI.Label { Text = t, Location = DpiScale.P(f, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }); }
-        private static AntdUI.Input Txt(Form f, int x, int y, int w, int fieldH) { var t = new AntdUI.Input { Location = DpiScale.P(f, x, y), Size = new Size(DpiScale.V(f, w), fieldH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f)}; f.Controls.Add(t); return t; }
+        private static AntdUI.Input Txt(Form f, int x, int y, int w, int fieldH) { var t = new AntdUI.Input { Location = DpiScale.P(f, x, y), Size = new Size(DpiScale.V(f, w), fieldH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.MonoFont()}; f.Controls.Add(t); return t; }
 
         protected override void Dispose(bool disposing)
         {

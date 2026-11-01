@@ -114,7 +114,7 @@ namespace Gdterm.UI.Controls
             {
                 Name = "KeyBindingTable",
                 Dock = DockStyle.Fill,
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f),
+                Font = Services.FormFontPolicy.MonoFont(),
                 BorderWidth = 0,
                 RowHeight = Math.Max(DpiScale.V(this, 24), Gdterm.UI.Services.FormFontPolicy.RowStep(this)) // 表格阅读行：24 地板
             };
@@ -336,7 +336,7 @@ namespace Gdterm.UI.Controls
                 y += rowH;
 
                 var lblValue = new AntdUI.Label { Text = "发送内容", Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
-                var txtValue = new AntdUI.Input { Location = DpiScale.P(this, 100, y), Size = new Size(DpiScale.V(this, 330), fieldH), Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f) };
+                var txtValue = new AntdUI.Input { Location = DpiScale.P(this, 100, y), Size = new Size(DpiScale.V(this, 330), fieldH), Font = Services.FormFontPolicy.MonoFont() };
                 y += rowH;
 
                 var lblDesc = new AntdUI.Label { Text = "描述", Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
@@ -352,7 +352,7 @@ namespace Gdterm.UI.Controls
                 y += Gdterm.UI.Services.FormFontPolicy.RowStep(this) * 2 + DpiScale.V(this, 14);
 
                 var btnOk = new AntdUI.Button {
-                    Text = "确定",
+                    Text = "保存",
                     Type = AntdUI.TTypeMini.Primary,
                     Size = new Size(DpiScale.V(this, 84), fieldH),
                     Location = DpiScale.P(this, 250, y)

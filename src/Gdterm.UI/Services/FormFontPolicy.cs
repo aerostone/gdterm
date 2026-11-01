@@ -218,6 +218,8 @@ namespace Gdterm.UI.Services
 
             ReplaceChildFonts(form.Controls, name, size, false);
             NormalizeAntdShapes(form);
+            // 审计 C5：全局回填无障碍名称（只填空名，不覆盖显式命名）
+            try { UiA11y.AutoName(form); } catch { }
         }
 
         /// <summary>
@@ -324,6 +326,84 @@ namespace Gdterm.UI.Services
                 && name.IndexOf("Courier", StringComparison.OrdinalIgnoreCase) < 0
                 && name.IndexOf("Mono", StringComparison.OrdinalIgnoreCase) < 0
                 && name.IndexOf("Emoji", StringComparison.OrdinalIgnoreCase) < 0;
+        }
+
+        // ───────────────────────── 等宽字体（代码/路径/密钥/密码语义）─────────────────────────
+
+        private static readonly System.Collections.Generic.Dictionary<string, Font> MonoFontCache =
+            new System.Collections.Generic.Dictionary<string, Font>(16);
+        private static readonly object MonoFontLock = new object();
+
+        /// <summary>
+        /// 等宽字体族解析（Consolas → Cascadia Mono → Courier New → 系统默认）。
+        /// 与 ResolveUiFamilyName 同一套“先探测再回退”的思路，避免字族不存在时 GDI+ 静默变宋体。
+        /// </summary>
+        private static string ResolveMonoFamilyName()
+        {
+            var candidates = new[] { "Consolas", "Cascadia Mono", "Courier New" };
+            try
+            {
+                using (var fonts = new System.Drawing.Text.InstalledFontCollection())
+                {
+                    foreach (var want in candidates)
+                    {
+                        foreach (var f in fonts.Families)
+                        {
+                            if (string.Equals(f.Name, want, StringComparison.OrdinalIgnoreCase))
+                                return f.Name;
+                        }
+                    }
+                }
+            }
+            catch { /* 极端 GDI+ 异常 → 系统默认 */ }
+            return SystemFonts.DefaultFont.FontFamily.Name;
+        }
+
+        /// <summary>
+        /// 等宽字号（pt）：跟随全局 UI 字号但夹在 8–16pt。
+        /// 背景（UI/UX 审计 2026-10-07 C3）：等宽文本原先直接吃 UIFontSize（8–24pt），
+        /// 用户把字号调到 14/20pt 时 ListView 行高、AntdUI.Table 行高、固定字段高度不跟随，
+        /// 必然裁切。夹顶 16pt 让极端字号下仍可读且不撑破固定行高。
+        /// </summary>
+        public static float MonoFontSize
+        {
+            get { return Math.Max(8f, Math.Min(16f, UiFontSize)); }
+        }
+
+        /// <summary>
+        /// 等宽字体工厂——DL §2.1“UI 字体 vs 等宽字体”两套分离的唯一出口。
+        ///
+        /// 取代原先 40 处逐点复制的 <c>new Font("Consolas", … UIFontSize …)</c>
+        /// （审计 C3：fallback 有 8.5/9/9.5/10/11/14 六种口径，且每处 new Font 都不 Dispose，
+        /// 面板重建即泄漏 GDI 句柄）。新代码禁止再直接构造等宽 Font。
+        ///
+        /// 契约：
+        ///   - 字号 = MonoFontSize × scale，夹 6–20pt；
+        ///   - 按 (族, 字号, 样式) 缓存实例，返回的 Font <b>不得 Dispose</b>，直接赋给 Control.Font 即可；
+        ///   - 字号变化（ApplyGlobalUIFont）时缓存键自然变化，旧实例由 GC 回收。
+        /// </summary>
+        /// <param name="scale">相对等宽基准的倍数（密码/密钥展示可 1.15）。</param>
+        /// <param name="style">通常 Regular；需要强调时 Bold。</param>
+        public static Font MonoFont(float scale = 1f, FontStyle style = FontStyle.Regular)
+        {
+            float size = MonoFontSize * (scale > 0f ? scale : 1f);
+            if (size < 6f) size = 6f;
+            if (size > 20f) size = 20f;
+            string key = "mono|" + size.ToString("F2") + "|" + ((int)style);
+            lock (MonoFontLock)
+            {
+                Font hit;
+                if (MonoFontCache.TryGetValue(key, out hit)) return hit;
+            }
+            Font made;
+            try { made = new Font(ResolveMonoFamilyName(), size, style); }
+            catch { made = new Font(SystemFonts.DefaultFont.FontFamily, size, style); }
+            lock (MonoFontLock)
+            {
+                if (MonoFontCache.Count >= 32) MonoFontCache.Clear();
+                MonoFontCache[key] = made;
+            }
+            return made;
         }
     }
 }

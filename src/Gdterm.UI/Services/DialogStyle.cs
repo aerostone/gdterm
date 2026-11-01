@@ -50,6 +50,9 @@ namespace Gdterm.UI.Services
             f.MaximizeBox = false;
             f.MinimizeBox = false;
             f.ShowInTaskbar = false;
+
+            // 审计 C5：一次回填基础无障碍名称（表单字段/按钮由 Text 推导，显式命名不覆盖）
+            try { UiA11y.AutoName(f); } catch { }
         }
 
         /// <summary>主操作按钮——薄荷绿实心。每个窗体至多一个（单一 CTA 原则）。</summary>
@@ -137,11 +140,42 @@ namespace Gdterm.UI.Services
             };
         }
 
-        /// <summary>表单输入控件统一暗色（TextBox/NumericUpDown/ComboBox 通用设置）。</summary>
+        /// <summary>
+        /// 表单输入控件统一暗色（TextBox/NumericUpDown/ComboBox 通用设置）。
+        ///
+        /// 审计 C9/C5：P2 的“分级边框”此前只定义了 token 从未接线 —— Border(1.31:1)
+        /// 同时充当分隔线与输入框边界，导致输入区在低亮度下看不出边界。
+        /// 这里把<b>交互面</b>描边接到 BorderStrong（≥3:1）；纯分隔线仍由 Border 负责。
+        /// AntdUI 控件的 BorderColor 属性名随版本而异，用反射“有则设”。
+        /// </summary>
         public static void ApplyInput(Control input)
         {
             if (input == null) return;
-            // AntdUI 输入控件自带边框/底色主题；原生控件（TerminalControl 等豁免区）沿用原生外观
+            try
+            {
+                if (input is TextBoxBase || input is ComboBox || input is NumericUpDown || input is DateTimePicker)
+                {
+                    input.BackColor = GdtermColorTable.Surface;
+                    input.ForeColor = GdtermColorTable.Foreground;
+                }
+            }
+            catch { }
+            TrySetColor(input, "BorderColor", GdtermColorTable.BorderStrong);
+            UiA11y.AutoName(input);
+        }
+
+        /// <summary>反射设置颜色属性（属性不存在或类型不符时静默跳过）。</summary>
+        private static void TrySetColor(Control c, string property, Color value)
+        {
+            if (c == null) return;
+            try
+            {
+                var pi = c.GetType().GetProperty(property);
+                if (pi == null || !pi.CanWrite) return;
+                if (pi.PropertyType != typeof(Color)) return;
+                pi.SetValue(c, value, null);
+            }
+            catch { }
         }
 
         /// <summary>分组标题——全局字号 +0.5 粗体。</summary>

@@ -17,6 +17,7 @@ namespace Gdterm.UI.Controls
         private const int Max = 200;
 
         private readonly ListBox _list;
+        private EmptyStateView _empty;
         private readonly AntdUI.Button _clear;
 
         public NotificationCenterPanel()
@@ -43,7 +44,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f),
+                Font = Services.FormFontPolicy.MonoFont(),
                 IntegralHeight = false
             };
 
@@ -59,7 +60,10 @@ namespace Gdterm.UI.Controls
             Controls.Add(_list);
             Controls.Add(_clear);
             Controls.Add(title);
-            Reload();
+
+            // 审计 C1：通知中心空态（“没有通知”和“没加载出来”此前长得一模一样）
+            _empty = EmptyStateView.Attach(this, "暂无通知",
+                "连接状态变化、扫描结果、导入导出等操作会在这里留痕");
         }
 
         public static void Push(string level, string message)
@@ -87,6 +91,7 @@ namespace Gdterm.UI.Controls
                 foreach (var line in Buffer) _list.Items.Add(line);
             }
             _list.EndUpdate();
+            if (_empty != null) _empty.SetEmpty(_list.Items.Count == 0);
         }
 
         protected override void OnVisibleChanged(EventArgs e)

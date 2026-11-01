@@ -169,7 +169,7 @@ namespace Gdterm.UI.Controls
                 Location = DpiScale.P(form, 100, y), Size = new Size(DpiScale.V(this, 410), lvH),
                 View = View.Details, FullRowSelect = true,
                 BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 8.5f)
+                Font = Services.FormFontPolicy.MonoFont()
             };
             lvSteps.Columns.Add("类型", 60);
             lvSteps.Columns.Add("内容/关键词", 180);
@@ -237,8 +237,8 @@ namespace Gdterm.UI.Controls
             y += stepBtnH + DpiScale.V(this, 12);
 
             int btnH = Math.Max(DpiScale.V(this, 30), fieldH);
-            var btnOk = new AntdUI.Button { Text = "确定", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(form, 340, y), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary, };
-            var btnCancel = new AntdUI.Button { Text = "取消", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(form, 430, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
+            var btnOk = new AntdUI.Button { Text = "保存", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(form, 340, y), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary, };
+            var btnCancel = new AntdUI.Button { Text = "取消", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(form, 430, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Surface2, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
             // 客户区高度随行高自适应（原先固定 450 在大字号下裁剪）
@@ -286,8 +286,8 @@ namespace Gdterm.UI.Controls
             stepY += stepRowH + DpiScale.V(this, 8);
 
             int stepBtnH = Math.Max(DpiScale.V(this, 30), stepFieldH);
-            var btnOk = new AntdUI.Button { Text = "确定", Size = new Size(DpiScale.V(this, 70), stepBtnH), Location = new Point(DpiScale.V(this, 170), stepY), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary, };
-            var btnCancel = new AntdUI.Button { Text = "取消", Size = new Size(DpiScale.V(this, 70), stepBtnH), Location = new Point(DpiScale.V(this, 250), stepY), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Hover, ForeColor = GdtermColorTable.Foreground };
+            var btnOk = new AntdUI.Button { Text = "添加", Size = new Size(DpiScale.V(this, 70), stepBtnH), Location = new Point(DpiScale.V(this, 170), stepY), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary, };
+            var btnCancel = new AntdUI.Button { Text = "取消", Size = new Size(DpiScale.V(this, 70), stepBtnH), Location = new Point(DpiScale.V(this, 250), stepY), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Surface2, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
             form.ClientSize = new Size(DpiScale.V(this, 350), stepY + stepBtnH + DpiScale.V(this, 16));
@@ -302,7 +302,7 @@ namespace Gdterm.UI.Controls
         }
 
         private static AntdUI.Label Lbl(string t, int x, int y, Form f) { var l = new AntdUI.Label { Text = t, Location = DpiScale.P(f, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }; f.Controls.Add(l); return l; }
-        private static AntdUI.Input Txt(int x, int y, int w, Form f, int fieldH) { var t = new AntdUI.Input { Location = DpiScale.P(f, x, y), Size = new Size(DpiScale.V(f, w), fieldH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f)}; f.Controls.Add(t); return t; }
+        private static AntdUI.Input Txt(int x, int y, int w, Form f, int fieldH) { var t = new AntdUI.Input { Location = DpiScale.P(f, x, y), Size = new Size(DpiScale.V(f, w), fieldH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.MonoFont()}; f.Controls.Add(t); return t; }
 
         protected override void Dispose(bool disposing) { base.Dispose(disposing); }
     }

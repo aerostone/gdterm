@@ -602,6 +602,31 @@ namespace Gdterm.UI.Forms
                 this, _securityManager, _keepassService, _lockOverlay,
                 _tabContainer, _reconnectWatchdog, _auditLogger,
                 _menuStrip, _statusBar);
+
+            // 审计 C6：运行期切换主题 → 按「旧色→新色」映射重贴整棵控件树。
+            // 之前在 ToolsDialogsLauncher 里只 Refresh()+Invalidate()，颜色是构造期快照，
+            // 结果只有菜单/状态栏这类实时读 token 的部分变了。
+            try { Diagnostics.GdtermColorTable.ThemeChanged += OnColorTableThemeChanged; } catch { }
+        }
+
+        /// <summary>
+        /// 主题切换后的统一重贴入口（审计 C6）。
+        /// 除颜色重贴外，还需要通知自绘控件重建画笔缓存 —— 它们持有旧色 GDI 对象。
+        /// </summary>
+        private void OnColorTableThemeChanged(System.Collections.Generic.IDictionary<Color, Color> map)
+        {
+            try
+            {
+                var n = Services.ThemeColorRemap.RefreshAll(this, map);
+                DiagLog.Info("MainForm.ThemeRemap", "repainted=" + n.ToString());
+            }
+            catch (System.Exception ex) { DiagLog.Swallowed("MainForm.ThemeRemap", ex); }
+
+            // 自绘控件的缓存刷掉重画（实时读 token 的会在 OnPaint 里拿新值）
+            try { _connectionTree?.Invalidate(true); } catch { }
+            try { _menuStrip?.Invalidate(true); } catch { }
+            try { _statusBar?.Invalidate(true); } catch { }
+            try { _tabContainer?.Refresh(); } catch { }
         }
 
         public void ApplyGlobalUIFont()

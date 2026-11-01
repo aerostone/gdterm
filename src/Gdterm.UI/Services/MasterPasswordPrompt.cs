@@ -47,7 +47,8 @@ namespace Gdterm.UI.Services
                 var pwdBox = new AntdUI.Input {
                     Location = DpiScale.P(dialog, 15, 45),
                     Size = DpiScale.S(dialog, 335, fieldH),
-                    Font = new Font("Consolas", DpiScale.Factor(dialog) * 11f),
+                    // 审计 C3：原先把 DPI 因子乘进 pt 字号（150% 下 11pt→16.5pt）；改走等宽策略
+                    Font = FormFontPolicy.MonoFont(1.22f),
                     UseSystemPasswordChar = true,
                     BackColor = GdtermColorTable.Surface,
                     ForeColor = GdtermColorTable.Foreground,
@@ -85,7 +86,7 @@ namespace Gdterm.UI.Services
                     Size = DpiScale.S(dialog, 80, 32),
                     Location = DpiScale.P(dialog, 185, 105),
                     DialogResult = DialogResult.Cancel,
-                    BackColor = GdtermColorTable.Hover,
+                    BackColor = GdtermColorTable.Surface2,
                     ForeColor = GdtermColorTable.Foreground
                 };
                 cancelBtn.Click += (s, ev) =>

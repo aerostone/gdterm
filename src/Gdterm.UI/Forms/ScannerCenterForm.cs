@@ -269,7 +269,7 @@ namespace Gdterm.UI.Forms
                 Multiline = true,
                 ReadOnly = true,
                 // 等宽字体用于原始脚本输出（终端语义），字号跟随全局 UI 字号
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f)
+                Font = Services.FormFontPolicy.MonoFont()
             };
             rawPanel.Controls.Add(_rawOutput);
             var rawHeader = new AntdUI.Label { Name = "ScannerRawHeader", Dock = DockStyle.Top, Height = headerH, Text = "原始输出", TextAlign = ContentAlignment.MiddleLeft, Font = new Font(Font, FontStyle.Bold), ForeColor = GdtermColorTable.Foreground };
@@ -575,9 +575,14 @@ namespace Gdterm.UI.Forms
 
         private async void OnRunClicked(object sender, EventArgs e)
         {
-            if (_running) return;
+            // 审计 C2：重入不再静默丢弃，给出「上一次还在跑」的可见反馈
+            if (_running) { Services.BusyScope.Nudge(this, "上一次扫描还在执行，请稍候…"); return; }
             var plugins = SelectedRunnablePlugins();
-            if (plugins.Count == 0) return;
+            if (plugins.Count == 0)
+            {
+                AntdUI.Message.warn(this, "请至少勾选一个可运行的扫描插件");
+                return;
+            }
 
             // 签名门禁：Invalid 拒跑；Unsigned 首次逐个确认并记台账（内容变更后重新问）
             foreach (var p in plugins)
@@ -624,17 +629,22 @@ namespace Gdterm.UI.Forms
             {
                 var results = new List<ScanRunResult>();
                 var runner = _runner;
-                await Task.Run(() =>
+                // 审计 C2：等待光标 + 取消令牌（窗口关闭/Dispose 时停止派发后续插件）
+                using (var busy = Services.BusyScope.Begin(this, "正在执行扫描插件…"))
                 {
-                    foreach (var p in plugins)
+                    await Task.Run(() =>
                     {
-                        var r = runner.RunOne(p, channel);
-                        results.Add(r);
-                    }
-                });
+                        foreach (var p in plugins)
+                        {
+                            if (busy.Token.IsCancellationRequested) break;
+                            var r = runner.RunOne(p, channel);
+                            results.Add(r);
+                        }
+                    });
 
-                if (IsDisposed || Disposing) return;
-                foreach (var r in results) RenderResult(r);
+                    if (IsDisposed || Disposing) return;
+                    foreach (var r in results) RenderResult(r);
+                }
             }
             catch (Exception ex)
             {

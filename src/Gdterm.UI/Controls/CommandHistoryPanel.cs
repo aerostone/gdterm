@@ -15,6 +15,7 @@ namespace Gdterm.UI.Controls
     {
         private readonly CommandHistoryStore _store;
         private ListView _historyList;
+        private EmptyStateView _empty;
         private AntdUI.Input _searchBox;
         private AntdUI.Select _hostFilter;
         private AntdUI.Label _statusLabel;
@@ -96,6 +97,11 @@ namespace Gdterm.UI.Controls
             Controls.Add(searchPanel);
             Controls.Add(_statusLabel);
 
+            // 审计 C1：空态引导（此前打开就是“一整片背景色”，分不清空/加载/坏了）
+            _empty = EmptyStateView.Attach(this, "还没有命令历史",
+                "在终端里执行过的命令会自动记录在这里，可按命令内容或主机过滤",
+                "打开终端");
+
             // 事件绑定
             _searchBox.TextChanged += (s, e) => RefreshHistory();
             _hostFilter.SelectedIndexChanged += (s, e) => RefreshHistory();
@@ -145,6 +151,18 @@ namespace Gdterm.UI.Controls
 
             _historyList.EndUpdate();
             _statusLabel.Text = $"共 {entries.Count} 条记录";
+
+            // 审计 C1：空态文案区分“确实没有”与“筛选后为空”
+            if (_empty != null)
+            {
+                bool filtered = !string.IsNullOrEmpty(_searchBox.Text) || _hostFilter.SelectedIndex > 0;
+                _empty.SetEmpty(entries.Count == 0, filtered
+                    ? "没有匹配的命令"
+                    : "还没有命令历史",
+                    filtered
+                        ? "换个关键词，或把主机过滤切回“所有主机”"
+                        : "在终端里执行过的命令会自动记录在这里，可按命令内容或主机过滤");
+            }
         }
 
         /// <summary>

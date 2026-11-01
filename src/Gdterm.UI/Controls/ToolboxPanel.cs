@@ -74,7 +74,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f),
+                Font = Services.FormFontPolicy.MonoFont(),
                 ReadOnly = true
             };
             // 结果复制：右键菜单（全选/复制/清空），路线图 tools-ui“结果复制”口径。

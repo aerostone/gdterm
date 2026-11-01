@@ -140,7 +140,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(btnCancel);
 
             var btnOk = new AntdUI.Button {
-                Text = "确定",
+                Text = "保存",
                 Type = AntdUI.TTypeMini.Primary,
                 Size = new Size(btnW, fieldH),
                 Location = new Point(clientW - DpiScale.V(this, 20) - btnW * 2 - btnGap, y)

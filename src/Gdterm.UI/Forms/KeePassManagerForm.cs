@@ -124,7 +124,7 @@ namespace Gdterm.UI.Forms
             {
                 Name = "KeePassEntryTable",
                 Dock = DockStyle.Fill,
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
+                Font = Services.FormFontPolicy.MonoFont(),
                 BorderWidth = 0,
                 RowHeight = rowH
             };
@@ -735,7 +735,7 @@ namespace Gdterm.UI.Forms
                 Padding = new Padding(0, btnPadH, btnPadR, btnPadH)
             };
             var okButton = new AntdUI.Button {
-                Text = "确定",
+                Text = "保存",
                 AutoSize = true,
                 Type = AntdUI.TTypeMini.Primary,
                 Margin = new Padding(0)
@@ -769,7 +769,7 @@ namespace Gdterm.UI.Forms
 
             _passwordBox = new AntdUI.Input {
                 // 等宽语义（终端/密码字符对齐），字号跟随全局 UI 字号
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
+                Font = Services.FormFontPolicy.MonoFont(),
                 UseSystemPasswordChar = true
             };
             var pwdCell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, AutoSize = true, Margin = new Padding(0) };

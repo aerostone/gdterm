@@ -26,7 +26,7 @@ namespace Gdterm.UI.Diagnostics
         private static Color s_surface = Color.FromArgb(0x16, 0x1D, 0x24);
         private static Color s_surface2 = Color.FromArgb(0x1E, 0x27, 0x31);
         private static Color s_border = Color.FromArgb(0x29, 0x32, 0x3D);
-        private static Color s_border_strong = Color.FromArgb(0x41, 0x50, 0x5F);
+        private static Color s_border_strong = Color.FromArgb(0x66, 0x75, 0x7F);
         private static Color s_accent = Color.FromArgb(0x3D, 0xDC, 0x97);
         private static Color s_foreground = Color.FromArgb(0xE8, 0xEE, 0xF3);
         private static Color s_muted = Color.FromArgb(0x8D, 0x9A, 0xA7);
@@ -44,7 +44,12 @@ namespace Gdterm.UI.Diagnostics
         /// <summary>悬浮层/弹出面板面（P1：与 Surface 拉开一档，菜单/下拉背景）。</summary>
         public static Color Surface2 { get { return s_surface2; } }
         public static Color Border { get { return s_border; } }
-        /// <summary>交互件边缘（按钮/输入框/对话框外框，P2 分级边框）。</summary>
+        /// <summary>
+        /// 交互件边缘（按钮/输入框/对话框外框，P2 分级边框）。
+        /// 2026-10-07 审计 C5：原 #41505F 对比度仅 2.05:1（低于 WCAG 1.4.11 的 3:1），
+        /// 提到 #66757F —— 三套主题对 Surface 分别为 3.57 / 3.82 / 4.06，对 Background 3.98+。
+        /// 纯分隔线继续用弱化的 Border（1.31:1），二者语义从此分开。
+        /// </summary>
         public static Color BorderStrong { get { return s_border_strong; } }
         public static Color Accent { get { return s_accent; } }
         public static Color Foreground { get { return s_foreground; } }
@@ -64,19 +69,20 @@ namespace Gdterm.UI.Diagnostics
         private static Color s_success = Color.FromArgb(0x63, 0xD2, 0x88);
         private static Color s_info = Color.FromArgb(0x7F, 0xB3, 0xEE);
 
-        /// <summary>危险/删除/错误文字（#F06A64）。</summary>
+        /// <summary>危险/删除/错误文字（色值见 docs/DESIGN-LANGUAGE.md §1 生成表 / docs/tokens.json）。</summary>
         public static Color Danger { get { return s_danger; } }
-        /// <summary>告警文字（#E4B86A）。</summary>
+        /// <summary>告警文字（色值见 §1 生成表）。</summary>
         public static Color Warning { get { return s_warning; } }
-        /// <summary>成功状态文字（#59C77B，区别于 Accent 按钮绿）。</summary>
+        /// <summary>成功状态文字（区别于 Accent 按钮绿；色值见 §1 生成表）。</summary>
         public static Color Success { get { return s_success; } }
-        /// <summary>链接/信息（#75A9E6，蓝色仅在可点击文字场景）。</summary>
+        /// <summary>链接/信息（蓝色仅在可点击文字场景；色值见 §1 生成表）。</summary>
         public static Color Info { get { return s_info; } }
 
         /// <summary>运行时切换外壳主题（与终端 ColorScheme 独立）。v2 色板：三级明度 + 分级边框 + Tint。</summary>
         public static void ApplyTheme(string name)
         {
             if (string.IsNullOrEmpty(name)) name = "Dark";
+            var before = CaptureTokens();
             switch (name)
             {
                 case "Darker":
@@ -84,7 +90,7 @@ namespace Gdterm.UI.Diagnostics
                     s_surface = Color.FromArgb(0x11, 0x16, 0x1C);
                     s_surface2 = Color.FromArgb(0x19, 0x1F, 0x27);
                     s_border = Color.FromArgb(0x22, 0x2B, 0x33);
-                    s_border_strong = Color.FromArgb(0x39, 0x46, 0x53);
+                    s_border_strong = Color.FromArgb(0x66, 0x75, 0x7F);
                     s_accent = Color.FromArgb(0x3D, 0xDC, 0x97);
                     s_foreground = Color.FromArgb(0xE6, 0xED, 0xF2);
                     s_muted = Color.FromArgb(0x84, 0x91, 0x9D);
@@ -97,7 +103,7 @@ namespace Gdterm.UI.Diagnostics
                     s_surface = Color.FromArgb(0x0A, 0x0F, 0x0F);
                     s_surface2 = Color.FromArgb(0x12, 0x1A, 0x1A);
                     s_border = Color.FromArgb(0x1B, 0x24, 0x25);
-                    s_border_strong = Color.FromArgb(0x33, 0x44, 0x44);
+                    s_border_strong = Color.FromArgb(0x66, 0x75, 0x7F);
                     s_accent = Color.FromArgb(0x3D, 0xDC, 0x97);
                     s_foreground = Color.FromArgb(0xF0, 0xF5, 0xF5);
                     s_muted = Color.FromArgb(0x87, 0x94, 0x94);
@@ -111,7 +117,7 @@ namespace Gdterm.UI.Diagnostics
                     s_surface = Color.FromArgb(0x16, 0x1D, 0x24);
                     s_surface2 = Color.FromArgb(0x1E, 0x27, 0x31);
                     s_border = Color.FromArgb(0x29, 0x32, 0x3D);
-                    s_border_strong = Color.FromArgb(0x41, 0x50, 0x5F);
+                    s_border_strong = Color.FromArgb(0x66, 0x75, 0x7F);
                     s_accent = Color.FromArgb(0x3D, 0xDC, 0x97);
                     s_foreground = Color.FromArgb(0xE8, 0xEE, 0xF3);
                     s_muted = Color.FromArgb(0x8D, 0x9A, 0xA7);
@@ -120,6 +126,72 @@ namespace Gdterm.UI.Diagnostics
                     s_tint = Color.FromArgb(26, 0x3D, 0xDC, 0x97);
                     break;
             }
+
+            // 审计 C6：颜色是构造时快照（Color 是 struct，赋值即拷贝），Refresh 不会重读 token。
+            // 订阅方（MainForm）拿到 old→new 映射后自行重贴颜色，避免“切主题只变一半”。
+            var map = BuildRemap(before, CaptureTokens());
+            var h = ThemeChanged;
+            if (h != null)
+            {
+                try { h(map); }
+                catch (Exception ex) { try { DiagLog.Swallowed("GdtermColorTable.ThemeChanged", ex); } catch { } }
+            }
+        }
+
+        /// <summary>
+        /// 主题切换后触发，参数是「旧色 → 新色」映射（未变化的 token 不出现）。
+        /// 用法：<c>GdtermColorTable.ThemeChanged += map =&gt; ThemeColorRemap.Apply(this, map);</c>
+        /// </summary>
+        public static event Action<System.Collections.Generic.IDictionary<Color, Color>> ThemeChanged;
+
+        /// <summary>当前全部 token 的快照（键为 token 名，顺序即优先级：基础层在前后者不覆盖前者）。</summary>
+        internal static System.Collections.Generic.Dictionary<string, Color> CaptureTokens()
+        {
+            return new System.Collections.Generic.Dictionary<string, Color>(20)
+            {
+                { "Background", s_background },
+                { "Surface", s_surface },
+                { "Surface2", s_surface2 },
+                { "Border", s_border },
+                { "BorderStrong", s_border_strong },
+                { "Accent", s_accent },
+                { "Foreground", s_foreground },
+                { "Muted", s_muted },
+                { "Hover", s_hover },
+                { "Pressed", s_pressed },
+                { "OnAccent", s_on_accent },
+                { "OnDanger", s_on_danger },
+                { "OnInfo", s_on_info },
+                { "Overlay", s_overlay },
+                { "Tint", s_tint },
+                { "Danger", s_danger },
+                { "Warning", s_warning },
+                { "Success", s_success },
+                { "Info", s_info }
+            };
+        }
+
+        /// <summary>
+        /// 由两次快照求「旧色 → 新色」映射。
+        /// 说明：不同 token 之间存在同色（如 Tint 三套主题相同、BorderStrong 统一后相同），
+        /// 因此同一旧色可能对应多个新色；这里按 <see cref="CaptureTokens"/> 的顺序取第一个
+        /// 非空映射（基础层优先），并跳过 old==new 的自映射 —— 这样重贴颜色时不会把
+        /// “本来就是新色”的控件改坏。
+        /// </summary>
+        internal static System.Collections.Generic.Dictionary<Color, Color> BuildRemap(
+            System.Collections.Generic.Dictionary<string, Color> before,
+            System.Collections.Generic.Dictionary<string, Color> after)
+        {
+            var map = new System.Collections.Generic.Dictionary<Color, Color>();
+            foreach (var kv in before)
+            {
+                Color now;
+                if (!after.TryGetValue(kv.Key, out now)) continue;
+                if (now.ToArgb() == kv.Value.ToArgb()) continue;
+                if (map.ContainsKey(kv.Value)) continue;
+                map[kv.Value] = now;
+            }
+            return map;
         }
 
         public override Color MenuBorder => Border;

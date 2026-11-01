@@ -183,7 +183,7 @@ namespace Gdterm.UI.Forms
             return new AntdUI.Input {
                 Location = new Point(x, y),
                 Size = new Size(width, fieldH),
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 11f),
+                Font = Services.FormFontPolicy.MonoFont(),
                 UseSystemPasswordChar = true
             };
         }

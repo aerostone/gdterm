@@ -83,7 +83,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f)
+                Font = Services.FormFontPolicy.MonoFont()
             };
             _pathBox.KeyDown += (s, e) =>
             {
@@ -107,7 +107,7 @@ namespace Gdterm.UI.Controls
                 HeaderStyle = ColumnHeaderStyle.Clickable,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
+                Font = Services.FormFontPolicy.MonoFont(),
                 AllowDrop = true
             };
             _list.Columns.Add("名称", DpiScale.V(this, 240));
@@ -535,7 +535,7 @@ namespace Gdterm.UI.Controls
                     Multiline = true,
                     ReadOnly = true,
                     Text = text ?? "",
-                    Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
+                    Font = Services.FormFontPolicy.MonoFont(),
                     BackColor = GdtermColorTable.Surface,
                     ForeColor = GdtermColorTable.Foreground,
                 };
@@ -573,7 +573,7 @@ namespace Gdterm.UI.Controls
                 var box = new AntdUI.Input {
                     Dock = DockStyle.Top,
                     MinimumSize = new Size(0, FormFontPolicy.FieldHeight(f)),
-                    Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9.5f),
+                    Font = Services.FormFontPolicy.MonoFont(),
                     BackColor = GdtermColorTable.Surface,
                     ForeColor = GdtermColorTable.Foreground,
                 };

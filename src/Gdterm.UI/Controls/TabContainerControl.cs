@@ -24,7 +24,7 @@ namespace Gdterm.UI.Controls
     /// <summary>
     /// 标签页容器壳——持有会话字典与 TabControl，业务委托 Services 层（finding-10）。
     /// </summary>
-    public class TabContainerControl : UserControl
+    public class TabContainerControl : UserControl, Gdterm.UI.Services.IHitRegionProvider
     {
         private readonly AutoReconnectWatchdog _reconnectWatchdog;
         private readonly IConnectionStore _connectionStore;
@@ -375,6 +375,17 @@ namespace Gdterm.UI.Controls
             int idx = -1;
             for (int i = 0; i < _tabControl.TabCount; i++)
                 if (_tabControl.GetTabRect(i).Contains(e.Location)) { idx = i; break; }
+
+            // 审计 C5：关闭钮可点时要给出手型光标（原先整条标签栏都是默认箭头，
+            // 用户不知道“×”是可点的）。命中区与 HitTestClose 的第二级一致。
+            try
+            {
+                var overClose = idx >= 0 && _chrome.HitTestClose(_tabControl, e.Location) != null;
+                var want = overClose ? Cursors.Hand : Cursors.Default;
+                if (_tabControl.Cursor != want) _tabControl.Cursor = want;
+            }
+            catch { }
+
             if (idx != _chrome.HoverIndex)
             {
                 _chrome.HoverIndex = idx;
@@ -481,6 +492,32 @@ namespace Gdterm.UI.Controls
             if (count < 2) return;
             int idx = ((_tabControl.SelectedIndex + delta) % count + count) % count;
             _tabControl.SelectedIndex = idx;
+        }
+
+        /// <summary>
+        /// 自绘命中区（审计 C5/C7-③）：每个标签的关闭钮命中区（屏幕坐标）。
+        /// 几何口径与 HitTestClose 一致（GetCloseHitRect，≥24×24 逻辑 px）；
+        /// 命中测试只在选中/悬停标签生效，但几何对所有标签恒定，故全量上报供 R1 判尺寸。
+        /// </summary>
+        public System.Collections.Generic.List<Gdterm.UI.Services.HitRegion> GetHitRegions()
+        {
+            var list = new System.Collections.Generic.List<Gdterm.UI.Services.HitRegion>();
+            if (_tabControl == null || !IsVisible) return list;
+            try
+            {
+                var dpi = DpiScale.Factor(_tabControl);
+                for (int i = 0; i < _tabControl.TabCount; i++)
+                {
+                    var local = Gdterm.UI.Services.TabChromePainter.GetCloseHitRect(
+                        _tabControl.GetTabRect(i), dpi);
+                    list.Add(new Gdterm.UI.Services.HitRegion(
+                        "tab-close:" + (string.IsNullOrEmpty(_tabControl.TabPages[i].Text)
+                            ? ("tab" + i) : _tabControl.TabPages[i].Text),
+                        _tabControl.RectangleToScreen(local)));
+                }
+            }
+            catch { return list; }
+            return list;
         }
 
         /// <summary>直达第 index 个标签（0 基，越界忽略）。</summary>

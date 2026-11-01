@@ -124,6 +124,10 @@ namespace Gdterm.UI.Services
         /// <summary>
         /// 若点击落在关闭按钮上，返回对应 TabPage；否则 null。
         /// 关闭钮仅悬停/选中时可见，但命中测试对悬停标签也生效（与可见性一致）。
+        ///
+        /// 两级命中（审计 C5）：可见字形仍是 16×18 设计 px，但命中区扩到 ≥24×24
+        /// （WCAG 2.2 SC 2.5.8 最小目标）。第一级精确命中；第二级只在**命中区**内
+        /// 接受，避免把整个标签头的点击都吞成关闭。
         /// </summary>
         public TabPage HitTestClose(TabControl tabControl, Point location)
         {
@@ -136,12 +140,29 @@ namespace Gdterm.UI.Services
                 if (!rect.Contains(location)) continue;
                 bool showClose = (i == tabControl.SelectedIndex) || (i == HoverIndex);
                 if (!showClose) return null;
-                var closeRect = GetCloseRect(rect, dpi);
-                if (closeRect.Contains(location))
+                if (GetCloseRect(rect, dpi).Contains(location))
+                    return tabControl.TabPages[i];
+                if (GetCloseHitRect(rect, dpi).Contains(location))
                     return tabControl.TabPages[i];
                 return null;
             }
             return null;
+        }
+
+        /// <summary>
+        /// 关闭钮的**命中区**（≥24×24 逻辑 px，垂直居中于标签、右端贴齐可见字形）。
+        /// 只向左/上下扩张，不向右（右侧是标签栏空白，扩张无收益）。
+        /// </summary>
+        public static Rectangle GetCloseHitRect(Rectangle tabRect, float dpi)
+        {
+            var vis = GetCloseRect(tabRect, dpi);
+            int min = (int)Math.Round(24 * dpi);
+            int w = Math.Max(vis.Width, min);
+            int h = Math.Max(vis.Height, Math.Min(min, tabRect.Height));
+            var r = new Rectangle(vis.Right - w, tabRect.Y, w, tabRect.Height);
+            // 高度不足 24 时保持标签内（不越界），垂直居中
+            if (r.Height > h) r = new Rectangle(r.X, r.Y + (r.Height - h) / 2, r.Width, h);
+            return r;
         }
 
         public static Rectangle GetCloseRect(Rectangle tabRect)

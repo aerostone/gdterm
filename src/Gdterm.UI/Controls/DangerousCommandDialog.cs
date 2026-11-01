@@ -80,7 +80,7 @@ namespace Gdterm.UI.Controls
             // 命令显示（等宽语义例外，字号跟随全局）
             _commandLabel = new AntdUI.Input {
                 Text = _command,
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 10f),
+                Font = Services.FormFontPolicy.MonoFont(),
                 ReadOnly = true,
                 Dock = DockStyle.Top,
                 Height = FormFontPolicy.FieldHeight(this),

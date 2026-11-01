@@ -107,7 +107,7 @@ namespace Gdterm.UI.Forms
             };
             var btnOk = new AntdUI.Button
             {
-                Text = "确定",
+                Text = "应用",
                 DialogResult = DialogResult.OK,
                 Size = new Size(btnW, btnH),
                 Location = new Point(btnCancel.Right + DpiScale.V(this, 8), y),

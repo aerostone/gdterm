@@ -1,0 +1,184 @@
+using System;
+using System.Drawing;
+using System.Windows.Forms;
+using Gdterm.UI.Services;
+using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+
+namespace Gdterm.UI.Controls
+{
+    /// <summary>
+    /// 列表型 UI 的标准空态引导层（UI/UX 审计 2026-10-07 C1）。
+    ///
+    /// 背景：15 个列表型面板里 11 个打开即是“一整片背景色”，用户无法区分
+    /// “空 / 还在加载 / 坏了”。而 KeePass 空库引导（KeePassEmptyGuide）与
+    /// ScannerCenter 的 UpdateEmptyHints 已证明该形态有效，只是没有统一组件。
+    ///
+    /// 形态（DL §4.3 标签规格 + §3.1 间距）：
+    ///   标题（Foreground，+0.5pt 粗体）
+    ///   一句说明（Muted，真实换行，宽度上限 360 设计 px）
+    ///   可选主操作（Primary，每空态至多一个）
+    ///
+    /// 用法：
+    ///   <code>
+    ///   _empty = EmptyStateView.Attach(this, "还没有命令历史",
+    ///               "执行过的命令会自动记录在这里", null);
+    ///   ...
+    ///   _empty.SetEmpty(_historyList.Items.Count == 0);
+    ///   </code>
+    /// 必须在列表控件加入之后再 Attach（Attach 会 BringToFront 盖在列表之上）。
+    /// </summary>
+    public sealed class EmptyStateView : UserControl
+    {
+        private readonly Panel _box;
+        private readonly AntdUI.Label _title;
+        private readonly System.Windows.Forms.Label _desc;
+        private readonly AntdUI.Button _action;
+
+        public event EventHandler ActionClicked;
+
+        public EmptyStateView(string title, string description = null, string actionText = null)
+        {
+            Dock = DockStyle.Fill;
+            BackColor = GdtermColorTable.Background;
+            ForeColor = GdtermColorTable.Muted;
+            Visible = false;
+            TabStop = false;
+
+            _box = new Panel
+            {
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                BackColor = Color.Transparent,
+                TabStop = false
+            };
+
+            var flow = new FlowLayoutPanel
+            {
+                FlowDirection = FlowDirection.TopDown,
+                WrapContents = false,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                BackColor = Color.Transparent,
+                TabStop = false,
+                Margin = Padding.Empty,
+                Padding = Padding.Empty
+            };
+
+            _title = new AntdUI.Label
+            {
+                Text = title ?? string.Empty,
+                AutoSize = true,
+                ForeColor = GdtermColorTable.Foreground,
+                Font = FormFontPolicy.UiFont(0.5f, FontStyle.Bold),
+                Margin = new Padding(0, 0, 0, DpiScale.V(null, 6)),
+                TextAlign = ContentAlignment.MiddleCenter
+            };
+            flow.Controls.Add(_title);
+            AccessibleName = title;
+
+            if (!string.IsNullOrEmpty(description))
+            {
+                // 说明用原生 Label 而不是 AntdUI.Label：AntdUI 的 Label 不换行，
+                // 长句会被裁（本项目历史最高频 bug），原生 Label 在 AutoSize=false 时按宽换行。
+                _desc = new System.Windows.Forms.Label
+                {
+                    Text = description,
+                    AutoSize = false,
+                    BackColor = Color.Transparent,
+                    ForeColor = GdtermColorTable.Muted,
+                    Font = FormFontPolicy.UiFont(-0.5f),
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    // 每行 ~360 设计 px，高度按真实 GDI 行高推导（2 行说明不挤成一行）
+                    Size = new Size(DpiScale.V(null, 360),
+                        FormFontPolicy.LineBox(FormFontPolicy.UiFont(-0.5f), null, 1.7f) * 2),
+                    Margin = new Padding(0, 0, 0, DpiScale.V(null, 10))
+                };
+                flow.Controls.Add(_desc);
+            }
+
+            if (!string.IsNullOrEmpty(actionText))
+            {
+                _action = new AntdUI.Button
+                {
+                    Text = actionText,
+                    Type = AntdUI.TTypeMini.Primary,
+                    AutoSize = true,
+                    Cursor = Cursors.Hand,
+                    Margin = new Padding(0)
+                };
+                _action.AccessibleName = actionText;
+                _action.Click += (s, e) =>
+                {
+                    var h = ActionClicked;
+                    if (h != null) h(this, EventArgs.Empty);
+                };
+                flow.Controls.Add(_action);
+            }
+
+            _box.Controls.Add(flow);
+            Controls.Add(_box);
+        }
+
+        /// <summary>空态主按钮（未提供 actionText 时为 null）。</summary>
+        public AntdUI.Button ActionButton { get { return _action; } }
+
+        /// <summary>切换显示：数据源为空时 true。加载中请用 BusyScope，不要复用本组件。</summary>
+        public void SetEmpty(bool empty)
+        {
+            if (Visible != empty) Visible = empty;
+        }
+
+        /// <summary>
+        /// 切换显示并就地改写文案（同一面板要区分“确实没有”与“筛选后为空”时用）。
+        /// 文案未变化时不触发重排。
+        /// </summary>
+        public void SetEmpty(bool empty, string title, string description = null)
+        {
+            if (title != null && _title.Text != title)
+            {
+                _title.Text = title;
+                AccessibleName = title;
+            }
+            if (description != null && _desc != null && _desc.Text != description)
+                _desc.Text = description;
+            SetEmpty(empty);
+            if (empty) CenterBox();
+        }
+
+        /// <summary>
+        /// 把空态层挂到宿主（通常是面板自身）上并置于最前。
+        /// list 仅用于可读性/顺序约定：本方法不订阅列表事件，调用方在刷新末尾显式 SetEmpty。
+        /// </summary>
+        public static EmptyStateView Attach(Control host, string title, string description = null,
+            string actionText = null, EventHandler onAction = null)
+        {
+            if (host == null) return null;
+            var v = new EmptyStateView(title, description, actionText);
+            if (onAction != null) v.ActionClicked += onAction;
+            host.Controls.Add(v);
+            try { v.BringToFront(); } catch { }
+            return v;
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            CenterBox();
+        }
+
+        protected override void OnVisibleChanged(EventArgs e)
+        {
+            base.OnVisibleChanged(e);
+            if (Visible) CenterBox();
+        }
+
+        private void CenterBox()
+        {
+            if (_box == null) return;
+            int w = _box.Width, h = _box.Height;
+            if (w <= 0 || h <= 0) { _box.PerformLayout(); w = _box.Width; h = _box.Height; }
+            _box.Left = Math.Max(0, (ClientSize.Width - w) / 2);
+            _box.Top = Math.Max(0, (ClientSize.Height - h) / 2);
+        }
+    }
+}

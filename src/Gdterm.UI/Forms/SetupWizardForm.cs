@@ -161,7 +161,7 @@ namespace Gdterm.UI.Forms
                 AutoSize = true,
                 Cursor = Cursors.Hand,
                 Name = "cancelButton",
-                BackColor = GdtermColorTable.Hover,
+                BackColor = GdtermColorTable.Surface2,
                 ForeColor = GdtermColorTable.Foreground,
                 Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5)),
                 Margin = new Padding(0, 0, DpiScale.V(this, 12), 0)
@@ -291,7 +291,7 @@ namespace Gdterm.UI.Forms
             };
             _passwordBox = new AntdUI.Input {
                 Dock = DockStyle.Fill,
-                Font = new Font("Consolas", Program.GlobalAppearance != null ? Program.GlobalAppearance.UIFontSize : 11f),
+                Font = Services.FormFontPolicy.MonoFont(),
                 UseSystemPasswordChar = true,
                 Margin = new Padding(0, 6, 0, 6)
             };
@@ -307,7 +307,7 @@ namespace Gdterm.UI.Forms
             };
             _confirmBox = new AntdUI.Input {
                 Dock = DockStyle.Fill,
-                Font = new Font("Consolas", Program.GlobalAppearance != null ? Program.GlobalAppearance.UIFontSize : 11f),
+                Font = Services.FormFontPolicy.MonoFont(),
                 UseSystemPasswordChar = true,
                 Margin = new Padding(0, 6, 0, 6)
             };

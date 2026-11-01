@@ -132,7 +132,7 @@ namespace Gdterm.UI.Forms
             _resultBox = new AntdUI.Input {
                 Location = new Point(pad, y),
                 Size = new Size(DpiScale.V(this, 300), resultH),
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 14f, FontStyle.Bold),
+                Font = Services.FormFontPolicy.MonoFont(1.56f, FontStyle.Bold),
                 ReadOnly = true
             };
             Controls.Add(_resultBox);
@@ -175,7 +175,7 @@ namespace Gdterm.UI.Forms
                 Location = new Point(clientW - pad - DpiScale.V(this, 130), y),
                 Size = new Size(DpiScale.V(this, 130), fieldH),
                 DialogResult = DialogResult.Cancel,
-                BackColor = GdtermColorTable.Hover,
+                BackColor = GdtermColorTable.Surface2,
                 ForeColor = GdtermColorTable.Foreground
             };
             Controls.Add(closeBtn);
@@ -194,7 +194,7 @@ namespace Gdterm.UI.Forms
             _historyBox = new AntdUI.Input {
                 Location = new Point(pad, y),
                 Size = new Size(clientW - pad * 2, historyH),
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 10f),
+                Font = Services.FormFontPolicy.MonoFont(),
                 ReadOnly = true,
                 Multiline = true
             };

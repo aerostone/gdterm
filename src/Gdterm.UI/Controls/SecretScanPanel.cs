@@ -101,7 +101,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f),
+                Font = Services.FormFontPolicy.MonoFont(),
                 View = View.Details,
                 FullRowSelect = true,
                 GridLines = false,
@@ -254,7 +254,7 @@ namespace Gdterm.UI.Controls
                 ReadOnly = true,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 10f),
+                Font = Services.FormFontPolicy.MonoFont(),
             };
 
             Action refreshText = () =>
@@ -287,7 +287,7 @@ namespace Gdterm.UI.Controls
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(form, 10), DpiScale.V(form, 4), DpiScale.V(form, 10), DpiScale.V(form, 4)),
                 Margin = new Padding(0, 0, DpiScale.V(form, 8), 0),
-                BackColor = GdtermColorTable.Hover,
+                BackColor = GdtermColorTable.Surface2,
                 ForeColor = GdtermColorTable.Foreground,
             };
             btnReveal.Click += (s2, e2) =>
@@ -314,7 +314,7 @@ namespace Gdterm.UI.Controls
                 Text = "加入白名单",
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(form, 10), DpiScale.V(form, 4), DpiScale.V(form, 10), DpiScale.V(form, 4)),
-                BackColor = GdtermColorTable.Hover,
+                BackColor = GdtermColorTable.Surface2,
                 ForeColor = GdtermColorTable.Foreground,
             };
             btnWhitelist.Click += (s2, e2) =>

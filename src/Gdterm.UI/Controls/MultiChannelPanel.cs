@@ -117,7 +117,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Top,
                 // 原 28 在大字号下裁字 → 38 地板（用户点名的"多通道没做完"区）
                 Height = FormFontPolicy.FieldHeight(this),
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f)
+                Font = Services.FormFontPolicy.MonoFont()
             };
 
             var inputHint = new AntdUI.Label {

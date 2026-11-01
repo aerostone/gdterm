@@ -45,7 +45,7 @@ namespace Gdterm.UI.Controls
                 Width = DpiScale.V(this, 250),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f),
+                Font = Services.FormFontPolicy.MonoFont(),
                 Margin = new Padding(0, 2, DpiScale.V(this, 6), 0)
             };
             _txtSearch.KeyDown += (s, e) =>

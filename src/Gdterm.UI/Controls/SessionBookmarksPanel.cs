@@ -308,7 +308,7 @@ namespace Gdterm.UI.Controls
 
                 int btnH = Math.Max(DpiScale.V(this, 30), fieldH);
                 var ok = new AntdUI.Button {
-                    Text = "确定",
+                    Text = "保存",
                     DialogResult = DialogResult.OK,
                     Location = new Point(pad + DpiScale.V(this, 310) - DpiScale.V(this, 80), y),
                     Size = new Size(DpiScale.V(this, 80), btnH),

@@ -36,7 +36,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = new Font("Consolas", Gdterm.UI.Program.GlobalAppearance != null ? Gdterm.UI.Program.GlobalAppearance.UIFontSize : 9f),
+                Font = Services.FormFontPolicy.MonoFont(),
                 IntegralHeight = false
             };
             var tip = new AntdUI.Label {

@@ -216,7 +216,7 @@ namespace Gdterm.UI.Controls
                     using (var fg = new SolidBrush(GdtermColorTable.Warning))
                     {
                         var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-                        g.DrawString("T", new Font("Consolas", 7f, FontStyle.Bold), fg, new RectangleF(3, 2, 10, 12), sf);
+                        g.DrawString("T", Services.FormFontPolicy.MonoFont(0.78f, FontStyle.Bold), fg, new RectangleF(3, 2, 10, 12), sf);
                     }
                     break;
                 case "server":
@@ -239,7 +239,7 @@ namespace Gdterm.UI.Controls
                     using (var fg = new SolidBrush(GdtermColorTable.OnInfo))
                     {
                         var sf = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
-                        g.DrawString("G", new Font("Consolas", 7f, FontStyle.Bold), fg, new RectangleF(3, 3, 10, 10), sf);
+                        g.DrawString("G", Services.FormFontPolicy.MonoFont(0.78f, FontStyle.Bold), fg, new RectangleF(3, 3, 10, 10), sf);
                     }
                     break;
             }
