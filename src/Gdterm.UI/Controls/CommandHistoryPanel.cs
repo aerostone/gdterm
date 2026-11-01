@@ -108,6 +108,12 @@ namespace Gdterm.UI.Controls
             btnRefresh.Click += (s, e) => RefreshHistory();
             btnClear.Click += (s, e) => ClearHistory();
             _historyList.DoubleClick += OnItemDoubleClick;
+
+            // 审计 C1 收尾（CI 0.1.348 实证）：构造后首刷一次。此前首次打开面板时
+            // RefreshHistory 无人调用，EmptyStateView 初值 Visible=false 永不翻亮，
+            // 空库用户看到的仍是一整片背景色（C1 要修的原症状）。
+            try { RefreshHistory(); }
+            catch (Exception exSwallowed) { try { DiagLog.Swallowed("CommandHistoryPanel.Ctor.Refresh", exSwallowed); } catch { } }
         }
 
         /// <summary>

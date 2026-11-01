@@ -27,6 +27,11 @@ namespace Gdterm.UI.Controls
             Dock = DockStyle.Fill;
             BackColor = GdtermColorTable.Background;
             BuildUI();
+
+            // 审计 C1 收尾（CI 0.1.348 实证）：构造后首刷一次。此前首次打开面板时
+            // RefreshList 无人调用，EmptyStateView 初值 Visible=false 永不翻亮。
+            try { RefreshList(); }
+            catch (Exception exSwallowed) { try { DiagLog.Swallowed("PortForwardPanel.Ctor.Refresh", exSwallowed); } catch { } }
         }
 
         /// <summary>绑定端口转发宿主（由 Terminal 层适配，UI 不碰 SshClient）</summary>
