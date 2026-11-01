@@ -74,6 +74,21 @@ namespace Gdterm.Tests.Ui
                 check(count > 40, "mainform-controls=" + count + " (>40)");
                 check(FindByType(f, "ConnectionTreeControl") != null, "tree-found");
                 check(FindByType(f, "TabContainerControl") != null, "tabs-found");
+                // 场景要求（2026-11-01 复核修正）：自绘命中区规则的真实目标（标签 × 区）
+                // 只在有标签时存在。空会话下 dump 的 hitRegions 永远为空，规则受检=0 → 空过。
+                // 开 1 个本地终端标签：本地 PTY，不连主机不用凭据，符合“冒烟不连主机”。
+                // 先断言存在、再判尺寸（检查器侧）：存在性是场景前提，不是可选项。
+                var tabs = FindByType(f, "TabContainerControl") as Gdterm.UI.Controls.TabContainerControl;
+                check(tabs != null, "tabs-instance");
+                if (tabs != null)
+                {
+                    tabs.OpenLocalTerminal();
+                    Application.DoEvents();
+                    Thread.Sleep(500);
+                    Application.DoEvents();
+                    check(tabs.GetHitRegions().Count >= 1,
+                        "hitregions>0 after open-tab (label close target must exist)");
+                }
                 check(FindByType(f, "BottomBarPanel") != null, "bottombar-found");
                 // v2 单栏：StatusBarControl 已合并进 BottomBarPanel（独立状态条不存在），状态项由底栏承载
                 check(FindByType(f, "BottomBarPanel") != null, "status-found");

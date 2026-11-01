@@ -55,6 +55,13 @@ namespace Gdterm.Tests.Ui
             sb.Append("\"visible\":").Append(c.Visible ? "true" : "false").Append(",");
             sb.Append("\"enabled\":").Append(c.Enabled ? "true" : "false").Append(",");
             sb.Append("\"font\":\"").Append(Esc(c.Font.Name + " " + c.Font.SizeInPoints.ToString("0.##") + "pt")).Append("\",");
+            // 文本适配度量（审计 C7-1）：单行所需宽 / 换行所需高 / 是否可换行。
+            // 历史最高频 bug 是“文字被裁”，此前 dump 只有 Bounds 没有文字需求尺寸，
+            // 因此这类 bug 只能靠人眼看截图。有了这三个数，ui-tree-check R6 就能自动判。
+            AppendTextMetrics(c, sb);
+            // 自绘命中区（审计 C5/C7-③）：IHitRegionProvider 控件的交互区不是 Control 节点，
+            // 没有这个字段 R1 永远报“全部达标”而标签关闭钮点不准。
+            AppendHitRegions(c, sb);
             // AntdUI 特有：RowHeight / BorderWidth / Type（反射读，有则记）
             sb.Append("\"extra\":{");
             BeginExtra();
@@ -79,6 +86,72 @@ namespace Gdterm.Tests.Ui
             }
             catch { }
             sb.Append("]}");
+        }
+
+        /// <summary>
+        /// 写 textSingleW（不换行所需的像素宽）、textWrapH（按可用宽换行所需高）、wrap（能否换行）。
+        /// 用真实 GDI 度量（TextRenderer + 控件自身 Font），不是估算。
+        /// </summary>
+        private static void AppendTextMetrics(Control c, StringBuilder sb)
+        {
+            int singleW = 0, wrapH = 0;
+            bool wrap = false;
+            try
+            {
+                string text = c.Text;
+                if (!string.IsNullOrEmpty(text))
+                {
+                    singleW = TextRenderer.MeasureText(text, c.Font, new Size(int.MaxValue, int.MaxValue),
+                        TextFormatFlags.NoPadding | TextFormatFlags.SingleLine).Width;
+                    wrap = CanWrap(c);
+                    if (wrap)
+                    {
+                        int availW = Math.Max(1, c.ClientSize.Width - c.Padding.Left - c.Padding.Right);
+                        wrapH = TextRenderer.MeasureText(text, c.Font, new Size(availW, int.MaxValue),
+                            TextFormatFlags.NoPadding | TextFormatFlags.WordBreak).Height;
+                    }
+                }
+            }
+            catch { }
+            sb.Append("\"textSingleW\":").Append(singleW).Append(",");
+            sb.Append("\"textWrapH\":").Append(wrapH).Append(",");
+            sb.Append("\"wrap\":").Append(wrap ? "true" : "false").Append(",");
+        }
+
+        /// <summary>
+        /// 写 hitRegions（自绘交互命中区，屏幕坐标）。非 IHitRegionProvider 控件不写该字段；
+        /// 异常吞掉（dump 不得因命中区采集失败而整棵树丢失）。
+        /// </summary>
+        private static void AppendHitRegions(Control c, StringBuilder sb)
+        {
+            var p = c as Gdterm.UI.Services.IHitRegionProvider;
+            if (p == null) return;
+            sb.Append("\"hitRegions\":[");
+            bool first = true;
+            try
+            {
+                foreach (var hr in p.GetHitRegions())
+                {
+                    if (!first) sb.Append(",");
+                    first = false;
+                    sb.Append("{\"label\":\"").Append(Esc(hr.Label)).Append("\",");
+                    sb.Append("\"abs\":").Append(RectJson(hr.Bounds)).Append("}");
+                }
+            }
+            catch { }
+            sb.Append("],");
+        }
+
+        /// <summary>文本是否会按宽度换行（换行后溢出判据变成高度而不是宽度）。</summary>
+        private static bool CanWrap(Control c)
+        {
+            var tb = c as TextBoxBase;
+            if (tb != null) return tb.Multiline;
+            var lab = c as Label;
+            if (lab != null) return !lab.AutoSize;
+            var rtb = c as RichTextBox;
+            if (rtb != null) return true;
+            return false;
         }
 
         private static void AppendProp(Control c, StringBuilder sb, string prop)

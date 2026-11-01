@@ -50,11 +50,18 @@ test_script:
       $smokeDir = "$env:APPVEYOR_BUILD_FOLDER\ui-smoke"
       Write-Host "Running UI smoke -> $smokeDir"
       & $testExe --ui-smoke "$smokeDir"
-      if ($LASTEXITCODE -ne 0) { throw "UI smoke failed exit=$LASTEXITCODE" }
-      Get-ChildItem $smokeDir -Filter *.png | ForEach-Object { Push-AppveyorArtifact $_.FullName -FileName ("ui-smoke/" + $_.Name) }
-      Get-ChildItem $smokeDir -Filter *.json | ForEach-Object { Push-AppveyorArtifact $_.FullName -FileName ("ui-smoke/" + $_.Name) }
-      # ===== 全控件树校验门（R1-R5）=====
-      # 刻意放在产物上传之后：门即使红了，PNG/JSON 仍在产物里可诊断（先留证据、再宣判）
+      $smokeExit = $LASTEXITCODE
+      # 2026-11-01 复核修正（as-desktop-ui-verify 闭环§5/证据契约）：旧代码非零即 throw，
+      # 产物上传与树检全部被跳过——CI 红了却无任何 dump/截图/日志可诊断。
+      # 现在无论成败都先保存证据、再统一宣判。
+      if (Test-Path $smokeDir) {
+        Get-ChildItem $smokeDir -Filter *.png | ForEach-Object { Push-AppveyorArtifact $_.FullName -FileName ("ui-smoke/" + $_.Name) }
+        Get-ChildItem $smokeDir -Filter *.json | ForEach-Object { Push-AppveyorArtifact $_.FullName -FileName ("ui-smoke/" + $_.Name) }
+      } else {
+        Write-Host "WARN: $smokeDir missing (smoke failed before writing evidence)"
+      }
+      # ===== 全控件树校验门（R1-R6 + 自绘命中区）=====
+      # 放在产物上传之后：门即使红了，PNG/JSON 仍在产物里可诊断（先留证据、再宣判）
       # 零第三方依赖（仅 stdlib），故无需 pip install
       $py = (Get-Command python -ErrorAction SilentlyContinue).Source
       $pyArgs = @()
@@ -65,14 +72,32 @@ test_script:
       if (-not $py) { throw "python not found - ui-tree-check gate cannot run (refusing to silently skip)" }
       $env:PYTHONIOENCODING = "utf-8"
       $env:PYTHONUTF8 = "1"
-      Write-Host "Running ui-tree-check gate -> $smokeDir"
-      & $py @pyArgs tools\ui-tree-check.py $smokeDir
-      if ($LASTEXITCODE -ne 0) { throw "ui-tree-check gate failed exit=$LASTEXITCODE" }
+      $checkExit = 0
+      if (Test-Path $smokeDir) {
+        Write-Host "Running ui-tree-check gate -> $smokeDir"
+        & $py @pyArgs tools\ui-tree-check.py $smokeDir
+        $checkExit = $LASTEXITCODE
+      } else {
+        Write-Host "ui-tree-check skipped: no dumps (smoke already failed exit=$smokeExit)"
+        $checkExit = 1
+      }
+      if ($smokeExit -ne 0) { throw "UI smoke failed exit=$smokeExit (evidence uploaded before this)" }
+      if ($checkExit -ne 0) { throw "ui-tree-check gate failed exit=$checkExit" }
       # ===== 编码守卫：全仓文本必须是合法 UTF-8，BOM 只许出现在白名单内 =====
       # 与 .editorconfig 同口径（.ps1 带 BOM，其余纯 UTF-8）；仅 stdlib，无 pip 依赖
       Write-Host "Running encoding guard"
       & $py @pyArgs tools\check-encoding.py
       if ($LASTEXITCODE -ne 0) { throw "encoding guard failed exit=$LASTEXITCODE" }
+      # ===== UI/UX L0 静态规范门（设计语言 SSOT 的机器投影，见 docs/UI-UX-VERIFICATION.md）=====
+      # 存量违规固化在 .codestable/tools/ui-ux-lint-baseline.txt（棘轮），只在新增时红；
+      # 同时校验 .codestable/tools/ui-coverage-registry.txt 的 dump 覆盖数不低于下限。
+      Write-Host "Running ui-ux-lint (L0 design-language gate)"
+      & $py @pyArgs tools\ui-ux-lint.py
+      if ($LASTEXITCODE -ne 0) { throw "ui-ux-lint gate failed exit=$LASTEXITCODE" }
+      # ===== 色彩 token SSOT 漂移门（审计 C9-1）：docs/tokens.json 与 §1 生成表必须与代码一致 =====
+      Write-Host "Running gen-tokens --check (token SSOT drift gate)"
+      & $py @pyArgs tools\gen-tokens.py --check
+      if ($LASTEXITCODE -ne 0) { throw "gen-tokens check failed exit=$LASTEXITCODE" }
 
 after_test:
   - ps: |

@@ -1,0 +1,49 @@
+# UI/UX L0 静态门基线（棘轮）。新增违规会让 CI 红；
+# 修复后运行 `python3 tools/ui-ux-lint.py --write-baseline` 收紧。
+# 格式：rule|file|snippet
+R04|Controls/BatchCommandPanel.cs|var leftPanel = new Panel { Dock = DockStyle.Left, Width = 250, BackColor = GdtermColorTable.Surface, Padding = new Padd
+R04|Controls/NotificationCenterPanel.cs|Height = 28,
+R04|Controls/ToolboxPanel.cs|Width = 220,
+R04|Forms/MainForm.cs|_connectionTree.Width = 250; // 标准模式树宽；Compact 模式由 ViewModeController 置 200
+R04|Services/SidePanelHost.cs|Height = 28,
+R04|Services/SidePanelHost.cs|Width = 360,
+R04|Services/ViewModeController.cs|_connectionTree.Width = 200;
+R04|Services/ViewModeController.cs|_connectionTree.Width = 250;
+R08|Services/ConnectionImportExportUi.cs|MessageBox.Show(owner,
+R08|Services/ConnectionImportExportUi.cs|MessageBox.Show(owner, "已导出 " + connections.Count + " 个连接", "导出成功",
+R08|Services/ToolsDialogsLauncher.cs|MessageBox.Show(
+R09|Controls/BatchCommandPanel.cs|_lvSessions = new ListView
+R09|Controls/HighlightRulePanel.cs|_lvRules = new ListView
+R09|Controls/KeyBindingPanel.cs|_table = new AntdUI.Table
+R09|Controls/LogonScriptPanel.cs|_lvScripts = new ListView
+R09|Controls/MultiChannelPanel.cs|_sessionList = new ListView
+R09|Controls/SecretScanPanel.cs|_lvFindings = new ListView
+R09|Controls/SnippetSearchPanel.cs|_lvResults = new ListView
+R09|Controls/ToolboxPanel.cs|_lvTools = new ListView
+R12|Controls/CommandHistoryPanel.cs|_hostFilter = new AntdUI.Select {
+R12|Controls/KeyBindingPanel.cs|var cmbKey = new AntdUI.Select { Location = DpiScale.P(this, 275, y), Size = new Size(DpiScale.V(this, 155), fieldH) };
+R12|Controls/KeyBindingPanel.cs|var cmbType = new AntdUI.Select { Location = DpiScale.P(this, 100, y), Size = new Size(DpiScale.V(this, 155), fieldH) };
+R12|Controls/MacroPanel.cs|_speedBox = new AntdUI.Select
+R13|Controls/CommandHistoryPanel.cs|Padding = new Padding(3, 0, 0, 0),
+R13|Controls/DangerousCommandDialog.cs|Padding = new Padding(10, 8, 10, 8)
+R13|Controls/DangerousCommandDialog.cs|Padding = new Padding(15, 10, 15, 10)
+R13|Controls/FilePaneControl.cs|Margin = new Padding(1, 0, 1, 0),
+R13|Controls/MacroPanel.cs|Padding = new Padding(3, 0, 0, 0),
+R13|Controls/WelcomePanel.cs|Margin = new Padding(4, 8, 4, 4)
+R13|Controls/WelcomePanel.cs|Padding = new Padding(0, 4, 0, 0)
+R13|Controls/WelcomePanel.cs|Padding = new Padding(0, 8, 0, 0)
+R13|Controls/WelcomePanel.cs|Padding = new Padding(2, 0, 0, 0)
+R13|Controls/WelcomePanel.cs|Padding = new Padding(40, 24, 40, 20)
+R13|Diagnostics/ToastNotifier.cs|Padding = new Padding(12, 8, 12, 8)
+R13|Forms/ConnectionDialog.cs|Margin = new Padding(0, 0, 0, 10)
+R13|Forms/ConnectionDialog.cs|Margin = new Padding(0, 0, 0, 3)
+R13|Forms/ConnectionDialog.cs|_advancedHost = new Panel { Dock = DockStyle.Fill, Visible = false, AutoScroll = true, BackColor = GdtermColorTable.Back
+R13|Forms/ConnectionDialog.cs|var rdpChecks = new TableLayoutPanel { ColumnCount = 2, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 
+R13|Forms/ConnectionDialog.cs|var topPanel = new Panel { Dock = DockStyle.Top, AutoSize = true, BackColor = GdtermColorTable.Background, Padding = new
+R13|Forms/KeePassEntryPicker.cs|Margin = new Padding(8, 0, 0, 0)
+R13|Forms/KeePassEntryPicker.cs|Margin = new Padding(8, 0, 0, 0),
+R13|Forms/KeePassEntryPicker.cs|Padding = new Padding(12, 10, 12, 6),
+R13|Forms/KeePassEntryPicker.cs|Padding = new Padding(12, 7, 12, 7)
+R13|Forms/SetupWizardForm.cs|Margin = new Padding(0, 6, 0, 6)
+R13|Forms/SetupWizardForm.cs|Padding = new Padding(0, 4, 0, 0)
+R13|Services/ViewModeController.cs|Padding = new Padding(10, 4, 10, 4),

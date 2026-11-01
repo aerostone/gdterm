@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
+using Gdterm.UI.Controls;
 using Gdterm.UI.Forms;
 
 namespace Gdterm.Tests.Ui
@@ -27,6 +28,7 @@ namespace Gdterm.Tests.Ui
             string outDir = args.Length > 0 ? args[0] : Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory, "ui-smoke");
             Directory.CreateDirectory(outDir);
+            _smokeOutDir = outDir;
             Console.WriteLine("=== gdterm UI smoke (screenshots to " + outDir + ") ===");
 
             // 1) 密码管理器：行数 + 列宽 + 行高 + 关闭
@@ -176,6 +178,44 @@ namespace Gdterm.Tests.Ui
                 }
             });
 
+            // 3c) 侧栏面板群（审计 C7-2）：6 个高频侧栏此前从未进 dump，布局回归无人守。
+            // 每个面板塞进 360x480 宿主窗（贴近真实侧栏几何）单独 Show + dump。
+            // 单面板失败只记该面板 FAIL（不拖垮其余）；全过后统一汇总断言。
+            // 依赖全部走临时目录，不碰 data/。
+            RunCase("SidePanels", () =>
+            {
+                string tmp = Path.Combine(Path.GetTempPath(), "gdterm-panels-" + Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(tmp);
+                var toolRegistry = new Gdterm.Tools.ToolRegistry();
+                var secretScanner = new SecretScanner(SecretScanConfig.GetDefault());
+                var portManager = new Gdterm.Tunnel.PortForwardManager();
+                var failures = new List<string>();
+
+                Action<string, Func<Control>, bool> tryPanel = (name, create, expectEmpty) =>
+                {
+                    try { DumpSidePanel(name, create, expectEmpty); }
+                    catch (Exception ex) { failures.Add(name + ": " + FlatEx(ex)); }
+                };
+
+                tryPanel("command-history", () => new CommandHistoryPanel(
+                    new Gdterm.Logging.CommandHistoryStore(Path.Combine(tmp, "cmdhist"))), expectEmpty: true);
+                tryPanel("port-forward", () => new PortForwardPanel(portManager), expectEmpty: true);
+                tryPanel("secret-scan", () => new SecretScanPanel(secretScanner, null), false);
+                tryPanel("key-binding", () => new KeyBindingPanel(
+                    new Gdterm.Terminal.TerminalKeyBindingStore(Path.Combine(tmp, "keybind.json"))), false);
+                tryPanel("toolbox", () => new ToolboxPanel(toolRegistry), false);
+                tryPanel("logon-script", () => new LogonScriptPanel(
+                    new Gdterm.Connections.LogonScriptStore(Path.Combine(tmp, "logon.json"))), false);
+
+                try { Directory.Delete(tmp, true); } catch { }
+                try { toolRegistry.Dispose(); } catch { }
+                try { secretScanner.Dispose(); } catch { }
+                try { portManager.Dispose(); } catch { }
+                Check(failures.Count == 0, "侧栏面板失败 " + failures.Count + "/6: " +
+                    string.Join(" | ", failures));
+                Console.WriteLine("  side-panels done");
+            });
+
             // 4) 主窗 layout：全依赖临时目录构造，dump 整棵树。
             // 主窗构造链长（hotkey/托盘/欢迎页/会话恢复），独立 STA 线程 + 8 分钟硬超时，
             // 超时只记 FAIL 不卡 job，后续 job（artifact/树检）照常跑。
@@ -316,6 +356,91 @@ namespace Gdterm.Tests.Ui
             foreach (Control c in root.Controls)
             {
                 var hit = FindByName(c, name);
+                if (hit != null) return hit;
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 侧栏面板 dump 公用壳（审计 C7-2）：宿主窗 360x480（贴近真实侧栏几何），
+        /// 面板 Dock=Fill。断言：能构造、能 Show、控件数 >3、dump 落盘。
+        /// 空态引导层（EmptyStateView）若在树上，额外断言其存在 —— 把 C1 的新组件也锁住。
+        /// </summary>
+        private static void DumpSidePanel(string name, Func<Control> create, bool expectEmpty = false)
+        {
+            // outDir 由 Run() 开头设一次（避免改 RunCase 签名）
+            string outDir = _smokeOutDir;
+
+            Control panel = null;
+            using (var host = new Form())
+            {
+                host.Text = name + "-host";
+                host.ClientSize = new Size(360, 480);
+                host.BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Background;
+                host.StartPosition = FormStartPosition.Manual;
+                host.Location = new Point(0, 0);
+
+                try { panel = create(); }
+                catch (Exception ex)
+                {
+                    Check(false, name + " 构造失败: " + FlatEx(ex));
+                    return;
+                }
+                Check(panel != null, name + " 面板非空");
+                if (panel == null) return;
+
+                panel.Dock = DockStyle.Fill;
+                host.Controls.Add(panel);
+                host.Show();
+                host.BringToFront();
+                Application.DoEvents();
+                Thread.Sleep(500);
+                Application.DoEvents();
+                Thread.Sleep(250);
+                Application.DoEvents();
+
+                AssertNoDockOverlap(host, name);
+                Check(CountControls(panel) > 3, name + "-controls=" + CountControls(panel) + " (>3)");
+
+                // 空态引导层：空数据源面板必须在树上挂 EmptyStateView（C1）。
+                // expectEmpty=true 时先断言存在再断言可见（场景要求节点存在：
+                // “找到才检查”会在组件被删除后假绿）；false 时找到才查可见性（其余面板空态未接，属已知遗留）。
+                var empty = FindByType(panel, "EmptyStateView");
+                if (expectEmpty)
+                {
+                    Check(empty != null, name + " 空态引导存在（EmptyStateView）");
+                    if (empty != null)
+                        Check(empty.Visible, name + " 空态引导可见（空库）");
+                }
+                else if (empty != null)
+                {
+                    Check(empty.Visible, name + " 空态引导可见（空库）");
+                }
+
+                Shot(host, Path.Combine(outDir, name + ".png"));
+                File.WriteAllText(Path.Combine(outDir, name + ".json"), UiTreeDumper.Dump(host), System.Text.Encoding.UTF8);
+                Console.WriteLine("  dump: " + name + ".json");
+            }
+            // 面板是宿主窗的子控件，宿主 Dispose 时会连带释放；这里补一手以防异常路径漏掉
+            try { if (panel != null) panel.Dispose(); } catch { }
+        }
+
+        /// <summary>侧栏 dump 用：outDir 由 Run() 开头设一次。</summary>
+        private static string _smokeOutDir;
+
+        private static int CountControls(Control root)
+        {
+            int n = 1;
+            foreach (Control c in root.Controls) n += CountControls(c);
+            return n;
+        }
+
+        private static Control FindByType(Control root, string typeName)
+        {
+            if (root.GetType().Name == typeName) return root;
+            foreach (Control c in root.Controls)
+            {
+                var hit = FindByType(c, typeName);
                 if (hit != null) return hit;
             }
             return null;

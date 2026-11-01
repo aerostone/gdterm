@@ -1,0 +1,65 @@
+# UI 覆盖登记表（R11 强制）
+# 目的：新增 Form/Control 必须显式声明"它靠什么验证"，否则 ui-ux-lint R11 失败。
+# 目的是让"零自动验证区"永远可见，而不是靠人记得去加 smoke。
+#
+# 状态取值：
+#   dump:<name>    有 UI 树 dump（run-ui-smoke 产出 <name>.json），进 L1 结构门
+#   manual:<note>  只能人工/截图验收（瞬态浮层、开环交互）
+#   none           当前零验证 —— 技术债，见 docs/UI-UX-VERIFICATION.md §5 收敛计划
+#
+# floor：dump 条目数下限。删/降级任何 dump 覆盖都会让门变红（棘轮）。
+# floor: 22
+#
+Forms/MainForm.cs | dump:mainform | 主壳：菜单/树/Tab/底栏/状态
+Forms/AiSettingsForm.cs | dump:ai-settings |
+Forms/AppearanceSettingsForm.cs | dump:appearance-settings |
+Forms/ChangeMasterPasswordForm.cs | dump:change-masterpwd |
+Forms/ConnectionDialog.cs | dump:connection-ssh,connection-rdp,connection-serial | 三协议 + 高级区展开
+Forms/DangerousCommandConfigForm.cs | dump:dangerous-cmd |
+Forms/KeePassEntryPicker.cs | dump:keepass-picker |
+Forms/KeePassManagerForm.cs | dump:keepass-manager,keepass-manager-empty | 有数据 / 空态两态
+Forms/KeePassUnlockForm.cs | dump:keepass-unlock |
+Forms/PasswordGeneratorForm.cs | dump:pwd-generator |
+Forms/PasswordHealthForm.cs | dump:password-health |
+Forms/QuickCommandEditorForm.cs | dump:quickcmd-editor |
+Forms/ScannerCenterForm.cs | dump:scanner-center |
+Forms/SetupWizardForm.cs | dump:setup-wizard |
+Forms/SshKeyManagerForm.cs | dump:sshkey-manager |
+Forms/SftpPermissionForm.cs | none | 唯一未进 dump 的窗体；建议补 Show 用例
+Controls/TransferProgressDialog.cs | dump:transfer-progress |
+Controls/AiChatPanel.cs | none | 侧栏常驻
+Controls/BatchCommandPanel.cs | none | 侧栏常驻
+Controls/BottomBarPanel.cs | none | 主壳底栏（mainform dump 内含节点，但无独立断言）
+Controls/CommandHistoryPanel.cs | dump:command-history | 侧栏常驻（审计 C7-2 入 dump）
+Controls/CommandTemplatePanel.cs | none | 侧栏常驻
+Controls/ConnectionQuickJumpForm.cs | none | 模态浮层
+Controls/ConnectionTreeControl.cs | none | 主壳常驻（mainform dump 内含节点）
+Controls/DangerousCommandDialog.cs | none | 模态浮层
+Controls/FilePaneControl.cs | none | SFTP 双栏
+Controls/HealthMonitorPanel.cs | none | 侧栏常驻
+Controls/HighlightRulePanel.cs | none | 侧栏常驻
+Controls/KeyBindingPanel.cs | dump:key-binding | 侧栏常驻（审计 C7-2 入 dump）
+Controls/LockOverlayControl.cs | none | 主壳遮罩（mainform 锁定态 dump 内含）
+Controls/LogonScriptPanel.cs | dump:logon-script | 侧栏常驻（审计 C7-2 入 dump）
+Controls/MacroPanel.cs | none | 侧栏常驻
+Controls/MultiChannelPanel.cs | none | 侧栏常驻
+Controls/NotificationCenterPanel.cs | none | 侧栏常驻
+Controls/PortForwardPanel.cs | dump:port-forward | 侧栏常驻（审计 C7-2 入 dump）
+Controls/SecretScanPanel.cs | dump:secret-scan | 侧栏常驻（审计 C7-2 入 dump）
+Controls/SessionBookmarksPanel.cs | none | 侧栏常驻
+Controls/SftpDualPanePanel.cs | none | 标签页常驻
+Controls/SnippetSearchPanel.cs | none | 模态浮层
+Controls/SplitPaneControl.cs | none | 分屏容器
+Controls/TabContainerControl.cs | none | 主壳常驻（mainform dump 内含节点）
+Controls/TerminalControl.cs | none | 主工作区
+Controls/TerminalControl.Keyboard.cs | manual:随宿主 | 部分类，随 TerminalControl
+Controls/TerminalControl.Profile.cs | manual:随宿主 | 部分类，随 TerminalControl
+Controls/TerminalSearchBar.cs | none | 终端内浮条
+Controls/ToolboxPanel.cs | dump:toolbox | 侧栏常驻（审计 C7-2 入 dump）
+Controls/TransferCenterPanel.cs | none | 侧栏常驻
+Controls/WelcomePanel.cs | none | 标签页常驻
+Controls/MenuTip.cs | manual:瞬态 | 菜单悬停提示，无稳定生命周期
+Controls/TerminalCompletion.cs | manual:瞬态 | 补全候选数据源
+Controls/TerminalCompletionPopup.cs | manual:瞬态 | 补全浮层
+Controls/FilePaneModel.cs | n/a:非UI | 纯模型
+Controls/EmptyStateView.cs | dump:随宿主 | 空态引导组件（C1），随宿主面板 dump（command-history 等）

@@ -2,13 +2,30 @@
 # -*- coding: utf-8 -*-
 """全控件树盒模型断言：读 CI 产出的 *.json（UiTreeDumper），查：
 
-R1 触击目标：可见且 enabled 的交互叶，abs 宽高二者同时小于 HIT_MIN(32) 才算失败
+R1 触击目标：可见且 enabled 的交互叶，abs 宽高二者同时小于 32 逻辑 px 才算失败
    （曾评估 either-dim，会立刻命中主窗 10 个 109-118x25 合法紧凑控件，故否决）；
    Label/Divider/Panel/Splitter 等展示型控件不参与，省略号溢出钮豁免。
-R2 焦点链：同一父容器实例内 tabIndex 非零值不得重复（0=WinForms 默认无序，跳过；
-   缺 tabIndex 字段的旧 dump 跳过）。
+   量纲（2026-11-01 复核修正）：app.manifest 是 PerMonitorV2，dump 的 abs 是设备像素，
+   阈值按 T×dpi/96 换算（96dpi 下恒等，高 dpi 需要更多设备像素）。
+R2（已删）：原“同父非零 TabIndex 不重复”规则恒过（全仓显式 TabIndex 仅 1 处，其余皆 0）——
+   永不失败的规则比没有规则更坏（审计 C7-④），按“补真实 Tab 序或删除”的决策删除；
+   焦点链覆盖由 R4（交互叶 TabStop=false 即红）承接。
 R3 关闭绑定：每窗至少一个名含 Close/Cancel/OK/确定/取消/关闭 的控件；无关闭语义的窗体走前缀豁免。
 R4 键盘可达性：交互叶 TabStop=false 数必须为 0（精确短名匹配，见该段注释）；mainform 走独立分支。
+R6 文本适配（2026-10-07 审计 C7-1）：dump 自带 textSingleW/textWrapH/wrap，
+   单行控件所需宽 > 可用宽+TOL 记为“文字溢出”；换行控件所需高 > 可用高+TOL 记为“文字裁切”。
+   默认 **warn-only**（打印 WARN 不影响退出码）：AntdUI.Button 有意省略号截断、以及
+   96/120dpi 度量差异都会造成个位数像素级告警，先积累基线再翻转成硬门（--textfit-strict）。
+   注意：warn-only 是告警不是阻断门，报告时不得称其为硬门。
+   主窗分支（2026-11-01 复核修正）：hitRegions 与 R6 是通用规则，mainform 同样受判
+   （此前 mainform 分支提前 continue，把这两条新规则的真实目标主窗跳掉了）。
+
+自绘命中区（审计 C5/C7-③）：节点带 hitRegions 字段时，每个区最小边 ≥ 24 逻辑 px
+   （WCAG 2.2 SC 2.5.8，与 TabChromePainter.GetCloseHitRect 的扩张口径同源）——
+   R1 的“Control 节点”口径看不见的自绘交互区（标签 × 等）由此纳入。
+   量纲同上：阈值 = 24×dpi/96 设备像素。0 个命中区时只报“受检=0”不假绿，
+   “场景必须存在”由 smoke 侧显式断言（先断言存在，再判尺寸）。
+
 R5 停靠遮挡：同父可见兄弟中 Dock=Fill 与边停靠(Top/Bottom/Left/Right)不得相交 ——
    "工具栏/表头盖住表体"类布局 bug 的可测签名；Fill vs Fill 豁免（同格覆盖层靠可见性互斥）。
 
@@ -23,9 +40,23 @@ import os
 import sys
 
 FAIL = []
+WARN = []
 TOL = 2          # 越界容差 px
 OVERLAP_MIN = 16  # 重叠告警阈值 px2（4x4）
 HIT_MIN = 32      # 最小触击目标 px（R1；change 2026-09-24 定稿，44 噪音过大否决）
+TEXTFIT_TOL = 4   # 文本适配容差 px（R6；96/120dpi 度量差异的经验上限）
+TEXTFIT_STRICT = "--textfit-strict" in sys.argv
+
+
+def sbool(v, default=False):
+    """dump 布尔字段是字符串 "true"/"false"（UiTreeDumper 约定）。
+    直接 truthy 判断会把 "false" 当 True，使过滤/断言静默失效
+    （R4 的 tabStop is False、R6 的 autoSize/wrap 都因此成死规则，2026-11-01 复核修正）。"""
+    if isinstance(v, str):
+        return v.lower() == "true"
+    if v is None:
+        return default
+    return bool(v)
 
 
 def check(ok, what):
@@ -75,7 +106,7 @@ def contains(a, b, tol=TOL):
 
 def siblings_overlap(nodes):
     """同父兄弟重叠：只查可见、非包含关系的两两交叠。"""
-    vis = [n for (n, _, _) in [(t[0], t[1], t[2]) for t in nodes] if n.get("visible") and area(n.get("abs", {})) > 0]
+    vis = [n for (n, _, _) in [(t[0], t[1], t[2]) for t in nodes] if sbool(n.get("visible")) and area(n.get("abs", {})) > 0]
     bad = []
     for i in range(len(vis)):
         for j in range(i + 1, len(vis)):
@@ -121,7 +152,10 @@ def mainform_rules(tree, check):
 
 
 def main():
-    d = sys.argv[1] if len(sys.argv) > 1 else "ui-smoke"
+    # flag（--textfit-strict 等）与位置参数分离：此前 argv[1] 无条件当目录，
+    # flag 放第一位会 FileNotFoundError 崩溃（2026-11-01 复核发现）。
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    d = args[0] if args else "ui-smoke"
     files = sorted(f for f in os.listdir(d) if f.endswith(".json"))
     print("=== ui-tree-check on %s (%d files) ===" % (d, len(files)))
     if not files:
@@ -161,7 +195,7 @@ def main():
         # ③父 AutoScroll=true（滚动容器内容高出是正常态，如 ConnectionDialog 高级区，288 实测）。
         oob = 0
         for n, pabs, pname, pnode, _pkey in all_nodes:
-            if pabs is None or not n.get("visible"):
+            if pabs is None or not sbool(n.get("visible")):
                 continue
             if n.get("dock") == "Fill":
                 continue
@@ -183,7 +217,7 @@ def main():
 
         # 零尺寸可见叶（Divider 线型 h<=2 豁免；Dock.Fill 未激活页豁免；零面积父链后代豁免）
         zero = [n for (n, pabs, _, _pnode, _pkey) in all_nodes
-                if n.get("visible") and not n.get("children")
+                if sbool(n.get("visible")) and not n.get("children")
                 and (n.get("abs", {}).get("w", 1) <= 0 or n.get("abs", {}).get("h", 1) <= 0)
                 # 空文本 AutoSize Label 正常态（如 errorLabel，有错才撑开）
                 and not ("Divider" in n.get("type", "") and n.get("abs", {}).get("h", 99) <= 2)
@@ -193,6 +227,96 @@ def main():
         check(len(zero) == 0, "零尺寸可见叶=%d" % len(zero))
         for n in zero[:5]:
             check(False, "零尺寸 " + (n.get("name") or n.get("type", "?")))
+
+        # === 通用规则（mainform 同样受判，2026-11-01 复核修正）===
+        # 空控件树 = 采集失败或窗体构造失败；旧逻辑 0 对象全打 ok → ALL OK 假绿。
+        if len(all_nodes) == 0:
+            check(False, "空控件树：采集失败或窗体构造失败，本文件不可判")
+
+        # 自绘命中区（审计 C5/C7-③）：每个 hitRegion 最小边 ≥ 24 逻辑 px。
+        # 量纲（复核修正）：PerMonitorV2 → abs 是设备像素；逻辑阈值 T 换算 T×dpi/96。
+        # 此前写成 24×96/dpi（方向反了）：96dpi 下 s=1 恰好隐藏，192dpi 下 16逻辑px 的
+        # 命中区（32 设备px）会假过 —— 高 dpi 只能要求更多设备像素，不能更少。
+        dpi = tree.get("dpi", 96) or 96
+        scale = dpi / 96.0
+        hit_min_d = 24.0 * scale
+        hit_total = 0
+        hit_nodes = 0
+        hit_small = 0
+        for n, _, _, _, _ in all_nodes:
+            hrs = n.get("hitRegions") or []
+            if not hrs:
+                continue
+            hit_nodes += 1
+            hit_total += len(hrs)
+            for hr in hrs:
+                a = hr.get("abs", {})
+                if a.get("w", 0) < hit_min_d or a.get("h", 0) < hit_min_d:
+                    hit_small += 1
+                    check(False, "自绘命中区过小 %s %dx%d dev < %d dev(=24逻辑@%ddpi) (%s)" % (
+                        n.get("name") or n.get("type", "?").split(".")[-1],
+                        a.get("w", 0), a.get("h", 0), int(hit_min_d), dpi,
+                        hr.get("label", "?")))
+        if hit_total == 0:
+            # 0 个命中区不假绿：只报受检数。“场景必须存在”由 smoke 侧断言
+            # （MainFormSmoke 已断言开标签后 GetHitRegions()≥1），此处是采集层兜底。
+            print("  info: 自绘命中区受检=0（无 hitRegions 数据）")
+        elif hit_small == 0:
+            check(True, "自绘命中区达标 %d 区/%d 控件 (%d 失败=0)" % (hit_total, hit_nodes, 0))
+
+        # R6 文本适配（审计 C7-1；warn-only = 告警不是阻断门，--textfit-strict 才转硬门）：
+        # 历史最高频 bug 是“文字被裁/贴顶/挤成两行”，dump 带真实 GDI 度量后按“所需 > 可用”判。
+        # 口径：
+        #   - 只判承载标签文本的控件（Button/Label/CheckBox/RadioButton 等），
+        #     输入框/表格/列表本身可滚动或自带省略号，纳入会产生大量噪音；
+        #   - AutoSize=true 的控件由 WinForms 自己撑开，跳过；
+        #   - 老 dump 没有 textSingleW 字段 → 跳过（向后兼容），受检数照实记录。
+        TEXTFIT_TYPES = ("Button", "Label", "Checkbox", "CheckBox", "Radio", "RadioButton")
+        overflow = 0
+        measured = 0
+        for n, _a, _b, _c, _d in all_nodes:
+            if not sbool(n.get("visible")):
+                continue
+            text = (n.get("text") or "").strip()
+            if not text or text == "\u2026":
+                continue
+            short = (n.get("type") or "").split(".")[-1]
+            if short not in TEXTFIT_TYPES:
+                continue
+            if sbool(n.get("autoSize")):
+                continue
+            if "textSingleW" not in n:
+                continue
+            box = n.get("abs", {})
+            if box.get("w", 0) <= 0 or box.get("h", 0) <= 0:
+                continue
+            measured += 1
+            pad = n.get("padding") or {}
+            avail_w = box.get("w", 0) - pad.get("l", 0) - pad.get("r", 0)
+            avail_h = box.get("h", 0) - pad.get("t", 0) - pad.get("b", 0)
+            if sbool(n.get("wrap")):
+                need_h = n.get("textWrapH", 0)
+                if need_h > avail_h + TEXTFIT_TOL:
+                    overflow += 1
+                    WARN.append("文字裁切 %s[%s] 需%dpx高 可用%dpx「%s」" % (
+                        _nm(n), short, need_h, avail_h, text[:20]))
+            else:
+                need_w = n.get("textSingleW", 0)
+                if need_w > avail_w + TEXTFIT_TOL:
+                    overflow += 1
+                    WARN.append("文字溢出 %s[%s] 需%dpx宽 可用%dpx「%s」" % (
+                        _nm(n), short, need_w, avail_w, text[:20]))
+        if measured == 0:
+            print("  info: 文本适配受检=0（无 textSingleW 字段或无文本承载控件）")
+        elif overflow == 0:
+            check(True, "文本适配=0 (受检=%d)" % measured)
+        elif TEXTFIT_STRICT:
+            for w in WARN[-overflow:]:
+                check(False, w)
+        else:
+            print("  warn: 文本适配候选=%d (受检=%d；warn-only，加 --textfit-strict 转硬门)" % (overflow, measured))
+            for w in WARN[-overflow:]:
+                print("    - " + w)
 
         if fname.startswith("mainform"):
             mainform_rules(tree, check)
@@ -213,19 +337,22 @@ def main():
             t = n.get("type", "")
             if "AntdUI" in t and "Button" in t:
                 # 固定尺寸钮靠库内 sps 居中（字高*0.4/侧），Padding=0 不贴边；只判 AutoSize 钮
-                if not n.get("autoSize"):
+                if not sbool(n.get("autoSize")):
                     continue
                 p = n.get("padding", {})
                 if p.get("l", 1) == 0 and p.get("r", 1) == 0:
                     check(False, "按钮左右padding=0(贴边风险) %s[%s]" % (n.get("name") or "?", n.get("text", "")))
 
-        # R1 最小触击目标：可见可交互控件 abs 宽高至少一维 >= HIT_MIN。
+        # R1 最小触击目标：可见可交互控件 abs 宽高至少一维 >= 32 逻辑 px（按 dpi 换算设备像素）。
         # 口径：visible && enabled && 子节点为空（叶）&& 非线型（Divider h<=2 豁免沿用零尺寸口径）。
         # 免判 R1-1：文本为 … 的溢出钮（窄窗唯一入口，设计取舍，沿用越界免判②）。
+        # 主窗 11 处合法紧凑控件（109-118x25 快捷卡片 + 隐藏覆盖钮）走 mainform 分支不覆盖，
+        # 故 R1 只对非 mainform 文件生效。
         NON_HIT = ("Label", "Divider", "Panel", "Splitter")
+        hit_min_r1 = HIT_MIN * scale  # 设备 px（96dpi 下 = 32，与历史口径恒等）
         small = 0
         for n, _, _, _, _ in all_nodes:
-            if not n.get("visible") or not n.get("enabled", True):
+            if not sbool(n.get("visible")) or not sbool(n.get("enabled"), True):
                 continue
             if n.get("children"):
                 continue
@@ -238,40 +365,22 @@ def main():
                 continue
             if (n.get("text") or "") == "\u2026":
                 continue
-            if a.get("w", 0) < HIT_MIN and a.get("h", 0) < HIT_MIN:
+            if a.get("w", 0) < hit_min_r1 and a.get("h", 0) < hit_min_r1:
                 small += 1
-                check(False, "触击过小 %s[%s]%dx%d<%d" % (
+                check(False, "触击过小 %s[%s]%dx%d dev < %d dev(=32逻辑)" % (
                     n.get("name") or "?", n.get("type", "").split(".")[-1],
-                    a.get("w", 0), a.get("h", 0), HIT_MIN))
+                    a.get("w", 0), a.get("h", 0), int(hit_min_r1)))
         if small == 0:
             check(True, "触击目标=0")
 
-        # R2 焦点链：同父容器 TabStop=true 控件 TabIndex 无重复（缺字段的老 dump 跳过）。
-        dup = 0
-        by_parent_tab = {}
-        for n, _pabs, _pname, _pnode, pkey in all_nodes:
-            if not n.get("visible"):
-                continue
-            if not n.get("tabStop"):
-                continue
-            if "tabIndex" not in n:
-                continue  # 老 dump 无字段：跳过，不断言
-            if n.get("tabIndex", 0) == 0:
-                continue  # 0=WinForms 默认未排（CI 321 实测：工具栏钮/动态行皆 0，设计即此）
-            by_parent_tab.setdefault(pkey, {}).setdefault(n.get("tabIndex"), []).append(n)
-        for pname, idxmap in by_parent_tab.items():
-            for idx, group in idxmap.items():
-                if len(group) > 1:
-                    dup += 1
-                    check(False, "TabIndex重复 %s 在容器 %s (%d个)" % (
-                        idx, pname, len(group)))
-        if dup == 0:
-            check(True, "焦点链无重复TabIndex")
-
         # R3 关闭绑定：每窗至少一个关闭路径（名含 Close/Cancel/OK/确定/取消/关闭其一）。
         # 免判 R3-1（2026-09-24 定稿 + CI 320 补 dangerous-cmd 配置页 + CI 321 补 scanner-center 工具窗）。
+        # 侧栏面板（审计 C7-2 新增 dump）：非独立窗口，关闭语义由宿主侧栏承担（关 Tab/收侧栏），
+        # 面板自身没有也不该有 Close/Cancel 钮。
         if fname.startswith(("transfer-progress", "pwd-generator", "setup-wizard", "dangerous-cmd",
-                              "scanner-center")):
+                              "scanner-center",
+                              "command-history", "port-forward", "secret-scan",
+                              "key-binding", "toolbox", "logon-script")):
             check(True, "关闭绑定免判(" + fname + ")")
         else:
             closelike = [n for (n, _, _, _, _) in all_nodes
@@ -289,9 +398,9 @@ def main():
         # 类型必须精确比对短名：Panel/TableLayoutPanel 等不可聚焦容器 TabStop 恒 false，
         # 子串匹配（"Table" 命中 TableLayoutPanel）会造出一堆假告警（首版实测 connection-rdp 9 处空名容器）。
         unreachable = [n for (n, _a, _b, _c, _d) in all_nodes
-                       if n.get("visible") and n.get("enabled", True)
+                       if sbool(n.get("visible")) and sbool(n.get("enabled"), True)
                        and (n.get("type") or "").split(".")[-1] in INTER_TYPES
-                       and n.get("tabStop") is False]
+                       and not sbool(n.get("tabStop"))]
         check(len(unreachable) == 0, "键盘可达性: 交互叶 TabStop=false 数=%d" % len(unreachable))
         for n in unreachable[:5]:
             check(False, "键盘不可达 %s[%s]" % (n.get("name") or n.get("type", "?").split(".")[-1],
@@ -309,7 +418,7 @@ def main():
         dock_ov = 0
         # tree 自身（窗体根）也要比：scanner-center 的工具栏 vs SplitContainer 就是根级兄弟
         for parent, _pa, _pn, _pnode, _pkey in [(tree, None, "", None, "ROOT")] + walk(tree):
-            vis = [c for c in _kids(parent) if c.get("visible")]
+            vis = [c for c in _kids(parent) if sbool(c.get("visible"))]
             for i in range(len(vis)):
                 for j in range(i + 1, len(vis)):
                     a, b = vis[i], vis[j]
@@ -326,6 +435,8 @@ def main():
             check(True, "停靠无遮挡=0")
 
     print()
+    if WARN:
+        print("UI-TREE-CHECK WARN: %d（文本适配候选，--textfit-strict 时计为失败）" % len(WARN))
     if FAIL:
         print("UI-TREE-CHECK FAIL: %d" % len(FAIL))
         return 1
