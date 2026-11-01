@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
+using Gdterm.Security;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Forms;
 
@@ -19,6 +20,9 @@ namespace Gdterm.Tests.Ui
     /// </summary>
     public static class UiSmokeRunner
     {
+        /// <summary>侧栏用例委托（具名：允许调用方用 expectEmpty: 命名参数）。</summary>
+        private delegate void PanelCase(string name, Func<Control> create, bool expectEmpty);
+
         private static int _passes;
         private static int _fails;
         private static readonly List<string> _messages = new List<string>();
@@ -191,7 +195,9 @@ namespace Gdterm.Tests.Ui
                 var portManager = new Gdterm.Tunnel.PortForwardManager();
                 var failures = new List<string>();
 
-                Action<string, Func<Control>, bool> tryPanel = (name, create, expectEmpty) =>
+                // 命名参数必须绑到具名委托上——Action<...> 的委托参数是 arg0/arg1/arg2，
+                // 对裸 Action 传 expectEmpty: 会 CS1746（2026-11-01 CI 0.1.347 实证）
+                PanelCase tryPanel = (name, create, expectEmpty) =>
                 {
                     try { DumpSidePanel(name, create, expectEmpty); }
                     catch (Exception ex) { failures.Add(name + ": " + FlatEx(ex)); }
@@ -202,7 +208,7 @@ namespace Gdterm.Tests.Ui
                 tryPanel("port-forward", () => new PortForwardPanel(portManager), expectEmpty: true);
                 tryPanel("secret-scan", () => new SecretScanPanel(secretScanner, null), false);
                 tryPanel("key-binding", () => new KeyBindingPanel(
-                    new Gdterm.Terminal.TerminalKeyBindingStore(Path.Combine(tmp, "keybind.json"))), false);
+                    new Gdterm.Connections.TerminalKeyBindingStore(Path.Combine(tmp, "keybind.json"))), false);
                 tryPanel("toolbox", () => new ToolboxPanel(toolRegistry), false);
                 tryPanel("logon-script", () => new LogonScriptPanel(
                     new Gdterm.Connections.LogonScriptStore(Path.Combine(tmp, "logon.json"))), false);
