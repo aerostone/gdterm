@@ -43,6 +43,8 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="AntdUI">
       <HintPath>..\..\lib\AntdUI.dll</HintPath>
       <Private>True</Private>
@@ -209,6 +211,7 @@
     <Compile Include="Services\ViewModeController.cs" />
     <Compile Include="Services\MainFormMenuBuilder.cs" />
     <Compile Include="Services\ConnectionImportExportUi.cs" />
+    <Compile Include="Services\DiagnosticsPackageExporter.cs" />
     <Compile Include="Services\MasterPasswordPrompt.cs" />
     <!-- 2026-10-07 审计新增文件（旧式 csproj 必须显式列 Compile，漏列 = 不参与编译，CI 报 CS0246） -->
     <Compile Include="Services\BusyScope.cs" />

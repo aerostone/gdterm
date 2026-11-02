@@ -523,6 +523,7 @@ namespace Gdterm.UI.Forms
                 DangerousCmdSettings = (s, e) => _toolsDialogs.OpenDangerousCmdSettings(),
                 ShowHotkeys = (s, e) => _toolsDialogs.ShowHotkeysHelp(),
                 ShowLogsFolder = (s, e) => { try { _toolsDialogs.ShowLogsFolder(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.LogsFolder", ex); } },
+                DiagnosticsPackage = (s, e) => { try { _toolsDialogs.ShowDiagnosticsPackage(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.Diagnostics", ex); } },
                 ToggleDebugMode = (s, e) => ToggleDebugMode(),
                 About = (s, e) => _toolsDialogs.ShowAbout(),
                 SshKeyManager = (s, e) => { try { _toolsDialogs?.OpenSshKeyManager(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.SshKey", ex); } },

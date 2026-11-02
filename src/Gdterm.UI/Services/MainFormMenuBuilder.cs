@@ -27,6 +27,7 @@ namespace Gdterm.UI.Services
             public EventHandler NewConnection { get; set; }
             public EventHandler ImportConnections { get; set; }
             public EventHandler ExportConnections { get; set; }
+            public EventHandler DiagnosticsPackage { get; set; }
             public EventHandler Exit { get; set; }
             public EventHandler OpenLocalTerminal { get; set; }
             public EventHandler OpenSftp { get; set; }
@@ -221,6 +222,8 @@ namespace Gdterm.UI.Services
             var helpMenu = new ToolStripMenuItem("帮助(&H)");
             helpMenu.DropDownItems.Add(Mk("快捷键列表", cb.ShowHotkeys, "helpq"));
             helpMenu.DropDownItems.Add(Mk("打开日志文件夹", cb.ShowLogsFolder, "logs"));
+            if (cb.DiagnosticsPackage != null)
+                helpMenu.DropDownItems.Add(Mk("导出诊断包…", cb.DiagnosticsPackage, "export"));
             helpMenu.DropDownItems.Add(new ToolStripSeparator());
             helpMenu.DropDownItems.Add(Mk("关于 gdterm", cb.About, "info"));
             menu.Items.Add(helpMenu);

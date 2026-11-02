@@ -281,6 +281,19 @@ namespace Gdterm.UI.Services
             System.Diagnostics.Process.Start("explorer.exe", "\"" + logsDir + "\"");
         }
 
+        /// <summary>帮助 → 导出诊断包：一键打包版本+脱敏日志+脱敏配置，方便报障（nyaterm 对比吸收 A7）。</summary>
+        public void ShowDiagnosticsPackage()
+        {
+            var path = DiagnosticsPackageExporter.BuildPackage(_owner);
+            if (path != null)
+            {
+                try { DiagLog.Info("ToolsDialogs", "diagnostics package exported: " + path); } catch { }
+                MessageBox.Show(_owner,
+                    "已导出诊断包：\n" + path + "\n\n可直接发给维护者；包内文本已自动脱敏，\n不含密码与凭据库。",
+                    "诊断包", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+
         public void ShowAbout()
         {
             // 版本与 git/CI 联动：构建时由 tools/gen-version.ps1 注入（CI=AppVeyor 版本，本地=git describe）
