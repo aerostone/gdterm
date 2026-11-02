@@ -26,12 +26,14 @@ namespace Gdterm.UI.Forms
             Text = "OTP 动态码管理";
             FormBorderStyle = FormBorderStyle.Sizable;
             StartPosition = FormStartPosition.CenterParent;
+            ShowInTaskbar = false;
+            // Font 先于 ClientSize（字体变更触发 AutoScaleMode=Font 缩放，顺序反了
+            // 构造期绝对坐标会拿到缩放后的宽，CI 0.1.359 实测 640→1080 页脚按钮飞出面板）
+            Font = FormFontPolicy.UiFont();
             ClientSize = DpiScale.S(this, 640, 420);
             MinimumSize = DpiScale.S(this, 480, 320);
             BackColor = GdtermColorTable.Background;
             ForeColor = GdtermColorTable.Foreground;
-            Font = FormFontPolicy.UiFont();
-            ShowInTaskbar = false;
 
             _list = new ListView
             {
@@ -59,16 +61,45 @@ namespace Gdterm.UI.Forms
                 Text = "暂无 OTP 条目\n\n点「添加」粘贴 otpauth:// URI 或 Base32 密钥\n（TOTP：多数 Web 门户/云平台的二次验证）"
             };
 
+            // 底部按钮栏——左右两个 FlowLayoutPanel（SetupWizardForm/PasswordHealthForm 流式惯例）。
+            // 禁用绝对坐标 Location=ClientSize.Width-N：构造期字体缩放后 ClientSize 已变，
+            // 绝对坐标推入面板外（CI 0.1.359 实测）；流式布局 resize 自动重排。
             var bottom = new Panel
             {
                 Dock = DockStyle.Bottom,
                 Height = FormFontPolicy.FieldHeight(this) + 24
             };
+            var leftFlow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Left,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = false,
+                Margin = new Padding(0),
+                Padding = new Padding(DpiScale.V(this, 8))
+            };
+            var rightFlow = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Right,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false,
+                Margin = new Padding(0),
+                Padding = new Padding(DpiScale.V(this, 8))
+            };
+
             var btnClose = new AntdUI.Button
             {
                 Text = "关闭",
-                Location = DpiScale.P(this, 8, 8),
-                Size = DpiScale.S(this, 88, FormFontPolicy.FieldHeight(this))
+                AutoSize = true,
+                Cursor = Cursors.Hand,
+                Name = "btnClose",
+                BackColor = GdtermColorTable.Surface2,
+                ForeColor = GdtermColorTable.Foreground,
+                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5)),
+                Margin = new Padding(DpiScale.V(this, 4))
             };
             btnClose.Click += (s, e) => Close();
             CancelButton = btnClose;
@@ -76,34 +107,46 @@ namespace Gdterm.UI.Forms
             var btnCopy = new AntdUI.Button
             {
                 Text = "复制代码",
+                AutoSize = true,
                 Type = AntdUI.TTypeMini.Primary,
-                Location = DpiScale.P(this, 104, 8),
-                Size = DpiScale.S(this, 108, FormFontPolicy.FieldHeight(this))
+                Cursor = Cursors.Hand,
+                Name = "btnCopy",
+                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5)),
+                Margin = new Padding(DpiScale.V(this, 4))
             };
             btnCopy.Click += (s, e) => CopySelectedCode();
+
+            // RightToLeft 流：先加者在右 → 视觉上 [添加][删除]，删除居右（与旧设计一致）
+            var btnAdd = new AntdUI.Button
+            {
+                Text = "添加",
+                AutoSize = true,
+                Cursor = Cursors.Hand,
+                Name = "btnAdd",
+                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5)),
+                Margin = new Padding(DpiScale.V(this, 4))
+            };
+            btnAdd.Click += (s, e) => AddEntry();
 
             var btnDelete = new AntdUI.Button
             {
                 Text = "删除",
-                Location = DpiScale.P(this, ClientSize.Width - 96, 8),
-                Size = DpiScale.S(this, 88, FormFontPolicy.FieldHeight(this)),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
+                AutoSize = true,
+                Cursor = Cursors.Hand,
+                Name = "btnDelete",
+                BackColor = GdtermColorTable.Surface2,
+                ForeColor = GdtermColorTable.Foreground,
+                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5)),
+                Margin = new Padding(DpiScale.V(this, 4))
             };
             btnDelete.Click += (s, e) => DeleteSelected();
 
-            var btnAdd = new AntdUI.Button
-            {
-                Text = "添加",
-                Location = DpiScale.P(this, ClientSize.Width - 192, 8),
-                Size = DpiScale.S(this, 88, FormFontPolicy.FieldHeight(this)),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            btnAdd.Click += (s, e) => AddEntry();
-
-            bottom.Controls.Add(btnClose);
-            bottom.Controls.Add(btnCopy);
-            bottom.Controls.Add(btnAdd);
-            bottom.Controls.Add(btnDelete);
+            leftFlow.Controls.Add(btnClose);
+            leftFlow.Controls.Add(btnCopy);
+            rightFlow.Controls.Add(btnAdd);
+            rightFlow.Controls.Add(btnDelete);
+            bottom.Controls.Add(leftFlow);
+            bottom.Controls.Add(rightFlow);
 
             // Fill 控件先加、边缘 Dock 后加（WinForms 反向 Z 序布局）；
             // 空态与列表互斥可见（都 Dock Fill，不可见者不占布局）。

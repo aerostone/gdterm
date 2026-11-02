@@ -28,11 +28,14 @@ namespace Gdterm.UI.Forms
             Resizable = false;
             AutoHandDpi = false;
             StartPosition = FormStartPosition.CenterParent;
-            ClientSize = DpiScale.S(this, 480, 360);
+            ShowInTaskbar = false;
+            // Font 先于 ClientSize：Font 变更会触发 AutoScaleMode=Font 整体缩放 ClientSize。
+            // 若先设 ClientSize 再换字体，构造期中部的绝对坐标计算会拿到缩放后的宽
+            // （CI 0.1.359 实测 480→760），Show 后回弹到设计值，页脚按钮飞出面板。
+            Font = FormFontPolicy.UiFont();
+            ClientSize = DpiScale.S(this, 480, 400);
             BackColor = GdtermColorTable.Background;
             ForeColor = GdtermColorTable.Foreground;
-            Font = FormFontPolicy.UiFont();
-            ShowInTaskbar = false;
 
             var pad = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 10), DpiScale.V(this, 12), DpiScale.V(this, 6));
 
@@ -46,59 +49,77 @@ namespace Gdterm.UI.Forms
             };
             _uri.TextChanged += (s, e) => TryPrefillFromUri();
 
+            int fh = FormFontPolicy.FieldHeight(this);
+            int gap = DpiScale.V(this, 8);
             var row1 = new TableLayoutPanel
             {
                 Dock = DockStyle.Top,
                 ColumnCount = 2,
                 RowCount = 4,
-                AutoSize = true,
+                // 禁用 AutoSize：Dock=Top + AutoSize=true 时表宽按“首选宽”取，Percent 列对
+                // 首选宽贡献为 0 → 输入单元格塌成零尺寸（CI 0.1.359 门禁实测 4 个 Input 零宽）。
+                // 固定高 + Dock=Top 取满宽，列宽显式分配，任何字号/DPI 下确定。
+                Height = 4 * fh + 3 * gap + DpiScale.V(this, 8),
                 Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 8), DpiScale.V(this, 12), 0)
             };
-            row1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 28));
-            row1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 72));
+            row1.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DpiScale.V(this, 96)));
+            row1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            for (int r = 0; r < 4; r++) row1.RowStyles.Add(new RowStyle(SizeType.Percent, 25f));
 
-            _issuer = new AntdUI.Input { MinimumSize = new System.Drawing.Size(0, FormFontPolicy.FieldHeight(this)), Font = FormFontPolicy.UiFont(), PlaceholderText = "如：GitHub" };
-            _account = new AntdUI.Input { MinimumSize = new System.Drawing.Size(0, FormFontPolicy.FieldHeight(this)), Font = FormFontPolicy.UiFont(), PlaceholderText = "如：user@example.com" };
-            _digits = new AntdUI.Input { MinimumSize = new System.Drawing.Size(0, FormFontPolicy.FieldHeight(this)), Font = FormFontPolicy.UiFont(), Text = "6" };
-            _period = new AntdUI.Input { MinimumSize = new System.Drawing.Size(0, FormFontPolicy.FieldHeight(this)), Font = FormFontPolicy.UiFont(), Text = "30" };
+            _issuer = new AntdUI.Input { MinimumSize = new System.Drawing.Size(120, fh), Font = FormFontPolicy.UiFont(), PlaceholderText = "如：GitHub" };
+            _account = new AntdUI.Input { MinimumSize = new System.Drawing.Size(120, fh), Font = FormFontPolicy.UiFont(), PlaceholderText = "如：user@example.com" };
+            _digits = new AntdUI.Input { MinimumSize = new System.Drawing.Size(120, fh), Font = FormFontPolicy.UiFont(), Text = "6" };
+            _period = new AntdUI.Input { MinimumSize = new System.Drawing.Size(120, fh), Font = FormFontPolicy.UiFont(), Text = "30" };
 
-            row1.Controls.Add(MakeLabel("发行方", pad), 0, 0);
+            row1.Controls.Add(TableLabel("发行方"), 0, 0);
             row1.Controls.Add(_issuer, 1, 0);
-            row1.Controls.Add(MakeLabel("账户", pad), 0, 1);
+            row1.Controls.Add(TableLabel("账户"), 0, 1);
             row1.Controls.Add(_account, 1, 1);
-            row1.Controls.Add(MakeLabel("位数(6-8)", pad), 0, 2);
+            row1.Controls.Add(TableLabel("位数(6-8)"), 0, 2);
             row1.Controls.Add(_digits, 1, 2);
-            row1.Controls.Add(MakeLabel("周期(秒)", pad), 0, 3);
+            row1.Controls.Add(TableLabel("周期(秒)"), 0, 3);
             row1.Controls.Add(_period, 1, 3);
 
-            var bottom = new Panel
+            // 底部按钮栏——FlowLayoutPanel 右向流（SetupWizardForm/PasswordHealthForm 同款惯例）。
+            // 流式布局每次 resize 自动重排，不依赖构造期 ClientSize，永不越界。
+            var bottom = new FlowLayoutPanel
             {
                 Dock = DockStyle.Bottom,
-                Height = FormFontPolicy.FieldHeight(this) + 24
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FlowDirection = FlowDirection.RightToLeft,
+                WrapContents = false,
+                BackColor = GdtermColorTable.Background,
+                Padding = new Padding(DpiScale.V(this, 16), DpiScale.V(this, 12), DpiScale.V(this, 16), DpiScale.V(this, 12))
             };
-            var btnCancel = new AntdUI.Button
-            {
-                Text = "取消",
-                Location = DpiScale.P(this, ClientSize.Width - 96, 8),
-                Size = DpiScale.S(this, 88, FormFontPolicy.FieldHeight(this)),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
-            };
-            btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
-
             var btnOk = new AntdUI.Button
             {
                 Text = "保存",
+                AutoSize = true,
                 Type = AntdUI.TTypeMini.Primary,
-                Location = DpiScale.P(this, ClientSize.Width - 192, 8),
-                Size = DpiScale.S(this, 88, FormFontPolicy.FieldHeight(this)),
-                Anchor = AnchorStyles.Top | AnchorStyles.Right
+                Cursor = Cursors.Hand,
+                Name = "btnSave",
+                Padding = new Padding(DpiScale.V(this, 16), DpiScale.V(this, 5), DpiScale.V(this, 16), DpiScale.V(this, 5)),
+                Margin = new Padding(DpiScale.V(this, 8))
             };
             btnOk.Click += (s, e) => OnOk();
-            AcceptButton = btnOk;
-            CancelButton = btnCancel;
-
+            var btnCancel = new AntdUI.Button
+            {
+                Text = "取消",
+                AutoSize = true,
+                Cursor = Cursors.Hand,
+                Name = "btnCancel",
+                BackColor = GdtermColorTable.Surface2,
+                ForeColor = GdtermColorTable.Foreground,
+                Padding = new Padding(DpiScale.V(this, 16), DpiScale.V(this, 5), DpiScale.V(this, 16), DpiScale.V(this, 5)),
+                Margin = new Padding(DpiScale.V(this, 8))
+            };
+            btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
+            // RightToLeft 流：先加者在右，主操作（保存）居右，与 SetupWizard 一致
             bottom.Controls.Add(btnOk);
             bottom.Controls.Add(btnCancel);
+            AcceptButton = btnOk;
+            CancelButton = btnCancel;
 
             // Fill 先加、边缘 Dock 后加
             var hint = new Label
@@ -117,6 +138,20 @@ namespace Gdterm.UI.Forms
             Controls.Add(lblUri);
             Controls.Add(bottom);
             FormFontPolicy.Apply(this);
+        }
+
+        /// <summary>表内单元格标签：Fill + 垂直居中（固定盒高下 Dock=Top 会贴顶）。</summary>
+        private Label TableLabel(string text)
+        {
+            return new Label
+            {
+                Dock = DockStyle.Fill,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Text = text,
+                ForeColor = GdtermColorTable.Foreground,
+                BackColor = GdtermColorTable.Background,
+                Font = FormFontPolicy.UiFont()
+            };
         }
 
         private Label MakeLabel(string text, Padding pad)
