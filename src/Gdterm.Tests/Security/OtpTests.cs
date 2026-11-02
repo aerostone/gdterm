@@ -63,9 +63,9 @@ namespace Gdterm.Tests.Security
 
         private static byte[] Encoding20()
         {
-            var k = new byte[20];
-            for (int i = 0; i < 20; i++) k[i] = (byte)('1' + (i % 10));
-            return k;
+            // 注意：不能写 ('1' + i%10)——i=9 时 '1'+9=':'（0x3a）而不是 '0'（0x30）。
+            // CI 0.1.357 教训：曾因此生成 "123456789:123456789:" 密钥，RFC 向量全挂。
+            return System.Text.Encoding.UTF8.GetBytes("12345678901234567890");
         }
 
         private static void TestSecondsRemaining()
@@ -255,12 +255,13 @@ namespace Gdterm.Tests.Security
             var path = System.IO.Path.Combine(System.IO.Path.GetTempPath(),
                 "gdterm-otp-test-" + Guid.NewGuid().ToString("N") + ".json");
             var plainSecret = "JBSWY3DPEHPK3PXP";
-            string fakeCipher = null;
             try
             {
                 OtpStoreJson.SetSecretProtector(
-                    p => { fakeCipher = "gdo1:" + p; return fakeCipher; },
-                    stored => stored != null && stored.StartsWith("gdo1:") ? stored.Substring(5) : stored);
+                    p => "gdo1:" + System.Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(p)),
+                    stored => stored != null && stored.StartsWith("gdo1:")
+                        ? System.Text.Encoding.UTF8.GetString(System.Convert.FromBase64String(stored.Substring(5)))
+                        : stored);
                 try
                 {
                     var store = new OtpStoreJson(path);

@@ -140,7 +140,6 @@ namespace Gdterm.Connections
             {
                 var digits = ExtractInt(obj, "digits");
                 var period = ExtractInt(obj, "period");
-                var totp = ExtractString(obj, "totp") != "false";
                 result.Add(new OtpEntry
                 {
                     Id = ExtractString(obj, "id"),
@@ -150,7 +149,7 @@ namespace Gdterm.Connections
                     Digits = digits >= 6 && digits <= 8 ? digits : 6,
                     Period = period > 0 ? period : 30,
                     Algorithm = OtpGenerator.ParseAlgorithm(ExtractString(obj, "algorithm")),
-                    IsTotp = totp,
+                    IsTotp = ExtractBool(obj, "totp", true),
                     Counter = ExtractInt(obj, "counter")
                 });
             }
@@ -186,6 +185,31 @@ namespace Gdterm.Connections
                 quoteEnd++;
             }
             return Unescape(json.Substring(quoteStart + 1, quoteEnd - quoteStart - 1));
+        }
+
+        /// <summary>
+        /// 提取布尔值（裸 true/false 或引号形式均可）。
+        /// 不能用 ExtractString——布尔值后面没有引号，会错抓到下一个键的字符串
+        /// （CI 0.1.357 教训：HOTP 条目重载后 IsTotp 恒为 true，动态码计数被重置）。
+        /// </summary>
+        private static bool ExtractBool(string json, string key, bool fallback)
+        {
+            var pattern = "\"" + key + "\"";
+            var idx = json.IndexOf(pattern);
+            if (idx < 0) return fallback;
+            var colonIdx = json.IndexOf(':', idx + pattern.Length);
+            if (colonIdx < 0) return fallback;
+            int s = colonIdx + 1;
+            while (s < json.Length && (json[s] == ' ' || json[s] == '\t')) s++;
+            if (s >= json.Length) return fallback;
+            if (json[s] == '"')
+            {
+                var v = ExtractString(json, key);
+                return v == null || v != "false";
+            }
+            if (json.Substring(s, Math.Min(4, json.Length - s)) == "true") return true;
+            if (json.Substring(s, Math.Min(5, json.Length - s)) == "false") return false;
+            return fallback;
         }
 
         private static int ExtractInt(string json, string key)
