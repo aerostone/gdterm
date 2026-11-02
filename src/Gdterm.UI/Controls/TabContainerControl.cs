@@ -728,6 +728,23 @@ namespace Gdterm.UI.Controls
                 _tabControl.SelectedIndex = index;
         }
 
+        /// <summary>命令面板用：按连接 Id 激活标签（GetOpenTabStates 的顺序与 TabPage 下标可能不一致）。</summary>
+        public bool ActivateTabByConnectionId(string connectionId)
+        {
+            if (string.IsNullOrEmpty(connectionId)) return false;
+            foreach (TabPage tab in _tabControl.TabPages)
+            {
+                if (_sessions.TryGetValue(tab, out var session) &&
+                    session.Config != null &&
+                    session.Config.Id == connectionId)
+                {
+                    _tabControl.SelectedTab = tab;
+                    return true;
+                }
+            }
+            return false;
+        }
+
         public TerminalControl GetActiveTerminalControl() => _activeQuery.GetActiveTerminalControl();
         public ITerminalSession GetActiveSession() => _activeQuery.GetActiveSession();
 

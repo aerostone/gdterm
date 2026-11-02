@@ -184,6 +184,9 @@
     <Compile Include="Controls\ConnectionQuickJumpForm.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="ControlsCommandPaletteForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Controls\TransferProgressDialog.cs">
       <SubType>Form</SubType>
     </Compile>

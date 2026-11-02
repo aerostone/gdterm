@@ -28,6 +28,9 @@ namespace Gdterm.UI.Services
 
         private System.Collections.Generic.List<HotkeyEntry> _registry;
 
+        /// <summary>快捷键平表（命令面板/帮助投影共用，审计 F7 SSOT）。</summary>
+        internal System.Collections.Generic.IReadOnlyList<HotkeyEntry> Entries { get { return _registry; } }
+
         public MainFormCommandRouter(
             TabContainerControl tabs,
             SidePanelFactory sidePanels,
@@ -53,6 +56,7 @@ namespace Gdterm.UI.Services
                 // 快速跳转（普通 Ctrl+K 是 shell kill-line，不能被抢）——实际路由点在 MainForm.ProcessCmdKey（先于本 router），
                 // 登记于此仅为帮助文本同源
                 new HotkeyEntry(Keys.Control | Keys.Shift | Keys.K, "快速跳转连接", null),
+                new HotkeyEntry(Keys.Control | Keys.Shift | Keys.O, "命令面板", null),
                 new HotkeyEntry(Keys.Control | Keys.Shift | Keys.R, "重连当前标签",
                     () => _tabs?.ReconnectActiveTab()),
                 new HotkeyEntry(Keys.Control | Keys.Shift | Keys.W, "关闭当前标签",

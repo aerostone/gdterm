@@ -993,12 +993,152 @@ namespace Gdterm.UI.Forms
             catch (Exception ex) { DiagLog.Swallowed("MainForm.QuickJump", ex); }
         }
 
+        /// <summary>
+        /// 命令面板（nyaterm 对比吸收 A1）：Ctrl+Shift+O。统一入口覆盖菜单动作/快捷键/已开标签/连接。
+        /// 命令表每次打开时重建——标签/连接是动态的，菜单动作闭包捕获当前实例字段。
+        /// </summary>
+        private void OpenCommandPalette()
+        {
+            try
+            {
+                var cmds = BuildPaletteCommands();
+                using (var dlg = new CommandPaletteForm(cmds))
+                {
+                    if (dlg.ShowDialog(this) == DialogResult.OK && dlg.Selected != null)
+                        dlg.Selected.Action();
+                }
+            }
+            catch (Exception ex) { DiagLog.Swallowed("MainForm.CommandPalette", ex); }
+        }
+
+        private List<PaletteCommand> BuildPaletteCommands()
+        {
+            var cmds = new List<PaletteCommand>();
+            void Add(string label, string category, Action act, string hotkey = null, string keywords = null)
+            {
+                if (act == null) return;
+                cmds.Add(new PaletteCommand { Label = label, Category = category, Action = act, Hotkey = hotkey, Keywords = keywords });
+            }
+
+            // 1) 快捷键平表（router 与帮助同源；Run=null 的 K/O 两项单独接实际动作）
+            if (_cmdRouter != null)
+            {
+                foreach (var e in _cmdRouter.Entries)
+                {
+                    if (e.Run == null) continue;
+                    Add(e.Desc, "命令", e.Run, MainFormCommandRouter.FormatKeys(e.Combo));
+                }
+            }
+            Add("快速跳转连接", "命令", OpenQuickJump, "Ctrl+Shift+K", "jump 连接 host");
+
+            // 2) 新建/导入导出/退出（文件菜单）
+            Add("新建连接", "命令", () => _openCoord?.NewConnection(), null, "new 连接 会话");
+            Add("导入连接（mRemoteNG/SecureCRT/Xshell/MobaXterm/WindTerm）", "命令",
+                () => ConnectionImportExportUi.Import(this, _connectionStore, () => { try { _connectionTree?.LoadConnections(); } catch { } }),
+                null, "import xshell mobaxterm windterm");
+            Add("导出连接", "命令", () => ConnectionImportExportUi.Export(this, _connectionStore), null, "export");
+            Add("打开本地终端", "命令", () => _tabContainer?.OpenLocalTerminal(), null, "local shell");
+            Add("SFTP 文件浏览器（当前会话）", "命令", () => _openCoord?.OpenSftpFromActive(), null, "sftp 文件");
+
+            // 3) 视图（视图菜单）
+            Add("标准视图", "视图", () => _viewMode?.SetViewMode(ViewMode.Standard));
+            Add("专注模式（全屏）", "视图", () => _viewMode?.SetViewMode(ViewMode.Focus), "F11");
+            Add("紧凑视图", "视图", () => _viewMode?.SetViewMode(ViewMode.Compact));
+            Add("切换连接树", "视图", () => _viewMode?.ToggleConnectionTree());
+            Add("水平分割", "视图", () => _tabContainer?.SplitHorizontal());
+            Add("垂直分割", "视图", () => _tabContainer?.SplitVertical());
+            Add("关闭当前标签", "视图", () => _tabContainer?.CloseActiveTab());
+
+            // 4) 侧面板（面板菜单）
+            Add("终端查找", "面板", () => _sidePanels?.AttachSearchBar(_tabContainer), "Ctrl+Shift+F", "search 搜索");
+            Add("高亮规则", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateHighlightPanel()));
+            Add("键位绑定", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateKeyBindingPanel()));
+            Add("登录脚本", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateLogonScriptPanel()));
+            Add("多通道广播", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateMultiChannelPanel()));
+            Add("批量命令", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateBatchPanel()));
+            Add("宏录制", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateMacroPanel()), "Ctrl+Shift+H");
+            Add("命令历史", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateHistoryPanel()));
+            Add("命令模板", "面板", () =>
+            {
+                try
+                {
+                    _sidePanelHost?.Show(_sidePanels?.CreateCommandTemplatePanel(
+                        () => _tabContainer != null ? _tabContainer.GetActiveTerminalControl() : null,
+                        _commandTemplateStore));
+                }
+                catch (Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.Palette", exSwallowed); } catch { } }
+            });
+            Add("健康监控", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateHealthPanel()));
+            Add("端口转发", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreatePortForwardPanel()));
+            Add("运维工具箱", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateToolboxPanel()));
+            Add("敏感信息扫描", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateSecretScanPanel()), null, "secret scan");
+            Add("收藏", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateBookmarksPanel(cfg =>
+            {
+                if (cfg != null) _openCoord?.OpenConnection(cfg);
+            })), null, "bookmark");
+            Add("传输中心", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateTransferCenterPanel()));
+            Add("通知中心", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateNotificationCenterPanel()));
+            Add("AI 助手聊天", "面板", ShowAiChatPanel, "Ctrl+Shift+G", "ai 聊天");
+
+            // 5) 工具/设置/帮助（工具菜单）
+            Add("密码库管理（KeePass）", "工具", () => _toolsDialogs?.OpenKeePassManager(), null, "keepass 密码库");
+            Add("密码健康报告", "工具", () => _toolsDialogs?.OpenPasswordHealth());
+            Add("密码生成器", "工具", () => _toolsDialogs?.OpenPasswordGenerator());
+            Add("修改主密码", "工具", () => _toolsDialogs?.OpenChangeMasterPassword());
+            Add("SSH 密钥管理", "工具", () => _toolsDialogs?.OpenSshKeyManager());
+            Add("扫描中心", "工具", () => _toolsDialogs?.OpenScannerCenter());
+            Add("外观设置", "设置", () => _toolsDialogs?.OpenAppearanceSettings());
+            Add("AI 设置", "设置", () => _toolsDialogs?.OpenAiSettings());
+            Add("危险命令设置", "设置", () => _toolsDialogs?.OpenDangerousCmdSettings());
+            Add("快捷键列表", "帮助", () => _toolsDialogs?.ShowHotkeysHelp());
+            Add("打开日志文件夹", "帮助", () => { try { _toolsDialogs?.ShowLogsFolder(); } catch { } });
+            Add("导出诊断包", "帮助", () => { try { _toolsDialogs?.ShowDiagnosticsPackage(); } catch { } });
+            Add("关于 gdterm", "帮助", () => _toolsDialogs?.ShowAbout());
+
+            // 6) 动态：已开标签 + 全部连接
+            try
+            {
+                if (_tabContainer != null)
+                {
+                    foreach (var st in _tabContainer.GetOpenTabStates())
+                    {
+                        var id = st.ConnectionId;
+                        Add((st.IsActive ? "切换标签: " : "打开标签: ") + st.Title,
+                            st.IsActive ? "标签(当前)" : "标签",
+                            () => _tabContainer?.ActivateTabByConnectionId(id),
+                            null, st.Host + " " + st.Protocol);
+                    }
+                }
+                if (_connectionStore != null)
+                {
+                    foreach (var c in _connectionStore.LoadAll() ?? new List<Gdterm.Core.Models.ConnectionConfig>())
+                    {
+                        if (c == null) continue;
+                        var cfg = c;
+                        Add("连接: " + c.Name,
+                            "连接",
+                            () => _openCoord?.OpenConnection(cfg),
+                            null, (c.Host ?? "") + " " + c.Protocol + " " + (c.GroupPath ?? ""));
+                    }
+                }
+            }
+            catch (Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.PaletteDynamic", exSwallowed); } catch { } }
+
+            return cmds;
+        }
+
         protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
         {
             // Ctrl+Shift+K：普通 Ctrl+K 是 shell kill-line，不能被抢
             if (keyData == (Keys.Control | Keys.Shift | Keys.K))
             {
                 OpenQuickJump();
+                return true;
+            }
+            // Ctrl+Shift+O：命令面板（Ctrl+Shift+P 已被片段搜索占用；router 平表登记同键仅为帮助同源）
+            if (keyData == (Keys.Control | Keys.Shift | Keys.O))
+            {
+                OpenCommandPalette();
                 return true;
             }
             if (_cmdRouter != null && _cmdRouter.TryHandle(keyData))
