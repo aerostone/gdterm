@@ -34,5 +34,15 @@ bld/
 Thumbs.db
 __pycache__/
 
+## codestable runtime（框架副本，丢了 `codestable update` 一键恢复；
+## 约定见 .codestable/vendor/shared-conventions.md——.runtime 为运行时工作区不进库）
+.codestable/.runtime/
+.codestable/telemetry/
+.codestable/vendor/
+.codestable/tools/*
+# 例外：这两个是项目自己的门禁数据（ui-ux-lint 基线棘轮/覆盖登记表），CI 依赖，必须入库
+!.codestable/tools/ui-coverage-registry.txt
+!.codestable/tools/ui-ux-lint-baseline.txt
+
 ## local scratch
 tmp/
