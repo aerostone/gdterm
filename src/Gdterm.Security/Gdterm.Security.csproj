@@ -51,6 +51,10 @@
     <Compile Include="SecurityManager.cs" />
     <Compile Include="SecretScanConfig.cs" />
     <Compile Include="SecretScanner.cs" />
+    <Compile Include="Otp/Base32.cs" />
+    <Compile Include="Otp/OtpAuthUri.cs" />
+    <Compile Include="Otp/OtpEntry.cs" />
+    <Compile Include="Otp/OtpGenerator.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

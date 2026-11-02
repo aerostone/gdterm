@@ -207,6 +207,9 @@ namespace Gdterm.UI
 
             // connections.json 主机/用户名：有主密码时用 gdk2 风格可逆保护（无主密码则明文兼容）
             WireConnectionHostProtection(securityManager);
+            // nyaterm 对比 B1：OTP 密钥为真机密，设主密码时 AES（gdo1:），无主密码明文兼容
+            WireOtpSecretProtection(securityManager);
+            var otpStore = new OtpStoreJson(Path.Combine(dataDir, "otp-entries.json"));
             var connectionStore = new ConnectionStoreJson(connectionsPath);
             var tunnelManager = new TunnelManager();
             var terminalFactory = new TerminalSessionFactory();
@@ -316,7 +319,8 @@ namespace Gdterm.UI
                 multiChannelManager,
                 toolRegistry,
                 secretScanner,
-                cmdTemplateStore);
+                cmdTemplateStore,
+                otpStore);
 
             // finding-03：旧 SHA256 解锁升级为 PBKDF2 后立刻落盘
             securityManager.LockStateChanged += (s, e) =>
@@ -485,6 +489,44 @@ namespace Gdterm.UI
             ConnectionStoreJson.SetHostProtector(
                 plain => ProtectHostField(securityManager, plain),
                 stored => UnprotectHostField(securityManager, stored));
+        }
+
+        /// <summary>
+        /// nyaterm 对比 B1：OTP 密钥落盘保护接线。设主密码时 gdo1: AES（未解锁时保持密文 → UI 锁定态）；
+        /// 无主密码时明文（v1 兼容）。
+        /// </summary>
+        private static void WireOtpSecretProtection(SecurityManager securityManager)
+        {
+            if (securityManager == null) return;
+            OtpStoreJson.SetSecretProtector(
+                plain => ProtectOtpField(securityManager, plain),
+                stored => UnprotectOtpField(securityManager, stored));
+        }
+
+        private static string ProtectOtpField(SecurityManager security, string plain)
+        {
+            if (string.IsNullOrEmpty(plain)) return plain;
+            if (plain.StartsWith("gdo1:", StringComparison.Ordinal)) return plain;
+            var master = security != null ? security.GetMasterPassword() : null;
+            if (string.IsNullOrEmpty(master)) return plain; // 未设主密码：明文（v1 兼容）
+            try { return "gdo1:" + AesProtect(plain, master); } catch { return plain; }
+        }
+
+        private static string UnprotectOtpField(SecurityManager security, string stored)
+        {
+            if (string.IsNullOrEmpty(stored)) return stored;
+            try
+            {
+                if (stored.StartsWith("gdo1:", StringComparison.Ordinal))
+                {
+                    var master = security != null ? security.GetMasterPassword() : null;
+                    if (!string.IsNullOrEmpty(master))
+                        return AesUnprotect(stored.Substring(5), master);
+                    return stored; // 未解锁：保持密文 → 条目显示锁定态
+                }
+                return stored; // 明文兼容
+            }
+            catch { return stored; }
         }
 
         [System.Runtime.InteropServices.DllImport("kernel32.dll", SetLastError = true,

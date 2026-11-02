@@ -188,8 +188,9 @@ namespace Gdterm.UI.Services
             {
                 if (written.Count >= MaxEntryCount) return;
                 var name = f.Name.ToLowerInvariant();
-                if (name.Contains("credential") || name.Contains("secret") || name.Contains("key"))
-                    continue; // 文件名带敏感词的一律不收
+                if (name.Contains("credential") || name.Contains("secret") || name.Contains("key")
+                    || name.Contains("otp") || name.Contains("password"))
+                    continue; // 文件名带敏感词的一律不收（含 OTP 密钥库）
                 if (f.Length > 1024 * 1024) continue;
                 try
                 {

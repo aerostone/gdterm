@@ -63,6 +63,7 @@ namespace Gdterm.UI.Services
             public EventHandler PasswordHealth { get; set; }
             public EventHandler PasswordGenerator { get; set; }
             public EventHandler ChangeMasterPassword { get; set; }
+            public EventHandler OtpManager { get; set; }
             public EventHandler AiSettings { get; set; }
             public EventHandler DangerousCmdSettings { get; set; }
             public EventHandler ShowHotkeys { get; set; }
@@ -202,6 +203,7 @@ namespace Gdterm.UI.Services
             toolsMenu.DropDownItems.Add(Mk("密码生成器(&G)", cb.PasswordGenerator, "key"));
             toolsMenu.DropDownItems.Add(Mk("SSH 密钥管理", cb.SshKeyManager, "key"));
             toolsMenu.DropDownItems.Add(Mk("修改主密码(&M)...", cb.ChangeMasterPassword, "pencil"));
+            toolsMenu.DropDownItems.Add(Mk("OTP 动态码管理(&T)…", cb.OtpManager, "key"));
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
             toolsMenu.DropDownItems.Add(Mk("外观设置(&R)...", cb.AppearanceSettings, "brush"));
             toolsMenu.DropDownItems.Add(Mk("AI 助手设置(&I)", cb.AiSettings, "ai"));

@@ -38,12 +38,17 @@
       <Project>{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}</Project>
       <Name>Gdterm.Core</Name>
     </ProjectReference>
+    <ProjectReference Include="..\Gdterm.Security\Gdterm.Security.csproj">
+      <Project>{C9D0E1F2-A3B4-5678-CDEF-012345678901}</Project>
+      <Name>Gdterm.Security</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="GroupNode.cs" />
     <Compile Include="ExternalFormatImporter.cs" />
     <Compile Include="IConnectionStore.cs" />
     <Compile Include="ConnectionStoreJson.cs" />
+    <Compile Include="OtpStoreJson.cs" />
     <Compile Include="IFolderCredentialStore.cs" />
     <Compile Include="SessionStateStore.cs" />
     <Compile Include="QuickCommandStore.cs" />

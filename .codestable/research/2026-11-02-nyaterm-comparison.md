@@ -65,7 +65,7 @@ Win7 兼容、RDP 原生 COM、串口 Backspace（待确认）、多跳链自动
 
 | # | 吸收点 | 说明 | 落点 |
 |---|---|---|---|
-| B1 | **OTP 管理**（TOTP/HOTP） | 二维码导入（zxing.net 4.x 支持 net462）、时间码列表、SSH 密码后自动填充 | 新 Gdterm.Security.Otp 模块 + OtpPanel；KeePass 路径可复用 .kdbx 的 otp: 字段（KeePass 2 原生支持） |
+| B1 | **OTP 管理**（TOTP/HOTP） ✅ 已实现（CI 待验证） | 二维码导入（zxing.net 4.x 支持 net462）、时间码列表、SSH 密码后自动填充 | 已完成：Gdterm.Security/Otp 模块（RFC 4226/6238 标准向量验证）+ OtpStoreJson（主密码 AES 落盘）+ 工具菜单「OTP 动态码管理」；二维码导入/SSH 自动填充留 v2 |
 | B2 | **加密同步/备份** | 主密码加密快照→WebDAV/S3/Gist；定时备份+保留策略+冲突处理 | gdterm 已有主密码+XOR 加密日志基础设施；升级为 AES-GCM（System.Security.Cryptography net462 内置）+ 同步引擎模块；UI 走 AppearanceSettingsForm 同级的 SyncSettingsForm |
 | B3 | **AI Agent 模式** | 观察-决策-执行循环、审批门槛执行、终端内联输出回写（行数可配）、@会话提及、最近输出入口、风险等级命令卡片 | AiAssistantService 加 Agent 状态机；执行通道复用 AiCommandGateBinder 的危险命令闸（天然审批点）；@提及用 ActiveSessionBridge 拉多会话上下文 |
 | B4 | **远程主机监控面板** | SSH 会话内资源（CPU/内存/磁盘/网络）/GPU（nvidia-smi）/进程/Docker | 会话内 exec 采集（agentless，5s 轮询+可配）→新 RemoteMonitorPanel 侧栏；工具集已有网络扫描可复用展示组件 |
@@ -111,6 +111,30 @@ Win7 兼容、RDP 原生 COM、串口 Backspace（待确认）、多跳链自动
 CI 验证：0.1.352/353 两轮红均为新增代码触发（csproj 路径转义、ui-ux-lint 3 新增违规），
 逐轮定点修复后 **0.1.354 全绿**：测试 231/231（含新增 54）、UI smoke 7/7、
 ui-ux-lint 基线外零新增、gen-tokens/编码守卫过。门禁体系按设计捕获了新代码的 3 类问题。
+
+## B1 实现记录（2026-11-02）
+
+**范围**：TOTP/HOTP 生成器 + otpauth:// URI + 加密落盘 + 管理器窗口（不含二维码扫描与 B2 同步）。
+
+| 文件 | 说明 |
+|---|---|
+| `Gdterm.Security/Otp/OtpAlgorithm.cs` | SHA1/256/512 |
+| `Gdterm.Security/Otp/OtpGenerator.cs` | RFC 4226 HOTP + RFC 6238 TOTP + 周期剩余秒（纯函数） |
+| `Gdterm.Security/Otp/Base32.cs` | RFC 4648（net462 无 BCL Base32）；解码容忍大小写/空格/连字符/填充 |
+| `Gdterm.Security/Otp/OtpAuthUri.cs` | `otpauth://totp|hotp/Issuer:account?secret=...` 解析/生成 |
+| `Gdterm.Security/Otp/OtpEntry.cs` | 条目 POCO；`CodeAt()` 锁定（gdo1:）时返回 null |
+| `Gdterm.Connections/OtpStoreJson.cs` | 与 ConnectionStoreJson 同构（原子写/版本/备份）+ protector 钩子接主密码 AES |
+| `Gdterm.UI/Forms/OtpManagerForm.cs` | 列表 + 1s 倒计时刷新 + 复制/添加/删除；空态引导；未解锁显示「已锁定」 |
+| `Gdterm.UI/Forms/AddOtpForm.cs` | 粘贴 URI 自动预填 + 手动字段 + 即时校验（AntdUI 错误态） |
+| `MainFormMenuBuilder.cs` | 工具→「OTP 动态码管理…」 |
+| `Program.cs` | `WireOtpSecretProtection`（WireSecretProtector 同款模式） |
+
+**验证**：RFC 4226 附录 D 全 10 向量 + RFC 6238 附录 B SHA1/256/512×8 位（Python 标准库 + openssl 双重对账）。
+⚠️ 教训：RFC 向量必须以官方原文为准——本会话凭记忆的 Base32 表与 HOTP SHA256 列均与原文不符，已用 `python3 base64`/`openssl` 交叉验证修正。
+
+**安全**：密钥落盘主密码 AES（gdo1: 前缀）；诊断包文件名白名单补 otp/password 排除（双保险：文件本在 data 根而非 config/ 收集范围）。
+**工程**：Gdterm.Connections 新增 Gdterm.Security 引用（Security→Core 单向，无环）。
+**已知边界（v2）**：管理器打开期间应用被锁定→码不自动恢复（重开窗口即可）；HOTP counter 不自动递增；无二维码扫码（手动粘贴 URI/密钥）。
 
 1. **第一批（A 组挑 4 项，1 个迭代）**：A1 命令面板 → A2 导入扩展 → A4 在线搜索/翻译（含 A3 动作链接）→ A7 诊断包。
    理由：纯增量、无破坏性、直接提升日常效率与报障效率。

@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Windows.Forms;
 using Gdterm.AI;
+using Gdterm.Connections;
 using Gdterm.Core.Models;
 using Gdterm.Security;
 using Gdterm.UI.Controls;
@@ -34,6 +35,8 @@ namespace Gdterm.Tests.Ui
             Show("dangerous-cmd", () => (Form)new DangerousCommandConfigForm(detector), outDir, log, check);
             Show("keepass-picker", () => (Form)new KeePassEntryPicker(keepass), outDir, log, check);
             Show("keepass-unlock", () => (Form)new KeePassUnlockForm(keepass), outDir, log, check);
+            Show("otp-manager", () => (Form)new OtpManagerForm(new OtpStoreJson(Path.Combine(tmp, "otp-entries.json"))), outDir, log, check);
+            Show("add-otp", () => (Form)new AddOtpForm(), outDir, log, check);
             Show("pwd-generator", () => (Form)new PasswordGeneratorForm(), outDir, log, check);
             Show("quickcmd-editor", () => (Form)new QuickCommandEditorForm(), outDir, log, check);
             Show("setup-wizard", () => (Form)new SetupWizardForm(security), outDir, log, check);
