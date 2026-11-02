@@ -318,6 +318,37 @@ namespace Gdterm.UI.Forms
             _tabContainer.ActiveSessionChanged += OnActiveSessionChanged;
             _tabContainer.SessionClosed += OnSessionClosed;
             _tabContainer.SearchRequested += (s, e) => _sidePanels?.AttachSearchBar(_tabContainer);
+            // A3-lite：终端选中文本含 host:port → 在连接列表中找同名连接并打开
+            _tabContainer.HostPortOpenRequested += (s, e) =>
+            {
+                try
+                {
+                    var list = _connectionStore != null ? _connectionStore.LoadAll() : null;
+                    ConnectionConfig hit = null;
+                    if (list != null)
+                    {
+                        foreach (var c in list)
+                        {
+                            if (c != null
+                                && string.Equals(c.Host, e.Host, StringComparison.OrdinalIgnoreCase))
+                            {
+                                hit = c;
+                                break;
+                            }
+                        }
+                    }
+                    if (hit != null)
+                    {
+                        _openCoord?.OpenConnection(hit);
+                    }
+                    else
+                    {
+                        MessageBox.Show(this, "连接列表中未找到 host 为 " + e.Host + " 的连接。",
+                            "打开连接", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                }
+                catch (Exception ex) { DiagLog.Swallowed("MainForm.HostPortOpen", ex); }
+            };
             _tabContainer.BlankAreaDoubleClicked += (s, e) => { try { _openCoord.NewConnection(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } } };
             _tabContainer.ExportRequested += (s, e) => ExportActiveTerminalBuffer();
             _tabContainer.AppearanceSettingsRequested += (s, e) => _toolsDialogs.OpenAppearanceSettings();

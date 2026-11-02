@@ -74,6 +74,16 @@ namespace Gdterm.UI.Controls
         public event EventHandler ExportRequested;
         /// <summary>用户在右键菜单点了「外观设置」。</summary>
         public event EventHandler AppearanceSettingsRequested;
+        /// <summary>用户在右键菜单点了「打开对应连接」（选中文本含 host:port，A3-lite）。</summary>
+        public event EventHandler<HostPortEventArgs> HostPortOpenRequested;
+
+        /// <summary>host:port 参数。</summary>
+        public sealed class HostPortEventArgs : EventArgs
+        {
+            public string Host { get; private set; }
+            public int Port { get; private set; }
+            public HostPortEventArgs(string host, int port) { Host = host; Port = port; }
+        }
 
         private ContextMenuStrip _termMenu;
 
@@ -247,6 +257,19 @@ namespace Gdterm.UI.Controls
                 SetMenuItemEnabled("_clearItem", IsConnected);
                 SetMenuItemEnabled("_reconnectItem", !IsConnected || _config != null);
                 SetMenuItemEnabled("_exportItem", IsConnected);
+                // 在线动作：需要选中；IP 查询需选中含合法 IPv4；host:port 需含合法地址
+                SetMenuItemEnabled("_onlineSearchItem", hasSel);
+                SetMenuItemEnabled("_onlineTranslateItem", hasSel);
+                bool hasIp = false;
+                bool hasHostPort = false;
+                try
+                {
+                    hasIp = hasSel && Gdterm.Core.OnlineLinks.ExtractFirstIpv4(GetSelection()) != null;
+                    hasHostPort = hasSel && Gdterm.Core.OnlineLinks.ExtractFirstHostPort(GetSelection()) != null;
+                }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+                SetMenuItemEnabled("_onlineIpItem", hasIp);
+                SetMenuItemEnabled("_onlineHostPortItem", hasHostPort);
             };
 
             var copyItem = new ToolStripMenuItem("复制(&C)");
@@ -293,6 +316,57 @@ namespace Gdterm.UI.Controls
                 try { SearchRequested?.Invoke(this, EventArgs.Empty); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
             };
             _termMenu.Items.Add(searchItem);
+
+            // 在线动作（nyaterm 对比吸收 A4）：选中文本 → 浏览器搜索/翻译/IP 查询
+            var onlineMenu = new ToolStripMenuItem("在线(&S)");
+            var onlineSearchItem = new ToolStripMenuItem("搜索(Bing)(&G)");
+            onlineSearchItem.Name = "_onlineSearchItem";
+            onlineSearchItem.Click += (s, e) => OpenOnlineUrl(
+                () => Gdterm.Core.OnlineLinks.BuildSearchUrl(GetSelection()), "TerminalControl.OnlineSearch");
+            var onlineTranslateItem = new ToolStripMenuItem("翻译(&T)");
+            onlineTranslateItem.Name = "_onlineTranslateItem";
+            onlineTranslateItem.Click += (s, e) => OpenOnlineUrl(
+                () => Gdterm.Core.OnlineLinks.BuildTranslateUrl(GetSelection()), "TerminalControl.OnlineTranslate");
+            var onlineIpItem = new ToolStripMenuItem("IP 查询(&I)");
+            onlineIpItem.Name = "_onlineIpItem";
+            onlineIpItem.Click += (s, e) =>
+            {
+                try
+                {
+                    var ip = Gdterm.Core.OnlineLinks.ExtractFirstIpv4(GetSelection());
+                    if (ip == null)
+                    {
+                        MessageBox.Show(this, "选中文本中未找到合法 IPv4 地址。",
+                            "IP 查询", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    OpenOnlineUrl(() => Gdterm.Core.OnlineLinks.BuildIpLookupUrl(ip), "TerminalControl.OnlineIp");
+                }
+                catch (Exception ex) { DiagLog.Swallowed("TerminalControl.OnlineIp", ex); }
+            };
+            onlineMenu.DropDownItems.Add(onlineSearchItem);
+            onlineMenu.DropDownItems.Add(onlineTranslateItem);
+            onlineMenu.DropDownItems.Add(onlineIpItem);
+            var onlineHostPortItem = new ToolStripMenuItem("打开对应连接(host:port)(&O)");
+            onlineHostPortItem.Name = "_onlineHostPortItem";
+            onlineHostPortItem.Click += (s, e) =>
+            {
+                try
+                {
+                    var hp = Gdterm.Core.OnlineLinks.ExtractFirstHostPort(GetSelection());
+                    if (hp == null)
+                    {
+                        MessageBox.Show(this, "选中文本中未找到 host:port 地址。",
+                            "打开连接", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+                    var hpe = HostPortOpenRequested;
+                    if (hpe != null) hpe(this, new HostPortEventArgs(hp.Host, hp.Port));
+                }
+                catch (Exception ex) { DiagLog.Swallowed("TerminalControl.HostPort", ex); }
+            };
+            onlineMenu.DropDownItems.Add(onlineHostPortItem);
+            _termMenu.Items.Add(onlineMenu);
             _termMenu.Items.Add(new ToolStripSeparator());
 
             var reconnectItem = new ToolStripMenuItem("重连(&R)");
@@ -327,9 +401,31 @@ namespace Gdterm.UI.Controls
         private void SetMenuItemEnabled(string name, bool enabled)
         {
             foreach (ToolStripItem item in _termMenu.Items)
+                SetMenuItemEnabledRecursive(item, name, enabled);
+        }
+
+        /// <summary>递归查找（在线子菜单的项在 DropDownItems 里，顶层查找够不到）。</summary>
+        private static void SetMenuItemEnabledRecursive(ToolStripItem item, string name, bool enabled)
+        {
+            if (item.Name == name) item.Enabled = enabled;
+            var drop = item as ToolStripMenuItem;
+            if (drop != null)
+                foreach (ToolStripItem child in drop.DropDownItems)
+                    SetMenuItemEnabledRecursive(child, name, enabled);
+        }
+
+        /// <summary>在线动作统一出口：默认浏览器打开 URL（A4）。</summary>
+        private void OpenOnlineUrl(Func<string> urlBuilder, string diagTag)
+        {
+            try
             {
-                if (item.Name == name) { item.Enabled = enabled; break; }
+                var text = GetSelection();
+                if (string.IsNullOrWhiteSpace(text)) return;
+                var url = urlBuilder();
+                if (string.IsNullOrEmpty(url)) return;
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
             }
+            catch (Exception ex) { DiagLog.Swallowed(diagTag, ex); }
         }
 
         private static bool ClipboardContainsText()

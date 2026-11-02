@@ -54,6 +54,8 @@ namespace Gdterm.UI.Controls
         public event EventHandler ReconnectRequested;
         public event EventHandler ExportRequested;
         public event EventHandler AppearanceSettingsRequested;
+        /// <summary>终端右键「打开对应连接」（选中文本 host:port，A3-lite）；参数 HostPortEventArgs。</summary>
+        public event EventHandler<TerminalControl.HostPortEventArgs> HostPortOpenRequested;
         /// <summary>终端尺寸/编码变化转发（由 TerminalControl.TerminalInfoChanged 转出）。</summary>
         public event EventHandler<Size> TerminalInfoChanged;
 
@@ -317,6 +319,7 @@ namespace Gdterm.UI.Controls
                 };
                 terminalControl.ExportRequested += (s, e) => ExportRequested?.Invoke(terminalControl, e);
                 terminalControl.AppearanceSettingsRequested += (s, e) => AppearanceSettingsRequested?.Invoke(terminalControl, e);
+                terminalControl.HostPortOpenRequested += (s, e) => HostPortOpenRequested?.Invoke(terminalControl, e);
                 // 终端尺寸/编码变化转发到状态栏
                 terminalControl.TerminalInfoChanged += (s, size) =>
                 {
