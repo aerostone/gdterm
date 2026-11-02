@@ -282,15 +282,15 @@ namespace Gdterm.UI.Services
         }
 
         /// <summary>帮助 → 导出诊断包：一键打包版本+脱敏日志+脱敏配置，方便报障（nyaterm 对比吸收 A7）。</summary>
+        /// <summary>诊断包一键导出（A7）：弹保存框→打包脱敏→Toast 提示路径（R08：成功提示走非阻塞通道）。</summary>
         public void ShowDiagnosticsPackage()
         {
             var path = DiagnosticsPackageExporter.BuildPackage(_owner);
             if (path != null)
             {
                 try { DiagLog.Info("ToolsDialogs", "diagnostics package exported: " + path); } catch { }
-                MessageBox.Show(_owner,
-                    "已导出诊断包：\n" + path + "\n\n可直接发给维护者；包内文本已自动脱敏，\n不含密码与凭据库。",
-                    "诊断包", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                try { ToastNotifier.Success("已导出诊断包：" + path + "（已脱敏，可直接发给维护者）"); }
+                catch { /* Toast 不可用时日志已留痕 */ }
             }
         }
 

@@ -100,7 +100,13 @@ namespace Gdterm.UI.Controls
                 }
             }
             _list.EndUpdate();
-            if (_list.Items.Count > 0) _list.SelectedIndex = 0;
+            if (_list.Items.Count == 0)
+            {
+                // 空态引导（UX 审计 C1 惯例）：列表型 UI 不能静默空白
+                _list.Items.Add(new Item { Command = null, Text = "暂无匹配命令——试试：新建 / sftp / 标签名 / 主机名" });
+                return;
+            }
+            _list.SelectedIndex = 0;
         }
 
         private static string FormatLine(PaletteCommand c)
@@ -135,7 +141,7 @@ namespace Gdterm.UI.Controls
         {
             var item = _list.SelectedValue as Item;
             if (item == null && _list.Items.Count > 0) item = _list.Items[0] as Item;
-            if (item == null) return;
+            if (item == null || item.Command == null) return; // 空态占位项不可执行
             Selected = item.Command;
             DialogResult = DialogResult.OK;
             Close();

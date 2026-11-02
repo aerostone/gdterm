@@ -27,6 +27,7 @@ Forms/SetupWizardForm.cs | dump:setup-wizard |
 Forms/SshKeyManagerForm.cs | dump:sshkey-manager |
 Forms/SftpPermissionForm.cs | none | 唯一未进 dump 的窗体；建议补 Show 用例
 Controls/TransferProgressDialog.cs | dump:transfer-progress |
+Controls/CommandPaletteForm.cs | manual:transient modal (hotkey-triggered, input-driven filtering) | A1 command palette; structure consistent with QuickJump
 Controls/AiChatPanel.cs | none | 侧栏常驻
 Controls/BatchCommandPanel.cs | none | 侧栏常驻
 Controls/BottomBarPanel.cs | none | 主壳底栏（mainform dump 内含节点，但无独立断言）
