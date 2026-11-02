@@ -104,7 +104,37 @@
 
 **流程沉淀**：RFC/密码学类纯逻辑代码，提交前本地 `~/dotnet/dotnet` + Roslyn csc 编到 .NET 8 运行时段跑向量（对照 Python/openssl），不再裸奔 CI。
 
-### 7.3 排期（后续）
+### 7.3 CI 0.1.359 门禁首捕真实布局 bug 复盘（0.1.360 全绿）
+
+**0.1.359（UI-TREE-CHECK FAIL:9）**：两新 OTP 对话框首次入 ui-tree-check 全量 dump，全中：
+1. **页脚按钮飞出面板（6 处，两窗体同款）**：构造期 `ClientSize` 先于 `Font=UiFont()` 设置——
+   字体变更触发 AutoScaleMode=Font 整体缩放（实测 AddOtp 480→760、OtpManager 640→1080），
+   按钮绝对 X 按 `ClientSize.Width-96/192` 拿到放大后的宽；Show 后客户端回弹设计值
+   （smoke 实测 480×360/640×420），docked 面板跟随回弹而绝对坐标不随（Anchor Top|Right 因
+   布局时序未生效）→ 按钮落在面板外 184–344px。旧对话框无此 bug 是因各自字体/尺寸时序不同。
+2. **AddOtp 4 输入框零尺寸**：`TableLayoutPanel` `Dock=Top + AutoSize=true` + Percent 列——
+   表宽按“首选宽”取，而 Percent 列对首选宽贡献为 0 → 输入单元格塌零（同表 label 有显式
+   尺寸故幸免，dump 特征完全吻合）。
+
+**修复 `7ef5615`**（对齐已过年检的 SetupWizardForm/PasswordHealthForm 惯例）：
+- 页脚全部改 `FlowLayoutPanel`（Dock=Bottom，RightToLeft 流 + AutoSize 按钮 + Padding 间距），
+  彻底去除 `ClientSize.Width-N` 绝对坐标——流式布局每次 resize 自动重排，任何字号/DPI 下不越界
+- 两窗体 `Font` 提前到 `ClientSize` 之前（构造期末尾字体态稳定，客户端尺寸即设计值）
+- AddOtp 表格改固定高 + 96px 绝对列 + 100% 列 + Percent 行，输入框 MinimumSize 加 120px 宽地板
+- AddOtp 高 360→400：两行提示文本 51px 需求在 360 下必被裁（0.1.359 text-fit warn）
+
+**0.1.360 全绿**：UI-TREE-CHECK ALL OK（27 dumps），两窗体子越界=0 / 零尺寸=0 / text-fit=0。
+
+**新窗体三惯例（防复发）**：① 构造器内 Font 先于 ClientSize；② 页脚按钮用流式布局惯例，
+禁止 `Location = ClientSize.Width - N`；③ TableLayoutPanel 禁用 Dock + AutoSize + Percent 列组合
+（要 Percent 列就固定高 + 显式列宽）。
+
+**监测体系旁证**：ui-tree-check 门禁此前只做回归预防，本次首次捕获新增 UI 的真实缺陷
+（含一个用户可见的文本裁剪 warn）——“新增 UI 必过盒模型门禁”闭环成立。另确认 AppVeyor
+匿名可读路径：`/api/projects/{o}/{p}/build/{v}` 与 `/api/buildjobs/{id}/log` 公开，artifacts 不公开
+（诊断靠日志 + 门禁输出，不依赖下载 dump）。
+
+### 7.4 排期（后续）
 
 1. **第二批剩余**：B2 加密同步（用户换机刚需）→ B3 AI Agent
 2. **第三批**：B4 远程监控 → B5 回传 → B8 预览升级

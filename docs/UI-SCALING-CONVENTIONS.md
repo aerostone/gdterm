@@ -36,7 +36,16 @@ TextBox/NumericUpDown/ComboBox 等输入控件：**只给宽度、不给高度**
 - 按钮条 → 底部 `FlowLayoutPanel`（`FlowDirection = RightToLeft` 实现"确定在右"）
 - 全屏覆盖层等特殊场景可用 `Dock = Fill`
 
-仅当控件不含文字且语义就是"固定装饰"时才允许绝对 `Location`。
+仅当控件不含文字且语义就是“固定装饰”时才允许绝对 `Location`。
+
+> **构造期陷阱（CI 0.1.359 门禁首捕，2026-11-02）**：`Location = DpiScale.P(this, ClientSize.Width - N, …)`
+> 看似“相对”实则绝对——构造器内 `Font = FormFontPolicy.UiFont()` 会触发 AutoScaleMode=Font
+> 整体缩放 ClientSize（实测 480→760 / 640→1080），按放大后的宽算出的 X，在 Show 后客户端
+> 回弹设计值时不随（docked 父面板跟随而绝对坐标不随）→ 按钮飞出面板 184–344px。
+> 三条惯例：**① 构造器内 `Font` 先于 `ClientSize`；② 页脚按钮一律 FlowLayoutPanel 流式
+> （L0 R14 已机械化拦截 Forms/ 内 `ClientSize.Width` 派生的 Location）；
+> ③ TableLayoutPanel 禁 `Dock + AutoSize + Percent 列` 组合（表宽取首选宽，Percent 列
+> 对首选宽贡献 0 → 单元格塌零；要 Percent 列就固定高 + 显式列宽）。
 
 ### 规则 3：禁止硬编码 UI 字体
 

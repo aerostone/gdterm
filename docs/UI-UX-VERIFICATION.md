@@ -80,6 +80,7 @@ CI 里已挂在 `appveyor.yml` 的 test_script 段（编码守卫之后、ui-smo
 | R11 | Form/Control 未登记覆盖状态 | 本文 §5 | 0 |
 | R12 | `AntdUI.Select` 设了 AutoSize | SC 规则 4d | 4 |
 | R13 | 裸像素 `Margin/Padding(a,b,c,d)` | SC 规则 4/4d | 24 |
+| R14 | `Location = … ClientSize.Width …`（Forms/ 构造期绝对坐标） | SC 规则 2（0.1.359 门禁首捕） | 0 |
 
 ### 3.3 基线棘轮（为什么不直接"必须为 0"）
 
@@ -234,7 +235,7 @@ Controls/FilePaneModel.cs    | n/a:非UI
 | DL §9.3 | 不覆盖 AntdUI 语义色 | L0 R07 | ✅🔧 |
 | DL §7.3 | 预提交 grep 快查（3 条） | L0 R01/R02/R05 | ✅🔧 取代手工 grep |
 | SC 规则 1 | 文本控件禁固定 Size | L0 R03 | ✅🔧 |
-| SC 规则 2 | 禁绝对坐标 | 无 | ❌ 人工评审 |
+| SC 规则 2 | 禁绝对坐标（页脚按钮一律 FlowLayoutPanel 右向流） | L0 R14（ClientSize.Width 派生 Location，Forms/ 生效） | ✅🔧（2026-11-02，0.1.359 首捕后机械化） |
 | SC 规则 3/4 | 固定值必须 DpiScale | L0 R04 | ✅🔧（8 处债） |
 | SC 规则 4b | 行距字体驱动 | L0 R05 | ✅🔧 |
 | SC 规则 4c | 禁裸 YaHei（Win7） | L0 R02 | ✅🔧 |

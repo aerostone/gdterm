@@ -132,6 +132,8 @@ ui-ux-lint 基线外零新增、gen-tokens/编码守卫过。门禁体系按设�
 **验证**：RFC 4226 附录 D 全 10 向量 + RFC 6238 附录 B SHA1/256/512×8 位（Python 标准库 + openssl 双重对账）。
 ⚠️ 教训：RFC 向量必须以官方原文为准——本会话凭记忆的 Base32 表与 HOTP SHA256 列均与原文不符，已用 `python3 base64`/`openssl` 交叉验证修正。
 
+**UI 门禁首捕（0.1.359→360）**：两个新对话框首次进 ui-tree-check 即 FAIL:9（页脚按钮绝对坐标 `ClientSize.Width-N` 在构造期字体 AutoScale 后按放大宽计算、Show 后飞出面板 6 处 + TableLayoutPanel Dock+AutoSize+Percent 列塌零 4 处）。`7ef5615` 改流式布局后 0.1.360 全绿。新窗体三惯例：Font 先于 ClientSize / 页脚用 FlowLayoutPanel 流式 / 表格禁用 Dock+AutoSize+Percent 组合。
+
 **安全**：密钥落盘主密码 AES（gdo1: 前缀）；诊断包文件名白名单补 otp/password 排除（双保险：文件本在 data 根而非 config/ 收集范围）。
 **工程**：Gdterm.Connections 新增 Gdterm.Security 引用（Security→Core 单向，无环）。
 **已知边界（v2）**：管理器打开期间应用被锁定→码不自动恢复（重开窗口即可）；HOTP counter 不自动递增；无二维码扫码（手动粘贴 URI/密钥）。

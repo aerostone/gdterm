@@ -24,6 +24,11 @@ R07 style-override AntdUI.Button 显式 BackColor 覆盖 Type 语义（§9.3）
 R08 blocking-toast 成功/完成类信息用阻断 MessageBox（§9.3）
 R09 empty-state    列表型 UI 无空态引导（UX 审计 2026-10-07）
 R10 consolas-text  自然语言文本用 Consolas（§4.5 / §2.1）
+R11 coverage       UI 文件未登记覆盖状态（UI-UX-VERIFICATION §2.3）
+R12 select-autosize AntdUI.Select 设了 AutoSize（缩放规则 4d）
+R13 bare-pad       裸像素 Margin/Padding（缩放规则 4d / 规则 4）
+R14 loc-from-client 构造期绝对坐标源自 ClientSize.Width（规则 2；CI 0.1.359 首捕：
+                   字体 AutoScale 后客户端已变，绝对 X 飞出 docked 面板；Forms/ 生效）
 
 基线棘轮（ratchet）
 ===================
@@ -360,6 +365,25 @@ def r13(path, lines):
         if is_comment(line) or "DpiScale" in line:
             continue
         if BARE_PAD_RE.search(line):
+            yield i, snippet(line)
+
+
+# ────────────────────────────── R14 ──────────────────────────────
+# 构造期绝对坐标页脚反模式（CI 0.1.359 首捕教训）：
+#   Location = … ClientSize.Width - N …
+# 字体变更触发 AutoScaleMode=Font 缩放后 ClientSize 已变，绝对 X 按放大宽
+# 计算，Show 后回弹设计值，docked 父面板跟随而按钮不随 → 飞出面板。
+# 仅 Forms/ 生效：该目录是构造期布局区；Resize 处理器里的动态重算合法，
+# 但出现在窗体构造器里几乎必是此反模式。页脚按钮一律 FlowLayoutPanel 流式。
+LOC_FROM_CLIENT_RE = re.compile(r"Location\s*=.*ClientSize\.Width")
+@rule("R14", "构造期绝对坐标源自 ClientSize.Width", "SCALING 规则 4e（0.1.359 门禁首捕）")
+def r14(path, lines):
+    if "/Forms/" not in path.replace("\\", "/"):
+        return
+    for i, line in enumerate(lines, 1):
+        if is_comment(line):
+            continue
+        if LOC_FROM_CLIENT_RE.search(line):
             yield i, snippet(line)
 
 
