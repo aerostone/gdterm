@@ -28,6 +28,7 @@ namespace Gdterm.Tests
             ConnectionStoreJsonTests.Run();
             ExternalFormatImporterTests.Run();
             OnlineLinksTests.Run();
+            OtpTests.Run();
             CredentialPayloadTests.Run();
             SecretFindingTests.Run();
             SecurityManagerHashTests.Run();

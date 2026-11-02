@@ -27,6 +27,8 @@ namespace Gdterm.UI.Services
         // 一体化 change 2026-09-26：密码库管理器注入连接库，启用「关联连接」列与「从凭据新建连接」
         private IConnectionStore _connectionStore;
         private Action _connectionsChanged;
+        // nyaterm 对比 B1：OTP 管理器注入条目存储
+        private IOtpStore _otpStore;
 
         public ToolsDialogsLauncher(
             IWin32Window owner,
@@ -65,6 +67,24 @@ namespace Gdterm.UI.Services
         {
             _connectionStore = connectionStore;
             _connectionsChanged = connectionsChanged;
+        }
+
+        /// <summary>注入 OTP 条目存储（nyaterm 对比 B1）。</summary>
+        public void SetOtpStore(IOtpStore otpStore)
+        {
+            _otpStore = otpStore;
+        }
+
+        /// <summary>打开 OTP 动态码管理器（nyaterm 对比 B1）。</summary>
+        public void OpenOtpManager()
+        {
+            if (_otpStore == null)
+            {
+                MessageBox.Show(_owner, "OTP 存储未初始化。", "OTP", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            using (var form = new OtpManagerForm(_otpStore))
+                form.ShowDialog(_owner);
         }
 
         /// <summary>帮助文本=路由表投影(平表部分)+特例键(不入平表的参数化/全局热键),杜绝两处手抄漂移。</summary>

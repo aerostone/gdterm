@@ -56,6 +56,8 @@ namespace Gdterm.UI.Forms
         private readonly ToolRegistry _toolRegistry;
         private readonly SecretScanner _secretScanner;
         private readonly CommandTemplateStore _commandTemplateStore;
+        // nyaterm 对比 B1：OTP 条目存储
+        private readonly IOtpStore _otpStore;
 
         private ConnectionTreeControl _connectionTree;
         private TabContainerControl _tabContainer;
@@ -106,7 +108,8 @@ namespace Gdterm.UI.Forms
             MultiChannelManager multiChannelManager = null,
             ToolRegistry toolRegistry = null,
             SecretScanner secretScanner = null,
-            CommandTemplateStore commandTemplateStore = null)
+            CommandTemplateStore commandTemplateStore = null,
+            IOtpStore otpStore = null)
         {
             _connectionStore = connectionStore;
             _tunnelManager = tunnelManager;
@@ -131,6 +134,7 @@ namespace Gdterm.UI.Forms
             _toolRegistry = toolRegistry;
             _secretScanner = secretScanner;
             _commandTemplateStore = commandTemplateStore;
+            _otpStore = otpStore;
 
             // 消除重绘闪烁：DoubleBuffered + 指定一致暗色背景。
             // 这是「发虚」的第二根因——重绘时 GDI 一帧帧走，看起来不稳重。,
@@ -469,6 +473,7 @@ namespace Gdterm.UI.Forms
             {
                 try { _connectionTree?.LoadConnections(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.ConnsChanged", exSwallowed); } catch { } }
             });
+            _toolsDialogs.SetOtpStore(_otpStore);
 
             // 状态栏可点击：把二级菜单里的高频入口提为一击直达
             _statusBar.StatusClicked += (s, key) =>
@@ -549,6 +554,7 @@ namespace Gdterm.UI.Forms
                 PasswordHealth = (s, e) => _toolsDialogs.OpenPasswordHealth(),
                 PasswordGenerator = (s, e) => _toolsDialogs.OpenPasswordGenerator(),
                 ChangeMasterPassword = (s, e) => _toolsDialogs.OpenChangeMasterPassword(),
+                OtpManager = (s, e) => _toolsDialogs.OpenOtpManager(),
                 AppearanceSettings = (s, e) => _toolsDialogs.OpenAppearanceSettings(),
                 AiSettings = (s, e) => _toolsDialogs.OpenAiSettings(),
                 DangerousCmdSettings = (s, e) => _toolsDialogs.OpenDangerousCmdSettings(),
@@ -1116,6 +1122,7 @@ namespace Gdterm.UI.Forms
             Add("密码健康报告", "工具", () => _toolsDialogs?.OpenPasswordHealth());
             Add("密码生成器", "工具", () => _toolsDialogs?.OpenPasswordGenerator());
             Add("修改主密码", "工具", () => _toolsDialogs?.OpenChangeMasterPassword());
+            Add("OTP 管理器", "工具", () => _toolsDialogs?.OpenOtpManager());
             Add("SSH 密钥管理", "工具", () => _toolsDialogs?.OpenSshKeyManager());
             Add("扫描中心", "工具", () => _toolsDialogs?.OpenScannerCenter());
             Add("外观设置", "设置", () => _toolsDialogs?.OpenAppearanceSettings());
