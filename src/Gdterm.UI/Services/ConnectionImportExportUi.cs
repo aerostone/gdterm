@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Windows.Forms;
 using Gdterm.Connections;
+using Gdterm.Core.Models;
 using Gdterm.UI.ImportExport;
 
 namespace Gdterm.UI.Services
@@ -17,13 +19,22 @@ namespace Gdterm.UI.Services
             using (var dlg = new OpenFileDialog
             {
                 Title = "导入连接",
-                Filter = "所有支持格式|*.json;*.csv;*.xml|JSON|*.json|CSV|*.csv|mRemoteNG XML|*.xml"
+                Multiselect = true,
+                Filter = "所有支持格式 (*.xsh;*.ini;*.json;user.sessions)|*.xsh;*.ini;*.json;user.sessions|"
+                    + "Xshell 会话 (*.xsh)|*.xsh|"
+                    + "MobaXterm 配置 (*.ini)|*.ini|"
+                    + "WindTerm 会话 (user.sessions)|user.sessions|"
+                    + "JSON (*.json)|*.json|"
+                    + "CSV (*.csv)|*.csv|"
+                    + "mRemoteNG XML (*.xml)|*.xml"
             })
             {
                 if (dlg.ShowDialog(owner) != DialogResult.OK) return;
                 try
                 {
-                    var imported = ConnectionImporterExporter.ImportFromFile(dlg.FileName);
+                    var imported = new List<ConnectionConfig>();
+                    foreach (var file in dlg.FileNames)
+                        imported.AddRange(ConnectionImporterExporter.ImportFromFile(file));
                     if (imported.Count == 0)
                     {
                         MessageBox.Show(owner, "未找到可导入的连接", "导入",

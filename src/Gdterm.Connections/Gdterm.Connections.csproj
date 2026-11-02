@@ -41,6 +41,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="GroupNode.cs" />
+    <Compile Include="ExternalFormatImporter.cs" />
     <Compile Include="IConnectionStore.cs" />
     <Compile Include="ConnectionStoreJson.cs" />
     <Compile Include="IFolderCredentialStore.cs" />

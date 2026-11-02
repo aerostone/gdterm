@@ -11,7 +11,8 @@ namespace Gdterm.UI.ImportExport
 {
     /// <summary>
     /// 连接导入/导出——支持 JSON (gdterm 原生) 和 CSV 格式
-    /// 兼容 mRemoteNG XML 和 SecureCRT CSV 格式
+    /// 兼容 mRemoteNG XML / SecureCRT CSV / Xshell .xsh / MobaXterm.ini / WindTerm user.sessions
+    /// （外部格式解析在 Gdterm.Connections.ExternalFormatImporter，可测）
     /// </summary>
     public static class ConnectionImporterExporter
     {
@@ -70,21 +71,39 @@ namespace Gdterm.UI.ImportExport
         // ========== 导入 ==========
 
         /// <summary>
-        /// 从文件导入连接（自动识别 JSON/CSV）
+        /// 从文件导入连接（自动识别 JSON/CSV/mRemoteNG XML/Xshell/MobaXterm/WindTerm）
         /// </summary>
         public static List<ConnectionConfig> ImportFromFile(string filePath)
         {
             var ext = Path.GetExtension(filePath).ToLowerInvariant();
             switch (ext)
             {
-                case ".json": return ImportFromJson(filePath);
+                case ".json":
+                    {
+                        var fromJson = TryImportFromJson(filePath);
+                        if (fromJson.Count > 0) return fromJson;
+                        // WindTerm 的 user.sessions 也是 JSON（session.* 键），gdterm JSON 解不出再试
+                        return ExternalFormatImporter.ImportWindTerm(filePath);
+                    }
                 case ".csv": return ImportFromCsv(filePath);
                 case ".xml": return ImportFromMRemoteNgXml(filePath);
+                case ".xsh": return ExternalFormatImporter.ImportXshell(filePath);
+                case ".ini": return ExternalFormatImporter.ImportMobaXterm(filePath);
                 default:
-                    // 尝试按 JSON 解析
-                    try { return ImportFromJson(filePath); }
-                    catch { return ImportFromCsv(filePath); }
+                    // 无扩展名或其他：按内容顺序尝试（gdterm JSON → WindTerm → CSV）
+                    var autoJson = TryImportFromJson(filePath);
+                    if (autoJson.Count > 0) return autoJson;
+                    var windTerm = ExternalFormatImporter.ImportWindTerm(filePath);
+                    if (windTerm.Count > 0) return windTerm;
+                    try { return ImportFromCsv(filePath); }
+                    catch { return new List<ConnectionConfig>(); }
             }
+        }
+
+        private static List<ConnectionConfig> TryImportFromJson(string filePath)
+        {
+            try { return ImportFromJson(filePath); }
+            catch { return new List<ConnectionConfig>(); }
         }
 
         /// <summary>

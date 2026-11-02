@@ -26,6 +26,7 @@ namespace Gdterm.Tests
             DefaultPortsTests.Run();
             LogSanitizerTests.Run();
             ConnectionStoreJsonTests.Run();
+            ExternalFormatImporterTests.Run();
             CredentialPayloadTests.Run();
             SecretFindingTests.Run();
             SecurityManagerHashTests.Run();
