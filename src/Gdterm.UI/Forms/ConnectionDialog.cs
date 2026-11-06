@@ -339,10 +339,13 @@ namespace Gdterm.UI.Forms
             _termCombo.SelectedValue = "xterm-256color";
             _localeBox = AddRow(termLayout, 1, "Locale", new AntdUI.Input());
             _localeBox.PlaceholderText = "如 zh_CN.UTF-8（留空不改远端环境）";
+            // 提示行同样要 Dock=Fill：AutoSize=false 且无停靠时 AntdUI.Label 宽会是 0，
+            // ui-tree-check 会把"零尺寸可见叶"判失败（0.1.364 实测）。
             var termHint = new AntdUI.Label
             {
-                Text = "终端类型决定 pty 协商的 TERM；Locale 在登录后 export（secureCRT 登录脚本同思路）",
+                Text = "TERM 决定 pty 协商类型；Locale 登录后 export",
                 AutoSize = false,
+                Dock = DockStyle.Fill,
                 Height = DpiScale.V(this, 20),
                 ForeColor = GdtermColorTable.Muted,
                 Margin = new Padding(0, DpiScale.V(this, 2), 0, 0)
