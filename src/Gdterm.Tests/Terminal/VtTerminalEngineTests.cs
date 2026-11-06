@@ -27,6 +27,8 @@ namespace Gdterm.Tests.Terminal
             AnswerColorPaletteQueries();
             ClipboardOsc52RoundTrip();
             SwallowKittyGraphicsApcs();
+            AnswerCursorPositionReports();
+            XtGetTcapReplyFraming();
         }
 
         /// <summary>配置的 TERM 要进 XTVERSION / XTGETTCAP TN（远端靠这个判断客户端身份）。</summary>
@@ -49,6 +51,71 @@ namespace Gdterm.Tests.Terminal
                 eng.Feed("\u001bP+q544e\u001b\\");   // XTGETTCAP TN（hex 编码应答）
                 var hex = HexDecode(sb.ToString());
                 Assert.True(hex.Contains("screen-256color"), "XTGETTCAP TN = configured TERM");
+            }
+        }
+
+        /// <summary>
+        /// XTGETTCAP 应答必须严格是 DCS 1+r&lt;hexname&gt;=&lt;hexvalue&gt; ST（"1+r" 与名字紧贴），
+        /// 能力名按大小写不敏感匹配；不支持的能力回 0+r 且不带值。
+        /// </summary>
+        private static void XtGetTcapReplyFraming()
+        {
+            using (var eng = new VtTerminalEngine(80, 24, 100))
+            {
+                var sb = new StringBuilder();
+                eng.SendToHost += (s, data) => sb.Append(Encoding.UTF8.GetString(data));
+
+                eng.Feed("\u001bP+q544e\u001b\\");            // TN
+                var reply = sb.ToString();
+                Assert.True(reply.StartsWith("\u001bP1+r544e=", StringComparison.Ordinal), "XTGETTCAP success framing (no space after 1+r)");
+                Assert.True(reply.EndsWith("\u001b\\", StringComparison.Ordinal), "XTGETTCAP ST terminator");
+
+                sb.Length = 0;
+                eng.Feed("\u001bP+q726762\u001b\\");          // rgb（小写能力名）
+                Assert.Equal("\u001bP1+r726762=382f382f38\u001b\\", sb.ToString(), "XTGETTCAP lookup is case-insensitive");
+
+                sb.Length = 0;
+                eng.Feed("\u001bP+q7878\u001b\\");            // xx：不支持
+                Assert.Equal("\u001bP0+r7878\u001b\\", sb.ToString(), "XTGETTCAP failure framing");
+            }
+        }
+
+        /// <summary>
+        /// DSR：CSI 6n 必须回 ESC[row;colR，CSI 5n 回 ESC[0n。库两者都不答（实测无任何回写），
+        /// 答案还必须是“喂到该字节为止”的光标位置——同包前面的文本要算进去，查询本身不能上屏。
+        /// </summary>
+        private static void AnswerCursorPositionReports()
+        {
+            CprCase("空屏 CPR", "", "\u001b[6n", "\u001b[1;1R");
+            CprCase("打印 abc 后 CPR", "abc", "\u001b[6n", "\u001b[1;4R");
+            CprCase("同包 abc+CPR（前面的文本要算）", "", "abc\u001b[6n", "\u001b[1;4R");
+            CprCase("中文后 CPR（宽字符占 2 列）", "中文", "\u001b[6n", "\u001b[1;5R");
+            CprCase("同包中文+CPR", "", "中文\u001b[6n", "\u001b[1;5R");
+            CprCase("CUP 定位后 CPR", "\u001b[4;7H", "\u001b[6n", "\u001b[4;7R");
+            CprCase("换行后 CPR", "ab\r\ncd", "\u001b[6n", "\u001b[2;3R");
+            CprCase("DSR 5n", "", "\u001b[5n", "\u001b[0n");
+
+            using (var eng = new VtTerminalEngine(40, 10, 100))
+            {
+                eng.Feed("AB\u001b[6nCD");
+                var text = eng.GetScreenText();
+                Assert.True(text.StartsWith("ABCD"), "DSR query must not reach the screen");
+            }
+        }
+
+        private static void CprCase(string label, string pre, string query, string expected)
+        {
+            using (var eng = new VtTerminalEngine(40, 10, 100))
+            {
+                var sb = new StringBuilder();
+                eng.SendToHost += (s, data) => sb.Append(Encoding.UTF8.GetString(data));
+                if (pre.Length > 0)
+                {
+                    eng.Feed(pre);
+                    sb.Length = 0;
+                }
+                eng.Feed(query);
+                Assert.Equal(expected, sb.ToString(), "CPR: " + label);
             }
         }
 

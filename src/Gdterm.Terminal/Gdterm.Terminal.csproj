@@ -87,6 +87,7 @@
     <Compile Include="Rendering\Vt\VtStreamPreprocessor.cs" />
     <Compile Include="Rendering\Vt\GraphicsDecoder.cs" />
     <Compile Include="Rendering\Vt\KittyGraphicsParser.cs" />
+    <Compile Include="Rendering\Vt\WideText.cs" />
     <Compile Include="Interop\ConPTY.cs" />
     <Compile Include="Interop\WinPty.cs" />
     <Compile Include="Transfer\ZmodemHandler.cs" />

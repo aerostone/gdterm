@@ -147,6 +147,18 @@ namespace Gdterm.Terminal.Rendering
             get { lock (_lock) return _engine.IsBracketedPasteEnabled; }
         }
 
+        /// <summary>应用是否请求焦点事件上报（?1004）。</summary>
+        public bool FocusReporting
+        {
+            get { lock (_lock) return _engine.FocusReporting; }
+        }
+
+        /// <summary>窗口焦点变化转给引擎（仅在应用开了 ?1004 时真的上报）。</summary>
+        public void ReportFocus(bool focused)
+        {
+            lock (_lock) _engine.ReportFocus(focused);
+        }
+
         // ===== 文本选择（左键拖选 / Shift+左键 扩选） =====
         private bool _hasSelection;
         private int _selStartCol, _selStartRow, _selEndCol, _selEndRow;
@@ -280,7 +292,7 @@ namespace Gdterm.Terminal.Rendering
                     sb.Append(ExtractSubstring(line, startC, endC - startC));
                 if (r < er) sb.Append('\n');
             }
-            return sb.ToString();
+            return WideText.Strip(sb.ToString());
         }
 
         /// <summary>左键拖选起点（像素）。返回是否进入选择模式。</summary>
@@ -587,7 +599,8 @@ namespace Gdterm.Terminal.Rendering
                             if (sp == null || sp.Hidden) continue;
                             sb.Append(sp.Text ?? "");
                         }
-                        string lineText = sb.ToString();
+                        // 去掉宽字符占位列再匹配，命中下标换算回模型列（占位列算 1 列）
+                        string lineText = WideText.Strip(sb.ToString());
                         if (lineText.Length > 0)
                         {
                             var matches = hl.MatchLine(lineText);
@@ -598,7 +611,8 @@ namespace Gdterm.Terminal.Rendering
                                     if (m == null || m.Length <= 0) continue;
                                     if (m.StartIndex < 0 || m.StartIndex + m.Length > lineText.Length) continue;
                                     if (m.Foreground.IsEmpty) continue;
-                                    hlStart = m.StartIndex; hlLen = m.Length;
+                                    hlStart = WideText.Columns(lineText.Substring(0, m.StartIndex));
+                                    hlLen = WideText.Columns(lineText.Substring(m.StartIndex, m.Length));
                                     hlColor = m.Foreground; hlBold = m.Bold;
                                     break;
                                 }
@@ -693,10 +707,20 @@ namespace Gdterm.Terminal.Rendering
                 float cx = PadX + page.CursorColumn * _charWidth;
                 float cy = PadY + page.CursorRow * _charHeight;
                 // 半透明整格光标：可见且不删除字符（密度打磨）
+                // 形状跟随 DECSCUSR（vim 插入模式的竖线/下划线光标）
                 Color cc = _scheme.CursorColor;
-                using (var cursorBrush = new SolidBrush(Color.FromArgb(110, cc.R, cc.G, cc.B)))
+                int shape = _engine.CursorShape;
+                bool thinShape = shape >= 3;          // 3/4 下划线、5/6 竖线
+                // 整格光标保持半透明（不遮挡字符，密度打磨过的观感）；细线只有几个像素，必须够实才看得见
+                using (var cursorBrush = new SolidBrush(Color.FromArgb(thinShape ? 235 : 110, cc.R, cc.G, cc.B)))
                 {
-                    g.FillRectangle(cursorBrush, cx, cy, _charWidth, _charHeight);
+                    float thin = Math.Max(2f, _charHeight / 8f);
+                    if (shape == 3 || shape == 4)
+                        g.FillRectangle(cursorBrush, cx, cy + _charHeight - thin, _charWidth, thin);
+                    else if (shape == 5 || shape == 6)
+                        g.FillRectangle(cursorBrush, cx, cy, Math.Max(2f, _charWidth / 6f), _charHeight);
+                    else
+                        g.FillRectangle(cursorBrush, cx, cy, _charWidth, _charHeight);
                 }
             }
 
@@ -1000,8 +1024,8 @@ namespace Gdterm.Terminal.Rendering
 
                 if (isAscii)
                     asciiBuf.Append(ch);
-                else if (!isLast)
-                    cjkBuf.Append(ch);
+                else if (!isLast && ch != WideText.Filler)
+                    cjkBuf.Append(ch);   // 占位列不画（宽字符字形本身占 2 格）
 
                 bool segBreak = isLast || (i + 1 < text.Length && ((text[i + 1] < 0x80) != isAscii));
                 if (segBreak || isLast)
@@ -1061,8 +1085,8 @@ namespace Gdterm.Terminal.Rendering
 
                 if (isAscii)
                     asciiBuf.Append(ch);
-                else if (!isLast)
-                    cjkBuf.Append(ch);
+                else if (!isLast && ch != WideText.Filler)
+                    cjkBuf.Append(ch);   // 占位列不画（宽字符字形本身占 2 格）
 
                 // 段间刷新
                 bool segBreak = isLast || (i + 1 < text.Length && ((text[i + 1] < 0x80) != isAscii));

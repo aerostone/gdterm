@@ -19,6 +19,8 @@ namespace Gdterm.Terminal.Rendering.Vt
         private readonly DataConsumer _consumer;
         private readonly VtStreamPreprocessor _pre = new VtStreamPreprocessor();
         private readonly object _lock = new object();
+        private readonly List<int> _dsrAt = new List<int>();
+        private readonly List<int> _dsrKind = new List<int>();
         private bool _disposed;
         private int _feedErrCount;
         // 用户手动滚上去后钉住的 TopRow（-1 = 跟随底部）。否则库会把“距底行数”保持不变，
@@ -169,6 +171,8 @@ namespace Gdterm.Terminal.Rendering.Vt
 
         public VtTerminalEngine(int columns = 80, int rows = 24, int maxHistory = 500)
         {
+            // 中文标题：库里用 ASCII 解 OSC，会乱码 → 预处理器自己解 UTF-8 后从这里抛事件
+            _pre.TitleSink = t => { var h = TitleChanged; if (h != null) { try { h(this, t); } catch { } } };
             if (columns < 2) columns = 2;
             if (rows < 1) rows = 1;
             Columns = columns;
@@ -235,11 +239,50 @@ namespace Gdterm.Terminal.Rendering.Vt
                     // 在这里拆成它认的多条 SGR，否则前景会变黑（lib\VtNetCore.dll 无法重编）
                     int n;
                     var normalized = _pre.Process(data, 0, data.Length, out n);
-                    if (normalized != null && n > 0)
+                    // DSR（CSI 6n/5n）的答案必须是“喂到该字节为止”的光标位置：
+                    // 按查询出现的位置把输出切段喂库，在分界点算光标再回写。
+                    // 纯查询输入（n==0）也要答，所以不能挂在 n > 0 的判断里。
+                    _pre.CopyCursorQueries(_dsrAt, _dsrKind);
+                    if (n > 0 && _dsrAt.Count == 0)
                     {
                         var slice = new byte[n];
                         Array.Copy(normalized, slice, n);
                         _consumer.Push(slice);
+                    }
+                    else if (n > 0 || _dsrAt.Count > 0)
+                    {
+                        int from = 0;
+                        var sb = new StringBuilder();
+                        for (int q = 0; q < _dsrAt.Count; q++)
+                        {
+                            int to = Math.Min(_dsrAt[q], n);
+                            if (to > from)
+                            {
+                                var part = new byte[to - from];
+                                Array.Copy(normalized, from, part, 0, part.Length);
+                                _consumer.Push(part);
+                                from = to;
+                            }
+                            if (_dsrKind[q] == 6)
+                            {
+                                int row = 0, col = 0;
+                                try { var p = _controller.ViewPort.CursorPosition; row = p.Row; col = p.Column; } catch { }
+                                sb.Append("\u001b[").Append(row + 1).Append(';').Append(col + 1).Append('R');
+                            }
+                            else sb.Append("\u001b[0n");
+                        }
+                        if (n > from)
+                        {
+                            var tailSlice = new byte[n - from];
+                            Array.Copy(normalized, from, tailSlice, 0, tailSlice.Length);
+                            _consumer.Push(tailSlice);
+                        }
+                        var dscr = sb.ToString();
+                        if (dscr.Length > 0)
+                        {
+                            var dh = SendToHost;
+                            if (dh != null) dh(this, Encoding.UTF8.GetBytes(dscr));
+                        }
                     }
                     var replies = _pre.TakeReplies();
                     if (replies.Length > 0)
@@ -369,7 +412,8 @@ namespace Gdterm.Terminal.Rendering.Vt
                         if (span == null || span.Hidden) continue;
                         sb.Append(span.Text ?? "");
                     }
-                    if (sb.ToString().IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0)
+                    // 去宽字符占位列再匹配（否则“中文”在库里是 中<fill>文<fill>，搜不到）
+                    if (WideText.Strip(sb.ToString()).IndexOf(text, StringComparison.OrdinalIgnoreCase) >= 0)
                         return r;
                 }
                 r++;
@@ -457,7 +501,29 @@ namespace Gdterm.Terminal.Rendering.Vt
         /// <summary>可见区域纯文本（调试/测试用）。</summary>
         public string GetScreenText()
         {
-            lock (_lock) return _controller.GetScreenText() ?? string.Empty;
+            string raw;
+            lock (_lock) raw = _controller.GetScreenText();
+            // 去掉宽字符占位列（见 WideText）
+            return WideText.Strip(raw ?? string.Empty);
+        }
+
+        /// <summary>光标形状（DECSCUSR）：0/1 闪烁块 2 稳态块 3/4 下划线 5/6 竖线。</summary>
+        public int CursorShape { get { return _pre.CursorShape; } }
+
+        /// <summary>应用是否请求焦点事件上报（?1004）。</summary>
+        public bool FocusReporting { get { return _pre.FocusReporting; } }
+
+        /// <summary>
+        /// 焦点变化上报（xterm focus in/out）：应用开了 ?1004 才发 ESC[I / ESC[O。
+        /// vim/neovim/tmux 靠它做“离开终端时自动保存”等行为。
+        /// </summary>
+        public void ReportFocus(bool focused)
+        {
+            if (_disposed || !_pre.FocusReporting) return;
+            var handler = SendToHost;
+            if (handler == null) return;
+            try { handler(this, Encoding.ASCII.GetBytes(focused ? "\u001b[I" : "\u001b[O")); }
+            catch (Exception ex) { Gdterm.Terminal.Diagnostics.TerminalLog.Swallowed("VtEngine.ReportFocus", ex); }
         }
 
         /// <summary>

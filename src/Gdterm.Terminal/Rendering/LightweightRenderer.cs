@@ -5,6 +5,7 @@ using System.Drawing.Drawing2D;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
+using Gdterm.Terminal.Rendering.Vt;
 using Gdterm.Terminal.Themes;
 
 namespace Gdterm.Terminal.Rendering
@@ -388,14 +389,14 @@ namespace Gdterm.Terminal.Rendering
             if (line.Spans == null || line.Spans.Count == 0)
             {
                 var brush = GetBrush(_scheme.Foreground);
-                g.DrawString(line.Text, _font, brush, x, y, StringFormat.GenericTypographic);
+                g.DrawString(WideText.Strip(line.Text), _font, brush, x, y, StringFormat.GenericTypographic);
                 return;
             }
 
             foreach (var span in line.Spans)
             {
                 var brush = GetBrush(span.Color);
-                g.DrawString(span.Text, span.Bold && _boldFont != null ? _boldFont : _font, brush, x, y, StringFormat.GenericTypographic);
+                g.DrawString(WideText.Strip(span.Text), span.Bold && _boldFont != null ? _boldFont : _font, brush, x, y, StringFormat.GenericTypographic);
                 x += span.Text.Length * _charWidth;
             }
         }
@@ -405,14 +406,14 @@ namespace Gdterm.Terminal.Rendering
             if (spans.Count == 0)
             {
                 var brush = GetBrush(_currentColor);
-                g.DrawString(currentText, _font, brush, x, y, StringFormat.GenericTypographic);
+                g.DrawString(WideText.Strip(currentText), _font, brush, x, y, StringFormat.GenericTypographic);
                 return;
             }
 
             foreach (var span in spans)
             {
                 var brush = GetBrush(span.Color);
-                g.DrawString(span.Text, span.Bold && _boldFont != null ? _boldFont : _font, brush, x, y, StringFormat.GenericTypographic);
+                g.DrawString(WideText.Strip(span.Text), span.Bold && _boldFont != null ? _boldFont : _font, brush, x, y, StringFormat.GenericTypographic);
                 x += span.Text.Length * _charWidth;
             }
         }

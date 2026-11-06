@@ -32,11 +32,21 @@ namespace Gdterm.Terminal.Rendering.Vt
         private int _pendingLen;
         private byte[] _out = new byte[256];
 
+        // DSR（CSI 6n / CSI 5n）：库完全不答，且答案依赖“喂到这一字节为止的光标位置”，
+        // 所以这里只记下查询在 _out 里的偏移，由引擎分段喂库后在分界处算光标再回写
+        private readonly List<int> _dsrAt = new List<int>();
+        private readonly List<int> _dsrKind = new List<int>();
+
         // 鼠标上报模式位（?9/?1000/?1001/?1002/?1003）
         private int _mouseModes;
         private bool _sgrMouse;
         private bool _bracketedPaste;
+        private bool _focusReporting;
         private int _modifyOtherKeys;
+
+        // 宽字符展开的 UTF-8 跨包残留（正文可能被拆包，半截序列必须留到下一包）
+        private readonly byte[] _utf8Pend = new byte[4];
+        private int _utf8PendLen;
 
         private readonly StringBuilder _replies = new StringBuilder();
 
@@ -51,6 +61,13 @@ namespace Gdterm.Terminal.Rendering.Vt
 
         /// <summary>xterm modifyOtherKeys 级别（0=关，1=Ctrl/Alt 组合，2=全部）。</summary>
         public int ModifyOtherKeys { get { return _modifyOtherKeys; } }
+
+        /// <summary>光标形状（DECSCUSR CSI Ps SP q）：0/1 闪烁块 2 稳态块 3 闪烁下划线 4 稳态下划线 5 闪烁竖线 6 稳态竖线。</summary>
+        public int CursorShape { get { return _cursorShape; } }
+        private int _cursorShape;
+
+        /// <summary>应用是否请求焦点事件上报（?1004）：UI 在获得/失去焦点时发 ESC[I / ESC[O。</summary>
+        public bool FocusReporting { get { return _focusReporting; } }
 
         /// <summary>是否启用了应用光标键模式（DECCKM ?1）。</summary>
         public bool ApplicationCursorKeys { get { return (_mouseModes & 0x10000) != 0; } }
@@ -80,6 +97,12 @@ namespace Gdterm.Terminal.Rendering.Vt
         /// <summary>单元像素尺寸（CSI 14t / 16t 用）。</summary>
         public int CellPixelWidth = 8;
         public int CellPixelHeight = 16;
+
+        /// <summary>
+        /// 窗口标题（OSC 0 / OSC 2，UTF-8）。库用 ASCII 解 OSC，中文标题会变成乱码，
+        /// 所以标题在这里自己解、自己吞，不再透传给库。
+        /// </summary>
+        public Action<string> TitleSink;
 
         /// <summary>OSC 52 写入请求（base64 文本），由 UI 落到系统剪贴板。</summary>
         public Action<string> ClipboardWrite;
@@ -114,6 +137,20 @@ namespace Gdterm.Terminal.Rendering.Vt
             return s;
         }
 
+        /// <summary>本批输出里的光标查询：偏移（_out 内）与类型（6=位置，5=状态）。</summary>
+        public void CopyCursorQueries(List<int> offsets, List<int> kinds)
+        {
+            offsets.Clear();
+            kinds.Clear();
+            for (int k = 0; k < _dsrAt.Count; k++)
+            {
+                offsets.Add(_dsrAt[k]);
+                kinds.Add(_dsrKind[k]);
+            }
+            _dsrAt.Clear();
+            _dsrKind.Clear();
+        }
+
         /// <summary>清空跨包残留（会话重连/重置时调用）。</summary>
         public void Reset()
         {
@@ -121,7 +158,10 @@ namespace Gdterm.Terminal.Rendering.Vt
             _mouseModes = 0;
             _sgrMouse = false;
             _bracketedPaste = false;
+            _focusReporting = false;
+            _cursorShape = 0;
             _modifyOtherKeys = 0;
+            _utf8PendLen = 0;
             _replies.Length = 0;
             _kitty.Reset();
         }
@@ -130,6 +170,8 @@ namespace Gdterm.Terminal.Rendering.Vt
         public byte[] Process(byte[] data, int offset, int count, out int outCount)
         {
             outCount = 0;
+            _dsrAt.Clear();
+            _dsrKind.Clear();
             if (data == null || count <= 0) return null;
 
             int total = _pendingLen + count;
@@ -157,8 +199,10 @@ namespace Gdterm.Terminal.Rendering.Vt
                 byte b = src[srcOffset + i];
                 if (b != 0x1B)
                 {
-                    _out[w++] = b;
-                    i++;
+                    // 正文成段透传：宽字符在这里补占位列（见 WideText），转义序列分支不受影响
+                    int textStart = i;
+                    while (i < srcLen && src[srcOffset + i] != 0x1B) i++;
+                    w = AppendText(src, srcOffset + textStart, i - textStart, w);
                     continue;
                 }
                 if (i + 1 >= srcLen)
@@ -182,6 +226,28 @@ namespace Gdterm.Terminal.Rendering.Vt
                         break;
                     }
                     string payload = Encoding.ASCII.GetString(src, srcOffset + i + 2, end - (i + 2));
+                    // 标题（OSC 0 / 2）：UTF-8 自己解，库里会变乱码
+                    if (payload.Length >= 2 && (payload[1] == ';') && (payload[0] == '0' || payload[0] == '2'))
+                    {
+                        int titleOff = srcOffset + i + 4;
+                        int titleLen = end - (i + 4);
+                        if (titleLen > 0)
+                        {
+                            var sink = TitleSink;
+                            if (sink != null)
+                            {
+                                string title;
+                                try { title = Encoding.UTF8.GetString(src, titleOff, titleLen); }
+                                catch { title = string.Empty; }
+                                if (!string.IsNullOrEmpty(title))
+                                {
+                                    try { sink(title); } catch { }
+                                }
+                            }
+                        }
+                        i = end + termLen;
+                        continue;
+                    }
                     bool drop = HandleOsc(payload);
                     if (!drop) { for (int k = i; k < end + termLen; k++) _out[w++] = src[srcOffset + k]; }
                     i = end + termLen;
@@ -287,7 +353,29 @@ namespace Gdterm.Terminal.Rendering.Vt
 
                 if ((final == (byte)'h' || final == (byte)'l') && bodyLen > 1 && bodyFirst == (byte)'?')
                 {
-                    UpdatePrivateModes(src, srcOffset + bodyOff + 1, bodyLen - 1, final == (byte)'h');
+                    bool setMode = final == (byte)'h';
+                    UpdatePrivateModes(src, srcOffset + bodyOff + 1, bodyLen - 1, setMode);
+                    // ?1047（备用屏，退出时清屏）库不认 → 改写成 ?47，行为最接近
+                    if (HasMode(src, srcOffset + bodyOff + 1, bodyLen - 1, 1047))
+                    {
+                        string modes = RewriteMode(src, srcOffset + bodyOff + 1, bodyLen - 1, 1047, 47);
+                        var rb = Encoding.ASCII.GetBytes("\u001b[?" + modes + (setMode ? "h" : "l"));
+                        Grow(w + rb.Length + 8);
+                        Array.Copy(rb, 0, _out, w, rb.Length);
+                        w += rb.Length;
+                        i = j + 1;
+                        continue;
+                    }
+                }
+
+                // DSR：CSI 6n 要光标位置、CSI 5n 要“一切正常”。库两者都不答（实测无任何回写）
+                if (final == (byte)'n' && bodyLen == 1
+                    && (src[srcOffset + bodyOff] == (byte)'6' || src[srcOffset + bodyOff] == (byte)'5'))
+                {
+                    _dsrAt.Add(w);
+                    _dsrKind.Add(src[srcOffset + bodyOff] == (byte)'6' ? 6 : 5);
+                    i = j + 1;
+                    continue;
                 }
 
                 // 库不答 / 答错的查询：自己答（不改字节，某些直接原样透传让它忽略）
@@ -361,6 +449,78 @@ namespace Gdterm.Terminal.Rendering.Vt
             return -1;
         }
 
+        // ================= 正文宽字符展开 =================
+
+        /// <summary>
+        /// 正文透传：UTF-8 解码（含跨包半截序列）→ 宽字符补占位列 → 重新编码。
+        /// 纯 ASCII 段直接拷字节，不建字符串（吞吐热路径）。
+        /// </summary>
+        private int AppendText(byte[] src, int start, int len, int w)
+        {
+            if (len <= 0) return w;
+
+            byte[] buf;
+            int total;
+            if (_utf8PendLen > 0)
+            {
+                total = _utf8PendLen + len;
+                buf = new byte[total];
+                Array.Copy(_utf8Pend, 0, buf, 0, _utf8PendLen);
+                Array.Copy(src, start, buf, _utf8PendLen, len);
+                _utf8PendLen = 0;
+            }
+            else
+            {
+                buf = src;
+                total = start + len;
+            }
+            int off = buf == src ? start : 0;
+            int end = total;
+
+            // 1) 找出可安全解码的完整前缀（末尾可能是半截 UTF-8 序列）
+            int p = off;
+            int validEnd = off;
+            bool allAscii = true;
+            while (p < end)
+            {
+                byte b = buf[p];
+                if (b < 0x80) { p++; validEnd = p; continue; }
+                allAscii = false;
+                int need = b >= 0xF0 ? 3 : b >= 0xE0 ? 2 : b >= 0xC0 ? 1 : -1;
+                if (need < 0) { p++; validEnd = p; continue; }   // 非法首字节：交给解码器出替换符
+                if (p + need >= end) break;                       // 半截序列：留到下一包
+                p += need + 1;
+                validEnd = p;
+            }
+            if (validEnd < end)
+            {
+                _utf8PendLen = end - validEnd;
+                if (_utf8PendLen > _utf8Pend.Length) _utf8PendLen = _utf8Pend.Length;
+                Array.Copy(buf, validEnd, _utf8Pend, 0, _utf8PendLen);
+            }
+
+            int n = validEnd - off;
+            if (n <= 0) return w;
+
+            if (allAscii)
+            {
+                Grow(w + n + 8);
+                Array.Copy(buf, off, _out, w, n);
+                return w + n;
+            }
+
+            string text;
+            try { text = Encoding.UTF8.GetString(buf, off, n); }
+            catch { text = null; }
+            if (string.IsNullOrEmpty(text)) return w;
+
+            string expanded = WideText.Expand(text);
+            int blen = Encoding.UTF8.GetByteCount(expanded);
+            Grow(w + blen + 8);
+            w += Encoding.UTF8.GetBytes(expanded, 0, expanded.Length, _out, w);
+            return w;
+        }
+
         private void Stash(byte[] src, int srcStart, int len)
         {
             EnsurePending(len);
@@ -382,33 +542,15 @@ namespace Gdterm.Terminal.Rendering.Vt
             int code;
             if (!int.TryParse(head, out code)) return false;
 
+            // 颜色类 OSC（4/5/10~19 设色、104/105/110~119 重置）一律自己吞掉，不透传给库：
+            // ① 我们的调色板是固定的，设色对渲染没有意义；
+            // ② 库对这些序列的解析有 bug——实测 “ESC]112 BEL”（无参数重置）会把之后整段输出吃掉，
+            //    屏幕上什么都不剩（tmux 3.0a 重绘时正好发 “ESC]112 BEL”，整屏变空）。
+            // 查询仍由我们应答（10/11/12/4;N;?），不依赖库。
+            if (IsColorOsc(code)) return HandleColorOsc(code, payload, semi);
+
             switch (code)
             {
-                case 10:
-                    if (IsQuery(semi < 0 ? "" : payload.Substring(semi + 1))) { ReplyOscColor(10, DefaultForeground); return true; }
-                    return false;
-                case 11:
-                    if (IsQuery(semi < 0 ? "" : payload.Substring(semi + 1))) { ReplyOscColor(11, DefaultBackground); return true; }
-                    return false;
-                case 12:
-                    if (IsQuery(semi < 0 ? "" : payload.Substring(semi + 1))) { ReplyOscColor(12, CursorColorValue); return true; }
-                    return false;
-                case 4:
-                    {
-                        if (semi < 0) return false;
-                        var parts = payload.Substring(semi + 1).Split(';');
-                        if (parts.Length >= 2 && parts[1] == "?")
-                        {
-                            int index;
-                            if (int.TryParse(parts[0], out index))
-                            {
-                                string rgb = LookupPalette(index);
-                                if (rgb != null) ReplyOscColor(4, index, rgb);
-                                return true;
-                            }
-                        }
-                        return false;
-                    }
                 case 8:
                     // OSC 8 超链接：lib 会把 URL 当正文打印（实测 “ESC]8;;http://x BEL” → 屏幕上出现 http://x）。
                     // 我们不渲染可点击链接，直接吞掉，只留链接文字。
@@ -430,6 +572,39 @@ namespace Gdterm.Terminal.Rendering.Vt
                 default:
                     return false;
             }
+        }
+
+        /// <summary>xterm 里跟调色板/动态颜色有关的 OSC 码。</summary>
+        private static bool IsColorOsc(int code)
+        {
+            if (code >= 10 && code <= 19) return true;      // 10/11/12 前景/背景/光标色，13~19 其它动态色
+            if (code >= 104 && code <= 105) return true;    // 重置调色板项 / 特殊项
+            if (code >= 110 && code <= 119) return true;    // 重置动态色
+            if (code == 4 || code == 5) return true;        // 设置调色板项 / 特殊项
+            return false;
+        }
+
+        /// <summary>颜色类 OSC：只应答查询，其余（设色/重置）直接丢弃。</summary>
+        private bool HandleColorOsc(int code, string payload, int semi)
+        {
+            string arg = semi < 0 ? "" : payload.Substring(semi + 1);
+            if (code == 10 && IsQuery(arg)) { ReplyOscColor(10, DefaultForeground); return true; }
+            if (code == 11 && IsQuery(arg)) { ReplyOscColor(11, DefaultBackground); return true; }
+            if (code == 12 && IsQuery(arg)) { ReplyOscColor(12, CursorColorValue); return true; }
+            if (code == 4 && semi >= 0)
+            {
+                var parts = arg.Split(';');
+                if (parts.Length >= 2 && parts[1] == "?")
+                {
+                    int index;
+                    if (int.TryParse(parts[0], out index))
+                    {
+                        string rgb = LookupPalette(index);
+                        if (rgb != null) ReplyOscColor(4, index, rgb);
+                    }
+                }
+            }
+            return true;   // 设色 / 重置：对固定调色板无意义，吞掉最安全
         }
 
         private static bool IsQuery(string s)
@@ -536,7 +711,9 @@ namespace Gdterm.Terminal.Rendering.Vt
                 if (name == null) continue;
                 string value;
                 bool supported = CapabilityTable.TryGetValue(name, out value);
-                sb.Append('\u001b').Append('P').Append(supported ? "1+r" : "0+r").Append(' ').Append(StringToHex(name));
+                // 应答格式严格是 DCS 1+r<hexname>=<hexvalue> ST：xterm/kitty/neovim 的解析器
+                // 都把 "1+r" 和名字当连在一起的前缀，中间加空格会被当成非法名字
+                sb.Append('\u001b').Append('P').Append(supported ? "1+r" : "0+r").Append(StringToHex(name));
                 if (supported && !string.IsNullOrEmpty(value))
                     sb.Append('=').Append(StringToHex(value));
                 sb.Append('\u001b').Append('\\');
@@ -552,7 +729,7 @@ namespace Gdterm.Terminal.Rendering.Vt
             {
                 if (_caps == null)
                 {
-                    _caps = new Dictionary<string, string>(StringComparer.Ordinal)
+                    _caps = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                     {
                         { "TN", TerminalName ?? "xterm-256color" },
                         { "Co", "256" },
@@ -592,6 +769,16 @@ namespace Gdterm.Terminal.Rendering.Vt
         private bool HandleCsi(byte final, byte[] src, int bodyOff, int bodyLen)
         {
             string body = bodyLen > 0 ? Encoding.ASCII.GetString(src, bodyOff, bodyLen) : string.Empty;
+
+            if (final == (byte)'q' && bodyLen > 0 && src[bodyOff + bodyLen - 1] == (byte)' '
+                && (bodyLen == 1 || char.IsDigit((char)src[bodyOff])))
+            {
+                // DECSCUSR：CSI Ps SP q —— 记录下来给渲染器画，别透传给库（库会当乱码）
+                int shape;
+                if (!int.TryParse(body.Substring(0, bodyLen - 1), out shape)) shape = 0;
+                _cursorShape = (shape < 0 || shape > 6) ? 0 : shape;
+                return true;
+            }
 
             if (final == (byte)'q' && body.StartsWith(">", StringComparison.Ordinal))
             {
@@ -687,9 +874,48 @@ namespace Gdterm.Terminal.Rendering.Vt
             if (hasDigit) ApplyMode(value, set);
         }
 
+        /// <summary>参数串里是否含某个私有模式号。</summary>
+        private static bool HasMode(byte[] src, int off, int len, int want)
+        {
+            int value = 0;
+            bool has = false;
+            for (int k = off; k < off + len; k++)
+            {
+                byte c = src[k];
+                if (c >= (byte)'0' && c <= (byte)'9') { value = value * 10 + (c - (byte)'0'); has = true; }
+                else if (c == (byte)';' || c == (byte)':')
+                {
+                    if (has && value == want) return true;
+                    value = 0; has = false;
+                }
+            }
+            return has && value == want;
+        }
+
+        /// <summary>把参数串里的 from 换写成 to（?1047 → ?47）。</summary>
+        private static string RewriteMode(byte[] src, int off, int len, int from, int to)
+        {
+            var sb = new StringBuilder(len + 2);
+            int value = 0;
+            bool has = false;
+            for (int k = off; k < off + len; k++)
+            {
+                byte c = src[k];
+                if (c >= (byte)'0' && c <= (byte)'9') { value = value * 10 + (c - (byte)'0'); has = true; }
+                else
+                {
+                    if (has) { sb.Append(value == from ? to : value); has = false; value = 0; }
+                    sb.Append((char)c);
+                }
+            }
+            if (has) sb.Append(value == from ? to : value);
+            return sb.ToString();
+        }
+
         private void ApplyMode(int mode, bool set)
         {
             if (mode == 1006) { _sgrMouse = set; return; }
+            if (mode == 1004) { _focusReporting = set; return; }
             if (mode == 2004) { _bracketedPaste = set; return; }
             if (mode == 1) { if (set) _mouseModes |= 0x10000; else _mouseModes &= ~0x10000; return; }  // DECCKM
             int bit;

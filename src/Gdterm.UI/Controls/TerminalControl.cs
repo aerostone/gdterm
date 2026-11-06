@@ -226,7 +226,18 @@ namespace Gdterm.UI.Controls
             canvas.KeyPress += OnKeyPress;
             canvas.KeyDown += OnKeyDown;
             canvas.PreviewKeyDown += (s, e) => { e.IsInputKey = true; };
-            canvas.GotFocus += (s, e) => Focus();
+            canvas.GotFocus += (s, e) =>
+            {
+                Focus();
+                // ?1004：应用要求焦点事件时才发（vim/neovim/tmux 靠它判断窗口切换）
+                try { if (_cellRenderer != null) _cellRenderer.ReportFocus(true); }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+            };
+            canvas.LostFocus += (s, e) =>
+            {
+                try { if (_cellRenderer != null) _cellRenderer.ReportFocus(false); }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+            };
 
             if (_cellRenderer != null)
             {
