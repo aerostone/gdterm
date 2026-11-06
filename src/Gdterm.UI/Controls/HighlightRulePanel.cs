@@ -201,7 +201,7 @@ namespace Gdterm.UI.Controls
             var lblArg = Lbl("动作参数:", 15, y + rowH);
             var txtArg = Txt(100, y + rowH, 285, fieldH);
             var lblCd = Lbl("冷却(秒):", 15, y + rowH * 2);
-            var numCd = new AntdUI.InputNumber { Location = DpiScale.P(this, 100, y + rowH * 2), Size = new Size(DpiScale.V(this, 100), fieldH), Minimum = 0, Maximum = 3600, Value = 5 };
+            var numCd = new AntdUI.InputNumber { Location = DpiScale.P(this, 100, y + rowH * 2), Size = new Size(DpiScale.V(this, 100), fieldH), Minimum = 0, Maximum = 600, Value = 5 };
             var hintAction = new AntdUI.Label
             {
                 Text = "命令走危险命令闸门；通知进通知中心+托盘；切标签参数是标题关键字。",
@@ -221,9 +221,10 @@ namespace Gdterm.UI.Controls
                 txtFg.Text = existing.ForegroundColor;
                 txtBg.Text = existing.BackgroundColor;
                 chkBold.Checked = existing.Bold;
-                cmbAction.SelectedIndex = (int)existing.Action;
+                // 配置被手改成越界值时别让下拉抛异常
+                cmbAction.SelectedIndex = Math.Max(0, Math.Min(3, (int)existing.Action));
                 txtArg.Text = existing.ActionArgument;
-                numCd.Value = existing.ActionCooldownSeconds;
+                numCd.Value = Math.Max(0, Math.Min(600, existing.ActionCooldownSeconds));
             }
 
             int btnH = Math.Max(DpiScale.V(this, 30), fieldH);

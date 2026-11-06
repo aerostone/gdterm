@@ -14,7 +14,7 @@ namespace Gdterm.Tests.Terminal
     {
         public static void Run()
         {
-            Console.WriteLine("-- 触发器 / 回滚边界 / 代理配置 --");
+            Console.WriteLine("-- triggers / scrollback clamp / proxy config --");
             ScrollbackClamp();
             TriggerHitOnlyForActionRules();
             TriggerCooldownDefaultsToFive();

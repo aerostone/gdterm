@@ -12,7 +12,7 @@ namespace Gdterm.Tests.Terminal
     {
         public static void Run()
         {
-            Console.WriteLine("-- 终端目录 / 通知 OSC --");
+            Console.WriteLine("-- OSC 7 cwd / OSC 9-777-99 notifications --");
             Osc7SetsDirectory();
             Osc7RejectsNonFileScheme();
             Osc9Notification();
