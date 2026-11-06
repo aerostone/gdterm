@@ -79,6 +79,13 @@ namespace Gdterm.Core.Models
         public List<string> AutoRunCommands { get; set; } = new List<string>();
 
         /// <summary>
+        /// 登录后执行的 locale 改写（如 en_US.UTF-8 / zh_CN.UTF-8）。
+        /// 留空表示不动远端环境。SSH 的 env 请求要求服务端 AcceptEnv，绝大多数默认不接收，
+        /// 所以这里走“登录后 export”的方式（与 SecureCRT 的登录脚本同思路）。
+        /// </summary>
+        public string Locale { get; set; } = "";
+
+        /// <summary>
         /// 是否启用会话自动日志（默认 false，省磁盘/内存）
         /// </summary>
         public bool AutoLog { get; set; } = false;
@@ -141,7 +148,8 @@ namespace Gdterm.Core.Models
                     CopyOnSelect = ExtractBool(json, "copyOnSelect", false),
                     Opacity = ExtractDouble(json, "opacity", 1.0),
                     AutoLog = ExtractBool(json, "autoLog", false),
-                    Renderer = ExtractValue(json, "renderer", "VtCell")
+                    Renderer = ExtractValue(json, "renderer", "VtCell"),
+                    Locale = ExtractValue(json, "locale", "")
                 };
             }
             else
@@ -158,6 +166,14 @@ namespace Gdterm.Core.Models
                 else if (string.Equals(v, "false", StringComparison.OrdinalIgnoreCase) || v == "0")
                     profile.AutoLog = false;
             }
+
+            // 简写：Metadata["locale"]=zh_CN.UTF-8（不必写整个 terminalProfile JSON）
+            if (metadata.ContainsKey("locale") && !string.IsNullOrWhiteSpace(metadata["locale"]))
+                profile.Locale = metadata["locale"].Trim();
+
+            // 简写：Metadata["term"]=screen-256color（TERM 名，影响 pty 请求与 XTVERSION/XTGETTCAP TN）
+            if (metadata.ContainsKey("term") && !string.IsNullOrWhiteSpace(metadata["term"]))
+                profile.TerminalType = metadata["term"].Trim();
 
             // Metadata["renderer"]=lightweight|vtcell 覆盖 JSON
             if (metadata.ContainsKey("renderer") && !string.IsNullOrWhiteSpace(metadata["renderer"]))
@@ -185,7 +201,8 @@ namespace Gdterm.Core.Models
                 $"\"copyOnSelect\":{(CopyOnSelect ? "true" : "false")}," +
                 $"\"opacity\":{Opacity:F2}," +
                 $"\"autoLog\":{(AutoLog ? "true" : "false")}," +
-                $"\"renderer\":\"{Escape(Renderer)}\"" +
+                $"\"renderer\":\"{Escape(Renderer)}\"," +
+                $"\"locale\":\"{Escape(Locale)}\"" +
                 "}";
         }
 

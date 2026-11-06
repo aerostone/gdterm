@@ -17,15 +17,28 @@ namespace Gdterm.Terminal.Rendering.Vt
     {
         private readonly VirtualTerminalController _controller;
         private readonly DataConsumer _consumer;
+        private readonly VtStreamPreprocessor _pre = new VtStreamPreprocessor();
         private readonly object _lock = new object();
         private bool _disposed;
         private int _feedErrCount;
+        // 用户手动滚上去后钉住的 TopRow（-1 = 跟随底部）。否则库会把“距底行数”保持不变，
+        // 有新输出时视图被一路拖回底部，回看历史就废了。
+        private int _pinnedTop = -1;
 
         /// <summary>终端需要回写主机的序列（DA/CPR/键鼠等）。</summary>
         public event EventHandler<byte[]> SendToHost;
 
         /// <summary>窗口标题变更（OSC）。</summary>
         public event EventHandler<string> TitleChanged;
+
+        /// <summary>应用请求写系统剪贴板（OSC 52），参数是 base64 文本。</summary>
+        public event EventHandler<string> ClipboardSetRequested;
+
+        /// <summary>解出一张图（sixel / kitty graphics），渲染器负责画。</summary>
+        public event EventHandler<TerminalImage> ImageReceived;
+
+        /// <summary>删除图（kitty a=d）；ImageId 0 表示全部，PlacementOnly 表示只撤显示。</summary>
+        public event EventHandler<TerminalImageDeleteEventArgs> ImageDeleted;
 
         public int Columns { get; private set; }
         public int Rows { get; private set; }
@@ -59,6 +72,19 @@ namespace Gdterm.Terminal.Rendering.Vt
             }
         }
 
+        /// <summary>当前视口第一行的绝对页号（图形定位用）。</summary>
+        public int ViewportTopRow
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    try { return _controller.ViewPort.TopRow; }
+                    catch { return 0; }
+                }
+            }
+        }
+
         public int CursorRow
         {
             get
@@ -76,17 +102,69 @@ namespace Gdterm.Terminal.Rendering.Vt
             get { lock (_lock) return _controller.CursorState.ShowCursor; }
         }
 
+        /// <summary>应用是否要求 bracketed paste（?2004）。粘贴时用 ESC[200~ / ESC[201~ 包裹。</summary>
+        public bool IsBracketedPasteEnabled
+        {
+            get { lock (_lock) return _pre.BracketedPaste; }
+        }
+
         /// <summary>应用是否启用了鼠标上报（vim/less/mc）。UI 据此决定左键是拖选还是透传。</summary>
+        /// <remarks>
+        /// 以自记的私有模式位为准：库的 MouseTrackingEnabled 收到 ?1000l 也不回零（实测），
+        /// 会让 TUI 退出后左键拖选永久失效。
+        /// </remarks>
         public bool IsMouseTrackingEnabled
         {
-            get
+            get { lock (_lock) return _pre.MouseTracking; }
+        }
+
+        /// <summary>xterm modifyOtherKeys 级别（0=关）。键盘层据此改发 CSI 27;mod;code~。</summary>
+        public int ModifyOtherKeys
+        {
+            get { lock (_lock) return _pre.ModifyOtherKeys; }
+        }
+
+        /// <summary>DECCKM 应用光标键模式。</summary>
+        public bool ApplicationCursorKeys
+        {
+            get { lock (_lock) return _pre.ApplicationCursorKeys; }
+        }
+
+        /// <summary>
+        /// 告诉应答器当前主题色与单元像素尺寸，用于 OSC 10/11/12/4 与 CSI 14t/16t/18t 应答。
+        /// 主题换了/字体变了都要重新调用（幂等）。
+        /// </summary>
+        public void SetQueryMetadata(string foreground, string background, string cursor, int cellWidth, int cellHeight)
+        {
+            lock (_lock)
             {
-                lock (_lock)
-                {
-                    try { return _controller.MouseTrackingEnabled; }
-                    catch { return false; }
-                }
+                if (!string.IsNullOrEmpty(foreground)) _pre.DefaultForeground = foreground;
+                if (!string.IsNullOrEmpty(background)) _pre.DefaultBackground = background;
+                if (!string.IsNullOrEmpty(cursor)) _pre.CursorColorValue = cursor;
+                if (cellWidth > 0) _pre.CellPixelWidth = cellWidth;
+                if (cellHeight > 0) _pre.CellPixelHeight = cellHeight;
             }
+        }
+
+        /// <summary>调色板查询回调（OSC 4;N;? 用），返回 #RRGGBB。</summary>
+        public Func<int, string> PaletteLookup
+        {
+            get { lock (_lock) return _pre.PaletteLookup; }
+            set { lock (_lock) _pre.PaletteLookup = value; }
+        }
+
+        /// <summary>终端类型名（XTVERSION / XTGETTCAP TN 应答里出现），与 SSH pty 请求的 TERM 保持一致。</summary>
+        public string TerminalName
+        {
+            get { lock (_lock) return _pre.TerminalName; }
+            set { lock (_lock) { if (!string.IsNullOrWhiteSpace(value)) _pre.TerminalName = value.Trim(); } }
+        }
+
+        /// <summary>客户端版本号（XTVERSION 应答里出现）。</summary>
+        public string ClientVersion
+        {
+            get { lock (_lock) return _pre.ClientVersion; }
+            set { lock (_lock) _pre.ClientVersion = value; }
         }
 
         public VtTerminalEngine(int columns = 80, int rows = 24, int maxHistory = 500)
@@ -102,6 +180,35 @@ namespace Gdterm.Terminal.Rendering.Vt
             _controller.SendData += OnControllerSendData;
 
             _consumer = new DataConsumer(_controller);
+            _pre.Columns = columns;
+            _pre.Rows = rows;
+            _pre.ClipboardWrite = b64 =>
+            {
+                var h = ClipboardSetRequested;
+                if (h != null) { try { h(this, b64); } catch { } }
+            };
+
+            _pre.ImageSink = img =>
+            {
+                if (img == null) return;
+                try
+                {
+                    // 光标位置取自“本批字节还没喂进库”的时刻：够用，且不会因为图在文本之后而错行太多。
+                    var p = _controller.ViewPort.CursorPosition;
+                    img.CursorColumn = p.Column;
+                    img.CursorRow = p.Row;
+                    try { img.AbsoluteRow = _controller.ViewPort.TopRow + p.Row; } catch { img.AbsoluteRow = p.Row; }
+                }
+                catch { }
+                var h = ImageReceived;
+                if (h != null) { try { h(this, img); } catch { } }
+            };
+
+            _pre.ImageDeleteSink = (id, placementOnly) =>
+            {
+                var h = ImageDeleted;
+                if (h != null) { try { h(this, new TerminalImageDeleteEventArgs { ImageId = id, PlacementOnly = placementOnly }); } catch { } }
+            };
 
             _controller.WindowTitleChanged += (s, e) =>
             {
@@ -124,7 +231,30 @@ namespace Gdterm.Terminal.Rendering.Vt
             {
                 lock (_lock)
                 {
-                    _consumer.Push(data);
+                    // SGR 归一化：库不认识 “0;38;5;N / 38;5;N;1 / 38:2::r:g:b” 这类合法写法，
+                    // 在这里拆成它认的多条 SGR，否则前景会变黑（lib\VtNetCore.dll 无法重编）
+                    int n;
+                    var normalized = _pre.Process(data, 0, data.Length, out n);
+                    if (normalized != null && n > 0)
+                    {
+                        var slice = new byte[n];
+                        Array.Copy(normalized, slice, n);
+                        _consumer.Push(slice);
+                    }
+                    var replies = _pre.TakeReplies();
+                    if (replies.Length > 0)
+                    {
+                        var rb = Encoding.UTF8.GetBytes(replies);
+                        var handler = SendToHost;
+                        if (handler != null) handler(this, rb);
+                    }
+                    if (_pinnedTop >= 0)
+                    {
+                        // 回看中：把视口钉回原处，别让新输出把用户拽回底部
+                        int top = ClampTopRow(_pinnedTop);
+                        if (_controller.ViewPort.TopRow != top) SetTopRow(top);
+                        if (top >= MaxTopRow) _pinnedTop = -1;
+                    }
                 }
             }
             catch (Exception ex)
@@ -152,6 +282,8 @@ namespace Gdterm.Terminal.Rendering.Vt
         {
             lock (_lock)
             {
+                _pre.Reset();
+                _pinnedTop = -1;
                 _controller.FullReset();
                 _controller.ResizeView(Columns, Rows);
             }
@@ -165,6 +297,8 @@ namespace Gdterm.Terminal.Rendering.Vt
             {
                 Columns = columns;
                 Rows = rows;
+                _pre.Columns = columns;
+                _pre.Rows = rows;
                 _controller.ResizeView(columns, rows);
             }
         }
@@ -243,6 +377,71 @@ namespace Gdterm.Terminal.Rendering.Vt
             return -1;
         }
 
+        /// <summary>视口可用的最大 TopRow（= 末行号 - 可见行数 + 1）。</summary>
+        private int MaxTopRow
+        {
+            get
+            {
+                try
+                {
+                    int maxTop = _controller.BottomRow - Rows + 1;
+                    return maxTop < 0 ? 0 : maxTop;
+                }
+                catch { return 0; }
+            }
+        }
+
+        private int ClampTopRow(int top)
+        {
+            int maxTop = MaxTopRow;
+            if (top > maxTop) top = maxTop;
+            if (top < 0) top = 0;
+            return top;
+        }
+
+        /// <summary>滚动回看（负=向上/看历史，正=向下）。返回新的距底行数，0 表示已在底部。</summary>
+        public int ScrollViewport(int lines)
+        {
+            if (_disposed) return 0;
+            lock (_lock)
+            {
+                try
+                {
+                    int cur = _controller.ViewPort.TopRow;
+                    int target = ClampTopRow(cur + lines);
+                    if (target != cur) SetTopRow(target);
+                    int maxTop = MaxTopRow;
+                    _pinnedTop = (target >= maxTop) ? -1 : target;
+                    return maxTop - target;
+                }
+                catch { return 0; }
+            }
+        }
+
+        /// <summary>回到实时底部（有新输出时自动跟随）。</summary>
+        public void ScrollToBottom()
+        {
+            if (_disposed) return;
+            lock (_lock)
+            {
+                _pinnedTop = -1;
+                try { SetTopRow(MaxTopRow); } catch { }
+            }
+        }
+
+        /// <summary>视口是否停在底部（用于“新输出到了”提示）。</summary>
+        public bool IsAtBottom
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    try { return _controller.ViewPort.TopRow >= MaxTopRow; }
+                    catch { return true; }
+                }
+            }
+        }
+
         private void SetTopRow(int top)
         {
             try
@@ -269,7 +468,8 @@ namespace Gdterm.Terminal.Rendering.Vt
         {
             lock (_lock)
             {
-                var top = _controller.ViewPort.TopRow;
+                // TopRow 越界会让 GetLine 抛 ArgumentOutOfRange（实测），先把视口拉回来。
+                var top = ClampTopRow(_controller.ViewPort.TopRow);
                 var rows = _controller.GetPageSpans(top, Rows, Columns, null);
                 var page = new VtPageSnapshot
                 {
@@ -330,22 +530,76 @@ namespace Gdterm.Terminal.Rendering.Vt
             }
         }
 
+        /// <summary>
+        /// 鼠标上报改为自己编码，不再交给库。
+        ///
+        /// 原因（实测 lib 1.0.30）：press 走 ?1006 的 SGR 形态，但 MouseMove 仍发 X10 的
+        /// ESC[M + 3 字节；X10 坐标是 32+x 单字节，列号 ≥ 95 就溢出成非法值——宽窗口里
+        /// 拖选/拖拽分屏在 tmux 里会点到错位置。自己编码还能统一 release/motion 语义。
+        /// </summary>
         public void MousePress(int column, int row, int button, bool control, bool shift)
         {
-            if (_disposed) return;
-            lock (_lock) _controller.MousePress(column, row, button, control, shift);
+            SendMouse(MouseAction.Press, column, row, button, control, shift);
         }
 
         public void MouseRelease(int column, int row, bool control, bool shift)
         {
-            if (_disposed) return;
-            lock (_lock) _controller.MouseRelease(column, row, control, shift);
+            SendMouse(MouseAction.Release, column, row, 0, control, shift);
         }
 
         public void MouseMove(int column, int row, int button, bool control, bool shift)
         {
+            SendMouse(MouseAction.Move, column, row, button, control, shift);
+        }
+
+        /// <summary>滚轮：button 0=上滚 1=下滚（xterm 码 64/65）。</summary>
+        public void MouseWheel(int column, int row, int button, bool control, bool shift)
+        {
+            SendMouse(MouseAction.Wheel, column, row, button, control, shift);
+        }
+
+        private enum MouseAction { Press, Release, Move, Wheel }
+
+        private void SendMouse(MouseAction action, int column, int row, int button, bool control, bool shift)
+        {
             if (_disposed) return;
-            lock (_lock) _controller.MouseMove(column, row, button, control, shift);
+            string seq;
+            lock (_lock)
+            {
+                if (!_pre.MouseTracking) return;
+                int b;
+                switch (action)
+                {
+                    case MouseAction.Wheel: b = 64 + (button & 1); break;
+                    case MouseAction.Move: b = 32 + (button & 3); break;
+                    default: b = button & 3; break;
+                }
+                if (shift) b += 4;
+                if (control) b += 16;
+                int x = column + 1;
+                int y = row + 1;
+                if (x < 1) x = 1;
+                if (y < 1) y = 1;
+
+                if (_pre.SgrMouseEncoding)
+                {
+                    seq = "\u001b[<" + b + ";" + x + ";" + y + (action == MouseAction.Release ? "m" : "M");
+                }
+                else
+                {
+                    // X10：ESC[M + (32+b) + (32+x) + (32+y)，单字节坐标上限 223
+                    if (x > 223) x = 223;
+                    if (y > 223) y = 223;
+                    var sb = new StringBuilder(6);
+                    sb.Append('\u001b').Append('[').Append('M');
+                    sb.Append((char)(32 + (b & 0xff)));
+                    sb.Append((char)(32 + x));
+                    sb.Append((char)(32 + y));
+                    seq = sb.ToString();
+                }
+            }
+            var handler = SendToHost;
+            if (handler != null) handler(this, Encoding.UTF8.GetBytes(seq));
         }
 
         private void OnControllerSendData(object sender, SendDataEventArgs e)

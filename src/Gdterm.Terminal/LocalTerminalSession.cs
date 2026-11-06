@@ -75,6 +75,9 @@ namespace Gdterm.Terminal
 
         public object TryGetSshClient() => null;
 
+        /// <summary>传给子进程的 TERM（来自 TerminalProfile.TerminalType；非 Windows 回退路径用）。</summary>
+        private string _termType = "xterm";
+
         public LocalTerminalSession(string shellPath = null, string workingDirectory = null)
         {
             _shellPath = shellPath;
@@ -85,6 +88,13 @@ namespace Gdterm.Terminal
         public void Connect(ConnectionConfig config, CredentialPayload credential, int rows = 24, int columns = 80)
         {
             ConnectionId = config != null ? config.Id : Guid.NewGuid().ToString("N");
+            try
+            {
+                var profile = TerminalProfile.FromMetadata(config?.Metadata);
+                if (profile != null && !string.IsNullOrWhiteSpace(profile.TerminalType))
+                    _termType = profile.TerminalType.Trim();
+            }
+            catch { _termType = "xterm"; }
             ConnectLocal();
         }
 
@@ -255,7 +265,8 @@ namespace Gdterm.Terminal
                 StandardOutputEncoding = Encoding.Default,
                 StandardErrorEncoding = Encoding.Default
             };
-            startInfo.EnvironmentVariables["TERM"] = "xterm";
+            // TERM 跟配置走（默认 xterm）；连接属性“终端类型”里可改
+            startInfo.EnvironmentVariables["TERM"] = string.IsNullOrWhiteSpace(_termType) ? "xterm" : _termType;
             startInfo.WorkingDirectory = ResolveCwd();
 
             if (_shellPath.IndexOf("powershell", StringComparison.OrdinalIgnoreCase) >= 0

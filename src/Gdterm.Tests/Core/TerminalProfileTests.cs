@@ -13,6 +13,31 @@ namespace Gdterm.Tests.Core
             LightweightFromMetadata();
             RendererInJsonRoundTrip();
             ScrollbackHardCapIsProfileSide();
+            TermShorthandOverridesJson();
+        }
+
+        /// <summary>
+        /// 连接属性「终端」分节写的是简写键 term/locale；它必须压过旧的 terminalProfile JSON，
+        /// 否则用户在 UI 里改的 TERM 会被 JSON 里的旧值盖掉（看起来"改了没生效"）。
+        /// </summary>
+        private static void TermShorthandOverridesJson()
+        {
+            var md = new Dictionary<string, string>
+            {
+                { "terminalProfile", "{\"terminalType\":\"vt100\",\"locale\":\"\"}" },
+                { "term", "tmux-256color" },
+                { "locale", "zh_CN.UTF-8" }
+            };
+            var p = TerminalProfile.FromMetadata(md);
+            Assert.Equal("tmux-256color", p.TerminalType, "shorthand term wins over json");
+            Assert.Equal("zh_CN.UTF-8", p.Locale, "shorthand locale wins over json");
+
+            var plain = TerminalProfile.FromMetadata(new Dictionary<string, string> { { "term", "vt220" } });
+            Assert.Equal("vt220", plain.TerminalType, "term only");
+            Assert.Equal("", plain.Locale, "no locale");
+
+            var empty = TerminalProfile.FromMetadata(new Dictionary<string, string>());
+            Assert.Equal("xterm-256color", empty.TerminalType, "default TERM unchanged");
         }
 
         private static void DefaultIsVtCell()

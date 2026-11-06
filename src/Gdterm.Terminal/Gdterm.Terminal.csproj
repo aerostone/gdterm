@@ -66,6 +66,7 @@
     <Compile Include="TelnetSession.cs" />
     <Compile Include="TerminalEndpoint.cs" />
     <Compile Include="TerminalKeyBindingResolver.cs" />
+    <Compile Include="XtermKeys.cs" />
     <Compile Include="HighlightEngine.cs" />
     <Compile Include="TerminalSearchEngine.cs" />
     <Compile Include="TerminalAutoLogger.cs" />
@@ -83,6 +84,10 @@
     <Compile Include="Rendering\TerminalRenderer.cs" />
     <Compile Include="Rendering\CellGdiRenderer.cs" />
     <Compile Include="Rendering\Vt\VtTerminalEngine.cs" />
+    <Compile Include="Rendering\Vt\SgrNormalizer.cs" />
+    <Compile Include="Rendering\Vt\VtStreamPreprocessor.cs" />
+    <Compile Include="Rendering\Vt\GraphicsDecoder.cs" />
+    <Compile Include="Rendering\Vt\KittyGraphicsParser.cs" />
     <Compile Include="Interop\ConPTY.cs" />
     <Compile Include="Interop\WinPty.cs" />
     <Compile Include="Transfer\ZmodemHandler.cs" />

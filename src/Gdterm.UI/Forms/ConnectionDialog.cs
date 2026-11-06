@@ -72,6 +72,9 @@ namespace Gdterm.UI.Forms
         private Panel _advancedHost;
         private FlowLayoutPanel _advFlow;
         private TableLayoutPanel _secSsh;
+        private TableLayoutPanel _secTerm;
+        private AntdUI.Select _termCombo;
+        private AntdUI.Input _localeBox;
         private TableLayoutPanel _secRdp;
         private TableLayoutPanel _secSerial;
         private AntdUI.Input _notesBox;
@@ -320,6 +323,33 @@ namespace Gdterm.UI.Forms
             _keepaliveBox = AddRow(sshLayout, 4, "保活秒数", new AntdUI.InputNumber { Minimum = 0, Maximum = 3600, Value = 30 });
             SectionContent(_secSsh, sshLayout);
             _advFlow.Controls.Add(_secSsh);
+
+            // --- 终端区（TERM / locale）---
+            _secTerm = MakeSection("终端");
+            var termLayout = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true };
+            termLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
+            termLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            _termCombo = AddRow(termLayout, 0, "终端类型", new AntdUI.Select());
+            // 内置常见 TERM（旧主机常要 vt100/ansi/linux）；配置里是别的值时按需补进候选
+            var termItems = new System.Collections.Generic.List<object>
+            {
+                "xterm-256color", "xterm", "screen-256color", "screen", "tmux-256color", "vt220", "vt100", "ansi", "linux"
+            };
+            for (int ti = 0; ti < termItems.Count; ti++) _termCombo.Items.Add(termItems[ti]);
+            _termCombo.SelectedValue = "xterm-256color";
+            _localeBox = AddRow(termLayout, 1, "Locale", new AntdUI.Input());
+            _localeBox.PlaceholderText = "如 zh_CN.UTF-8（留空不改远端环境）";
+            var termHint = new AntdUI.Label
+            {
+                Text = "终端类型决定 pty 协商的 TERM；Locale 在登录后 export（secureCRT 登录脚本同思路）",
+                AutoSize = false,
+                Height = DpiScale.V(this, 20),
+                ForeColor = GdtermColorTable.Muted,
+                Margin = new Padding(0, DpiScale.V(this, 2), 0, 0)
+            };
+            termLayout.Controls.Add(termHint, 0, 2); termLayout.SetColumnSpan(termHint, 2);
+            SectionContent(_secTerm, termLayout);
+            _advFlow.Controls.Add(_secTerm);
 
             // --- RDP 区 ---
             _secRdp = MakeSection("RDP 选项");
@@ -582,6 +612,7 @@ namespace Gdterm.UI.Forms
                      || (_config.Metadata.ContainsKey("rdp_tcp_dump") && _config.Metadata["rdp_tcp_dump"] == "true")
                      || (_config.Metadata.ContainsKey("rdp_passline") && _config.Metadata["rdp_passline"] == "false")))
                 || _config.Serial != null
+                || (_config.Metadata != null && (_config.Metadata.ContainsKey("term") || _config.Metadata.ContainsKey("locale")))
                 || (_config.Metadata != null && _config.Metadata.ContainsKey("notes")
                     && !string.IsNullOrEmpty(_config.Metadata["notes"]));
             if (hasAdvanced && !_expanded) ToggleAdvanced();
@@ -618,10 +649,24 @@ namespace Gdterm.UI.Forms
             // 高级区只显示当前协议相关的分节（Telnet 无专属分节，与 SSH 同走跳板/保活区）
             bool isSsh = proto == "SSH" || proto == "Telnet", isRdp = proto == "RDP", isSerial = proto == "Serial";
             _secSsh.Visible = isSsh;
+            if (_secTerm != null) _secTerm.Visible = proto != "RDP";
             _secRdp.Visible = isRdp;
             _secSerial.Visible = isSerial;
             _domainBox.Enabled = isRdp;
             if (_advancedHost.Visible) _advancedHost.PerformLayout();
+        }
+
+        /// <summary>选中 TERM：候选里没有就补一条，避免自定义 TERM 被下拉吞成空值。</summary>
+        private void SelectTerm(string term)
+        {
+            if (string.IsNullOrEmpty(term) || _termCombo == null) return;
+            bool found = false;
+            foreach (var it in _termCombo.Items)
+            {
+                if (it != null && string.Equals(it.ToString(), term, System.StringComparison.OrdinalIgnoreCase)) { found = true; break; }
+            }
+            if (!found) _termCombo.Items.Add(term);
+            _termCombo.SelectedValue = term;
         }
 
         /// <summary>串口下拉合并本机枚举：GetPortNames 结果并入固定候选（去重），缺省回 COM1。</summary>
@@ -678,6 +723,18 @@ namespace Gdterm.UI.Forms
                 if (_config.Metadata.TryGetValue("ssh_keepalive", out ka) && int.TryParse((ka ?? "").Trim(), out kas) && kas >= 0)
                     _keepaliveBox.Value = Math.Min(kas, 3600);
             }
+
+            // 终端类型 / Locale（metadata term / locale；也兼容 terminalProfile JSON）
+            try
+            {
+                var tp = TerminalProfile.FromMetadata(_config.Metadata);
+                if (tp != null)
+                {
+                    if (!string.IsNullOrWhiteSpace(tp.TerminalType)) SelectTerm(tp.TerminalType.Trim());
+                    if (!string.IsNullOrWhiteSpace(tp.Locale)) _localeBox.Text = tp.Locale;
+                }
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionDialog.LoadTerm", exSwallowed); } catch { } }
 
             // SSH 跳板（JumpChain 首跳）
             if (_config.JumpChain != null && _config.JumpChain.Hops != null && _config.JumpChain.Hops.Count > 0)
@@ -750,6 +807,15 @@ namespace Gdterm.UI.Forms
             _config.Metadata["rdp_loadbalance"] = _rdpLoadBalanceBox.Text?.Trim() ?? "";
             _config.Metadata["rdp_engine"] = _rdpEngineCombo.SelectedIndex == 2 ? "mstscax"
                                            : _rdpEngineCombo.SelectedIndex == 1 ? "freerdp" : "auto";
+
+            // 终端类型 / Locale（写简写键，TerminalProfile.FromMetadata 会优先认 terminalProfile JSON）
+            {
+                var term = (_termCombo.Text ?? "").Trim();
+                _config.Metadata["term"] = term.Length > 0 ? term : "xterm-256color";
+                var loc = (_localeBox.Text ?? "").Trim();
+                if (loc.Length > 0) _config.Metadata["locale"] = loc;
+                else _config.Metadata.Remove("locale");
+            }
 
             // SSH 保活（0=关闭；30=缺省可不存，照存保持所见即所得）
             if (_config.Metadata == null) _config.Metadata = new System.Collections.Generic.Dictionary<string, string>();

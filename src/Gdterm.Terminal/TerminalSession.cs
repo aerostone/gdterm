@@ -338,9 +338,35 @@ namespace Gdterm.Terminal
             catch { }
         }
 
+        // UTF-8 流式解码状态：远端一包 4096 字节会把 3 字节汉字（或 emoji）切在两包之间，
+        // 之前逐包 Encoding.UTF8.GetString 解 → 半个字符变 U+FFFD，中文文件名/中文提示乱码。
+        private readonly Decoder _utf8Decoder = new UTF8Encoding(false).GetDecoder();
+        private char[] _utf8Chars = new char[4096 + 8];
+
+        /// <summary>把原始字节解成文本（跨包保留不完整的多字节序列）。</summary>
+        private string DecodeUtf8(byte[] data)
+        {
+            if (data == null || data.Length == 0) return string.Empty;
+            if (_utf8Chars.Length < data.Length + 8)
+                _utf8Chars = new char[data.Length + 8];
+            int n;
+            try
+            {
+                n = _utf8Decoder.GetChars(data, 0, data.Length, _utf8Chars, 0, false);
+            }
+            catch
+            {
+                // 极端脏数据：丢弃解码状态，退回一次性解码（保证输出不断流）
+                _utf8Decoder.Reset();
+                return Encoding.UTF8.GetString(data);
+            }
+            return n <= 0 ? string.Empty : new string(_utf8Chars, 0, n);
+        }
+
         private void StartReading()
         {
             var buffer = new byte[4096];
+            try { _utf8Decoder.Reset(); } catch { }
 
             _shellStream.DataReceived += (sender, e) =>
             {
@@ -383,7 +409,8 @@ namespace Gdterm.Terminal
                         }
                     }
                     catch { }
-                    var text = Encoding.UTF8.GetString(e.Data);
+                    var text = DecodeUtf8(e.Data);
+                    if (text.Length == 0) return;
                     ProcessOutput(text);
                 }
                 catch

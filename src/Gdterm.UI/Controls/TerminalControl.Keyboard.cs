@@ -24,6 +24,27 @@ namespace Gdterm.UI.Controls
 
             if (!char.IsControl(e.KeyChar))
             {
+                var mods = ModifierKeys;
+
+                // Ctrl+Space：xterm 发 NUL（readline set-mark），不能被当成普通空格送出去
+                if (e.KeyChar == ' ' && (mods & Keys.Control) == Keys.Control
+                    && (mods & Keys.Alt) == 0)
+                {
+                    SafeSend(XtermKeys.Null);
+                    e.Handled = true;
+                    return;
+                }
+
+                // Alt+可打印键 = Meta（xterm 发 ESC 前缀）：readline 的 M-b/M-f/M-d、tmux 的 M-方向。
+                // 用 KeyPress 的字符而不是 KeyCode 反查，避免非 US 布局下猜错字符。
+                if ((mods & Keys.Alt) == Keys.Alt && (mods & Keys.Control) != Keys.Control)
+                {
+                    SafeSend(XtermKeys.Escape + e.KeyChar);
+                    _commandLine.Append(e.KeyChar);
+                    e.Handled = true;
+                    return;
+                }
+
                 _commandLine.Append(e.KeyChar);
 
                 if (_cellRenderer != null)
@@ -46,6 +67,53 @@ namespace Gdterm.UI.Controls
                 e.Handled = true;
                 try { UpdateCompletionPopup(); }
                 catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
+            }
+            else
+            {
+                // 控制码（0x01..0x1F / 0x7F）直通主机。
+                //
+                // 修复：原实现只在 KeyDown 里处理 Ctrl+C 一个组合，OnKeyPress 又整段跳过控制字符，
+                // 于是除 Ctrl+C 外所有 Ctrl 组合（tmux 前缀 C-b、readline 的 C-a/C-e/C-r/C-w/C-k、
+                // vim 的 C-f/C-b、less 的 C-v…）全留在本地——tmux 根本唤不出来。
+                //
+                // KeyChar 本身就是 xterm 在线上发的那个字节。本地已消费的键（Enter/Tab/BS/Esc/
+                // 方向键/特殊键）在 KeyDown 里已 SuppressKeyPress，其 WM_CHAR 不会到这里，所以不会重复发。
+                var mods = ModifierKeys;
+                if ((mods & Keys.Control) != Keys.Control) return;
+
+                // xterm modifyOtherKeys（CSI > 4 ; n m）开着时，Ctrl+字母改发 CSI 27;mod;code ~，
+                // 否则 tmux/vim 无法区分 C-a / C-S-a / C-M-a（扩展键协议的前置能力）。
+                var seq = TryModifiedKeysSequence(e.KeyChar, mods);
+                if (seq == null)
+                {
+                    seq = XtermKeys.ControlChar(e.KeyChar) ?? e.KeyChar.ToString();
+                    if ((mods & Keys.Alt) == Keys.Alt) seq = XtermKeys.Escape + seq;   // Ctrl+Alt = Meta
+                }
+                SafeSend(seq);
+                e.Handled = true;
+            }
+        }
+
+        /// <summary>
+        /// modifyOtherKeys 生效时把 Ctrl+可打印键编码成 CSI 27 ; mod ; code ~（xterm 扩展键协议）。
+        /// 返回 null 表示未启用或该键不在本函数职责内，走原来的控制码路径。
+        /// </summary>
+        private string TryModifiedKeysSequence(char keyChar, Keys mods)
+        {
+            try
+            {
+                var engine = _cellRenderer?.Engine;
+                if (engine == null || engine.ModifyOtherKeys <= 0) return null;
+
+                var code = XtermKeys.BaseKeyCode(keyChar, (mods & Keys.Shift) == Keys.Shift);
+                if (code <= 0) return null;
+                return XtermKeys.ModifiedKey(code, true,
+                    (mods & Keys.Shift) == Keys.Shift, (mods & Keys.Alt) == Keys.Alt);
+            }
+            catch (System.Exception exSwallowed)
+            {
+                try { DiagLog.Swallowed("TerminalControl.ModifiedKeys", exSwallowed); } catch { }
+                return null;
             }
         }
 
@@ -81,10 +149,11 @@ namespace Gdterm.UI.Controls
 
             try
             {
-                // Cell 路径：方向键等走 VtNetCore（应用光标模式）
-                if (_cellRenderer != null && TryCellSpecialKey(e))
+                // 方向键等特殊键：序列由 XtermKeys 产出（DLL 内置表有 Enter=LF、Home=ESC[1~ 等偏差）
+                if (TrySpecialKey(e))
                 {
                     e.Handled = true;
+                    e.SuppressKeyPress = true;   // 挡住 WM_CHAR，避免同一个键再被 OnKeyPress 发一次
                     return;
                 }
 
@@ -102,6 +171,7 @@ namespace Gdterm.UI.Controls
                             }
                         }
                         catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
+                        e.SuppressKeyPress = true;
                         var cmd = _commandLine.ToString();
                         if (UseLocalLineBuffer)
                         {
@@ -114,7 +184,7 @@ namespace Gdterm.UI.Controls
                             _commandLine.Clear();
                             if (cmd.Length > 0)
                                 SafeSend(cmd);
-                            SafeSend("\r");
+                            SafeSend(XtermKeys.Enter);
                         }
                         else if (UseVtCellDangerGate)
                         {
@@ -128,8 +198,8 @@ namespace Gdterm.UI.Controls
                                 catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                                 return;
                             }
-                            if (_cellRenderer == null || !_cellRenderer.TryKeyPressed("Enter", e.Control, e.Shift))
-                                SafeSend("\r");
+                            // 库内置键表把 Enter 映射成 LF(0x0A)，远端 readline 不认（ICRNL 只转 CR）→ 这里自己发 CR
+                            SafeSend(XtermKeys.Enter);
                         }
                         else
                         {
@@ -142,7 +212,7 @@ namespace Gdterm.UI.Controls
                                 catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                                 return;
                             }
-                            SafeSend("\r");
+                            SafeSend(XtermKeys.Enter);
                         }
                         if (!string.IsNullOrWhiteSpace(cmd))
                         {
@@ -161,16 +231,13 @@ namespace Gdterm.UI.Controls
                         {
                             try { _renderer?.Write("\b \b"); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                         }
-                        else if (_cellRenderer != null)
-                        {
-                            if (!_cellRenderer.TryKeyPressed("Back", e.Control, e.Shift))
-                                SafeSend("\b");
-                        }
                         else
                         {
-                            SafeSend("\b");
+                            // Ctrl+BS = 0x08，普通 BS = 0x7F（与 xterm kbs=\177 一致）
+                            SafeSend(XtermKeys.For("Back", e.Control, e.Shift, e.Alt));
                         }
                         e.Handled = true;
+                        e.SuppressKeyPress = true;
                         try { UpdateCompletionPopup(); }
                         catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                         break;
@@ -191,16 +258,10 @@ namespace Gdterm.UI.Controls
                             _commandLine.Clear();
                             SafeSend(partial);
                         }
-                        if (_cellRenderer != null)
-                        {
-                            if (!_cellRenderer.TryKeyPressed("Tab", e.Control, e.Shift))
-                                SafeSend("\t");
-                        }
-                        else
-                        {
-                            SafeSend("\t");
-                        }
+                        // Shift+Tab = CSI Z（反向补全），Ctrl+Tab = HT
+                        SafeSend(XtermKeys.For("Tab", e.Control, e.Shift, e.Alt));
                         e.Handled = true;
+                        e.SuppressKeyPress = true;
                         break;
                     case Keys.Escape:
                         // 弹窗可见时 Esc=关弹窗并吃掉；否则保持原行为（专注模式退出）
@@ -214,8 +275,12 @@ namespace Gdterm.UI.Controls
                             }
                         }
                         catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
-                        // 不在此消费 Esc：交给 MainForm ProcessCmdKey 退出专注模式
-                        // （终端应用如 vim 仍可用其它快捷键；专注模式优先可退出）
+                        // 修复：以前这里直接把 Esc 留给 MainForm 的专注模式退出，导致 vim/tmux/less
+                        // 收不到 ESC。MainForm 若真要拿 Esc（专注模式），会在 ProcessCmdKey 先吃掉，
+                        // 根本走不到这里——所以这里必须发给主机。
+                        SafeSend(XtermKeys.Escape);
+                        e.Handled = true;
+                        e.SuppressKeyPress = true;
                         break;
                     case Keys.Up:
                         try
@@ -295,16 +360,36 @@ namespace Gdterm.UI.Controls
                     ClearLocalLine(eraseDisplay: UseLocalLineBuffer);
                     SafeSend("\x03");
                     e.Handled = true;
+                    e.SuppressKeyPress = true;
+                }
+
+                if (!_keyResolver.HasBinding(e))
+                {
+                    // Ctrl+Shift+V / Shift+Insert：终端式粘贴（走 bracketed paste 判断）
+                    if ((e.Control && e.Shift && e.KeyCode == Keys.V) ||
+                        (e.Shift && e.KeyCode == Keys.Insert))
+                    {
+                        PasteFromClipboard();
+                        e.Handled = true;
+                        e.SuppressKeyPress = true;
+                    }
                 }
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
         }
 
-        /// <summary>VtNetCore 键名映射；成功则已通过 SendToHost 发往会话。</summary>
-        private bool TryCellSpecialKey(KeyEventArgs e)
+        /// <summary>
+        /// 特殊键 → 主机。
+        ///
+        /// 序列由 <see cref="XtermKeys"/>（TERM=xterm-256color 的 terminfo）产出，不再以
+        /// lib\VtNetCore.dll 1.0.30 内置键表为准——那张表把 Enter 映射成 LF、Escape 映射成双 ESC、
+        /// Home/End 用 ESC[1~/ESC[4~、F1-F4 用 ESC[11~..，且没有修饰键组合（Ctrl+Up 也发 ESC OA）。
+        ///
+        /// 唯一仍走引擎的是“无修饰键的方向键”：它要按 DECCKM 应用光标键模式切换 ESC[A / ESCOA。
+        /// </summary>
+        private bool TrySpecialKey(KeyEventArgs e)
         {
-            if (_cellRenderer == null) return false;
-            string name = null;
+            string name;
             switch (e.KeyCode)
             {
                 case Keys.Up: name = "Up"; break;
@@ -329,21 +414,45 @@ namespace Gdterm.UI.Controls
                 case Keys.F10: name = "F10"; break;
                 case Keys.F11: name = "F11"; break;
                 case Keys.F12: name = "F12"; break;
+                case Keys.F13: name = "F13"; break;
+                case Keys.F14: name = "F14"; break;
+                case Keys.F15: name = "F15"; break;
+                case Keys.F16: name = "F16"; break;
+                case Keys.F17: name = "F17"; break;
+                case Keys.F18: name = "F18"; break;
+                case Keys.F19: name = "F19"; break;
+                case Keys.F20: name = "F20"; break;
+                case Keys.F21: name = "F21"; break;
+                case Keys.F22: name = "F22"; break;
+                case Keys.F23: name = "F23"; break;
+                case Keys.F24: name = "F24"; break;
                 default: return false;
             }
 
+            // 补全弹窗可见时上下键用于选候选，不发给主机
+            if (IsCompletionPopupShown && (name == "Up" || name == "Down"))
+                return false;
+
+            bool plainArrow = !e.Control && !e.Shift && !e.Alt && XtermKeys.IsArrowKey(name);
+
             // 清空本地命令缓冲（历史导航等）
-            if (e.KeyCode == Keys.Up || e.KeyCode == Keys.Down)
+            if (name == "Up" || name == "Down")
                 ClearLocalLine(eraseDisplay: false);
 
-            try
+            if (_cellRenderer != null && plainArrow)
             {
-                if (_cellRenderer.TryKeyPressed(name, e.Control, e.Shift))
-                    return true;
+                try
+                {
+                    if (_cellRenderer.TryKeyPressed(name, false, false))
+                        return true;   // 引擎按 DECCKM 出 ESC[A 或 ESCOA
+                }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
             }
-            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
-            return false;
+
+            var seq = XtermKeys.For(name, e.Control, e.Shift, e.Alt);
+            if (string.IsNullOrEmpty(seq)) return false;
+            SafeSend(seq);
+            return true;
         }
 }
 }
-

@@ -49,6 +49,7 @@ namespace Gdterm.UI.Controls
             if (_cellRenderer != null)
             {
                 try { _cellRenderer.ApplyFont(fontName, fontSize, cjkFontName); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Profile", exSwallowed); } catch { } }
+                try { if (_profile != null) _cellRenderer.ApplyTerminalType(_profile.TerminalType); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Profile", exSwallowed); } catch { } }
                 LogFontMetrics("cell");
             }
             else if (_renderer is LightweightRenderer light)

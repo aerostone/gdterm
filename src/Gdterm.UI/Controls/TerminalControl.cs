@@ -196,8 +196,11 @@ namespace Gdterm.UI.Controls
                 _cellRenderer = new CellGdiRenderer(rows, cols, scheme, history);
                 _cellRenderer.SendToHost += OnCellSendToHost;
                 _cellRenderer.TerminalResized += OnCellTerminalResized;
+                _cellRenderer.ClipboardSetRequested += OnCellClipboardSetRequested;
                 _renderer = _cellRenderer;
                 try { _cellRenderer.ApplyFont(fontName, fontSize, cjkFontName); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+                // TERM 名与 pty 请求保持一致（XTGETTCAP TN / XTVERSION 会回它）
+                try { if (_profile != null) _cellRenderer.ApplyTerminalType(_profile.TerminalType); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 LogFontMetrics("cell");
             }
             else
@@ -230,6 +233,7 @@ namespace Gdterm.UI.Controls
                 canvas.MouseDown += OnCellMouseDown;
                 canvas.MouseUp += OnCellMouseUp;
                 canvas.MouseMove += OnCellMouseMove;
+                canvas.MouseWheel += OnCellMouseWheel;
             }
 
             KeyPress += OnKeyPress;
@@ -288,12 +292,7 @@ namespace Gdterm.UI.Controls
             pasteItem.Name = "_pasteItem";
             pasteItem.Click += (s, e) =>
             {
-                try
-                {
-                    if (!IsConnected) return;
-                    var text = Clipboard.GetText();
-                    if (!string.IsNullOrEmpty(text)) TrySendInput(text);
-                }
+                try { PasteFromClipboard(); }
                 catch (Exception ex) { DiagLog.Swallowed("TerminalControl.Paste", ex); }
             };
 
@@ -431,6 +430,88 @@ namespace Gdterm.UI.Controls
         private static bool ClipboardContainsText()
         {
             try { return Clipboard.ContainsText(); } catch { return false; }
+        }
+
+        private bool _bootstrapArmed;
+        private bool _bootstrapSent;
+
+        /// <summary>挂上环境引导：第一段主机输出后（且不是密码提示）再发。</summary>
+        private void ArmEnvironmentBootstrap()
+        {
+            _bootstrapArmed = BuildEnvironmentBootstrap().Length > 0;
+            _bootstrapSent = false;
+        }
+
+        /// <summary>在 OnTerminalOutput 收到首批数据后调用一次。</summary>
+        private void TryFireEnvironmentBootstrap(string firstPayload)
+        {
+            if (!_bootstrapArmed || _bootstrapSent) return;
+            var script = BuildEnvironmentBootstrap();
+            if (script.Length == 0) { _bootstrapArmed = false; return; }
+
+            // 出现密码/口令提示时不发，等下一次输出（登录完成）再说。
+            var peek = firstPayload ?? string.Empty;
+            var low = peek.ToLowerInvariant();
+            if (low.EndsWith("password:") || low.EndsWith("password: ") || low.EndsWith("密码：")
+                || low.EndsWith("passphrase:") || low.EndsWith("verification code:"))
+                return;
+
+            _bootstrapSent = true;
+            _bootstrapArmed = false;
+            try { TrySendInput(script); }        // 原样发送，末尾 \n 保留
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.EnvBootstrap", exSwallowed); } catch { } }
+        }
+
+        /// <summary>
+        /// 生成登录后的环境引导脚本：locale + TerminalProfile.EnvironmentVariables。
+        /// 值按 POSIX 单引号转义；返回空串表示无需发送。
+        /// </summary>
+        private string BuildEnvironmentBootstrap()
+        {
+            try
+            {
+                var parts = new System.Collections.Generic.List<string>();
+                var locale = _profile != null ? _profile.Locale : null;
+                if (!string.IsNullOrWhiteSpace(locale))
+                {
+                    var v = ShellQuote(locale.Trim());
+                    parts.Add("export LANG=" + v);
+                    parts.Add("export LC_ALL=" + v);
+                }
+                var env = _profile != null ? _profile.EnvironmentVariables : null;
+                if (env != null)
+                {
+                    foreach (var kv in env)
+                    {
+                        if (string.IsNullOrWhiteSpace(kv.Key)) continue;
+                        var key = kv.Key.Trim();
+                        if (!IsShellIdentifier(key)) continue;
+                        parts.Add("export " + key + "=" + ShellQuote(kv.Value ?? string.Empty));
+                    }
+                }
+                if (parts.Count == 0) return string.Empty;
+                return string.Join("; ", parts) + "\n";
+            }
+            catch (Exception ex)
+            {
+                DiagLog.Swallowed("TerminalControl.EnvBootstrap", ex);
+                return string.Empty;
+            }
+        }
+
+        private static bool IsShellIdentifier(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return false;
+            if (!(char.IsLetter(s[0]) || s[0] == '_')) return false;
+            foreach (char c in s)
+                if (!(char.IsLetterOrDigit(c) || c == '_')) return false;
+            return true;
+        }
+
+        /// <summary>POSIX 单引号转义：' → '\''。</summary>
+        private static string ShellQuote(string value)
+        {
+            return "'" + (value ?? string.Empty).Replace("'", "'\\''") + "'";
         }
 
         private void OnCellSendToHost(object sender, byte[] data)
@@ -624,6 +705,26 @@ namespace Gdterm.UI.Controls
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
         }
 
+        /// <summary>
+        /// OSC 52：远端应用（tmux 的 copy-mode、neovim 的 "+y）请求写剪贴板。
+        /// 生效范围仅限本机剪贴板；读取请求在预处理器里已被拒绝。
+        /// </summary>
+        private void OnCellClipboardSetRequested(object sender, string base64)
+        {
+            if (string.IsNullOrEmpty(base64)) return;
+            try
+            {
+                byte[] bytes;
+                try { bytes = Convert.FromBase64String(base64); }
+                catch { return; }
+                if (bytes.Length == 0 || bytes.Length > 1024 * 1024) return;   // 上限 1MB，防炸
+                var text = System.Text.Encoding.UTF8.GetString(bytes);
+                if (InvokeRequired) BeginInvoke(new Action(() => { try { Clipboard.SetText(text); } catch { } }));
+                else Clipboard.SetText(text);
+            }
+            catch (Exception ex) { DiagLog.Swallowed("TerminalControl.Clipboard52", ex); }
+        }
+
         private void OnCellMouseDown(object sender, MouseEventArgs e)
         {
             // 右键：Shift+右键 → VT 鼠标按钮 2（vim/less 等应用内）；裸右键 → 弹菜单。
@@ -669,6 +770,40 @@ namespace Gdterm.UI.Controls
                     (ModifierKeys & Keys.Control) != 0,
                     (ModifierKeys & Keys.Shift) != 0);
             }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+        }
+
+        /// <summary>
+        /// 滚轮：
+        ///   - 应用开了鼠标上报且没按 Shift（tmux/vim 的 mouse on）→ 作为 button 64/65 送给远端；
+        ///   - 否则（含 Shift+滚轮）→ 滚本地回看缓冲，3 行/格。
+        /// 之前整个 UI 没有 MouseWheel 订阅，滚轮在任何渲染器下都是死的。
+        /// </summary>
+        private void OnCellMouseWheel(object sender, MouseEventArgs e)
+        {
+            if (_cellRenderer == null || e.Delta == 0) return;
+            bool ctrl = (ModifierKeys & Keys.Control) != 0;
+            bool shift = (ModifierKeys & Keys.Shift) != 0;
+
+            bool tracking = false;
+            try { tracking = _cellRenderer.IsMouseTrackingEnabled; }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+
+            if (tracking && !shift && _session?.IsConnected == true)
+            {
+                int col, row;
+                if (!_cellRenderer.TryHitTest(e.X, e.Y, out col, out row)) return;
+                // 滚轮一格 = 3 行，和 Windows Terminal 一致
+                for (int i = 0; i < 3; i++)
+                {
+                    try { _cellRenderer.MouseWheel(col, row, e.Delta > 0 ? 0 : 1, ctrl, shift); }
+                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+                }
+                return;
+            }
+
+            int lines = (e.Delta > 0 ? -3 : 3);
+            try { _cellRenderer.ScrollViewport(lines); }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
         }
 
@@ -900,14 +1035,23 @@ public async void Connect()
                     catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 }
 
+                // locale / 环境变量：SSH 的 env 请求要服务端 AcceptEnv 才生效（默认几乎都不开），
+                // 所以在 shell 起来后直接 export 一次。Locale 为空且没有自定义变量时一个字节都不发。
+                // 时机：等主机第一段输出（登录横幅/提示符）再发，避免在 sshd 还没 fork shell 时把字节
+                // 塞给可能出现的二次认证提示（“Password:”会把我们的 export 当成密码收走）。
+                ArmEnvironmentBootstrap();
+
                 if (_profile.AutoRunCommands != null)
                 {
                     void RunAuto()
                     {
                         foreach (var cmd in _profile.AutoRunCommands)
                         {
-                            if (!string.IsNullOrWhiteSpace(cmd))
-                                TrySendInput(cmd + (_profile.NewLineSequence ?? "\n"), isCommandLine: true);
+                            if (string.IsNullOrWhiteSpace(cmd)) continue;
+                            // 危险命令闸门走 isCommandLine，但该模式会 TrimEnd 掉末尾换行——
+                            // 原来把 "\n" 拼在同一个字符串里，等于把回车吃掉，命令根本没执行过。
+                            if (TrySendInput(cmd, isCommandLine: true))
+                                SafeSend(_profile.NewLineSequence ?? "\n");
                         }
                     }
                     if (InvokeRequired) BeginInvoke(new Action(RunAuto));
@@ -1030,6 +1174,30 @@ public async void Connect()
                 }
                 catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
             }
+        }
+
+        /// <summary>
+        /// 粘贴：应用开了 bracketed paste（?2004，vim/tmux/bash 5 默认会开）时用
+        /// ESC[200~ ... ESC[201~ 包住，否则多行粘贴会被远端当成逐行回车直接执行。
+        /// 单行/短文本仍按原路发送，保持老行为。
+        /// </summary>
+        public bool PasteFromClipboard()
+        {
+            string text = null;
+            try { text = Clipboard.ContainsText() ? Clipboard.GetText() : null; }
+            catch (Exception ex) { DiagLog.Swallowed("TerminalControl.PasteRead", ex); }
+            if (string.IsNullOrEmpty(text)) return false;
+            if (!IsConnected) return false;
+
+            bool bracketed = false;
+            try { bracketed = _cellRenderer != null && _cellRenderer.IsBracketedPasteEnabled; }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+
+            if (!bracketed) return TrySendInput(text);
+
+            // 括号粘贴内部：换行统一成 \r（远端自己决定要不要执行），去掉 NUL
+            var body = text.Replace("\r\n", "\n").Replace('\r', '\n').Replace("\n", "\r").Replace("\0", "");
+            return TrySendInput("\u001b[200~" + body + "\u001b[201~");
         }
 
         public bool TrySendInput(string text, bool isCommandLine = false)
@@ -1424,6 +1592,10 @@ public async void Connect()
                 return;
             }
 
+            // 首段输出到手 → 环境引导（locale / 自定义变量）可以发了
+            try { TryFireEnvironmentBootstrap(e.Text); }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.EnvBootstrap", exSwallowed); } catch { } }
+
             _renderer?.Write(e.Text);
             try { _autoLogger?.LogOutput(e.Text); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
         }
@@ -1445,6 +1617,7 @@ public async void Connect()
                     if (_cellRenderer != null)
                     {
                         try { _cellRenderer.SendToHost -= OnCellSendToHost; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+                        try { _cellRenderer.ClipboardSetRequested -= OnCellClipboardSetRequested; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                         try { _cellRenderer.TerminalResized -= OnCellTerminalResized; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                     }
                     if (_session != null)

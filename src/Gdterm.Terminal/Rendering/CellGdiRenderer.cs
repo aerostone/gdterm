@@ -16,6 +16,21 @@ namespace Gdterm.Terminal.Rendering
     public class CellGdiRenderer : IRenderer, IDisposable
     {
         private readonly DoubleBufferedPanel _canvas;
+
+        /// <summary>图形叠加层（sixel / kitty graphics）。按“绝对行号”锚定，滚动时跟随内容。</summary>
+        private sealed class ImageOverlay
+        {
+            public TerminalImage Image;
+            public Bitmap Bitmap;
+            public bool DecodeFailed;
+            public int ImageId;
+            public int PlacementId;
+        }
+
+        private const int MaxOverlays = 24;
+        private readonly System.Collections.Generic.List<ImageOverlay> _overlays =
+            new System.Collections.Generic.List<ImageOverlay>();
+        private int _pageTopRow;
         private readonly VtTerminalEngine _engine;
         private readonly object _lock = new object();
         private readonly Dictionary<Color, SolidBrush> _brushCache = new Dictionary<Color, SolidBrush>();
@@ -56,6 +71,9 @@ namespace Gdterm.Terminal.Rendering
 
         /// <summary>引擎请求发往主机的字节（DA/键鼠应答等）。</summary>
         public event EventHandler<byte[]> SendToHost;
+
+        /// <summary>应用通过 OSC 52 请求写系统剪贴板；参数是 base64 文本。</summary>
+        public event EventHandler<string> ClipboardSetRequested;
 
         /// <summary>本地 cell 尺寸变化（供 UI 通知 SSH window-change）。</summary>
         public event EventHandler TerminalResized;
@@ -124,6 +142,11 @@ namespace Gdterm.Terminal.Rendering
             get { lock (_lock) return _engine.IsMouseTrackingEnabled; }
         }
 
+        public bool IsBracketedPasteEnabled
+        {
+            get { lock (_lock) return _engine.IsBracketedPasteEnabled; }
+        }
+
         // ===== 文本选择（左键拖选 / Shift+左键 扩选） =====
         private bool _hasSelection;
         private int _selStartCol, _selStartRow, _selEndCol, _selEndRow;
@@ -137,6 +160,26 @@ namespace Gdterm.Terminal.Rendering
                 var h = SendToHost;
                 if (h != null) h(this, data);
             };
+            _engine.ClipboardSetRequested += (s, b64) =>
+            {
+                var h = ClipboardSetRequested;
+                if (h != null) h(this, b64);
+            };
+            // OSC 4 调色板查询：0-15 取当前主题，其余走 xterm 256 公式
+            _engine.PaletteLookup = index =>
+            {
+                var ansi = _scheme != null ? _scheme.AnsiColors : null;
+                if (ansi != null && index >= 0 && index < ansi.Length)
+                {
+                    var c = ansi[index];
+                    return "#" + c.R.ToString("x2") + c.G.ToString("x2") + c.B.ToString("x2");
+                }
+                return null;
+            };
+            _engine.ImageReceived += OnImageReceived;
+            _engine.ImageDeleted += OnImageDeleted;
+
+            PushQueryMetadata();
 
             _canvas = new DoubleBufferedPanel
             {
@@ -192,6 +235,7 @@ namespace Gdterm.Terminal.Rendering
             if (_disposed) return;
             lock (_lock)
             {
+                ClearOverlaysLocked();
                 _engine.FullReset();
                 RefreshSnapshot(force: true);
                 if (!_isPaused)
@@ -368,6 +412,7 @@ namespace Gdterm.Terminal.Rendering
             {
                 if (columns != Columns || rows != Rows)
                 {
+                    ClearOverlaysLocked();   // 行列变了像素锚点失效，图上不再跟着内容走，直接清掉
                     _engine.Resize(columns, rows);
                     changed = true;
                 }
@@ -400,6 +445,33 @@ namespace Gdterm.Terminal.Rendering
             lock (_lock) _engine.MouseMove(column, row, button, control, shift);
         }
 
+        public void MouseWheel(int column, int row, int button, bool control, bool shift)
+        {
+            if (_disposed) return;
+            lock (_lock) _engine.MouseWheel(column, row, button, control, shift);
+        }
+
+        /// <summary>滚轮回看历史（负=向上）。</summary>
+        public void ScrollViewport(int lines)
+        {
+            if (_disposed) return;
+            lock (_lock) _engine.ScrollViewport(lines);
+            ScheduleRedraw();
+        }
+
+        /// <summary>回到实时底部。</summary>
+        public bool IsAtBottom
+        {
+            get { lock (_lock) return _engine.IsAtBottom; }
+        }
+
+        public void ScrollToBottom()
+        {
+            if (_disposed) return;
+            lock (_lock) _engine.ScrollToBottom();
+            ScheduleRedraw();
+        }
+
         /// <summary>像素坐标 → cell 列/行。</summary>
         public bool TryHitTest(int pixelX, int pixelY, out int column, out int row)
         {
@@ -415,6 +487,7 @@ namespace Gdterm.Terminal.Rendering
         {
             if (!force && !_engine.Changed) return;
             _page = _engine.SnapshotVisible();
+            try { _pageTopRow = _engine.ViewportTopRow; } catch { _pageTopRow = 0; }
             _engine.ClearChanges();
         }
 
@@ -625,6 +698,158 @@ namespace Gdterm.Terminal.Rendering
                 {
                     g.FillRectangle(cursorBrush, cx, cy, _charWidth, _charHeight);
                 }
+            }
+
+            DrawOverlays(g, _pageTopRow);
+        }
+
+        // ───────────────────────── 图形（sixel / kitty graphics）─────────────────────────
+
+        private void OnImageReceived(object sender, TerminalImage img)
+        {
+            if (_disposed || img == null) return;
+            try
+            {
+                lock (_lock)
+                {
+                    // 同一 (imageId, placementId) 再放置一次就替换，避免无限堆积
+                    for (int k = _overlays.Count - 1; k >= 0; k--)
+                    {
+                        var o = _overlays[k];
+                        if (o.ImageId == img.ImageId && o.PlacementId == img.PlacementId && img.ImageId != 0)
+                        {
+                            try { if (o.Bitmap != null) o.Bitmap.Dispose(); } catch { }
+                            _overlays.RemoveAt(k);
+                        }
+                    }
+                    while (_overlays.Count >= MaxOverlays)
+                    {
+                        var old = _overlays[0];
+                        try { if (old.Bitmap != null) old.Bitmap.Dispose(); } catch { }
+                        _overlays.RemoveAt(0);
+                    }
+                    _overlays.Add(new ImageOverlay
+                    {
+                        Image = img,
+                        ImageId = img.ImageId,
+                        PlacementId = img.PlacementId
+                    });
+                }
+                if (!_isPaused)
+                {
+                    _needsRedraw = true;
+                    ScheduleRedraw();
+                }
+            }
+            catch (System.Exception ex) { Gdterm.Terminal.Diagnostics.TerminalLog.Swallowed("CellGdiRenderer.ImageReceived", ex); }
+        }
+
+        private void OnImageDeleted(object sender, TerminalImageDeleteEventArgs e)
+        {
+            if (_disposed || e == null) return;
+            try
+            {
+                lock (_lock)
+                {
+                    for (int k = _overlays.Count - 1; k >= 0; k--)
+                    {
+                        var o = _overlays[k];
+                        bool hit = e.ImageId == 0 || o.ImageId == e.ImageId;
+                        if (!hit) continue;
+                        if (e.PlacementOnly && e.ImageId == 0) continue;  // 只删“当前放置”时要求带 id
+                        try { if (o.Bitmap != null) o.Bitmap.Dispose(); } catch { }
+                        _overlays.RemoveAt(k);
+                    }
+                }
+                if (!_isPaused) { _needsRedraw = true; ScheduleRedraw(); }
+            }
+            catch (System.Exception ex) { Gdterm.Terminal.Diagnostics.TerminalLog.Swallowed("CellGdiRenderer.ImageDeleted", ex); }
+        }
+
+        private void ClearOverlaysLocked()
+        {
+            for (int k = 0; k < _overlays.Count; k++)
+            {
+                try { if (_overlays[k].Bitmap != null) _overlays[k].Bitmap.Dispose(); } catch { }
+            }
+            _overlays.Clear();
+        }
+
+        /// <summary>画出所有可见叠加图；纹理按需解码（解码必须在绘制线程，且失败只影响这张图）。</summary>
+        private void DrawOverlays(Graphics g, int topRow)
+        {
+            if (_overlays.Count == 0) return;
+            ImageOverlay[] snapshot;
+            lock (_lock) snapshot = _overlays.ToArray();
+            if (snapshot.Length == 0) return;
+
+            int prevInterp = (int)g.InterpolationMode;
+            try { g.InterpolationMode = InterpolationMode.NearestNeighbor; } catch { }
+            try
+            {
+                foreach (var o in snapshot)
+                {
+                    var img = o.Image;
+                    if (img == null) continue;
+                    if (o.Bitmap == null && !o.DecodeFailed) o.Bitmap = DecodeImage(img, ref o.DecodeFailed);
+                    if (o.Bitmap == null) continue;
+
+                    int row = img.AbsoluteRow - topRow;
+                    if (row + 4 < 0 || row > Rows + 4) continue;      // 图整体在视口外，跳过
+
+                    float x = PadX + img.CursorColumn * _charWidth + img.OffsetX;
+                    float y = PadY + row * _charHeight + img.OffsetY;
+                    float w = img.Columns > 0 ? img.Columns * _charWidth : img.Width;
+                    float h = img.Rows > 0 ? img.Rows * _charHeight : img.Height;
+                    if (w <= 0 || h <= 0) continue;
+                    g.DrawImage(o.Bitmap, x, y, w, h);
+                }
+            }
+            catch (System.Exception ex) { Gdterm.Terminal.Diagnostics.TerminalLog.Swallowed("CellGdiRenderer.DrawOverlays", ex); }
+            finally { try { g.InterpolationMode = (InterpolationMode)prevInterp; } catch { } }
+        }
+
+        /// <summary>PNG（kitty f=100）交给 GDI；原始 RGBA/RGB 手工转 BGRA 位图。</summary>
+        private Bitmap DecodeImage(TerminalImage img, ref bool failed)
+        {
+            try
+            {
+                if (img.Format == 100)
+                {
+                    using (var ms = new System.IO.MemoryStream(img.Rgba, 0, img.Rgba.Length))
+                        return new Bitmap(ms);
+                }
+                if (img.Rgba == null || img.Width <= 0 || img.Height <= 0) { failed = true; return null; }
+
+                var bmp = new Bitmap(img.Width, img.Height, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                var data = bmp.LockBits(new Rectangle(0, 0, img.Width, img.Height),
+                    System.Drawing.Imaging.ImageLockMode.WriteOnly, System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+                try
+                {
+                    int stride = data.Stride;
+                    var buf = new byte[stride * img.Height];
+                    for (int yy = 0; yy < img.Height; yy++)
+                    {
+                        int src = yy * img.Width * 4;
+                        int dst = yy * stride;
+                        for (int xx = 0; xx < img.Width; xx++, src += 4, dst += 4)
+                        {
+                            buf[dst + 0] = img.Rgba[src + 2];   // B
+                            buf[dst + 1] = img.Rgba[src + 1];   // G
+                            buf[dst + 2] = img.Rgba[src + 0];   // R
+                            buf[dst + 3] = img.Rgba[src + 3];   // A
+                        }
+                    }
+                    System.Runtime.InteropServices.Marshal.Copy(buf, 0, data.Scan0, buf.Length);
+                }
+                finally { bmp.UnlockBits(data); }
+                return bmp;
+            }
+            catch (System.Exception ex)
+            {
+                Gdterm.Terminal.Diagnostics.TerminalLog.Swallowed("CellGdiRenderer.DecodeImage", ex);
+                failed = true;
+                return null;
             }
         }
 
@@ -870,6 +1095,35 @@ namespace Gdterm.Terminal.Rendering
             return Math.Max(cx - x, text.Length * _charWidth);
         }
 
+        /// <summary>
+        /// 把主题色与单元像素尺寸推给引擎的查询应答器（OSC 10/11/12/4、CSI 14t/16t）。
+        /// 换主题、换字体、改字号后都要调一次。
+        /// </summary>
+        /// <summary>把 TerminalProfile 里的 TERM 名同步到引擎（XTVERSION / XTGETTCAP TN 用）。</summary>
+        public void ApplyTerminalType(string term)
+        {
+            if (_disposed || string.IsNullOrWhiteSpace(term)) return;
+            try { _engine.TerminalName = term.Trim(); } catch (System.Exception ex) { Gdterm.Terminal.Diagnostics.TerminalLog.Swallowed("CellGdiRenderer.ApplyTerminalType", ex); }
+        }
+
+        public void PushQueryMetadata()
+        {
+            try
+            {
+                string fg = ToHex(_scheme != null ? _scheme.Foreground : Color.Silver);
+                string bg = ToHex(_scheme != null ? _scheme.Background : Color.Black);
+                string cur = ToHex(_scheme != null ? _scheme.CursorColor : Color.White);
+                _engine.SetQueryMetadata(fg, bg, cur,
+                    (int)Math.Round(_charWidth), (int)Math.Round(_charHeight));
+            }
+            catch { }   // 元信息只是应答用，失败不影响渲染
+        }
+
+        private static string ToHex(Color c)
+        {
+            return "#" + c.R.ToString("x2") + c.G.ToString("x2") + c.B.ToString("x2");
+        }
+
         private void MeasureCell()
         {
             if (_font == null) return;
@@ -884,6 +1138,7 @@ namespace Gdterm.Terminal.Rendering
                 _charWidth = Math.Max(6f, size.Width);
                 _charHeight = Math.Max(12f, (float)Math.Ceiling(_font.GetHeight(g)) + 2f);
             }
+            PushQueryMetadata();
         }
 
         private SolidBrush GetBrush(Color c)
@@ -917,6 +1172,7 @@ namespace Gdterm.Terminal.Rendering
             if (_disposed) return;
             _disposed = true;
             try { _redrawTimer.Stop(); _redrawTimer.Dispose(); } catch { }
+            try { lock (_lock) ClearOverlaysLocked(); } catch { }
             try { _engine.Dispose(); } catch { }
             try { _font.Dispose(); } catch { }
             try { _boldFont.Dispose(); } catch { }

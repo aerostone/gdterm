@@ -22,6 +22,109 @@ namespace Gdterm.Tests.Terminal
             ScrollAndHistoryCap();
             ParseWebColorHelper();
             SendToHostOnDeviceAttributes();
+            ReportConfiguredTerminalName();
+            AnswerWindowMetadataQueries();
+            AnswerColorPaletteQueries();
+            ClipboardOsc52RoundTrip();
+            SwallowKittyGraphicsApcs();
+        }
+
+        /// <summary>配置的 TERM 要进 XTVERSION / XTGETTCAP TN（远端靠这个判断客户端身份）。</summary>
+        private static void ReportConfiguredTerminalName()
+        {
+            using (var eng = new VtTerminalEngine(80, 24, 100))
+            {
+                var sb = new StringBuilder();
+                eng.SendToHost += (s, data) => sb.Append(Encoding.ASCII.GetString(data));
+
+                Assert.Equal("xterm-256color", eng.TerminalName, "default TerminalName");
+
+                eng.TerminalName = "screen-256color";
+
+                sb.Length = 0;
+                eng.Feed("\u001b[>q");     // XTVERSION
+                Assert.True(sb.ToString().Contains("screen-256color"), "XTVERSION echoes configured TERM");
+
+                sb.Length = 0;
+                eng.Feed("\u001bP+q544e\u001b\\");   // XTGETTCAP TN（hex 编码应答）
+                var hex = HexDecode(sb.ToString());
+                Assert.True(hex.Contains("screen-256color"), "XTGETTCAP TN = configured TERM");
+            }
+        }
+
+        /// <summary>像素/字符尺寸/文本区字符数必须与窗口一致（tmux、neovim 靠这个排版）。</summary>
+        private static void AnswerWindowMetadataQueries()
+        {
+            using (var eng = new VtTerminalEngine(120, 32, 100))
+            {
+                eng.SetQueryMetadata(null, null, null, 9, 18);   // 单元 9x18px → 120 列 576px 宽、32 行 576px 高
+                var sb = new StringBuilder();
+                eng.SendToHost += (s, data) => sb.Append(Encoding.ASCII.GetString(data));
+
+                eng.Feed("\u001b[14t");    // 像素尺寸
+                Assert.True(sb.ToString().Contains("\u001b[4;576;1080t"), "CSI 14t pixel size 576x1080");
+                sb.Length = 0;
+                eng.Feed("\u001b[16t");    // 字符尺寸
+                Assert.True(sb.ToString().Contains("\u001b[6;18;9t"), "CSI 16t cell size 18x9");
+                sb.Length = 0;
+                eng.Feed("\u001b[18t");    // 文本区字符数
+                Assert.True(sb.ToString().Contains("\u001b[8;32;120t"), "CSI 18t text area 32x120");
+            }
+        }
+
+        /// <summary>OSC 10/11/4 查询按主题回色；未知索引不乱答。</summary>
+        private static void AnswerColorPaletteQueries()
+        {
+            using (var eng = new VtTerminalEngine(80, 24, 100))
+            {
+                var sb = new StringBuilder();
+                eng.SendToHost += (s, data) => sb.Append(Encoding.ASCII.GetString(data));
+
+                eng.Feed("\u001b]11;?\u0007");
+                Assert.True(sb.ToString().Contains("rgb:"), "OSC 11 background answered as rgb:");
+                sb.Length = 0;
+                eng.Feed("\u001b]4;1;?\u0007");
+                Assert.True(sb.ToString().Contains("rgb:"), "OSC 4 palette index answered as rgb:");
+            }
+        }
+
+        /// <summary>OSC 52 不落盘、只发事件给宿主（免密剪贴板桥）。</summary>
+        private static void ClipboardOsc52RoundTrip()
+        {
+            using (var eng = new VtTerminalEngine(80, 24, 100))
+            {
+                string got = null;
+                eng.ClipboardSetRequested += (s, text) => got = text;
+                eng.Feed("\u001b]52;c;" + Convert.ToBase64String(Encoding.UTF8.GetBytes("hello-clip")) + "\u0007");
+                // 事件带的是 base64，解码落剪贴板由 UI 做（TerminalControl.OnCellClipboardSetRequested）
+                Assert.Equal("hello-clip", got == null ? null : Encoding.UTF8.GetString(Convert.FromBase64String(got)), "OSC 52 → host event → decode");
+            }
+        }
+
+        /// <summary>不支持的 kitty 图形必须整段吞掉，绝不能把 APC 内容漏到屏幕上。</summary>
+        private static void SwallowKittyGraphicsApcs()
+        {
+            using (var eng = new VtTerminalEngine(80, 24, 100))
+            {
+                eng.Feed("A\u001b_Gf=32,s=2,v=2;QUJDRA==\u001b\\B");
+                var screen = eng.GetScreenText();
+                Assert.True(screen.Contains("AB"), "text around kitty APC survives");
+                Assert.True(screen.IndexOf("QUJDRA", StringComparison.Ordinal) < 0, "kitty payload not on screen");
+            }
+        }
+
+        private static string HexDecode(string s)
+        {
+            var sb = new StringBuilder();
+            int i = s.IndexOf('=');
+            if (i < 0) return s;
+            for (i++; i + 1 < s.Length; i += 2)
+            {
+                int v;
+                if (!int.TryParse(s.Substring(i, 2), System.Globalization.NumberStyles.HexNumber, null, out v)) break;
+                sb.Append((char)v);
+            }
+            return sb.ToString();
         }
 
         private static void PlainTextAndCursor()
