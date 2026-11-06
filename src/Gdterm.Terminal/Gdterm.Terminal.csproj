@@ -84,7 +84,6 @@
     <Compile Include="Rendering\TerminalRenderer.cs" />
     <Compile Include="Rendering\CellGdiRenderer.cs" />
     <Compile Include="Rendering\Vt\VtTerminalEngine.cs" />
-    <Compile Include="Rendering\Vt\SgrNormalizer.cs" />
     <Compile Include="Rendering\Vt\VtStreamPreprocessor.cs" />
     <Compile Include="Rendering\Vt\GraphicsDecoder.cs" />
     <Compile Include="Rendering\Vt\KittyGraphicsParser.cs" />
