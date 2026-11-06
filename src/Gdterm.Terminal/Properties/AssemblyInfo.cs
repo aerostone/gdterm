@@ -9,9 +9,6 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyCopyright("")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
-// Ctrl+Click 链接识别要按「显示列」切 token，复用 WideText（宽字符占位列口径的 SSOT）
-// 程序集名是 gdterm（csproj 的 AssemblyName），不是工程名 Gdterm.UI
-[assembly: System.Runtime.CompilerServices.InternalsVisibleTo("gdterm")]
 [assembly: ComVisible(false)]
 [assembly: Guid("d4e5f6a7-b8c9-0123-defa-567890123456")]
 [assembly: AssemblyVersion("1.0.0.0")]

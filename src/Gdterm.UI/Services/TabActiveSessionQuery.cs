@@ -45,14 +45,14 @@ namespace Gdterm.UI.Services
         {
             var session = GetActiveSession();
             if (session == null) return null;
-            return SshPortForwardHost.Wrap(session.TryGetSshClient());
+            return SshPortForwardHost.FromClientObject(session.TryGetSshClient());
         }
 
         public ISshRemoteSession GetActiveRemoteSession()
         {
             var session = GetActiveSession();
             if (session == null) return null;
-            return SshNetRemoteSession.Wrap(session.TryGetSshClient());
+            return SshNetRemoteSession.FromClientObject(session.TryGetSshClient());
         }
 
         public Dictionary<string, ITerminalSession> GetConnectedSessions()

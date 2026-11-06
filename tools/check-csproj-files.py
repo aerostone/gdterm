@@ -55,6 +55,7 @@ def main():
                     print("  未登记到 csproj: %s（msbuild 会报 CS0246）" % full)
                     problems += 1
     problems += check_internals_visible_to(projects)
+    problems += check_cross_assembly_internal_types(projects)
     print("csproj-file-list: %d 个工程，%d 处问题" % (len(projects), problems))
     return 0 if problems == 0 else 1
 
@@ -88,6 +89,105 @@ def check_internals_visible_to(projects):
                           % (path, m.group(1)))
                     problems += 1
                 _ = own
+    return problems
+
+
+def project_sources(proj):
+    """该工程参与编译的 .cs（按 csproj 的 Compile Include，跳过 MSBuild 生成项）。"""
+    base = os.path.dirname(proj)
+    text = open(proj, encoding="utf-8-sig", errors="replace").read()
+    out = []
+    for m in re.finditer(r'<Compile Include="([^"]+)"', text):
+        rel = m.group(1).replace("\\", "/")
+        if "$(" in rel:
+            continue
+        out.append(os.path.normpath(os.path.join(base, rel)))
+    return out
+
+
+TYPE_RE = re.compile(r'^\s*(?:public|internal)\s+(?:static\s+|sealed\s+|abstract\s+|partial\s+)*'
+                     r'(?:class|struct|interface|enum|delegate)\s+([A-Za-z_][A-Za-z0-9_]*)', re.M)
+
+
+def strip_comments_and_strings(text):
+    """去掉注释与字符串字面量——只在注释里提到类型名不算使用（否则全是假阳性）。"""
+    out = []
+    i, n = 0, len(text)
+    while i < n:
+        two = text[i:i + 2]
+        if two == "//":
+            j = text.find("\n", i)
+            i = n if j < 0 else j
+        elif two == "/*":
+            j = text.find("*/", i + 2)
+            i = n if j < 0 else j + 2
+        elif text[i] == '"':
+            i += 1
+            while i < n and text[i] != '"':
+                i += 2 if text[i] == "\\" else 1
+            i += 1
+        elif text[i] == "'":
+            i += 1
+            while i < n and text[i] != "'":
+                i += 2 if text[i] == "\\" else 1
+            i += 1
+        else:
+            out.append(text[i])
+            i += 1
+    return "".join(out)
+
+
+def friend_assemblies(proj):
+    """读工程源码里声明的 InternalsVisibleTo。"""
+    friends = set()
+    for path in project_sources(proj):
+        if not os.path.exists(path):
+            continue
+        text = open(path, encoding="utf-8-sig", errors="replace").read()
+        for m in re.finditer(r'InternalsVisibleTo\s*\(\s*"([^"]+)"', text):
+            friends.add(m.group(1).split(",")[0].strip().lower())
+    return friends
+
+
+def check_cross_assembly_internal_types(projects):
+    """另一个工程用了本工程的 internal 类型 → 真机 CS0122/CS0012。"""
+    internal_types = {}      # 类型名 -> 声明它的工程
+    owners = {}
+    for proj in projects:
+        name = assembly_name(proj)
+        owners[name.lower()] = proj
+        for path in project_sources(proj):
+            if not os.path.exists(path):
+                continue
+            text = open(path, encoding="utf-8-sig", errors="replace").read()
+            for m in TYPE_RE.finditer(text):
+                decl_line = m.group(0)
+                if "public " in decl_line:
+                    continue
+                internal_types.setdefault(m.group(1), set()).add(name)
+
+    # 谁被谁授权：工程 -> 允许看它 internal 的程序集名
+    grants = {assembly_name(p).lower(): friend_assemblies(p) for p in projects}
+
+    problems = 0
+    for proj in projects:
+        me = assembly_name(proj)
+        for path in project_sources(proj):
+            if not os.path.exists(path):
+                continue
+            text = strip_comments_and_strings(
+                open(path, encoding="utf-8-sig", errors="replace").read())
+            for tname, declares in internal_types.items():
+                if me in declares or len(declares) != 1:
+                    continue
+                owner = list(declares)[0]
+                if me.lower() in grants.get(owner.lower(), set()):
+                    continue
+                if re.search(r'\b' + re.escape(tname) + r'\b', text) is None:
+                    continue
+                print("  跨工程使用 internal 类型: %s 用了 %s 的内部类型 %s（真机报 CS0122）"
+                      % (path, owner, tname))
+                problems += 1
     return problems
 
 

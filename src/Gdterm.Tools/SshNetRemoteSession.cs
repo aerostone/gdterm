@@ -23,8 +23,12 @@ namespace Gdterm.Tools
             return client == null ? null : new SshNetRemoteSession(client);
         }
 
-        /// <summary>从 ITerminalSession.TryGetSshClient() 的 object 桥接（finding-11）。</summary>
-        public static ISshRemoteSession Wrap(object client)
+        /// <summary>
+        /// 从 ITerminalSession.TryGetSshClient() 的 object 桥接（finding-11）。
+        /// 刻意不叫 Wrap：同名重载会让编译器去加载 Wrap(SshClient) 的签名，
+        /// 从而把 Renci.SshNet 变成调用方的编译期依赖（CI 0.1.369 CS0012）。
+        /// </summary>
+        public static ISshRemoteSession FromClientObject(object client)
         {
             return Wrap(client as SshClient);
         }

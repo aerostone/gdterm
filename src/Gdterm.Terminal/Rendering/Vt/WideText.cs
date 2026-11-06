@@ -18,7 +18,7 @@ namespace Gdterm.Terminal.Rendering.Vt
     /// 组合字符（零宽）先在本地做 NFC 合成，合成不掉的直接丢弃——宁可少一个
     /// 重音符号，也不要整行文字右移（lib 会把它当 1 列）。
     /// </summary>
-    internal static class WideText
+    public static class WideText
     {
         /// <summary>占位列字符（私用区 U+E000）。对用户不可见，出文本前必须 Strip。</summary>
         public const char Filler = '\uE000';
