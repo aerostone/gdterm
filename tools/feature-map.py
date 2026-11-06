@@ -621,6 +621,8 @@ def main():
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--json", metavar="PATH")
     ap.add_argument("--only")
+    ap.add_argument("--ascii", action="store_true",
+                    help="CI 控制台是 GBK，中文会变乱码——只输出 ASCII 摘要")
     a = ap.parse_args()
 
     tree = scan()
@@ -668,10 +670,16 @@ def main():
         gaps = sum(len(d["gaps"]) for d in detail)
         debt = sum(len(d["debt"]) for d in detail)
         floor = contracts.get("baseline", {}).get("gaps", 999)
-        print("feature-map: 页面 %d；缺口 %d（基线 %d）；已知债 %d；未登记入口 %d"
-              % (len(detail), gaps, floor, debt, len(unregistered)))
+        ascii_only = a.ascii or os.environ.get("APPVEYOR") == "True"
+        if ascii_only:
+            print("feature-map: pages=%d gaps=%d baseline=%d debt=%d unregistered=%d"
+                  % (len(detail), gaps, floor, debt, len(unregistered)))
+        else:
+            print("feature-map: 页面 %d；缺口 %d（基线 %d）；已知债 %d；未登记入口 %d"
+                  % (len(detail), gaps, floor, debt, len(unregistered)))
         if gaps > floor:
-            print("feature-map: 缺口数超过基线（棘轮只降不升）")
+            print("feature-map: gap count exceeds baseline (ratchet: only decrease)" if ascii_only
+                  else "feature-map: 缺口数超过基线（棘轮只降不升）")
             ok = False
         print("FEATURE-MAP-CHECK %s" % ("ALL OK" if ok else "FAILED"))
         return 0 if ok else 1
