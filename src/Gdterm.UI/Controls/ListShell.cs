@@ -70,7 +70,9 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Top,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                WrapContents = false,
+                // 换行而非溢出：窄侧栏（360px）里过滤框+排序+按钮排不下时，
+                // 宁可工具条变两行（Dock=Top + AutoSize 会自然长高），也不能让按钮伸出父边界
+                WrapContents = true,
                 FlowDirection = FlowDirection.LeftToRight,
                 BackColor = GdtermColorTable.Background,
                 // 行间距交给子控件 Margin，容器不留白（否则窄侧栏里工具条吃掉两行）
@@ -175,6 +177,8 @@ namespace Gdterm.UI.Controls
                 Type = AntdUI.TTypeMini.Default,
                 AutoSize = true,
                 Height = fieldH,
+                // AutoSize 钮不吃库内默认 sps，Padding 必须显式给，否则文字贴边（ui-tree-check L0 会红）
+                Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3)),
                 Margin = new Padding(0, 0, DpiScale.V(this, 4), 0)
             };
             if (onClick != null) b.Click += onClick;
