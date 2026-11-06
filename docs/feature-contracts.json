@@ -1,7 +1,7 @@
 {
   "$comment": "功能大纲 × 页面契约矩阵的数据源。type 决定适用哪些能力（见 tools/feature-map.py TYPE_CAPS）。known_gaps 是已登记的技术债（棘轮：只减不增）；manual_ok 是「有实现但源码特征判不出来」的人工签字。新增页面/面板/对话框必须在这里登记，否则 feature-map --check 报「未登记入口」。",
   "baseline": {
-    "gaps": 49
+    "gaps": 0
   },
   "pages": [
     {
