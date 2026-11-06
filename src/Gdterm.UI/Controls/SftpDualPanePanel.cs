@@ -33,6 +33,45 @@ namespace Gdterm.UI.Controls
         private AntdUI.Label _connStatus;
         private AntdUI.Label _queueLabel;
         private int _activeTransfers;
+        private bool _followCwd = true;
+        private string _pendingFollow;
+
+        /// <summary>是否跟随终端当前目录（MobaXterm「follow terminal folder」）。</summary>
+        public bool FollowTerminalDirectory
+        {
+            get { return _followCwd; }
+            set { _followCwd = value; }
+        }
+
+        /// <summary>本面板连的是不是这台主机（终端的 cwd 只该跟到同主机面板）。</summary>
+        public bool MatchesHost(string host)
+        {
+            if (string.IsNullOrEmpty(host)) return false;
+            var h = _config != null ? _config.Host : null;
+            return !string.IsNullOrEmpty(h) && string.Equals(h, host, StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// 终端切目录 → 远端栏跟过去。force=true 时忽略「跟随」开关（Ctrl+Click 路径用）。
+        /// 远端还没连上时先记住，连上后落到该目录。
+        /// </summary>
+        public void FollowTo(string remotePath, bool force = false)
+        {
+            if (string.IsNullOrEmpty(remotePath)) return;
+            if (!force && !_followCwd) return;
+            var pane = _remote;
+            if (pane == null) { _pendingFollow = remotePath; return; }
+            try
+            {
+                if (string.Equals(pane.CurrentPath, remotePath, StringComparison.Ordinal)) { _pendingFollow = null; return; }
+                pane.Navigate(remotePath);
+                _pendingFollow = null;
+            }
+            catch (Exception ex)
+            {
+                try { DiagLog.Swallowed("SftpDualPanePanel.FollowTo", ex); } catch { }
+            }
+        }
 
         public SftpDualPanePanel(
             ConnectionConfig config,
@@ -115,7 +154,7 @@ namespace Gdterm.UI.Controls
             };
         }
 
-        private static void AddPane(SplitterPanel host, FilePaneControl pane, string title, Color titleColor)
+        private static void AddPane(SplitterPanel host, FilePaneControl pane, string title, Color titleColor, Control extraTop = null)
         {
             var header = new AntdUI.Label {
                 Dock = DockStyle.Top,
@@ -127,7 +166,9 @@ namespace Gdterm.UI.Controls
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = Services.FormFontPolicy.UiFont(0f, FontStyle.Bold)
             };
+            // 停靠顺序 = 添加顺序的反序：先加面板，再加附加条，最后加标题（标题最靠上）
             host.Controls.Add(pane);
+            if (extraTop != null) host.Controls.Add(extraTop);
             host.Controls.Add(header);
         }
 
@@ -155,8 +196,20 @@ namespace Gdterm.UI.Controls
                 _remote = new FilePaneControl(new SftpFilePaneProvider(_sftp, _config.Host));
                 _remote.EntriesDropped += entries => OnTransfer(entries, targetIsRemote: true); // 拖到远程=上传
                 _remote.TransferToPeerRequested += entries => OnTransfer(entries, targetIsRemote: false); // 远程→对侧=下载
-                AddPane(_split.Panel2, _remote, "远程 " + _config.Host, GdtermColorTable.Accent);
-                _remote.Navigate("/");
+                var follow = new AntdUI.Checkbox
+                {
+                    Text = "跟随终端目录",
+                    Checked = _followCwd,
+                    AutoSize = true,
+                    Dock = DockStyle.Top,
+                    Padding = new Padding(DpiScale.V(this, 6), 0, 0, 0),
+                    BackColor = GdtermColorTable.Surface,
+                    ForeColor = GdtermColorTable.Muted,
+                    Font = Services.FormFontPolicy.UiFont()
+                };
+                follow.CheckedChanged += (s2, e2) => { _followCwd = follow.Checked; };
+                AddPane(_split.Panel2, _remote, "远程 " + _config.Host, GdtermColorTable.Accent, follow);
+                _remote.Navigate(string.IsNullOrEmpty(_pendingFollow) ? "/" : _pendingFollow);
             }
             catch (Exception ex)
             {

@@ -5,6 +5,24 @@ using System.Text.RegularExpressions;
 namespace Gdterm.Core.Models
 {
     /// <summary>
+    /// 命中一条高亮规则后的动作（P1-7，Xshell 式触发器）。默认 None＝纯高亮，保持老配置行为。
+    /// </summary>
+    public enum HighlightAction
+    {
+        /// <summary>只高亮，不做动作。</summary>
+        None = 0,
+
+        /// <summary>把 ActionArgument 当命令发到当前终端（末尾自动补回车）。</summary>
+        SendCommand = 1,
+
+        /// <summary>弹通知（通知中心 + 托盘气泡），ActionArgument 是通知文本。</summary>
+        Notify = 2,
+
+        /// <summary>切到标题包含 ActionArgument 的标签。</summary>
+        SwitchTab = 3
+    }
+
+    /// <summary>
     /// 终端关键词高亮规则
     /// </summary>
     public class HighlightRule
@@ -38,6 +56,15 @@ namespace Gdterm.Core.Models
 
         /// <summary>排序</summary>
         public int SortOrder { get; set; }
+
+        /// <summary>命中后的动作（None=只高亮）。</summary>
+        public HighlightAction Action { get; set; } = HighlightAction.None;
+
+        /// <summary>动作参数：命令文本 / 通知内容 / 目标标签标题关键字。</summary>
+        public string ActionArgument { get; set; }
+
+        /// <summary>同一规则的动作冷却秒数（0=每行都触发）。默认 5 秒，避免 cat 大文件时刷屏。</summary>
+        public int ActionCooldownSeconds { get; set; } = 5;
     }
 
     /// <summary>

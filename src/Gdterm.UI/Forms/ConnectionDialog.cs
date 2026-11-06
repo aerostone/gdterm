@@ -37,6 +37,13 @@ namespace Gdterm.UI.Forms
         private AntdUI.InputNumber _tunnelPortBox;
         private AntdUI.Input _tunnelUserBox;
         private AntdUI.InputNumber _keepaliveBox; // SSH 保活秒数（0=关闭，缺省 30）
+        // 代理（P0-2：企业内网刚需，SSH.NET 原生 ProxyTypes）
+        private TableLayoutPanel _secProxy;
+        private AntdUI.Select _proxyKindCombo;
+        private AntdUI.Input _proxyHostBox;
+        private AntdUI.InputNumber _proxyPortBox;
+        private AntdUI.Input _proxyUserBox;
+        private AntdUI.Input _proxyPassBox;
 
         // RDP
         private AntdUI.Input _domainBox;
@@ -75,6 +82,7 @@ namespace Gdterm.UI.Forms
         private TableLayoutPanel _secTerm;
         private AntdUI.Select _termCombo;
         private AntdUI.Input _localeBox;
+        private AntdUI.InputNumber _scrollbackBox; // 回滚行数（100..100000，缺省 10000）
         private TableLayoutPanel _secRdp;
         private TableLayoutPanel _secSerial;
         private AntdUI.Input _notesBox;
@@ -324,6 +332,50 @@ namespace Gdterm.UI.Forms
             SectionContent(_secSsh, sshLayout);
             _advFlow.Controls.Add(_secSsh);
 
+            // --- 代理区（HTTP / SOCKS5）---
+            _secProxy = MakeSection("代理（HTTP / SOCKS）");
+            var proxyLayout = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true };
+            proxyLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
+            proxyLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            _proxyKindCombo = AddRow(proxyLayout, 0, "类型", new AntdUI.Select());
+            _proxyKindCombo.Items.Add("不使用代理");
+            _proxyKindCombo.Items.Add("HTTP");
+            _proxyKindCombo.Items.Add("SOCKS5");
+            _proxyKindCombo.Items.Add("SOCKS4");
+            _proxyKindCombo.SelectedIndex = 0;
+            _proxyKindCombo.SelectedIndexChanged += (s2, e2) =>
+            {
+                // 切类型时给惯用端口，已经手填过的不覆盖
+                try
+                {
+                    int cur = _proxyPortBox.Value.HasValue ? (int)_proxyPortBox.Value.Value : 0;
+                    bool isDefault = cur == 0 || cur == 8080 || cur == 1080;
+                    if (!isDefault) return;
+                    var kind = SelectedProxyKind();
+                    int def = ProxyConfig.DefaultPort(kind);
+                    if (def > 0) _proxyPortBox.Value = def;
+                }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnDialog.ProxyKind", exSwallowed); } catch { } }
+            };
+            _proxyHostBox = AddRow(proxyLayout, 1, "代理主机", new AntdUI.Input());
+            _proxyHostBox.PlaceholderText = "proxy.corp.local";
+            _proxyPortBox = AddRow(proxyLayout, 2, "代理端口", new AntdUI.InputNumber { Minimum = 1, Maximum = 65535, Value = 8080 });
+            _proxyUserBox = AddRow(proxyLayout, 3, "代理用户", new AntdUI.Input());
+            _proxyUserBox.PlaceholderText = "可选";
+            _proxyPassBox = AddRow(proxyLayout, 4, "代理密码", new AntdUI.Input { UseSystemPasswordChar = true });
+            var proxyHint = new AntdUI.Label
+            {
+                Text = "先连代理再握手；SOCKS5 支持用户名/密码。密码与主机一样由主密码保护落盘。",
+                AutoSize = false,
+                Dock = DockStyle.Fill,
+                Height = DpiScale.V(this, 20),
+                ForeColor = GdtermColorTable.Muted,
+                Margin = new Padding(0, DpiScale.V(this, 2), 0, 0)
+            };
+            proxyLayout.Controls.Add(proxyHint, 0, 5); proxyLayout.SetColumnSpan(proxyHint, 2);
+            SectionContent(_secProxy, proxyLayout);
+            _advFlow.Controls.Add(_secProxy);
+
             // --- 终端区（TERM / locale）---
             _secTerm = MakeSection("终端");
             var termLayout = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true };
@@ -339,6 +391,12 @@ namespace Gdterm.UI.Forms
             _termCombo.SelectedValue = "xterm-256color";
             _localeBox = AddRow(termLayout, 1, "Locale", new AntdUI.Input());
             _localeBox.PlaceholderText = "如 zh_CN.UTF-8（留空不改远端环境）";
+            // 回滚行数：之前是写死的 2000 硬顶，Xshell/MobaXterm 都是万行级（P1-5）
+            _scrollbackBox = AddRow(termLayout, 2, "回滚行数",
+                new AntdUI.InputNumber { Minimum = Gdterm.Core.Constants.TerminalLimits.MinScrollback,
+                                         Maximum = Gdterm.Core.Constants.TerminalLimits.MaxScrollback,
+                                         Increment = 1000,
+                                         Value = Gdterm.Core.Constants.TerminalLimits.DefaultScrollback });
             // 提示行同样要 Dock=Fill：AutoSize=false 且无停靠时 AntdUI.Label 宽会是 0，
             // ui-tree-check 会把"零尺寸可见叶"判失败（0.1.364 实测）。
             var termHint = new AntdUI.Label
@@ -499,6 +557,29 @@ namespace Gdterm.UI.Forms
         /// <summary>高级区小节：标题行 + 内容行（TableLayoutPanel 避免绝对定位重叠）。
         /// 宽度必须显式定死 516：AutoSize 只按内容收缩，RDP/SSH/串口三区会量出 176~472 不等宽，
         /// 导致高级区忽窄忽宽（CI 318 实测）。</summary>
+        /// <summary>UI 下拉索引 ↔ ProxyKind。</summary>
+        private ProxyKind SelectedProxyKind()
+        {
+            switch (_proxyKindCombo != null ? _proxyKindCombo.SelectedIndex : 0)
+            {
+                case 1: return ProxyKind.Http;
+                case 2: return ProxyKind.Socks5;
+                case 3: return ProxyKind.Socks4;
+                default: return ProxyKind.None;
+            }
+        }
+
+        private static int ProxyIndexOf(ProxyKind kind)
+        {
+            switch (kind)
+            {
+                case ProxyKind.Http: return 1;
+                case ProxyKind.Socks5: return 2;
+                case ProxyKind.Socks4: return 3;
+                default: return 0;
+            }
+        }
+
         private TableLayoutPanel MakeSection(string title)
         {
             var t = new TableLayoutPanel
@@ -655,6 +736,7 @@ namespace Gdterm.UI.Forms
             if (_secTerm != null) _secTerm.Visible = proto != "RDP";
             _secRdp.Visible = isRdp;
             _secSerial.Visible = isSerial;
+            if (_secProxy != null) _secProxy.Visible = isSsh;
             _domainBox.Enabled = isRdp;
             if (_advancedHost.Visible) _advancedHost.PerformLayout();
         }
@@ -735,6 +817,7 @@ namespace Gdterm.UI.Forms
                 {
                     if (!string.IsNullOrWhiteSpace(tp.TerminalType)) SelectTerm(tp.TerminalType.Trim());
                     if (!string.IsNullOrWhiteSpace(tp.Locale)) _localeBox.Text = tp.Locale;
+                    _scrollbackBox.Value = Gdterm.Core.Constants.TerminalLimits.ClampScrollback(tp.ScrollbackLines, 0);
                 }
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionDialog.LoadTerm", exSwallowed); } catch { } }
@@ -747,6 +830,16 @@ namespace Gdterm.UI.Forms
                 _tunnelHostBox.Text = hop.Host ?? "";
                 _tunnelPortBox.Value = hop.Port > 0 ? hop.Port : 22;
                 _tunnelUserBox.Text = hop.Username ?? "";
+            }
+
+            // 代理
+            if (_config.Proxy != null && _config.Proxy.Kind != ProxyKind.None)
+            {
+                _proxyKindCombo.SelectedIndex = ProxyIndexOf(_config.Proxy.Kind);
+                _proxyHostBox.Text = _config.Proxy.Host ?? "";
+                if (_config.Proxy.Port > 0) _proxyPortBox.Value = _config.Proxy.Port;
+                _proxyUserBox.Text = _config.Proxy.Username ?? "";
+                _proxyPassBox.Text = _config.Proxy.Password ?? "";
             }
 
             // Serial
@@ -815,6 +908,13 @@ namespace Gdterm.UI.Forms
             {
                 var term = (_termCombo.Text ?? "").Trim();
                 _config.Metadata["term"] = term.Length > 0 ? term : "xterm-256color";
+                // 回滚行数：写简写键（TerminalProfile.FromMetadata 优先认 terminalProfile JSON）
+                int sbLines = _scrollbackBox.Value.HasValue
+                    ? (int)_scrollbackBox.Value.Value
+                    : Gdterm.Core.Constants.TerminalLimits.DefaultScrollback;
+                _config.Metadata["scrollback"] = Gdterm.Core.Constants.TerminalLimits
+                    .ClampScrollback(Math.Max(sbLines, Gdterm.Core.Constants.TerminalLimits.MinScrollback), 0)
+                    .ToString();
                 var loc = (_localeBox.Text ?? "").Trim();
                 if (loc.Length > 0) _config.Metadata["locale"] = loc;
                 else _config.Metadata.Remove("locale");
@@ -843,6 +943,29 @@ namespace Gdterm.UI.Forms
             else
             {
                 _config.JumpChain = null;
+            }
+
+            // 代理（未启用则清空，避免残留旧值）
+            {
+                var kind = SelectedProxyKind();
+                var host = (_proxyHostBox.Text ?? "").Trim();
+                if (kind == ProxyKind.None || host.Length == 0)
+                {
+                    _config.Proxy = null;
+                }
+                else
+                {
+                    _config.Proxy = new ProxyConfig
+                    {
+                        Kind = kind,
+                        Host = host,
+                        Port = _proxyPortBox.Value.HasValue && _proxyPortBox.Value.Value > 0
+                            ? (int)_proxyPortBox.Value.Value
+                            : ProxyConfig.DefaultPort(kind),
+                        Username = string.IsNullOrWhiteSpace(_proxyUserBox.Text) ? null : _proxyUserBox.Text.Trim(),
+                        Password = string.IsNullOrEmpty(_proxyPassBox.Text) ? null : _proxyPassBox.Text
+                    };
+                }
             }
 
             // Serial

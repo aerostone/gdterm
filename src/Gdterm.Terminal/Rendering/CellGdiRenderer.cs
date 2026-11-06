@@ -51,6 +51,13 @@ namespace Gdterm.Terminal.Rendering
         private bool _disposed;
         private bool _needsRedraw;
         private readonly Timer _redrawTimer;
+        // 脏行差分：只重画变化的行，长日志刷屏时 CPU 明显降下来
+        private VtPageSnapshot _paintedPage;
+        private int _paintedTopRow = int.MinValue;
+        private bool[] _dirtyRows;
+        private bool _fullPaint = true;
+        /// <summary>上一帧实际重画的行数（诊断/测试用：1 表示只补了脏行，多行表示整屏）。</summary>
+        public int LastPaintedRowCount { get; private set; }
         private const int MinRedrawIntervalMs = 16;
         private const string FontName = "Consolas";
         private const float FontSize = 12f;
@@ -74,6 +81,12 @@ namespace Gdterm.Terminal.Rendering
 
         /// <summary>应用通过 OSC 52 请求写系统剪贴板；参数是 base64 文本。</summary>
         public event EventHandler<string> ClipboardSetRequested;
+
+        /// <summary>OSC 7：远端 shell 上报的当前目录。</summary>
+        public event EventHandler<string> DirectoryChanged;
+
+        /// <summary>OSC 9 / 777 / 99：应用请求的桌面通知。</summary>
+        public event EventHandler<TerminalNotification> NotificationReceived;
 
         /// <summary>本地 cell 尺寸变化（供 UI 通知 SSH window-change）。</summary>
         public event EventHandler TerminalResized;
@@ -102,10 +115,17 @@ namespace Gdterm.Terminal.Rendering
         {
             lock (_lock)
             {
-                if (rules == null || rules.Count == 0) { _highlight = null; return; }
-                if (_highlight == null) _highlight = new HighlightEngine();
-                _highlight.LoadRules(rules);
+                if (rules == null || rules.Count == 0) _highlight = null;
+                else
+                {
+                    if (_highlight == null) _highlight = new HighlightEngine();
+                    _highlight.LoadRules(rules);
+                }
+                // 高亮变了必须整屏重画：脏行差分比的是原始快照，看不出"同一行换了颜色"
+                ForceFullRepaint();
+                if (!_isPaused) { _needsRedraw = true; }
             }
+            if (!_isPaused) ScheduleRedraw();
         }
 
         public int Rows { get { return _engine.Rows; } }
@@ -188,6 +208,16 @@ namespace Gdterm.Terminal.Rendering
                 }
                 return null;
             };
+            _engine.DirectoryChanged += (s, path) =>
+            {
+                var h = DirectoryChanged;
+                if (h != null && !string.IsNullOrEmpty(path)) { try { h(this, path); } catch { } }
+            };
+            _engine.NotificationReceived += (s, n) =>
+            {
+                var h = NotificationReceived;
+                if (h != null && n != null) { try { h(this, n); } catch { } }
+            };
             _engine.ImageReceived += OnImageReceived;
             _engine.ImageDeleted += OnImageDeleted;
 
@@ -249,6 +279,7 @@ namespace Gdterm.Terminal.Rendering
             {
                 ClearOverlaysLocked();
                 _engine.FullReset();
+                ForceFullRepaint();
                 RefreshSnapshot(force: true);
                 if (!_isPaused)
                 {
@@ -305,6 +336,7 @@ namespace Gdterm.Terminal.Rendering
                 _hasSelection = true;
                 _selStartCol = _selEndCol = col;
                 _selStartRow = _selEndRow = row;
+                ForceFullRepaint();
                 _needsRedraw = true;
             }
             ScheduleRedraw();
@@ -321,6 +353,7 @@ namespace Gdterm.Terminal.Rendering
             {
                 _selEndCol = col;
                 _selEndRow = row;
+                ForceFullRepaint();
                 _needsRedraw = true;
             }
             ScheduleRedraw();
@@ -335,6 +368,7 @@ namespace Gdterm.Terminal.Rendering
             {
                 needRedraw = _hasSelection;
                 _hasSelection = false;
+                if (needRedraw) ForceFullRepaint();
                 _needsRedraw = needRedraw;
             }
             if (needRedraw) ScheduleRedraw();
@@ -498,9 +532,91 @@ namespace Gdterm.Terminal.Rendering
         private void RefreshSnapshot(bool force)
         {
             if (!force && !_engine.Changed) return;
-            _page = _engine.SnapshotVisible();
-            try { _pageTopRow = _engine.ViewportTopRow; } catch { _pageTopRow = 0; }
+            var page = _engine.SnapshotVisible();
+            int top;
+            try { top = _engine.ViewportTopRow; } catch { top = 0; }
+            _page = page;
+            _pageTopRow = top;
+            ComputeDirty(page, top);
             _engine.ClearChanges();
+        }
+
+        /// <summary>
+        /// 与「已画到屏幕上的那一帧」比较，标出变化行。
+        /// 宁可退化成整屏（滚动/换字号/有图形叠加/行数变化），也不能画错。
+        /// </summary>
+        private void ComputeDirty(VtPageSnapshot page, int top)
+        {
+            if (_paintedPage == null || _paintedPage.Lines == null || page == null || page.Lines == null
+                || _paintedPage.Lines.Count != page.Lines.Count
+                || _paintedTopRow != top
+                || _overlays.Count > 0)
+            {
+                ForceFullRepaint();
+                return;
+            }
+            int n = page.Lines.Count;
+            // 复用同一个数组并清零：每帧 new bool[n] 会在长日志刷屏时制造无谓 GC 压力
+            if (_dirtyRows == null || _dirtyRows.Length != n) _dirtyRows = new bool[n];
+            else Array.Clear(_dirtyRows, 0, n);
+            for (int r = 0; r < n; r++)
+            {
+                if (!LineEquals(_paintedPage.Lines[r], page.Lines[r])) _dirtyRows[r] = true;
+            }
+            // 光标所在行（新旧各一行）必须重画，否则会留下残影
+            MarkCursorRow(page, n);
+            MarkCursorRow(_paintedPage, n);
+        }
+
+        private void MarkCursorRow(VtPageSnapshot page, int rows)
+        {
+            if (page == null || !page.ShowCursor) return;
+            if (page.CursorRow < 0 || page.CursorRow >= rows) return;
+            if (_dirtyRows != null) _dirtyRows[page.CursorRow] = true;
+        }
+
+        private static bool LineEquals(VtLineSnapshot a, VtLineSnapshot b)
+        {
+            if (ReferenceEquals(a, b)) return true;
+            if (a == null || b == null) return false;
+            if (a.DoubleWidth != b.DoubleWidth) return false;
+            var sa = a.Spans;
+            var sb = b.Spans;
+            int na = sa == null ? 0 : sa.Count;
+            int nb = sb == null ? 0 : sb.Count;
+            if (na != nb) return false;
+            for (int k = 0; k < na; k++)
+            {
+                var x = sa[k];
+                var y = sb[k];
+                if (ReferenceEquals(x, y)) continue;
+                if (x == null || y == null) return false;
+                if (!string.Equals(x.Text, y.Text, StringComparison.Ordinal)) return false;
+                if (x.Foreground != y.Foreground) return false;
+                if (x.Background != y.Background) return false;
+                if (x.Bold != y.Bold || x.Underline != y.Underline || x.Hidden != y.Hidden) return false;
+            }
+            return true;
+        }
+
+        /// <summary>下一帧整屏重画（选区/字体/图形/滚动变化都走这里）。</summary>
+        private void ForceFullRepaint()
+        {
+            _paintedPage = null;
+            _paintedTopRow = int.MinValue;
+            _dirtyRows = null;
+            _fullPaint = true;
+        }
+
+        /// <summary>取屏内某一行文本（Ctrl+Click 识别链接/路径用；已去宽字符占位列）。</summary>
+        public string GetRowText(int row)
+        {
+            VtPageSnapshot page;
+            lock (_lock) page = _page;
+            if (page == null || page.Lines == null || row < 0 || row >= page.Lines.Count) return string.Empty;
+            var line = page.Lines[row];
+            int len = LineTextLength(line);
+            return len <= 0 ? string.Empty : WideText.Strip(ExtractSubstring(line, 0, len));
         }
 
         private void ScheduleRedraw()
@@ -561,7 +677,14 @@ namespace Gdterm.Terminal.Rendering
                 ec = _selEndCol; er = _selEndRow;
             }
 
-            g.Clear(_scheme.Background);
+            bool full;
+            bool[] dirty;
+            lock (_lock)
+            {
+                full = _fullPaint;
+                dirty = _dirtyRows;
+            }
+            if (full) g.Clear(_scheme.Background);
             if (page == null || page.Lines == null) return;
 
             // 选区规范化（上→下、左→右）
@@ -572,8 +695,17 @@ namespace Gdterm.Terminal.Rendering
             }
 
             float y = PadY;
+            int paintedRows = 0;
             for (int r = 0; r < page.Lines.Count; r++)
             {
+                // 脏行差分：没变化的行整段跳过（背景上一帧已经画对）
+                if (!full && (dirty == null || r >= dirty.Length || !dirty[r]))
+                {
+                    y += _charHeight;
+                    continue;
+                }
+                if (!full) ClearRowBand(g, y);
+                paintedRows++;
                 var line = page.Lines[r];
                 float x = PadX;
                 // 该行选区起止列（不含则 -1）
@@ -725,6 +857,26 @@ namespace Gdterm.Terminal.Rendering
             }
 
             DrawOverlays(g, _pageTopRow);
+
+            lock (_lock)
+            {
+                _paintedPage = page;
+                _paintedTopRow = _pageTopRow;
+                // 数组留着复用（ComputeDirty 会先清零），只在整屏重画时丢弃
+                _fullPaint = false;
+                LastPaintedRowCount = paintedRows;
+            }
+        }
+
+        /// <summary>只清单行背景（局部重画前先擦掉这一行，含左右留白）。</summary>
+        private void ClearRowBand(Graphics g, float y)
+        {
+            try
+            {
+                using (var bg = new SolidBrush(_scheme.Background))
+                    g.FillRectangle(bg, 0f, y - 1f, _canvas.Width, _charHeight + 2f);
+            }
+            catch { }
         }
 
         // ───────────────────────── 图形（sixel / kitty graphics）─────────────────────────
@@ -913,6 +1065,7 @@ namespace Gdterm.Terminal.Rendering
             if (string.IsNullOrWhiteSpace(fontName)) fontName = FontName;
             if (fontSize < 8f) fontSize = 8f;
             if (fontSize > 36f) fontSize = 36f;
+            ForceFullRepaint();   // 字体变化会改变每格像素尺寸：必须整屏重画
             // pt → px 按实际屏幕 DPI 转换，非 96 硬编码（4K/高 DPI 下字体大小才一致）
             float dpiX;
             using (var bmp = new Bitmap(1, 1))

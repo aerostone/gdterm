@@ -76,6 +76,12 @@ namespace Gdterm.UI.Controls
         public event EventHandler AppearanceSettingsRequested;
         /// <summary>用户在右键菜单点了「打开对应连接」（选中文本含 host:port，A3-lite）。</summary>
         public event EventHandler<HostPortEventArgs> HostPortOpenRequested;
+        /// <summary>OSC 7 上报的远端当前目录（SFTP 跟随、标题栏用）。</summary>
+        public event EventHandler<string> DirectoryChanged;
+        /// <summary>OSC 9 / 777 / 99 应用通知。</summary>
+        public event EventHandler<Gdterm.Terminal.Rendering.Vt.TerminalNotification> NotificationReceived;
+        /// <summary>Ctrl+Click 到远端绝对路径（由宿主决定用 SFTP 还是复制）。</summary>
+        public event EventHandler<string> RemotePathOpenRequested;
 
         /// <summary>host:port 参数。</summary>
         public sealed class HostPortEventArgs : EventArgs
@@ -189,7 +195,8 @@ namespace Gdterm.UI.Controls
             int rows = 24;
             int cols = 80;
             // 与 TerminalProfile 默认 300 对齐，低配多标签更省
-            int history = _profile?.ScrollbackLines ?? 300;
+            int history = Gdterm.Core.Constants.TerminalLimits.ClampScrollback(
+                _profile?.ScrollbackLines ?? Gdterm.Core.Constants.TerminalLimits.DefaultScrollback, rows);
 
             if (_profile != null && _profile.UseVtCell)
             {
@@ -197,6 +204,16 @@ namespace Gdterm.UI.Controls
                 _cellRenderer.SendToHost += OnCellSendToHost;
                 _cellRenderer.TerminalResized += OnCellTerminalResized;
                 _cellRenderer.ClipboardSetRequested += OnCellClipboardSetRequested;
+                _cellRenderer.DirectoryChanged += (s2, path) =>
+                {
+                    var h = DirectoryChanged;
+                    if (h != null) { try { h(this, path); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } } }
+                };
+                _cellRenderer.NotificationReceived += (s2, n) =>
+                {
+                    var h = NotificationReceived;
+                    if (h != null) { try { h(this, n); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } } }
+                };
                 _renderer = _cellRenderer;
                 try { _cellRenderer.ApplyFont(fontName, fontSize, cjkFontName); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 // TERM 名与 pty 请求保持一致（XTGETTCAP TN / XTVERSION 会回它）
@@ -753,6 +770,15 @@ namespace Gdterm.UI.Controls
 
             if (_cellRenderer == null) return;
 
+            // Ctrl+左键：打开 URL / 本地路径 / 远端路径（同 Xshell、MobaXterm）；命中则不再拖选
+            if (e.Button == MouseButtons.Left
+                && (ModifierKeys & Keys.Control) != 0
+                && (ModifierKeys & Keys.Shift) == 0)
+            {
+                try { if (TryOpenLinkAt(e.X, e.Y)) return; }
+                catch (Exception ex) { DiagLog.Swallowed("TerminalControl.CtrlClick", ex); }
+            }
+
             // 左键：若应用未启用鼠标上报，则走本地拖选（SecureCRT 习惯）
             bool mouseTracking = _cellRenderer.IsMouseTrackingEnabled;
             if (e.Button == MouseButtons.Left && !mouseTracking)
@@ -846,6 +872,7 @@ namespace Gdterm.UI.Controls
         private void OnCellMouseMove(object sender, MouseEventArgs e)
         {
             if (_cellRenderer == null) return;
+            UpdateLinkCursor(e.X, e.Y);
             // 本地拖选扩展
             if (_selecting)
             {
@@ -1579,6 +1606,8 @@ public async void Connect()
                 var light = _renderer as Gdterm.Terminal.Rendering.LightweightRenderer;
                 if (light != null) light.SetHighlightRules(rules);
                 if (_cellRenderer != null) _cellRenderer.SetHighlightRules(rules);
+                // P1-7：同一份规则里的「动作」在这里变成触发器
+                SetTriggerRules(rules);
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
         }
@@ -1592,6 +1621,7 @@ public async void Connect()
             if (_isPaused)
             {
                 try { _renderer?.Write(e.Text); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+                try { EvaluateTriggers(e.Text); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Triggers", exSwallowed); } catch { } }
                 try { _autoLogger?.LogOutput(e.Text); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 return;
             }
@@ -1608,6 +1638,8 @@ public async void Connect()
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.EnvBootstrap", exSwallowed); } catch { } }
 
             _renderer?.Write(e.Text);
+            // P1-7：触发器只看输出流，与渲染无关
+            try { EvaluateTriggers(e.Text); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Triggers", exSwallowed); } catch { } }
             try { _autoLogger?.LogOutput(e.Text); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
         }
 

@@ -55,6 +55,9 @@ Controls/TabContainerControl.cs | none | 主壳常驻（mainform dump 内含节�
 Controls/TerminalControl.cs | none | 主工作区
 Controls/TerminalControl.Keyboard.cs | manual:随宿主 | 部分类，随 TerminalControl
 Controls/TerminalControl.Profile.cs | manual:随宿主 | 部分类，随 TerminalControl
+Controls/TerminalControl.Links.cs | manual:随宿主 | 部分类：链接探测/点击（含 URL、路径、行号），随 TerminalControl
+Controls/TerminalControl.Triggers.cs | manual:随宿主 | 部分类：输出触发器（P1-7），随 TerminalControl
+Controls/RemoteMonitorPanel.cs | manual:需真实 SSH 会话 | 主机资源面板（P1-4），采样靠独立 SSH 连接，无 dump 意义
 Controls/TerminalSearchBar.cs | none | 终端内浮条
 Controls/ToolboxPanel.cs | dump:toolbox | 侧栏常驻（审计 C7-2 入 dump）
 Controls/TransferCenterPanel.cs | none | 侧栏常驻

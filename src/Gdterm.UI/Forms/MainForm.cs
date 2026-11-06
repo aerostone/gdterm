@@ -542,6 +542,7 @@ namespace Gdterm.UI.Forms
                     catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
                 },
                 ShowHealth = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateHealthPanel()),
+                ShowRemoteMonitor = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateRemoteMonitorPanel()),
                 ShowPortForward = (s, e) => _sidePanelHost?.Show(_sidePanels.CreatePortForwardPanel()),
                 ShowToolbox = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateToolboxPanel()),
                 ShowSecretScan = (s, e) => _sidePanelHost?.Show(_sidePanels.CreateSecretScanPanel()),
@@ -559,6 +560,7 @@ namespace Gdterm.UI.Forms
                 AiSettings = (s, e) => _toolsDialogs.OpenAiSettings(),
                 DangerousCmdSettings = (s, e) => _toolsDialogs.OpenDangerousCmdSettings(),
                 ShowHotkeys = (s, e) => _toolsDialogs.ShowHotkeysHelp(),
+                ShowUpdateCheck = (s, e) => _toolsDialogs.OpenUpdateCheck(),
                 ShowLogsFolder = (s, e) => { try { _toolsDialogs.ShowLogsFolder(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.LogsFolder", ex); } },
                 DiagnosticsPackage = (s, e) => { try { _toolsDialogs.ShowDiagnosticsPackage(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.Diagnostics", ex); } },
                 ToggleDebugMode = (s, e) => ToggleDebugMode(),
@@ -1106,6 +1108,7 @@ namespace Gdterm.UI.Forms
                 catch (Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.Palette", exSwallowed); } catch { } }
             });
             Add("健康监控", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateHealthPanel()));
+            Add("主机资源", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateRemoteMonitorPanel()), null, "cpu 内存 磁盘 负载 网络 资源 monitor");
             Add("端口转发", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreatePortForwardPanel()));
             Add("运维工具箱", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateToolboxPanel()));
             Add("敏感信息扫描", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateSecretScanPanel()), null, "secret scan");

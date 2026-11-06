@@ -14,9 +14,11 @@ namespace Gdterm.UI.Controls
         private static void NormalizeProfile(TerminalProfile profile)
         {
             if (profile == null) return;
-            // 低配默认：scrollback 300；硬顶 2000。不因内存自动切 Lightweight。
-            if (profile.ScrollbackLines > 2000) profile.ScrollbackLines = 2000;
-            if (profile.ScrollbackLines < 100) profile.ScrollbackLines = 100;
+            // 收敛到 TerminalLimits 一处口径（P1-5）：之前这里硬顶 2000，跟引擎层 100k 上限打架。
+            // 设置界面给人看的下限仍是 MinScrollback，否则 0/负数会被引擎当成「不留历史」。
+            if (profile.ScrollbackLines < Gdterm.Core.Constants.TerminalLimits.MinScrollback)
+                profile.ScrollbackLines = Gdterm.Core.Constants.TerminalLimits.MinScrollback;
+            profile.ScrollbackLines = Gdterm.Core.Constants.TerminalLimits.ClampScrollback(profile.ScrollbackLines, 0);
             if (string.IsNullOrWhiteSpace(profile.TerminalType))
                 profile.TerminalType = "xterm-256color";
             if (string.IsNullOrWhiteSpace(profile.Renderer))

@@ -77,6 +77,8 @@
     <Compile Include="AutoReconnectWatchdog.cs" />
     <Compile Include="LocalTerminalSession.cs" />
     <Compile Include="TerminalReadyDetector.cs" />
+    <Compile Include="Monitoring\RemoteStatsParser.cs" />
+    <Compile Include="Monitoring\RemoteStatsSampler.cs" />
     <Compile Include="MultiChannelManager.cs" />
     <Compile Include="MacroRecorder.cs" />
     <Compile Include="MultiChannelRecorder.cs" />
@@ -88,6 +90,7 @@
     <Compile Include="Rendering\Vt\GraphicsDecoder.cs" />
     <Compile Include="Rendering\Vt\KittyGraphicsParser.cs" />
     <Compile Include="Rendering\Vt\WideText.cs" />
+    <Compile Include="Rendering\Vt\TerminalNotification.cs" />
     <Compile Include="Interop\ConPTY.cs" />
     <Compile Include="Interop\WinPty.cs" />
     <Compile Include="Transfer\ZmodemHandler.cs" />

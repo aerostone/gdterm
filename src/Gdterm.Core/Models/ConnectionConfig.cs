@@ -58,6 +58,9 @@ namespace Gdterm.Core.Models
         /// </summary>
         public TunnelConfig Tunnel { get; set; }
 
+        /// <summary>连接前先过的 HTTP/SOCKS 代理；null 或 Kind=None 表示直连。</summary>
+        public ProxyConfig Proxy { get; set; }
+
         /// <summary>
         /// 关联的 KeePass 条目 UUID。null 表示不关联
         /// </summary>

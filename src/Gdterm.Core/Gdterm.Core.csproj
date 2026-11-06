@@ -35,9 +35,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Constants\DefaultPorts.cs" />
+    <Compile Include="Constants\TerminalLimits.cs" />
     <Compile Include="Enums\ProtocolType.cs" />
     <Compile Include="Enums\TunnelType.cs" />
     <Compile Include="Models\ConnectionConfig.cs" />
+    <Compile Include="Models\ProxyConfig.cs" />
     <Compile Include="Models\CredentialPayload.cs" />
     <Compile Include="Models\CommandHistoryEntry.cs" />
     <Compile Include="Models\DangerousCommandConfig.cs" />

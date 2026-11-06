@@ -54,6 +54,7 @@ namespace Gdterm.UI.Services
             public EventHandler ShowAiChat { get; set; }
             public EventHandler ShowCmdTemplates { get; set; }
             public EventHandler ShowHealth { get; set; }
+            public EventHandler ShowRemoteMonitor { get; set; }
             public EventHandler ShowPortForward { get; set; }
             public EventHandler ShowToolbox { get; set; }
             public EventHandler ShowSecretScan { get; set; }
@@ -67,6 +68,7 @@ namespace Gdterm.UI.Services
             public EventHandler AiSettings { get; set; }
             public EventHandler DangerousCmdSettings { get; set; }
             public EventHandler ShowHotkeys { get; set; }
+            public EventHandler ShowUpdateCheck { get; set; }
             public EventHandler About { get; set; }
             public EventHandler AppearanceSettings { get; set; }
             public EventHandler SshKeyManager { get; set; }
@@ -186,6 +188,7 @@ namespace Gdterm.UI.Services
             termMenu.DropDownItems.Add(Mk("命令模板库", cb.ShowCmdTemplates, "template"));
             termMenu.DropDownItems.Add(new ToolStripSeparator());
             termMenu.DropDownItems.Add(Mk("健康监控", cb.ShowHealth, "health"));
+            termMenu.DropDownItems.Add(Mk("主机资源（远端 CPU/内存）", cb.ShowRemoteMonitor, "cpu"));
             termMenu.DropDownItems.Add(Mk("端口转发", cb.ShowPortForward, "forward"));
             menu.Items.Add(termMenu);
 
@@ -223,6 +226,7 @@ namespace Gdterm.UI.Services
             // ===== 帮助 =====
             var helpMenu = new ToolStripMenuItem("帮助(&H)");
             helpMenu.DropDownItems.Add(Mk("快捷键列表", cb.ShowHotkeys, "helpq"));
+            helpMenu.DropDownItems.Add(Mk("检查更新…", cb.ShowUpdateCheck, "update"));
             helpMenu.DropDownItems.Add(Mk("打开日志文件夹", cb.ShowLogsFolder, "logs"));
             if (cb.DiagnosticsPackage != null)
                 helpMenu.DropDownItems.Add(Mk("导出诊断包…", cb.DiagnosticsPackage, "export"));

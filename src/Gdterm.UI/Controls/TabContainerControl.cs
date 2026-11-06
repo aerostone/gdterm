@@ -40,6 +40,9 @@ namespace Gdterm.UI.Controls
         private readonly TabChromePainter _chrome;
         private readonly TabSelectionCoordinator _selection;
         private readonly Dictionary<TabPage, TabSessionState> _sessions = new Dictionary<TabPage, TabSessionState>();
+        /// <summary>当前打开着的 SFTP 双栏面板（终端切目录时按主机名找它们跟随）。</summary>
+        private readonly System.Collections.Generic.List<SftpDualPanePanel> _sftpPanels =
+            new System.Collections.Generic.List<SftpDualPanePanel>();
         private TabControl _tabControl;
         private ContextMenuStrip _tabContextMenu;
 
@@ -58,6 +61,9 @@ namespace Gdterm.UI.Controls
         public event EventHandler<TerminalControl.HostPortEventArgs> HostPortOpenRequested;
         /// <summary>终端尺寸/编码变化转发（由 TerminalControl.TerminalInfoChanged 转出）。</summary>
         public event EventHandler<Size> TerminalInfoChanged;
+
+        /// <summary>终端上报的应用通知（OSC 9/777/99），供托盘气泡/通知中心使用。</summary>
+        public event EventHandler<Gdterm.Terminal.Rendering.Vt.TerminalNotification> NotificationReceived;
 
         /// <summary>标签数量变化（落地页显示/隐藏）。</summary>
         public event EventHandler TabCountChanged;
@@ -271,6 +277,8 @@ namespace Gdterm.UI.Controls
                 return;
             }
             _sessions[opened.Page] = opened.Session;
+            var panel = opened.Session != null ? opened.Session.Control as SftpDualPanePanel : null;
+            if (panel != null) _sftpPanels.Add(panel);
             _tabControl.TabPages.Add(opened.Page);
             RaiseTabCountChanged();
             _tabControl.SelectedTab = opened.Page;
@@ -320,6 +328,30 @@ namespace Gdterm.UI.Controls
                 terminalControl.ExportRequested += (s, e) => ExportRequested?.Invoke(terminalControl, e);
                 terminalControl.AppearanceSettingsRequested += (s, e) => AppearanceSettingsRequested?.Invoke(terminalControl, e);
                 terminalControl.HostPortOpenRequested += (s, e) => HostPortOpenRequested?.Invoke(terminalControl, e);
+                // P0-1：OSC 7 上报的 cwd → 同主机 SFTP 双栏跟随
+                terminalControl.DirectoryChanged += (s, path) => FollowSftpTo(terminalControl, path, false);
+                // P1-6：Ctrl+Click 远端路径 → 有 SFTP 就跳过去，没有就开一个
+                terminalControl.RemotePathOpenRequested += (s, path) => HandleRemotePathOpen(terminalControl, path);
+                // P1-7：触发器要求切标签（标题包含关键字就切过去）
+                terminalControl.TriggerTabSwitchRequested += (s, keyword) => ActivateTabByTitle(keyword);
+                // P0-3：OSC 9/777/99 → 通知中心 + 托盘气泡
+                terminalControl.NotificationReceived += (s, n) =>
+                {
+                    try
+                    {
+                        string title = string.IsNullOrEmpty(n.Title) ? "NOTIFY" : n.Title;
+                        NotificationCenterPanel.Push(title, n.Body);
+                        // 气泡：error/warn 更显眼（pushToCenter=false，避免通知中心重复记两条）
+                        bool urgent = string.Equals(n.Urgency, "error", StringComparison.OrdinalIgnoreCase)
+                                   || string.Equals(n.Urgency, "warn", StringComparison.OrdinalIgnoreCase);
+                        var lvl = string.Equals(n.Urgency, "error", StringComparison.OrdinalIgnoreCase)
+                            ? ToastNotifier.Level.Error
+                            : (urgent ? ToastNotifier.Level.Warning : ToastNotifier.Level.Info);
+                        ToastNotifier.Show(n.ToString(), lvl, urgent ? 5000 : 3500, pushToCenter: false);
+                    }
+                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
+                    try { NotificationReceived?.Invoke(terminalControl, n); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
+                };
                 // 终端尺寸/编码变化转发到状态栏
                 terminalControl.TerminalInfoChanged += (s, size) =>
                 {
@@ -332,6 +364,66 @@ namespace Gdterm.UI.Controls
                     TerminalInfoChanged?.Invoke(terminalControl, info);
                 }
                 catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
+            }
+        }
+
+        /// <summary>终端切目录 → 同主机 SFTP 双栏跟过去（MobaXterm「follow terminal folder」）。</summary>
+        private void FollowSftpTo(TerminalControl source, string path, bool force)
+        {
+            if (source == null || string.IsNullOrEmpty(path)) return;
+            string host = null;
+            try { host = source.Config != null ? source.Config.Host : null; } catch { }
+            if (string.IsNullOrEmpty(host)) return;
+            PruneSftpPanels();
+            for (int i = 0; i < _sftpPanels.Count; i++)
+            {
+                var panel = _sftpPanels[i];
+                try
+                {
+                    if (panel == null || !panel.MatchesHost(host)) continue;
+                    panel.FollowTo(path, force);
+                }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainer.FollowSftp", exSwallowed); } catch { } }
+            }
+        }
+
+        private void PruneSftpPanels()
+        {
+            for (int i = _sftpPanels.Count - 1; i >= 0; i--)
+            {
+                var panel = _sftpPanels[i];
+                if (panel == null || panel.IsDisposed) _sftpPanels.RemoveAt(i);
+            }
+        }
+
+        /// <summary>Ctrl+Click 到远端路径：已有同主机 SFTP 就跳，否则新开一个 SFTP 标签并落位。</summary>
+        private void HandleRemotePathOpen(TerminalControl source, string path)
+        {
+            if (source == null || string.IsNullOrEmpty(path)) return;
+            PruneSftpPanels();
+            string host = null;
+            try { host = source.Config != null ? source.Config.Host : null; } catch { }
+            bool any = false;
+            for (int i = 0; i < _sftpPanels.Count; i++)
+            {
+                var panel = _sftpPanels[i];
+                if (panel == null || !panel.MatchesHost(host)) continue;
+                any = true;
+                try { panel.FollowTo(path, true); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainer.RemotePathOpen", exSwallowed); } catch { } }
+            }
+            if (!any)
+            {
+                var cfg = source.Config;
+                if (cfg == null) return;
+                OpenSftpBrowser(cfg);
+                PruneSftpPanels();
+                // 刚建的 panel 会在连上后落到 _pendingFollow（FollowTo 先记下路径）
+                for (int i = 0; i < _sftpPanels.Count; i++)
+                {
+                    var panel = _sftpPanels[i];
+                    if (panel == null || !panel.MatchesHost(host)) continue;
+                    try { panel.FollowTo(path, true); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainer.RemotePathOpen", exSwallowed); } catch { } }
+                }
             }
         }
 
@@ -524,6 +616,25 @@ namespace Gdterm.UI.Controls
         }
 
         /// <summary>直达第 index 个标签（0 基，越界忽略）。</summary>
+        /// <summary>按标题关键字切标签（触发器用）。找不到就忽略——不弹窗打扰。</summary>
+        public void ActivateTabByTitle(string keyword)
+        {
+            if (string.IsNullOrWhiteSpace(keyword) || _tabControl == null) return;
+            try
+            {
+                foreach (TabPage tab in _tabControl.TabPages)
+                {
+                    if (tab == null) continue;
+                    if (tab.Text != null && tab.Text.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        _tabControl.SelectedTab = tab;
+                        return;
+                    }
+                }
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl.ActivateTabByTitle", exSwallowed); } catch { } }
+        }
+
         public void ActivateTabIndex(int index)
         {
             if (index < 0 || index >= _tabControl.TabCount) return;

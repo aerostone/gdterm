@@ -14,6 +14,9 @@ namespace Gdterm.Connections
         private readonly string _filePath;
         private readonly object _lock = new object();
 
+        /// <summary>双引号字面量（手写 JSON 用，避免格式串里堆反斜杠）。</summary>
+        private static readonly string DQ = ((char)34).ToString();
+
         public HighlightStore(string filePath)
         {
             _filePath = filePath;
@@ -72,7 +75,11 @@ namespace Gdterm.Connections
                 sb.AppendFormat("      \"backgroundColor\": \"{0}\",\n", r.BackgroundColor ?? "");
                 sb.AppendFormat("      \"bold\": {0},\n", r.Bold ? "true" : "false");
                 sb.AppendFormat("      \"enabled\": {0},\n", r.Enabled ? "true" : "false");
-                sb.AppendFormat("      \"sortOrder\": {0}\n", r.SortOrder);
+                sb.AppendFormat("      \"sortOrder\": {0},\n", r.SortOrder);
+                // P1-7 触发器：动作 / 参数 / 冷却（0=只高亮，老配置读出来就是 None）
+                sb.AppendFormat("      \"action\": {0},\n", (int)r.Action);
+                sb.Append("      ").Append(DQ).Append("actionArgument").Append(DQ).Append(": ").Append(DQ).Append(Escape(r.ActionArgument)).Append(DQ).Append(",").Append(Environment.NewLine);
+                sb.AppendFormat("      \"actionCooldownSeconds\": {0}\n", r.ActionCooldownSeconds);
                 sb.AppendFormat("    }}{0}\n", i < config.Rules.Count - 1 ? "," : "");
             }
             sb.AppendLine("  ]");
@@ -109,7 +116,13 @@ namespace Gdterm.Connections
                     BackgroundColor = ExtractString(obj, "backgroundColor"),
                     Bold = obj.Contains("\"bold\": true") || obj.Contains("\"bold\":true"),
                     Enabled = obj.Contains("\"enabled\": true") || obj.Contains("\"enabled\":true"),
-                    SortOrder = ExtractInt(obj, "sortOrder")
+                    SortOrder = ExtractInt(obj, "sortOrder"),
+                    Action = (HighlightAction)ExtractInt(obj, "action"),
+                    ActionArgument = ExtractString(obj, "actionArgument"),
+                    // 老文件没有这个键：缺省按 5 秒冷却，否则 cat 大文件会把同一动作刷满
+                    ActionCooldownSeconds = obj.Contains("\"actionCooldownSeconds\"")
+                        ? ExtractInt(obj, "actionCooldownSeconds")
+                        : 5
                 });
                 pos = objEnd + 1;
             }

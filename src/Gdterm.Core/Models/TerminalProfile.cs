@@ -179,6 +179,14 @@ namespace Gdterm.Core.Models
             if (metadata.ContainsKey("renderer") && !string.IsNullOrWhiteSpace(metadata["renderer"]))
                 profile.Renderer = metadata["renderer"].Trim();
 
+            // 简写：Metadata["scrollback"]=10000（连接对话框里直接填，不必写整个 profile JSON）
+            if (metadata.ContainsKey("scrollback") && !string.IsNullOrWhiteSpace(metadata["scrollback"]))
+            {
+                int sb;
+                if (int.TryParse(metadata["scrollback"].Trim(), out sb) && sb > 0)
+                    profile.ScrollbackLines = sb;
+            }
+
             return profile;
         }
 

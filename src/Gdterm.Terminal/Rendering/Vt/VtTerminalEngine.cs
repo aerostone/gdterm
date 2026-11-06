@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Text;
+using Gdterm.Core.Constants;
 using VtNetCore.VirtualTerminal;
 using VtNetCore.VirtualTerminal.Layout;
 using VtNetCore.VirtualTerminal.Model;
@@ -36,6 +37,12 @@ namespace Gdterm.Terminal.Rendering.Vt
         /// <summary>应用请求写系统剪贴板（OSC 52），参数是 base64 文本。</summary>
         public event EventHandler<string> ClipboardSetRequested;
 
+        /// <summary>远端工作目录变化（OSC 7 的 file:// URI）。SFTP 跟随终端目录靠它。</summary>
+        public event EventHandler<string> DirectoryChanged;
+
+        /// <summary>应用请求弹桌面通知（OSC 9 / 777 / 99）。</summary>
+        public event EventHandler<TerminalNotification> NotificationReceived;
+
         /// <summary>解出一张图（sixel / kitty graphics），渲染器负责画。</summary>
         public event EventHandler<TerminalImage> ImageReceived;
 
@@ -45,16 +52,14 @@ namespace Gdterm.Terminal.Rendering.Vt
         public int Columns { get; private set; }
         public int Rows { get; private set; }
 
-        /// <summary>scrollback 硬顶（含可见行）。默认 500，对齐低内存门禁。</summary>
+        /// <summary>
+        /// scrollback 行数（含可见行）。上限从固定的 2000 放到 TerminalLimits.MaxScrollback（100k），
+        /// 默认 10000——排查长日志时 2000 行确实不够。
+        /// </summary>
         public int MaximumHistoryLines
         {
             get { return _controller.MaximumHistoryLines; }
-            set
-            {
-                if (value < Rows) value = Rows;
-                if (value > 2000) value = 2000;
-                _controller.MaximumHistoryLines = value;
-            }
+            set { _controller.MaximumHistoryLines = TerminalLimits.ClampScrollback(value, Rows); }
         }
 
         public bool Changed
@@ -179,7 +184,7 @@ namespace Gdterm.Terminal.Rendering.Vt
             Rows = rows;
 
             _controller = new VirtualTerminalController();
-            _controller.MaximumHistoryLines = Math.Min(Math.Max(maxHistory, rows), 2000);
+            _controller.MaximumHistoryLines = TerminalLimits.ClampScrollback(maxHistory, rows);
             _controller.ResizeView(columns, rows);
             _controller.SendData += OnControllerSendData;
 
@@ -190,6 +195,18 @@ namespace Gdterm.Terminal.Rendering.Vt
             {
                 var h = ClipboardSetRequested;
                 if (h != null) { try { h(this, b64); } catch { } }
+            };
+
+            _pre.CwdSink = path =>
+            {
+                var h = DirectoryChanged;
+                if (h != null) { try { h(this, path); } catch { } }
+            };
+
+            _pre.NotificationSink = n =>
+            {
+                var h = NotificationReceived;
+                if (h != null && n != null) { try { h(this, n); } catch { } }
             };
 
             _pre.ImageSink = img =>

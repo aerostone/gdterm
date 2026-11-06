@@ -45,6 +45,7 @@
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Net.Http" />
     <Reference Include="AntdUI">
       <HintPath>..\..\lib\AntdUI.dll</HintPath>
       <Private>True</Private>
@@ -151,6 +152,7 @@
     <Compile Include="Controls\TerminalSearchBar.cs" />
     <Compile Include="Controls\PortForwardPanel.cs" />
     <Compile Include="Controls\HealthMonitorPanel.cs" />
+    <Compile Include="Controls\RemoteMonitorPanel.cs" />
     <Compile Include="Controls\BatchCommandPanel.cs" />
     <Compile Include="Controls\MacroPanel.cs" />
     <Compile Include="Controls\AiChatPanel.cs">
@@ -168,6 +170,8 @@
     <Compile Include="Controls\FilePaneControl.cs" />
     <Compile Include="Controls\SessionBookmarksPanel.cs" />
     <Compile Include="Controls\TerminalControl.cs" />
+    <Compile Include="Controls\TerminalControl.Links.cs" />
+    <Compile Include="Controls\TerminalControl.Triggers.cs" />
     <Compile Include="Controls\TerminalControl.Keyboard.cs" />
     <Compile Include="Controls\TerminalControl.Profile.cs" />
     <Compile Include="DebugConfig.cs" />
@@ -212,6 +216,7 @@
     <Compile Include="Services\TabActiveSessionQuery.cs" />
     <Compile Include="Services\GlobalHotkeyController.cs" />
     <Compile Include="Services\ToolsDialogsLauncher.cs" />
+    <Compile Include="Services\UpdateChecker.cs" />
     <Compile Include="Services\SidePanelHost.cs" />
     <Compile Include="Services\ViewModeController.cs" />
     <Compile Include="Services\MainFormMenuBuilder.cs" />

@@ -107,6 +107,18 @@ namespace Gdterm.Terminal.Rendering.Vt
         /// <summary>OSC 52 写入请求（base64 文本），由 UI 落到系统剪贴板。</summary>
         public Action<string> ClipboardWrite;
 
+        /// <summary>
+        /// OSC 7：shell 上报的当前工作目录（已百分号解码的绝对路径）。
+        /// SFTP 面板「跟随终端目录」靠它；不处理的话 lib 会把这串当正文或直接丢掉。
+        /// </summary>
+        public Action<string> CwdSink;
+
+        /// <summary>OSC 9 / 777 / 99：应用请求的桌面通知。</summary>
+        public Action<TerminalNotification> NotificationSink;
+
+        /// <summary>kitty OSC 99 分片通知的标题暂存（d=0 先来、d=1 补正文）。</summary>
+        private string _kittyNotifyTitle;
+
         /// <summary>解码成功的图形（sixel / kitty graphics），由渲染器决定画在哪。</summary>
         public Action<TerminalImage> ImageSink;
 
@@ -245,6 +257,12 @@ namespace Gdterm.Terminal.Rendering.Vt
                                 }
                             }
                         }
+                        i = end + termLen;
+                        continue;
+                    }
+                    // OSC 7 / 9 / 99 / 777：路径和通知正文都是 UTF-8，库里按 ASCII 解会乱码 -> 自己解自己吞
+                    if (TryHandleUtf8Osc(src, srcOffset + i + 2, end - (i + 2)))
+                    {
                         i = end + termLen;
                         continue;
                     }
@@ -572,6 +590,203 @@ namespace Gdterm.Terminal.Rendering.Vt
                 default:
                     return false;
             }
+        }
+
+        /// <summary>
+        /// OSC 7（cwd）/ 9 / 777 / 99（桌面通知）—— 统一走 UTF-8 自解。
+        /// 返回 true 表示已消费（不再透传给库）。
+        /// </summary>
+        private bool TryHandleUtf8Osc(byte[] src, int off, int len)
+        {
+            if (len < 2) return false;
+            int semi = -1;
+            int digits = 0;
+            for (int k = 0; k < len && k < 6; k++)
+            {
+                byte c = src[off + k];
+                if (c == (byte)';') { semi = k; break; }
+                if (c < (byte)'0' || c > (byte)'9') return false;
+                digits++;
+            }
+            if (semi < 0 || digits == 0) return false;
+            int code = 0;
+            for (int k = 0; k < semi; k++) code = code * 10 + (src[off + k] - (byte)'0');
+            if (code != 7 && code != 9 && code != 99 && code != 777) return false;
+
+            string rest;
+            try { rest = Encoding.UTF8.GetString(src, off + semi + 1, len - semi - 1); }
+            catch { return true; }
+
+            if (code == 7)
+            {
+                string path = ParseOsc7Path(rest);
+                if (!string.IsNullOrEmpty(path))
+                {
+                    var sink = CwdSink;
+                    if (sink != null) { try { sink(path); } catch { } }
+                }
+                return true;
+            }
+
+            if (code == 9)
+            {
+                // OSC 9;<message>（iTerm2 简写，无标题）
+                RaiseNotification(null, (rest ?? "").Trim(), null);
+                return true;
+            }
+
+            if (code == 777)
+            {
+                // OSC 777;notify;<title>;<body>（urxvt）；其它 777 子类型（window-title 等）直接吞掉
+                var parts = (rest ?? "").Split(new[] { ';' }, 3);
+                if (parts.Length >= 2 && string.Equals(parts[0], "notify", StringComparison.Ordinal))
+                    RaiseNotification(parts[1], parts.Length >= 3 ? parts[2] : null, null);
+                return true;
+            }
+
+            // OSC 99（kitty 通知协议）：metadata;payload，metadata 内以 ':' 分隔 key=value；
+            // d=0 标题 / d=1 正文-补全 / d=2 正文-独立；u=0/1/2 紧急度。
+            {
+                string head = rest ?? "";
+                string payload = "";
+                int sc = head.IndexOf(';');
+                if (sc >= 0) { payload = head.Substring(sc + 1); head = head.Substring(0, sc); }
+
+                // 容错：有实现把 metadata 之间也用 ';' 分隔（u=2;d=1;正文）。把 payload 开头
+                // 仍长得像 metadata 的段逐段剥回 head，最多 4 段，避免把正文吃掉。
+                for (int guard = 0; guard < 4; guard++)
+                {
+                    int ns = payload.IndexOf(';');
+                    if (ns < 0) break;
+                    string cand = payload.Substring(0, ns);
+                    if (!LooksLikeKittyMeta(cand)) break;
+                    head = head.Length == 0 ? cand : head + ":" + cand;
+                    payload = payload.Substring(ns + 1);
+                }
+
+                head = ":" + head + ":";
+                if (head.IndexOf(":p=?:", StringComparison.Ordinal) >= 0
+                    || head.IndexOf(":p=close:", StringComparison.Ordinal) >= 0) return true;   // 能力查询/关闭：静默
+
+                string urgency = KittyMetaValue(head, "u");
+                string done = KittyMetaValue(head, "d");
+                if (done == "1" || done == "2")
+                {
+                    string title = _kittyNotifyTitle;
+                    _kittyNotifyTitle = null;
+                    RaiseNotification(title, payload, urgency);
+                }
+                else
+                {
+                    _kittyNotifyTitle = payload;   // d=0（或缺省，按标题算）
+                }
+                return true;
+            }
+        }
+
+        /// <summary>OSC 99 metadata 的 key 白名单——用于把被 ';' 分隔的 metadata 段从 payload 里剥回。</summary>
+        private static bool LooksLikeKittyMeta(string segment)
+        {
+            if (string.IsNullOrEmpty(segment) || segment.Length < 3) return false;
+            char k = segment[0];
+            if ("diupoaft".IndexOf(k) < 0) return false;
+            if (segment[1] != '=') return false;
+            for (int i = 2; i < segment.Length; i++)
+            {
+                char c = segment[i];
+                if (char.IsLetterOrDigit(c) || c == '-' || c == '_' || c == '.' || c == '/') continue;
+                return false;
+            }
+            return true;
+        }
+
+        /// <summary>紧急度归一：kitty 的 u=0/1/2（低/普通/严重）映射到 UI 的三档。</summary>
+        private static string NormalizeUrgency(string urgency)
+        {
+            if (string.IsNullOrEmpty(urgency)) return "info";
+            switch (urgency.Trim())
+            {
+                case "2": return "error";    // kitty critical
+                case "1": return "warn";     // kitty normal
+                case "0": return "info";     // kitty low
+                default: return urgency;
+            }
+        }
+
+        /// <summary>取 ":key=value:" 形式里的值。</summary>
+        private static string KittyMetaValue(string headWithColons, string key)
+        {
+            string token = ":" + key + "=";
+            int i = headWithColons.IndexOf(token, StringComparison.Ordinal);
+            if (i < 0) return null;
+            int start = i + token.Length;
+            int end = headWithColons.IndexOf(':', start);
+            if (end < 0) return null;
+            return headWithColons.Substring(start, end - start);
+        }
+
+        /// <summary>OSC 7 的路径部分：file://host/path 或裸路径，百分号解码后返回绝对路径。</summary>
+        private static string ParseOsc7Path(string rest)
+        {
+            if (string.IsNullOrEmpty(rest)) return null;
+            string path = rest;
+            int scheme = rest.IndexOf("://", StringComparison.Ordinal);
+            if (scheme >= 0)
+            {
+                int slash = rest.IndexOf('/', scheme + 3);
+                if (slash < 0) return null;
+                path = rest.Substring(slash);
+            }
+            path = PercentDecode(path);
+            if (string.IsNullOrEmpty(path)) return null;
+            if (path[0] != '/' && path[0] != '~') return null;   // 非绝对路径不认（防误导航）
+            if (path.Length > 1 && path[path.Length - 1] == '/') path = path.Substring(0, path.Length - 1);
+            return path;
+        }
+
+        /// <summary>%XX 解码（OSC 7 的路径按 RFC 3986 转义，中文目录常见）。</summary>
+        private static string PercentDecode(string s)
+        {
+            if (s == null) return null;
+            if (s.IndexOf('%') < 0) return s;
+            var bytes = new List<byte>(s.Length);
+            for (int k = 0; k < s.Length; k++)
+            {
+                if (s[k] == '%' && k + 2 < s.Length && IsHex(s[k + 1]) && IsHex(s[k + 2]))
+                {
+                    bytes.Add((byte)(HexVal(s[k + 1]) * 16 + HexVal(s[k + 2])));
+                    k += 2;
+                    continue;
+                }
+                bytes.AddRange(Encoding.UTF8.GetBytes(s[k].ToString()));
+            }
+            try { return Encoding.UTF8.GetString(bytes.ToArray()); } catch { return s; }
+        }
+
+        private static bool IsHex(char c)
+        {
+            return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+        }
+
+        private static int HexVal(char c)
+        {
+            if (c >= '0' && c <= '9') return c - '0';
+            if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+            return c - 'A' + 10;
+        }
+
+        private void RaiseNotification(string title, string body, string urgency)
+        {
+            if (string.IsNullOrEmpty(title) && string.IsNullOrEmpty(body)) return;
+            var sink = NotificationSink;
+            if (sink == null) return;
+            var n = new TerminalNotification
+            {
+                Title = title ?? "",
+                Body = body ?? "",
+                Urgency = NormalizeUrgency(urgency)
+            };
+            try { sink(n); } catch { }
         }
 
         /// <summary>xterm 里跟调色板/动态颜色有关的 OSC 码。</summary>

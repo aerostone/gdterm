@@ -51,12 +51,15 @@ namespace Gdterm.UI.Diagnostics
             Show(message, Level.Error, durationMs);
         }
 
-        public static void Show(string message, Level level = Level.Info, int durationMs = 3500)
+        public static void Show(string message, Level level = Level.Info, int durationMs = 3500, bool pushToCenter = true)
         {
             if (string.IsNullOrWhiteSpace(message)) return;
             // A4：Toast 级事件统一留痕通知中心（任何 Toast 都可在通知中心回看）
-            try { NotificationCenterPanel.Push(level.ToString().ToUpperInvariant(), message); }
-            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ToastNotifier.Show", exSwallowed); } catch { } }
+            if (pushToCenter)
+            {
+                try { NotificationCenterPanel.Push(level.ToString().ToUpperInvariant(), message); }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ToastNotifier.Show", exSwallowed); } catch { } }
+            }
             try
             {
                 var owner = _owner;

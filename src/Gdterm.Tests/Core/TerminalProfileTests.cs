@@ -13,6 +13,7 @@ namespace Gdterm.Tests.Core
             LightweightFromMetadata();
             RendererInJsonRoundTrip();
             ScrollbackHardCapIsProfileSide();
+            ScrollbackShorthandAndLimits();
             TermShorthandOverridesJson();
         }
 
@@ -76,10 +77,40 @@ namespace Gdterm.Tests.Core
 
         private static void ScrollbackHardCapIsProfileSide()
         {
-            // 低配默认 300；UI NormalizeProfile 夹到 100..2000
+            // 低配默认 300；UI NormalizeProfile 抬到 MinScrollback、上界交给 TerminalLimits.MaxScrollback(100k)
             var p = new TerminalProfile();
             Assert.Equal(300, p.ScrollbackLines, "default scrollback 300 for low-memory");
             Assert.True(p.UseVtCell, "default remains VtCell (not auto Lightweight)");
+        }
+
+        /// <summary>
+        /// Metadata["scrollback"] 简写 + 边界收敛（P1-5）：连接属性里填的行数必须能覆盖
+        /// profile JSON 的 300/2000，且 0 / 负数 / 超限都被夹到合法值。
+        /// </summary>
+        private static void ScrollbackShorthandAndLimits()
+        {
+            var md = new Dictionary<string, string>
+            {
+                { "terminalProfile", "{\"scrollbackLines\":2000}" },
+                { "scrollback", "50000" }
+            };
+            var p = TerminalProfile.FromMetadata(md);
+            Assert.Equal(50000, p.ScrollbackLines, "shorthand scrollback wins over json");
+
+            var json = TerminalProfile.FromMetadata(new Dictionary<string, string>
+            {
+                { "terminalProfile", "{\"scrollbackLines\":8000}" }
+            });
+            Assert.Equal(8000, json.ScrollbackLines, "json scrollback honored when no shorthand");
+
+            var bad = TerminalProfile.FromMetadata(new Dictionary<string, string> { { "scrollback", "0" } });
+            Assert.Equal(300, bad.ScrollbackLines, "scrollback=0 ignored (keep default)");
+
+            Assert.Equal(Gdterm.Core.Constants.TerminalLimits.MaxScrollback,
+                Gdterm.Core.Constants.TerminalLimits.ClampScrollback(999999, 0), "clamp upper bound");
+            Assert.Equal(40, Gdterm.Core.Constants.TerminalLimits.ClampScrollback(40, 0), "engine keeps small values");
+            Assert.Equal(40, Gdterm.Core.Constants.TerminalLimits.ClampScrollback(10, 40), "raised to one screen");
+            Assert.Equal(0, Gdterm.Core.Constants.TerminalLimits.ClampScrollback(-5, 0), "negative floored");
         }
     }
 }

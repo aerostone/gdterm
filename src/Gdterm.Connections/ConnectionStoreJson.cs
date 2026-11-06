@@ -209,6 +209,12 @@ namespace Gdterm.Connections
                     SerializeTunnel(sb, c.Tunnel);
                 }
 
+                if (c.Proxy != null && c.Proxy.Kind != Gdterm.Core.Models.ProxyKind.None)
+                {
+                    sb.Append(", \"proxy\": ");
+                    SerializeProxy(sb, c.Proxy);
+                }
+
                 if (c.Serial != null)
                 {
                     sb.Append(", \"serial\": ");
@@ -250,6 +256,17 @@ namespace Gdterm.Connections
                 }
             }
             sb.Append("]}");
+        }
+
+        private void SerializeProxy(StringBuilder sb, Gdterm.Core.Models.ProxyConfig proxy)
+        {
+            sb.Append("{");
+            sb.Append("\"kind\": \"" + proxy.Kind + "\", ");
+            sb.Append("\"host\": \"" + Escape(ProtectField(proxy.Host)) + "\", ");
+            sb.Append("\"port\": " + proxy.Port + ", ");
+            sb.Append("\"username\": \"" + Escape(ProtectField(proxy.Username)) + "\", ");
+            sb.Append("\"password\": \"" + Escape(ProtectField(proxy.Password)) + "\"");
+            sb.Append("}");
         }
 
         private void SerializeTunnel(StringBuilder sb, TunnelConfig tunnel)
@@ -339,6 +356,23 @@ namespace Gdterm.Connections
                         RemoteHost = ExtractString(tunnelStr, "remoteHost"),
                         RemotePort = ExtractInt(tunnelStr, "remotePort")
                     };
+                }
+
+                // 代理（缺省 null = 直连，兼容旧文件）
+                var proxyStr = ExtractObject(obj, "proxy");
+                if (proxyStr != null)
+                {
+                    conn.Proxy = new Gdterm.Core.Models.ProxyConfig
+                    {
+                        Kind = ParseEnum<Gdterm.Core.Models.ProxyKind>(ExtractString(proxyStr, "kind")),
+                        Host = UnprotectField(ExtractString(proxyStr, "host")),
+                        Port = ExtractInt(proxyStr, "port"),
+                        Username = UnprotectField(ExtractString(proxyStr, "username")),
+                        Password = UnprotectField(ExtractString(proxyStr, "password"))
+                    };
+                    if (conn.Proxy.Kind == Gdterm.Core.Models.ProxyKind.None) conn.Proxy = null;
+                    else if (conn.Proxy.Port <= 0)
+                        conn.Proxy.Port = Gdterm.Core.Models.ProxyConfig.DefaultPort(conn.Proxy.Kind);
                 }
 
                 // 串口参数（0.1.119 前从未落盘，缺失时保持 null）

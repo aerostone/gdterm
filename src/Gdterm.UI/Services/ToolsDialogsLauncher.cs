@@ -1,4 +1,5 @@
 using System;
+using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 using Gdterm.AI;
@@ -6,6 +7,7 @@ using Gdterm.Connections;
 using Gdterm.KeePass;
 using Gdterm.Security;
 using Gdterm.UI.Diagnostics;
+using Gdterm.UI.Controls;
 using Gdterm.UI.Forms;
 
 namespace Gdterm.UI.Services
@@ -224,6 +226,113 @@ namespace Gdterm.UI.Services
             }
             using (var form = new AiSettingsForm(aiModelStore))
                 form.ShowDialog(_owner);
+        }
+
+        /// <summary>
+        /// 检查更新（P2-9）：查 GitHub releases/latest。异步 + 静默失败——断网/限流都只提示一句，
+        /// 绝不阻塞 UI 线程（HttpClient 同步等待在 Win7 上会假死）。
+        /// </summary>
+        public async void OpenUpdateCheck()
+        {
+            UpdateInfo info;
+            try
+            {
+                Cursor.Current = Cursors.WaitCursor;
+                info = await UpdateChecker.CheckAsync(UpdateChecker.DefaultRepo, 10).ConfigureAwait(true);
+            }
+            catch (Exception ex)
+            {
+                info = new UpdateInfo { Error = ex.Message };
+            }
+            finally
+            {
+                try { Cursor.Current = Cursors.Default; } catch (Exception) { }
+            }
+            ShowUpdateResult(info);
+        }
+
+        private void ShowUpdateResult(UpdateInfo info)
+        {
+            bool failed = info == null || !string.IsNullOrEmpty(info.Error);
+            bool newer = !failed && info.IsNewer;
+
+            using (var form = new Form
+            {
+                Text = "检查更新",
+                StartPosition = FormStartPosition.CenterParent,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                MaximizeBox = false,
+                MinimizeBox = false,
+                BackColor = GdtermColorTable.Background,
+                ForeColor = GdtermColorTable.Foreground
+            })
+            {
+                int pad = DpiScale.V(form, 14);
+                int fieldH = FormFontPolicy.FieldHeight(form);
+                var head = new AntdUI.Label
+                {
+                    Text = failed ? "检查失败：" + (info != null ? info.Error : "未知错误")
+                         : newer ? "发现新版本 " + info.Version
+                         : "已是最新版本（" + UpdateChecker.CurrentVersion + "）",
+                    AutoSize = true,
+                    Location = new Point(pad, pad),
+                    ForeColor = failed ? GdtermColorTable.Danger
+                             : newer ? GdtermColorTable.Accent : GdtermColorTable.Foreground,
+                    Font = FormFontPolicy.UiFont(+1f)
+                };
+                form.Controls.Add(head);
+
+                var body = new TextBox
+                {
+                    Multiline = true,
+                    ReadOnly = true,
+                    ScrollBars = ScrollBars.Vertical,
+                    WordWrap = true,
+                    BorderStyle = BorderStyle.FixedSingle,
+                    BackColor = GdtermColorTable.Surface,
+                    ForeColor = GdtermColorTable.Foreground,
+                    Font = FormFontPolicy.MonoFont(),
+                    Location = new Point(pad, pad + DpiScale.V(form, 34)),
+                    Size = new Size(DpiScale.V(form, 520), DpiScale.V(form, 220)),
+                    Text = failed ? "无法获取 release 信息，请检查网络后重试；也可直接打开项目主页查看。"
+                         : newer ? (info.Name ?? "") + "\r\n\r\n" + (info.Body ?? "（该 release 未写说明）")
+                         : "当前版本：" + UpdateChecker.CurrentVersion
+                    + "\r\n最新版本：" + (info != null ? info.Version : "?")
+                    + "\r\n\r\n没有可用的更新。"
+                };
+                form.Controls.Add(body);
+
+                int btnY = body.Bottom + DpiScale.V(form, 12);
+                var btnOpen = new AntdUI.Button
+                {
+                    Text = newer ? "打开下载页" : "打开项目主页",
+                    Size = new Size(DpiScale.V(form, 110), fieldH),
+                    Location = new Point(pad, btnY),
+                    Type = AntdUI.TTypeMini.Primary
+                };
+                btnOpen.Click += (s, e) =>
+                {
+                    string url = !failed && !string.IsNullOrEmpty(info.HtmlUrl)
+                        ? info.HtmlUrl
+                        : "https://github.com/" + UpdateChecker.DefaultRepo + "/releases";
+                    try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true }); }
+                    catch (Exception ex) { DiagLog.Swallowed("ToolsDialogsLauncher.OpenReleasePage", ex); }
+                };
+                var btnClose = new AntdUI.Button
+                {
+                    Text = "关闭",
+                    Size = new Size(DpiScale.V(form, 90), fieldH),
+                    Location = new Point(body.Right - DpiScale.V(form, 90), btnY),
+                    BackColor = GdtermColorTable.Surface2,
+                    ForeColor = GdtermColorTable.Foreground,
+                    DialogResult = DialogResult.Cancel
+                };
+                form.Controls.Add(btnOpen);
+                form.Controls.Add(btnClose);
+                form.CancelButton = btnClose;
+                form.ClientSize = new Size(body.Right + pad, btnY + fieldH + pad);
+                form.ShowDialog(_owner);
+            }
         }
 
         public void OpenPasswordGenerator()

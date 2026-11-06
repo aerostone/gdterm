@@ -149,6 +149,13 @@ namespace Gdterm.UI.Services
             return panel;
         }
 
+        /// <summary>远端主机资源面板（P1-4）：CPU/内存/Swap/磁盘/负载/网络，5 秒一采。</summary>
+        public Control CreateRemoteMonitorPanel()
+        {
+            Func<TerminalControl> getActive = () => _tabs != null ? _tabs.GetActiveTerminalControl() : null;
+            return new RemoteMonitorPanel(getActive);
+        }
+
         public Control CreatePortForwardPanel()
         {
             try

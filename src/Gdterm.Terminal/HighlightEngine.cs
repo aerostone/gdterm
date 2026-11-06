@@ -20,6 +20,21 @@ namespace Gdterm.Terminal
     }
 
     /// <summary>
+    /// 触发器命中（P1-7）：一行里某条带动作的规则命中了。
+    /// 与 HighlightMatch 分开是因为触发只关心「有没有命中、命中什么」，不关心着色范围。
+    /// </summary>
+    public class TriggerHit
+    {
+        public string RuleId { get; set; }
+        public string RuleName { get; set; }
+        public HighlightAction Action { get; set; }
+        public string Argument { get; set; }
+        /// <summary>实际命中的文本（通知里带上它更好定位）。</summary>
+        public string MatchText { get; set; }
+        public int CooldownSeconds { get; set; }
+    }
+
+    /// <summary>
     /// 终端关键词高亮引擎——编译正则、匹配文本行
     /// </summary>
     public class HighlightEngine : IDisposable
@@ -111,6 +126,45 @@ namespace Gdterm.Terminal
             });
 
             return matches;
+        }
+
+        /// <summary>
+        /// 对一行文本返回所有「带动作」的命中（触发器）。无动作规则不参与，保持零成本。
+        /// </summary>
+        public List<TriggerHit> MatchTriggers(string line)
+        {
+            var hits = new List<TriggerHit>();
+            if (string.IsNullOrEmpty(line) || _rules.Count == 0) return hits;
+            foreach (var rule in _rules)
+            {
+                if (rule.Rule == null || rule.Rule.Action == HighlightAction.None) continue;
+                try
+                {
+                    var m = rule.CompiledRegex.Match(line);
+                    if (!m.Success) continue;
+                    hits.Add(new TriggerHit
+                    {
+                        RuleId = rule.Rule.Id,
+                        RuleName = rule.Rule.Name,
+                        Action = rule.Rule.Action,
+                        Argument = rule.Rule.ActionArgument,
+                        MatchText = m.Value,
+                        CooldownSeconds = rule.Rule.ActionCooldownSeconds
+                    });
+                }
+                catch { }
+            }
+            return hits;
+        }
+
+        /// <summary>是否有任何带动作的规则（没有就完全跳过触发器扫描）。</summary>
+        public bool HasTriggers
+        {
+            get
+            {
+                foreach (var r in _rules) { if (r.Rule != null && r.Rule.Action != HighlightAction.None) return true; }
+                return false;
+            }
         }
 
         /// <summary>快速判断一行是否有任何高亮</summary>

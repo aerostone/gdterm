@@ -66,7 +66,9 @@ namespace Gdterm.Terminal
                 config.Host,
                 config.Port,
                 credential.Username ?? config.Username,
-                credential);
+                credential,
+                30,
+                config.Proxy);
 
             _sshClient = new SshClient(connInfo);
             Gdterm.Tunnel.SshKeepAlive.Apply(_sshClient, config);

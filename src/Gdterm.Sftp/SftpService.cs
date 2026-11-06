@@ -33,7 +33,9 @@ namespace Gdterm.Sftp
                 config.Host,
                 config.Port,
                 credential.Username ?? config.Username,
-                credential);
+                credential,
+                30,
+                config.Proxy);
 
             _client = new SftpClient(connInfo);
             Gdterm.Tunnel.SshKeepAlive.Apply(_client, config);

@@ -188,7 +188,29 @@ namespace Gdterm.UI.Controls
             var chkRegex = Chk("正则表达式", 100, y); var chkCase = Chk("区分大小写", 220, y); y += rowHChk;
             var lblFg = Lbl("前景色:", 15, y); var txtFg = Txt(100, y, 100, fieldH); txtFg.PlaceholderText = "#FF4444";
             var lblBg = Lbl("背景色:", 220, y); var txtBg = Txt(290, y, 95, fieldH); txtBg.PlaceholderText = "#330000"; y += rowH;
-            var chkBold = Chk("加粗", 100, y); y += rowHChk + DpiScale.V(this, 12);
+            var chkBold = Chk("加粗", 100, y); y += rowHChk;
+
+            // P1-7 触发器：命中后做什么
+            var lblAction = Lbl("命中动作:", 15, y);
+            var cmbAction = new AntdUI.Select { Location = DpiScale.P(this, 100, y), Size = new Size(DpiScale.V(this, 150), fieldH) };
+            cmbAction.Items.Add("只高亮");
+            cmbAction.Items.Add("发送命令");
+            cmbAction.Items.Add("弹通知");
+            cmbAction.Items.Add("切到标签");
+            cmbAction.SelectedIndex = 0;
+            var lblArg = Lbl("动作参数:", 15, y + rowH);
+            var txtArg = Txt(100, y + rowH, 285, fieldH);
+            var lblCd = Lbl("冷却(秒):", 15, y + rowH * 2);
+            var numCd = new AntdUI.InputNumber { Location = DpiScale.P(this, 100, y + rowH * 2), Size = new Size(DpiScale.V(this, 100), fieldH), Minimum = 0, Maximum = 3600, Value = 5 };
+            var hintAction = new AntdUI.Label
+            {
+                Text = "命令走危险命令闸门；通知进通知中心+托盘；切标签参数是标题关键字。",
+                Location = DpiScale.P(this, 15, y + rowH * 3),
+                AutoSize = true,
+                ForeColor = GdtermColorTable.Muted,
+                Font = Services.FormFontPolicy.UiFont(-1f)
+            };
+            y += rowH * 3 + DpiScale.V(this, 30);
 
             if (existing != null)
             {
@@ -199,13 +221,17 @@ namespace Gdterm.UI.Controls
                 txtFg.Text = existing.ForegroundColor;
                 txtBg.Text = existing.BackgroundColor;
                 chkBold.Checked = existing.Bold;
+                cmbAction.SelectedIndex = (int)existing.Action;
+                txtArg.Text = existing.ActionArgument;
+                numCd.Value = existing.ActionCooldownSeconds;
             }
 
             int btnH = Math.Max(DpiScale.V(this, 30), fieldH);
             var btnOk = new AntdUI.Button { Text = "保存", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 220, y), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary, };
             var btnCancel = new AntdUI.Button { Text = "取消", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 310, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Surface2, ForeColor = GdtermColorTable.Foreground };
 
-            form.Controls.AddRange(new Control[] { lblName, txtName, lblPattern, txtPattern, chkRegex, chkCase, lblFg, txtFg, lblBg, txtBg, chkBold, btnOk, btnCancel });
+            form.Controls.AddRange(new Control[] { lblName, txtName, lblPattern, txtPattern, chkRegex, chkCase, lblFg, txtFg, lblBg, txtBg, chkBold,
+                lblAction, cmbAction, lblArg, txtArg, lblCd, numCd, hintAction, btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
             // 客户区高度随行高自适应（原先固定 350 在大字号下裁剪）
             form.ClientSize = new Size(DpiScale.V(this, 420), y + btnH + DpiScale.V(this, 16));
@@ -217,7 +243,11 @@ namespace Gdterm.UI.Controls
                 Name = txtName.Text.Trim(), Pattern = txtPattern.Text.Trim(),
                 IsRegex = chkRegex.Checked, CaseSensitive = chkCase.Checked,
                 ForegroundColor = txtFg.Text.Trim(), BackgroundColor = txtBg.Text.Trim(),
-                Bold = chkBold.Checked, Enabled = true, SortOrder = existing?.SortOrder ?? 99
+                Bold = chkBold.Checked, Enabled = true, SortOrder = existing?.SortOrder ?? 99,
+                Action = (Gdterm.Core.Models.HighlightAction)Math.Max(0, Math.Min(3, cmbAction.SelectedIndex)),
+                ActionArgument = string.IsNullOrWhiteSpace(txtArg.Text) ? null : txtArg.Text.Trim(),
+                // InputNumber.Value 可被清空成 null（用户全选删除），别让保存按钮抛异常
+                ActionCooldownSeconds = numCd.Value.HasValue ? (int)numCd.Value.Value : 5
             };
         }
 
