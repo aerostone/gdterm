@@ -127,7 +127,7 @@
 | 命令面板 `page.CommandPaletteForm` | Ctrl+Shift+P 风格入口 | list | 100% (4/4) | — | — |
 | 命令模板库 `page.CommandTemplatePanel` | 终端 > 命令模板库 | list | 100% (4/4) | — | — |
 | 连接属性 `page.ConnectionDialog` | 文件 > 新建连接 | settings | 100% (3/3) | — | connection-ssh,connection-rdp,connection-serial | 三协议 + 高级区展开 |
-| 连接导入/导出 `page.ConnectionImportExport` | 文件 > 导入连接 / 导出连接 | input | 100% (2/2) | — | — |
+| 连接导入/导出 `page.ConnectionImportExport` | 文件 > 导入连接 / 导出连接 | input | 100% (2/2) | — | import-preview | 导入连接预览裁定框（新增/跳过两类行，回车导入/Esc 取消） |
 | 快速跳转 `page.ConnectionQuickJumpForm` | 文件 > 快速跳转连接 | list | 100% (4/4) | — | — |
 | 连接树 `page.ConnectionTreeControl` | 主窗左侧 | panel | 100% (0/0) | — | — |
 | 危险命令规则 `page.DangerousCommandConfigForm` | 工具 > 危险命令规则 | list | 100% (4/4) | — | dangerous-cmd | |
