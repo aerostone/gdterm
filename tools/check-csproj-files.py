@@ -13,6 +13,9 @@
   - 只认 <Compile Include>；含 $( ) 的 MSBuild 生成文件跳过
   - 路径比较不区分大小写（Windows 语义），但存在性按磁盘真实路径判断
   - bin/obj/packages 不参与枚举
+  - InternalsVisibleTo 的友元程序集名必须等于目标工程的 AssemblyName（默认=工程名），
+    否则真机 msbuild 报 CS0122 而 csc-check（全仓编成一个程序集）永远看不见
+    ——0.1.368 就是这条：Gdterm.UI 的 AssemblyName 是 gdterm
 
 退出码：0 无问题；1 有问题（打印明细）。
 用法：python3 tools/check-csproj-files.py
@@ -51,8 +54,41 @@ def main():
                 if full.lower() not in listed:
                     print("  未登记到 csproj: %s（msbuild 会报 CS0246）" % full)
                     problems += 1
+    problems += check_internals_visible_to(projects)
     print("csproj-file-list: %d 个工程，%d 处问题" % (len(projects), problems))
     return 0 if problems == 0 else 1
+
+
+def assembly_name(proj):
+    """工程的程序集名：<AssemblyName> 优先，缺省=工程文件名。"""
+    text = open(proj, encoding="utf-8-sig", errors="replace").read()
+    m = re.search(r"<AssemblyName>([^<]+)</AssemblyName>", text)
+    return (m.group(1).strip() if m else os.path.splitext(os.path.basename(proj))[0])
+
+
+def check_internals_visible_to(projects):
+    """InternalsVisibleTo 的名字必须是某个真实程序集名，否则 CI 才炸 CS0122。"""
+    names = {assembly_name(p).lower() for p in projects}
+    problems = 0
+    for proj in projects:
+        base = os.path.dirname(proj)
+        own = assembly_name(proj).lower()
+        for root, dirs, files in os.walk(base):
+            dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+            for f in files:
+                if not f.endswith(".cs"):
+                    continue
+                path = os.path.join(root, f)
+                text = open(path, encoding="utf-8-sig", errors="replace").read()
+                for m in re.finditer(r'InternalsVisibleTo\s*\(\s*"([^"]+)"', text):
+                    friend = m.group(1).split(",")[0].strip().lower()
+                    if friend in names:
+                        continue
+                    print("  InternalsVisibleTo 找不到对应程序集: %s -> \"%s\"（msbuild 会报 CS0122）"
+                          % (path, m.group(1)))
+                    problems += 1
+                _ = own
+    return problems
 
 
 if __name__ == "__main__":
