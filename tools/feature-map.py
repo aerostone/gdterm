@@ -362,13 +362,17 @@ TYPE_CAPS = {
 
 # 能力 -> 源码证据（任一命中即算有证据）
 DETECT = {
-    "list": [r'ListView|DataGridView|TreeView|ListViewEx|Items\.Add'],
+    # AntdUI.Table/DataSource 也是列表（KeePass 系页面用自绘表格而不是 ListView）
+    "list": [r'ListView|DataGridView|TreeView|ListViewEx|Items\.Add|AntdUI\.Table|DataSource\s*='],
     "activation": [r'DoubleClick|KeyDown|ItemActivate|SelectedIndexChanged|Keys\.Enter'],
     "empty": [r'EmptyStateView'],
-    "loading": [r'BusyScope|Loading|_busy|IsBusy|SetBusy'],
+    # 加载态证据三类：① BusyScope 作用域（用户触发的长任务）② 显式加载标志位
+    # （_loading / isLoading / SetLoading——被动采样类面板用它，不能为 5 秒一轮的采样
+    # 每次都切 WaitCursor）③ 跑马灯进度条（总大小未知时表示"在动"）。
+    "loading": [r'BusyScope|_loading|_busy|Loading|IsBusy|SetBusy|ProgressBarStyle\.Marquee|MarqueeAnimationSpeed'],
     "error": [r'Message\.error|Message\.Error|MessageBox\.Show|DiagLog\.Error'],
     "confirm": [r'ConfirmDanger|MessageModal|确认'],
-    "persist": [r'Store\b|\.Save\(|SaveConfig|WriteAllText'],
+    "persist": [r'Store\b|\.Save\(|SaveConfig|WriteAllText|WriteAllLines'],
     "search": [r'PlaceholderText\s*=\s*"[^"]*(?:搜索|过滤|查找)|Filter\(|\.Search\(|搜索|过滤|筛选'],
     "sort": [r'SortOrder|Sorting\s*=|CompareFunc|排序'],
     "paging": [r'PageSize|分页|VirtualMode|VirtualListSize|ScrollTo'],

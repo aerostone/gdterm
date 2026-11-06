@@ -18,6 +18,8 @@ namespace Gdterm.UI.Forms
     {
         private readonly IKeePassService _keepassService;
         private AntdUI.Input _passwordBox;
+        private AntdUI.Label _statusLabel;
+        private bool _busy;
         private AntdUI.Button _unlockButton;
         private AntdUI.Button _cancelButton;
 
@@ -61,12 +63,12 @@ namespace Gdterm.UI.Forms
             Controls.Add(title);
             y += Math.Max(DpiScale.V(this, 44), FormFontPolicy.RowStep(this) + DpiScale.V(this, 10));
 
-            var status = new AntdUI.Label {
+            _statusLabel = new AntdUI.Label {
                 Text = "请输入主密码以解锁 KeePass 密码库",
                 AutoSize = true,
                 Location = new Point(pad, y)
             };
-            Controls.Add(status);
+            Controls.Add(_statusLabel);
             y += Math.Max(DpiScale.V(this, 40), FormFontPolicy.RowStep(this) + DpiScale.V(this, 6));
 
             // ── 密码输入（AntdUI.Input：占位符/清除钮/回车提交）──
@@ -108,6 +110,23 @@ namespace Gdterm.UI.Forms
 
             AcceptButton = _unlockButton;
             CancelButton = _cancelButton;
+            // 空密码时「解锁」置灰：原来点下去才弹「请输入密码」，属于事后报错
+            _passwordBox.TextChanged += (s2, e2) => ValidateInput();
+            ValidateInput();
+        }
+
+        /// <summary>输入校验：密码非空才允许解锁（并给出即时反馈，而不是点完再弹框）。</summary>
+        private void ValidateInput()
+        {
+            bool ok = !string.IsNullOrWhiteSpace(_passwordBox.Text);
+            if (_unlockButton != null && !_busy) _unlockButton.Enabled = ok;
+            if (_statusLabel != null)
+            {
+                _statusLabel.Text = ok ? "请输入主密码以解锁 KeePass 密码库" : "密码不能为空";
+                _statusLabel.ForeColor = ok
+                    ? System.Drawing.SystemColors.ControlText
+                    : Gdterm.UI.Diagnostics.GdtermColorTable.Danger;
+            }
         }
 
         private void OnUnlockClick(object sender, EventArgs e)
@@ -119,6 +138,7 @@ namespace Gdterm.UI.Forms
                 return;
             }
 
+            _busy = true;
             _unlockButton.Enabled = false;
             _unlockButton.Text = "解锁中...";
             UnlockAsync(password);

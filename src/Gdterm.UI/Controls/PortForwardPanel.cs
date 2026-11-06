@@ -86,6 +86,14 @@ namespace Gdterm.UI.Controls
             _lvRules.Columns.Add("状态", 60);
             _lvRules.Columns.Add("说明", 150);
 
+            // 激活路径：双击 = 启动/停止切换；回车同双击；Delete 删除（此前列表只能靠下面四个按钮）
+            _lvRules.DoubleClick += (s2, e2) => ToggleSelected();
+            _lvRules.KeyDown += (s2, e2) =>
+            {
+                if (e2.KeyCode == Keys.Enter) { ToggleSelected(); e2.Handled = true; }
+                else if (e2.KeyCode == Keys.Delete) { DeleteSelected(); e2.Handled = true; }
+            };
+
             Controls.Add(_lvRules);
             Controls.Add(toolbar);
 
@@ -172,6 +180,22 @@ namespace Gdterm.UI.Controls
                 });
                 RefreshList();
             }
+        }
+
+        /// <summary>双击/回车：已运行则停，未运行则启。</summary>
+        private void ToggleSelected()
+        {
+            if (_lvRules.SelectedItems.Count == 0) return;
+            var rule = _lvRules.SelectedItems[0].Tag as PortForwardRule;
+            if (rule == null) return;
+            if (IsRunning(rule)) StopSelected();
+            else StartSelected();
+        }
+
+        private bool IsRunning(PortForwardRule rule)
+        {
+            try { return rule != null && _manager != null && _manager.IsActive(rule.Id); }
+            catch (Exception) { return false; }
         }
 
         private void StartSelected()

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Windows.Forms;
 using Gdterm.Connections;
 using Gdterm.Core.Models;
+using Gdterm.UI.Diagnostics;
 using Gdterm.UI.ImportExport;
 
 namespace Gdterm.UI.Services
@@ -33,21 +34,46 @@ namespace Gdterm.UI.Services
                 try
                 {
                     var imported = new List<ConnectionConfig>();
+                    var bad = new List<string>();
                     foreach (var file in dlg.FileNames)
-                        imported.AddRange(ConnectionImporterExporter.ImportFromFile(file));
+                    {
+                        // 逐文件容错：一个坏文件不该让整批导入全灭（原来一处抛异常，前面读到的也丢了）
+                        try
+                        {
+                            var one = ConnectionImporterExporter.ImportFromFile(file) ?? new List<ConnectionConfig>();
+                            if (one.Count == 0) bad.Add(file);
+                            imported.AddRange(one);
+                        }
+                        catch (Exception fileEx)
+                        {
+                            bad.Add(file);
+                            try { DiagLog.Error("ConnectionImport.File", fileEx); } catch (Exception) { }
+                        }
+                    }
                     if (imported.Count == 0)
                     {
-                        MessageBox.Show(owner, "未找到可导入的连接", "导入",
-                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show(owner,
+                            "未找到可导入的连接" + (bad.Count > 0 ? "\n无法解析：" + string.Join("\n", bad.ToArray()) : ""),
+                            "导入", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
                     var existing = store.LoadAll();
                     var merge = ConnectionImporterExporter.MergeConnections(existing, imported);
+
+                    // 先预览再写库：原来选完文件直接落库，用户看不到写什么、也拦不住
+                    using (var preview = new Gdterm.UI.Forms.ImportPreviewForm(merge.NewConnections, merge.Duplicates))
+                    {
+                        if (preview.ShowDialog(owner) != DialogResult.OK || !preview.Confirmed)
+                            return; // 用户取消：一条都不写
+                    }
+
                     foreach (var conn in merge.NewConnections)
                         store.Add(conn);
                     if (onReloaded != null) onReloaded();
+                    var skippedNote = merge.Duplicates.Count > 0 ? "\n跳过 " + merge.Duplicates.Count + " 条重复" : "";
+                    var badNote = bad.Count > 0 ? "\n无法解析 " + bad.Count + " 个文件（已跳过）" : "";
                     MessageBox.Show(owner,
-                        "导入完成：\n新增 " + merge.NewConnections.Count + "\n跳过 " + merge.Duplicates.Count,
+                        "导入完成：\n新增 " + merge.NewConnections.Count + skippedNote + badNote,
                         "导入成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)

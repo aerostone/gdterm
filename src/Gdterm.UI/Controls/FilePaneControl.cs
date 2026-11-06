@@ -20,6 +20,7 @@ namespace Gdterm.UI.Controls
         private readonly IFilePaneProvider _provider;
         private AntdUI.Input _pathBox;
         private ListView _list;
+        private EmptyStateView _empty;
         private AntdUI.Label _status;
         private string _currentPath;
         private bool _busy;
@@ -156,6 +157,10 @@ namespace Gdterm.UI.Controls
             Controls.Add(_list);
             Controls.Add(_status);
             Controls.Add(top);
+
+            // 审计 C1：空目录/读取失败此前都只是一片空列表（状态栏那行字容易被忽略）
+            _empty = EmptyStateView.Attach(this, "这个目录是空的",
+                "拖文件到这里可直接上传；点「刷新」重新读取", "刷新", (s2, e2) => Refresh());
         }
 
         private ContextMenuStrip BuildContextMenu()
@@ -271,7 +276,16 @@ namespace Gdterm.UI.Controls
                 _busy = false;
                 if (t.IsFaulted)
                 {
-                    _status.Text = "读取失败: " + t.Exception.GetBaseException().Message;
+                    var msg = t.Exception.GetBaseException().Message;
+                    _status.Text = "读取失败: " + msg;
+                    try { DiagLog.Error("FilePaneControl.Navigate", t.Exception); } catch (Exception) { }
+                    // 失败不能只留状态栏一行：目录读不出来时列表是空的，正好和"空目录"长得一样
+                    if (_empty != null)
+                    {
+                        _empty.SetEmpty(true, "读取失败", msg);
+                        if (_empty.ActionButton != null) _empty.ActionButton.Visible = true;
+                    }
+                    ToastNotifier.Error("目录读取失败：" + msg);
                     return;
                 }
                 var entries = t.Result;
@@ -279,6 +293,12 @@ namespace Gdterm.UI.Controls
                 _pathBox.Text = string.IsNullOrEmpty(captured) ? "此电脑" : captured;
                 RenderList(entries);
                 _status.Text = (string.IsNullOrEmpty(captured) ? "此电脑" : captured) + "  (" + entries.Count + " 项)";
+                if (_empty != null)
+                {
+                    _empty.SetEmpty(entries.Count == 0, "这个目录是空的",
+                        "拖文件到这里可直接上传；点「刷新」重新读取");
+                    if (_empty.ActionButton != null) _empty.ActionButton.Visible = true;
+                }
             }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 

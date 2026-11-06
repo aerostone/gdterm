@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Gdterm.Tools.Scanning;
 using Gdterm.UI.Diagnostics;
+using Gdterm.UI.Controls;
 using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Forms
@@ -37,6 +38,7 @@ namespace Gdterm.UI.Forms
         private SplitContainer _split;
         /// <summary>空状态引导（UX change 2026-09-25）：0 插件 / 0 发现 / 空输出时各显一条，指向已有入口。</summary>
         private AntdUI.Label _pluginEmptyHint;
+        private EmptyStateView _pluginEmpty;
         private AntdUI.Label _findingEmptyHint;
         private AntdUI.Label _rawEmptyHint;
 
@@ -214,6 +216,11 @@ namespace Gdterm.UI.Forms
                 ForeColor = GdtermColorTable.Muted
             };
             pluginPanel.Controls.Add(pluginHint);
+            // 审计 C1：把原来那行 20px 的「还没有插件」小字升级成标准空态层——
+            // 0 插件时用户最需要的是「下一步做什么」，底部一行灰字等于没说。
+            _pluginEmpty = EmptyStateView.Attach(pluginPanel, "还没有扫描插件",
+                "在插件目录放入脚本即自动生效（无需重启）；也可点「新建模板」生成骨架",
+                "新建模板", (s2, e2) => OnNewPluginTemplate(s2, e2));
             _split.Panel1.Controls.Add(pluginPanel);
 
             // 右：发现 + 原始输出
@@ -373,6 +380,7 @@ namespace Gdterm.UI.Forms
         private void UpdateEmptyHints()
         {
             if (_pluginEmptyHint != null) _pluginEmptyHint.Visible = _store.Plugins.Count == 0;
+            if (_pluginEmpty != null) _pluginEmpty.SetEmpty(_store.Plugins.Count == 0);
             if (_findingEmptyHint != null) _findingEmptyHint.Visible = _findingRows.Count == 0;
             if (_rawEmptyHint != null) _rawEmptyHint.Visible = string.IsNullOrEmpty(_rawOutput.Text);
         }

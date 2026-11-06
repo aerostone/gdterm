@@ -30,6 +30,7 @@ namespace Gdterm.UI.Controls
         private AntdUI.Select _speedBox;
         private ListView _macroList;
         private AntdUI.Label _statusLabel;
+        private EmptyStateView _empty;
 
         private TerminalControl _recordSource;
         private MacroRecorder _pendingMacro; // 刚录完未保存的
@@ -130,6 +131,11 @@ namespace Gdterm.UI.Controls
             Controls.Add(_macroList);
             Controls.Add(toolPanel);
             Controls.Add(_statusLabel);
+
+            // 审计 C1：空态引导 —— 宏目录为空时此前只剩一行状态提示，看不出该录还是该载入
+            _empty = EmptyStateView.Attach(this, "还没有保存的宏",
+                "点「● 录制」录下当前终端的按键序列，或「载入」从 data/macros/ 里选已有的宏文件",
+                "开始录制", (s2, e2) => StartRecording());
 
             UpdateButtons();
         }
@@ -340,6 +346,14 @@ namespace Gdterm.UI.Controls
                 item.SubItems.Add(new FileInfo(f).LastWriteTime.ToString("yyyy-MM-dd HH:mm"));
                 item.Tag = f;
                 _macroList.Items.Add(item);
+            }
+            if (_empty != null)
+            {
+                // 目录读不出来（权限/IO）与「确实没有宏」必须分开说，不能都显示成空态
+                bool readFailed = false;
+                try { Directory.GetFiles(_macroDir, "*.json"); } catch { readFailed = true; }
+                _empty.SetEmpty(_macroList.Items.Count == 0, readFailed ? "无法读取宏目录" : null,
+                    readFailed ? "检查 data/macros/ 是否存在且可写" : null);
             }
             UpdateButtons();
         }

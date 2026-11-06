@@ -8,6 +8,7 @@ using Gdterm.Core.Models;
 using Gdterm.KeePass;
 using Gdterm.KeePass.Models;
 using Gdterm.UI.Diagnostics;
+using Gdterm.UI.Controls;
 using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Forms
@@ -32,7 +33,7 @@ namespace Gdterm.UI.Forms
         private AntdUI.Label _statusLabel;
         private AntdUI.Button _btnNewConnection;
         /// <summary>空库引导层：覆盖表区，仅在“加载成功且 0 条目”时可见（UX change 2026-09-25）。</summary>
-        private Panel _emptyGuide;
+        private EmptyStateView _emptyGuide;
         private System.Collections.Generic.List<KeePassEntrySummary> _entries = new System.Collections.Generic.List<KeePassEntrySummary>();
         /// <summary>搜索过滤后的条目视图（与 _entries 同序子集）。</summary>
         private IList<KeePassEntrySummary> _view = new System.Collections.Generic.List<KeePassEntrySummary>();
@@ -182,93 +183,14 @@ namespace Gdterm.UI.Forms
             closeButton.Click += (s, e) => Close();
             bottomPanel.Controls.Add(closeButton);
 
-            // 空库引导层：与表同格（同 bounds），BringToFront 后覆盖表区；空/有行两态由 LoadEntries 切换。
-            // 引导只指向已有动作（添加/刷新），不新增“连接库”能力（change 2026-09-25 D1）。
-            _emptyGuide = new Panel
-            {
-                Name = "KeePassEmptyGuide",
-                Dock = DockStyle.Fill,
-                BackColor = GdtermColorTable.Background,
-                Visible = false
-            };
-            var emptyGrid = new TableLayoutPanel
-            {
-                Dock = DockStyle.Fill,
-                ColumnCount = 1,
-                RowCount = 3,
-                BackColor = GdtermColorTable.Background
-            };
-            emptyGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
-            emptyGrid.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            emptyGrid.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
-            // 显式给列 100%：不写列样式时 TLP 列按内容 AutoSize，内容会偏左而非居中
-            emptyGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-
-            var emptyTitle = new AntdUI.Label
-            {
-                Name = "KeePassEmptyGuideTitle",
-                Text = "还没有条目",
-                AutoSize = true,
-                Font = FormFontPolicy.UiFont(+2f, FontStyle.Bold),
-                ForeColor = GdtermColorTable.Foreground,
-                Anchor = AnchorStyles.None,
-                Margin = new Padding(0, 0, 0, DpiScale.V(this, 6))
-            };
-            var emptyHint = new AntdUI.Label
-            {
-                Name = "KeePassEmptyGuideHint",
-                Text = "点『添加』创建第一条；读取现有 KeePass 库需先在主界面解锁。",
-                AutoSize = true,
-                ForeColor = GdtermColorTable.Muted,
-                Anchor = AnchorStyles.None,
-                Margin = new Padding(0, 0, 0, DpiScale.V(this, 10))
-            };
-            var emptyButtons = new FlowLayoutPanel
-            {
-                Name = "KeePassEmptyGuideButtons",
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
-                Anchor = AnchorStyles.None,
-                BackColor = GdtermColorTable.Background,
-                Margin = new Padding(0)
-            };
-            var emptyAddButton = new AntdUI.Button
-            {
-                Name = "KeePassEmptyGuideAddButton",
-                Text = "添加第一条",
-                Type = AntdUI.TTypeMini.Primary,
-                AutoSize = true,
-                Padding = btnPadding,
-                Margin = btnMarginR
-            };
-            emptyAddButton.Click += OnAddClick;
-            var emptyRefreshButton = new AntdUI.Button
-            {
-                Name = "KeePassEmptyGuideRefreshButton",
-                Text = "刷新",
-                Type = AntdUI.TTypeMini.Default,
-                Ghost = true,
-                AutoSize = true,
-                Padding = btnPadding,
-                Margin = new Padding(DpiScale.V(this, 4), 0, 0, 0)
-            };
-            emptyRefreshButton.Click += (s, e) => LoadEntries();
-            emptyButtons.Controls.Add(emptyAddButton);
-            emptyButtons.Controls.Add(emptyRefreshButton);
-
-            emptyGrid.Controls.Add(emptyTitle, 0, 0);
-            emptyGrid.Controls.Add(emptyHint, 0, 1);
-            emptyGrid.Controls.Add(emptyButtons, 0, 2);
-            _emptyGuide.Controls.Add(emptyGrid);
-
+            // 空库引导：统一走 EmptyStateView（原来是手工 Panel+TLP+两按钮，≈80 行自绘空态；
+            // 刷新在工具栏已有入口，这里只留「添加第一条」这一个下一步动作）
             // 表 + 引导层同格：引导后加并置前，Dock=Fill 覆盖表区（两矩形全等，树检包含关系豁免重叠）
             var tableHost = new Panel { Dock = DockStyle.Fill, BackColor = GdtermColorTable.Background };
             _entryTable.Dock = DockStyle.Fill;
             tableHost.Controls.Add(_entryTable);
-            tableHost.Controls.Add(_emptyGuide);
-            _emptyGuide.BringToFront();
+            _emptyGuide = EmptyStateView.Attach(tableHost, "还没有条目",
+                "点『添加』创建第一条；读取现有 KeePass 库需先在主界面解锁", "添加第一条", OnAddClick);
 
             // Dock 顺序：后添加的先布局——Top 先钉住，Bottom 再钉住，Fill 吃剩余空间
             Controls.Add(tableHost);
@@ -357,12 +279,12 @@ namespace Gdterm.UI.Forms
                 _usageByEntry = BuildUsageMap();
                 ApplyFilter();
                 // 空库时才给引导（加载失败走 catch 分支，不显示引导以免误导）
-                if (_emptyGuide != null) _emptyGuide.Visible = _entries.Count == 0;
+                if (_emptyGuide != null) _emptyGuide.SetEmpty(_entries.Count == 0);
             }
             catch (Exception ex)
             {
                 _statusLabel.Text = $"加载失败：{ex.Message}";
-                if (_emptyGuide != null) _emptyGuide.Visible = false;
+                if (_emptyGuide != null) _emptyGuide.SetEmpty(false);
             }
         }
 

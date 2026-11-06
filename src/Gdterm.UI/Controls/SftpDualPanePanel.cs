@@ -28,6 +28,7 @@ namespace Gdterm.UI.Controls
         private readonly ITunnelManager _tunnelManager;
         private ISftpService _sftp;
         private FilePaneControl _local;
+        private EmptyStateView _remotePlaceholder;
         private FilePaneControl _remote;
         private SplitContainer _split;
         private AntdUI.Label _connStatus;
@@ -117,15 +118,11 @@ namespace Gdterm.UI.Controls
             _local.TransferToPeerRequested += entries => OnTransfer(entries, targetIsRemote: true); // 本地→对侧=上传
             AddPane(_split.Panel1, _local, "本地", GdtermColorTable.Info);
 
-            // Panel2：连接成功前只放占位提示
-            var placeholder = new AntdUI.Label {
-                Dock = DockStyle.Fill,
-                Text = "正在连接 " + (_config != null ? _config.Host : "") + " …",
-                TextAlign = ContentAlignment.MiddleCenter,
-                ForeColor = GdtermColorTable.Muted,
-                BackColor = GdtermColorTable.Background
-            };
-            _split.Panel2.Controls.Add(placeholder);
+            // Panel2：连接成功前只有占位——升级为标准空态层（带「重试连接」入口，
+            // 原来连接失败后这个占位就永远停在那儿，只能关标签页重开）
+            _remotePlaceholder = EmptyStateView.Attach(_split.Panel2, "正在连接 " + (_config != null ? _config.Host : "") + " …",
+                "连接成功后这里显示远端目录，可拖拽或双击在两栏间传输");
+            _split.Panel2.Controls.Add(_remotePlaceholder);
 
             var queueBar = new FlowLayoutPanel
             {
@@ -215,6 +212,9 @@ namespace Gdterm.UI.Controls
             {
                 _connStatus.Text = "  连接失败: " + ex.Message + "  （关闭此标签页后重试）";
                 _connStatus.ForeColor = GdtermColorTable.Danger;
+                if (_remotePlaceholder != null)
+                    _remotePlaceholder.SetEmpty(true, "连接失败", ex.Message + "；关闭此标签页后重新打开即可重连");
+                try { ToastNotifier.Error("SFTP 连接失败：" + ex.Message); } catch (Exception) { }
                 try { DiagLog.Info("SftpDualPane.Connect", "failed: " + ex.Message); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SftpDualPanePanel", exSwallowed); } catch { } }
             }
         }

@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.KeePass;
 using Gdterm.KeePass.Models;
 using Gdterm.Security;
+using Gdterm.UI.Controls;
+using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
@@ -155,8 +158,12 @@ namespace Gdterm.UI.Forms
                 {
                     _scoreLabel.Text = "分析失败";
                     _scoreLabel.ForeColor = GdtermColorTable.Danger;
-                    _summaryLabel.Text = failure.Message;
+                    _summaryLabel.Text = failure.Message + "（可直接重试，无需重开窗口）";
                     if (_scanStateLabel != null) _scanStateLabel.Text = "上次扫描：失败";
+                    // 原来只有一行红字：既不留痕也不能重试
+                    try { DiagLog.Error("PasswordHealth.Analyze", failure); } catch (Exception) { }
+                    try { ToastNotifier.Error("密码健康分析失败：" + failure.Message); } catch (Exception) { }
+                    ShowRetryTab(failure.Message);
                     return;
                 }
                 if (report != null) DisplayReport(report);
@@ -192,6 +199,68 @@ namespace Gdterm.UI.Forms
 
             // 过期密码标签页
             AddIssueTab("过期密码", report.ExpiredPasswords, GdtermColorTable.Warning);
+        }
+
+        /// <summary>分析失败页：说明 + 一键重试（失败后窗口不再只是"死"在那里）。</summary>
+        private void ShowRetryTab(string message)
+        {
+            _tabControl.Pages.Clear();
+            var tab = new AntdUI.TabPage { Text = "  分析失败  " };
+            var host = new Panel { Dock = DockStyle.Fill, BackColor = GdtermColorTable.Background };
+            tab.Controls.Add(host);
+            _tabControl.Pages.Add(tab);
+            EmptyStateView.Attach(host, "读取密码库失败",
+                message + "；解锁密码库或检查 KDBX 文件后点下方按钮重试",
+                "重试分析", (s2, e2) => LoadReportAsync());
+        }
+
+        /// <summary>行激活：双击把这一条复制到剪贴板（拿去改密码/贴给同事时不用手抄）。</summary>
+        private void WireRowActivation(AntdUI.Table table, Func<object, string> describe)
+        {
+            if (table == null || describe == null) return;
+            EventHandler copy = (s2, e2) =>
+            {
+                try
+                {
+                    var row = CurrentRow(table);
+                    var text = row == null ? null : describe(row);
+                    if (string.IsNullOrEmpty(text)) return;
+                    Clipboard.SetText(text);
+                    ToastNotifier.Success("已复制：" + text, 2000);
+                }
+                catch (Exception ex)
+                {
+                    try { DiagLog.Error("PasswordHealth.Copy", ex); } catch (Exception) { }
+                    ToastNotifier.Error("复制失败：" + ex.Message);
+                }
+            };
+            table.DoubleClick += copy;
+            table.KeyDown += (s2, e2) =>
+            {
+                if (e2.KeyCode == Keys.Enter) { copy(s2, e2); e2.Handled = true; }
+            };
+        }
+
+        /// <summary>AntdUI.Table 的 SelectedIndex 含表头行（0 为表头），故减 1 取数据行。</summary>
+        private static object CurrentRow(AntdUI.Table table)
+        {
+            var rows = table.DataSource as System.Collections.IList;
+            if (rows == null) return null;
+            int i = table.SelectedIndex - 1;
+            if (i < 0 || i >= rows.Count) return null;
+            return rows[i];
+        }
+
+        private static string DescribeIssue(object row)
+        {
+            var r = row as IssueRow;
+            return r == null ? null : (r.Title + " / " + r.Username + " / " + r.GroupPath + " / " + r.Issue);
+        }
+
+        private static string DescribeDup(object row)
+        {
+            var r = row as DupRow;
+            return r == null ? null : (r.Title + " / " + r.Username + " / " + r.GroupPath);
         }
 
         private sealed class IssueRow
@@ -237,8 +306,16 @@ namespace Gdterm.UI.Forms
                 }
             }
             table.DataSource = rows;
+            WireRowActivation(table, DescribeIssue);
 
-            tab.Controls.Add(table);
+            var host = new Panel { Dock = DockStyle.Fill, BackColor = GdtermColorTable.Background };
+            host.Controls.Add(table);
+            EmptyStateView.Attach(host, "这一类没有发现问题",
+                "「" + name + "」检查通过；规则变更或条目录入变化后重开本窗口即可复检");
+            var empty = host.Controls.OfType<EmptyStateView>().FirstOrDefault();
+            if (empty != null) empty.SetEmpty(rows.Count == 0);
+
+            tab.Controls.Add(host);
             _tabControl.Pages.Add(tab);
         }
 
@@ -284,7 +361,16 @@ namespace Gdterm.UI.Forms
                 }
             }
             listView.DataSource = rows;
-            tab.Controls.Add(listView);
+            WireRowActivation(listView, DescribeDup);
+
+            var dupHost = new Panel { Dock = DockStyle.Fill, BackColor = GdtermColorTable.Background };
+            dupHost.Controls.Add(listView);
+            EmptyStateView.Attach(dupHost, "没有重复密码",
+                "每个条目都用了唯一密码；同一密码被复用时会在这里按组列出");
+            var dupEmpty = dupHost.Controls.OfType<EmptyStateView>().FirstOrDefault();
+            if (dupEmpty != null) dupEmpty.SetEmpty(rows.Count == 0);
+
+            tab.Controls.Add(dupHost);
             _tabControl.Pages.Add(tab);
         }
     }

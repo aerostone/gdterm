@@ -21,6 +21,8 @@ namespace Gdterm.UI.Controls
         private ListView _recentList;
         private AntdUI.Input _searchBox;
         private AntdUI.Label _statusLabel;
+        private EmptyStateView _emptyBookmarks;
+        private EmptyStateView _emptyRecent;
 
         /// <summary>请求打开连接（ConnectionId）</summary>
         public event Action<ConnectionConfig> OpenConnectionRequested;
@@ -143,6 +145,13 @@ namespace Gdterm.UI.Controls
             Controls.Add(title);
             Controls.Add(_statusLabel);
 
+            // 审计 C1：两个列表各自要有空态 —— 只有书签没记录、只有记录没书签都是常态
+            _emptyBookmarks = EmptyStateView.Attach(bmHost, "还没有书签",
+                "把常用会话收进书签，下次按名称/标签就能搜到",
+                "添加书签", (s2, e2) => OnAddBookmark(s2, e2));
+            _emptyRecent = EmptyStateView.Attach(recentHost, "还没有连接记录",
+                "连过的会话会按时间倒序留在这里，成功/失败一目了然");
+
             // 布局顺序：Bottom 先加会被挤；用 Resume 后设 splitter
             split.SplitterDistance = 220;
         }
@@ -218,10 +227,26 @@ namespace Gdterm.UI.Controls
             catch (Exception ex)
             {
                 _statusLabel.Text = "加载失败: " + ex.Message;
+                try { DiagLog.Error("SessionBookmarksPanel.Filter", ex); } catch (Exception) { }
+                ToastNotifier.Error("书签加载失败：" + ex.Message);
             }
             finally
             {
                 _bookmarksList.EndUpdate();
+                if (_emptyBookmarks != null)
+                {
+                    // 「筛选后为空」与「一条书签都没有」是两件事：前者该提示换关键字，后者该引导添加
+                    bool hasAny = false;
+                    try
+                    {
+                        var raw = _bookmarkStore.LoadAll();
+                        hasAny = raw != null && raw.Count > 0;
+                    }
+                    catch (Exception) { }
+                    _emptyBookmarks.SetEmpty(_bookmarksList.Items.Count == 0,
+                        hasAny ? "没有匹配的书签" : null,
+                        hasAny ? "换个名称/标签再搜，或清空搜索框" : null);
+                }
             }
         }
 
@@ -245,10 +270,15 @@ namespace Gdterm.UI.Controls
                     _recentList.Items.Add(item);
                 }
             }
-            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SessionBookmarksPanel", exSwallowed); } catch { } }
+            catch (Exception ex)
+            {
+                try { DiagLog.Error("SessionBookmarksPanel.Recent", ex); } catch (Exception) { }
+                ToastNotifier.Error("最近连接加载失败：" + ex.Message);
+            }
             finally
             {
                 _recentList.EndUpdate();
+                if (_emptyRecent != null) _emptyRecent.SetEmpty(_recentList.Items.Count == 0);
             }
         }
 

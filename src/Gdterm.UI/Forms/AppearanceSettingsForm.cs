@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Text;
 using System.IO;
@@ -293,8 +294,59 @@ namespace Gdterm.UI.Forms
             if (cb.Items.Count == 0) cb.Items.Add(FormFontPolicy.UiFontName);
         }
 
+        /// <summary>
+        /// 保存前校验：字号区间、透明度区间、字体是否真的装在系统里。
+        /// 「选了没装的字体」是外观页最典型的静默失败——GDI 会 fallback 到别的字体，
+        /// 用户只看到"设置没生效"，没有任何提示。
+        /// </summary>
+        private bool ValidateSettings()
+        {
+            int size = (int)_sizeNum.Value;
+            if (size < 6 || size > 48)
+            {
+                AntdUI.Message.warn(this, "终端字号需在 6–48 之间（当前 " + size + "）");
+                _sizeNum.Focus();
+                return false;
+            }
+            int uiSize = (int)_uiSizeNum.Value;
+            if (uiSize < 6 || uiSize > 36)
+            {
+                AntdUI.Message.warn(this, "界面字号需在 6–36 之间（当前 " + uiSize + "）");
+                _uiSizeNum.Focus();
+                return false;
+            }
+            if (_opacityNum != null && ((int)_opacityNum.Value < 30 || (int)_opacityNum.Value > 100))
+            {
+                AntdUI.Message.warn(this, "窗口不透明度需在 30–100 之间");
+                return false;
+            }
+            var missing = new List<string>();
+            if (!FontExists(_fontCombo)) missing.Add("终端字体");
+            if (!FontExists(_uiFontCombo)) missing.Add("界面字体");
+            if (missing.Count > 0)
+            {
+                // 不拦保存（用户可能故意先配好再去装字体），但必须说清楚会 fallback
+                AntdUI.Message.warn(this, string.Join("、", missing) + " 在本机未安装，将回退到系统默认字体");
+                DiagLog.Info("Appearance.Validate", "missing fonts: " + string.Join(",", missing));
+            }
+            return true;
+        }
+
+        private static bool FontExists(AntdUI.Select combo)
+        {
+            try
+            {
+                var name = combo != null && combo.SelectedValue != null ? combo.SelectedValue.ToString() : null;
+                if (string.IsNullOrWhiteSpace(name)) return true;
+                using (var ff = new FontFamily(name)) { }
+                return true;
+            }
+            catch (Exception) { return false; }
+        }
+
         private void SaveResult()
         {
+            if (!ValidateSettings()) return;
             // 底栏分组/钉住不在本对话框编辑：必须透传旧值，否则 Save 会清掉 MainForm 已落盘的 bottom-bar 状态。
             var old = AppearanceSettings.Load(_iniPath);
             Result = new AppearanceSettings

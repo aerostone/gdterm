@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -113,21 +114,162 @@ namespace Gdterm.Security
         }
 
         /// <summary>
-        /// 添加白名单命令
+        /// 添加白名单命令。
+        /// 2026-11 审计：此前后台只在内存 HashSet 里加，配置文件不动、界面也读不回来——
+        /// 用户加的豁免重启即消失（“功能是假的”）。现在同步进 _config.Whitelist 并落盘。
         /// </summary>
         public void AddToWhitelist(string command)
         {
-            if (!string.IsNullOrWhiteSpace(command))
-                _whitelist.Add(command.Trim());
+            if (string.IsNullOrWhiteSpace(command)) return;
+            var cmd = command.Trim();
+            if (!_whitelist.Add(cmd)) return;
+            if (_config.Whitelist == null) _config.Whitelist = new List<string>();
+            if (!_config.Whitelist.Any(w => string.Equals(w, cmd, StringComparison.OrdinalIgnoreCase)))
+                _config.Whitelist.Add(cmd);
+            SaveConfig();
         }
 
-        /// <summary>
-        /// 移除白名单命令
-        /// </summary>
+        /// <summary>移除白名单命令（同样落盘）。</summary>
         public void RemoveFromWhitelist(string command)
         {
-            if (!string.IsNullOrWhiteSpace(command))
-                _whitelist.Remove(command.Trim());
+            if (string.IsNullOrWhiteSpace(command)) return;
+            var cmd = command.Trim();
+            _whitelist.Remove(cmd);
+            if (_config.Whitelist != null)
+                _config.Whitelist.RemoveAll(w => string.Equals(w, cmd, StringComparison.OrdinalIgnoreCase));
+            SaveConfig();
+        }
+
+        /// <summary>白名单快照（配置界面回填用；此前没有这个入口，界面只能显示一句“功能已就绪”）。</summary>
+        public IReadOnlyList<string> GetWhitelist()
+        {
+            var list = new List<string>(_whitelist);
+            list.Sort(StringComparer.OrdinalIgnoreCase);
+            return list.AsReadOnly();
+        }
+
+        /// <summary>新增规则并落盘（规则热生效，不需要重启）。</summary>
+        public void AddRule(DangerousCommandRule rule)
+        {
+            if (rule == null || string.IsNullOrWhiteSpace(rule.Pattern)) return;
+            if (string.IsNullOrWhiteSpace(rule.Id))
+                rule.Id = "custom-" + Guid.NewGuid().ToString("N").Substring(0, 8);
+            _config.Rules.Add(rule);
+            SaveConfig();
+            CompileRules();
+        }
+
+        /// <summary>按 Id 覆盖规则内容并落盘。</summary>
+        public bool UpdateRule(string id, DangerousCommandRule updated)
+        {
+            if (string.IsNullOrWhiteSpace(id) || updated == null) return false;
+            var idx = _config.Rules.FindIndex(r => string.Equals(r.Id, id, StringComparison.OrdinalIgnoreCase));
+            if (idx < 0) return false;
+            updated.Id = id;
+            _config.Rules[idx] = updated;
+            SaveConfig();
+            CompileRules();
+            return true;
+        }
+
+        /// <summary>按 Id 删除规则并落盘。</summary>
+        public bool RemoveRule(string id)
+        {
+            var idx = _config.Rules.FindIndex(r => string.Equals(r.Id, id, StringComparison.OrdinalIgnoreCase));
+            if (idx < 0) return false;
+            _config.Rules.RemoveAt(idx);
+            SaveConfig();
+            CompileRules();
+            return true;
+        }
+
+        /// <summary>启用/禁用规则并落盘（禁用只影响匹配，不删规则）。</summary>
+        public bool SetRuleEnabled(string id, bool enabled)
+        {
+            var rule = _config.Rules.FirstOrDefault(r => string.Equals(r.Id, id, StringComparison.OrdinalIgnoreCase));
+            if (rule == null) return false;
+            rule.Enabled = enabled;
+            SaveConfig();
+            CompileRules();
+            return true;
+        }
+
+        /// <summary>写回配置文件；路径未配置时静默跳过（内存模式，测试用）。</summary>
+        public void SaveConfig()
+        {
+            if (string.IsNullOrEmpty(_configPath)) return;
+            try
+            {
+                var dir = Path.GetDirectoryName(_configPath);
+                if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
+                var tmp = _configPath + ".tmp";
+                File.WriteAllText(tmp, SerializeConfig(_config), Encoding.UTF8);
+                if (File.Exists(_configPath)) File.Delete(_configPath);
+                File.Move(tmp, _configPath);
+            }
+            catch (Exception ex)
+            {
+                // 写不进去必须留痕：调用方据此给用户看失败提示，而不是假装保存成功
+                LastSaveError = ex.Message;
+            }
+        }
+
+        /// <summary>最近一次 SaveConfig 的失败原因（成功时为 null）。</summary>
+        public string LastSaveError { get; private set; }
+
+        private static string SerializeConfig(DangerousCommandConfig cfg)
+        {
+            var sb = new StringBuilder();
+            sb.Append("{\n");
+            sb.Append("  \"enabled\": ").Append(cfg.Enabled ? "true" : "false").Append(",\n");
+            sb.Append("  \"applyToBroadcast\": ").Append(cfg.ApplyToBroadcast ? "true" : "false").Append(",\n");
+            sb.Append("  \"whitelist\": [");
+            var wl = cfg.Whitelist ?? new List<string>();
+            for (int i = 0; i < wl.Count; i++)
+            {
+                if (i > 0) sb.Append(", ");
+                sb.Append(Quote(wl[i]));
+            }
+            sb.Append("],\n");
+            sb.Append("  \"rules\": [");
+            for (int i = 0; i < cfg.Rules.Count; i++)
+            {
+                var r = cfg.Rules[i];
+                sb.Append(i == 0 ? "\n" : ",\n");
+                sb.Append("    {");
+                sb.Append("\"id\": ").Append(Quote(r.Id)).Append(", ");
+                sb.Append("\"name\": ").Append(Quote(r.Name)).Append(", ");
+                sb.Append("\"pattern\": ").Append(Quote(r.Pattern)).Append(", ");
+                sb.Append("\"patternType\": ").Append(Quote(r.PatternType.ToString())).Append(", ");
+                sb.Append("\"level\": ").Append(Quote(r.Level.ToString())).Append(", ");
+                sb.Append("\"confirmCount\": ").Append(r.ConfirmCount.ToString(CultureInfo.InvariantCulture)).Append(", ");
+                sb.Append("\"description\": ").Append(Quote(r.Description)).Append(", ");
+                sb.Append("\"category\": ").Append(Quote(r.Category)).Append(", ");
+                sb.Append("\"enabled\": ").Append(r.Enabled ? "true" : "false");
+                sb.Append("}");
+            }
+            sb.Append("\n  ]\n}\n");
+            return sb.ToString();
+        }
+
+        private static string Quote(string value)
+        {
+            if (value == null) return "\"\"";
+            var sb = new StringBuilder("\"");
+            foreach (var ch in value)
+            {
+                switch (ch)
+                {
+                    case '"': sb.Append("\\\""); break;
+                    case '\\': sb.Append("\\\\"); break;
+                    case '\n': sb.Append("\\n"); break;
+                    case '\r': sb.Append("\\r"); break;
+                    case '\t': sb.Append("\\t"); break;
+                    default: sb.Append(ch); break;
+                }
+            }
+            sb.Append('"');
+            return sb.ToString();
         }
 
         /// <summary>
@@ -268,9 +410,30 @@ namespace Gdterm.Security
                 }
             }
 
+            // 解析 Whitelist（2026-11：此前只读规则不读白名单，配置里的豁免永远不生效）
+            var wlStart = json.IndexOf("\"whitelist\"");
+            if (wlStart > 0)
+            {
+                var arrStart = json.IndexOf('[', wlStart);
+                var arrEnd = FindMatchingBracket(json, arrStart);
+                if (arrStart > 0 && arrEnd > arrStart)
+                {
+                    var raw = json.Substring(arrStart + 1, arrEnd - arrStart - 1);
+                    foreach (var entry in raw.Split(','))
+                    {
+                        var t = entry.Trim().Trim('"');
+                        if (t.Length > 0) config.Whitelist.Add(t);
+                    }
+                }
+            }
+
             // 如果没有规则，用默认
             if (config.Rules.Count == 0)
-                return DangerousCommandConfig.GetDefault();
+            {
+                var fallback = DangerousCommandConfig.GetDefault();
+                fallback.Whitelist = config.Whitelist;
+                return fallback;
+            }
 
             return config;
         }

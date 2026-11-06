@@ -16,6 +16,7 @@ namespace Gdterm.UI.Controls
             new System.Collections.Generic.List<string>();
 
         private readonly ListBox _list;
+        private EmptyStateView _empty;
 
         public TransferCenterPanel()
         {
@@ -57,13 +58,41 @@ namespace Gdterm.UI.Controls
             };
             clear.Click += (s, e) =>
             {
-                lock (Sync) Jobs.Clear();
-                Reload();
+                int n;
+                lock (Sync) n = Jobs.Count;
+                if (n == 0)
+                {
+                    ToastNotifier.Info("传输记录已经是空的");
+                    return;
+                }
+                if (MessageBox.Show(FindForm(), "清空 " + n + " 条传输记录？", "传输中心",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+                try
+                {
+                    lock (Sync) Jobs.Clear();
+                    Reload();
+                }
+                catch (Exception ex)
+                {
+                    try { DiagLog.Error("TransferCenter.Clear", ex); } catch (Exception) { }
+                    ToastNotifier.Error("清空失败：" + ex.Message);
+                }
             };
+
+            // 双击/回车 = 复制这条记录（要贴给同事或提 issue 时原来没有任何出路）
+            _list.DoubleClick += (s, e) => CopySelected();
+            _list.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter) { CopySelected(); e.Handled = true; }
+            };
+
             Controls.Add(_list);
             Controls.Add(tip);
             Controls.Add(clear);
             Controls.Add(title);
+            _empty = EmptyStateView.Attach(this, "还没有传输记录",
+                "从 SFTP 面板上传/下载、Zmodem 收发的文件，完成后都会记在这里",
+                "打开传输日志目录", (s2, e2) => OpenLogDir());
             Reload();
         }
 
@@ -82,14 +111,46 @@ namespace Gdterm.UI.Controls
         {
             _list.BeginUpdate();
             _list.Items.Clear();
+            int count;
             lock (Sync)
             {
-                if (Jobs.Count == 0)
-                    _list.Items.Add("（暂无传输记录）");
-                else
-                    foreach (var j in Jobs) _list.Items.Add(j);
+                count = Jobs.Count;
+                foreach (var j in Jobs) _list.Items.Add(j);
             }
             _list.EndUpdate();
+            // 占位项「（暂无传输记录）」退役：它既不能选中也没有意义，改由空态层承担引导
+            if (_empty != null) _empty.SetEmpty(count == 0);
+        }
+
+        private void CopySelected()
+        {
+            if (_list.SelectedItem == null) return;
+            try
+            {
+                Clipboard.SetText(_list.SelectedItem.ToString());
+                ToastNotifier.Success("已复制传输记录", 2000);
+            }
+            catch (Exception ex)
+            {
+                try { DiagLog.Error("TransferCenter.Copy", ex); } catch (Exception) { }
+                ToastNotifier.Error("复制失败：" + ex.Message);
+            }
+        }
+
+        private void OpenLogDir()
+        {
+            try
+            {
+                var dir = System.IO.Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "gdterm", "logs");
+                System.IO.Directory.CreateDirectory(dir);
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(dir) { UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                try { DiagLog.Error("TransferCenter.OpenLogDir", ex); } catch (Exception) { }
+                ToastNotifier.Error("打开日志目录失败：" + ex.Message);
+            }
         }
 
         protected override void OnVisibleChanged(EventArgs e)

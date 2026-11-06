@@ -17,6 +17,7 @@ namespace Gdterm.UI.Controls
         private readonly AntdUI.Label _lblScore;
         private readonly AntdUI.Label _lblStats;
         private readonly ListView _lvFindings;
+        private EmptyStateView _empty;
         private readonly AntdUI.Button _btnScan;
         private readonly AntdUI.Button _btnStop;
         private readonly ProgressBar _progress;
@@ -139,6 +140,11 @@ namespace Gdterm.UI.Controls
 
             Controls.Add(_lvFindings);
             Controls.Add(_progress);
+            // 审计 C1：空态引导 —— 「扫完 0 个发现」与「还没扫」此前都只是一片空列表
+            _empty = EmptyStateView.Attach(this, "还没有扫描结果",
+                "选一个目录开始扫描，命中密钥/口令/私钥等高危模式的文件会列在这里",
+                "开始扫描", (s2, e2) => StartScan());
+            _empty.SetEmpty(true);
             Controls.Add(topPanel);
             Controls.Add(bottomPanel);
 
@@ -152,6 +158,7 @@ namespace Gdterm.UI.Controls
         private void StartScan()
         {
             _lvFindings.Items.Clear();
+            if (_empty != null) _empty.SetEmpty(false);
             _btnScan.Enabled = false;
             _btnStop.Enabled = true;
             _progress.Style = ProgressBarStyle.Marquee;
@@ -216,12 +223,38 @@ namespace Gdterm.UI.Controls
                 report.CriticalCount, report.HighCount, report.MediumCount, report.LowCount);
 
             _lblStatus.Text = string.Format("扫描耗时: {0:F1}秒", report.Duration.TotalSeconds);
+
+            if (_empty != null)
+            {
+                // 「零发现」是好消息，不该显示成空态；文案要区分「没扫」与「扫完很干净」
+                if (_lvFindings.Items.Count > 0) _empty.SetEmpty(false);
+                else if (report.FilesScanned > 0)
+                {
+                    _empty.SetEmpty(true, "没有发现敏感信息",
+                        string.Format("已扫描 {0} 个文件，未命中已知密钥/口令模式", report.FilesScanned));
+                    if (_empty.ActionButton != null) _empty.ActionButton.Visible = false;
+                }
+                else
+                {
+                    _empty.SetEmpty(true);
+                    if (_empty.ActionButton != null) _empty.ActionButton.Visible = true;
+                }
+                if (_lvFindings.Items.Count > 0 && _empty.ActionButton != null)
+                    _empty.ActionButton.Visible = true;
+            }
         }
 
         private void OnError(string error)
         {
             if (InvokeRequired) { BeginInvoke(new Action(() => OnError(error))); return; }
             _lblStatus.Text = "错误: " + error;
+            _btnScan.Enabled = true;
+            _btnStop.Enabled = false;
+            _progress.Style = ProgressBarStyle.Continuous;
+            // 失败必须能被人看见：状态栏在面板底部，扫描出错时用户往往已经切走
+            var owner = FindForm();
+            if (owner != null) AntdUI.Message.error(owner, "扫描失败：" + error);
+            else ToastNotifier.Error("扫描失败：" + error);
         }
 
         private void OnFindingDoubleClick(object sender, EventArgs e)

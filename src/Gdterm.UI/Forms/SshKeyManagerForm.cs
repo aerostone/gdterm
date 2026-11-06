@@ -76,8 +76,15 @@ namespace Gdterm.UI.Forms
                         {
                             var raw = File.ReadAllText(dlg.FileName, Encoding.UTF8);
                             _preview.Text = raw.Length > 2000 ? raw.Substring(0, 2000) + "\n…" : raw;
+                            // 选了非私钥文件（比如 .pub 公钥或别的文本）要当场说，而不是等导入后才由服务端拒绝
+                            if (raw.IndexOf("PRIVATE KEY", StringComparison.Ordinal) < 0)
+                                AntdUI.Message.warn(this, "这个文件里没有 PRIVATE KEY 头，可能不是私钥（.pub 公钥无法用于认证）");
                         }
-                        catch (Exception ex) { _preview.Text = ex.Message; }
+                        catch (Exception ex)
+                        {
+                            _preview.Text = ex.Message;
+                            ToastNotifier.Error("读取私钥文件失败：" + ex.Message);
+                        }
                     }
                 }
             };
@@ -118,6 +125,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(ok);
 
             ClientSize = new Size(clientW, y + fieldH + DpiScale.V(this, 16));
+            AcceptButton = ok;   // 回车=导入，Esc=关闭（此前只能用鼠标点）
             CancelButton = cancel;
         }
 

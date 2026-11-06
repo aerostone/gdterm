@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using Gdterm.AI;
 using Gdterm.Terminal;
 using TerminalControl = Gdterm.UI.Controls.TerminalControl;
+using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
@@ -30,6 +31,7 @@ namespace Gdterm.UI.Controls
         private FlowLayoutPanel _cmdBar;
         private CancellationTokenSource _cts;
         private bool _sending;
+        private EmptyStateView _empty;
 
         public AiChatPanel(IAiAssistantService aiService, Func<TerminalControl> getActiveTerminal)
         {
@@ -121,11 +123,36 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
                 Margin = new Padding(DpiScale.V(this, 4), 0, 0, 0)
             };
-            _btnClear.Click += (s, e) => { try { _aiService.ClearHistory(); _historyBox.Clear(); AppendSys("已清空对话历史。"); } catch { } };
+            _btnClear.Click += (s, e) =>
+            {
+                try
+                {
+                    _aiService.ClearHistory();
+                    _historyBox.Clear();
+                    if (_cmdBar != null) { _cmdBar.Controls.Clear(); _cmdBar.Visible = false; }
+                    if (_empty != null) _empty.SetEmpty(true);
+                    AppendSys("已清空对话历史。");
+                }
+                catch (Exception ex)
+                {
+                    try { DiagLog.Error("AiChatPanel.Clear", ex); } catch (Exception) { }
+                    ToastNotifier.Error("清空会话失败：" + ex.Message);
+                }
+            };
             bottomRow.Controls.Add(_btnClear, 2, 0);
             Controls.Add(bottomRow);
 
-            AppendSys("AI 助手：回复中的命令会出现在下方快捷条，点一下即发往当前终端（过危险命令确认）。");
+            // 审计 C1：空对话此前只有一行灰色小字，看着像「没加载出来」。
+            // 改成空态引导：说明能力 + 一个可直接点的示例提问（点了就填进输入框）。
+            _empty = EmptyStateView.Attach(this, "AI 助手",
+                "回复里出现的命令会列在下方快捷条，点一下即发往当前终端（仍走危险命令确认）",
+                "试一个示例问题", (s2, e2) =>
+                {
+                    _inputBox.Text = "这台机器 CPU 占用为什么这么高？给出排查命令";
+                    _inputBox.Focus();
+                    try { _inputBox.SelectAll(); } catch (Exception) { }
+                });
+            _empty.SetEmpty(true);
         }
 
         private void OnInputKeyDown(object sender, KeyEventArgs e)
@@ -241,6 +268,7 @@ namespace Gdterm.UI.Controls
 
         private void AppendUser(string text)
         {
+            if (_empty != null) _empty.SetEmpty(false);
             AppendLine("你： " + text, GdtermColorTable.Accent, true);
         }
 

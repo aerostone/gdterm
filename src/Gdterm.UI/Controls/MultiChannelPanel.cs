@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using Gdterm.Terminal;
 using Gdterm.UI.Services;
 
+using Gdterm.UI.Diagnostics;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Controls
@@ -32,6 +33,7 @@ namespace Gdterm.UI.Controls
         private EventHandler<ChannelSessionEventArgs> _onSessionRegistered;
         private EventHandler<ChannelSessionEventArgs> _onSessionUnregistered;
         private EventHandler<BroadcastStateChangedEventArgs> _onBroadcastStateChanged;
+        private EmptyStateView _empty;
 
         /// <summary>
         /// 广播命令事件（用户在输入框输入命令后触发）
@@ -141,6 +143,10 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Surface
             };
 
+            // 空态：一个终端都没打开时列表是纯空白 + 一排灰按钮，等于让用户猜「先干什么」
+            _empty = EmptyStateView.Attach(this, "还没有可广播的会话",
+                "打开任意 SSH/串口标签后会自动出现在这里；只有停在命令提示符的会话可加入",
+                "刷新列表", (s2, e2) => { RefreshList(); ToastNotifier.Info("已刷新会话列表", 1500); });
             Controls.Add(_sessionList);
             Controls.Add(toolbar);
             Controls.Add(inputPanel);
@@ -286,7 +292,12 @@ namespace Gdterm.UI.Controls
                 _btnRecord.Text = "停止";
                 _statusLabel.Text = "录制中…（广播输入记入时间线）";
             }
-            catch (System.Exception ex) { _statusLabel.Text = "录制失败: " + ex.Message; }
+            catch (System.Exception ex)
+            {
+                _statusLabel.Text = "录制失败: " + ex.Message;
+                try { DiagLog.Error("MultiChannel.Record", ex); } catch { }
+                ToastNotifier.Error("录制失败：" + ex.Message);
+            }
         }
 
         /// <summary>回放：输入事件按原时间线重发到同名会话（1x）。输出事件仅记时间线不回显——远端状态已变，重放输出无意义。</summary>
@@ -388,6 +399,7 @@ namespace Gdterm.UI.Controls
             }
 
             _sessionList.EndUpdate();
+            if (_empty != null) _empty.SetEmpty(sessions.Count == 0);
             UpdateStatus();
         }
 

@@ -32,6 +32,9 @@ namespace Gdterm.UI.Controls
         private string _samplerKey;
         private bool _sampling;
         private bool _disposed2;
+        private bool _loading = true;          // 首帧未到 → 顶部显示跑马灯 + “正在连接采样”
+        private bool _failing;                 // 连续失败中（只在跃迁那一次提示，避免每 5 秒刷屏）
+        private ProgressBar _firstLoadBar;
 
         /// <summary>采样间隔（毫秒）。远端 5 秒一轮，成本可忽略。</summary>
         public int IntervalMs { get; set; } = 5000;
@@ -49,11 +52,11 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
-                RowCount = 9,
+                RowCount = 10,   // 0..8 内容行（AutoSize）+ 9 弹性尾行（Percent 吸收剩余高度）
                 BackColor = GdtermColorTable.Background
             };
             root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            for (int i = 0; i < 8; i++) root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            for (int i = 0; i < 9; i++) root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
             var title = new AntdUI.Label
@@ -97,6 +100,18 @@ namespace Gdterm.UI.Controls
             };
             root.Controls.Add(_statusLabel, 0, 6);
 
+            // 首帧加载态：本地 5s 采样 + 远端 SSH 建链，第一轮多半要等 1-3 秒。
+            // 此前这段时间面板是一片“0.0%”，看起来像采集全挂了。
+            _firstLoadBar = new ProgressBar
+            {
+                Dock = DockStyle.Fill,
+                Height = DpiScale.V(this, 3),
+                Style = ProgressBarStyle.Marquee,
+                MarqueeAnimationSpeed = 30,
+                Margin = new Padding(0, DpiScale.V(this, 6), 0, 0)
+            };
+            root.Controls.Add(_firstLoadBar, 0, 7);
+
             var hint = new AntdUI.Label
             {
                 Text = "每 5 秒在独立 SSH 连接上只读采集 /proc，不干扰终端。",
@@ -106,14 +121,23 @@ namespace Gdterm.UI.Controls
                 ForeColor = GdtermColorTable.Muted,
                 Margin = new Padding(0, DpiScale.V(this, 8), 0, 0)
             };
-            root.Controls.Add(hint, 0, 7);
+            root.Controls.Add(hint, 0, 8);
 
             Controls.Add(root);
 
+            SetLoading(true);
             _timer = new System.Windows.Forms.Timer { Interval = IntervalMs };
             _timer.Tick += (s, e) => Tick();
             HandleCreated += (s, e) => { _timer.Start(); Tick(); };
             HandleDestroyed += (s, e) => _timer.Stop();
+        }
+
+        /// <summary>首帧加载态开关（跑马灯 + 状态行）。</summary>
+        private void SetLoading(bool loading)
+        {
+            _loading = loading;
+            if (_firstLoadBar != null && _firstLoadBar.Visible != loading) _firstLoadBar.Visible = loading;
+            if (loading) SetStatus("正在连接采样（首个快照约 1-3 秒）…", true);
         }
 
         private void Tick()
@@ -122,6 +146,7 @@ namespace Gdterm.UI.Controls
             var cfg = CurrentConfig();
             if (cfg == null)
             {
+                SetLoading(false);
                 SetStatus("无活动 SSH 会话（连上后自动开始）", false);
                 ResetBars("—");
                 return;
@@ -130,6 +155,7 @@ namespace Gdterm.UI.Controls
             var cred = CurrentCredentials();
             if (cred == null)
             {
+                SetLoading(false);
                 SetStatus("缺少凭据，无法采样（重连后恢复）", false);
                 ResetBars("—");
                 return;
@@ -148,7 +174,9 @@ namespace Gdterm.UI.Controls
                 {
                     _sampler = null;
                     _samplerKey = null;
+                    SetLoading(false);
                     SetStatus("采样器初始化失败: " + ex.Message, false);
+                    try { DiagLog.Error("RemoteMonitorPanel.Init", ex); } catch (Exception) { }
                     return;
                 }
             }
@@ -170,7 +198,7 @@ namespace Gdterm.UI.Controls
                         try
                         {
                             if (t.IsFaulted || t.Result == null)
-                                SetStatus("采样失败: " + (t.Exception != null ? t.Exception.GetBaseException().Message : "空结果"), false);
+                                ReportSampleFailure(t.Exception != null ? t.Exception.GetBaseException().Message : "空结果");
                             else
                                 Render(t.Result);
                         }
@@ -181,13 +209,30 @@ namespace Gdterm.UI.Controls
             }, TaskScheduler.Default);
         }
 
+        /// <summary>
+        /// 采样失败：状态行染红 + 首轮失败时留痕并提示一次。
+        /// 面板挂靠终端侧边，失败时用户多半在看终端——只在“进入失败态”的瞬间提示，
+        /// 恢复后自动重新武装，不会每 5 秒弹一次。
+        /// </summary>
+        private void ReportSampleFailure(string message)
+        {
+            SetLoading(false);
+            SetStatus("采样失败: " + message, false);
+            if (_failing) return;
+            _failing = true;
+            try { DiagLog.Error("RemoteMonitorPanel.Sample", message); } catch (Exception) { }
+            ToastNotifier.Warning("主机资源采样失败：" + message);
+        }
+
         private void Render(RemoteStatsSnapshot s)
         {
             if (s.Error != null)
             {
-                SetStatus("采样失败: " + s.Error, false);
+                ReportSampleFailure(s.Error);
                 return;
             }
+            _failing = false;
+            SetLoading(false);
             _cpuBar.Value = s.CpuPercent;
             _memBar.Value = s.MemPercent;
             _swapBar.Value = s.SwapPercent;

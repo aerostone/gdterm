@@ -19,6 +19,9 @@ namespace Gdterm.UI.Controls
         private Panel _graphPanel;
         private readonly List<HealthSnapshot> _recent = new List<HealthSnapshot>();
         private System.Windows.Forms.Timer _refreshTimer;
+        private AntdUI.Label _lblHint;
+        private bool _loading = true;       // 首帧快照未到 = 还在加载（此前图区空白，分不清「等」与「坏」）
+        private bool _lastConnected = true;
         private static readonly Font _titleFont = Services.FormFontPolicy.UiFont(+1f);
         private static readonly Font _labelFont = Services.FormFontPolicy.UiFont(-1f);
         private readonly Dictionary<Color, SolidBrush> _brushCache = new Dictionary<Color, SolidBrush>();
@@ -42,11 +45,35 @@ namespace Gdterm.UI.Controls
 
         public void SetMonitor(ConnectionHealthMonitor monitor)
         {
+            if (_monitor != null)
+            {
+                try { _monitor.SnapshotUpdated -= OnSnapshot; } catch (Exception) { }
+            }
             _monitor = monitor;
+            _loading = true;
+            if (_lblHint != null) _lblHint.Text = "正在等待首个采样…";
             if (_monitor != null)
             {
                 _monitor.SnapshotUpdated += OnSnapshot;
-                _monitor.Start(3000);
+                try { _monitor.Start(3000); }
+                catch (Exception ex)
+                {
+                    SetHint("采样启动失败：" + ex.Message, true);
+                    try { DiagLog.Error("HealthMonitorPanel.Start", ex); } catch (Exception) { }
+                }
+            }
+        }
+
+        /// <summary>状态条文案 + 失败时留痕（失败只在文字里变红太容易被忽略）。</summary>
+        private void SetHint(string text, bool failed)
+        {
+            if (_lblHint == null) return;
+            _lblHint.Text = text;
+            _lblHint.ForeColor = failed ? GdtermColorTable.Danger : GdtermColorTable.Muted;
+            if (failed)
+            {
+                try { DiagLog.Error("HealthMonitorPanel", text); } catch (Exception) { }
+                ToastNotifier.Warning(text);
             }
         }
 
@@ -67,8 +94,10 @@ namespace Gdterm.UI.Controls
             _lblUptime = CreateCard("⏱ 运行时间", "00:00:00", GdtermColorTable.Foreground);
             _lblLatency = CreateCard("⚡ 延迟", "— ms", GdtermColorTable.Success);
             _lblReconnects = CreateCard("↻ 重连", "0", GdtermColorTable.Warning);
+            _lblHint = CreateCard("采样", "正在等待首个采样…", GdtermColorTable.Muted);
+            _lblHint.Font = _labelFont;
 
-            cards.Controls.AddRange(new Control[] { _lblStatus, _lblUptime, _lblLatency, _lblReconnects });
+            cards.Controls.AddRange(new Control[] { _lblStatus, _lblUptime, _lblLatency, _lblReconnects, _lblHint });
 
             // ── 图表区 ──
             _graphPanel = new Panel
@@ -117,11 +146,23 @@ namespace Gdterm.UI.Controls
             {
                 BeginInvoke((Action)(() =>
                 {
+                    _loading = false;
                     _lblStatus.Text = snapshot.IsConnected ? "● 已连接" : "○ 断开";
                     _lblStatus.ForeColor = snapshot.IsConnected ? GdtermColorTable.Success : GdtermColorTable.Danger;
                     _lblUptime.Text = FormatTimeSpan(snapshot.Uptime);
                     _lblLatency.Text = string.Format("{0:F0}ms", snapshot.LatencyMs);
                     _lblReconnects.Text = snapshot.ReconnectCount.ToString();
+                    // 状态跃迁才提示：每 3 秒弹一次「断开」会把面板变成噪音源
+                    if (snapshot.IsConnected != _lastConnected)
+                    {
+                        _lastConnected = snapshot.IsConnected;
+                        if (!snapshot.IsConnected)
+                            SetHint(string.IsNullOrEmpty(snapshot.StatusText) ? "连接已断开，正在等待重连…" : snapshot.StatusText, true);
+                        else
+                            SetHint("已恢复连接", false);
+                    }
+                    else if (snapshot.IsConnected)
+                        SetHint("采样于 " + snapshot.Timestamp.ToString("HH:mm:ss"), false);
                 }));
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("HealthMonitorPanel", exSwallowed); } catch { } }
@@ -154,7 +195,14 @@ namespace Gdterm.UI.Controls
             // 连接状态线（1=已连接, 0=断开）
             List<HealthSnapshot> snapshots;
             lock (_recent) { snapshots = new List<HealthSnapshot>(_recent); }
-            if (snapshots.Count < 2) return;
+            if (snapshots.Count < 2)
+            {
+                // 此前这里直接 return：首帧前图区纯背景色，用户以为图表坏了
+                var msg = _loading ? "正在等待首个采样…" : "采样点不足，稍等几秒即出曲线";
+                g.DrawString(msg, _labelFont, GetBrush(GdtermColorTable.Muted),
+                    chartRect.Left + 8, chartRect.Top + chartRect.Height / 2f - 8);
+                return;
+            }
 
             var points = new PointF[snapshots.Count];
             for (int i = 0; i < snapshots.Count; i++)

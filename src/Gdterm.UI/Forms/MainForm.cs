@@ -1044,7 +1044,7 @@ namespace Gdterm.UI.Forms
                 using (var dlg = new CommandPaletteForm(cmds))
                 {
                     if (dlg.ShowDialog(this) == DialogResult.OK && dlg.Selected != null)
-                        dlg.Selected.Action();
+                        dlg.RunSelected();
                 }
             }
             catch (Exception ex) { DiagLog.Swallowed("MainForm.CommandPalette", ex); }

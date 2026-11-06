@@ -7,6 +7,7 @@ using Gdterm.Connections;
 using Gdterm.Core.Models;
 using Gdterm.Terminal;
 using TerminalControl = Gdterm.UI.Controls.TerminalControl;
+using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
@@ -95,6 +96,8 @@ namespace Gdterm.UI.Controls
             _lvResults.Columns.Add("命令", DpiScale.V(this, 320));
             _lvResults.DoubleClick += (s, e) => ExecuteSelected();
             Controls.Add(_lvResults);
+            _empty = EmptyStateView.Attach(this, "还没有命令模板",
+                "把常用命令存成模板，双击即插入当前终端（支持变量占位）");
 
             var toolRow = new FlowLayoutPanel
             {
@@ -138,6 +141,8 @@ namespace Gdterm.UI.Controls
             return b;
         }
 
+        private EmptyStateView _empty;
+
         private void RefreshCategories()
         {
             try
@@ -160,7 +165,12 @@ namespace Gdterm.UI.Controls
             catch { cat = null; }
             IEnumerable<CommandTemplate> all;
             try { all = _store.GetAll() ?? new List<CommandTemplate>(); }
-            catch { all = new List<CommandTemplate>(); }
+            catch (Exception ex)
+            {
+                all = new List<CommandTemplate>();
+                try { DiagLog.Error("CmdTemplatePanel.GetAll", ex); } catch (Exception) { }
+                ToastNotifier.Error("读取命令模板失败：" + ex.Message);
+            }
             foreach (var t in all)
             {
                 if (t == null) continue;
@@ -180,6 +190,16 @@ namespace Gdterm.UI.Controls
             }
             if (_lvResults.Items.Count > 0) _lvResults.Items[0].Selected = true;
             _statusLabel.Text = "共 " + _filtered.Count + " 个模板";
+            if (_empty != null)
+            {
+                // 区分「一条模板都没有」和「筛选把结果滤空了」——后者该提示清空搜索而不是让用户去建模板
+                bool none = _filtered.Count == 0;
+                bool filtered = none && (!string.IsNullOrEmpty(q) || !string.IsNullOrEmpty(cat));
+                if (filtered)
+                    _empty.SetEmpty(true, "没有匹配的模板", "清空搜索词或把分类切回「全部」试试");
+                else
+                    _empty.SetEmpty(true, "还没有命令模板", "把常用命令存成模板，双击即插入当前终端（支持变量占位）");
+            }
         }
 
         private void ExecuteSelected()

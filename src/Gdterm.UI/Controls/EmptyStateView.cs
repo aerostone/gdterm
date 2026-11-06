@@ -166,7 +166,29 @@ namespace Gdterm.UI.Controls
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
+            ClampWidth();
             CenterBox();
+        }
+
+        /// <summary>
+        /// 窄宿主自适配：说明文本的设计宽是 360（两行排版的最佳阅读宽），
+        /// 但侧栏/三栏面板的可用宽常只有 280 左右——固定 360 会横向溢出
+        /// （ui-tree-check 的 R-溢出 会红）。这里按宿主实际宽夹一次。
+        /// </summary>
+        private void ClampWidth()
+        {
+            if (_desc == null) return;
+            int avail = Width - DpiScale.V(this, 20);
+            if (avail <= 0) return;
+            int design = DpiScale.V(this, 360);
+            int want = Math.Max(DpiScale.V(this, 140), Math.Min(design, avail));
+            if (_desc.Width == want) return;
+            _desc.Width = want;
+            // 宽度变了行数也变：按真实 GDI 行高重算高度（宽 140~360 之间最多 3 行）
+            int line = FormFontPolicy.LineBox(FormFontPolicy.UiFont(-0.5f), null, 1.7f);
+            int lines = Math.Max(1, (int)Math.Ceiling((double)(_desc.Text ?? "").Length * 14 / Math.Max(1, want)) );
+            _desc.Height = line * Math.Min(3, Math.Max(2, lines));
+            try { _box.PerformLayout(); } catch (Exception) { }
         }
 
         protected override void OnVisibleChanged(EventArgs e)

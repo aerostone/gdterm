@@ -35,8 +35,27 @@ namespace Gdterm.UI.Controls
             };
             _clear.Click += (s, e) =>
             {
-                lock (Sync) Buffer.Clear();
-                Reload();
+                int n;
+                lock (Sync) n = Buffer.Count;
+                if (n == 0)
+                {
+                    // 空列表点「清空」不该什么也不发生：这是最容易让用户怀疑按钮坏了的地方
+                    ToastNotifier.Info("通知中心已经是空的");
+                    return;
+                }
+                if (MessageBox.Show(this.FindForm(), "清空 " + n + " 条通知？清空后无法恢复。", "通知中心",
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+                try
+                {
+                    lock (Sync) Buffer.Clear();
+                    Reload();
+                    ToastNotifier.Success("已清空 " + n + " 条通知", 2000);
+                }
+                catch (Exception ex)
+                {
+                    try { DiagLog.Error("NotificationCenter.Clear", ex); } catch (Exception) { }
+                    ToastNotifier.Error("清空失败：" + ex.Message);
+                }
             };
 
             _list = new ListBox
@@ -55,6 +74,14 @@ namespace Gdterm.UI.Controls
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(DpiScale.V(this, 8), 0, 0, 0),
                 Font = Services.FormFontPolicy.UiFont(+1f, FontStyle.Bold)
+            };
+
+            // 双击/回车 = 复制这一条（通知往往要贴给别人或提 issue，选中后无处可去是原来的空洞）
+            _list.DoubleClick += (s, e) => CopySelected();
+            _list.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Enter) { CopySelected(); e.Handled = true; }
+                if (e.KeyCode == Keys.Delete) { RemoveSelected(); e.Handled = true; }
             };
 
             Controls.Add(_list);
@@ -92,6 +119,39 @@ namespace Gdterm.UI.Controls
             }
             _list.EndUpdate();
             if (_empty != null) _empty.SetEmpty(_list.Items.Count == 0);
+        }
+
+        private void CopySelected()
+        {
+            if (_list.SelectedItem == null) return;
+            var text = _list.SelectedItem.ToString();
+            try
+            {
+                Clipboard.SetText(text);
+                ToastNotifier.Success("已复制通知", 2000);
+            }
+            catch (Exception ex)
+            {
+                // 剪贴板被别的进程占用是常见失败：不能静默
+                try { DiagLog.Error("NotificationCenter.Copy", ex); } catch (Exception) { }
+                ToastNotifier.Error("复制失败：" + ex.Message);
+            }
+        }
+
+        private void RemoveSelected()
+        {
+            if (_list.SelectedItem == null) return;
+            var text = _list.SelectedItem.ToString();
+            try
+            {
+                lock (Sync) Buffer.Remove(text);
+                Reload();
+            }
+            catch (Exception ex)
+            {
+                try { DiagLog.Error("NotificationCenter.Remove", ex); } catch (Exception) { }
+                ToastNotifier.Error("删除通知失败：" + ex.Message);
+            }
         }
 
         protected override void OnVisibleChanged(EventArgs e)

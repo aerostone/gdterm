@@ -53,6 +53,37 @@ namespace Gdterm.UI.Diagnostics
         }
 
         /// <summary>
+        /// 失败日志：功能没能完成（列表加载失败、采样失败、导出失败）。
+        /// 与 <see cref="Swallowed"/> 的区别：Swallowed 是「可以不管的边角」，
+        /// Error 是「用户本来期待成功的事没成功」，必须留痕到 crash.jsonl + ui.log。
+        /// 可视化反馈由调用方另做（Toast / 状态行 / Message.error）——
+        /// 日志只是兜底证据，不能当反馈用。
+        /// </summary>
+        public static void Error(string source, Exception ex)
+        {
+            try
+            {
+                CrashLog.Write("error:" + (source ?? "unknown"), ex, isTerminating: false,
+                    uiFile: true);
+            }
+            catch
+            {
+                // 诊断本身失败时保持静默
+            }
+        }
+
+        /// <summary>失败日志（无异常对象：远端返回错误码、接口返回失败等）。</summary>
+        public static void Error(string source, string message)
+        {
+            try
+            {
+                CrashLog.Write("error:" + (source ?? "unknown"),
+                    new Exception(message ?? ""), isTerminating: false, uiFile: true);
+            }
+            catch { }
+        }
+
+        /// <summary>
         /// 试运行阶段信息日志——写入 crash.jsonl（source 前缀 info:），永不抛出。
         /// UI 相关 source 会同时镜像到 logs/ui.log。
         /// </summary>

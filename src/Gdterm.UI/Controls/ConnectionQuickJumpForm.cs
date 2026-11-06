@@ -19,6 +19,7 @@ namespace Gdterm.UI.Controls
         private readonly AntdUI.Input _filter;
         private readonly ListBox _list;
         private List<ConnectionConfig> _all = new List<ConnectionConfig>();
+        private EmptyStateView _empty;
 
         public ConnectionConfig Selected { get; private set; }
 
@@ -63,6 +64,8 @@ namespace Gdterm.UI.Controls
 
             Controls.Add(_list);
             Controls.Add(_filter);
+            _empty = EmptyStateView.Attach(this, "没有匹配的连接",
+                "改个关键词，或先去「连接 → 新建连接」把主机存下来", null, null);
             Gdterm.UI.Services.FormFontPolicy.Apply(this);
             LoadData();
             KeyDown += (s, e) =>
@@ -74,7 +77,17 @@ namespace Gdterm.UI.Controls
         private void LoadData()
         {
             try { _all = (_store.LoadAll() ?? new List<ConnectionConfig>()).ToList(); }
-            catch { _all = new List<ConnectionConfig>(); }
+            catch (Exception ex)
+            {
+                // 原来这里静默吞异常：连接库读失败时用户只看到「没有匹配的连接」，会以为收藏丢了
+                _all = new List<ConnectionConfig>();
+                try { DiagLog.Error("QuickJump.LoadAll", ex); } catch (Exception) { }
+                if (_empty != null)
+                    _empty.SetEmpty(true, "连接库读取失败", "检查 " + ex.Message + "；恢复后重开本窗口即可重新加载");
+                ToastNotifier.Error("读取连接列表失败：" + ex.Message);
+                ApplyFilter();
+                return;
+            }
             ApplyFilter();
         }
 
@@ -102,6 +115,7 @@ namespace Gdterm.UI.Controls
                 }
             }
             _list.EndUpdate();
+            if (_empty != null) _empty.SetEmpty(_list.Items.Count == 0);
             if (_list.Items.Count > 0) _list.SelectedIndex = 0;
         }
 

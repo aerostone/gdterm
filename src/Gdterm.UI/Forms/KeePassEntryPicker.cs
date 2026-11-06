@@ -5,7 +5,9 @@ using System.Linq;
 using System.Windows.Forms;
 using Gdterm.KeePass;
 using Gdterm.KeePass.Models;
+using Gdterm.UI.Controls;
 using Gdterm.UI.Services;
+using Gdterm.UI.Diagnostics;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 
 namespace Gdterm.UI.Forms
@@ -22,7 +24,7 @@ namespace Gdterm.UI.Forms
         private readonly IKeePassService _keepass;
         private AntdUI.Input _searchBox;
         private AntdUI.Table _table;
-        private Panel _emptyState;
+        private EmptyStateView _emptyState;
         private AntdUI.Button _selectButton;
         private System.Collections.Generic.List<KeePassEntrySummary> _rows = new System.Collections.Generic.List<KeePassEntrySummary>();
         private IList<KeePassEntrySummary> _entries;
@@ -84,19 +86,10 @@ namespace Gdterm.UI.Forms
             _table.CellClick += (s, e) => UpdateSelectionState();
             _table.CellDoubleClick += (s, e) => SelectEntry();
 
-            _emptyState = new Panel
-            {
-                Dock = DockStyle.Fill,
-                Visible = false,
-                BackColor = GdtermColorTable.Background
-            };
-            _emptyState.Controls.Add(new AntdUI.Label
-            {
-                Dock = DockStyle.Fill,
-                AutoSize = false,
-                TextAlign = ContentAlignment.MiddleCenter,
-                ForeColor = GdtermColorTable.Muted
-            });
+            // 统一到 EmptyStateView：原来的手工 Panel + 单行居中标签既没有标题层级，
+            // 也不带“去管理密码库”的下一步动作。
+            _emptyState = EmptyStateView.Attach(this, "密码库中没有可选凭据",
+                "在「管理…」里新建一条，或取消本次选择", "管理密码库…", (s2, e2) => OpenManager());
 
             // 停靠子控件不会可靠撑开 Panel.AutoSize；按钮栏改为表格，取消按钮始终占据可点击空间。
             var btnPanel = new TableLayoutPanel
@@ -163,7 +156,19 @@ namespace Gdterm.UI.Forms
 
         private void LoadEntries()
         {
-            _entries = _keepass.ListEntries() ?? new List<KeePassEntrySummary>();
+            try
+            {
+                _entries = _keepass.ListEntries() ?? new List<KeePassEntrySummary>();
+            }
+            catch (Exception ex)
+            {
+                // 密码库没解锁/文件被占用时原来直接抛到 WinForms 未处理异常
+                _entries = new List<KeePassEntrySummary>();
+                try { DiagLog.Error("KeePassEntryPicker.ListEntries", ex); } catch (Exception) { }
+                ToastNotifier.Error("读取密码库失败：" + ex.Message);
+                if (_emptyState != null)
+                    _emptyState.SetEmpty(true, "密码库读取失败", ex.Message);
+            }
             PopulateList(_entries);
         }
 
@@ -191,13 +196,14 @@ namespace Gdterm.UI.Forms
             _table.DataSource = rows;
             bool isEmpty = _rows.Count == 0;
             _table.Visible = !isEmpty;
-            _emptyState.Visible = isEmpty;
-            if (isEmpty)
+            if (_emptyState != null)
             {
-                var label = _emptyState.Controls[0] as AntdUI.Label;
-                label.Text = string.IsNullOrWhiteSpace(_searchBox.Text)
-                    ? "密码库中没有可选凭据，可新建凭据或取消返回。"
-                    : "没有匹配的凭据，可调整搜索条件或取消返回。";
+                if (isEmpty && !string.IsNullOrWhiteSpace(_searchBox.Text))
+                    _emptyState.SetEmpty(true, "没有匹配的凭据", "调整搜索词，或清空后重试");
+                else if (isEmpty)
+                    _emptyState.SetEmpty(true, "密码库中没有可选凭据", "在「管理…」里新建一条，或取消本次选择");
+                else
+                    _emptyState.SetEmpty(false);
             }
             UpdateSelectionState();
         }

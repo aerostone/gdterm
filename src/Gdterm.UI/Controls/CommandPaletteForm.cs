@@ -28,6 +28,7 @@ namespace Gdterm.UI.Controls
         private readonly AntdUI.Input _filter;
         private readonly ListBox _list;
         private readonly List<PaletteCommand> _all;
+        private EmptyStateView _empty;
 
         public PaletteCommand Selected { get; private set; }
 
@@ -73,6 +74,10 @@ namespace Gdterm.UI.Controls
 
             Controls.Add(_list);
             Controls.Add(_filter);
+            // 空态用真空态层（此前是往列表塞一条不可选中的占位字符串，
+            // 键盘上下键会选中它、回车又什么都不做——症状是"命令面板卡住"）
+            _empty = EmptyStateView.Attach(this, "没有匹配的命令",
+                "试试关键词：新建 / sftp / 标签名 / 主机名", null, null);
             Gdterm.UI.Services.FormFontPolicy.Apply(this);
             ApplyFilter();
             KeyDown += (s, e) =>
@@ -100,12 +105,8 @@ namespace Gdterm.UI.Controls
                 }
             }
             _list.EndUpdate();
-            if (_list.Items.Count == 0)
-            {
-                // 空态引导（UX 审计 C1 惯例）：列表型 UI 不能静默空白
-                _list.Items.Add(new Item { Command = null, Text = "暂无匹配命令——试试：新建 / sftp / 标签名 / 主机名" });
-                return;
-            }
+            if (_empty != null) _empty.SetEmpty(_list.Items.Count == 0);
+            if (_list.Items.Count == 0) return;
             _list.SelectedIndex = 0;
         }
 
@@ -137,11 +138,26 @@ namespace Gdterm.UI.Controls
             }
         }
 
+        /// <summary>
+        /// 执行选中的命令并吞掉异常：命令面板里挂着一个会抛的 lambda 时，
+        /// 原来是直接冒到 WinForms 未处理异常（整个应用可能被带走）。
+        /// </summary>
+        public void RunSelected()
+        {
+            if (Selected == null || Selected.Action == null) return;
+            try { Selected.Action(); }
+            catch (Exception ex)
+            {
+                try { DiagLog.Error("CommandPalette.Run", ex); } catch (Exception) { }
+                ToastNotifier.Error("命令执行失败：" + ex.Message);
+            }
+        }
+
         private void AcceptSelection()
         {
             var item = _list.SelectedValue as Item;
             if (item == null && _list.Items.Count > 0) item = _list.Items[0] as Item;
-            if (item == null || item.Command == null) return; // 空态占位项不可执行
+            if (item == null || item.Command == null) return;
             Selected = item.Command;
             DialogResult = DialogResult.OK;
             Close();

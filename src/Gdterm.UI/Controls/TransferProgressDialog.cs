@@ -18,6 +18,8 @@ namespace Gdterm.UI.Controls
         private readonly AntdUI.Button _cancelButton;
         private bool _completed;
         private bool _cancelled;
+        private bool _lastSuccess;
+        private bool _loading = true;   // 总大小未知 = 还在算/还在建链，进度条该跑马灯而不是钉在 0%
 
         public bool IsCancelled { get { return _cancelled; } }
 
@@ -66,7 +68,9 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 Minimum = 0,
                 Maximum = 100,
-                Style = ProgressBarStyle.Continuous
+                // 首帧总大小还未知：跑马灯表示「工作中」，Continuous 停在 0% 会被当成卡死
+                Style = ProgressBarStyle.Marquee,
+                MarqueeAnimationSpeed = 30
             };
             barHost.Controls.Add(_bar);
             var bottomFlow = new FlowLayoutPanel
@@ -91,12 +95,7 @@ namespace Gdterm.UI.Controls
                 Type = AntdUI.TTypeMini.Default,
                 Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 4), DpiScale.V(this, 12), DpiScale.V(this, 4))
             };
-            _cancelButton.Click += (s, e) =>
-            {
-                _cancelled = true;
-                _detailLabel.Text = "正在取消…";
-                _cancelButton.Enabled = false;
-            };
+            _cancelButton.Click += OnCancelClick;
 
             // 底部行：RightToLeft 流序使先加入的靠右 —— 取消按钮在右、百分比在其左
             bottomFlow.Controls.Add(_percentLabel);
@@ -136,6 +135,12 @@ namespace Gdterm.UI.Controls
 
             try
             {
+                if (_loading && total > 0)
+                {
+                    // 总大小到了：从跑马灯切回真实进度
+                    _loading = false;
+                    _bar.Style = ProgressBarStyle.Continuous;
+                }
                 _bar.Value = pct;
                 _percentLabel.Text = total > 0
                     ? string.Format("{0}%  ({1} / {2})", pct, FormatBytes(transferred), FormatBytes(total))
@@ -155,12 +160,12 @@ namespace Gdterm.UI.Controls
             }
 
             _completed = true;
+            _lastSuccess = success;
+            _loading = false;
             _cancelButton.Text = "关闭";
             _cancelButton.Enabled = true;
-            _cancelButton.Click -= null;
-            // 重新绑定为关闭
-            foreach (EventHandler h in new EventHandler[] { }) { }
-            _cancelButton.Click += (s, e) => { try { DialogResult = success ? DialogResult.OK : DialogResult.Cancel; Close(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TransferProgressDialog", exSwallowed); } catch { } } };
+            // 此前这里是每次 Complete 都再挂一个 Click lambda（累积）+ 一句 `Click -= null` 的无效代码，
+            // 现在统一走 OnCancelClick，按 _completed 分支。
             if (success)
             {
                 _bar.Value = 100;
@@ -170,9 +175,32 @@ namespace Gdterm.UI.Controls
             }
             else
             {
+                _bar.Style = ProgressBarStyle.Continuous;
                 _detailLabel.Text = message ?? "失败";
                 _detailLabel.ForeColor = GdtermColorTable.Danger;
+                _percentLabel.Text = "已中断";
+                // 失败要么是网络断、要么是权限/磁盘满：必须留痕并主动说一声（对话框可能已经不在前台）
+                try { DiagLog.Error("TransferProgressDialog.Complete", message ?? "传输失败"); } catch (Exception) { }
+                ToastNotifier.Error(message ?? "传输失败");
             }
+        }
+
+        /// <summary>取消/关闭共用入口（避免 Complete 反复挂 handler 造成重复触发）。</summary>
+        private void OnCancelClick(object sender, EventArgs e)
+        {
+            try
+            {
+                if (_completed)
+                {
+                    DialogResult = _lastSuccess ? DialogResult.OK : DialogResult.Cancel;
+                    Close();
+                    return;
+                }
+                _cancelled = true;
+                _detailLabel.Text = "正在取消…";
+                _cancelButton.Enabled = false;
+            }
+            catch (Exception exSwallowed) { try { DiagLog.Swallowed("TransferProgressDialog.Cancel", exSwallowed); } catch { } }
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e)

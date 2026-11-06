@@ -4,6 +4,7 @@ using System.Linq;
 using System.Windows.Forms;
 using Gdterm.Connections;
 using Gdterm.Security.Otp;
+using Gdterm.UI.Controls;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
 
@@ -17,7 +18,7 @@ namespace Gdterm.UI.Forms
     {
         private readonly IOtpStore _store;
         private readonly ListView _list;
-        private readonly Label _emptyLabel;
+        private EmptyStateView _empty;
         private readonly Timer _timer;
 
         public OtpManagerForm(IOtpStore store)
@@ -49,17 +50,6 @@ namespace Gdterm.UI.Forms
             _list.Columns.Add("动态码", 140);
             _list.Columns.Add("剩余", 80);
             _list.DoubleClick += (s, e) => CopySelectedCode();
-
-            // 空态引导（UX 审计 C1 惯例，R09）
-            _emptyLabel = new Label
-            {
-                Dock = DockStyle.Fill,
-                TextAlign = ContentAlignment.MiddleCenter,
-                ForeColor = GdtermColorTable.Foreground,
-                BackColor = GdtermColorTable.Background,
-                Font = FormFontPolicy.UiFont(+1f),
-                Text = "暂无 OTP 条目\n\n点「添加」粘贴 otpauth:// URI 或 Base32 密钥\n（TOTP：多数 Web 门户/云平台的二次验证）"
-            };
 
             // 底部按钮栏——左右两个 FlowLayoutPanel（SetupWizardForm/PasswordHealthForm 流式惯例）。
             // 禁用绝对坐标 Location=ClientSize.Width-N：构造期字体缩放后 ClientSize 已变，
@@ -151,10 +141,15 @@ namespace Gdterm.UI.Forms
             // Fill 控件先加、边缘 Dock 后加（WinForms 反向 Z 序布局）；
             // 空态与列表互斥可见（都 Dock Fill，不可见者不占布局）。
             Controls.Add(_list);
-            Controls.Add(_emptyLabel);
             Controls.Add(bottom);
+
+            // 空态引导（UX 审计 C1）：改用全仓统一的 EmptyStateView，和另外 15 个列表面板长得一致，
+            // 并带上「添加」主操作（此前只有一段居中文字，用户还得自己去底下找按钮）
+            _empty = EmptyStateView.Attach(this, "暂无 OTP 条目",
+                "点「添加」粘贴 otpauth:// URI 或 Base32 密钥；TOTP 用于多数 Web 门户/云平台的二次验证",
+                "添加条目", (s2, e2) => AddEntry());
             _list.Visible = false;
-            _emptyLabel.Visible = true;
+            _empty.SetEmpty(true);
             FormFontPolicy.Apply(this);
 
             _timer = new Timer { Interval = 1000 };
@@ -196,7 +191,7 @@ namespace Gdterm.UI.Forms
             _list.EndUpdate();
 
             _list.Visible = entries.Count > 0;
-            _emptyLabel.Visible = entries.Count == 0;
+            if (_empty != null) _empty.SetEmpty(entries.Count == 0);
 
             if (selectedId != null)
             {

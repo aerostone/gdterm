@@ -17,6 +17,7 @@ namespace Gdterm.UI.Controls
         private HighlightRuleConfig _config;
         private ListView _lvRules;
         private AntdUI.Button _btnAdd, _btnEdit, _btnDelete, _btnToggle;
+        private EmptyStateView _empty;
 
         public event Action RulesChanged;
 
@@ -74,6 +75,11 @@ namespace Gdterm.UI.Controls
 
             Controls.Add(_lvRules);
             Controls.Add(toolbar);
+
+            // 审计 C1：空态引导 —— 此前规则为空时就是一片背景色，分不清「没有规则」与「加载坏了」
+            _empty = EmptyStateView.Attach(this, "还没有高亮规则",
+                "规则命中的行会按设定前景/背景色着色，可区分生产库报错、告警关键字等",
+                "添加规则", (s2, e2) => AddRule());
         }
 
         private AntdUI.Button CreateBtn(string text)
@@ -104,6 +110,7 @@ namespace Gdterm.UI.Controls
                 if (!r.Enabled) item.ForeColor = GdtermColorTable.Muted; // 禁用行置灰：Border 太深看不见，Muted 才是状态文字色
                 _lvRules.Items.Add(item);
             }
+            if (_empty != null) _empty.SetEmpty(_lvRules.Items.Count == 0);
         }
 
         private void AddRule()

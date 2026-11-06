@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Gdterm.Security;
@@ -26,6 +28,11 @@ namespace Gdterm.UI.Controls
         private AntdUI.Button _btnSelectAll;
         private AntdUI.Label _lblStatus;
         private Dictionary<string, ITerminalSession> _sessions = new Dictionary<string, ITerminalSession>();
+        // 批量命令历史（↑/↓ 召回）：批量入口的命令都是精心拼出来的，关掉面板就丢等于每次重写
+        private readonly List<string> _history = new List<string>();
+        private int _historyCursor = -1;
+        private static readonly string HistoryPath = Path.Combine(
+            AppDomain.CurrentDomain.BaseDirectory, "data", "config", "batch-history.txt");
 
         public BatchCommandPanel()
         {
@@ -33,6 +40,7 @@ namespace Gdterm.UI.Controls
             Dock = DockStyle.Fill;
             BackColor = GdtermColorTable.Background;
             BuildUI();
+            LoadHistory();
         }
 
         public void SetDangerousDetector(DangerousCommandDetector detector)
@@ -64,7 +72,7 @@ namespace Gdterm.UI.Controls
             var lblCmd = new AntdUI.Label { Text = "命令:", AutoSize = true, Margin = new Padding(0, DpiScale.V(this, 6), DpiScale.V(this, 8), 0), Font = font, ForeColor = GdtermColorTable.Foreground };
             // 输入框高度与项目 38 地板统一（原先 28 在大字号下文字被裁）
             _txtCommand = new AntdUI.Input { Width = DpiScale.V(this, 500), Height = FormFontPolicy.FieldHeight(this), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.MonoFont(), Margin = new Padding(0, DpiScale.V(this, 1), DpiScale.V(this, 8), 0)};
-            _txtCommand.KeyDown += (s, e) => { if (e.KeyCode == Keys.Enter) { ExecuteCommand(); e.SuppressKeyPress = true; } };
+            _txtCommand.KeyDown += OnCommandKeyDown;
 
             _btnExecute = new AntdUI.Button { Text = "▶ 执行", AutoSize = true, Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)), Type = AntdUI.TTypeMini.Primary, Font = font, Margin = new Padding(0, 0, DpiScale.V(this, 8), 0) };
             _btnExecute.Click += (s, e) => ExecuteCommand();
@@ -127,10 +135,77 @@ namespace Gdterm.UI.Controls
             }
         }
 
+        private void OnCommandKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter) { ExecuteCommand(); e.SuppressKeyPress = true; return; }
+            if (e.KeyCode == Keys.Up) { RecallHistory(-1); e.SuppressKeyPress = true; return; }
+            if (e.KeyCode == Keys.Down) { RecallHistory(+1); e.SuppressKeyPress = true; }
+        }
+
+        /// <summary>↑/↓ 在历史里上下移动（-1 更早，+1 更新；到底部回空）。</summary>
+        private void RecallHistory(int delta)
+        {
+            if (_history.Count == 0) return;
+            if (_historyCursor < 0) _historyCursor = _history.Count;   // 首次按 ↑ 从最新一条往上
+            _historyCursor = Math.Max(0, Math.Min(_history.Count, _historyCursor + delta));
+            _txtCommand.Text = _historyCursor >= _history.Count ? "" : _history[_historyCursor];
+            try { _txtCommand.SelectionStart = _txtCommand.Text.Length; } catch (Exception) { }
+        }
+
+        /// <summary>命令入历史（去重、最近优先、上限 50），并落盘到 data/config/batch-history.json。</summary>
+        private void RememberCommand(string command)
+        {
+            if (string.IsNullOrWhiteSpace(command)) return;
+            _history.Remove(command);
+            _history.Insert(0, command);
+            while (_history.Count > 50) _history.RemoveAt(_history.Count - 1);
+            _historyCursor = -1;
+            try
+            {
+                var dir = Path.GetDirectoryName(HistoryPath);
+                if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
+                // 一行一条：命令本身不含换行，txt 比 JSON 更好排查（可直接用记事本看/改）
+                File.WriteAllLines(HistoryPath, _history.ToArray(), Encoding.UTF8);
+            }
+            catch (Exception ex)
+            {
+                // 历史写失败不影响执行本身，但必须留痕（便携版目录只读是最常见原因）
+                try { DiagLog.Error("BatchCommand.History", ex); } catch (Exception) { }
+            }
+        }
+
+        private void LoadHistory()
+        {
+            try
+            {
+                if (!File.Exists(HistoryPath)) return;
+                _history.Clear();
+                foreach (var line in File.ReadAllLines(HistoryPath, Encoding.UTF8))
+                {
+                    var v = (line ?? "").Trim();
+                    if (v.Length == 0 || _history.Contains(v)) continue;
+                    _history.Add(v);
+                    if (_history.Count >= 50) break;
+                }
+            }
+            catch (Exception ex)
+            {
+                try { DiagLog.Error("BatchCommand.LoadHistory", ex); } catch (Exception) { }
+            }
+        }
+
         private async void ExecuteCommand()
         {
             var command = _txtCommand.Text.Trim();
-            if (string.IsNullOrEmpty(command)) return;
+            if (string.IsNullOrEmpty(command))
+            {
+                // 原来这里直接 return：点「执行」毫无反应，用户以为按钮坏了
+                _lblStatus.Text = "请先输入要执行的命令";
+                _lblStatus.ForeColor = GdtermColorTable.Warning;
+                ToastNotifier.Warning("请输入要批量执行的命令");
+                _txtCommand.Focus();
+                return;
+            }
 
             var selected = new Dictionary<string, ITerminalSession>();
             foreach (ListViewItem item in _lvSessions.Items)
@@ -173,6 +248,7 @@ namespace Gdterm.UI.Controls
                 catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("BatchCommandPanel", exSwallowed); } catch { } }
             }
 
+            RememberCommand(command);
             _btnExecute.Enabled = false;
             _lblStatus.Text = string.Format("正在向 {0} 个会话发送...", selected.Count);
             _lblStatus.ForeColor = GdtermColorTable.Foreground;

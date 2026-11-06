@@ -144,12 +144,13 @@
       "id": "page.SshKeyManagerForm",
       "name": "SSH 密钥管理",
       "menu": "工具 > SSH 密钥管理",
-      "type": "list",
+      "type": "input",
       "src": [
         "src/Gdterm.UI/Forms/SshKeyManagerForm.cs"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [],
+      "note": "导入表单（无列表）：校验 + 键盘；列表能力不适用，原判为 list 属误分类"
     },
     {
       "id": "page.TransferCenterPanel",
@@ -311,7 +312,8 @@
       "menu": "文件 > SFTP 浏览器",
       "type": "list",
       "src": [
-        "src/Gdterm.UI/Controls/SftpDualPanePanel.cs"
+        "src/Gdterm.UI/Controls/SftpDualPanePanel.cs",
+        "src/Gdterm.UI/Controls/FilePaneControl.cs"
       ],
       "known_gaps": [],
       "manual_ok": [],
@@ -323,11 +325,12 @@
       "menu": "文件 > 导入连接 / 导出连接",
       "type": "input",
       "src": [
-        "src/Gdterm.UI/Services/ConnectionImportExportUi.cs"
+        "src/Gdterm.UI/Services/ConnectionImportExportUi.cs",
+        "src/Gdterm.UI/Forms/ImportPreviewForm.cs"
       ],
       "known_gaps": [],
       "manual_ok": [],
-      "note": "只有系统文件框 + MessageBox 汇总；无预览、无冲突逐条裁定、无导入结果列表 —— 典型「简陋」"
+      "note": "文件框 + 预览裁定对话框（ImportPreviewForm，回车导入/Esc 取消/可过滤）"
     },
     {
       "id": "page.ConnectionQuickJumpForm",

@@ -14,6 +14,7 @@ namespace Gdterm.UI.Forms
         private readonly AntdUI.Checkbox[,] _chk = new AntdUI.Checkbox[3, 3];
         private readonly AntdUI.InputNumber _octalBox;
         private bool _syncing;
+        private bool _warnedIllegalOctal;
 
         public int OctalMode { get; private set; }
 
@@ -179,9 +180,16 @@ namespace Gdterm.UI.Forms
                 int d0 = (v / 100) % 10, d1 = (v / 10) % 10, d2 = v % 10;
                 if (d0 > 7 || d1 > 7 || d2 > 7)
                 {
+                    // 原来静默回退：用户以为输入生效了，实际没变。这里说清规则再回退。
                     _octalBox.Value = OctalMode;
+                    if (!_warnedIllegalOctal)
+                    {
+                        _warnedIllegalOctal = true;
+                        AntdUI.Message.warn(this, "八进制每位只能是 0-7，已回退到 " + OctalMode.ToString("D3"));
+                    }
                     return;
                 }
+                _warnedIllegalOctal = false;
                 OctalMode = v;
                 int[] ds = { d0, d1, d2 };
                 for (int r = 0; r < 3; r++)
