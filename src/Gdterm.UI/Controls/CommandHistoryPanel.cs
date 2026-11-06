@@ -19,6 +19,8 @@ namespace Gdterm.UI.Controls
         private AntdUI.Input _searchBox;
         private AntdUI.Select _hostFilter;
         private AntdUI.Label _statusLabel;
+        /// <summary>排序/批量/导出壳（自带搜索，故壳只出排序与导出）</summary>
+        private ListShell _shell;
 
         /// <summary>
         /// 双击命令事件（用于重新执行）
@@ -93,9 +95,25 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Surface
             };
 
-            Controls.Add(_historyList);
+            // 排序 + 导出走共用壳；过滤仍由上面这个搜索框负责（它走 store 查询，能搜全量而非当前屏）
+            _shell = new ListShell(_historyList, showFilter: false);
+            var btnExport = _shell.AddAction("导出", (s, e) => _shell.ExportCsv(FindForm(), "command-history"));
+            btnExport.Name = "HistoryExportButton";
+            _shell.ItemActivated += (s, it) =>
+            {
+                var entry = it == null ? null : it.Tag as CommandHistoryEntry;
+                if (entry != null) CommandDoubleClicked?.Invoke(this, entry);
+            };
+
+            Controls.Add(_shell);
             Controls.Add(searchPanel);
             Controls.Add(_statusLabel);
+            _historyList.AccessibleName = "命令历史列表";
+            _historyList.AccessibleDescription = "时间/主机/命令/耗时/是否广播";
+            // 无障碍名称回填：ListView/Table 本身没有 Text，AutoName 只补有文本的控件，
+            // 列表名单独设（读屏软件念"宏列表"而不是"列表"）
+            try { UiA11y.AutoName(this); } catch (Exception) { }
+
 
             // 审计 C1：空态引导（此前打开就是“一整片背景色”，分不清空/加载/坏了）
             _empty = EmptyStateView.Attach(this, "还没有命令历史",
@@ -107,7 +125,7 @@ namespace Gdterm.UI.Controls
             _hostFilter.SelectedIndexChanged += (s, e) => RefreshHistory();
             btnRefresh.Click += (s, e) => RefreshHistory();
             btnClear.Click += (s, e) => ClearHistory();
-            _historyList.DoubleClick += OnItemDoubleClick;
+            _historyList.DoubleClick += OnItemDoubleClick;   // 旧路径保留（外部订阅者可能依赖）
 
             // 审计 C1 收尾（CI 0.1.348 实证）：构造后首刷一次。此前首次打开面板时
             // RefreshHistory 无人调用，EmptyStateView 初值 Visible=false 永不翻亮，
@@ -141,9 +159,7 @@ namespace Gdterm.UI.Controls
 
             var entries = _store.Query(query);
 
-            _historyList.BeginUpdate();
-            _historyList.Items.Clear();
-
+            var items = new System.Collections.Generic.List<ListViewItem>(entries.Count);
             foreach (var entry in entries)
             {
                 var item = new ListViewItem(entry.ExecutedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss"));
@@ -152,10 +168,9 @@ namespace Gdterm.UI.Controls
                 item.SubItems.Add(FormatDuration(entry.DurationMs));
                 item.SubItems.Add(entry.IsBroadcast ? "●" : "");
                 item.Tag = entry;
-                _historyList.Items.Add(item);
+                items.Add(item);
             }
-
-            _historyList.EndUpdate();
+            _shell.SetItems(items);
             _statusLabel.Text = $"共 {entries.Count} 条记录";
 
             // 审计 C1：空态文案区分“确实没有”与“筛选后为空”
@@ -210,10 +225,20 @@ namespace Gdterm.UI.Controls
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning);
 
-            if (result == DialogResult.Yes)
+            if (result != DialogResult.Yes) return;
+
+            try
             {
-                // 实际实现中应该清空文件
+                // 原来这里只有 RefreshHistory()：磁盘上一条没删，用户以为清干净了
+                int removed = _store.ClearAll();
                 RefreshHistory();
+                _statusLabel.Text = removed > 0 ? "已清空 " + removed + " 个历史文件" : "历史已经是空的";
+                ToastNotifier.Success(removed > 0 ? "命令历史已清空" : "命令历史已经是空的");
+            }
+            catch (Exception ex)
+            {
+                try { DiagLog.Error("CommandHistory.Clear", ex); } catch (Exception) { }
+                ToastNotifier.Error("清空失败：" + ex.Message);
             }
         }
 

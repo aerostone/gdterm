@@ -376,7 +376,9 @@ DETECT = {
     "search": [r'PlaceholderText\s*=\s*"[^"]*(?:搜索|过滤|查找)|Filter\(|\.Search\(|搜索|过滤|筛选'],
     "sort": [r'SortOrder|Sorting\s*=|CompareFunc|排序'],
     "paging": [r'PageSize|分页|VirtualMode|VirtualListSize|ScrollTo'],
-    "bulk": [r'SelectAll|全选|CheckedItems|多选|SelectAllRows'],
+    # 批量能力的证据：全选入口、勾选列（CheckBoxes）、或显式的批处理调用。
+    # 注意别把"多选"三个字当证据——注释里写"多选批量"不算实现过。
+    "bulk": [r'SelectAllRows|全选|CheckedItems|CheckedListBox|CheckBoxes'],
     "export": [r'导出|Export\('],
     "import": [r'导入|Import\('],
     "undo": [r'撤销|Undo|回收站|Restore\('],

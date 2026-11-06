@@ -31,6 +31,8 @@ namespace Gdterm.UI.Controls
         private ListView _macroList;
         private AntdUI.Label _statusLabel;
         private EmptyStateView _empty;
+        /// <summary>过滤/排序/批量/导出壳（宏多达几十条时靠它找，不再靠肉眼滚）</summary>
+        private ListShell _shell;
 
         private TerminalControl _recordSource;
         private MacroRecorder _pendingMacro; // 刚录完未保存的
@@ -107,6 +109,7 @@ namespace Gdterm.UI.Controls
                 View = View.Details,
                 FullRowSelect = true,
                 GridLines = true,
+                CheckBoxes = true,          // 批量删除靠勾选（Ctrl+A 在壳里切换全选）
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground
             };
@@ -115,6 +118,11 @@ namespace Gdterm.UI.Controls
             _macroList.Columns.Add("时长", 80);
             _macroList.Columns.Add("来源", 140);
             _macroList.DoubleClick += (s, e) => ReplaySelected();
+
+            // 列表壳：过滤 + 排序 + 导出（原先 0 项，宏一多就只能靠滚）
+            _shell = new ListShell(_macroList, "过滤宏名/来源…");
+            var btnExport = _shell.AddAction("导出", (s, e) => _shell.ExportCsv(FindForm(), "macros"));
+            btnExport.Name = "MacroExportButton";
 
             // ── 底部状态（含 Muted 危险提示）──
             _statusLabel = new AntdUI.Label
@@ -128,9 +136,15 @@ namespace Gdterm.UI.Controls
                 ForeColor = GdtermColorTable.Muted
             };
 
-            Controls.Add(_macroList);
+            Controls.Add(_shell);
             Controls.Add(toolPanel);
             Controls.Add(_statusLabel);
+            _macroList.AccessibleName = "宏列表";
+            _macroList.AccessibleDescription = "已保存的宏：名称/步数/时长/来源";
+            // 无障碍名称回填：ListView/Table 本身没有 Text，AutoName 只补有文本的控件，
+            // 列表名单独设（读屏软件念"宏列表"而不是"列表"）
+            try { UiA11y.AutoName(this); } catch (Exception) { }
+
 
             // 审计 C1：空态引导 —— 宏目录为空时此前只剩一行状态提示，看不出该录还是该载入
             _empty = EmptyStateView.Attach(this, "还没有保存的宏",
@@ -324,7 +338,10 @@ namespace Gdterm.UI.Controls
         private void RefreshMacroList()
         {
             if (InvokeRequired) { Invoke(new Action(RefreshMacroList)); return; }
-            _macroList.Items.Clear();
+            var items = new System.Collections.Generic.List<ListViewItem>();
+            // 每个宏都要读盘 + 反序列化，几十条时同步刷新会明显迟滞：套 BusyScope 给即时反馈
+            using (BusyScope.Begin(this, "正在读取宏…", false, _btnLoad))
+            {
             string[] files;
             try { files = Directory.GetFiles(_macroDir, "*.json"); }
             catch { files = new string[0]; }
@@ -345,14 +362,17 @@ namespace Gdterm.UI.Controls
                 item.SubItems.Add(dur);
                 item.SubItems.Add(new FileInfo(f).LastWriteTime.ToString("yyyy-MM-dd HH:mm"));
                 item.Tag = f;
-                _macroList.Items.Add(item);
+                items.Add(item);
+            }
+            _shell.SetItems(items);
             }
             if (_empty != null)
             {
                 // 目录读不出来（权限/IO）与「确实没有宏」必须分开说，不能都显示成空态
                 bool readFailed = false;
                 try { Directory.GetFiles(_macroDir, "*.json"); } catch { readFailed = true; }
-                _empty.SetEmpty(_macroList.Items.Count == 0, readFailed ? "无法读取宏目录" : null,
+                // 用全量判空：过滤到 0 条时该亮的是壳的「没有匹配」，不是「还没有保存的宏」
+                _empty.SetEmpty(_shell.AllItems.Count == 0, readFailed ? "无法读取宏目录" : null,
                     readFailed ? "检查 data/macros/ 是否存在且可写" : null);
             }
             UpdateButtons();
@@ -421,16 +441,28 @@ namespace Gdterm.UI.Controls
 
         private void DeleteSelected()
         {
-            if (_macroList.SelectedItems.Count == 0) return;
-            var path = _macroList.SelectedItems[0].Tag as string;
-            if (string.IsNullOrEmpty(path)) return;
-            if (MessageBox.Show(FindForm(), "删除宏「" + Path.GetFileNameWithoutExtension(path) + "」？", "删除宏",
+            // 勾选的多条一起删（之前的实现只认 SelectedItems[0]，勾了 10 条也只删 1 条）
+            var picked = _shell.SelectedOrChecked();
+            if (picked.Count == 0) return;
+            string tip = picked.Count == 1
+                ? "删除宏「" + Path.GetFileNameWithoutExtension((string)picked[0].Tag) + "」？"
+                : "删除选中的 " + picked.Count + " 个宏？";
+            if (MessageBox.Show(FindForm(), tip, "删除宏",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+            int ok = 0, fail = 0;
             try
             {
-                File.Delete(path);
+                foreach (var it in picked)
+                {
+                    var p = it.Tag as string;
+                    if (string.IsNullOrEmpty(p)) continue;
+                    try { File.Delete(p); ok++; }
+                    catch (Exception) { fail++; }
+                }
                 RefreshMacroList();
-                SetStatus("已删除。");
+                SetStatus(fail == 0 ? "已删除 " + ok + " 个宏。" : "删除完成：" + ok + " 成功，" + fail + " 失败。");
+                if (fail == 0) ToastNotifier.Success("已删除 " + ok + " 个宏");
+                else ToastNotifier.Warning(fail + " 个宏删除失败（可能被占用或权限不足）");
             }
             catch (Exception ex)
             {

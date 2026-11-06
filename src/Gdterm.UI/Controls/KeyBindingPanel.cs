@@ -28,6 +28,7 @@ namespace Gdterm.UI.Controls
         private AntdUI.Button _btnDelete;
         private AntdUI.Button _btnReset;
         private AntdUI.Checkbox _chkIntercept;
+        private TableShell<BindingRow> _shell;
 
         /// <summary>当绑定变更时触发（通知外部刷新 TerminalControl 的 resolver）</summary>
         public event Action BindingsChanged;
@@ -127,9 +128,39 @@ namespace Gdterm.UI.Controls
             _table.Columns.Add(new AntdUI.Column("Desc", "描述", AntdUI.ColumnAlign.Left) { Width = "16%" });
             _table.CellDoubleClick += (s, e) => OnEdit(s, e);
 
-            Controls.Add(_table);
+            // 表壳：过滤 + 排序 + 导出（7 列绑定时靠肉眼找一条，此前只能扫）
+            _shell = new TableShell<BindingRow>(_table,
+                new[] { "名称", "按键组合", "类型", "发送内容", "分组", "状态", "描述" },
+                r => string.Join(" ", new[] { r.Name, r.Combo, r.Type, r.Value, r.Group, r.State, r.Desc }),
+                (r, i) =>
+                {
+                    switch (i)
+                    {
+                        case 0: return r.Name;
+                        case 1: return r.Combo;
+                        case 2: return r.Type;
+                        case 3: return r.Value;
+                        case 4: return r.Group;
+                        case 5: return r.State;
+                        default: return r.Desc;
+                    }
+                });
+            _shell.AddAction("导出", (s2, e2) => _shell.ExportCsv(FindForm(), "key-bindings")).Name = "KeyBindingExportButton";
+            // 过滤/排序改了可见顺序后，SelectedIndex → 绑定对象的映射要跟着换
+            _shell.ViewChanged += list =>
+            {
+                _rows.Clear();
+                foreach (var r in list) if (r.Source != null) _rows.Add(r.Source);
+            };
+
+            Controls.Add(_shell);
             Controls.Add(bottomPanel);
             Controls.Add(topPanel);
+            _table.AccessibleName = "快捷键绑定表";
+            // 无障碍名称回填：ListView/Table 本身没有 Text，AutoName 只补有文本的控件，
+            // 列表名单独设（读屏软件念"宏列表"而不是"列表"）
+            try { UiA11y.AutoName(this); } catch (Exception) { }
+
 
             // 选中当前活动预设
             for (int i = 0; i < _config.Presets.Count; i++)
@@ -167,6 +198,7 @@ namespace Gdterm.UI.Controls
 
         private sealed class BindingRow
         {
+            public TerminalKeyBinding Source { get; set; }
             public string Name { get; set; }
             public string Combo { get; set; }
             public string Type { get; set; }
@@ -180,11 +212,13 @@ namespace Gdterm.UI.Controls
         {
             _rows.Clear();
             var rows = new List<BindingRow>();
+            using (BusyScope.Begin(this, "正在读取快捷键绑定…", false))
             foreach (var b in _store.GetActiveBindings())
             {
                 _rows.Add(b);
                 rows.Add(new BindingRow
                 {
+                    Source = b,
                     Name = b.Name,
                     Combo = b.GetKeyCombo(),
                     Type = b.Type.ToString(),
@@ -194,7 +228,7 @@ namespace Gdterm.UI.Controls
                     Desc = b.Description ?? ""
                 });
             }
-            _table.DataSource = rows;
+            _shell.SetItems(rows);
         }
 
         private TerminalKeyBinding SelectedBinding()

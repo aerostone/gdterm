@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
@@ -18,6 +19,8 @@ namespace Gdterm.UI.Controls
         private readonly AntdUI.Label _lblStats;
         private readonly ListView _lvFindings;
         private EmptyStateView _empty;
+        /// <summary>过滤/排序/导出壳（扫描结果动辄上百条，按文件/规则找是刚需）</summary>
+        private ListShell _shell;
         private readonly AntdUI.Button _btnScan;
         private readonly AntdUI.Button _btnStop;
         private readonly ProgressBar _progress;
@@ -138,7 +141,11 @@ namespace Gdterm.UI.Controls
             };
             bottomPanel.Controls.Add(_lblStatus);
 
-            Controls.Add(_lvFindings);
+            _shell = new ListShell(_lvFindings, "过滤规则/文件/内容…");
+            var btnExport = _shell.AddAction("导出", (s2, e2) => _shell.ExportCsv(FindForm(), "secret-scan"));
+            btnExport.Name = "SecretScanExportButton";
+
+            Controls.Add(_shell);
             Controls.Add(_progress);
             // 审计 C1：空态引导 —— 「扫完 0 个发现」与「还没扫」此前都只是一片空列表
             _empty = EmptyStateView.Attach(this, "还没有扫描结果",
@@ -153,11 +160,16 @@ namespace Gdterm.UI.Controls
             _scanner.ProgressChanged += OnProgressChanged;
             _scanner.ScanCompleted += OnScanCompleted;
             _scanner.ErrorOccurred += OnError;
+            _lvFindings.AccessibleName = "敏感信息扫描结果";
+            // 无障碍名称回填：ListView/Table 本身没有 Text，AutoName 只补有文本的控件，
+            // 列表名单独设（读屏软件念"宏列表"而不是"列表"）
+            try { UiA11y.AutoName(this); } catch (Exception) { }
+
         }
 
         private void StartScan()
         {
-            _lvFindings.Items.Clear();
+            _shell.SetItems(new System.Collections.Generic.List<ListViewItem>());
             if (_empty != null) _empty.SetEmpty(false);
             _btnScan.Enabled = false;
             _btnStop.Enabled = true;
@@ -192,8 +204,8 @@ namespace Gdterm.UI.Controls
             item.SubItems.Add(finding.Description);
             item.Tag = finding;
 
-            _lvFindings.Items.Add(item);
-            _lblStats.Text = string.Format("已发现 {0} 个问题", _lvFindings.Items.Count);
+            _shell.AddItem(item);
+            _lblStats.Text = string.Format("已发现 {0} 个问题", _shell.AllItems.Count);
         }
 
         private void OnProgressChanged(int current, int total)

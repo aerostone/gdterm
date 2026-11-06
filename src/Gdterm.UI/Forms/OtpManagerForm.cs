@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
@@ -18,6 +19,7 @@ namespace Gdterm.UI.Forms
     {
         private readonly IOtpStore _store;
         private readonly ListView _list;
+        private ListShell _shell;
         private EmptyStateView _empty;
         private readonly Timer _timer;
 
@@ -44,6 +46,7 @@ namespace Gdterm.UI.Forms
                 GridLines = true,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
+                CheckBoxes = true,       // 批量删除
                 Font = FormFontPolicy.MonoFont()
             };
             _list.Columns.Add("名称", 240);
@@ -140,8 +143,17 @@ namespace Gdterm.UI.Forms
 
             // Fill 控件先加、边缘 Dock 后加（WinForms 反向 Z 序布局）；
             // 空态与列表互斥可见（都 Dock Fill，不可见者不占布局）。
-            Controls.Add(_list);
+            _shell = new ListShell(_list, "过滤名称…");
+            _shell.AddAction("导出", (s2, e2) => _shell.ExportCsv(this, "otp-codes")).Name = "OtpExportButton";
+
+            Controls.Add(_shell);
             Controls.Add(bottom);
+            _list.AccessibleName = "OTP 条目列表";
+            _list.AccessibleDescription = "名称/动态码/剩余秒数";
+            // 无障碍名称回填：ListView/Table 本身没有 Text，AutoName 只补有文本的控件，
+            // 列表名单独设（读屏软件念"宏列表"而不是"列表"）
+            try { UiA11y.AutoName(this); } catch (Exception) { }
+
 
             // 空态引导（UX 审计 C1）：改用全仓统一的 EmptyStateView，和另外 15 个列表面板长得一致，
             // 并带上「添加」主操作（此前只有一段居中文字，用户还得自己去底下找按钮）
@@ -174,9 +186,10 @@ namespace Gdterm.UI.Forms
             if (_list.SelectedItems.Count > 0)
                 selectedId = _list.SelectedItems[0].Tag as string;
 
-            _list.BeginUpdate();
-            _list.Items.Clear();
             var entries = _store.LoadAll();
+            using (BusyScope.Begin(this, "正在读取 OTP 条目…", false))
+            {
+            var rows = new List<ListViewItem>(entries.Count);
             foreach (var en in entries)
             {
                 var item = new ListViewItem(new[]
@@ -186,11 +199,12 @@ namespace Gdterm.UI.Forms
                     TimeText(en)
                 });
                 item.Tag = en.Id;
-                _list.Items.Add(item);
+                rows.Add(item);
             }
-            _list.EndUpdate();
+            _shell.SetItems(rows);
+            }
 
-            _list.Visible = entries.Count > 0;
+            _shell.Visible = entries.Count > 0;
             if (_empty != null) _empty.SetEmpty(entries.Count == 0);
 
             if (selectedId != null)
@@ -287,17 +301,34 @@ namespace Gdterm.UI.Forms
 
         private void DeleteSelected()
         {
-            if (_list.SelectedItems.Count == 0) return;
-            var id = _list.SelectedItems[0].Tag as string;
-            var entry = _store.LoadAll().FirstOrDefault(e => Equals(e.Id, id));
-            var title = entry != null ? entry.Title : id;
-            var res = MessageBox.Show(this, "删除 OTP 条目「" + title + "」？\n删除后无法恢复。",
+            var ids = new List<string>();
+            foreach (var it in _shell.SelectedOrChecked())
+            {
+                var id = it.Tag as string;
+                if (!string.IsNullOrEmpty(id)) ids.Add(id);
+            }
+            if (ids.Count == 0) return;
+
+            var all = _store.LoadAll();
+            string first = ids.Count == 1
+                ? (all.FirstOrDefault(e => Equals(e.Id, ids[0]))?.Title ?? ids[0])
+                : null;
+            var res = MessageBox.Show(this, ids.Count == 1
+                    ? "删除 OTP 条目「" + first + "」？\n删除后无法恢复。"
+                    : "删除选中的 " + ids.Count + " 个 OTP 条目？\n删除后无法恢复。",
                 "删除确认", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
             if (res != DialogResult.OK) return;
+            int ok = 0;
             try
             {
-                _store.Delete(id);
+                foreach (var id in ids)
+                {
+                    try { _store.Delete(id); ok++; }
+                    catch (Exception ex) { try { DiagLog.Swallowed("OtpManager.Delete", ex); } catch { } }
+                }
                 RefreshList();
+                if (ok == ids.Count) ToastNotifier.Success("已删除 " + ok + " 个条目");
+                else ToastNotifier.Warning("删除完成：" + ok + " 成功，" + (ids.Count - ok) + " 失败");
             }
             catch (Exception ex)
             {

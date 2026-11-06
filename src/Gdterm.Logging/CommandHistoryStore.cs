@@ -162,6 +162,34 @@ namespace Gdterm.Logging
             }
         }
 
+        /// <summary>
+        /// 清空全部历史（命令历史面板的「清空」按钮）。返回被删除的文件数：
+        /// 之前那个按钮只弹确认框、然后 RefreshHistory()，磁盘上一条没删——用户以为清干净了。
+        /// </summary>
+        public int ClearAll()
+        {
+            int removed = 0;
+            lock (_lock)
+            {
+                try
+                {
+                    _writer?.Flush();
+                    _writer?.Dispose();
+                }
+                catch (Exception) { }
+                _writer = null;
+
+                foreach (var f in GetLogFilesSorted())
+                {
+                    try { File.Delete(f); removed++; }
+                    catch (Exception ex) { try { System.Diagnostics.Debug.WriteLine("ClearAll: " + ex.Message); } catch (Exception) { } }
+                }
+                // 重新开一个空文件，后续 RecordCommand 继续可用
+                InitializeCurrentFile();
+            }
+            return removed;
+        }
+
         private void InitializeCurrentFile()
         {
             _currentFilePath = Path.Combine(_logDirectory, $"commands-{DateTime.UtcNow:yyyyMMdd-HHmmss}.jsonl");

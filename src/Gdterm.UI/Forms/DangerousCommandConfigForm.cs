@@ -22,6 +22,7 @@ namespace Gdterm.UI.Forms
         private AntdUI.Input _whitelistBox;
         private System.Collections.Generic.List<DangerousCommandRule> _ruleRows = new System.Collections.Generic.List<DangerousCommandRule>();
         private AntdUI.Table _ruleTable;
+        private TableShell<RuleRow> _shell;
         private AntdUI.Label _statusLabel;
         private EmptyStateView _empty;
 
@@ -40,9 +41,12 @@ namespace Gdterm.UI.Forms
             InitializeComponent();
             // 高/低 DPI 自适应：声明设计基准 96 DPI，让 .NET 自动按当前 DPI 缩放控件。
             Gdterm.UI.Services.FormFontPolicy.Apply(this);
+            // 无障碍名称回填：ListView/Table 本身没有 Text，AutoName 只补有文本的控件
+            try { UiA11y.AutoName(this); } catch (Exception) { }
             LoadRules();
             LoadWhitelist();
         }
+
 
         private void InitializeComponent()
         {
@@ -99,6 +103,29 @@ namespace Gdterm.UI.Forms
             _ruleTable.Columns.Add(new AntdUI.Column("Category", "分类", AntdUI.ColumnAlign.Left) { Width = "16%" });
             _ruleTable.Columns.Add(new AntdUI.Column("Enabled", "启用", AntdUI.ColumnAlign.Left) { Width = "16%" });
             _ruleTable.CellDoubleClick += (s, e) => OnEditRuleClick(s, e);
+
+            // 表壳：过滤 + 排序 + 导出（规则几十条时靠肉眼找"rm -rf"很费劲）
+            _shell = new TableShell<RuleRow>(_ruleTable,
+                new[] { "名称", "匹配模式", "匹配类型", "危险等级", "分类", "启用" },
+                r => string.Join(" ", new[] { r.Name, r.Pattern, r.Type, r.Level, r.Category, r.Enabled }),
+                (r, i) =>
+                {
+                    switch (i)
+                    {
+                        case 0: return r.Name;
+                        case 1: return r.Pattern;
+                        case 2: return r.Type;
+                        case 3: return r.Level;
+                        case 4: return r.Category;
+                        default: return r.Enabled;
+                    }
+                });
+            _shell.AddAction("导出", (s2, e2) => _shell.ExportCsv(FindForm(), "dangerous-command-rules")).Name = "DangerRuleExportButton";
+            _shell.ViewChanged += list =>
+            {
+                _ruleRows.Clear();
+                foreach (var r in list) if (r.Source != null) _ruleRows.Add(r.Source);
+            };
 
             // —— 白名单区（底部组合面板，Dock=Bottom，字体驱动高度）——
             var wlPanel = new TableLayoutPanel
@@ -173,7 +200,7 @@ namespace Gdterm.UI.Forms
             // 于是 Fill 若不是最低索引（最先 Add），它就先吃掉整个客户区，而后处理的边缘兄弟
             // 仍停在算出来的正确位置、只是与它重叠（工具栏/白名单/状态条压在表体上）。
             // 原注释"Fill 必须最后添加"已被真实 dump 几何证伪（CI 323 dangerous-cmd 三处遮挡），勿改回。
-            Controls.Add(_ruleTable);     // Fill：最先添加 → 最后参与分配，拿中间剩余区
+            Controls.Add(_shell);     // Fill：最先添加 → 最后参与分配，拿中间剩余区
             Controls.Add(toolbar);        // Top：工具栏
             Controls.Add(wlPanel);        // Bottom：白名单区
             Controls.Add(_statusLabel);   // Bottom：最底状态条（最后添加 → 最先分配，贴最底）
@@ -193,6 +220,7 @@ namespace Gdterm.UI.Forms
 
         private sealed class RuleRow
         {
+            public DangerousCommandRule Source { get; set; }
             public string Name { get; set; }
             public string Pattern { get; set; }
             public string Type { get; set; }
@@ -211,16 +239,19 @@ namespace Gdterm.UI.Forms
         }
 
         private void LoadRules()
-        {            _ruleRows.Clear();
+        {
+            _ruleRows.Clear();
             try
             {
                 var rules = _detector.GetAllRules();
                 var rows = new List<RuleRow>();
+                using (BusyScope.Begin(this, "正在读取规则…", false))
                 foreach (var rule in rules)
                 {
                     _ruleRows.Add(rule);
                     rows.Add(new RuleRow
                     {
+                        Source = rule,
                         Name = rule.Name ?? "(无名称)",
                         Pattern = rule.Pattern ?? "",
                         Type = rule.PatternType.ToString(),
@@ -229,7 +260,7 @@ namespace Gdterm.UI.Forms
                         Enabled = rule.Enabled ? "是" : "否"
                     });
                 }
-                _ruleTable.DataSource = rows;
+                _shell.SetItems(rows);
                 _statusLabel.Text = $"共 {rows.Count} 条规则";
                 if (_empty != null) _empty.SetEmpty(rows.Count == 0);
             }

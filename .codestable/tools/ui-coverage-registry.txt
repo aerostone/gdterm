@@ -70,3 +70,5 @@ Controls/EmptyStateView.cs | dump:随宿主 | 空态引导组件（C1），随�
 Forms/OtpManagerForm.cs | dump:otp-manager | B1 OTP manager; smoke 建 tmp 空库 dump，条目态需人工过
 Forms/AddOtpForm.cs | dump:add-otp | B1 添加 OTP 对话框
 Forms/ImportPreviewForm.cs | dump:import-preview | 导入连接预览裁定框（新增/跳过两类行，回车导入/Esc 取消）
+Controls/ListShell.cs | dump:随宿主 | 列表壳（过滤/排序/批量/导出），随 command-history 等宿主 dump
+Controls/TableShell.cs | dump:随宿主 | 表格壳（过滤/排序/导出），随 key-binding 等宿主 dump

@@ -12,10 +12,20 @@ namespace Gdterm.UI.Controls
     public sealed class TransferCenterPanel : UserControl
     {
         private static readonly object Sync = new object();
-        private static readonly System.Collections.Generic.List<string> Jobs =
-            new System.Collections.Generic.List<string>();
 
-        private readonly ListBox _list;
+        /// <summary>一条传输记录（原来是拼好的字符串，无法按时间/说明分列，也导不出 CSV）。</summary>
+        private sealed class Job
+        {
+            public DateTime At { get; set; }
+            public string Message { get; set; }
+            public string TimeText { get { return At.ToString("HH:mm:ss"); } }
+        }
+
+        private static readonly System.Collections.Generic.List<Job> Jobs =
+            new System.Collections.Generic.List<Job>();
+
+        private readonly ListView _list;
+        private ListShell _shell;
         private EmptyStateView _empty;
 
         public TransferCenterPanel()
@@ -32,14 +42,17 @@ namespace Gdterm.UI.Controls
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(DpiScale.V(this, 8), 0, 0, 0)
             };
-            _list = new ListBox
+            _list = new ListView
             {
                 Dock = DockStyle.Fill,
+                View = View.Details,
+                FullRowSelect = true,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = Services.FormFontPolicy.MonoFont(),
-                IntegralHeight = false
+                Font = Services.FormFontPolicy.MonoFont()
             };
+            _list.Columns.Add("时间", DpiScale.V(this, 70));
+            _list.Columns.Add("说明", DpiScale.V(this, 360));
             var tip = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
                 Height = Math.Max(DpiScale.V(this, 22), FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this)),
@@ -86,22 +99,30 @@ namespace Gdterm.UI.Controls
                 if (e.KeyCode == Keys.Enter) { CopySelected(); e.Handled = true; }
             };
 
-            Controls.Add(_list);
+            _shell = new ListShell(_list, "过滤传输记录…");
+            _shell.AddAction("导出", (s2, e2) => _shell.ExportCsv(FindForm(), "transfers")).Name = "TransferExportButton";
+
+            Controls.Add(_shell);
             Controls.Add(tip);
             Controls.Add(clear);
             Controls.Add(title);
             _empty = EmptyStateView.Attach(this, "还没有传输记录",
                 "从 SFTP 面板上传/下载、Zmodem 收发的文件，完成后都会记在这里",
                 "打开传输日志目录", (s2, e2) => OpenLogDir());
+            _list.AccessibleName = "传输记录列表";
+            // 无障碍名称回填：ListView/Table 本身没有 Text，AutoName 只补有文本的控件，
+            // 列表名单独设（读屏软件念"宏列表"而不是"列表"）
+            try { UiA11y.AutoName(this); } catch (Exception) { }
+
             Reload();
         }
 
         public static void Record(string message)
         {
-            var line = DateTime.Now.ToString("HH:mm:ss") + "  " + (message ?? "");
+            var job = new Job { At = DateTime.Now, Message = message ?? "" };
             lock (Sync)
             {
-                Jobs.Insert(0, line);
+                Jobs.Insert(0, job);
                 while (Jobs.Count > 100) Jobs.RemoveAt(Jobs.Count - 1);
             }
             try { NotificationCenterPanel.Push("XFER", message); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TransferCenterPanel", exSwallowed); } catch { } }
@@ -109,25 +130,30 @@ namespace Gdterm.UI.Controls
 
         public void Reload()
         {
-            _list.BeginUpdate();
-            _list.Items.Clear();
+            var rows = new System.Collections.Generic.List<ListViewItem>();
             int count;
             lock (Sync)
             {
                 count = Jobs.Count;
-                foreach (var j in Jobs) _list.Items.Add(j);
+                foreach (var j in Jobs)
+                {
+                    var item = new ListViewItem(j.TimeText);
+                    item.SubItems.Add(j.Message ?? "");
+                    item.Tag = j;
+                    rows.Add(item);
+                }
             }
-            _list.EndUpdate();
-            // 占位项「（暂无传输记录）」退役：它既不能选中也没有意义，改由空态层承担引导
+            _shell.SetItems(rows);
             if (_empty != null) _empty.SetEmpty(count == 0);
         }
 
         private void CopySelected()
         {
-            if (_list.SelectedItem == null) return;
+            if (_list.SelectedItems.Count == 0) return;
+            var it = _list.SelectedItems[0];
             try
             {
-                Clipboard.SetText(_list.SelectedItem.ToString());
+                Clipboard.SetText(it.Text + "  " + (it.SubItems.Count > 1 ? it.SubItems[1].Text : ""));
                 ToastNotifier.Success("已复制传输记录", 2000);
             }
             catch (Exception ex)

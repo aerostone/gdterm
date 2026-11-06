@@ -90,12 +90,22 @@ namespace Gdterm.UI.Controls
                 FullRowSelect = true,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
+                CheckBoxes = true,     // 批量删除
                 Font = FormFontPolicy.UiFont()
             };
             _lvResults.Columns.Add("模板", DpiScale.V(this, 150));
             _lvResults.Columns.Add("命令", DpiScale.V(this, 320));
             _lvResults.DoubleClick += (s, e) => ExecuteSelected();
-            Controls.Add(_lvResults);
+
+            _shell = new ListShell(_lvResults, showFilter: false);
+            var btnExport = _shell.AddAction("导出", (s, e) => _shell.ExportCsv(FindForm(), "command-templates"));
+            btnExport.Name = "TemplateExportButton";
+            // 键盘：Ctrl+F 落到本页自己的搜索框（壳没有过滤框，默认会把焦点丢给不存在的输入）
+            _lvResults.KeyDown += (s, e) =>
+            {
+                if (e.Control && e.KeyCode == Keys.F) { _txtSearch.Focus(); _txtSearch.SelectAll(); e.SuppressKeyPress = true; }
+            };
+            Controls.Add(_shell);
             _empty = EmptyStateView.Attach(this, "还没有命令模板",
                 "把常用命令存成模板，双击即插入当前终端（支持变量占位）");
 
@@ -126,6 +136,11 @@ namespace Gdterm.UI.Controls
                 Font = FormFontPolicy.UiFont(-1f)
             };
             Controls.Add(_statusLabel);
+            _lvResults.AccessibleName = "命令模板列表";
+            // 无障碍名称回填：ListView/Table 本身没有 Text，AutoName 只补有文本的控件，
+            // 列表名单独设（读屏软件念"宏列表"而不是"列表"）
+            try { UiA11y.AutoName(this); } catch (Exception) { }
+
         }
 
         private AntdUI.Button MkBtn(string text, string tip)
@@ -142,6 +157,8 @@ namespace Gdterm.UI.Controls
         }
 
         private EmptyStateView _empty;
+        /// <summary>排序/批量/导出壳（搜索与分类筛选是本页数据层做的，壳不出第二个搜索框）</summary>
+        private ListShell _shell;
 
         private void RefreshCategories()
         {
@@ -157,8 +174,8 @@ namespace Gdterm.UI.Controls
 
         private void FilterResults()
         {
-            _lvResults.Items.Clear();
             _filtered.Clear();
+            var rows = new List<ListViewItem>();
             string q = (_txtSearch.Text ?? "").Trim();
             string cat = null;
             try { cat = _categoryBox.SelectedIndex > 0 ? (string)_categoryBox.SelectedValue : null; }
@@ -186,8 +203,9 @@ namespace Gdterm.UI.Controls
                 var item = new ListViewItem(t.Name ?? "");
                 item.SubItems.Add(t.Command ?? "");
                 item.Tag = t;
-                _lvResults.Items.Add(item);
+                rows.Add(item);
             }
+            _shell.SetItems(rows);
             if (_lvResults.Items.Count > 0) _lvResults.Items[0].Selected = true;
             _statusLabel.Text = "共 " + _filtered.Count + " 个模板";
             if (_empty != null)
@@ -298,16 +316,38 @@ namespace Gdterm.UI.Controls
 
         private void DeleteSelected()
         {
-            if (_lvResults.SelectedItems.Count == 0) return;
-            var t = _lvResults.SelectedItems[0].Tag as CommandTemplate;
-            if (t == null) return;
-            try
+            // 勾选的多条一起删；一条都没勾时按当前选中行（保持老用法）
+            var picked = _shell.SelectedOrChecked();
+            var targets = new List<CommandTemplate>();
+            foreach (var it in picked)
             {
-                _store.Delete(t.Id);
-                FilterResults();
-                _statusLabel.Text = "已删除：" + t.Name;
+                var t = it.Tag as CommandTemplate;
+                if (t != null) targets.Add(t);
             }
-            catch (System.Exception ex) { _statusLabel.Text = "删除失败：" + ex.Message; }
+            if (targets.Count == 0) return;
+            if (targets.Count > 1)
+            {
+                var ask = MessageBox.Show(FindForm(), "删除选中的 " + targets.Count + " 个模板？", "删除模板",
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                if (ask != DialogResult.Yes) return;
+            }
+            int ok = 0, fail = 0;
+            foreach (var t in targets)
+            {
+                try { _store.Delete(t.Id); ok++; }
+                catch (System.Exception ex)
+                {
+                    fail++;
+                    try { DiagLog.Error("CmdTemplatePanel.Delete", ex); } catch (Exception) { }
+                }
+            }
+            FilterResults();
+            RefreshCategories();
+            _statusLabel.Text = fail == 0
+                ? "已删除 " + ok + " 个模板"
+                : "删除完成：" + ok + " 成功，" + fail + " 失败";
+            if (ok > 0) ToastNotifier.Success("已删除 " + ok + " 个模板");
+            if (fail > 0) ToastNotifier.Error(fail + " 个模板删除失败");
         }
     }
 }

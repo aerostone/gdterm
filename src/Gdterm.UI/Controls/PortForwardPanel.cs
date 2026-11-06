@@ -17,6 +17,8 @@ namespace Gdterm.UI.Controls
     {
         private ListView _lvRules;
         private EmptyStateView _empty;
+        /// <summary>过滤/排序/批量/导出壳</summary>
+        private ListShell _shell;
         private readonly PortForwardManager _manager;
         private readonly List<PortForwardRule> _rules = new List<PortForwardRule>();
         private ISshPortForwardHost _host;
@@ -77,6 +79,7 @@ namespace Gdterm.UI.Controls
                 FullRowSelect = true,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
+                CheckBoxes = true,       // 批量停止/删除
                 Font = Services.FormFontPolicy.MonoFont()
             };
             _lvRules.Columns.Add("类型", 60);
@@ -94,13 +97,23 @@ namespace Gdterm.UI.Controls
                 else if (e2.KeyCode == Keys.Delete) { DeleteSelected(); e2.Handled = true; }
             };
 
-            Controls.Add(_lvRules);
+            _shell = new ListShell(_lvRules, "过滤名称/地址/说明…");
+            var btnExport = _shell.AddAction("导出", (s2, e2) => _shell.ExportCsv(FindForm(), "port-forward"));
+            btnExport.Name = "ForwardExportButton";
+            _shell.ItemActivated += (s2, it) => ToggleSelected();
+
+            Controls.Add(_shell);
             Controls.Add(toolbar);
 
             // 审计 C1：空隧道列表给出下一步动作（此前只有一排禁用按钮，用户不知道要干什么）
             _empty = EmptyStateView.Attach(this, "还没有端口转发规则",
                 "把本地端口映射到远端服务（ssh -L），用于内网数据库/Web 面板",
                 "新建规则", (s2, e2) => AddRule());
+            _lvRules.AccessibleName = "端口转发规则列表";
+            // 无障碍名称回填：ListView/Table 本身没有 Text，AutoName 只补有文本的控件，
+            // 列表名单独设（读屏软件念"宏列表"而不是"列表"）
+            try { UiA11y.AutoName(this); } catch (Exception) { }
+
         }
 
         private AntdUI.Button CreateBtn(string text)
@@ -117,7 +130,7 @@ namespace Gdterm.UI.Controls
 
         private void RefreshList()
         {
-            _lvRules.Items.Clear();
+            var items = new List<ListViewItem>(_rules.Count);
             foreach (var r in _rules)
             {
                 var item = new ListViewItem(r.Type.ToString());
@@ -128,8 +141,10 @@ namespace Gdterm.UI.Controls
                 item.SubItems.Add(r.Description ?? "");
                 item.Tag = r;
                 if (_manager.IsActive(r.Id)) item.ForeColor = GdtermColorTable.Success;
-                _lvRules.Items.Add(item);
+                items.Add(item);
             }
+            _shell.SetItems(items);
+            // 用全量判空：过滤到 0 条时该亮的是壳的「没有匹配」
             if (_empty != null) _empty.SetEmpty(_rules.Count == 0);
         }
 
@@ -226,9 +241,29 @@ namespace Gdterm.UI.Controls
 
         private void DeleteSelected()
         {
-            if (_lvRules.SelectedItems.Count == 0) return;
-            var rule = _lvRules.SelectedItems[0].Tag as PortForwardRule;
-            if (rule != null) { try { _manager.Bind(_host); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("PortForwardPanel", exSwallowed); } catch { } } _manager.Stop(rule.Id); _rules.Remove(rule); RefreshList(); }
+            // 勾选的多条一起删；一条都没勾时按当前选中行
+            var picked = _shell.SelectedOrChecked();
+            var targets = new List<PortForwardRule>();
+            foreach (var it in picked)
+            {
+                var r = it.Tag as PortForwardRule;
+                if (r != null) targets.Add(r);
+            }
+            if (targets.Count == 0) return;
+            if (MessageBox.Show(FindForm(), targets.Count == 1
+                    ? "删除转发规则「" + (targets[0].Name ?? "") + "」？"
+                    : "删除选中的 " + targets.Count + " 个转发规则？", "删除规则",
+                MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+            try { _manager.Bind(_host); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("PortForwardPanel", exSwallowed); } catch { } }
+            int n = 0;
+            foreach (var rule in targets)
+            {
+                try { _manager.Stop(rule.Id); } catch (Exception) { }   // 运行中的先停，否则端口句柄留在后台
+                _rules.Remove(rule);
+                n++;
+            }
+            RefreshList();
+            ToastNotifier.Success("已删除 " + n + " 条转发规则");
         }
 
         private static void Lbl(Form f, string t, int x, int y) { f.Controls.Add(new AntdUI.Label { Text = t, Location = DpiScale.P(f, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }); }

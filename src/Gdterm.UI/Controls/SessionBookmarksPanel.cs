@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
@@ -21,6 +22,8 @@ namespace Gdterm.UI.Controls
         private ListView _recentList;
         private AntdUI.Input _searchBox;
         private AntdUI.Label _statusLabel;
+        private ListShell _shellBookmarks;
+        private ListShell _shellRecent;
         private EmptyStateView _emptyBookmarks;
         private EmptyStateView _emptyRecent;
 
@@ -96,6 +99,7 @@ namespace Gdterm.UI.Controls
             };
 
             _bookmarksList = CreateListView("书签");
+            _bookmarksList.CheckBoxes = true;   // 批量删除/收藏
             _bookmarksList.Columns.Add("名称", 140);
             _bookmarksList.Columns.Add("连接", 100);
             _bookmarksList.Columns.Add("标签", 80);
@@ -107,6 +111,14 @@ namespace Gdterm.UI.Controls
                 if (e.KeyCode == Keys.Delete) OnDeleteBookmark(s, e);
             };
 
+            // 两个列表各配一个壳：排序 + 导出（书签页自己有搜索框，壳不再出第二个过滤）
+            _shellBookmarks = new ListShell(_bookmarksList, showFilter: false);
+            _shellBookmarks.AddAction("导出", (s2, e2) => _shellBookmarks.ExportCsv(FindForm(), "bookmarks")).Name = "BookmarkExportButton";
+            _bookmarksList.KeyDown += (s2, e2) =>
+            {
+                if (e2.Control && e2.KeyCode == Keys.F) { _searchBox.Focus(); _searchBox.SelectAll(); e2.SuppressKeyPress = true; }
+            };
+
             var bmHost = new Panel { Dock = DockStyle.Fill };
             var bmLabel = new AntdUI.Label {
                 Text = "收藏书签",
@@ -115,10 +127,12 @@ namespace Gdterm.UI.Controls
                 ForeColor = GdtermColorTable.Muted,
                 Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 2), 0, 0)
             };
-            bmHost.Controls.Add(_bookmarksList);
+            bmHost.Controls.Add(_shellBookmarks);
             bmHost.Controls.Add(bmLabel);
 
             _recentList = CreateListView("最近");
+            _shellRecent = new ListShell(_recentList);
+            _shellRecent.AddAction("导出", (s2, e2) => _shellRecent.ExportCsv(FindForm(), "recent-connections")).Name = "RecentExportButton";
             _recentList.Columns.Add("主机", 140);
             _recentList.Columns.Add("协议", 60);
             _recentList.Columns.Add("时间", 120);
@@ -133,7 +147,7 @@ namespace Gdterm.UI.Controls
                 ForeColor = GdtermColorTable.Muted,
                 Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 2), 0, 0)
             };
-            recentHost.Controls.Add(_recentList);
+            recentHost.Controls.Add(_shellRecent);
             recentHost.Controls.Add(recentLabel);
 
             split.Panel1.Controls.Add(bmHost);
@@ -144,6 +158,12 @@ namespace Gdterm.UI.Controls
             Controls.Add(_searchBox);
             Controls.Add(title);
             Controls.Add(_statusLabel);
+            _bookmarksList.AccessibleName = "书签列表";
+            _recentList.AccessibleName = "最近连接列表";
+            // 无障碍名称回填：ListView/Table 本身没有 Text，AutoName 只补有文本的控件，
+            // 列表名单独设（读屏软件念"宏列表"而不是"列表"）
+            try { UiA11y.AutoName(this); } catch (Exception) { }
+
 
             // 审计 C1：两个列表各自要有空态 —— 只有书签没记录、只有记录没书签都是常态
             _emptyBookmarks = EmptyStateView.Attach(bmHost, "还没有书签",
@@ -194,6 +214,8 @@ namespace Gdterm.UI.Controls
 
         private void FilterBookmarks()
         {
+            using (BusyScope.Begin(this, "正在读取书签…", false))
+            {
             _bookmarksList.BeginUpdate();
             _bookmarksList.Items.Clear();
             try
@@ -204,6 +226,7 @@ namespace Gdterm.UI.Controls
                     .OrderByDescending(b => b.IsFavorite)
                     .ThenByDescending(b => b.ConnectCount)
                     .ThenBy(b => b.Name ?? "");
+                var rows = new List<ListViewItem>();
                 foreach (var b in ordered)
                 {
                     if (!string.IsNullOrEmpty(q))
@@ -220,9 +243,10 @@ namespace Gdterm.UI.Controls
                     item.SubItems.Add(b.ConnectionId ?? "");
                     item.SubItems.Add(b.Tags ?? "");
                     item.SubItems.Add(b.ConnectCount.ToString());
-                    _bookmarksList.Items.Add(item);
+                    rows.Add(item);
                 }
-                _statusLabel.Text = "书签 " + _bookmarksList.Items.Count + " 条";
+                _shellBookmarks.SetItems(rows);
+                _statusLabel.Text = "书签 " + _shellBookmarks.AllItems.Count + " 条";
             }
             catch (Exception ex)
             {
@@ -243,10 +267,11 @@ namespace Gdterm.UI.Controls
                         hasAny = raw != null && raw.Count > 0;
                     }
                     catch (Exception) { }
-                    _emptyBookmarks.SetEmpty(_bookmarksList.Items.Count == 0,
+                    _emptyBookmarks.SetEmpty(_shellBookmarks.AllItems.Count == 0,
                         hasAny ? "没有匹配的书签" : null,
                         hasAny ? "换个名称/标签再搜，或清空搜索框" : null);
                 }
+            }
             }
         }
 
@@ -257,6 +282,7 @@ namespace Gdterm.UI.Controls
             try
             {
                 var recents = _bookmarkStore.GetRecentConnections(30) ?? new RecentConnection[0];
+                var rows = new List<ListViewItem>();
                 foreach (var r in recents)
                 {
                     var item = new ListViewItem(r.Host ?? r.ConnectionId ?? "")
@@ -267,8 +293,9 @@ namespace Gdterm.UI.Controls
                     item.SubItems.Add(r.Protocol ?? "");
                     item.SubItems.Add(r.ConnectedAt.ToLocalTime().ToString("MM-dd HH:mm"));
                     item.SubItems.Add(r.Success ? "OK" : "失败");
-                    _recentList.Items.Add(item);
+                    rows.Add(item);
                 }
+                _shellRecent.SetItems(rows);
             }
             catch (Exception ex)
             {
@@ -278,7 +305,7 @@ namespace Gdterm.UI.Controls
             finally
             {
                 _recentList.EndUpdate();
-                if (_emptyRecent != null) _emptyRecent.SetEmpty(_recentList.Items.Count == 0);
+                if (_emptyRecent != null) _emptyRecent.SetEmpty(_shellRecent.AllItems.Count == 0);
             }
         }
 
@@ -379,16 +406,30 @@ namespace Gdterm.UI.Controls
 
         private void OnDeleteBookmark(object sender, EventArgs e)
         {
-            if (_bookmarksList.SelectedItems.Count == 0) return;
-            var bm = _bookmarksList.SelectedItems[0].Tag as SessionBookmark;
-            if (bm == null) return;
-            if (MessageBox.Show("删除书签「" + bm.Name + "」？", "确认",
+            var targets = new List<SessionBookmark>();
+            foreach (var it in _shellBookmarks.SelectedOrChecked())
+            {
+                var bm0 = it.Tag as SessionBookmark;
+                if (bm0 != null) targets.Add(bm0);
+            }
+            if (targets.Count == 0) return;
+            string ask = targets.Count == 1
+                ? "删除书签「" + targets[0].Name + "」？"
+                : "删除选中的 " + targets.Count + " 个书签？";
+            if (MessageBox.Show(ask, "确认",
                     MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
             try
             {
-                _bookmarkStore.Delete(bm.Id);
+                int ok = 0, fail = 0;
+                foreach (var bm1 in targets)
+                {
+                    try { _bookmarkStore.Delete(bm1.Id); ok++; }
+                    catch (Exception) { fail++; }
+                }
                 Reload();
+                if (fail == 0) ToastNotifier.Success("已删除 " + ok + " 个书签");
+                else ToastNotifier.Warning("删除完成：" + ok + " 成功，" + fail + " 失败");
             }
             catch (Exception ex)
             {
