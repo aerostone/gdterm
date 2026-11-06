@@ -122,6 +122,18 @@ namespace Gdterm.UI.Controls
             Controls.Add(_box);
         }
 
+        /// <summary>
+        /// 给空态层与内部子控件起名，供 ui-smoke 按名定位（Form.Name 一旦被断言依赖，
+        /// 替换实现时不能让它凭空消失：KeePassManagerEmpty 断言 KeePassEmptyGuide*）。
+        /// </summary>
+        public EmptyStateView WithNames(string rootName, string actionName = null, string hintName = null)
+        {
+            if (!string.IsNullOrEmpty(rootName)) Name = rootName;
+            if (_action != null && !string.IsNullOrEmpty(actionName)) _action.Name = actionName;
+            if (_desc != null && !string.IsNullOrEmpty(hintName)) _desc.Name = hintName;
+            return this;
+        }
+
         /// <summary>空态主按钮（未提供 actionText 时为 null）。</summary>
         public AntdUI.Button ActionButton { get { return _action; } }
 

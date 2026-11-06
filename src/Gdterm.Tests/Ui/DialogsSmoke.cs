@@ -1,9 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Windows.Forms;
 using Gdterm.AI;
 using Gdterm.Connections;
+using Gdterm.Core.Enums;
 using Gdterm.Core.Models;
 using Gdterm.Security;
 using Gdterm.UI.Controls;
@@ -42,6 +44,17 @@ namespace Gdterm.Tests.Ui
             Show("setup-wizard", () => (Form)new SetupWizardForm(security), outDir, log, check);
             Show("sshkey-manager", () => (Form)new SshKeyManagerForm(keepass), outDir, log, check);
             Show("transfer-progress", () => (Form)new TransferProgressDialog("smoke"), outDir, log, check);
+            // 连接导入预览：裁决入口不渲染过就没人知道「导入前能不能看清、确定键是否置灰」
+            Show("import-preview", () => (Form)new ImportPreviewForm(
+                new List<ConnectionConfig>
+                {
+                    new ConnectionConfig { Name = "prod-web-01", Protocol = ProtocolType.SSH, Host = "10.0.0.11", Port = 22 },
+                    new ConnectionConfig { Name = "db-replica", Protocol = ProtocolType.SSH, Host = "10.0.0.12", Port = 22 }
+                },
+                new List<ConnectionConfig>
+                {
+                    new ConnectionConfig { Name = "已存在的主机", Protocol = ProtocolType.SSH, Host = "10.0.0.9", Port = 22 }
+                }), outDir, log, check);
 
             check(_oneFails == 0, "dialogs-one-fail=" + _oneFails + " (==0)");
             try { Directory.Delete(tmp, true); } catch { }

@@ -190,7 +190,10 @@ namespace Gdterm.UI.Forms
             _entryTable.Dock = DockStyle.Fill;
             tableHost.Controls.Add(_entryTable);
             _emptyGuide = EmptyStateView.Attach(tableHost, "还没有条目",
-                "点『添加』创建第一条；读取现有 KeePass 库需先在主界面解锁", "添加第一条", OnAddClick);
+                    "点『添加』创建第一条；读取现有 KeePass 库需先在主界面解锁", "添加第一条", OnAddClick);
+            // 名字是被 ui-smoke 断言过的契约（KeePassManagerEmpty 用例），换实现也得留着
+            if (_emptyGuide != null)
+                _emptyGuide.WithNames("KeePassEmptyGuide", "KeePassEmptyGuideAddButton", "KeePassEmptyGuideHint");
 
             // Dock 顺序：后添加的先布局——Top 先钉住，Bottom 再钉住，Fill 吃剩余空间
             Controls.Add(tableHost);
