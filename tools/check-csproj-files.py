@@ -35,6 +35,15 @@ def main():
     for proj in projects:
         base = os.path.dirname(proj)
         text = open(proj, encoding="utf-8-sig", errors="replace").read()
+        # XML 良构性：文件列表对得上也可能标签没配对（0.1.374 就是这样：本地门禁全绿，
+        # CI 在 nuget restore 阶段 MSB4025 才炸）。先在最便宜的地方拦住。
+        try:
+            import xml.etree.ElementTree as ET
+            ET.fromstring(re.sub(r'&(?!amp;|lt;|gt;|quot;|apos;|#)', '&amp;', text))
+        except Exception as ex:
+            print("  XML 不良构: %s -> %s（msbuild 会报 MSB4025）" % (proj, ex))
+            problems += 1
+            continue
         listed = set()
         for m in re.finditer(r'<Compile Include="([^"]+)"', text):
             rel = m.group(1).replace("\\", "/")

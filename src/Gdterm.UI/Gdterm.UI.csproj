@@ -106,6 +106,8 @@
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="Forms\ImportPreviewForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Forms\KeePassUnlockForm.cs">
       <SubType>Form</SubType>
     </Compile>
