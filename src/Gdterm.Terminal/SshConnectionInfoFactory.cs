@@ -17,7 +17,7 @@ namespace Gdterm.Terminal
 
         /// <summary>
         /// 带代理的连接信息。proxy 为空或未配好时等价于直连——SSH.NET 的 ConnectionInfo 原生支持
-        /// Http/Socks4/Socks5（ProxyType/ProxyHost/ProxyPort/ProxyUsername/ProxyPassword）。
+        /// Http/Socks4/Socks5（构造 ConnectionInfo 时传 ProxyTypes，属性只读）。
         /// </summary>
         public static ConnectionInfo Create(string host, int port, string username, CredentialPayload credential,
             int timeoutSeconds, ProxyConfig proxy)
@@ -26,54 +26,68 @@ namespace Gdterm.Terminal
             if (credential == null) throw new ArgumentNullException(nameof(credential));
 
             var user = username ?? credential.Username ?? "root";
+            // SSH.NET 2026 的 Proxy* 属性只读 —— 代理必须在构造 ConnectionInfo 时传，
+            // 且「密码认证 + 代理认证」没有公开构造重载，只能退回 ConnectionInfo + AuthenticationMethod。
+            ProxyTypes proxyType;
+            bool useProxy = TryMapProxy(proxy, out proxyType);
+            string proxyUser = useProxy && !string.IsNullOrEmpty(proxy.Username) ? proxy.Username : null;
+            string proxyPass = proxy.Password ?? string.Empty;
             ConnectionInfo info;
 
+            PrivateKeyFile keyFile = null;
             if (credential.SshPrivateKey != null && credential.SshPrivateKey.Length > 0)
             {
                 // MemoryStream 由 PrivateKeyFile 在构造时读取；不 dispose 流直到 key 解析完成
                 var ms = new MemoryStream(credential.SshPrivateKey, writable: false);
-                PrivateKeyFile keyFile;
                 try
                 {
-                    if (!string.IsNullOrEmpty(credential.SshPrivateKeyPassphrase))
-                        keyFile = new PrivateKeyFile(ms, credential.SshPrivateKeyPassphrase);
-                    else
-                        keyFile = new PrivateKeyFile(ms);
+                    keyFile = string.IsNullOrEmpty(credential.SshPrivateKeyPassphrase)
+                        ? new PrivateKeyFile(ms)
+                        : new PrivateKeyFile(ms, credential.SshPrivateKeyPassphrase);
                 }
                 finally
                 {
                     ms.Dispose();
                 }
+            }
 
-                info = new PrivateKeyConnectionInfo(host, port, user, keyFile);
+            var password = credential.Password ?? "";
+            if (!useProxy)
+            {
+                info = keyFile != null
+                    ? (ConnectionInfo)new PrivateKeyConnectionInfo(host, port, user, keyFile)
+                    : new PasswordConnectionInfo(host, port, user, password);
+            }
+            else if (proxyUser != null)
+            {
+                // 代理要认证：ConnectionInfo 有 (proxyUsername, proxyPassword) 的完整重载
+                AuthenticationMethod auth = keyFile != null
+                    ? (AuthenticationMethod)new PrivateKeyAuthenticationMethod(user, keyFile)
+                    : new PasswordAuthenticationMethod(user, password);
+                info = new ConnectionInfo(host, port, user, proxyType, proxy.Host, proxy.Port, proxyUser, proxyPass, auth);
             }
             else
             {
-                info = new PasswordConnectionInfo(host, port, user, credential.Password ?? "");
+                info = keyFile != null
+                    ? (ConnectionInfo)new PrivateKeyConnectionInfo(host, port, user, proxyType, proxy.Host, proxy.Port, keyFile)
+                    : new PasswordConnectionInfo(host, port, user, password, proxyType, proxy.Host, proxy.Port);
             }
 
             info.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
-            ApplyProxy(info, proxy);
             return info;
         }
 
-        /// <summary>把 ProxyConfig 灌进 ConnectionInfo（类型不认识/未填好则保持直连）。</summary>
-        private static void ApplyProxy(ConnectionInfo info, ProxyConfig proxy)
+        /// <summary>ProxyConfig → SSH.NET ProxyTypes；未配好/类型不认识则 false（直连）。</summary>
+        private static bool TryMapProxy(ProxyConfig proxy, out ProxyTypes type)
         {
-            if (info == null || proxy == null || !proxy.IsUsable) return;
+            type = ProxyTypes.None;
+            if (proxy == null || !proxy.IsUsable) return false;
             switch (proxy.Kind)
             {
-                case ProxyKind.Http: info.ProxyType = ProxyTypes.Http; break;
-                case ProxyKind.Socks4: info.ProxyType = ProxyTypes.Socks4; break;
-                case ProxyKind.Socks5: info.ProxyType = ProxyTypes.Socks5; break;
-                default: return;
-            }
-            info.ProxyHost = proxy.Host;
-            info.ProxyPort = proxy.Port;
-            if (!string.IsNullOrEmpty(proxy.Username))
-            {
-                info.ProxyUsername = proxy.Username;
-                info.ProxyPassword = proxy.Password ?? string.Empty;
+                case ProxyKind.Http: type = ProxyTypes.Http; return true;
+                case ProxyKind.Socks4: type = ProxyTypes.Socks4; return true;
+                case ProxyKind.Socks5: type = ProxyTypes.Socks5; return true;
+                default: return false;
             }
         }
     }

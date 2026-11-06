@@ -348,7 +348,7 @@ namespace Gdterm.UI.Forms
                 // 切类型时给惯用端口，已经手填过的不覆盖
                 try
                 {
-                    int cur = _proxyPortBox.Value.HasValue ? (int)_proxyPortBox.Value.Value : 0;
+                    int cur = (int)_proxyPortBox.Value;
                     bool isDefault = cur == 0 || cur == 8080 || cur == 1080;
                     if (!isDefault) return;
                     var kind = SelectedProxyKind();
@@ -909,9 +909,7 @@ namespace Gdterm.UI.Forms
                 var term = (_termCombo.Text ?? "").Trim();
                 _config.Metadata["term"] = term.Length > 0 ? term : "xterm-256color";
                 // 回滚行数：写简写键（TerminalProfile.FromMetadata 优先认 terminalProfile JSON）
-                int sbLines = _scrollbackBox.Value.HasValue
-                    ? (int)_scrollbackBox.Value.Value
-                    : Gdterm.Core.Constants.TerminalLimits.DefaultScrollback;
+                int sbLines = (int)_scrollbackBox.Value; // InputNumber.Value 在本版 AntdUI 是 decimal（非 nullable）
                 _config.Metadata["scrollback"] = Gdterm.Core.Constants.TerminalLimits
                     .ClampScrollback(Math.Max(sbLines, Gdterm.Core.Constants.TerminalLimits.MinScrollback), 0)
                     .ToString();
@@ -959,8 +957,8 @@ namespace Gdterm.UI.Forms
                     {
                         Kind = kind,
                         Host = host,
-                        Port = _proxyPortBox.Value.HasValue && _proxyPortBox.Value.Value > 0
-                            ? (int)_proxyPortBox.Value.Value
+                        Port = (int)_proxyPortBox.Value > 0
+                            ? (int)_proxyPortBox.Value
                             : ProxyConfig.DefaultPort(kind),
                         Username = string.IsNullOrWhiteSpace(_proxyUserBox.Text) ? null : _proxyUserBox.Text.Trim(),
                         Password = string.IsNullOrEmpty(_proxyPassBox.Text) ? null : _proxyPassBox.Text

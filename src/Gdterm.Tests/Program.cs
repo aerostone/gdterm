@@ -36,6 +36,8 @@ namespace Gdterm.Tests
             SftpPermissionTests.Run();
             TerminalProfileTests.Run();
             VtTerminalEngineTests.Run();
+            TerminalNotificationTests.Run();
+            TriggerAndLimitsTests.Run();
             ZmodemReceiverTests.Run();
             MacroRecorderTests.Run();
             ScanPluginTests.Run();

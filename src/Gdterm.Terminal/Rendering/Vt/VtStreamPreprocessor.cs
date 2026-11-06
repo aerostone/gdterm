@@ -630,8 +630,11 @@ namespace Gdterm.Terminal.Rendering.Vt
 
             if (code == 9)
             {
-                // OSC 9;<message>（iTerm2 简写，无标题）
-                RaiseNotification(null, (rest ?? "").Trim(), null);
+                // OSC 9;<message>（iTerm2 简写，无标题）。
+                // 例外：Windows Terminal / ConEmu 用 9;4;<state>;<pct> 画进度条，那不是通知。
+                var msg = (rest ?? "").Trim();
+                if (msg.StartsWith("4;", StringComparison.Ordinal)) return true;
+                RaiseNotification(null, msg, null);
                 return true;
             }
 
@@ -733,6 +736,9 @@ namespace Gdterm.Terminal.Rendering.Vt
             int scheme = rest.IndexOf("://", StringComparison.Ordinal);
             if (scheme >= 0)
             {
+                // 只认 file://（OSC 7 的规范形式）；http:// 之类是别的协议，别把 URL 路径当 cd 目标
+                var proto = rest.Substring(0, scheme);
+                if (!string.Equals(proto, "file", StringComparison.OrdinalIgnoreCase)) return null;
                 int slash = rest.IndexOf('/', scheme + 3);
                 if (slash < 0) return null;
                 path = rest.Substring(slash);

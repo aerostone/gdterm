@@ -246,8 +246,8 @@ namespace Gdterm.UI.Controls
                 Bold = chkBold.Checked, Enabled = true, SortOrder = existing?.SortOrder ?? 99,
                 Action = (Gdterm.Core.Models.HighlightAction)Math.Max(0, Math.Min(3, cmbAction.SelectedIndex)),
                 ActionArgument = string.IsNullOrWhiteSpace(txtArg.Text) ? null : txtArg.Text.Trim(),
-                // InputNumber.Value 可被清空成 null（用户全选删除），别让保存按钮抛异常
-                ActionCooldownSeconds = numCd.Value.HasValue ? (int)numCd.Value.Value : 5
+                // 冷却夹到 0..600（InputNumber.Value 在本版 AntdUI 为 decimal，不校验会存进离谱值）
+                ActionCooldownSeconds = (int)Math.Max(0, Math.Min(600, numCd.Value))
             };
         }
 
