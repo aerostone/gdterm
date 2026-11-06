@@ -1,0 +1,725 @@
+{
+  "$comment": "功能大纲 × 页面契约矩阵的数据源。type 决定适用哪些能力（见 tools/feature-map.py TYPE_CAPS）。known_gaps 是已登记的技术债（棘轮：只减不增）；manual_ok 是「有实现但源码特征判不出来」的人工签字。新增页面/面板/对话框必须在这里登记，否则 feature-map --check 报「未登记入口」。",
+  "baseline": {
+    "gaps": 49
+  },
+  "pages": [
+    {
+      "id": "page.CommandPaletteForm",
+      "name": "命令面板",
+      "menu": "Ctrl+Shift+P 风格入口",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Controls/CommandPaletteForm.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.AddOtpForm",
+      "name": "添加 OTP",
+      "menu": "OTP > 新增",
+      "type": "input",
+      "src": [
+        "src/Gdterm.UI/Forms/AddOtpForm.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": [
+        "persist"
+      ],
+      "note": "对话框返回 Result：OtpManagerForm 侧 `_store.Add(...)`"
+    },
+    {
+      "id": "page.TransferProgressDialog",
+      "name": "传输进度",
+      "menu": "SFTP > 上传/下载",
+      "type": "progress",
+      "src": [
+        "src/Gdterm.UI/Controls/TransferProgressDialog.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": [],
+      "drop_caps": [
+        "empty"
+      ],
+      "note": "进度对话框：只该有「进行中/失败」两态"
+    },
+    {
+      "id": "page.FilePaneControl",
+      "name": "文件面板（单栏）",
+      "menu": "SFTP > 单栏",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Controls/FilePaneControl.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.SftpPermissionForm",
+      "name": "SFTP 权限修改",
+      "menu": "SFTP > 右键 > 权限",
+      "type": "input",
+      "src": [
+        "src/Gdterm.UI/Forms/SftpPermissionForm.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.WelcomePanel",
+      "name": "欢迎页",
+      "menu": "mainform > 空标签页",
+      "type": "panel",
+      "src": [
+        "src/Gdterm.UI/Controls/WelcomePanel.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": [],
+      "drop_caps": [
+        "empty"
+      ],
+      "note": "欢迎页本身承担空态职责"
+    },
+    {
+      "id": "page.ConnectionTreeControl",
+      "name": "连接树",
+      "menu": "主窗左侧",
+      "type": "panel",
+      "src": [
+        "src/Gdterm.UI/Controls/ConnectionTreeControl.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": [],
+      "drop_caps": [
+        "empty"
+      ],
+      "note": "连接树承载在左侧栏，空态由向导/新建连接引导"
+    },
+    {
+      "id": "page.KeePassUnlockForm",
+      "name": "密码库解锁",
+      "menu": "密码库 > 解锁",
+      "type": "input",
+      "src": [
+        "src/Gdterm.UI/Forms/KeePassUnlockForm.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.KeePassEntryPicker",
+      "name": "密码库条目选择",
+      "menu": "密码库 > 选择条目",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Forms/KeePassEntryPicker.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.AiSettingsForm",
+      "name": "AI 助手设置",
+      "menu": "工具 > AI 助手设置",
+      "type": "settings",
+      "src": [
+        "src/Gdterm.UI/Forms/AiSettingsForm.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.OtpManagerForm",
+      "name": "OTP 动态码管理",
+      "menu": "工具 > OTP 动态码管理",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Forms/OtpManagerForm.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.SshKeyManagerForm",
+      "name": "SSH 密钥管理",
+      "menu": "工具 > SSH 密钥管理",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Forms/SshKeyManagerForm.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.TransferCenterPanel",
+      "name": "传输中心",
+      "menu": "工具 > 传输中心",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Controls/TransferCenterPanel.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.ChangeMasterPasswordForm",
+      "name": "修改主密码",
+      "menu": "工具 > 修改主密码",
+      "type": "input",
+      "src": [
+        "src/Gdterm.UI/Forms/ChangeMasterPasswordForm.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.DangerousCommandConfigForm",
+      "name": "危险命令规则",
+      "menu": "工具 > 危险命令规则",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Forms/DangerousCommandConfigForm.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.AppearanceSettingsForm",
+      "name": "外观设置",
+      "menu": "工具 > 外观设置",
+      "type": "settings",
+      "src": [
+        "src/Gdterm.UI/Forms/AppearanceSettingsForm.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.PasswordHealthForm",
+      "name": "密码健康报告",
+      "menu": "工具 > 密码健康报告",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Forms/PasswordHealthForm.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.KeePassManagerForm",
+      "name": "密码库管理",
+      "menu": "工具 > 密码库管理",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Forms/KeePassManagerForm.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.PasswordGeneratorForm",
+      "name": "密码生成器",
+      "menu": "工具 > 密码生成器",
+      "type": "input",
+      "src": [
+        "src/Gdterm.UI/Forms/PasswordGeneratorForm.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": [
+        "validation"
+      ],
+      "note": "生成器没有非法输入面：长度由 Slider 夹取，字符集至少勾一项（UI 层禁用）"
+    },
+    {
+      "id": "page.KeyBindingPanel",
+      "name": "快捷键绑定",
+      "menu": "工具 > 快捷键绑定",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Controls/KeyBindingPanel.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": [],
+      "drop_caps": [
+        "empty"
+      ],
+      "note": "快捷键注册表是固定集合，不存在空集"
+    },
+    {
+      "id": "page.ScannerCenterForm",
+      "name": "扫描中心",
+      "menu": "工具 > 扫描中心（插件）",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Forms/ScannerCenterForm.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.SecretScanPanel",
+      "name": "敏感信息扫描",
+      "menu": "工具 > 敏感信息扫描",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Controls/SecretScanPanel.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.ToolboxPanel",
+      "name": "运维工具箱",
+      "menu": "工具 > 运维工具箱",
+      "type": "panel",
+      "src": [
+        "src/Gdterm.UI/Controls/ToolboxPanel.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": [],
+      "drop_caps": [
+        "empty"
+      ],
+      "note": "静态工具清单，没有数据源，空态无意义"
+    },
+    {
+      "id": "page.NotificationCenterPanel",
+      "name": "通知中心",
+      "menu": "工具 > 通知中心",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Controls/NotificationCenterPanel.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.QuickCommandEditorForm",
+      "name": "快捷命令编辑",
+      "menu": "快捷命令栏 > 编辑",
+      "type": "input",
+      "src": [
+        "src/Gdterm.UI/Forms/QuickCommandEditorForm.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.SftpDualPanePanel",
+      "name": "SFTP 双栏",
+      "menu": "文件 > SFTP 浏览器",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Controls/SftpDualPanePanel.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": [],
+      "note": "双栏宿主：单栏能力见 FilePaneControl"
+    },
+    {
+      "id": "page.ConnectionImportExport",
+      "name": "连接导入/导出",
+      "menu": "文件 > 导入连接 / 导出连接",
+      "type": "input",
+      "src": [
+        "src/Gdterm.UI/Services/ConnectionImportExportUi.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": [],
+      "note": "只有系统文件框 + MessageBox 汇总；无预览、无冲突逐条裁定、无导入结果列表 —— 典型「简陋」"
+    },
+    {
+      "id": "page.ConnectionQuickJumpForm",
+      "name": "快速跳转",
+      "menu": "文件 > 快速跳转连接",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Controls/ConnectionQuickJumpForm.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.ConnectionDialog",
+      "name": "连接属性",
+      "menu": "文件 > 新建连接",
+      "type": "settings",
+      "src": [
+        "src/Gdterm.UI/Forms/ConnectionDialog.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": [
+        "persist"
+      ],
+      "note": "对话框本身不落盘：ConnectionOpenCoordinator.NewConnection 里 `_store?.Add(dlg.Result)`（ConnectionOpenCoordinator.cs:81）"
+    },
+    {
+      "id": "page.AiChatPanel",
+      "name": "AI 助手",
+      "menu": "终端 > AI 助手",
+      "type": "panel",
+      "src": [
+        "src/Gdterm.UI/Controls/AiChatPanel.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.RemoteMonitorPanel",
+      "name": "主机资源监控",
+      "menu": "终端 > 主机资源（远端 CPU/内存）",
+      "type": "monitor",
+      "src": [
+        "src/Gdterm.UI/Controls/RemoteMonitorPanel.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.HealthMonitorPanel",
+      "name": "健康监控",
+      "menu": "终端 > 健康监控",
+      "type": "monitor",
+      "src": [
+        "src/Gdterm.UI/Controls/HealthMonitorPanel.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.DangerousCommandDialog",
+      "name": "危险命令确认",
+      "menu": "终端 > 命中危险命令",
+      "type": "dialog",
+      "src": [
+        "src/Gdterm.UI/Controls/DangerousCommandDialog.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": [],
+      "drop_caps": [
+        "empty"
+      ]
+    },
+    {
+      "id": "page.CommandHistoryPanel",
+      "name": "命令历史",
+      "menu": "终端 > 命令历史",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Controls/CommandHistoryPanel.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.CommandTemplatePanel",
+      "name": "命令模板库",
+      "menu": "终端 > 命令模板库",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Controls/CommandTemplatePanel.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.MultiChannelPanel",
+      "name": "多通道广播",
+      "menu": "终端 > 多通道广播",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Controls/MultiChannelPanel.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.MacroPanel",
+      "name": "宏录制",
+      "menu": "终端 > 宏录制",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Controls/MacroPanel.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.BatchCommandPanel",
+      "name": "批量命令",
+      "menu": "终端 > 批量命令",
+      "type": "editor",
+      "src": [
+        "src/Gdterm.UI/Controls/BatchCommandPanel.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.LogonScriptPanel",
+      "name": "登录脚本",
+      "menu": "终端 > 登录脚本",
+      "type": "editor",
+      "src": [
+        "src/Gdterm.UI/Controls/LogonScriptPanel.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.PortForwardPanel",
+      "name": "端口转发",
+      "menu": "终端 > 端口转发",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Controls/PortForwardPanel.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.HighlightRulePanel",
+      "name": "高亮规则",
+      "menu": "终端 > 高亮规则",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Controls/HighlightRulePanel.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.SessionBookmarksPanel",
+      "name": "书签 / 最近连接",
+      "menu": "连接 > 书签 / 最近连接",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Controls/SessionBookmarksPanel.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": []
+    },
+    {
+      "id": "page.SetupWizardForm",
+      "name": "首次启动向导",
+      "menu": "首启",
+      "type": "wizard",
+      "src": [
+        "src/Gdterm.UI/Forms/SetupWizardForm.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": [
+        "persist"
+      ],
+      "note": "向导只收集：Program.cs:205 `SavePasswordConfig(securityManager.GetPasswordConfig(), ...)`"
+    },
+    {
+      "id": "act.ToggleDebugMode",
+      "name": "调试模式",
+      "menu": "工具 > 调试模式",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "调试模式",
+      "src": []
+    },
+    {
+      "id": "act.About",
+      "name": "关于 gdterm",
+      "menu": "帮助 > 关于 gdterm",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "关于 gdterm",
+      "src": []
+    },
+    {
+      "id": "act.DiagnosticsPackage",
+      "name": "导出诊断包",
+      "menu": "帮助 > 导出诊断包",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "导出诊断包",
+      "src": []
+    },
+    {
+      "id": "act.ShowHotkeys",
+      "name": "快捷键列表",
+      "menu": "帮助 > 快捷键列表",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "快捷键列表",
+      "src": []
+    },
+    {
+      "id": "act.ShowLogsFolder",
+      "name": "打开日志文件夹",
+      "menu": "帮助 > 打开日志文件夹",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "打开日志文件夹",
+      "src": []
+    },
+    {
+      "id": "act.OpenSftp",
+      "name": "SFTP 浏览器",
+      "menu": "文件 > SFTP 浏览器",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "SFTP 浏览器",
+      "src": []
+    },
+    {
+      "id": "act.ImportConnections",
+      "name": "导入连接",
+      "menu": "文件 > 导入连接",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "导入连接",
+      "src": []
+    },
+    {
+      "id": "act.ExportConnections",
+      "name": "导出连接",
+      "menu": "文件 > 导出连接",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "导出连接",
+      "src": []
+    },
+    {
+      "id": "act.OpenLocalTerminal",
+      "name": "本地终端",
+      "menu": "文件 > 本地终端",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "本地终端",
+      "src": []
+    },
+    {
+      "id": "act.Exit",
+      "name": "退出",
+      "menu": "文件 > 退出",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "退出",
+      "src": []
+    },
+    {
+      "id": "act.ShowSearch",
+      "name": "查找",
+      "menu": "终端 > 查找",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "查找",
+      "src": []
+    },
+    {
+      "id": "act.ShowSnippet",
+      "name": "片段搜索",
+      "menu": "终端 > 片段搜索",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "片段搜索",
+      "src": []
+    },
+    {
+      "id": "act.ToggleTmuxBar",
+      "name": "tmux 快捷面板",
+      "menu": "视图 > tmux 快捷面板",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "tmux 快捷面板",
+      "src": []
+    },
+    {
+      "id": "act.ViewFocus",
+      "name": "专注模式",
+      "menu": "视图 > 专注模式",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "专注模式",
+      "src": []
+    },
+    {
+      "id": "act.ToggleTree",
+      "name": "切换连接面板",
+      "menu": "视图 > 切换连接面板",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "切换连接面板",
+      "src": []
+    },
+    {
+      "id": "act.SplitVertical",
+      "name": "垂直分割",
+      "menu": "视图 > 垂直分割",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "垂直分割",
+      "src": []
+    },
+    {
+      "id": "act.ToggleQuickBar",
+      "name": "快捷命令栏",
+      "menu": "视图 > 快捷命令栏",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "快捷命令栏",
+      "src": []
+    },
+    {
+      "id": "act.ViewStandard",
+      "name": "标准视图",
+      "menu": "视图 > 标准视图",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "标准视图",
+      "src": []
+    },
+    {
+      "id": "act.SplitHorizontal",
+      "name": "水平分割",
+      "menu": "视图 > 水平分割",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "水平分割",
+      "src": []
+    },
+    {
+      "id": "act.ViewCompact",
+      "name": "紧凑模式",
+      "menu": "视图 > 紧凑模式",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "紧凑模式",
+      "src": []
+    },
+    {
+      "id": "act.ToggleTreePin",
+      "name": "自动隐藏连接面板",
+      "menu": "视图 > 自动隐藏连接面板",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "自动隐藏连接面板",
+      "src": []
+    },
+    {
+      "id": "act.CloseActive",
+      "name": "关闭当前标签",
+      "menu": "连接 > 关闭当前标签",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "关闭当前标签",
+      "src": []
+    },
+    {
+      "id": "act.ReconnectActive",
+      "name": "重连当前标签",
+      "menu": "连接 > 重连当前标签",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "重连当前标签",
+      "src": []
+    }
+  ]
+}

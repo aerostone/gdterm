@@ -98,6 +98,11 @@ test_script:
       Write-Host "Running gen-tokens --check (token SSOT drift gate)"
       & $py @pyArgs tools\gen-tokens.py --check
       if ($LASTEXITCODE -ne 0) { throw "gen-tokens check failed exit=$LASTEXITCODE" }
+      # ===== 功能完备性门（IA × 页面契约，棘轮）=====
+      # 新菜单入口没登记契约、或缺口数超过绑定基线 -> 红
+      Write-Host "Running feature-map --check (page completeness gate)"
+      & $py @pyArgs tools\feature-map.py --check
+      if ($LASTEXITCODE -ne 0) { throw "feature-map check failed exit=$LASTEXITCODE" }
 
 after_test:
   - ps: |
