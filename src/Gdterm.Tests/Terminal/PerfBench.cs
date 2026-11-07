@@ -11,8 +11,9 @@ namespace Gdterm.Tests.Terminal
 {
     /// <summary>
     /// 渲染性能基准（P2-8 基线）：大 cat 刷屏场景下每帧耗时 / 脏行命中 / 分配压力。
-    /// 走真实路径：CellGdiRenderer（引擎+GDI 画布）+ RenderFrameNow 同步帧，
-    /// 无消息泵（帧循环完全由基准驱动，数字可复现）。
+    /// 走真实路径：CellGdiRenderer（引擎+GDI 画布）画在真实宿主 Form 里，
+    /// 帧由 DoEvents 消息泵驱动（与 UiSmokeRunner 同款；0.1.395/396 教训：
+    /// parentless 窗口 + 同步 Update() 在 CI 会话硬 SEH 崩）。
     /// 三个场景：
     ///   A scroll1  —— 每帧 1 行（60fps 慢速滚动），必整屏重画（所有行位移）
     ///   B burst25  —— 每帧 25 行（16ms 合并突发），整屏重画
@@ -57,32 +58,48 @@ namespace Gdterm.Tests.Terminal
 
         private static int RunCore(string outJson)
         {
+            // 0.1.395/396 教训：parentless canvas + Show() + 裸 Update() 在 CI 上硬崩
+            // （SEH，C# catch 接不住，crash 文件都落不下来）。改用冒烟已验证的模式：
+            // canvas 放进真实 Form（可见），帧由 DoEvents 消息泵驱动（UiSmokeRunner 同款，
+            // CI 上 39 个 dump 全部画出了内容），帧末 Update() 同步 flush。
             var r = new CellGdiRenderer(Rows, Cols, null, History);
             var canvas = (Control)r.GetControl();
             // 按 Consolas 12pt @96dpi 的实测格宽 9x18 给画布（ApplyFont 内部也会 RecomputeGrid）
-            canvas.Size = new Size(Cols * 9 + 24, Rows * 18 + 24);
-            // 关键：必须 Visible——parentless 窗口不带 WS_VISIBLE 时 Update()→UpdateWindow()
-            // 会跳过 WM_PAINT，GDI 路径测不到（0.1.394 基线首轮实测教训：帧耗时里全是快照、
-            // paintedRows 恒 0）。CI 会话有桌面，短暂露一块空白面板无副作用。
-            canvas.Show();
+            int cw = Cols * 9 + 24, ch = Rows * 18 + 24;
+            canvas.Size = new Size(cw, ch);
+
+            var host = new Form
+            {
+                Text = "gdterm-perf-bench",
+                ShowInTaskbar = false,
+                FormBorderStyle = FormBorderStyle.FixedSingle,
+                ClientSize = new Size(cw + 8, ch + 8),
+                StartPosition = FormStartPosition.Manual,
+                Location = new Point(0, 0)
+            };
+            canvas.Location = new Point(4, 4);
+            host.Controls.Add(canvas);
+            host.Show();
+            Application.DoEvents();
             if (!canvas.IsHandleCreated || !canvas.Visible)
             {
                 Console.WriteLine("perf-bench: FAILED - canvas not visible (no desktop session?)");
+                try { host.Close(); } catch { }
                 return 1;
             }
 
             // 预热：字体加载 / 刷子缓存 / JIT
             for (int i = 0; i < 80; i++) r.Write(MakeLine(i) + "\r\n");
-            r.RenderFrameNow();
+            PumpFrame(r, canvas);
             GC.Collect();
 
             ScenarioResult a, b, c;
-            a = RunScenario(r, "scroll1", 150, f => r.Write(MakeLine(1000 + f) + "\r\n"));
-            b = RunScenario(r, "burst25", 60, f =>
+            a = RunScenario(r, canvas, "scroll1", 150, f => r.Write(MakeLine(1000 + f) + "\r\n"));
+            b = RunScenario(r, canvas, "burst25", 60, f =>
             {
                 for (int k = 0; k < 25; k++) r.Write(MakeLine(2000 + f * 25 + k) + "\r\n");
             });
-            c = RunScenario(r, "inplace", 100, f =>
+            c = RunScenario(r, canvas, "inplace", 100, f =>
             {
                 // 光标停在最后一行：\r 回车后覆盖写（不产生滚动）
                 r.Write("\r" + MakeLine(3000 + f));
@@ -103,7 +120,16 @@ namespace Gdterm.Tests.Terminal
                     Console.WriteLine("perf-bench: json write failed: " + ex.Message);
                 }
             }
+            try { host.Close(); } catch { }
             return 0;
+        }
+
+        /// <summary>一帧：显式快照 + 消息泵（DoEvents 处理 WM_PAINT，冒烟同款）+ 同步 flush。</summary>
+        private static void PumpFrame(CellGdiRenderer r, Control canvas)
+        {
+            r.RenderFrameNow();          // 快照 + 差分 + Invalidate（不含同步绘制）
+            Application.DoEvents();      // 泵：把挂起的 WM_PAINT 画掉（生产等价路径）
+            try { canvas.Update(); } catch { }   // 兜底：泵没画到就同步 flush
         }
 
         private class ScenarioResult
@@ -129,7 +155,7 @@ namespace Gdterm.Tests.Terminal
             return sb.ToString();
         }
 
-        private static ScenarioResult RunScenario(CellGdiRenderer r, string name, int frames, Action<int> feed)
+        private static ScenarioResult RunScenario(CellGdiRenderer r, Control canvas, string name, int frames, Action<int> feed)
         {
             var res = new ScenarioResult { Name = name, Frames = frames };
             var ms = new long[frames];
@@ -140,7 +166,7 @@ namespace Gdterm.Tests.Terminal
             {
                 feed(f);
                 var sw = Stopwatch.StartNew();
-                r.RenderFrameNow();
+                PumpFrame(r, canvas);
                 sw.Stop();
                 // 亚毫秒帧记 1ms：保留分辨力又不归零（Stopwatch 本身亚微秒精度，这里是口径选择）
                 ms[f] = Math.Max(1L, (long)sw.Elapsed.TotalMilliseconds);
