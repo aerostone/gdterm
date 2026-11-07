@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using Gdterm.Terminal.Diagnostics;
+using Gdterm.Core;
 
 namespace Gdterm.Terminal
 {
@@ -130,7 +131,7 @@ namespace Gdterm.Terminal
                     LatencyMs = sw.Elapsed.TotalMilliseconds,
                     ReconnectCount = _reconnectCount,
                     Uptime = connected ? _uptime.Elapsed : TimeSpan.Zero,
-                    StatusText = connected ? "已连接" : "已断开"
+                    StatusText = connected ? L10n.T("已连接") : L10n.T("已断开")
                 };
 
                 lock (_lock)

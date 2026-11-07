@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Gdterm.Core;
 
 namespace Gdterm.Terminal
 {
@@ -109,7 +110,7 @@ namespace Gdterm.Terminal
         /// <summary>从文件加载宏</summary>
         public void LoadFromFile(string filePath)
         {
-            if (!File.Exists(filePath)) throw new FileNotFoundException("宏文件不存在", filePath);
+            if (!File.Exists(filePath)) throw new FileNotFoundException(L10n.T("宏文件不存在"), filePath);
 
             _steps.Clear();
             var json = File.ReadAllText(filePath, Encoding.UTF8);

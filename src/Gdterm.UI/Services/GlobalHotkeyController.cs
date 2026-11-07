@@ -2,6 +2,7 @@ using System;
 using System.Windows.Forms;
 using Gdterm.UI.Hotkeys;
 using Gdterm.UI.Diagnostics;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Services
 {
@@ -34,7 +35,7 @@ namespace Gdterm.UI.Services
                 // A6：注册失败对用户可见（热键被其他程序占用时的唯一线索），一次性提示
                 try
                 {
-                    ToastNotifier.Show("全局热键 Ctrl+` 注册失败（可能已被其他程序占用）",
+                    ToastNotifier.Show(L10n.T("全局热键 Ctrl+` 注册失败（可能已被其他程序占用）"),
                         ToastNotifier.Level.Warning);
                 }
                 catch (System.Exception exToast) { try { DiagLog.Swallowed("GlobalHotkeyController.Toast", exToast); } catch { } }

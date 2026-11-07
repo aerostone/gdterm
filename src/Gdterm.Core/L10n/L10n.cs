@@ -66,6 +66,33 @@ namespace Gdterm.Core
             ["确认修改"] = "Confirm change",
             ["确认新密码"] = "Confirm new password",
             ["请输入当前密码"] = "Enter the current password",
+            // —— OTP 生成（批次5c：OtpGenerator） ——
+            ["key 为空"] = "key is empty",
+            // —— 宏录制（批次5c：MacroRecorder） ——
+            ["宏文件不存在"] = "Macro file not found",
+            // —— 连接健康监控（批次5c：ConnectionHealthMonitor） ——
+            ["已连接"] = "Connected",
+            // —— 隧道会话（批次5c：TunnelSession） ——
+            ["没有已连接的 hop"] = "No connected hop",
+            // —— 隧道管理（批次5c：TunnelManager） ——
+            ["隧道不存在"] = "The tunnel does not exist",
+            // —— AI 模型存储（批次5c：AiModelStore） ——
+            ["HMAC 校验失败（密文被篡改或主密码错误）"] = "HMAC verification failed (the ciphertext was tampered with or the master password is wrong)",
+            // —— SFTP 增强（批次5c：SftpEnhancements） ——
+            ["... (共{0}行以上，仅显示前{1}行)"] = "... ({0}+ lines total; only the first {1} are shown)",
+            // —— SFTP 同步执行（批次5c：SftpSyncRunner） ——
+            // —— 忙碌域（批次5c：BusyScope） ——
+            ["上一次操作还在进行，请稍候…"] = "The previous operation is still running; please wait…",
+            // —— 全局热键（批次5c：GlobalHotkeyController） ——
+            ["全局热键 Ctrl+` 注册失败（可能已被其他程序占用）"] = "The global hotkey Ctrl+` failed to register (it may be taken by another program)",
+            // —— 侧面板宿主（批次5c：SidePanelHost） ——
+            ["✕ 关闭面板"] = "✕ Close panel",
+            // —— 连接打开协调（批次5c：ConnectionOpenCoordinator） ——
+            ["请先打开一个 SSH 连接，或从连接树双击后再打开 SFTP。"] = "Open an SSH connection first, or double-click one in the tree, then open SFTP.",
+            // —— 专注模式（批次5c：ViewModeController） ——
+            ["退出专注 (Esc/F11)"] = "Exit focus mode (Esc/F11)",
+            // —— 未处理错误（批次5c：Program） ——
+            ["发生未处理错误，详情已写入 logs/diag.log\n\n"] = "An unhandled error occurred; details were written to logs/diag.log\n\n",
             // —— GDI 渲染器（批次5b：CellGdiRenderer，仅字体状态） ——
             ["(加载失败)"] = " (load failed)",
             // —— Zmodem 接收（批次5b：ZmodemReceiver） ——

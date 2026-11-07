@@ -4,6 +4,7 @@ using System.Net;
 using System.Net.Sockets;
 using Gdterm.Core.Models;
 using Renci.SshNet;
+using Gdterm.Core;
 
 namespace Gdterm.Tunnel.Models
 {
@@ -219,7 +220,7 @@ namespace Gdterm.Tunnel.Models
         public SshClient GetLastClient()
         {
             if (_hopClients.Count == 0)
-                throw new InvalidOperationException("没有已连接的 hop");
+                throw new InvalidOperationException(L10n.T("没有已连接的 hop"));
             return _hopClients[_hopClients.Count - 1];
         }
 

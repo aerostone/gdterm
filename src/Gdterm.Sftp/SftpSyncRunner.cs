@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Gdterm.Sftp.Models;
+using Gdterm.Core;
 
 namespace Gdterm.Sftp
 {
@@ -58,7 +59,7 @@ namespace Gdterm.Sftp
             catch
             {
                 try { await sftp.ListDirectoryAsync(remoteDir, ct); }
-                catch (Exception ex) { throw new Exception("无法创建远程目录 " + remoteDir + ": " + ex.Message, ex); }
+                catch (Exception ex) { throw new Exception(L10n.T("无法创建远程目录 ") + remoteDir + ": " + ex.Message, ex); }
             }
         }
 

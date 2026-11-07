@@ -18,6 +18,7 @@ using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Forms;
 using Gdterm.Logging.Models;
 using System.Threading.Tasks;
+using Gdterm.Core;
 
 namespace Gdterm.UI
 {
@@ -148,7 +149,7 @@ namespace Gdterm.UI
                 try
                 {
                     MessageBox.Show(
-                        "发生未处理错误，详情已写入 logs/diag.log\n\n" +
+                        L10n.T("发生未处理错误，详情已写入 logs/diag.log\n\n") +
                         (e.Exception != null ? e.Exception.Message : ""),
                         "gdterm",
                         MessageBoxButtons.OK,

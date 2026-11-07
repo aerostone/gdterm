@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Windows.Forms;
 using Gdterm.UI.Controls;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Services
 {
@@ -170,7 +171,7 @@ namespace Gdterm.UI.Services
             {
                 var prev = owner.Cursor;
                 owner.Cursor = Cursors.No;
-                try { owner.ToolTipText2("上一次操作还在进行，请稍候…"); } catch { }
+                try { owner.ToolTipText2(L10n.T("上一次操作还在进行，请稍候…")); } catch { }
                 var ctx = SynchronizationContext.Current;
                 var timer = new System.Threading.Tasks.Task(() =>
                 {

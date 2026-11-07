@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Gdterm.Core.Security;
 using Gdterm.Sftp.Models;
 using Renci.SshNet;
+using Gdterm.Core;
 
 namespace Gdterm.Sftp
 {
@@ -36,7 +37,7 @@ namespace Gdterm.Sftp
                         count++;
                     }
                     if (!reader.EndOfStream)
-                        lines.Add(string.Format("... (共{0}行以上，仅显示前{1}行)", maxLines, maxLines));
+                        lines.Add(string.Format(L10n.T("... (共{0}行以上，仅显示前{1}行)"), maxLines, maxLines));
                 }
                 return string.Join("\n", lines);
             }

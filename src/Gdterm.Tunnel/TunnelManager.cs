@@ -6,6 +6,7 @@ using Gdterm.Core.Models;
 using Gdterm.Tunnel.Exceptions;
 using Gdterm.Tunnel.Models;
 using Renci.SshNet;
+using Gdterm.Core;
 
 namespace Gdterm.Tunnel
 {
@@ -153,7 +154,7 @@ namespace Gdterm.Tunnel
             return new TunnelStatus
             {
                 IsActive = false,
-                LastError = "隧道不存在",
+                LastError = L10n.T("隧道不存在"),
                 Uptime = TimeSpan.Zero
             };
         }

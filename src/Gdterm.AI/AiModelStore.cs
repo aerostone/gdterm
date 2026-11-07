@@ -5,6 +5,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Gdterm.AI.Models;
+using Gdterm.Core;
 
 namespace Gdterm.AI
 {
@@ -393,7 +394,7 @@ namespace Gdterm.AI
             using (var hmac = new HMACSHA256(key))
                 expected = hmac.ComputeHash(macInput);
             if (!FixedTimeEquals(expected, mac))
-                throw new CryptographicException("HMAC 校验失败（密文被篡改或主密码错误）");
+                throw new CryptographicException(L10n.T("HMAC 校验失败（密文被篡改或主密码错误）"));
 
             using (var aes = Aes.Create())
             {

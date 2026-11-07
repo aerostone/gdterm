@@ -6,6 +6,7 @@ using Gdterm.KeePass;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Forms;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Services
 {
@@ -93,7 +94,7 @@ namespace Gdterm.UI.Services
                 return;
             }
             MessageBox.Show(
-                "请先打开一个 SSH 连接，或从连接树双击后再打开 SFTP。",
+                L10n.T("请先打开一个 SSH 连接，或从连接树双击后再打开 SFTP。"),
                 "SFTP",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information);

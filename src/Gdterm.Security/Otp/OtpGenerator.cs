@@ -1,5 +1,6 @@
 using System;
 using System.Security.Cryptography;
+using Gdterm.Core;
 
 namespace Gdterm.Security.Otp
 {
@@ -24,7 +25,7 @@ namespace Gdterm.Security.Otp
         /// </summary>
         public static string Hotp(byte[] key, long counter, int digits, OtpAlgorithm algorithm)
         {
-            if (key == null || key.Length == 0) throw new ArgumentException("key 为空");
+            if (key == null || key.Length == 0) throw new ArgumentException(L10n.T("key 为空"));
             if (counter < 0) throw new ArgumentOutOfRangeException(nameof(counter));
             if (digits < 6 || digits > 10) throw new ArgumentOutOfRangeException(nameof(digits));
 

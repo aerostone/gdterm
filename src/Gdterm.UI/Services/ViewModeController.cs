@@ -5,6 +5,7 @@ using Gdterm.UI.Controls;
 using Gdterm.UI.Forms;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 using Gdterm.UI.Diagnostics;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Services
 {
@@ -55,7 +56,7 @@ namespace Gdterm.UI.Services
         {
             if (_host == null || _exitFocusButton != null) return;
             _exitFocusButton = new AntdUI.Button {
-                Text = "退出专注 (Esc/F11)",
+                Text = L10n.T("退出专注 (Esc/F11)"),
                 AutoSize = true,
                 // 隐式 Default 钮会忽略 BackColor（Accent 底画不出 + OnAccent 深字 = 隐形钮，见 509df1b 教训）→ 显式 Primary
                 Type = AntdUI.TTypeMini.Primary,

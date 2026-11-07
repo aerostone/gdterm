@@ -5,6 +5,7 @@ using Gdterm.Tools;
 using Gdterm.UI.Controls;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 using Gdterm.UI.Diagnostics;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Services
 {
@@ -44,7 +45,7 @@ namespace Gdterm.UI.Services
                 BackColor = GdtermColorTable.Background
             };
             var sideClose = new AntdUI.Button {
-                Text = "✕ 关闭面板",
+                Text = L10n.T("✕ 关闭面板"),
                 Dock = DockStyle.Top,
                 // 固定 28 在大字号下裁字 → 字体驱动（host 建成后才有字号，此处先给 28 地板，Show 时校准）
                 Height = 28,
