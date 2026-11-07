@@ -22,6 +22,7 @@ namespace Gdterm.UI.Controls
         private readonly BatchCommandExecutor _executor;
         private DangerousCommandDetector _dangerousDetector;
         private ListView _lvSessions;
+        private ListShell _shell;
         private AntdUI.Input _txtCommand;
         private RichTextBox _rtbResults;
         private AntdUI.Button _btnExecute;
@@ -126,7 +127,11 @@ namespace Gdterm.UI.Controls
             _lvSessions.Columns.Add("会话", 200);
             _lvSessions.Columns.Add("状态", 40);
 
-            leftPanel.Controls.Add(_lvSessions);
+            // 列表壳：排序 + 计数（会话多时按名字/状态排；不加过滤——勾选批量执行依赖全量可见，
+            // 过滤后“全选”只作用于可见子集，语义会变，故这里 showFilter:false 只开排序）
+            _shell = new ListShell(_lvSessions, showFilter: false);
+
+            leftPanel.Controls.Add(_shell);
             leftPanel.Controls.Add(leftHeader);
 
             // ── 右侧：结果对比 ──
@@ -147,14 +152,15 @@ namespace Gdterm.UI.Controls
 
         private void RefreshSessions()
         {
-            _lvSessions.Items.Clear();
+            var items = new List<ListViewItem>();
             foreach (var kvp in _sessions)
             {
                 var item = new ListViewItem(kvp.Key);
                 item.SubItems.Add(kvp.Value?.IsConnected == true ? "●" : "○");
                 item.Tag = kvp.Value;
-                _lvSessions.Items.Add(item);
+                items.Add(item);
             }
+            _shell.SetItems(items);
         }
 
         private void OnCommandKeyDown(object sender, KeyEventArgs e)

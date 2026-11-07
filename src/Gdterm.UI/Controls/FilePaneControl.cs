@@ -20,6 +20,7 @@ namespace Gdterm.UI.Controls
         private readonly IFilePaneProvider _provider;
         private AntdUI.Input _pathBox;
         private ListView _list;
+        private ListShell _shell;
         private EmptyStateView _empty;
         private AntdUI.Label _status;
         private string _currentPath;
@@ -154,7 +155,12 @@ namespace Gdterm.UI.Controls
 
             _list.ContextMenuStrip = BuildContextMenu();
 
-            Controls.Add(_list);
+            // 列表壳：过滤 + 排序 + 导出（目录文件多时按名称/大小/修改时间找某个文件；
+            // 勾选批量走右键/拖拽，不受过滤影响，故 showFilter:true 安全）
+            _shell = new ListShell(_list, "过滤文件名…");
+            _shell.AddAction("导出", (s, e) => _shell.ExportCsv(FindForm(), "file-list")).Name = "FileListExportButton";
+
+            Controls.Add(_shell);
             Controls.Add(_status);
             Controls.Add(top);
 
@@ -317,8 +323,7 @@ namespace Gdterm.UI.Controls
 
         private void RenderList(List<FileEntry> entries)
         {
-            _list.BeginUpdate();
-            _list.Items.Clear();
+            var items = new List<ListViewItem>();
             foreach (var f in entries)
             {
                 var item = new ListViewItem(f.Name);
@@ -327,9 +332,9 @@ namespace Gdterm.UI.Controls
                 item.SubItems.Add(f.Permissions ?? "");
                 item.ForeColor = f.IsDirectory ? GdtermColorTable.Info : GdtermColorTable.Foreground;
                 item.Tag = f;
-                _list.Items.Add(item);
+                items.Add(item);
             }
-            _list.EndUpdate();
+            _shell.SetItems(items);
         }
 
         // └─ 拖拽/菜单触发的跨面板传输请求 → 宿主处理

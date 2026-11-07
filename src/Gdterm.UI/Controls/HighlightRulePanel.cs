@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
@@ -18,6 +19,7 @@ namespace Gdterm.UI.Controls
         private ListView _lvRules;
         private AntdUI.Button _btnAdd, _btnEdit, _btnDelete, _btnToggle;
         private EmptyStateView _empty;
+        private ListShell _shell;
 
         public event Action RulesChanged;
 
@@ -73,7 +75,11 @@ namespace Gdterm.UI.Controls
             _lvRules.Columns.Add("状态", 50);
             _lvRules.DoubleClick += (s, e) => EditRule();
 
-            Controls.Add(_lvRules);
+            // 列表壳：过滤 + 排序 + 导出（规则多时靠肉眼找某条正则很费劲；此前只有 4 个操作钮）
+            _shell = new ListShell(_lvRules, "过滤规则名/模式/颜色…");
+            _shell.AddAction("导出", (s, e) => _shell.ExportCsv(FindForm(), "highlight-rules")).Name = "HlRuleExportButton";
+
+            Controls.Add(_shell);
             Controls.Add(toolbar);
 
             // 审计 C1：空态引导 —— 此前规则为空时就是一片背景色，分不清「没有规则」与「加载坏了」
@@ -96,7 +102,7 @@ namespace Gdterm.UI.Controls
 
         private void RefreshList()
         {
-            _lvRules.Items.Clear();
+            var items = new List<ListViewItem>();
             foreach (var r in _config.Rules)
             {
                 var item = new ListViewItem(r.Name);
@@ -108,9 +114,10 @@ namespace Gdterm.UI.Controls
                 item.SubItems.Add(r.Enabled ? "✓" : "✗");
                 item.Tag = r;
                 if (!r.Enabled) item.ForeColor = GdtermColorTable.Muted; // 禁用行置灰：Border 太深看不见，Muted 才是状态文字色
-                _lvRules.Items.Add(item);
+                items.Add(item);
             }
-            if (_empty != null) _empty.SetEmpty(_lvRules.Items.Count == 0);
+            _shell.SetItems(items);
+            if (_empty != null) _empty.SetEmpty(items.Count == 0);
         }
 
         private void AddRule()

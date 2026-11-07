@@ -18,6 +18,7 @@ namespace Gdterm.UI.Controls
         private readonly LogonScriptStore _store;
         private List<LogonScript> _scripts;
         private ListView _lvScripts;
+        private ListShell _shell;
         private AntdUI.Button _btnAdd, _btnEdit, _btnDelete;
         private EmptyStateView _empty;
 
@@ -66,7 +67,11 @@ namespace Gdterm.UI.Controls
             _lvScripts.Columns.Add("说明", 200);
             _lvScripts.DoubleClick += (s, e) => EditScript();
 
-            Controls.Add(_lvScripts);
+            // 列表壳：过滤 + 排序 + 导出（脚本多时靠肉眼找某条；此前只有 3 个操作钮）
+            _shell = new ListShell(_lvScripts, "过滤脚本名/关联连接…");
+            _shell.AddAction("导出", (s, e) => _shell.ExportCsv(FindForm(), "logon-scripts")).Name = "LogonScriptExportButton";
+
+            Controls.Add(_shell);
             Controls.Add(toolbar);
             // 空态引导：脚本列表为空时此前是纯空白（CI 0.1.383 EMPTY_MISSING）
             _empty = EmptyStateView.Attach(this, "还没有登录脚本",
@@ -88,7 +93,7 @@ namespace Gdterm.UI.Controls
 
         private void RefreshList()
         {
-            _lvScripts.Items.Clear();
+            var items = new List<ListViewItem>();
             foreach (var s in _scripts)
             {
                 var item = new ListViewItem(s.Name);
@@ -97,9 +102,10 @@ namespace Gdterm.UI.Controls
                 item.SubItems.Add(s.Enabled ? "✓" : "✗");
                 item.SubItems.Add(s.Description ?? "");
                 item.Tag = s;
-                _lvScripts.Items.Add(item);
+                items.Add(item);
             }
-            if (_empty != null) _empty.SetEmpty(_lvScripts.Items.Count == 0);
+            _shell.SetItems(items);
+            if (_empty != null) _empty.SetEmpty(items.Count == 0);
         }
 
         private void AddScript()
