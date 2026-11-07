@@ -20,8 +20,23 @@ namespace Gdterm.Tests.Ui
     /// </summary>
     public static class UiSmokeRunner
     {
-        /// <summary>侧栏用例委托（具名：允许调用方用 expectEmpty: 命名参数）。</summary>
-        private delegate void PanelCase(string name, Func<Control> create, bool expectEmpty);
+        /// <summary>
+        /// 空态层期望。三态是必须的：CI 0.1.382 实证"层在树上就必须可见"是错规则——
+        /// 高亮规则自带 7 条默认数据、通知中心是进程级静态缓冲（被前面用例写过），
+        /// 两者的层本就该隐藏；二态 bool 无法表达"有数据/无数据/没有层"。
+        /// </summary>
+        private enum EmptyExpect
+        {
+            /// <summary>不判空态层（面板没有空态层，或数据源不可控）。</summary>
+            Ignore,
+            /// <summary>空数据源：层必须在树上且可见。</summary>
+            Visible,
+            /// <summary>有数据源：层必须在树上且隐藏。</summary>
+            Hidden
+        }
+
+        /// <summary>侧栏用例委托（具名：允许调用方用 empty: 命名参数）。</summary>
+        private delegate void PanelCase(string name, Func<Control> create, EmptyExpect empty);
 
         private static int _passes;
         private static int _fails;
@@ -197,42 +212,43 @@ namespace Gdterm.Tests.Ui
 
                 // 命名参数必须绑到具名委托上——Action<...> 的委托参数是 arg0/arg1/arg2，
                 // 对裸 Action 传 expectEmpty: 会 CS1746（2026-11-01 CI 0.1.347 实证）
-                PanelCase tryPanel = (name, create, expectEmpty) =>
+                PanelCase tryPanel = (name, create, empty) =>
                 {
-                    try { DumpSidePanel(name, create, expectEmpty); }
+                    try { DumpSidePanel(name, create, empty); }
                     catch (Exception ex) { failures.Add(name + ": " + FlatEx(ex)); }
                 };
 
                 tryPanel("command-history", () => new CommandHistoryPanel(
-                    new Gdterm.Logging.CommandHistoryStore(Path.Combine(tmp, "cmdhist"))), expectEmpty: true);
-                tryPanel("port-forward", () => new PortForwardPanel(portManager), expectEmpty: true);
-                tryPanel("secret-scan", () => new SecretScanPanel(secretScanner, null), false);
+                    new Gdterm.Logging.CommandHistoryStore(Path.Combine(tmp, "cmdhist"))), empty: EmptyExpect.Visible);
+                tryPanel("port-forward", () => new PortForwardPanel(portManager), empty: EmptyExpect.Visible);
+                tryPanel("secret-scan", () => new SecretScanPanel(secretScanner, null), empty: EmptyExpect.Ignore);
                 tryPanel("key-binding", () => new KeyBindingPanel(
-                    new Gdterm.Connections.TerminalKeyBindingStore(Path.Combine(tmp, "keybind.json"))), false);
-                tryPanel("toolbox", () => new ToolboxPanel(toolRegistry), false);
+                    new Gdterm.Connections.TerminalKeyBindingStore(Path.Combine(tmp, "keybind.json"))), empty: EmptyExpect.Visible);
+                tryPanel("toolbox", () => new ToolboxPanel(toolRegistry), empty: EmptyExpect.Ignore);
                 tryPanel("logon-script", () => new LogonScriptPanel(
-                    new Gdterm.Connections.LogonScriptStore(Path.Combine(tmp, "logon.json"))), false);
+                    new Gdterm.Connections.LogonScriptStore(Path.Combine(tmp, "logon.json"))), empty: EmptyExpect.Visible);
 
                 // ===== 2026-11 补：此前这 10 个侧栏面板没有任何 dump =====
                 // registry 里它们全是 dump:none，意味着"渲染成空白页"也没人会发现
                 // （树形断言只能覆盖被构造过的面板）。这里逐个用 tmp 空库构造 + dump；
                 // 空数据源的必须自带空态引导（expectEmpty:true 会断言 EmptyStateView 可见）。
-                tryPanel("macro", () => new MacroPanel(Path.Combine(tmp, "macros"), null), expectEmpty: true);
+                tryPanel("macro", () => new MacroPanel(Path.Combine(tmp, "macros"), null), empty: EmptyExpect.Visible);
                 tryPanel("bookmarks", () => new SessionBookmarksPanel(
                     new Gdterm.Connections.BookmarkStoreJson(Path.Combine(tmp, "bookmarks")),
-                    new Gdterm.Connections.ConnectionStoreJson(Path.Combine(tmp, "conns.json"))), expectEmpty: true);
+                    new Gdterm.Connections.ConnectionStoreJson(Path.Combine(tmp, "conns.json"))), empty: EmptyExpect.Visible);
                 tryPanel("command-template", () => new CommandTemplatePanel(
-                    new Gdterm.Connections.CommandTemplateStore(Path.Combine(tmp, "tpl.json")), null), expectEmpty: true);
+                    new Gdterm.Connections.CommandTemplateStore(Path.Combine(tmp, "tpl.json")), null), empty: EmptyExpect.Visible);
                 // 高亮规则自带 7 条默认规则（HighlightRuleConfig.GetDefault）→ 非空库
                 tryPanel("highlight-rule", () => new HighlightRulePanel(
-                    new Gdterm.Connections.HighlightStore(Path.Combine(tmp, "highlight.json"))), false);
-                tryPanel("transfer-center", () => new TransferCenterPanel(), expectEmpty: true);
-                tryPanel("notification-center", () => new NotificationCenterPanel(), expectEmpty: true);
-                tryPanel("multi-channel", () => new MultiChannelPanel(new Gdterm.Terminal.MultiChannelManager()), expectEmpty: true);
-                tryPanel("batch-command", () => new BatchCommandPanel(), false);
-                tryPanel("health-monitor", () => new HealthMonitorPanel(), false);
+                    new Gdterm.Connections.HighlightStore(Path.Combine(tmp, "highlight.json"))), empty: EmptyExpect.Hidden);
+                tryPanel("transfer-center", () => new TransferCenterPanel(), empty: EmptyExpect.Visible);
+                // 通知中心用进程级静态缓冲，前面用例可能已写入 → 空态不可控，只 dump 不判
+                tryPanel("notification-center", () => new NotificationCenterPanel(), empty: EmptyExpect.Ignore);
+                tryPanel("multi-channel", () => new MultiChannelPanel(new Gdterm.Terminal.MultiChannelManager()), empty: EmptyExpect.Visible);
+                tryPanel("batch-command", () => new BatchCommandPanel(), empty: EmptyExpect.Ignore);
+                tryPanel("health-monitor", () => new HealthMonitorPanel(), empty: EmptyExpect.Ignore);
                 tryPanel("snippet-search", () => new SnippetSearchPanel(
-                    new System.Collections.Generic.List<Gdterm.Core.Models.QuickCommand>()), false);
+                    new System.Collections.Generic.List<Gdterm.Core.Models.QuickCommand>()), empty: EmptyExpect.Ignore);
 
                 try { Directory.Delete(tmp, true); } catch { }
                 try { toolRegistry.Dispose(); } catch { }
@@ -393,7 +409,7 @@ namespace Gdterm.Tests.Ui
         /// 面板 Dock=Fill。断言：能构造、能 Show、控件数 >3、dump 落盘。
         /// 空态引导层（EmptyStateView）若在树上，额外断言其存在 —— 把 C1 的新组件也锁住。
         /// </summary>
-        private static void DumpSidePanel(string name, Func<Control> create, bool expectEmpty = false)
+        private static void DumpSidePanel(string name, Func<Control> create, EmptyExpect emptyMode = EmptyExpect.Ignore)
         {
             // outDir 由 Run() 开头设一次（避免改 RunCase 签名）
             string outDir = _smokeOutDir;
@@ -433,15 +449,17 @@ namespace Gdterm.Tests.Ui
                 // expectEmpty=true 时先断言存在再断言可见（场景要求节点存在：
                 // “找到才检查”会在组件被删除后假绿）；false 时找到才查可见性（其余面板空态未接，属已知遗留）。
                 var empty = FindByType(panel, "EmptyStateView");
-                if (expectEmpty)
+                if (emptyMode == EmptyExpect.Visible)
                 {
                     Check(empty != null, name + " EMPTY_MISSING (no EmptyStateView)");
                     if (empty != null)
                         Check(empty.Visible, name + " EMPTY_HIDDEN (empty source but layer invisible)");
                 }
-                else if (empty != null)
+                else if (emptyMode == EmptyExpect.Hidden)
                 {
-                    Check(empty.Visible, name + " EMPTY_HIDDEN (empty source but layer invisible)");
+                    Check(empty != null, name + " EMPTY_MISSING (no EmptyStateView)");
+                    if (empty != null)
+                        Check(!empty.Visible, name + " EMPTY_SHOWN (data present but layer still visible)");
                 }
 
                 Shot(host, Path.Combine(outDir, name + ".png"));
