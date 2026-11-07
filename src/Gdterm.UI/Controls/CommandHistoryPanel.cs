@@ -55,18 +55,18 @@ namespace Gdterm.UI.Controls
                 // 工具条输入无高会被压矮 → 38 地板
                 MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this))
             };
-            _searchBox.PlaceholderText = "搜索命令...";
+            _searchBox.PlaceholderText = L10n.T("搜索命令...");
 
             _hostFilter = new AntdUI.Select {
                 Width = DpiScale.V(this, 120),
                 AutoSize = true,
                 MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this)),
             };
-            _hostFilter.Items.Add("所有主机");
+            _hostFilter.Items.Add(L10n.T("所有主机"));
             _hostFilter.SelectedIndex = 0;
 
-            var btnRefresh = new AntdUI.Button { Text = "刷新", AutoSize = true, Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3))};
-            var btnClear = new AntdUI.Button { Text = "清空", AutoSize = true, Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3))};
+            var btnRefresh = new AntdUI.Button { Text = L10n.T("刷新"), AutoSize = true, Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3))};
+            var btnClear = new AntdUI.Button { Text = L10n.T("清空"), AutoSize = true, Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3))};
 
             searchPanel.Controls.AddRange(new Control[] { _searchBox, _hostFilter, btnRefresh, btnClear });
 
@@ -79,17 +79,17 @@ namespace Gdterm.UI.Controls
                 GridLines = true,
                 HeaderStyle = ColumnHeaderStyle.Clickable
             };
-            _historyList.Columns.Add("时间", 130);
-            _historyList.Columns.Add("主机", 100);
-            _historyList.Columns.Add("命令", 200);
-            _historyList.Columns.Add("耗时", 60);
-            _historyList.Columns.Add("广播", 40);
+            _historyList.Columns.Add(L10n.T("时间"), 130);
+            _historyList.Columns.Add(L10n.T("主机"), 100);
+            _historyList.Columns.Add(L10n.T("命令"), 200);
+            _historyList.Columns.Add(L10n.T("耗时"), 60);
+            _historyList.Columns.Add(L10n.T("广播"), 40);
 
             // 状态栏
             _statusLabel = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
                 AutoSize = true,
-                Text = "就绪",
+                Text = L10n.T("就绪"),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(3, 0, 0, 0),
                 BackColor = GdtermColorTable.Surface
@@ -97,7 +97,7 @@ namespace Gdterm.UI.Controls
 
             // 排序 + 导出走共用壳；过滤仍由上面这个搜索框负责（它走 store 查询，能搜全量而非当前屏）
             _shell = new ListShell(_historyList, showFilter: false);
-            var btnExport = _shell.AddAction("导出", (s, e) => _shell.ExportCsv(FindForm(), "command-history"));
+            var btnExport = _shell.AddAction(L10n.T("导出"), (s, e) => _shell.ExportCsv(FindForm(), "command-history"));
             btnExport.Name = "HistoryExportButton";
             _shell.ItemActivated += (s, it) =>
             {
@@ -108,17 +108,17 @@ namespace Gdterm.UI.Controls
             Controls.Add(_shell);
             Controls.Add(searchPanel);
             Controls.Add(_statusLabel);
-            _historyList.AccessibleName = "命令历史列表";
-            _historyList.AccessibleDescription = "时间/主机/命令/耗时/是否广播";
+            _historyList.AccessibleName = L10n.T("命令历史列表");
+            _historyList.AccessibleDescription = L10n.T("时间/主机/命令/耗时/是否广播");
             // 无障碍名称回填：ListView/Table 本身没有 Text，AutoName 只补有文本的控件，
             // 列表名单独设（读屏软件念"宏列表"而不是"列表"）
             try { UiA11y.AutoName(this); } catch (Exception) { }
 
 
             // 审计 C1：空态引导（此前打开就是“一整片背景色”，分不清空/加载/坏了）
-            _empty = EmptyStateView.Attach(this, "还没有命令历史",
-                "在终端里执行过的命令会自动记录在这里，可按命令内容或主机过滤",
-                "打开终端");
+            _empty = EmptyStateView.Attach(this, L10n.T("还没有命令历史"),
+                L10n.T("在终端里执行过的命令会自动记录在这里，可按命令内容或主机过滤"),
+                L10n.T("打开终端"));
 
             // 事件绑定
             _searchBox.TextChanged += (s, e) => RefreshHistory();
@@ -171,18 +171,18 @@ namespace Gdterm.UI.Controls
                 items.Add(item);
             }
             _shell.SetItems(items);
-            _statusLabel.Text = $"共 {entries.Count} 条记录";
+            _statusLabel.Text = L10n.Tf("共 {0} 条记录", entries.Count);
 
             // 审计 C1：空态文案区分“确实没有”与“筛选后为空”
             if (_empty != null)
             {
                 bool filtered = !string.IsNullOrEmpty(_searchBox.Text) || _hostFilter.SelectedIndex > 0;
                 _empty.SetEmpty(entries.Count == 0, filtered
-                    ? "没有匹配的命令"
-                    : "还没有命令历史",
+                    ? L10n.T("没有匹配的命令")
+                    : L10n.T("还没有命令历史"),
                     filtered
-                        ? "换个关键词，或把主机过滤切回“所有主机”"
-                        : "在终端里执行过的命令会自动记录在这里，可按命令内容或主机过滤");
+                        ? L10n.T("换个关键词，或把主机过滤切回“所有主机”")
+                        : L10n.T("在终端里执行过的命令会自动记录在这里，可按命令内容或主机过滤"));
             }
         }
 
@@ -192,7 +192,7 @@ namespace Gdterm.UI.Controls
         public void UpdateHostFilter(System.Collections.Generic.IList<CommandHistoryEntry> entries)
         {
             _hostFilter.Items.Clear();
-            _hostFilter.Items.Add("所有主机");
+            _hostFilter.Items.Add(L10n.T("所有主机"));
 
             var hosts = new System.Collections.Generic.SortedSet<string>();
             foreach (var entry in entries)
@@ -220,8 +220,8 @@ namespace Gdterm.UI.Controls
         private void ClearHistory()
         {
             var result = MessageBox.Show(
-                "确定要清空命令历史记录吗？此操作不可撤销。",
-                "确认清空",
+                L10n.T("确定要清空命令历史记录吗？此操作不可撤销。"),
+                L10n.T("确认清空"),
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning);
 
@@ -232,13 +232,13 @@ namespace Gdterm.UI.Controls
                 // 原来这里只有 RefreshHistory()：磁盘上一条没删，用户以为清干净了
                 int removed = _store.ClearAll();
                 RefreshHistory();
-                _statusLabel.Text = removed > 0 ? "已清空 " + removed + " 个历史文件" : "历史已经是空的";
-                ToastNotifier.Success(removed > 0 ? "命令历史已清空" : "命令历史已经是空的");
+                _statusLabel.Text = removed > 0 ? L10n.T("已清空 ") + removed + L10n.T(" 个历史文件") : L10n.T("历史已经是空的");
+                ToastNotifier.Success(removed > 0 ? L10n.T("命令历史已清空") : L10n.T("命令历史已经是空的"));
             }
             catch (Exception ex)
             {
                 try { DiagLog.Error("CommandHistory.Clear", ex); } catch (Exception) { }
-                ToastNotifier.Error("清空失败：" + ex.Message);
+                ToastNotifier.Error(L10n.T("清空失败：") + ex.Message);
             }
         }
 

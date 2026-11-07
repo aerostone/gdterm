@@ -63,7 +63,7 @@ namespace Gdterm.UI.Controls
                 MinimumSize = new Size(0, fieldH),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
-                PlaceholderText = "搜索模板：名称 / 命令 / 标签"
+                PlaceholderText = L10n.T("搜索模板：名称 / 命令 / 标签")
             };
             _txtSearch.TextChanged += (s, e) => FilterResults();
             _txtSearch.KeyDown += (s, e) =>
@@ -92,12 +92,12 @@ namespace Gdterm.UI.Controls
                 CheckBoxes = true,     // 批量删除
                 Font = FormFontPolicy.UiFont()
             };
-            _lvResults.Columns.Add("模板", DpiScale.V(this, 150));
-            _lvResults.Columns.Add("命令", DpiScale.V(this, 320));
+            _lvResults.Columns.Add(L10n.T("模板"), DpiScale.V(this, 150));
+            _lvResults.Columns.Add(L10n.T("命令"), DpiScale.V(this, 320));
             _lvResults.DoubleClick += (s, e) => ExecuteSelected();
 
             _shell = new ListShell(_lvResults, showFilter: false);
-            var btnExport = _shell.AddAction("导出", (s, e) => _shell.ExportCsv(FindForm(), "command-templates"));
+            var btnExport = _shell.AddAction(L10n.T("导出"), (s, e) => _shell.ExportCsv(FindForm(), "command-templates"));
             btnExport.Name = "TemplateExportButton";
             // 键盘：Ctrl+F 落到本页自己的搜索框（壳没有过滤框，默认会把焦点丢给不存在的输入）
             _lvResults.KeyDown += (s, e) =>
@@ -108,8 +108,8 @@ namespace Gdterm.UI.Controls
             // 停靠顺序（CI 0.1.381 实测 360x48 遮挡）：Fill 必须先于 Top 进集合，
             // 反向布局时 Top 先吃掉顶边、Fill 再取剩余；反过来 Fill 会占满整块再被 Top 压上。
             Controls.Add(topRow);
-            _empty = EmptyStateView.Attach(this, "还没有命令模板",
-                "把常用命令存成模板，双击即插入当前终端（支持变量占位）");
+            _empty = EmptyStateView.Attach(this, L10n.T("还没有命令模板"),
+                L10n.T("把常用命令存成模板，双击即插入当前终端（支持变量占位）"));
 
             var toolRow = new FlowLayoutPanel
             {
@@ -120,25 +120,25 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(DpiScale.V(this, 4))
             };
-            var btnSend = MkBtn("发送到终端", "变量填充后发往当前终端（过危险命令确认）");
+            var btnSend = MkBtn(L10n.T("发送到终端"), L10n.T("变量填充后发往当前终端（过危险命令确认）"));
             btnSend.Click += (s, e) => ExecuteSelected();
-            var btnSave = MkBtn("存为模板", "把当前输入框内容存成新模板");
+            var btnSave = MkBtn(L10n.T("存为模板"), L10n.T("把当前输入框内容存成新模板"));
             btnSave.Click += (s, e) => SaveCurrentAsTemplate();
-            var btnDel = MkBtn("删除", "删除选中模板");
+            var btnDel = MkBtn(L10n.T("删除"), L10n.T("删除选中模板"));
             btnDel.Click += (s, e) => DeleteSelected();
             toolRow.Controls.AddRange(new Control[] { btnSend, btnSave, btnDel });
             Controls.Add(toolRow);
 
             _statusLabel = new AntdUI.Label
             {
-                Text = "Enter 发送 | 双击发送 | {host}/{user}/{date}/{prompt} 自动填充",
+                Text = L10n.T("Enter 发送 | 双击发送 | {host}/{user}/{date}/{prompt} 自动填充"),
                 Dock = DockStyle.Bottom,
                 AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
                 Font = FormFontPolicy.UiFont(-1f)
             };
             Controls.Add(_statusLabel);
-            _lvResults.AccessibleName = "命令模板列表";
+            _lvResults.AccessibleName = L10n.T("命令模板列表");
             // 无障碍名称回填：ListView/Table 本身没有 Text，AutoName 只补有文本的控件，
             // 列表名单独设（读屏软件念"宏列表"而不是"列表"）
             try { UiA11y.AutoName(this); } catch (Exception) { }
@@ -167,7 +167,7 @@ namespace Gdterm.UI.Controls
             try
             {
                 _categoryBox.Items.Clear();
-                _categoryBox.Items.Add("全部");
+                _categoryBox.Items.Add(L10n.T("全部"));
                 foreach (var c in _store.GetCategories()) _categoryBox.Items.Add(c);
                 _categoryBox.SelectedIndex = 0;
             }
@@ -188,7 +188,7 @@ namespace Gdterm.UI.Controls
             {
                 all = new List<CommandTemplate>();
                 try { DiagLog.Error("CmdTemplatePanel.GetAll", ex); } catch (Exception) { }
-                ToastNotifier.Error("读取命令模板失败：" + ex.Message);
+                ToastNotifier.Error(L10n.T("读取命令模板失败：") + ex.Message);
             }
             foreach (var t in all)
             {
@@ -209,16 +209,16 @@ namespace Gdterm.UI.Controls
             }
             _shell.SetItems(rows);
             if (_lvResults.Items.Count > 0) _lvResults.Items[0].Selected = true;
-            _statusLabel.Text = "共 " + _filtered.Count + " 个模板";
+            _statusLabel.Text = L10n.T("共 ") + _filtered.Count + L10n.T(" 个模板");
             if (_empty != null)
             {
                 // 区分「一条模板都没有」和「筛选把结果滤空了」——后者该提示清空搜索而不是让用户去建模板
                 bool none = _filtered.Count == 0;
                 bool filtered = none && (!string.IsNullOrEmpty(q) || !string.IsNullOrEmpty(cat));
                 if (filtered)
-                    _empty.SetEmpty(true, "没有匹配的模板", "清空搜索词或把分类切回「全部」试试");
+                    _empty.SetEmpty(true, L10n.T("没有匹配的模板"), L10n.T("清空搜索词或把分类切回「全部」试试"));
                 else
-                    _empty.SetEmpty(true, "还没有命令模板", "把常用命令存成模板，双击即插入当前终端（支持变量占位）");
+                    _empty.SetEmpty(true, L10n.T("还没有命令模板"), L10n.T("把常用命令存成模板，双击即插入当前终端（支持变量占位）"));
             }
         }
 
@@ -231,7 +231,7 @@ namespace Gdterm.UI.Controls
             try { tc = _getActiveTerminal != null ? _getActiveTerminal() : null; } catch { }
             if (tc == null || tc.Session == null || !tc.Session.IsConnected)
             {
-                _statusLabel.Text = "无已连接终端";
+                _statusLabel.Text = L10n.T("无已连接终端");
                 return;
             }
             var sess = tc.Session;
@@ -258,7 +258,7 @@ namespace Gdterm.UI.Controls
                 _store.Update(t);
             }
             catch { }
-            try { tc.TrySendInput(resolved + "\r", isCommandLine: true); _statusLabel.Text = "已发送：" + t.Name; }
+            try { tc.TrySendInput(resolved + "\r", isCommandLine: true); _statusLabel.Text = L10n.T("已发送：") + t.Name; }
             catch (System.Exception exSwallowed) { try { Gdterm.UI.Diagnostics.DiagLog.Swallowed("CmdTemplatePanel", exSwallowed); } catch { } }
         }
 
@@ -266,7 +266,7 @@ namespace Gdterm.UI.Controls
         {
             var form = new Form
             {
-                Text = "填写变量 — " + (title ?? ""),
+                Text = L10n.T("填写变量 — ") + (title ?? ""),
                 StartPosition = FormStartPosition.CenterParent,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
@@ -290,8 +290,8 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground
             };
-            var btnOk = new AntdUI.Button { Text = "执行", Type = AntdUI.TTypeMini.Primary, Size = new Size(DpiScale.V(form, 80), fieldH), Location = DpiScale.P(form, 190, 56), DialogResult = DialogResult.OK };
-            var btnCancel = new AntdUI.Button { Text = "取消", Size = new Size(DpiScale.V(form, 80), fieldH), Location = DpiScale.P(form, 280, 56), DialogResult = DialogResult.Cancel };
+            var btnOk = new AntdUI.Button { Text = L10n.T("执行"), Type = AntdUI.TTypeMini.Primary, Size = new Size(DpiScale.V(form, 80), fieldH), Location = DpiScale.P(form, 190, 56), DialogResult = DialogResult.OK };
+            var btnCancel = new AntdUI.Button { Text = L10n.T("取消"), Size = new Size(DpiScale.V(form, 80), fieldH), Location = DpiScale.P(form, 280, 56), DialogResult = DialogResult.Cancel };
             form.Controls.AddRange(new Control[] { lbl, txt, btnOk, btnCancel });
             form.AcceptButton = btnOk;
             form.CancelButton = btnCancel;
@@ -303,17 +303,17 @@ namespace Gdterm.UI.Controls
         private void SaveCurrentAsTemplate()
         {
             string cmd = (_txtSearch.Text ?? "").Trim();
-            if (cmd.Length == 0) { _statusLabel.Text = "搜索框为空：先在搜索框输入命令内容"; return; }
+            if (cmd.Length == 0) { _statusLabel.Text = L10n.T("搜索框为空：先在搜索框输入命令内容"); return; }
             try
             {
                 var t = _store.CreateFromHistory(cmd);
-                t.Category = "从历史创建";
+                t.Category = L10n.T("从历史创建");
                 _store.Add(t);
                 RefreshCategories();
                 FilterResults();
-                _statusLabel.Text = "已存为模板：" + t.Name;
+                _statusLabel.Text = L10n.T("已存为模板：") + t.Name;
             }
-            catch (System.Exception ex) { _statusLabel.Text = "保存失败：" + ex.Message; }
+            catch (System.Exception ex) { _statusLabel.Text = L10n.T("保存失败：") + ex.Message; }
         }
 
         private void DeleteSelected()
@@ -329,7 +329,7 @@ namespace Gdterm.UI.Controls
             if (targets.Count == 0) return;
             if (targets.Count > 1)
             {
-                var ask = MessageBox.Show(FindForm(), "删除选中的 " + targets.Count + " 个模板？", "删除模板",
+                var ask = MessageBox.Show(FindForm(), L10n.T("删除选中的 ") + targets.Count + L10n.T(" 个模板？"), L10n.T("删除模板"),
                     MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (ask != DialogResult.Yes) return;
             }
@@ -346,10 +346,10 @@ namespace Gdterm.UI.Controls
             FilterResults();
             RefreshCategories();
             _statusLabel.Text = fail == 0
-                ? "已删除 " + ok + " 个模板"
-                : "删除完成：" + ok + " 成功，" + fail + " 失败";
-            if (ok > 0) ToastNotifier.Success("已删除 " + ok + " 个模板");
-            if (fail > 0) ToastNotifier.Error(fail + " 个模板删除失败");
+                ? L10n.T("已删除 ") + ok + L10n.T(" 个模板")
+                : L10n.T("删除完成：") + ok + L10n.T(" 成功，") + fail + L10n.T(" 失败");
+            if (ok > 0) ToastNotifier.Success(L10n.T("已删除 ") + ok + L10n.T(" 个模板"));
+            if (fail > 0) ToastNotifier.Error(fail + L10n.T(" 个模板删除失败"));
         }
     }
 }

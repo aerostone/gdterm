@@ -60,10 +60,10 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 5), DpiScale.V(this, 8), DpiScale.V(this, 5))
             };
-            var btnAdd = CreateBtn("添加规则");
-            var btnStart = CreateBtn("启动");
-            var btnStop = CreateBtn("停止");
-            var btnDelete = CreateBtn("删除");
+            var btnAdd = CreateBtn(L10n.T("添加规则"));
+            var btnStart = CreateBtn(L10n.T("启动"));
+            var btnStop = CreateBtn(L10n.T("停止"));
+            var btnDelete = CreateBtn(L10n.T("删除"));
 
             btnAdd.Click += (s, e) => AddRule();
             btnStart.Click += (s, e) => StartSelected();
@@ -82,12 +82,12 @@ namespace Gdterm.UI.Controls
                 CheckBoxes = true,       // 批量停止/删除
                 Font = Services.FormFontPolicy.MonoFont()
             };
-            _lvRules.Columns.Add("类型", 60);
-            _lvRules.Columns.Add("名称", 120);
-            _lvRules.Columns.Add("本地地址", 140);
-            _lvRules.Columns.Add("远程地址", 140);
-            _lvRules.Columns.Add("状态", 60);
-            _lvRules.Columns.Add("说明", 150);
+            _lvRules.Columns.Add(L10n.T("类型"), 60);
+            _lvRules.Columns.Add(L10n.T("名称"), 120);
+            _lvRules.Columns.Add(L10n.T("本地地址"), 140);
+            _lvRules.Columns.Add(L10n.T("远程地址"), 140);
+            _lvRules.Columns.Add(L10n.T("状态"), 60);
+            _lvRules.Columns.Add(L10n.T("说明"), 150);
 
             // 激活路径：双击 = 启动/停止切换；回车同双击；Delete 删除（此前列表只能靠下面四个按钮）
             _lvRules.DoubleClick += (s2, e2) => ToggleSelected();
@@ -97,8 +97,8 @@ namespace Gdterm.UI.Controls
                 else if (e2.KeyCode == Keys.Delete) { DeleteSelected(); e2.Handled = true; }
             };
 
-            _shell = new ListShell(_lvRules, "过滤名称/地址/说明…");
-            var btnExport = _shell.AddAction("导出", (s2, e2) => _shell.ExportCsv(FindForm(), "port-forward"));
+            _shell = new ListShell(_lvRules, L10n.T("过滤名称/地址/说明…"));
+            var btnExport = _shell.AddAction(L10n.T("导出"), (s2, e2) => _shell.ExportCsv(FindForm(), "port-forward"));
             btnExport.Name = "ForwardExportButton";
             _shell.ItemActivated += (s2, it) => ToggleSelected();
 
@@ -106,10 +106,10 @@ namespace Gdterm.UI.Controls
             Controls.Add(toolbar);
 
             // 审计 C1：空隧道列表给出下一步动作（此前只有一排禁用按钮，用户不知道要干什么）
-            _empty = EmptyStateView.Attach(this, "还没有端口转发规则",
-                "把本地端口映射到远端服务（ssh -L），用于内网数据库/Web 面板",
-                "新建规则", (s2, e2) => AddRule());
-            _lvRules.AccessibleName = "端口转发规则列表";
+            _empty = EmptyStateView.Attach(this, L10n.T("还没有端口转发规则"),
+                L10n.T("把本地端口映射到远端服务（ssh -L），用于内网数据库/Web 面板"),
+                L10n.T("新建规则"), (s2, e2) => AddRule());
+            _lvRules.AccessibleName = L10n.T("端口转发规则列表");
             // 无障碍名称回填：ListView/Table 本身没有 Text，AutoName 只补有文本的控件，
             // 列表名单独设（读屏软件念"宏列表"而不是"列表"）
             try { UiA11y.AutoName(this); } catch (Exception) { }
@@ -137,7 +137,7 @@ namespace Gdterm.UI.Controls
                 item.SubItems.Add(r.Name ?? "");
                 item.SubItems.Add(string.Format("{0}:{1}", r.LocalHost, r.LocalPort));
                 item.SubItems.Add(string.Format("{0}:{1}", r.RemoteHost, r.RemotePort));
-                item.SubItems.Add(_manager.IsActive(r.Id) ? "● 运行" : "○ 停止");
+                item.SubItems.Add(_manager.IsActive(r.Id) ? L10n.T("● 运行") : L10n.T("○ 停止"));
                 item.SubItems.Add(r.Description ?? "");
                 item.Tag = r;
                 if (_manager.IsActive(r.Id)) item.ForeColor = GdtermColorTable.Success;
@@ -152,7 +152,7 @@ namespace Gdterm.UI.Controls
         {
             var form = new Form
             {
-                Text = "添加端口转发规则", // ClientSize 在按钮行后按行高动态计算（见下方）
+                Text = L10n.T("添加端口转发规则"), // ClientSize 在按钮行后按行高动态计算（见下方）
                 StartPosition = FormStartPosition.CenterParent,
                 BackColor = GdtermColorTable.Background, ForeColor = GdtermColorTable.Foreground,
                 FormBorderStyle = FormBorderStyle.FixedDialog, MaximizeBox = false, MinimizeBox = false
@@ -163,18 +163,18 @@ namespace Gdterm.UI.Controls
             int rowH = fieldH + DpiScale.V(this, 6);
             int y = 15;
             var cmbType = new AntdUI.Select { Location = DpiScale.P(this, 110, y), Size = new Size(DpiScale.V(this, 250), fieldH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = font };
-            cmbType.Items.AddRange(new object[] { "Local（本地转发）", "Remote（远程转发）", "Dynamic（SOCKS5）" });
+            cmbType.Items.AddRange(new object[] { L10n.T("Local（本地转发）"), L10n.T("Remote（远程转发）"), "Dynamic（SOCKS5）" });
             cmbType.SelectedIndex = 0;
-            Lbl(form, "类型:", 15, y); form.Controls.Add(cmbType); y += rowH;
-            var txtName = Txt(form, 110, y, 250, fieldH); Lbl(form, "名称:", 15, y); y += rowH;
-            var txtLocalHost = Txt(form, 110, y, 120, fieldH); txtLocalHost.Text = "127.0.0.1"; Lbl(form, "本地地址:", 15, y);
-            var txtLocalPort = Txt(form, 280, y, 80, fieldH); Lbl(form, "端口:", 245, y); y += rowH;
-            var txtRemoteHost = Txt(form, 110, y, 120, fieldH); txtRemoteHost.Text = "127.0.0.1"; Lbl(form, "远程地址:", 15, y);
-            var txtRemotePort = Txt(form, 280, y, 80, fieldH); Lbl(form, "端口:", 245, y); y += rowH + DpiScale.V(this, 12);
+            Lbl(form, L10n.T("类型:"), 15, y); form.Controls.Add(cmbType); y += rowH;
+            var txtName = Txt(form, 110, y, 250, fieldH); Lbl(form, L10n.T("名称:"), 15, y); y += rowH;
+            var txtLocalHost = Txt(form, 110, y, 120, fieldH); txtLocalHost.Text = "127.0.0.1"; Lbl(form, L10n.T("本地地址:"), 15, y);
+            var txtLocalPort = Txt(form, 280, y, 80, fieldH); Lbl(form, L10n.T("端口:"), 245, y); y += rowH;
+            var txtRemoteHost = Txt(form, 110, y, 120, fieldH); txtRemoteHost.Text = "127.0.0.1"; Lbl(form, L10n.T("远程地址:"), 15, y);
+            var txtRemotePort = Txt(form, 280, y, 80, fieldH); Lbl(form, L10n.T("端口:"), 245, y); y += rowH + DpiScale.V(this, 12);
 
             int btnH = Math.Max(DpiScale.V(this, 30), fieldH);
-            var btnOk = new AntdUI.Button { Text = "保存", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 200, y), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary, };
-            var btnCancel = new AntdUI.Button { Text = "取消", Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 290, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Surface2, ForeColor = GdtermColorTable.Foreground };
+            var btnOk = new AntdUI.Button { Text = L10n.T("保存"), Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 200, y), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary, };
+            var btnCancel = new AntdUI.Button { Text = L10n.T("取消"), Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 290, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Surface2, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
             // 客户区高度随行高自适应（原先固定 320 在大字号下裁剪）
@@ -218,7 +218,7 @@ namespace Gdterm.UI.Controls
             if (_lvRules.SelectedItems.Count == 0) return;
             if (_host == null || !_host.IsConnected)
             {
-                MessageBox.Show("请先打开并连接一个 SSH 终端标签，再启动端口转发。", "端口转发",
+                MessageBox.Show(L10n.T("请先打开并连接一个 SSH 终端标签，再启动端口转发。"), L10n.T("端口转发"),
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -228,7 +228,7 @@ namespace Gdterm.UI.Controls
             bool ok = rule.Type == PortForwardType.Local
                 ? _manager.StartLocal(rule)
                 : rule.Type == PortForwardType.Remote ? _manager.StartRemote(rule) : false;
-            if (!ok) MessageBox.Show("启动失败", "gdterm", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            if (!ok) MessageBox.Show(L10n.T("启动失败"), "gdterm", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             RefreshList();
         }
 
@@ -251,8 +251,8 @@ namespace Gdterm.UI.Controls
             }
             if (targets.Count == 0) return;
             if (MessageBox.Show(FindForm(), targets.Count == 1
-                    ? "删除转发规则「" + (targets[0].Name ?? "") + "」？"
-                    : "删除选中的 " + targets.Count + " 个转发规则？", "删除规则",
+                    ? L10n.T("删除转发规则「") + (targets[0].Name ?? "") + "」？"
+                    : L10n.T("删除选中的 ") + targets.Count + L10n.T(" 个转发规则？"), L10n.T("删除规则"),
                 MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
             try { _manager.Bind(_host); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("PortForwardPanel", exSwallowed); } catch { } }
             int n = 0;
@@ -263,7 +263,7 @@ namespace Gdterm.UI.Controls
                 n++;
             }
             RefreshList();
-            ToastNotifier.Success("已删除 " + n + " 条转发规则");
+            ToastNotifier.Success(L10n.T("已删除 ") + n + L10n.T(" 条转发规则"));
         }
 
         private static void Lbl(Form f, string t, int x, int y) { f.Controls.Add(new AntdUI.Label { Text = t, Location = DpiScale.P(f, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }); }

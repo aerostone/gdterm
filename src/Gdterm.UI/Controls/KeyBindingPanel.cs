@@ -58,7 +58,7 @@ namespace Gdterm.UI.Controls
             };
 
             var lblPreset = new AntdUI.Label {
-                Text = "预设:",
+                Text = L10n.T("预设:"),
                 AutoSize = true,
                 Margin = new Padding(0, DpiScale.V(this, 8), DpiScale.V(this, 10), 0)
             };
@@ -78,7 +78,7 @@ namespace Gdterm.UI.Controls
             };
 
             _chkIntercept = new AntdUI.Checkbox {
-                Text = "拦截模式（匹配的按键不发送到终端）",
+                Text = L10n.T("拦截模式（匹配的按键不发送到终端）"),
                 AutoSize = true,
                 Margin = new Padding(0, DpiScale.V(this, 7), 0, 0),
                 Checked = _config.InterceptMode
@@ -98,10 +98,10 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 5), DpiScale.V(this, 10), DpiScale.V(this, 5))
             };
 
-            _btnAdd = CreateButton("添加");
-            _btnEdit = CreateButton("编辑");
-            _btnDelete = CreateButton("删除");
-            _btnReset = CreateButton("重置预设");
+            _btnAdd = CreateButton(L10n.T("添加"));
+            _btnEdit = CreateButton(L10n.T("编辑"));
+            _btnDelete = CreateButton(L10n.T("删除"));
+            _btnReset = CreateButton(L10n.T("重置预设"));
 
             _btnAdd.Click += OnAdd;
             _btnEdit.Click += OnEdit;
@@ -120,18 +120,18 @@ namespace Gdterm.UI.Controls
                 BorderWidth = 0,
                 RowHeight = Math.Max(DpiScale.V(this, 24), Gdterm.UI.Services.FormFontPolicy.RowStep(this)) // 表格阅读行：24 地板
             };
-            _table.Columns.Add(new AntdUI.Column("Name", "名称", AntdUI.ColumnAlign.Left) { Width = "14%" });
-            _table.Columns.Add(new AntdUI.Column("Combo", "按键组合", AntdUI.ColumnAlign.Left) { Width = "16%" });
-            _table.Columns.Add(new AntdUI.Column("Type", "类型", AntdUI.ColumnAlign.Left) { Width = "10%" });
-            _table.Columns.Add(new AntdUI.Column("Value", "发送内容", AntdUI.ColumnAlign.Left) { Width = "24%" });
-            _table.Columns.Add(new AntdUI.Column("Group", "分组", AntdUI.ColumnAlign.Left) { Width = "12%" });
-            _table.Columns.Add(new AntdUI.Column("State", "状态", AntdUI.ColumnAlign.Left) { Width = "8%" });
-            _table.Columns.Add(new AntdUI.Column("Desc", "描述", AntdUI.ColumnAlign.Left) { Width = "16%" });
+            _table.Columns.Add(new AntdUI.Column("Name", L10n.T("名称"), AntdUI.ColumnAlign.Left) { Width = "14%" });
+            _table.Columns.Add(new AntdUI.Column("Combo", L10n.T("按键组合"), AntdUI.ColumnAlign.Left) { Width = "16%" });
+            _table.Columns.Add(new AntdUI.Column("Type", L10n.T("类型"), AntdUI.ColumnAlign.Left) { Width = "10%" });
+            _table.Columns.Add(new AntdUI.Column("Value", L10n.T("发送内容"), AntdUI.ColumnAlign.Left) { Width = "24%" });
+            _table.Columns.Add(new AntdUI.Column("Group", L10n.T("分组"), AntdUI.ColumnAlign.Left) { Width = "12%" });
+            _table.Columns.Add(new AntdUI.Column("State", L10n.T("状态"), AntdUI.ColumnAlign.Left) { Width = "8%" });
+            _table.Columns.Add(new AntdUI.Column("Desc", L10n.T("描述"), AntdUI.ColumnAlign.Left) { Width = "16%" });
             _table.CellDoubleClick += (s, e) => OnEdit(s, e);
 
             // 表壳：过滤 + 排序 + 导出（7 列绑定时靠肉眼找一条，此前只能扫）
             _shell = new TableShell<BindingRow>(_table,
-                new[] { "名称", "按键组合", "类型", "发送内容", "分组", "状态", "描述" },
+                new[] { L10n.T("名称"), L10n.T("按键组合"), L10n.T("类型"), L10n.T("发送内容"), L10n.T("分组"), L10n.T("状态"), L10n.T("描述") },
                 r => string.Join(" ", new[] { r.Name, r.Combo, r.Type, r.Value, r.Group, r.State, r.Desc }),
                 (r, i) =>
                 {
@@ -146,7 +146,7 @@ namespace Gdterm.UI.Controls
                         default: return r.Desc;
                     }
                 });
-            _shell.AddAction("导出", (s2, e2) => _shell.ExportCsv(FindForm(), "key-bindings")).Name = "KeyBindingExportButton";
+            _shell.AddAction(L10n.T("导出"), (s2, e2) => _shell.ExportCsv(FindForm(), "key-bindings")).Name = "KeyBindingExportButton";
             // 过滤/排序改了可见顺序后，SelectedIndex → 绑定对象的映射要跟着换
             _shell.ViewChanged += list =>
             {
@@ -156,12 +156,12 @@ namespace Gdterm.UI.Controls
 
             Controls.Add(_shell);
             // 空态引导：绑定表为空时此前就是一片背景色 + 一排操作按钮，用户不知道"没有"还是"没读到"
-            _empty = EmptyStateView.Attach(this, "还没有自定义快捷键",
-                "把常用的组合键绑到终端动作上；内置默认绑定可以用上方「预设」一键切回",
-                "新建绑定", (s2, e2) => OnAdd(this, EventArgs.Empty));
+            _empty = EmptyStateView.Attach(this, L10n.T("还没有自定义快捷键"),
+                L10n.T("把常用的组合键绑到终端动作上；内置默认绑定可以用上方「预设」一键切回"),
+                L10n.T("新建绑定"), (s2, e2) => OnAdd(this, EventArgs.Empty));
             Controls.Add(bottomPanel);
             Controls.Add(topPanel);
-            _table.AccessibleName = "快捷键绑定表";
+            _table.AccessibleName = L10n.T("快捷键绑定表");
             // 无障碍名称回填：ListView/Table 本身没有 Text，AutoName 只补有文本的控件，
             // 列表名单独设（读屏软件念"宏列表"而不是"列表"）
             try { UiA11y.AutoName(this); } catch (Exception) { }
@@ -217,7 +217,7 @@ namespace Gdterm.UI.Controls
         {
             _rows.Clear();
             var rows = new List<BindingRow>();
-            using (BusyScope.Begin(this, "正在读取快捷键绑定…", false))
+            using (BusyScope.Begin(this, L10n.T("正在读取快捷键绑定…"), false))
             foreach (var b in _store.GetActiveBindings())
             {
                 _rows.Add(b);
@@ -319,7 +319,7 @@ namespace Gdterm.UI.Controls
 
             if (binding.Group != "custom")
             {
-                MessageBox.Show("只能删除自定义绑定", "gdterm", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(L10n.T("只能删除自定义绑定"), "gdterm", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -331,7 +331,7 @@ namespace Gdterm.UI.Controls
 
         private void OnReset(object sender, EventArgs e)
         {
-            if (MessageBox.Show("确定重置当前预设？自定义绑定将保留。", "gdterm",
+            if (MessageBox.Show(L10n.T("确定重置当前预设？自定义绑定将保留。"), "gdterm",
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
                 _store.Reload();
@@ -346,7 +346,7 @@ namespace Gdterm.UI.Controls
         {
             using (var form = new AntdUI.Window())
             {
-                form.Text = existing == null ? "添加快捷键" : "编辑快捷键";
+                form.Text = existing == null ? L10n.T("添加快捷键") : L10n.T("编辑快捷键");
                 // ClientSize 在按钮行后按行高动态计算（见下方）
                 form.StartPosition = FormStartPosition.CenterParent;
                 form.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -358,11 +358,11 @@ namespace Gdterm.UI.Controls
                 int rowH = fieldH + DpiScale.V(this, 10);
                 int lblOff = DpiScale.V(this, 8);
                 int y = 20;
-                var lblName = new AntdUI.Label { Text = "名称", Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
+                var lblName = new AntdUI.Label { Text = L10n.T("名称"), Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
                 var txtName = new AntdUI.Input { Location = DpiScale.P(this, 100, y), Size = new Size(DpiScale.V(this, 330), fieldH) };
                 y += rowH;
 
-                var lblCombo = new AntdUI.Label { Text = "按键组合", Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
+                var lblCombo = new AntdUI.Label { Text = L10n.T("按键组合"), Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
                 var chkCtrl = new AntdUI.Checkbox { Text = "Ctrl", Location = DpiScale.P(this, 100, y + lblOff), AutoSize = true };
                 var chkAlt = new AntdUI.Checkbox { Text = "Alt", Location = DpiScale.P(this, 160, y + lblOff), AutoSize = true };
                 var chkShift = new AntdUI.Checkbox { Text = "Shift", Location = DpiScale.P(this, 218, y + lblOff), AutoSize = true };
@@ -370,16 +370,16 @@ namespace Gdterm.UI.Controls
                 FillKeyCombo(cmbKey);
                 y += rowH;
 
-                var lblType = new AntdUI.Label { Text = "类型", Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
+                var lblType = new AntdUI.Label { Text = L10n.T("类型"), Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
                 var cmbType = new AntdUI.Select { Location = DpiScale.P(this, 100, y), Size = new Size(DpiScale.V(this, 155), fieldH) };
-                cmbType.Items.AddRange(new object[] { "Sequence (转义序列)", "Text (字面文本)", "Action (内置动作)" });
+                cmbType.Items.AddRange(new object[] { L10n.T("Sequence (转义序列)"), L10n.T("Text (字面文本)"), L10n.T("Action (内置动作)") });
                 y += rowH;
 
-                var lblValue = new AntdUI.Label { Text = "发送内容", Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
+                var lblValue = new AntdUI.Label { Text = L10n.T("发送内容"), Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
                 var txtValue = new AntdUI.Input { Location = DpiScale.P(this, 100, y), Size = new Size(DpiScale.V(this, 330), fieldH), Font = Services.FormFontPolicy.MonoFont() };
                 y += rowH;
 
-                var lblDesc = new AntdUI.Label { Text = "描述", Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
+                var lblDesc = new AntdUI.Label { Text = L10n.T("描述"), Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
                 var txtDesc = new AntdUI.Input { Location = DpiScale.P(this, 100, y), Size = new Size(DpiScale.V(this, 330), fieldH) };
                 y += rowH + DpiScale.V(this, 2);
 
@@ -392,7 +392,7 @@ namespace Gdterm.UI.Controls
                 y += Gdterm.UI.Services.FormFontPolicy.RowStep(this) * 2 + DpiScale.V(this, 14);
 
                 var btnOk = new AntdUI.Button {
-                    Text = "保存",
+                    Text = L10n.T("保存"),
                     Type = AntdUI.TTypeMini.Primary,
                     Size = new Size(DpiScale.V(this, 84), fieldH),
                     Location = DpiScale.P(this, 250, y)
@@ -401,7 +401,7 @@ namespace Gdterm.UI.Controls
                 {
                     if (string.IsNullOrWhiteSpace(txtName.Text) || cmbKey.SelectedValue == null)
                     {
-                        AntdUI.Message.warn(form, "请填写名称和选择按键");
+                        AntdUI.Message.warn(form, L10n.T("请填写名称和选择按键"));
                         return;
                     }
                     form.DialogResult = DialogResult.OK;
@@ -409,7 +409,7 @@ namespace Gdterm.UI.Controls
                 };
 
                 var btnCancel = new AntdUI.Button {
-                    Text = "取消",
+                    Text = L10n.T("取消"),
                     Type = AntdUI.TTypeMini.Default,
                     Size = new Size(DpiScale.V(this, 84), fieldH),
                     Location = DpiScale.P(this, 346, y)
