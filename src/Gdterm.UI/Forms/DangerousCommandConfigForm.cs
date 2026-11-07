@@ -50,7 +50,7 @@ namespace Gdterm.UI.Forms
 
         private void InitializeComponent()
         {
-            Text = "危险命令规则配置";
+            Text = L10n.T("危险命令规则配置");
             {
                 float grow = FormFontPolicy.UiFontSize / 9f;
                 // Dock 布局：白名单区/工具栏高度已字体驱动，窗体只需适度增长保证列表可视高度,
@@ -81,11 +81,11 @@ namespace Gdterm.UI.Forms
                 Padding = new Padding(pad, DpiScale.V(this, 5), pad, DpiScale.V(this, 5)),
                 BackColor = GdtermColorTable.Background
             };
-            toolbar.Controls.Add(MakeBtn("添加自定义规则", OnAddRuleClick, AntdUI.TTypeMini.Primary, btnPadding, btnMargin));
-            toolbar.Controls.Add(MakeBtn("编辑", OnEditRuleClick, AntdUI.TTypeMini.Default, btnPadding, btnMargin));
-            toolbar.Controls.Add(MakeBtn("删除", OnDeleteRuleClick, AntdUI.TTypeMini.Default, btnPadding, btnMargin));
-            toolbar.Controls.Add(MakeBtn("启用/禁用", OnToggleRuleClick, AntdUI.TTypeMini.Default, btnPadding, btnMargin));
-            toolbar.Controls.Add(MakeBtn("刷新", (s, e) => { LoadRules(); LoadWhitelist(); }, AntdUI.TTypeMini.Default, btnPadding, btnMargin));
+            toolbar.Controls.Add(MakeBtn(L10n.T("添加自定义规则"), OnAddRuleClick, AntdUI.TTypeMini.Primary, btnPadding, btnMargin));
+            toolbar.Controls.Add(MakeBtn(L10n.T("编辑"), OnEditRuleClick, AntdUI.TTypeMini.Default, btnPadding, btnMargin));
+            toolbar.Controls.Add(MakeBtn(L10n.T("删除"), OnDeleteRuleClick, AntdUI.TTypeMini.Default, btnPadding, btnMargin));
+            toolbar.Controls.Add(MakeBtn(L10n.T("启用/禁用"), OnToggleRuleClick, AntdUI.TTypeMini.Default, btnPadding, btnMargin));
+            toolbar.Controls.Add(MakeBtn(L10n.T("刷新"), (s, e) => { LoadRules(); LoadWhitelist(); }, AntdUI.TTypeMini.Default, btnPadding, btnMargin));
 
             // 规则列表（Dock 布局：工具栏下、白名单上，随窗体伸缩）
             _ruleTable = new AntdUI.Table
@@ -96,17 +96,17 @@ namespace Gdterm.UI.Forms
                 BorderWidth = 0,
                 RowHeight = rowH
             };
-            _ruleTable.Columns.Add(new AntdUI.Column("Name", "名称", AntdUI.ColumnAlign.Left) { Width = "16%" });
-            _ruleTable.Columns.Add(new AntdUI.Column("Pattern", "匹配模式", AntdUI.ColumnAlign.Left) { Width = "28%" });
-            _ruleTable.Columns.Add(new AntdUI.Column("Type", "匹配类型", AntdUI.ColumnAlign.Left) { Width = "12%" });
-            _ruleTable.Columns.Add(new AntdUI.Column("Level", "危险等级", AntdUI.ColumnAlign.Left) { Width = "12%" });
-            _ruleTable.Columns.Add(new AntdUI.Column("Category", "分类", AntdUI.ColumnAlign.Left) { Width = "16%" });
-            _ruleTable.Columns.Add(new AntdUI.Column("Enabled", "启用", AntdUI.ColumnAlign.Left) { Width = "16%" });
+            _ruleTable.Columns.Add(new AntdUI.Column("Name", L10n.T("名称"), AntdUI.ColumnAlign.Left) { Width = "16%" });
+            _ruleTable.Columns.Add(new AntdUI.Column("Pattern", L10n.T("匹配模式"), AntdUI.ColumnAlign.Left) { Width = "28%" });
+            _ruleTable.Columns.Add(new AntdUI.Column("Type", L10n.T("匹配类型"), AntdUI.ColumnAlign.Left) { Width = "12%" });
+            _ruleTable.Columns.Add(new AntdUI.Column("Level", L10n.T("危险等级"), AntdUI.ColumnAlign.Left) { Width = "12%" });
+            _ruleTable.Columns.Add(new AntdUI.Column("Category", L10n.T("分类"), AntdUI.ColumnAlign.Left) { Width = "16%" });
+            _ruleTable.Columns.Add(new AntdUI.Column("Enabled", L10n.T("启用"), AntdUI.ColumnAlign.Left) { Width = "16%" });
             _ruleTable.CellDoubleClick += (s, e) => OnEditRuleClick(s, e);
 
             // 表壳：过滤 + 排序 + 导出（规则几十条时靠肉眼找"rm -rf"很费劲）
             _shell = new TableShell<RuleRow>(_ruleTable,
-                new[] { "名称", "匹配模式", "匹配类型", "危险等级", "分类", "启用" },
+                new[] { L10n.T("名称"), L10n.T("匹配模式"), L10n.T("匹配类型"), L10n.T("危险等级"), L10n.T("分类"), L10n.T("启用") },
                 r => string.Join(" ", new[] { r.Name, r.Pattern, r.Type, r.Level, r.Category, r.Enabled }),
                 (r, i) =>
                 {
@@ -120,7 +120,7 @@ namespace Gdterm.UI.Forms
                         default: return r.Enabled;
                     }
                 });
-            _shell.AddAction("导出", (s2, e2) => _shell.ExportCsv(FindForm(), "dangerous-command-rules")).Name = "DangerRuleExportButton";
+            _shell.AddAction(L10n.T("导出"), (s2, e2) => _shell.ExportCsv(FindForm(), "dangerous-command-rules")).Name = "DangerRuleExportButton";
             _shell.ViewChanged += list =>
             {
                 _ruleRows.Clear();
@@ -148,7 +148,7 @@ namespace Gdterm.UI.Forms
             var wlBtnPadding = new Padding(btnPad, DpiScale.V(this, 3), btnPad, DpiScale.V(this, 3));
 
             var whitelistHeader = new AntdUI.Label {
-                Text = "白名单（豁免命令）",
+                Text = L10n.T("白名单（豁免命令）"),
                 Font = Services.FormFontPolicy.UiFont(0.5f, FontStyle.Bold),
                 AutoSize = true,
                 ForeColor = GdtermColorTable.Foreground,
@@ -165,10 +165,10 @@ namespace Gdterm.UI.Forms
                 BackColor = GdtermColorTable.Background,
                 Margin = new Padding(0, 0, 0, DpiScale.V(this, 4))
             };
-            var btnAddWhitelist = new AntdUI.Button { Text = "添加", Type = AntdUI.TTypeMini.Primary, AutoSize = true, Padding = wlBtnPadding, Margin = new Padding(0, 0, DpiScale.V(this, 6), 0) };
+            var btnAddWhitelist = new AntdUI.Button { Text = L10n.T("添加"), Type = AntdUI.TTypeMini.Primary, AutoSize = true, Padding = wlBtnPadding, Margin = new Padding(0, 0, DpiScale.V(this, 6), 0) };
             btnAddWhitelist.Click += OnAddWhitelistClick;
 
-            var btnRemoveWhitelist = new AntdUI.Button { Text = "移除", Type = AntdUI.TTypeMini.Error, AutoSize = true, Padding = wlBtnPadding };
+            var btnRemoveWhitelist = new AntdUI.Button { Text = L10n.T("移除"), Type = AntdUI.TTypeMini.Error, AutoSize = true, Padding = wlBtnPadding };
             btnRemoveWhitelist.Click += OnRemoveWhitelistClick;
             whitelistButtons.Controls.Add(btnAddWhitelist);
             whitelistButtons.Controls.Add(btnRemoveWhitelist);
@@ -189,7 +189,7 @@ namespace Gdterm.UI.Forms
             _statusLabel = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
                 AutoSize = true,
-                Text = "就绪",
+                Text = L10n.T("就绪"),
                 TextAlign = ContentAlignment.MiddleLeft,
                 ForeColor = GdtermColorTable.Muted,
                 Padding = new Padding(pad, DpiScale.V(this, 5), pad, DpiScale.V(this, 5))
@@ -206,9 +206,9 @@ namespace Gdterm.UI.Forms
             Controls.Add(_statusLabel);   // Bottom：最底状态条（最后添加 → 最先分配，贴最底）
 
             // 审计 C1：规则表为空时此前是一片空白表体，分不清「没有规则」与「加载失败」
-            _empty = EmptyStateView.Attach(this, "还没有自定义规则",
-                "内置规则在代码里默认生效；这里管理的是你自己追加/覆盖的规则",
-                "添加自定义规则", (s2, e2) => OnAddRuleClick(s2, e2));
+            _empty = EmptyStateView.Attach(this, L10n.T("还没有自定义规则"),
+                L10n.T("内置规则在代码里默认生效；这里管理的是你自己追加/覆盖的规则"),
+                L10n.T("添加自定义规则"), (s2, e2) => OnAddRuleClick(s2, e2));
         }
 
         private static AntdUI.Button MakeBtn(string text, EventHandler onClick, AntdUI.TTypeMini type, Padding padding, int margin)
@@ -245,33 +245,33 @@ namespace Gdterm.UI.Forms
             {
                 var rules = _detector.GetAllRules();
                 var rows = new List<RuleRow>();
-                using (BusyScope.Begin(this, "正在读取规则…", false))
+                using (BusyScope.Begin(this, L10n.T("正在读取规则…"), false))
                 foreach (var rule in rules)
                 {
                     _ruleRows.Add(rule);
                     rows.Add(new RuleRow
                     {
                         Source = rule,
-                        Name = rule.Name ?? "(无名称)",
+                        Name = rule.Name ?? L10n.T("(无名称)"),
                         Pattern = rule.Pattern ?? "",
                         Type = rule.PatternType.ToString(),
                         Level = GetLevelText(rule.Level),
                         Category = rule.Category ?? "",
-                        Enabled = rule.Enabled ? "是" : "否"
+                        Enabled = rule.Enabled ? L10n.T("是") : L10n.T("否")
                     });
                 }
                 _shell.SetItems(rows);
-                _statusLabel.Text = $"共 {rows.Count} 条规则";
+                _statusLabel.Text = L10n.Tf("共 {0} 条规则", rows.Count);
                 if (_empty != null) _empty.SetEmpty(rows.Count == 0);
             }
             catch (Exception ex)
             {
-                _statusLabel.Text = $"加载规则失败：{ex.Message}";
+                _statusLabel.Text = L10n.Tf("加载规则失败：{0}", ex.Message);
                 try { Diagnostics.DiagLog.Error("DangerousCommandConfigForm.LoadRules", ex); } catch (Exception) { }
-                AntdUI.Message.error(this, "加载规则失败：" + ex.Message);
+                AntdUI.Message.error(this, L10n.T("加载规则失败：") + ex.Message);
                 if (_empty != null)
                 {
-                    _empty.SetEmpty(true, "规则加载失败", ex.Message);
+                    _empty.SetEmpty(true, L10n.T("规则加载失败"), ex.Message);
                     if (_empty.ActionButton != null) _empty.ActionButton.Visible = false;
                 }
             }
@@ -284,13 +284,13 @@ namespace Gdterm.UI.Forms
                 // 2026-11 修：此前这里只有一句「功能已就绪」的假提示，白名单框打开永远是空的
                 var list = _detector.GetWhitelist();
                 _whitelistBox.Text = string.Join(Environment.NewLine, list);
-                _statusLabel.Text = $"白名单 {list.Count} 条";
+                _statusLabel.Text = L10n.Tf("白名单 {0} 条", list.Count);
             }
             catch (Exception ex)
             {
-                _statusLabel.Text = $"加载白名单失败：{ex.Message}";
+                _statusLabel.Text = L10n.Tf("加载白名单失败：{0}", ex.Message);
                 try { Diagnostics.DiagLog.Error("DangerousCommandConfigForm.LoadWhitelist", ex); } catch (Exception) { }
-                AntdUI.Message.error(this, "加载白名单失败：" + ex.Message);
+                AntdUI.Message.error(this, L10n.T("加载白名单失败：") + ex.Message);
             }
         }
 
@@ -298,9 +298,9 @@ namespace Gdterm.UI.Forms
         {
             switch (level)
             {
-                case DangerLevel.Medium: return "中等";
-                case DangerLevel.High: return "高";
-                case DangerLevel.Critical: return "严重";
+                case DangerLevel.Medium: return L10n.T("中等");
+                case DangerLevel.High: return L10n.T("高");
+                case DangerLevel.Critical: return L10n.T("严重");
                 default: return level.ToString();
             }
         }
@@ -318,16 +318,16 @@ namespace Gdterm.UI.Forms
                     if (_detector.LastSaveError != null)
                     {
                         // 内存已生效但文件没写进去：必须说清楚，否则用户重启后规则消失还以为自己没保存
-                        _statusLabel.Text = "规则已生效，但配置文件写入失败：" + _detector.LastSaveError;
-                        AntdUI.Message.error(this, "规则已生效，但配置文件写入失败：" + _detector.LastSaveError);
+                        _statusLabel.Text = L10n.T("规则已生效，但配置文件写入失败：") + _detector.LastSaveError;
+                        AntdUI.Message.error(this, L10n.T("规则已生效，但配置文件写入失败：") + _detector.LastSaveError);
                     }
-                    else _statusLabel.Text = $"已添加规则：{rule.Name}";
+                    else _statusLabel.Text = L10n.Tf("已添加规则：{0}", rule.Name);
                     LoadRules();
                 }
                 catch (Exception ex)
                 {
                     try { Diagnostics.DiagLog.Error("DangerousCommandConfigForm.AddRule", ex); } catch (Exception) { }
-                    AntdUI.Message.error(this, "添加规则失败：" + ex.Message);
+                    AntdUI.Message.error(this, L10n.T("添加规则失败：") + ex.Message);
                 }
             }
         }
@@ -345,20 +345,20 @@ namespace Gdterm.UI.Forms
                 {
                     if (!_detector.UpdateRule(rule.Id, updated))
                     {
-                        AntdUI.Message.warn(this, "这条规则已不在配置文件里（可能被外部改动），已重新加载");
+                        AntdUI.Message.warn(this, L10n.T("这条规则已不在配置文件里（可能被外部改动），已重新加载"));
                         LoadRules();
                         return;
                     }
                     bool saved = _detector.LastSaveError == null;
-                    _statusLabel.Text = saved ? $"已保存规则：{updated.Name}"
-                        : "规则已生效，但配置文件写入失败：" + _detector.LastSaveError;
-                    if (!saved) AntdUI.Message.error(this, "配置文件写入失败：" + _detector.LastSaveError);
+                    _statusLabel.Text = saved ? L10n.Tf("已保存规则：{0}", updated.Name)
+                        : L10n.T("规则已生效，但配置文件写入失败：") + _detector.LastSaveError;
+                    if (!saved) AntdUI.Message.error(this, L10n.T("配置文件写入失败：") + _detector.LastSaveError);
                     LoadRules();
                 }
                 catch (Exception ex)
                 {
                     try { Diagnostics.DiagLog.Error("DangerousCommandConfigForm.EditRule", ex); } catch (Exception) { }
-                    AntdUI.Message.error(this, "保存规则失败：" + ex.Message);
+                    AntdUI.Message.error(this, L10n.T("保存规则失败：") + ex.Message);
                 }
             }
         }
@@ -368,8 +368,8 @@ namespace Gdterm.UI.Forms
             var rule = SelectedRule();
             if (rule == null) return;
             var confirm = MessageBox.Show(this,
-                "确定要删除规则 \"" + rule.Name + "\" 吗？此操作会写入配置文件，内置默认规则不受影响。",
-                "确认删除",
+                L10n.Tf("确定要删除规则 \"{0}\" 吗？此操作会写入配置文件，内置默认规则不受影响。", rule.Name),
+                L10n.T("确认删除"),
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning);
 
@@ -379,21 +379,21 @@ namespace Gdterm.UI.Forms
                 bool ok = _detector.RemoveRule(rule.Id);
                 if (!ok)
                 {
-                    AntdUI.Message.warn(this, "这条规则已不在配置文件里，已重新加载");
+                    AntdUI.Message.warn(this, L10n.T("这条规则已不在配置文件里，已重新加载"));
                 }
                 else
                 {
-                    _statusLabel.Text = $"已删除规则：{rule.Name}";
+                    _statusLabel.Text = L10n.Tf("已删除规则：{0}", rule.Name);
                     if (_detector.LastSaveError != null)
-                        AntdUI.Message.error(this, "配置文件写入失败：" + _detector.LastSaveError);
-                    ToastNotifier.Success("已删除规则：" + rule.Name, 2500);
+                        AntdUI.Message.error(this, L10n.T("配置文件写入失败：") + _detector.LastSaveError);
+                    ToastNotifier.Success(L10n.T("已删除规则：") + rule.Name, 2500);
                 }
                 LoadRules();
             }
             catch (Exception ex)
             {
                 try { Diagnostics.DiagLog.Error("DangerousCommandConfigForm.RemoveRule", ex); } catch (Exception) { }
-                AntdUI.Message.error(this, "删除规则失败：" + ex.Message);
+                AntdUI.Message.error(this, L10n.T("删除规则失败：") + ex.Message);
             }
         }
 
@@ -406,25 +406,25 @@ namespace Gdterm.UI.Forms
             {
                 if (!_detector.SetRuleEnabled(rule.Id, want))
                 {
-                    AntdUI.Message.warn(this, "这条规则已不在配置文件里，已重新加载");
+                    AntdUI.Message.warn(this, L10n.T("这条规则已不在配置文件里，已重新加载"));
                     LoadRules();
                     return;
                 }
                 LoadRules();
-                _statusLabel.Text = "规则 \"" + rule.Name + "\" 已" + (want ? "启用" : "禁用");
+                _statusLabel.Text = L10n.Tf("规则 \"{0}\" 已{1}", rule.Name, want ? L10n.T("启用") : L10n.T("禁用"));
                 if (_detector.LastSaveError != null)
-                    AntdUI.Message.error(this, "配置文件写入失败：" + _detector.LastSaveError);
+                    AntdUI.Message.error(this, L10n.T("配置文件写入失败：") + _detector.LastSaveError);
             }
             catch (Exception ex)
             {
                 try { Diagnostics.DiagLog.Error("DangerousCommandConfigForm.ToggleRule", ex); } catch (Exception) { }
-                AntdUI.Message.error(this, "切换规则状态失败：" + ex.Message);
+                AntdUI.Message.error(this, L10n.T("切换规则状态失败：") + ex.Message);
             }
         }
 
         private void OnAddWhitelistClick(object sender, EventArgs e)
         {
-            using (var inputDlg = new TextInputForm("添加白名单命令", "请输入要豁免的完整命令："))
+            using (var inputDlg = new TextInputForm(L10n.T("添加白名单命令"), L10n.T("请输入要豁免的完整命令：")))
             {
                 if (inputDlg.ShowDialog(this) == DialogResult.OK)
                 {
@@ -433,9 +433,9 @@ namespace Gdterm.UI.Forms
                     {
                         _detector.AddToWhitelist(command);
                         LoadWhitelist();
-                        _statusLabel.Text = $"已添加白名单：{command}";
+                        _statusLabel.Text = L10n.Tf("已添加白名单：{0}", command);
                         if (_detector.LastSaveError != null)
-                            AntdUI.Message.error(this, "白名单已生效，但配置文件写入失败：" + _detector.LastSaveError);
+                            AntdUI.Message.error(this, L10n.T("白名单已生效，但配置文件写入失败：") + _detector.LastSaveError);
                     }
                 }
             }
@@ -446,12 +446,12 @@ namespace Gdterm.UI.Forms
             var command = _whitelistBox.SelectedText;
             if (string.IsNullOrEmpty(command))
             {
-                AntdUI.Message.warn(this, "请先在白名单框中选中要移除的命令。");
+                AntdUI.Message.warn(this, L10n.T("请先在白名单框中选中要移除的命令。"));
                 return;
             }
             var confirm = MessageBox.Show(this,
-                $"确定要从白名单中移除 \"{command}\" 吗？",
-                "确认移除",
+                L10n.Tf("确定要从白名单中移除 \"{0}\" 吗？", command),
+                L10n.T("确认移除"),
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question);
 
@@ -459,9 +459,9 @@ namespace Gdterm.UI.Forms
             {
                 _detector.RemoveFromWhitelist(command);
                 LoadWhitelist();
-                _statusLabel.Text = $"已移除白名单：{command}";
+                _statusLabel.Text = L10n.Tf("已移除白名单：{0}", command);
                 if (_detector.LastSaveError != null)
-                    AntdUI.Message.error(this, "白名单已生效，但配置文件写入失败：" + _detector.LastSaveError);
+                    AntdUI.Message.error(this, L10n.T("白名单已生效，但配置文件写入失败：") + _detector.LastSaveError);
             }
         }
 
@@ -506,7 +506,7 @@ namespace Gdterm.UI.Forms
         private void Prefill()
         {
             if (_editing == null) return;
-            Text = "编辑规则";
+            Text = L10n.T("编辑规则");
             _nameBox.Text = _editing.Name ?? "";
             _patternBox.Text = _editing.Pattern ?? "";
             _patternTypeCombo.SelectedIndex = _editing.PatternType == PatternType.Contains ? 1
@@ -530,13 +530,13 @@ namespace Gdterm.UI.Forms
             var pattern = (_patternBox.Text ?? "").Trim();
             if (name.Length == 0)
             {
-                AntdUI.Message.warn(this, "请填写规则名称");
+                AntdUI.Message.warn(this, L10n.T("请填写规则名称"));
                 _nameBox.Focus();
                 return null;
             }
             if (pattern.Length == 0)
             {
-                AntdUI.Message.warn(this, "请填写匹配模式");
+                AntdUI.Message.warn(this, L10n.T("请填写匹配模式"));
                 _patternBox.Focus();
                 return null;
             }
@@ -549,7 +549,7 @@ namespace Gdterm.UI.Forms
                 catch (Exception ex)
                 {
                     // 非法正则会静默匹配不了任何东西（检测器里是 continue 跳过），必须当场拦住
-                    AntdUI.Message.error(this, "正则表达式无效：" + ex.Message);
+                    AntdUI.Message.error(this, L10n.T("正则表达式无效：") + ex.Message);
                     _patternBox.Focus();
                     return null;
                 }
@@ -573,7 +573,7 @@ namespace Gdterm.UI.Forms
 
         private void InitializeComponent()
         {
-            Text = "添加自定义规则";
+            Text = L10n.T("添加自定义规则");
             Size = DpiScale.S(this, 470, 560); // 初始基准，构造末尾按内容自适应重设
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -594,11 +594,11 @@ namespace Gdterm.UI.Forms
             int rowH = fieldH + DpiScale.V(this, 10);
             int y = DpiScale.V(this, 20);
 
-            _nameBox = AddTextField("规则名称", labelX, boxX, ref y, boxW, fieldH, rowH);
-            _patternBox = AddTextField("匹配模式", labelX, boxX, ref y, boxW, fieldH, rowH);
+            _nameBox = AddTextField(L10n.T("规则名称"), labelX, boxX, ref y, boxW, fieldH, rowH);
+            _patternBox = AddTextField(L10n.T("匹配模式"), labelX, boxX, ref y, boxW, fieldH, rowH);
 
             // 匹配类型
-            Controls.Add(MakeLabel("匹配类型", labelX, y, fieldH));
+            Controls.Add(MakeLabel(L10n.T("匹配类型"), labelX, y, fieldH));
             _patternTypeCombo = new AntdUI.Select { Location = new Point(boxX, y), Size = new Size(DpiScale.V(this, 160), fieldH) };
             foreach (var v in new[] { "Regex", "Contains", "Equals" }) _patternTypeCombo.Items.Add(v);
             _patternTypeCombo.SelectedIndex = 0;
@@ -606,7 +606,7 @@ namespace Gdterm.UI.Forms
             y += rowH;
 
             // 危险等级
-            Controls.Add(MakeLabel("危险等级", labelX, y, fieldH));
+            Controls.Add(MakeLabel(L10n.T("危险等级"), labelX, y, fieldH));
             _levelCombo = new AntdUI.Select { Location = new Point(boxX, y), Size = new Size(DpiScale.V(this, 160), fieldH) };
             foreach (var v in new[] { "Medium", "High", "Critical" }) _levelCombo.Items.Add(v);
             _levelCombo.SelectedIndex = 0;
@@ -614,7 +614,7 @@ namespace Gdterm.UI.Forms
             y += rowH;
 
             // 分类
-            Controls.Add(MakeLabel("分类", labelX, y, fieldH));
+            Controls.Add(MakeLabel(L10n.T("分类"), labelX, y, fieldH));
             _categoryCombo = new AntdUI.Select { Location = new Point(boxX, y), Size = new Size(DpiScale.V(this, 200), fieldH) };
             var cats = new System.Collections.Generic.List<string>();
             if (_categories != null)
@@ -636,7 +636,7 @@ namespace Gdterm.UI.Forms
             y += rowH;
 
             // 描述
-            Controls.Add(MakeLabel("描述", labelX, y, fieldH));
+            Controls.Add(MakeLabel(L10n.T("描述"), labelX, y, fieldH));
             int descH = fieldH + DpiScale.V(this, 18);
             _descriptionBox = new AntdUI.Input {
                 Location = new Point(boxX, y),
@@ -648,7 +648,7 @@ namespace Gdterm.UI.Forms
 
             // 启用
             _enabledCheck = new AntdUI.Checkbox {
-                Text = "启用此规则",
+                Text = L10n.T("启用此规则"),
                 Location = new Point(boxX, y + DpiScale.V(this, 6)),
                 AutoSize = true,
                 Checked = true
@@ -660,7 +660,7 @@ namespace Gdterm.UI.Forms
             int btnGap = DpiScale.V(this, 8);
             // 按钮（主按钮最右）
             var okButton = new AntdUI.Button {
-                Text = "保存",
+                Text = L10n.T("保存"),
                 Type = AntdUI.TTypeMini.Primary,
                 Size = new Size(btnW, fieldH),
                 Location = new Point(boxX + boxW - btnW * 2 - btnGap, y)
@@ -676,7 +676,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(okButton);
 
             var cancelButton = new AntdUI.Button {
-                Text = "取消",
+                Text = L10n.T("取消"),
                 Size = new Size(btnW, fieldH),
                 Location = new Point(boxX + boxW - btnW, y)
             };
@@ -756,7 +756,7 @@ namespace Gdterm.UI.Forms
             int btnW = DpiScale.V(this, 84);
             int btnGap = DpiScale.V(this, 8);
             var cancelButton = new AntdUI.Button {
-                Text = "取消",
+                Text = L10n.T("取消"),
                 Size = new Size(btnW, fieldH),
                 Location = new Point(clientW - pad - btnW, y)
             };
@@ -764,7 +764,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(cancelButton);
 
             var okButton = new AntdUI.Button {
-                Text = "保存",
+                Text = L10n.T("保存"),
                 Type = AntdUI.TTypeMini.Primary,
                 Size = new Size(btnW, fieldH),
                 Location = new Point(clientW - pad - btnW * 2 - btnGap, y)
