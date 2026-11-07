@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Gdterm.Security.Otp;
+using Gdterm.Core;
 
 namespace Gdterm.Connections
 {
@@ -89,10 +90,10 @@ namespace Gdterm.Connections
 
         public void Delete(string id)
         {
-            if (string.IsNullOrEmpty(id)) throw new ArgumentException("Id 不能为空", nameof(id));
+            if (string.IsNullOrEmpty(id)) throw new ArgumentException(L10n.T("Id 不能为空"), nameof(id));
             var list = LoadAll();
             var index = list.ToList().FindIndex(e => e.Id == id);
-            if (index < 0) throw new KeyNotFoundException("未找到 Id 为 " + id + " 的 OTP 条目");
+            if (index < 0) throw new KeyNotFoundException(L10n.T("未找到 Id 为 ") + id + L10n.T(" 的 OTP 条目"));
             list.RemoveAt(index);
             SaveAll(list);
         }

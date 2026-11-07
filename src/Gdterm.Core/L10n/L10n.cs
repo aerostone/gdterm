@@ -66,6 +66,21 @@ namespace Gdterm.Core
             ["确认修改"] = "Confirm change",
             ["确认新密码"] = "Confirm new password",
             ["请输入当前密码"] = "Enter the current password",
+            // —— RDP 客户端工厂（批次5a：RdpClientFactory，仅异常） ——
+            ["rdp_engine=freerdp 但未找到 wfreerdp.exe（期望位置：<程序目录>\\lib\\freerdp\\wfreerdp.exe 或 freerdp\\wfreerdp.exe 或 vendor\\freerdp\\wfreerdp.exe）"] = "rdp_engine=freerdp but wfreerdp.exe was not found (expected at <app dir>\\lib\\freerdp\\wfreerdp.exe, freerdp\\wfreerdp.exe, or vendor\\freerdp\\wfreerdp.exe)",
+            // —— OTP 存储（批次5a：OtpStoreJson） ——
+            ["Id 不能为空"] = "Id must not be empty",
+            ["未找到 Id 为 "] = "No OTP entry found with Id ",
+            [" 的 OTP 条目"] = "",
+            // —— 连接存储（批次5a：ConnectionStoreJson） ——
+            ["连接 Id 不能为空"] = "Connection Id must not be empty",
+            // —— Base32（批次5a：Base32） ——
+            ["Base32 输入为空"] = "Base32 input is empty",
+            ["非法 Base32 字符: '"] = "Invalid Base32 character: '",
+            // —— 登录脚本（批次5a：LogonScriptEngine） ——
+            ["脚本已取消"] = "The script was cancelled",
+            ["登录脚本执行完成"] = "Login script finished",
+            ["脚本执行失败: "] = "Script execution failed: ",
             // —— 密码强度警告（批次4z：KeePassPasswordWarning） ——
             [" 条规则：\r\n  - "] = " rule(s):\r\n  - ",
             ["\r\n\r\n仍要保存？建议尽快在远端修改为强密码。"] = "\r\n\r\nSave anyway? Change it to a strong password on the remote host as soon as possible.",

@@ -1,5 +1,6 @@
 using System;
 using System.Text;
+using Gdterm.Core;
 
 namespace Gdterm.Security.Otp
 {
@@ -38,7 +39,7 @@ namespace Gdterm.Security.Otp
         public static byte[] Decode(string input)
         {
             if (string.IsNullOrEmpty(input))
-                throw new FormatException("Base32 输入为空");
+                throw new FormatException(L10n.T("Base32 输入为空"));
 
             var cleaned = new StringBuilder();
             foreach (var ch in input)
@@ -46,11 +47,11 @@ namespace Gdterm.Security.Otp
                 var up = char.ToUpperInvariant(ch);
                 if (up == '=' || up == ' ' || up == '-' || up == '\t' || up == '\r' || up == '\n') continue;
                 int idx = Alphabet.IndexOf(up);
-                if (idx < 0) throw new FormatException("非法 Base32 字符: '" + ch + "'");
+                if (idx < 0) throw new FormatException(L10n.T("非法 Base32 字符: '") + ch + "'");
                 cleaned.Append(Alphabet[idx]);
             }
             if (cleaned.Length == 0)
-                throw new FormatException("Base32 输入为空");
+                throw new FormatException(L10n.T("Base32 输入为空"));
 
             var outp = new byte[cleaned.Length * 5 / 8];
             int buffer = 0, bits = 0, o = 0;

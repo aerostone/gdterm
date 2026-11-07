@@ -1,3 +1,4 @@
+using Gdterm.Core;
 namespace Gdterm.Rdp
 {
     /// <summary>
@@ -35,7 +36,7 @@ namespace Gdterm.Rdp
             {
                 // 显式要求 FreeRDP 但二进制缺失——抛出让用户看到明确提示，而不是静默换引擎
                 throw new System.InvalidOperationException(
-                    "rdp_engine=freerdp 但未找到 wfreerdp.exe（期望位置：<程序目录>\\lib\\freerdp\\wfreerdp.exe 或 freerdp\\wfreerdp.exe 或 vendor\\freerdp\\wfreerdp.exe）");
+                    L10n.T("rdp_engine=freerdp 但未找到 wfreerdp.exe（期望位置：<程序目录>\\lib\\freerdp\\wfreerdp.exe 或 freerdp\\wfreerdp.exe 或 vendor\\freerdp\\wfreerdp.exe）"));
             }
 
             RdpLog.Info("RdpClientFactory", "wfreerdp 未找到，回退 mstscax ActiveX（可将 FreeRDP 2.x 解压到 lib\\freerdp\\ 启用）");

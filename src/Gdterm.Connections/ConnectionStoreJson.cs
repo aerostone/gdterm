@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Gdterm.Core.Models;
+using Gdterm.Core;
 
 namespace Gdterm.Connections
 {
@@ -106,7 +107,7 @@ namespace Gdterm.Connections
         {
             if (connection == null) throw new ArgumentNullException(nameof(connection));
             if (string.IsNullOrEmpty(connection.Id))
-                throw new ArgumentException("连接 Id 不能为空", nameof(connection));
+                throw new ArgumentException(L10n.T("连接 Id 不能为空"), nameof(connection));
 
             var list = LoadAll();
             var index = list.ToList().FindIndex(c => c.Id == connection.Id);
@@ -121,7 +122,7 @@ namespace Gdterm.Connections
         public void Delete(string connectionId)
         {
             if (string.IsNullOrEmpty(connectionId))
-                throw new ArgumentException("连接 Id 不能为空", nameof(connectionId));
+                throw new ArgumentException(L10n.T("连接 Id 不能为空"), nameof(connectionId));
 
             var list = LoadAll();
             var index = list.ToList().FindIndex(c => c.Id == connectionId);
@@ -136,7 +137,7 @@ namespace Gdterm.Connections
         public ConnectionConfig GetById(string connectionId)
         {
             if (string.IsNullOrEmpty(connectionId))
-                throw new ArgumentException("连接 Id 不能为空", nameof(connectionId));
+                throw new ArgumentException(L10n.T("连接 Id 不能为空"), nameof(connectionId));
 
             var list = LoadAll();
             return list.FirstOrDefault(c => c.Id == connectionId);

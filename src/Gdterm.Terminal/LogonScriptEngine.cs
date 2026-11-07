@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Gdterm.Core.Models;
 using Gdterm.Terminal.Models;
+using Gdterm.Core;
 
 namespace Gdterm.Terminal
 {
@@ -62,15 +63,15 @@ namespace Gdterm.Terminal
                     }
                 }
 
-                Completed?.Invoke(!token.IsCancellationRequested, token.IsCancellationRequested ? "脚本已取消" : "登录脚本执行完成");
+                Completed?.Invoke(!token.IsCancellationRequested, token.IsCancellationRequested ? L10n.T("脚本已取消") : L10n.T("登录脚本执行完成"));
             }
             catch (OperationCanceledException)
             {
-                Completed?.Invoke(false, "脚本已取消");
+                Completed?.Invoke(false, L10n.T("脚本已取消"));
             }
             catch (Exception ex)
             {
-                Completed?.Invoke(false, "脚本执行失败: " + ex.Message);
+                Completed?.Invoke(false, L10n.T("脚本执行失败: ") + ex.Message);
             }
             finally
             {
