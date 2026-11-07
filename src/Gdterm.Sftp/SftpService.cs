@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Gdterm.Core.Models;
 using Gdterm.Sftp.Models;
 using Renci.SshNet;
+using Gdterm.Core;
 
 namespace Gdterm.Sftp
 {
@@ -118,7 +119,7 @@ namespace Gdterm.Sftp
             EnsureConnected();
 
             if (!File.Exists(localPath))
-                throw new FileNotFoundException("本地文件不存在", localPath);
+                throw new FileNotFoundException(L10n.T("本地文件不存在"), localPath);
 
             var totalBytes = new FileInfo(localPath).Length;
             var stopwatch = Stopwatch.StartNew();
@@ -177,7 +178,7 @@ namespace Gdterm.Sftp
             EnsureConnected();
 
             if (!File.Exists(localPath))
-                throw new FileNotFoundException("本地文件不存在", localPath);
+                throw new FileNotFoundException(L10n.T("本地文件不存在"), localPath);
 
             var localSize = new FileInfo(localPath).Length;
 
@@ -349,7 +350,7 @@ namespace Gdterm.Sftp
             int mode = 0;
             int d0 = (octalMode / 100) % 10, d1 = (octalMode / 10) % 10, d2 = octalMode % 10;
             if (d0 < 0 || d0 > 7 || d1 < 0 || d1 > 7 || d2 < 0 || d2 > 7)
-                throw new ArgumentOutOfRangeException("octalMode", "权限位须为 000-777（如 755）。");
+                throw new ArgumentOutOfRangeException("octalMode", L10n.T("权限位须为 000-777（如 755）。"));
             mode = (d0 << 6) | (d1 << 3) | d2;
             _client.ChangePermissions(remotePath, (short)mode);
             return Task.CompletedTask;
@@ -381,7 +382,7 @@ namespace Gdterm.Sftp
         private void EnsureConnected()
         {
             if (!IsConnected)
-                throw new InvalidOperationException("SFTP 未连接，请先调用 ConnectAsync");
+                throw new InvalidOperationException(L10n.T("SFTP 未连接，请先调用 ConnectAsync"));
         }
 
         private void DeleteDirectoryRecursive(string remotePath, CancellationToken ct)

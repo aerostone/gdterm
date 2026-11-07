@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Gdterm.Sftp.Models;
+using Gdterm.Core;
 
 namespace Gdterm.Sftp
 {
@@ -42,10 +43,10 @@ namespace Gdterm.Sftp
         /// <summary>比较单个文件，返回动作与原因（供测试与 UI 提示）。</summary>
         public static SyncAction Decide(long sourceSize, DateTime sourceMtimeUtc, bool targetExists, long targetSize, DateTime targetMtimeUtc, out string reason)
         {
-            if (!targetExists) { reason = "目标缺失"; return SyncAction.Transfer; }
-            if (sourceSize != targetSize) { reason = "大小不同"; return SyncAction.Transfer; }
-            if (sourceMtimeUtc - targetMtimeUtc > MtimeTolerance) { reason = "源更新"; return SyncAction.Transfer; }
-            reason = "一致";
+            if (!targetExists) { reason = L10n.T("目标缺失"); return SyncAction.Transfer; }
+            if (sourceSize != targetSize) { reason = L10n.T("大小不同"); return SyncAction.Transfer; }
+            if (sourceMtimeUtc - targetMtimeUtc > MtimeTolerance) { reason = L10n.T("源更新"); return SyncAction.Transfer; }
+            reason = L10n.T("一致");
             return SyncAction.Skip;
         }
 

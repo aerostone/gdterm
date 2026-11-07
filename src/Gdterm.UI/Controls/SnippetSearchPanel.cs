@@ -8,6 +8,7 @@ using Gdterm.Terminal;
 using TerminalControl = Gdterm.UI.Controls.TerminalControl;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
@@ -65,7 +66,7 @@ namespace Gdterm.UI.Controls
 
             // 提示
             _lblHint = new AntdUI.Label {
-                Text = "输入关键词搜索快捷命令 | Enter 执行 | Esc 关闭",
+                Text = L10n.T("输入关键词搜索快捷命令 | Enter 执行 | Esc 关闭"),
                 Dock = DockStyle.Top,
                 Height = Math.Max(DpiScale.V(this, 22), FormFontPolicy.LineBox(FormFontPolicy.UiFont(-1f), this)),
                 Font = Services.FormFontPolicy.UiFont(-1f),
@@ -85,7 +86,7 @@ namespace Gdterm.UI.Controls
                 Font = Services.FormFontPolicy.UiFont(),
                 HeaderStyle = ColumnHeaderStyle.None
             };
-            _lvResults.Columns.Add("匹配结果", 600);
+            _lvResults.Columns.Add(L10n.T("匹配结果"), 600);
             _lvResults.DoubleClick += (s, e) => ExecuteSelected();
 
             Controls.Add(_lvResults);
@@ -219,7 +220,7 @@ namespace Gdterm.UI.Controls
 
             var form = new Form
             {
-                Text = "填写变量 — " + cmd.Name,
+                Text = L10n.T("填写变量 — ") + cmd.Name,
                 StartPosition = FormStartPosition.CenterParent,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
@@ -245,8 +246,8 @@ namespace Gdterm.UI.Controls
             y += DpiScale.V(form, 4);
 
             int btnH = Math.Max(DpiScale.V(form, 30), fieldH);
-            var btnOk = new AntdUI.Button { Text = "执行", Size = new Size(DpiScale.V(form, 80), btnH), Location = DpiScale.P(form, 190, y), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary, };
-            var btnCancel = new AntdUI.Button { Text = "取消", Size = new Size(DpiScale.V(form, 80), btnH), Location = DpiScale.P(form, 280, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Surface2, ForeColor = GdtermColorTable.Foreground };
+            var btnOk = new AntdUI.Button { Text = L10n.T("执行"), Size = new Size(DpiScale.V(form, 80), btnH), Location = DpiScale.P(form, 190, y), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary, };
+            var btnCancel = new AntdUI.Button { Text = L10n.T("取消"), Size = new Size(DpiScale.V(form, 80), btnH), Location = DpiScale.P(form, 280, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Surface2, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
             // 客户区高度随行数自适应（原先 40+n*40+60 写死行高 40，大字号下裁剪）

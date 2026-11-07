@@ -66,6 +66,27 @@ namespace Gdterm.Core
             ["确认修改"] = "Confirm change",
             ["确认新密码"] = "Confirm new password",
             ["请输入当前密码"] = "Enter the current password",
+            // —— SFTP 同步（批次4y：SftpSyncPlanner） ——
+            ["一致"] = "In sync",
+            ["大小不同"] = "Different size",
+            ["源更新"] = "Source newer",
+            ["目标缺失"] = "Target missing",
+            // —— SFTP 服务（批次4y：SftpService） ——
+            ["SFTP 未连接，请先调用 ConnectAsync"] = "SFTP not connected; call ConnectAsync first",
+            ["本地文件不存在"] = "Local file not found",
+            ["权限位须为 000-777（如 755）。"] = "Permission bits must be 000-777 (e.g. 755).",
+            // —— 连接模板（批次4y：TemplateStore） ——
+            ["Telnet 设备"] = "Telnet device",
+            ["Windows 远程桌面"] = "Windows Remote Desktop",
+            ["串口终端连接"] = "Serial terminal connection",
+            ["串口设备"] = "Serial device",
+            ["标准 Linux SSH 连接"] = "Standard Linux SSH connection",
+            ["老交换机/工控明文终端（无加密）"] = "Legacy switches / industrial plaintext terminals (no encryption)",
+            ["跳板机 SSH"] = "Jumphost SSH",
+            ["通过跳板机的 SSH 连接"] = "SSH connection via a jumphost",
+            // —— 快捷命令搜索（批次4y：SnippetSearchPanel） ——
+            ["匹配结果"] = "Matches",
+            ["输入关键词搜索快捷命令 | Enter 执行 | Esc 关闭"] = "Type a keyword to search quick commands | Enter to run | Esc to close",
             // —— 命令面板（批次4x2：CommandPaletteForm） ——
             ["命令执行失败："] = "Command execution failed: ",
             ["命令面板 (Ctrl+Shift+O)"] = "Command palette (Ctrl+Shift+O)",
