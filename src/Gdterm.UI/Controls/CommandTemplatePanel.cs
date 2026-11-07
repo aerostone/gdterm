@@ -10,6 +10,7 @@ using TerminalControl = Gdterm.UI.Controls.TerminalControl;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {

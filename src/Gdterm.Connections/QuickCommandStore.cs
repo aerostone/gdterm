@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using Gdterm.Core.Models;
+using Gdterm.Core;
 
 namespace Gdterm.Connections
 {
@@ -82,38 +83,38 @@ namespace Gdterm.Connections
         {
             return new List<QuickCommand>
             {
-                Create("网络", "查看 IP 地址", "ip addr show", "网络配置"),
-                Create("网络", "查看路由表", "ip route show", "网络配置"),
-                Create("网络", "查看监听端口", "ss -tlnp", "网络诊断"),
-                Create("网络", "查看网络连接", "ss -s", "连接统计"),
-                Create("网络", "DNS 解析测试", "nslookup {host}", "DNS 诊断"),
-                Create("网络", "Ping 测试", "ping -c 4 {host}", "连通性"),
-                Create("网络", "Traceroute", "traceroute {host}", "路由追踪"),
-                Create("网络", "防火墙规则", "iptables -L -n", "防火墙"),
-                Create("磁盘", "磁盘使用", "df -h", "磁盘空间"),
-                Create("磁盘", "目录大小", "du -sh /* | sort -rh | head -20", "空间分析"),
-                Create("磁盘", "Inode 使用", "df -i", "Inode 检查"),
-                Create("磁盘", "挂载信息", "mount | column -t", "挂载点"),
-                Create("进程", "进程列表", "ps aux --sort=-%mem | head -20", "内存排序"),
-                Create("进程", "CPU 使用 Top", "top -bn1 | head -20", "CPU 监控"),
-                Create("进程", "内存使用", "free -h", "内存统计"),
-                Create("进程", "系统负载", "uptime", "负载信息"),
-                Create("进程", "僵尸进程", "ps aux | grep -w Z", "进程清理"),
-                Create("系统", "系统信息", "uname -a", "系统版本"),
-                Create("系统", "内核版本", "cat /etc/os-release", "发行版"),
-                Create("系统", "登录用户", "who", "会话信息"),
-                Create("系统", "系统日志", "journalctl -n 50 --no-pager", "日志查看"),
-                Create("系统", "计划任务", "crontab -l", "定时任务"),
-                Create("系统", "服务状态", "systemctl list-units --state=failed", "故障服务"),
-                Create("安全", "最近登录", "last -n 20", "登录审计"),
-                Create("安全", "失败登录", "lastb -n 20 2>/dev/null || echo '需要 root'", "安全审计"),
-                Create("安全", "sudo 日志", "grep sudo /var/log/auth.log | tail -20", "权限审计"),
+                Create(L10n.T("网络"), L10n.T("查看 IP 地址"), "ip addr show", L10n.T("网络配置")),
+                Create(L10n.T("网络"), L10n.T("查看路由表"), "ip route show", L10n.T("网络配置")),
+                Create(L10n.T("网络"), L10n.T("查看监听端口"), "ss -tlnp", L10n.T("网络诊断")),
+                Create(L10n.T("网络"), L10n.T("查看网络连接"), "ss -s", L10n.T("连接统计")),
+                Create(L10n.T("网络"), L10n.T("DNS 解析测试"), "nslookup {host}", L10n.T("DNS 诊断")),
+                Create(L10n.T("网络"), L10n.T("Ping 测试"), "ping -c 4 {host}", L10n.T("连通性")),
+                Create(L10n.T("网络"), "Traceroute", "traceroute {host}", L10n.T("路由追踪")),
+                Create(L10n.T("网络"), L10n.T("防火墙规则"), "iptables -L -n", L10n.T("防火墙")),
+                Create(L10n.T("磁盘"), L10n.T("磁盘使用"), "df -h", L10n.T("磁盘空间")),
+                Create(L10n.T("磁盘"), L10n.T("目录大小"), "du -sh /* | sort -rh | head -20", L10n.T("空间分析")),
+                Create(L10n.T("磁盘"), L10n.T("Inode 使用"), "df -i", L10n.T("Inode 检查")),
+                Create(L10n.T("磁盘"), L10n.T("挂载信息"), "mount | column -t", L10n.T("挂载点")),
+                Create(L10n.T("进程"), L10n.T("进程列表"), "ps aux --sort=-%mem | head -20", L10n.T("内存排序")),
+                Create(L10n.T("进程"), L10n.T("CPU 使用 Top"), "top -bn1 | head -20", L10n.T("CPU 监控")),
+                Create(L10n.T("进程"), L10n.T("内存使用"), "free -h", L10n.T("内存统计")),
+                Create(L10n.T("进程"), L10n.T("系统负载"), "uptime", L10n.T("负载信息")),
+                Create(L10n.T("进程"), L10n.T("僵尸进程"), "ps aux | grep -w Z", L10n.T("进程清理")),
+                Create(L10n.T("系统"), L10n.T("系统信息"), "uname -a", L10n.T("系统版本")),
+                Create(L10n.T("系统"), L10n.T("内核版本"), "cat /etc/os-release", L10n.T("发行版")),
+                Create(L10n.T("系统"), L10n.T("登录用户"), "who", L10n.T("会话信息")),
+                Create(L10n.T("系统"), L10n.T("系统日志"), "journalctl -n 50 --no-pager", L10n.T("日志查看")),
+                Create(L10n.T("系统"), L10n.T("计划任务"), "crontab -l", L10n.T("定时任务")),
+                Create(L10n.T("系统"), L10n.T("服务状态"), "systemctl list-units --state=failed", L10n.T("故障服务")),
+                Create(L10n.T("安全"), L10n.T("最近登录"), "last -n 20", L10n.T("登录审计")),
+                Create(L10n.T("安全"), L10n.T("失败登录"), "lastb -n 20 2>/dev/null || echo '需要 root'", L10n.T("安全审计")),
+                Create(L10n.T("安全"), L10n.T("sudo 日志"), "grep sudo /var/log/auth.log | tail -20", L10n.T("权限审计")),
                 // 公司脚本封装：时钟同步一键（chrony/ntpdate/timedatectl 链式兜底，与 TimeSyncTool 远程命令同源）
-                Create("系统", "时钟同步", "(chronyc -a 'burst 3/4' && chronyc -a makestep 2>/dev/null) || (ntpdate ntp.aliyun.com 2>/dev/null) || (timedatectl set-ntp true 2>/dev/null) && date '+%Y-%m-%d %H:%M:%S'", "时钟同步"),
-                Create("Docker", "容器列表", "docker ps -a", "容器管理"),
-                Create("Docker", "镜像列表", "docker images", "镜像管理"),
-                Create("Docker", "磁盘占用", "docker system df", "存储清理"),
-                Create("Docker", "容器日志", "docker logs --tail 50 {container}", "日志查看")
+                Create(L10n.T("系统"), L10n.T("时钟同步"), "(chronyc -a 'burst 3/4' && chronyc -a makestep 2>/dev/null) || (ntpdate ntp.aliyun.com 2>/dev/null) || (timedatectl set-ntp true 2>/dev/null) && date '+%Y-%m-%d %H:%M:%S'", L10n.T("时钟同步")),
+                Create("Docker", L10n.T("容器列表"), "docker ps -a", L10n.T("容器管理")),
+                Create("Docker", L10n.T("镜像列表"), "docker images", L10n.T("镜像管理")),
+                Create("Docker", L10n.T("磁盘占用"), "docker system df", L10n.T("存储清理")),
+                Create("Docker", L10n.T("容器日志"), "docker logs --tail 50 {container}", L10n.T("日志查看"))
             };
         }
 

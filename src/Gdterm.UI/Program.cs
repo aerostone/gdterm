@@ -73,7 +73,7 @@ namespace Gdterm.UI
             }
             catch { GlobalAppearance = new Gdterm.UI.Forms.AppearanceSettings(); }
             // 界面语言（i18n）：必须在任何窗体构造前加载，T() 在构造时取值
-            try { Gdterm.UI.L10n.Load(GlobalAppearance.Language); } catch { }
+            try { Gdterm.Core.L10n.Load(GlobalAppearance.Language); } catch { }
             // 初始外壳主题（与终端 ColorScheme 独立）
             try { Gdterm.UI.Diagnostics.GdtermColorTable.ApplyTheme(GlobalAppearance.UiTheme); } catch { }
             try { AntdUI.Style.SetPrimary(Gdterm.UI.Diagnostics.GdtermColorTable.Accent); } catch { }

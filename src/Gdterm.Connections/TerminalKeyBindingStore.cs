@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Gdterm.Core.Models;
+using Gdterm.Core;
 
 namespace Gdterm.Connections
 {
@@ -148,48 +149,48 @@ namespace Gdterm.Connections
             return new KeyBindingPreset
             {
                 Name = "tmux",
-                Description = "tmux 快捷键（前缀键 Ctrl+B）",
+                Description = L10n.T("tmux 快捷键（前缀键 Ctrl+B）"),
                 Bindings = new List<TerminalKeyBinding>
                 {
                     // ── 前缀键发送 ──
-                    B("发送前缀 Ctrl+B", true, false, false, "B", SendType.Sequence, "\x02", "tmux", "发送 tmux 前缀键"),
+                    B(L10n.T("发送前缀 Ctrl+B"), true, false, false, "B", SendType.Sequence, "\x02", "tmux", L10n.T("发送 tmux 前缀键")),
 
                     // ── 会话管理 ──
-                    B("分离会话", true, false, false, "D", SendType.Sequence, "\x02\x64", "tmux", "Ctrl+B d = 分离会话"),
-                    B("会话列表", true, false, false, "S", SendType.Sequence, "\x02\x73", "tmux", "Ctrl+B s = 会话列表"),
-                    B("重命名会话", true, false, false, "R", SendType.Sequence, "\x02\x24", "tmux", "Ctrl+B $ = 重命名会话"),
+                    B(L10n.T("分离会话"), true, false, false, "D", SendType.Sequence, "\x02\x64", "tmux", L10n.T("Ctrl+B d = 分离会话")),
+                    B(L10n.T("会话列表"), true, false, false, "S", SendType.Sequence, "\x02\x73", "tmux", L10n.T("Ctrl+B s = 会话列表")),
+                    B(L10n.T("重命名会话"), true, false, false, "R", SendType.Sequence, "\x02\x24", "tmux", L10n.T("Ctrl+B $ = 重命名会话")),
 
                     // ── 窗口管理 ──
-                    B("新建窗口", true, false, false, "C", SendType.Sequence, "\x02\x63", "tmux", "Ctrl+B c = 新建窗口"),
-                    B("下一个窗口", true, false, false, "N", SendType.Sequence, "\x02\x6e", "tmux", "Ctrl+B n = 下一个窗口"),
-                    B("上一个窗口", true, false, false, "P", SendType.Sequence, "\x02\x70", "tmux", "Ctrl+B p = 上一个窗口"),
-                    B("窗口列表", true, false, false, "W", SendType.Sequence, "\x02\x77", "tmux", "Ctrl+B w = 窗口列表"),
-                    B("切换窗口", true, false, false, "L", SendType.Sequence, "\x02\x6c", "tmux", "Ctrl+B l = 切换到上一个窗口"),
-                    B("关闭窗口", true, false, false, "X", SendType.Sequence, "\x02\x78", "tmux", "Ctrl+B x = 关闭窗口"),
+                    B(L10n.T("新建窗口"), true, false, false, "C", SendType.Sequence, "\x02\x63", "tmux", L10n.T("Ctrl+B c = 新建窗口")),
+                    B(L10n.T("下一个窗口"), true, false, false, "N", SendType.Sequence, "\x02\x6e", "tmux", L10n.T("Ctrl+B n = 下一个窗口")),
+                    B(L10n.T("上一个窗口"), true, false, false, "P", SendType.Sequence, "\x02\x70", "tmux", L10n.T("Ctrl+B p = 上一个窗口")),
+                    B(L10n.T("窗口列表"), true, false, false, "W", SendType.Sequence, "\x02\x77", "tmux", L10n.T("Ctrl+B w = 窗口列表")),
+                    B(L10n.T("切换窗口"), true, false, false, "L", SendType.Sequence, "\x02\x6c", "tmux", L10n.T("Ctrl+B l = 切换到上一个窗口")),
+                    B(L10n.T("关闭窗口"), true, false, false, "X", SendType.Sequence, "\x02\x78", "tmux", L10n.T("Ctrl+B x = 关闭窗口")),
 
                     // ── 面板分割 ──
-                    B("垂直分割", true, false, false, "Oem5", SendType.Sequence, "\x02\x25", "tmux", "Ctrl+B % = 垂直分割"),
-                    B("水平分割", true, false, true, "Oem7", SendType.Sequence, "\x02\x22", "tmux", "Ctrl+B \" = 水平分割"),
-                    B("切换面板", true, false, false, "O", SendType.Sequence, "\x02\x6f", "tmux", "Ctrl+B o = 切换面板"),
-                    B("关闭面板", true, false, false, "X", SendType.Sequence, "\x02\x78", "tmux", "Ctrl+B x = 关闭面板"),
+                    B(L10n.T("垂直分割"), true, false, false, "Oem5", SendType.Sequence, "\x02\x25", "tmux", L10n.T("Ctrl+B % = 垂直分割")),
+                    B(L10n.T("水平分割"), true, false, true, "Oem7", SendType.Sequence, "\x02\x22", "tmux", L10n.T("Ctrl+B \" = 水平分割")),
+                    B(L10n.T("切换面板"), true, false, false, "O", SendType.Sequence, "\x02\x6f", "tmux", L10n.T("Ctrl+B o = 切换面板")),
+                    B(L10n.T("关闭面板"), true, false, false, "X", SendType.Sequence, "\x02\x78", "tmux", L10n.T("Ctrl+B x = 关闭面板")),
 
                     // ── 面块导航（方向键） ──
-                    B("面板-上", true, true, false, "Up", SendType.Sequence, "\x02\x1b[1;3A", "tmux", "Ctrl+B Alt+↑ = 选择上方面板"),
-                    B("面板-下", true, true, false, "Down", SendType.Sequence, "\x02\x1b[1;3B", "tmux", "Ctrl+B Alt+↓ = 选择下方面板"),
-                    B("面板-左", true, true, false, "Left", SendType.Sequence, "\x02\x1b[1;3D", "tmux", "Ctrl+B Alt+← = 选择左方面板"),
-                    B("面板-右", true, true, false, "Right", SendType.Sequence, "\x02\x1b[1;3C", "tmux", "Ctrl+B Alt+→ = 选择右方面板"),
+                    B(L10n.T("面板-上"), true, true, false, "Up", SendType.Sequence, "\x02\x1b[1;3A", "tmux", L10n.T("Ctrl+B Alt+↑ = 选择上方面板")),
+                    B(L10n.T("面板-下"), true, true, false, "Down", SendType.Sequence, "\x02\x1b[1;3B", "tmux", L10n.T("Ctrl+B Alt+↓ = 选择下方面板")),
+                    B(L10n.T("面板-左"), true, true, false, "Left", SendType.Sequence, "\x02\x1b[1;3D", "tmux", L10n.T("Ctrl+B Alt+← = 选择左方面板")),
+                    B(L10n.T("面板-右"), true, true, false, "Right", SendType.Sequence, "\x02\x1b[1;3C", "tmux", L10n.T("Ctrl+B Alt+→ = 选择右方面板")),
 
                     // ── 复制模式 ──
-                    B("进入复制模式", true, false, false, "OemOpenBrackets", SendType.Sequence, "\x02\x5b", "tmux", "Ctrl+B [ = 进入复制模式"),
-                    B("粘贴缓冲区", true, false, false, "OemCloseBrackets", SendType.Sequence, "\x02\x5d", "tmux", "Ctrl+B ] = 粘贴"),
+                    B(L10n.T("进入复制模式"), true, false, false, "OemOpenBrackets", SendType.Sequence, "\x02\x5b", "tmux", L10n.T("Ctrl+B [ = 进入复制模式")),
+                    B(L10n.T("粘贴缓冲区"), true, false, false, "OemCloseBrackets", SendType.Sequence, "\x02\x5d", "tmux", L10n.T("Ctrl+B ] = 粘贴")),
 
                     // ── 布局 ──
-                    B("均衡布局", true, false, false, "E", SendType.Sequence, "\x02\x45", "tmux", "Ctrl+B E = 均衡面板"),
-                    B("全屏面板", true, false, false, "Z", SendType.Sequence, "\x02\x7a", "tmux", "Ctrl+B z = 全屏/恢复面板"),
+                    B(L10n.T("均衡布局"), true, false, false, "E", SendType.Sequence, "\x02\x45", "tmux", L10n.T("Ctrl+B E = 均衡面板")),
+                    B(L10n.T("全屏面板"), true, false, false, "Z", SendType.Sequence, "\x02\x7a", "tmux", L10n.T("Ctrl+B z = 全屏/恢复面板")),
 
                     // ── 其他 ──
-                    B("命令模式", true, false, false, "OemSemicolon", SendType.Sequence, "\x02\x3a", "tmux", "Ctrl+B : = 进入命令模式"),
-                    B("帮助", true, false, false, "OemQuestion", SendType.Sequence, "\x02\x3f", "tmux", "Ctrl+B ? = 快捷键帮助"),
+                    B(L10n.T("命令模式"), true, false, false, "OemSemicolon", SendType.Sequence, "\x02\x3a", "tmux", L10n.T("Ctrl+B : = 进入命令模式")),
+                    B(L10n.T("帮助"), true, false, false, "OemQuestion", SendType.Sequence, "\x02\x3f", "tmux", L10n.T("Ctrl+B ? = 快捷键帮助")),
                 }
             };
         }
@@ -200,23 +201,23 @@ namespace Gdterm.Connections
             return new KeyBindingPreset
             {
                 Name = "screen",
-                Description = "GNU Screen 快捷键（前缀键 Ctrl+A）",
+                Description = L10n.T("GNU Screen 快捷键（前缀键 Ctrl+A）"),
                 Bindings = new List<TerminalKeyBinding>
                 {
-                    B("发送前缀 Ctrl+A", true, false, false, "A", SendType.Sequence, "\x01", "screen", "发送 screen 前缀键"),
-                    B("分离会话", true, false, false, "D", SendType.Sequence, "\x01\x64", "screen", "Ctrl+A d = 分离"),
-                    B("新建窗口", true, false, false, "C", SendType.Sequence, "\x01\x63", "screen", "Ctrl+A c = 新建窗口"),
-                    B("下一个窗口", true, false, false, "N", SendType.Sequence, "\x01\x6e", "screen", "Ctrl+A n = 下一个"),
-                    B("上一个窗口", true, false, false, "P", SendType.Sequence, "\x01\x70", "screen", "Ctrl+A p = 上一个"),
-                    B("窗口列表", true, false, false, "W", SendType.Sequence, "\x01\x77", "screen", "Ctrl+A w = 窗口列表"),
-                    B("水平分割", true, false, false, "S", SendType.Sequence, "\x01\x73", "screen", "Ctrl+A S = 水平分割"),
-                    B("垂直分割", true, false, false, "V", SendType.Sequence, "\x01\x76", "screen", "Ctrl+A V = 垂直分割"),
-                    B("切换面板", true, false, false, "Tab", SendType.Sequence, "\x01\x09", "screen", "Ctrl+A Tab = 切换面板"),
-                    B("复制模式", true, false, false, "OemOpenBrackets", SendType.Sequence, "\x01\x5b", "screen", "Ctrl+A [ = 复制模式"),
-                    B("粘贴", true, false, false, "OemCloseBrackets", SendType.Sequence, "\x01\x5d", "screen", "Ctrl+A ] = 粘贴"),
-                    B("命令模式", true, false, false, "OemSemicolon", SendType.Sequence, "\x01\x3a", "screen", "Ctrl+A : = 命令"),
-                    B("关闭面板", true, false, false, "K", SendType.Sequence, "\x01\x6b", "screen", "Ctrl+A K = 关闭"),
-                    B("帮助", true, false, false, "OemQuestion", SendType.Sequence, "\x01\x3f", "screen", "Ctrl+A ? = 帮助"),
+                    B(L10n.T("发送前缀 Ctrl+A"), true, false, false, "A", SendType.Sequence, "\x01", "screen", L10n.T("发送 screen 前缀键")),
+                    B(L10n.T("分离会话"), true, false, false, "D", SendType.Sequence, "\x01\x64", "screen", L10n.T("Ctrl+A d = 分离")),
+                    B(L10n.T("新建窗口"), true, false, false, "C", SendType.Sequence, "\x01\x63", "screen", L10n.T("Ctrl+A c = 新建窗口")),
+                    B(L10n.T("下一个窗口"), true, false, false, "N", SendType.Sequence, "\x01\x6e", "screen", L10n.T("Ctrl+A n = 下一个")),
+                    B(L10n.T("上一个窗口"), true, false, false, "P", SendType.Sequence, "\x01\x70", "screen", L10n.T("Ctrl+A p = 上一个")),
+                    B(L10n.T("窗口列表"), true, false, false, "W", SendType.Sequence, "\x01\x77", "screen", L10n.T("Ctrl+A w = 窗口列表")),
+                    B(L10n.T("水平分割"), true, false, false, "S", SendType.Sequence, "\x01\x73", "screen", L10n.T("Ctrl+A S = 水平分割")),
+                    B(L10n.T("垂直分割"), true, false, false, "V", SendType.Sequence, "\x01\x76", "screen", L10n.T("Ctrl+A V = 垂直分割")),
+                    B(L10n.T("切换面板"), true, false, false, "Tab", SendType.Sequence, "\x01\x09", "screen", L10n.T("Ctrl+A Tab = 切换面板")),
+                    B(L10n.T("复制模式"), true, false, false, "OemOpenBrackets", SendType.Sequence, "\x01\x5b", "screen", L10n.T("Ctrl+A [ = 复制模式")),
+                    B(L10n.T("粘贴"), true, false, false, "OemCloseBrackets", SendType.Sequence, "\x01\x5d", "screen", L10n.T("Ctrl+A ] = 粘贴")),
+                    B(L10n.T("命令模式"), true, false, false, "OemSemicolon", SendType.Sequence, "\x01\x3a", "screen", L10n.T("Ctrl+A : = 命令")),
+                    B(L10n.T("关闭面板"), true, false, false, "K", SendType.Sequence, "\x01\x6b", "screen", L10n.T("Ctrl+A K = 关闭")),
+                    B(L10n.T("帮助"), true, false, false, "OemQuestion", SendType.Sequence, "\x01\x3f", "screen", L10n.T("Ctrl+A ? = 帮助")),
                 }
             };
         }
@@ -227,16 +228,16 @@ namespace Gdterm.Connections
             return new KeyBindingPreset
             {
                 Name = "terminal",
-                Description = "终端增强（复制/粘贴/滚动等）",
+                Description = L10n.T("终端增强（复制/粘贴/滚动等）"),
                 Bindings = new List<TerminalKeyBinding>
                 {
                     // 内置动作
-                    B("复制", true, false, false, "C", SendType.Action, "copy", "terminal", "复制选中文本"),
-                    B("粘贴", true, false, false, "V", SendType.Action, "paste", "terminal", "粘贴剪贴板"),
-                    B("向上滚动", true, true, false, "Up", SendType.Action, "scroll_up", "terminal", "滚动历史"),
-                    B("向下滚动", true, true, false, "Down", SendType.Action, "scroll_down", "terminal", "滚动历史"),
-                    B("清除屏幕", true, false, false, "L", SendType.Action, "clear", "terminal", "清除终端"),
-                    B("查找", true, false, false, "F", SendType.Action, "find", "terminal", "搜索终端内容"),
+                    B(L10n.T("复制"), true, false, false, "C", SendType.Action, "copy", "terminal", L10n.T("复制选中文本")),
+                    B(L10n.T("粘贴"), true, false, false, "V", SendType.Action, "paste", "terminal", L10n.T("粘贴剪贴板")),
+                    B(L10n.T("向上滚动"), true, true, false, "Up", SendType.Action, "scroll_up", "terminal", L10n.T("滚动历史")),
+                    B(L10n.T("向下滚动"), true, true, false, "Down", SendType.Action, "scroll_down", "terminal", L10n.T("滚动历史")),
+                    B(L10n.T("清除屏幕"), true, false, false, "L", SendType.Action, "clear", "terminal", L10n.T("清除终端")),
+                    B(L10n.T("查找"), true, false, false, "F", SendType.Action, "find", "terminal", L10n.T("搜索终端内容")),
                 }
             };
         }
@@ -247,7 +248,7 @@ namespace Gdterm.Connections
             return new KeyBindingPreset
             {
                 Name = "none",
-                Description = "无快捷键（所有按键直接发送到终端）",
+                Description = L10n.T("无快捷键（所有按键直接发送到终端）"),
                 Bindings = new List<TerminalKeyBinding>()
             };
         }

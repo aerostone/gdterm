@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {

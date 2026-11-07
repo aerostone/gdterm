@@ -8,6 +8,7 @@ using Gdterm.UI.Controls;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Forms
 {

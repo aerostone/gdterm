@@ -2,6 +2,7 @@ using System;
 using System.Windows.Forms;
 using Gdterm.UI;
 using Gdterm.UI.Controls;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Services
 {

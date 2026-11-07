@@ -18,6 +18,7 @@ using Gdterm.UI.Controls;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
 using TerminalControl = Gdterm.UI.Controls.TerminalControl;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Forms
 {

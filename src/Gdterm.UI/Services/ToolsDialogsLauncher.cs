@@ -9,6 +9,7 @@ using Gdterm.Security;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Forms;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Services
 {

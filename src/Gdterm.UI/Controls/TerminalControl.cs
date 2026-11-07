@@ -15,6 +15,7 @@ using Gdterm.Terminal.Rendering;
 using Gdterm.Terminal.Themes;
 using Gdterm.Tunnel;
 using Gdterm.UI.Diagnostics;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {

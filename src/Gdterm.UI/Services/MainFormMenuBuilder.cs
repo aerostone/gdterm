@@ -2,6 +2,7 @@ using System;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Services
 {

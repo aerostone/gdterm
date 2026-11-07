@@ -10,6 +10,7 @@ using Gdterm.KeePass.Models;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Services;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Forms
 {

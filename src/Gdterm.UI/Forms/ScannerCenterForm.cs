@@ -9,6 +9,7 @@ using Gdterm.Tools.Scanning;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Services;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Forms
 {

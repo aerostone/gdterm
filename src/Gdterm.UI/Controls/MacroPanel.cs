@@ -9,6 +9,7 @@ using System.Windows.Forms;
 using Gdterm.Terminal;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {

@@ -7,6 +7,7 @@ using Gdterm.Connections;
 using Gdterm.Terminal;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {

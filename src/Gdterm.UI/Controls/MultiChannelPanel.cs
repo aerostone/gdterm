@@ -9,6 +9,7 @@ using Gdterm.UI.Services;
 
 using Gdterm.UI.Diagnostics;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {

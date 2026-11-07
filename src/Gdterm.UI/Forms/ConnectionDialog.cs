@@ -8,6 +8,7 @@ using Gdterm.Core.Models;
 using Gdterm.KeePass;
 using Gdterm.KeePass.Models;
 using Gdterm.UI.Services;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Forms
 {

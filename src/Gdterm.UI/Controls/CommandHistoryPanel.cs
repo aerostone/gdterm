@@ -5,6 +5,7 @@ using Gdterm.UI.Diagnostics;
 using Gdterm.Core.Models;
 using Gdterm.Logging;
 using Gdterm.UI.Services;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
