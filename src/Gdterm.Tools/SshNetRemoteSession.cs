@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using Gdterm.Tools.Models;
 using Renci.SshNet;
+using Gdterm.Core;
 
 namespace Gdterm.Tools
 {
@@ -53,7 +54,7 @@ namespace Gdterm.Tools
                 {
                     Command = command,
                     ExitCode = -1,
-                    Stderr = "SSH 未连接",
+                    Stderr = L10n.T("SSH 未连接"),
                     Duration = sw.Elapsed
                 };
             }
@@ -89,7 +90,7 @@ namespace Gdterm.Tools
                         {
                             Command = command,
                             ExitCode = -1,
-                            Stderr = "远端命令超时（" + timeoutSeconds + " 秒），已中断",
+                            Stderr = L10n.T("远端命令超时（") + timeoutSeconds + L10n.T(" 秒），已中断"),
                             Duration = sw.Elapsed
                         };
                     }
@@ -124,7 +125,7 @@ namespace Gdterm.Tools
 
         public IRemoteFileTransfer CreateFileTransfer()
         {
-            if (_client == null) throw new InvalidOperationException("SSH 客户端为空");
+            if (_client == null) throw new InvalidOperationException(L10n.T("SSH 客户端为空"));
             return new SshRemoteFileTransfer(_client);
         }
 

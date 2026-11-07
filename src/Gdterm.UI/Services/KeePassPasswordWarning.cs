@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Windows.Forms;
 using Gdterm.KeePass;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Services
 {
@@ -31,10 +32,10 @@ namespace Gdterm.UI.Services
 
             if (violations == null || violations.Count == 0) return true;
 
-            var msg = "密码强度不足，违反 " + violations.Count + " 条规则：\r\n  - "
+            var msg = L10n.T("密码强度不足，违反 ") + violations.Count + L10n.T(" 条规则：\r\n  - ")
                       + string.Join("\r\n  - ", violations)
-                      + "\r\n\r\n仍要保存？建议尽快在远端修改为强密码。";
-            var dr = MessageBox.Show(owner, msg, "密码强度警告",
+                      + L10n.T("\r\n\r\n仍要保存？建议尽快在远端修改为强密码。");
+            var dr = MessageBox.Show(owner, msg, L10n.T("密码强度警告"),
                 MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
             return dr == DialogResult.Yes;
         }

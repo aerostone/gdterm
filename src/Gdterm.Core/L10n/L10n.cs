@@ -66,6 +66,14 @@ namespace Gdterm.Core
             ["确认修改"] = "Confirm change",
             ["确认新密码"] = "Confirm new password",
             ["请输入当前密码"] = "Enter the current password",
+            // —— 标签分屏（批次4z：TabSplitService） ——
+            ["仅终端标签支持分屏"] = "Only terminal tabs support splitting",
+            ["无法创建分屏终端"] = "Cannot create the split terminal",
+            ["请先打开一个连接"] = "Open a connection first",
+            // —— SSH 远程会话（批次4z：SshNetRemoteSession） ——
+            [" 秒），已中断"] = " s); aborted",
+            ["SSH 客户端为空"] = "SSH client is null",
+            ["远端命令超时（"] = "Remote command timed out (",
             // —— SFTP 同步（批次4y：SftpSyncPlanner） ——
             ["一致"] = "In sync",
             ["大小不同"] = "Different size",

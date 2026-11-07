@@ -130,7 +130,7 @@ namespace Gdterm.UI.Controls
             _config = new ConnectionConfig
             {
                 Id = Guid.NewGuid().ToString("N"),
-                Name = "本地终端",
+                Name = L10n.T("本地终端"),
                 Host = "localhost",
                 Protocol = ProtocolType.SSH
             };

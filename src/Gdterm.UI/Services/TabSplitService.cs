@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
 using Gdterm.UI.Controls;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Services
 {
@@ -24,7 +25,7 @@ namespace Gdterm.UI.Services
         {
             if (selectedTab == null || sessions == null || !sessions.ContainsKey(selectedTab))
             {
-                MessageBox.Show("请先打开一个连接", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(L10n.T("请先打开一个连接"), L10n.T("提示"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return false;
             }
 
@@ -32,14 +33,14 @@ namespace Gdterm.UI.Services
             var currentTerminal = TabActiveSessionQuery.ResolveTerminal(session);
             if (session == null || currentTerminal == null)
             {
-                MessageBox.Show("仅终端标签支持分屏", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(L10n.T("仅终端标签支持分屏"), L10n.T("提示"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return false;
             }
 
             var newTerminal = _opener.CreateSplitTerminal(session.Config, session.Credential);
             if (newTerminal == null)
             {
-                MessageBox.Show("无法创建分屏终端", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(L10n.T("无法创建分屏终端"), L10n.T("提示"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
 
