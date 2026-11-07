@@ -24,6 +24,7 @@ namespace Gdterm.UI.Forms
         private readonly IKeePassService _keepass;
         private AntdUI.Input _searchBox;
         private AntdUI.Table _table;
+        private TableShell<EntryRow> _shell;
         private EmptyStateView _emptyState;
         private AntdUI.Button _selectButton;
         private System.Collections.Generic.List<KeePassEntrySummary> _rows = new System.Collections.Generic.List<KeePassEntrySummary>();
@@ -86,6 +87,21 @@ namespace Gdterm.UI.Forms
             _table.CellClick += (s, e) => UpdateSelectionState();
             _table.CellDoubleClick += (s, e) => SelectEntry();
 
+            // 表壳：排序 + 导出（凭据多时按标题/用户/分组排；搜索走页面自己的 _searchBox，
+            // 故 showFilter:false，避免两套过滤叠加。排序作用在“当前搜索结果”内）。
+            _shell = new TableShell<EntryRow>(_table,
+                new[] { "标题", "用户名", "分组" },
+                r => string.Join(" ", new[] { r.Title, r.Username, r.GroupPath }),
+                (r, i) => { switch (i) { case 0: return r.Title; case 1: return r.Username; default: return r.GroupPath; } },
+                showFilter: false);
+            _shell.AddAction("导出", (s, e) => _shell.ExportCsv(FindForm(), "keepass-entries")).Name = "KeePassEntryExportButton";
+            // 可见顺序变化时把「可见行 → 源条目」写回 _rows（SelectedIndex-1 反查靠它）
+            _shell.ViewChanged += list =>
+            {
+                _rows.Clear();
+                foreach (var r in list) if (r.Source != null) _rows.Add(r.Source);
+            };
+
             // 统一到 EmptyStateView：原来的手工 Panel + 单行居中标签既没有标题层级，
             // 也不带“去管理密码库”的下一步动作。
             _emptyState = EmptyStateView.Attach(this, "密码库中没有可选凭据",
@@ -146,7 +162,7 @@ namespace Gdterm.UI.Forms
             btnPanel.Controls.Add(_selectButton, 4, 0);
 
             // Dock 顺序：后添加的先布局——Top 先钉住，Bottom 再钉住，Fill 吃剩余空间
-            Controls.Add(_table);
+            Controls.Add(_shell);
             Controls.Add(_emptyState);
             Controls.Add(btnPanel);
             Controls.Add(searchPanel);
@@ -177,23 +193,24 @@ namespace Gdterm.UI.Forms
             public string Title { get; set; }
             public string Username { get; set; }
             public string GroupPath { get; set; }
+            public KeePassEntrySummary Source { get; set; }   // 表壳 ViewChanged 反查源条目用
         }
 
         private void PopulateList(IList<KeePassEntrySummary> items)
         {
-            _rows.Clear();
             var rows = new List<EntryRow>();
             foreach (var e in items)
             {
-                _rows.Add(e);
                 rows.Add(new EntryRow
                 {
                     Title = e.Title ?? "",
                     Username = e.Username ?? "",
-                    GroupPath = e.GroupPath ?? ""
+                    GroupPath = e.GroupPath ?? "",
+                    Source = e
                 });
             }
-            _table.DataSource = rows;
+            _rows.Clear();
+            _shell.SetItems(rows);   // 壳置 DataSource + 触发 ViewChanged 重建 _rows
             bool isEmpty = _rows.Count == 0;
             _table.Visible = !isEmpty;
             if (_emptyState != null)
