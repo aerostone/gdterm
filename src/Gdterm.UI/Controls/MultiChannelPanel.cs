@@ -52,6 +52,8 @@ namespace Gdterm.UI.Controls
             _recorder = recorder;
             InitializeComponent();
             WireEvents();
+            // 首帧刷新：已有会话/空列表都要立刻可见（否则打开侧栏 = 空白列表 + 隐藏空态）
+            RefreshList();
         }
 
         private void InitializeComponent()

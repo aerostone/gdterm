@@ -81,7 +81,6 @@ namespace Gdterm.UI.Controls
             };
             _categoryBox.SelectedIndexChanged += (s, e) => FilterResults();
             topRow.Controls.Add(_categoryBox, 1, 0);
-            Controls.Add(topRow);
 
             _lvResults = new ListView
             {
@@ -106,6 +105,9 @@ namespace Gdterm.UI.Controls
                 if (e.Control && e.KeyCode == Keys.F) { _txtSearch.Focus(); _txtSearch.SelectAll(); e.SuppressKeyPress = true; }
             };
             Controls.Add(_shell);
+            // 停靠顺序（CI 0.1.381 实测 360x48 遮挡）：Fill 必须先于 Top 进集合，
+            // 反向布局时 Top 先吃掉顶边、Fill 再取剩余；反过来 Fill 会占满整块再被 Top 压上。
+            Controls.Add(topRow);
             _empty = EmptyStateView.Attach(this, "还没有命令模板",
                 "把常用命令存成模板，双击即插入当前终端（支持变量占位）");
 

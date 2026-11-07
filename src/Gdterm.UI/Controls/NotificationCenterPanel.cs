@@ -91,6 +91,9 @@ namespace Gdterm.UI.Controls
             // 审计 C1：通知中心空态（“没有通知”和“没加载出来”此前长得一模一样）
             _empty = EmptyStateView.Attach(this, "暂无通知",
                 "连接状态变化、扫描结果、导入导出等操作会在这里留痕");
+            // 首帧必须反映缓冲区现状：此前只在 Push 时刷新，侧栏一打开是空白表 + 隐藏空态，
+            // 看着像"通知全丢了"（CI 0.1.381 侧栏 dump 实证空态未显示）。
+            Reload();
         }
 
         public static void Push(string level, string message)

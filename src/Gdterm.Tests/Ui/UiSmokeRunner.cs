@@ -223,8 +223,9 @@ namespace Gdterm.Tests.Ui
                     new Gdterm.Connections.ConnectionStoreJson(Path.Combine(tmp, "conns.json"))), expectEmpty: true);
                 tryPanel("command-template", () => new CommandTemplatePanel(
                     new Gdterm.Connections.CommandTemplateStore(Path.Combine(tmp, "tpl.json")), null), expectEmpty: true);
+                // 高亮规则自带 7 条默认规则（HighlightRuleConfig.GetDefault）→ 非空库
                 tryPanel("highlight-rule", () => new HighlightRulePanel(
-                    new Gdterm.Connections.HighlightStore(Path.Combine(tmp, "highlight.json"))), expectEmpty: true);
+                    new Gdterm.Connections.HighlightStore(Path.Combine(tmp, "highlight.json"))), false);
                 tryPanel("transfer-center", () => new TransferCenterPanel(), expectEmpty: true);
                 tryPanel("notification-center", () => new NotificationCenterPanel(), expectEmpty: true);
                 tryPanel("multi-channel", () => new MultiChannelPanel(new Gdterm.Terminal.MultiChannelManager()), expectEmpty: true);
@@ -357,12 +358,12 @@ namespace Gdterm.Tests.Ui
                         if (ov.Width <= 0 || ov.Height <= 0) continue;
                         bad++;
                         if (bad <= 3)
-                            Check(false, where + " 停靠遮挡 " + Pretty(a) + " vs " + Pretty(b)
-                                + " 交叠" + ov.Width + "x" + ov.Height);
+                            Check(false, where + " DOCK_OVERLAP " + Pretty(a) + " vs " + Pretty(b)
+                                + " overlap=" + ov.Width + "x" + ov.Height);
                     }
                 }
             }
-            if (bad == 0) Check(true, where + " 停靠无遮挡(0 处)");
+            if (bad == 0) Check(true, where + " DOCK_OK (0 overlaps)");
         }
 
         private static bool IsEdgeDock(DockStyle d)
@@ -409,10 +410,10 @@ namespace Gdterm.Tests.Ui
                 try { panel = create(); }
                 catch (Exception ex)
                 {
-                    Check(false, name + " 构造失败: " + FlatEx(ex));
+                    Check(false, name + " CTOR_FAIL: " + FlatEx(ex));
                     return;
                 }
-                Check(panel != null, name + " 面板非空");
+                Check(panel != null, name + " PANEL_NULL");
                 if (panel == null) return;
 
                 panel.Dock = DockStyle.Fill;
@@ -426,7 +427,7 @@ namespace Gdterm.Tests.Ui
                 Application.DoEvents();
 
                 AssertNoDockOverlap(host, name);
-                Check(CountControls(panel) > 3, name + "-controls=" + CountControls(panel) + " (>3)");
+                Check(CountControls(panel) > 3, name + " TOO_FEW_CONTROLS=" + CountControls(panel) + " (>3)");
 
                 // 空态引导层：空数据源面板必须在树上挂 EmptyStateView（C1）。
                 // expectEmpty=true 时先断言存在再断言可见（场景要求节点存在：
@@ -434,13 +435,13 @@ namespace Gdterm.Tests.Ui
                 var empty = FindByType(panel, "EmptyStateView");
                 if (expectEmpty)
                 {
-                    Check(empty != null, name + " 空态引导存在（EmptyStateView）");
+                    Check(empty != null, name + " EMPTY_MISSING (no EmptyStateView)");
                     if (empty != null)
-                        Check(empty.Visible, name + " 空态引导可见（空库）");
+                        Check(empty.Visible, name + " EMPTY_HIDDEN (empty source but layer invisible)");
                 }
                 else if (empty != null)
                 {
-                    Check(empty.Visible, name + " 空态引导可见（空库）");
+                    Check(empty.Visible, name + " EMPTY_HIDDEN (empty source but layer invisible)");
                 }
 
                 Shot(host, Path.Combine(outDir, name + ".png"));

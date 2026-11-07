@@ -380,7 +380,11 @@ def main():
         if fname.startswith(("transfer-progress", "pwd-generator", "setup-wizard", "dangerous-cmd",
                               "scanner-center",
                               "command-history", "port-forward", "secret-scan",
-                              "key-binding", "toolbox", "logon-script")):
+                              "key-binding", "toolbox", "logon-script",
+                              # 2026-11 新增的 10 个侧栏面板 dump（同为面板，无 Close 语义）
+                              "macro", "bookmarks", "command-template", "highlight-rule",
+                              "transfer-center", "notification-center", "multi-channel",
+                              "batch-command", "health-monitor", "snippet-search")):
             check(True, "关闭绑定免判(" + fname + ")")
         else:
             closelike = [n for (n, _, _, _, _) in all_nodes

@@ -48,6 +48,23 @@ namespace Gdterm.UI.Controls
             _dangerousDetector = detector;
         }
 
+        /// <summary>按可用宽夹取命令输入框（不低于 120 设计 px，按钮与标签优先不被挤没）。</summary>
+        private void FitCommandBox(Control row)
+        {
+            if (_txtCommand == null || row == null) return;
+            int reserve = 0;
+            foreach (Control c in row.Controls)
+            {
+                if (c == _txtCommand) continue;
+                if (!c.Visible) continue;
+                reserve += c.Width + c.Margin.Horizontal;
+            }
+            int avail = row.ClientSize.Width - row.Padding.Horizontal - reserve - _txtCommand.Margin.Horizontal;
+            int min = DpiScale.V(this, 120);
+            int w = Math.Max(min, avail);
+            if (_txtCommand.Width != w) _txtCommand.Width = w;
+        }
+
         public void SetSessions(Dictionary<string, ITerminalSession> sessions)
         {
             _sessions = sessions ?? new Dictionary<string, ITerminalSession>();
@@ -71,6 +88,8 @@ namespace Gdterm.UI.Controls
 
             var lblCmd = new AntdUI.Label { Text = "命令:", AutoSize = true, Margin = new Padding(0, DpiScale.V(this, 6), DpiScale.V(this, 8), 0), Font = font, ForeColor = GdtermColorTable.Foreground };
             // 输入框高度与项目 38 地板统一（原先 28 在大字号下文字被裁）
+            // 宽度不写死 500：侧栏只有 ~360，固定宽会顶出右边界（CI 0.1.381 越界 x=16 w=500）。
+            // 先给一个设计宽，随后由 FitCommandBox 按宿主实际宽夹取。
             _txtCommand = new AntdUI.Input { Width = DpiScale.V(this, 500), Height = FormFontPolicy.FieldHeight(this), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.MonoFont(), Margin = new Padding(0, DpiScale.V(this, 1), DpiScale.V(this, 8), 0)};
             _txtCommand.KeyDown += OnCommandKeyDown;
 
@@ -80,6 +99,9 @@ namespace Gdterm.UI.Controls
             _lblStatus = new AntdUI.Label { Text = "", AutoSize = true, Margin = new Padding(0, DpiScale.V(this, 6), 0, 0), Font = font, ForeColor = GdtermColorTable.Muted };
 
             topPanel.Controls.AddRange(new Control[] { lblCmd, _txtCommand, _btnExecute, _lblStatus });
+            // 宿主变宽/变窄时重算输入框宽度（侧栏 360 / 独立窗口 900 都要合适）
+            topPanel.SizeChanged += (s2, e2) => FitCommandBox(topPanel);
+            FitCommandBox(topPanel);
 
             // ── 左侧：会话列表 ──
             var leftPanel = new Panel { Dock = DockStyle.Left, Width = 250, BackColor = GdtermColorTable.Surface, Padding = new Padding(4) };

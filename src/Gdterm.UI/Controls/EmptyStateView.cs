@@ -203,6 +203,31 @@ namespace Gdterm.UI.Controls
             try { _box.PerformLayout(); } catch (Exception) { }
         }
 
+        /// <summary>
+        /// 高度自适应（CI 0.1.381 实证）：书签页底部空态位只有 94px，而「标题+两行说明+按钮」
+        /// 实测 121px —— 硬居中只会把按钮顶到宿主外面（越界 + 点不到）。
+        /// 空间不足就先舍说明（标题 + 主操作仍完整可读），空间恢复再挂回来。
+        /// </summary>
+        private void FitHeight()
+        {
+            if (_desc == null) return;
+            try { _box.PerformLayout(); } catch (Exception) { }
+            int avail = ClientSize.Height;
+            if (avail <= 0) return;
+            bool wantCollapse = _box.Height > avail;
+            if (_desc.Visible == wantCollapse)   // 需要收起却还在显示 / 需要恢复却已收起
+            {
+                _desc.Visible = !wantCollapse;
+                try { _box.PerformLayout(); } catch (Exception) { }
+                // 恢复说明后仍然放不下 → 退回收起态（避免抖动）
+                if (!wantCollapse && _box.Height > avail)
+                {
+                    _desc.Visible = false;
+                    try { _box.PerformLayout(); } catch (Exception) { }
+                }
+            }
+        }
+
         protected override void OnVisibleChanged(EventArgs e)
         {
             base.OnVisibleChanged(e);
@@ -212,6 +237,7 @@ namespace Gdterm.UI.Controls
         private void CenterBox()
         {
             if (_box == null) return;
+            FitHeight();
             int w = _box.Width, h = _box.Height;
             if (w <= 0 || h <= 0) { _box.PerformLayout(); w = _box.Width; h = _box.Height; }
             _box.Left = Math.Max(0, (ClientSize.Width - w) / 2);

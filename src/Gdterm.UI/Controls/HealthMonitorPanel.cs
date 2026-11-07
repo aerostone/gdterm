@@ -85,7 +85,9 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Top,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                WrapContents = false,
+                // 5 张卡片在侧栏宽（~360）里横排必然越界（CI 0.1.381 实测第 5 张 x=310 + 115px）。
+                // 允许换行：宽宿主仍是一行，窄侧栏自动折成 2~3 行，卡不裁、字不糊。
+                WrapContents = true,
                 BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 10), DpiScale.V(this, 12), DpiScale.V(this, 10))
             };
