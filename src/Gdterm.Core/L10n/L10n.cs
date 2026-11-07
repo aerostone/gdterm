@@ -66,6 +66,11 @@ namespace Gdterm.Core
             ["确认修改"] = "Confirm change",
             ["确认新密码"] = "Confirm new password",
             ["请输入当前密码"] = "Enter the current password",
+            // —— 触发器通知（批次5d：TerminalControl.Triggers） ——
+            ["触发器已发送命令："] = "Trigger sent command: ",
+            ["触发器"] = "Trigger",
+            // —— 链接通知（批次5d：TerminalControl.Links） ——
+            ["无法打开："] = "Cannot open: ",
             // —— OTP 生成（批次5c：OtpGenerator） ——
             ["key 为空"] = "key is empty",
             // —— 宏录制（批次5c：MacroRecorder） ——

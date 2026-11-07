@@ -4,6 +4,7 @@ using System.IO;
 using System.Windows.Forms;
 using Gdterm.Terminal.Rendering.Vt;
 using Gdterm.UI.Diagnostics;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
@@ -134,7 +135,7 @@ namespace Gdterm.UI.Controls
             catch (Exception ex)
             {
                 DiagLog.Swallowed("TerminalControl.OpenWithShell", ex);
-                try { NotificationCenterPanel.Push("warn", "无法打开：" + target); } catch { }
+                try { NotificationCenterPanel.Push("warn", L10n.T("无法打开：") + target); } catch { }
             }
         }
     }

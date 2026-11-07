@@ -4,6 +4,7 @@ using System.Text;
 using Gdterm.Core.Models;
 using Gdterm.Terminal;
 using Gdterm.UI.Diagnostics;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
@@ -103,7 +104,7 @@ namespace Gdterm.UI.Controls
                         try
                         {
                             TrySendInput(cmd, isCommandLine: true);   // 危险命令闸门照样生效
-                            NotificationCenterPanel.Push("info", "触发器已发送命令：" + cmd);
+                            NotificationCenterPanel.Push("info", L10n.T("触发器已发送命令：") + cmd);
                         }
                         catch (Exception ex) { DiagLog.Swallowed("TerminalControl.TriggerSend", ex); }
                         break;
@@ -111,7 +112,7 @@ namespace Gdterm.UI.Controls
                 case HighlightAction.Notify:
                     {
                         string body = string.IsNullOrWhiteSpace(hit.Argument) ? (line ?? "").Trim() : hit.Argument;
-                        string title = string.IsNullOrWhiteSpace(hit.RuleName) ? "触发器" : hit.RuleName;
+                        string title = string.IsNullOrWhiteSpace(hit.RuleName) ? L10n.T("触发器") : hit.RuleName;
                         try { NotificationCenterPanel.Push(title, body); }
                         catch (Exception ex) { DiagLog.Swallowed("TerminalControl.TriggerNotify", ex); }
                         try { ToastNotifier.Show(title + "：" + body, ToastNotifier.Level.Warning, 4500, false); }
