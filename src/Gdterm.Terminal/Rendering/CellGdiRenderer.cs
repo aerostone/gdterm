@@ -58,6 +58,8 @@ namespace Gdterm.Terminal.Rendering
         private bool _fullPaint = true;
         /// <summary>上一帧实际重画的行数（诊断/测试用：1 表示只补了脏行，多行表示整屏）。</summary>
         public int LastPaintedRowCount { get; private set; }
+        /// <summary>上一帧快照+差分耗时（ms，诊断用；Paint 耗时 = 帧总耗时 - 此项）。</summary>
+        internal long LastSnapshotMs { get; private set; }
         private const int MinRedrawIntervalMs = 16;
         private const string FontName = "Consolas";
         private const float FontSize = 12f;
@@ -532,6 +534,7 @@ namespace Gdterm.Terminal.Rendering
         private void RefreshSnapshot(bool force)
         {
             if (!force && !_engine.Changed) return;
+            var sw = System.Diagnostics.Stopwatch.StartNew();
             var page = _engine.SnapshotVisible();
             int top;
             try { top = _engine.ViewportTopRow; } catch { top = 0; }
@@ -539,6 +542,7 @@ namespace Gdterm.Terminal.Rendering
             _pageTopRow = top;
             ComputeDirty(page, top);
             _engine.ClearChanges();
+            LastSnapshotMs = (long)sw.Elapsed.TotalMilliseconds;
         }
 
         /// <summary>

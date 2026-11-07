@@ -40,10 +40,13 @@ namespace Gdterm.Tests.Terminal
             var canvas = (Control)r.GetControl();
             // 按 Consolas 12pt @96dpi 的实测格宽 9x18 给画布（ApplyFont 内部也会 RecomputeGrid）
             canvas.Size = new Size(Cols * 9 + 24, Rows * 18 + 24);
-            canvas.CreateControl();
-            if (!canvas.IsHandleCreated)
+            // 关键：必须 Visible——parentless 窗口不带 WS_VISIBLE 时 Update()→UpdateWindow()
+            // 会跳过 WM_PAINT，GDI 路径测不到（0.1.394 基线首轮实测教训：帧耗时里全是快照、
+            // paintedRows 恒 0）。CI 会话有桌面，短暂露一块空白面板无副作用。
+            canvas.Show();
+            if (!canvas.IsHandleCreated || !canvas.Visible)
             {
-                Console.WriteLine("perf-bench: FAILED - canvas handle not created (no desktop session?)");
+                Console.WriteLine("perf-bench: FAILED - canvas not visible (no desktop session?)");
                 return 1;
             }
 
@@ -88,6 +91,7 @@ namespace Gdterm.Tests.Terminal
             public int Frames;
             public int FullFrames;           // 整屏帧数（paintedRows >= Rows）
             public long MinMs, AvgMs, P50Ms, P95Ms, MaxMs;
+            public long SnapAvgMs, SnapP95Ms;   // 快照+差分（引擎 GetPageSpans + 行快照）
             public double AvgRows;
             public double AvgAllocKB;
         }
@@ -108,6 +112,7 @@ namespace Gdterm.Tests.Terminal
         {
             var res = new ScenarioResult { Name = name, Frames = frames };
             var ms = new long[frames];
+            var snapMs = new long[frames];
             double rowsSum = 0;
             long memBefore = GC.GetTotalMemory(false);
             for (int f = 0; f < frames; f++)
@@ -118,19 +123,23 @@ namespace Gdterm.Tests.Terminal
                 sw.Stop();
                 // 亚毫秒帧记 1ms：保留分辨力又不归零（Stopwatch 本身亚微秒精度，这里是口径选择）
                 ms[f] = Math.Max(1L, (long)sw.Elapsed.TotalMilliseconds);
+                snapMs[f] = r.LastSnapshotMs;
                 int painted = r.LastPaintedRowCount;
                 rowsSum += painted;
                 if (painted >= Rows) res.FullFrames++;
             }
             long memAfter = GC.GetTotalMemory(false);
             Array.Sort(ms);
+            Array.Sort(snapMs);
             res.MinMs = ms[0];
             res.P50Ms = ms[frames / 2];
             res.P95Ms = ms[(int)(frames * 0.95)];
             res.MaxMs = ms[frames - 1];
-            long sum = 0;
-            for (int i = 0; i < frames; i++) sum += ms[i];
+            res.SnapP95Ms = snapMs[(int)(frames * 0.95)];
+            long sum = 0, snapSum = 0;
+            for (int i = 0; i < frames; i++) { sum += ms[i]; snapSum += snapMs[i]; }
             res.AvgMs = sum / frames;
+            res.SnapAvgMs = snapSum / frames;
             res.AvgRows = rowsSum / frames;
             res.AvgAllocKB = (memAfter - memBefore) / 1024.0 / frames;
             return res;
@@ -139,17 +148,19 @@ namespace Gdterm.Tests.Terminal
         private static void PrintTable(ScenarioResult[] ss)
         {
             var sb = new StringBuilder();
-            sb.AppendLine("scenario  frames  full  min  avg   p50  p95   max  rows/f  allocKB/f");
+            sb.AppendLine("scenario  frames  full  min  avg   p50  p95   max  snapAvg snapP95 rows/f allocKB/f");
             foreach (var s in ss)
             {
                 sb.AppendLine(string.Format(CultureInfo.InvariantCulture,
-                    "{0,-9} {1,6} {2,5} {3,4} {4,5} {5,4} {6,5} {7,5} {8,7} {9,8}",
+                    "{0,-9} {1,6} {2,5} {3,4} {4,5} {5,4} {6,5} {7,5} {8,7} {9,7} {10,6} {11,8}",
                     s.Name, s.Frames, s.FullFrames, s.MinMs, s.AvgMs, s.P50Ms, s.P95Ms, s.MaxMs,
+                    s.SnapAvgMs, s.SnapP95Ms,
                     s.AvgRows.ToString("F1", CultureInfo.InvariantCulture),
                     s.AvgAllocKB.ToString("F1", CultureInfo.InvariantCulture)));
             }
             Console.WriteLine(sb.ToString());
-            Console.WriteLine("note: scroll1/burst25 = full-paint frames (scroll moves every row);");
+            Console.WriteLine("note: frame = feed + snapshot(engine GetPageSpans+diff) + GDI paint.");
+            Console.WriteLine("      scroll1/burst25 = full-paint frames (scroll moves every row);");
             Console.WriteLine("      inplace = dirty-row path (expect rows/f ~1-2).");
             Console.WriteLine("      budget: full-paint p95 < 16ms, inplace p95 < 4ms @ " + Rows + "x" + Cols);
         }
@@ -171,6 +182,8 @@ namespace Gdterm.Tests.Terminal
                   .Append(", \"p50_ms\": ").Append(s.P50Ms.ToString(CultureInfo.InvariantCulture))
                   .Append(", \"p95_ms\": ").Append(s.P95Ms.ToString(CultureInfo.InvariantCulture))
                   .Append(", \"max_ms\": ").Append(s.MaxMs.ToString(CultureInfo.InvariantCulture))
+                  .Append(", \"snapshot_avg_ms\": ").Append(s.SnapAvgMs.ToString(CultureInfo.InvariantCulture))
+                  .Append(", \"snapshot_p95_ms\": ").Append(s.SnapP95Ms.ToString(CultureInfo.InvariantCulture))
                   .Append(", \"avg_rows_per_frame\": ").Append(s.AvgRows.ToString("F2", CultureInfo.InvariantCulture))
                   .Append(", \"avg_alloc_kb_per_frame\": ").Append(s.AvgAllocKB.ToString("F2", CultureInfo.InvariantCulture))
                   .Append(" }");
