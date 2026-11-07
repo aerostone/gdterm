@@ -165,14 +165,14 @@ namespace Gdterm.UI.Controls
         {
             if (InvokeRequired) { BeginInvoke(new Action<bool>(UpdateSecurityStatus), locked); return; }
             _securityDot.ForeColor = locked ? GdtermColorTable.Muted : GdtermColorTable.Success;
-            SetStatusTip(_securityStatus, locked ? "安全: 已锁定（点击修改主密码）" : "安全: 已解锁（点击修改主密码）");
+            SetStatusTip(_securityStatus, locked ? L10n.T("安全: 已锁定（点击修改主密码）") : L10n.T("安全: 已解锁（点击修改主密码）"));
         }
 
         public void UpdateKeePassStatus(bool unlocked)
         {
             if (InvokeRequired) { BeginInvoke(new Action<bool>(UpdateKeePassStatus), unlocked); return; }
             _keepassDot.ForeColor = unlocked ? GdtermColorTable.Success : GdtermColorTable.Muted;
-            SetStatusTip(_keepassStatus, unlocked ? "密码库: 已解锁" : "密码库: 锁定");
+            SetStatusTip(_keepassStatus, unlocked ? L10n.T("密码库: 已解锁") : L10n.T("密码库: 锁定"));
         }
 
         /// <summary>连接状态段（A1）：空=就绪(Muted)；含"失败"=Danger；其余重连中=Warning。自带线程 marshal。</summary>
@@ -182,9 +182,9 @@ namespace Gdterm.UI.Controls
             if (_connectionStatus == null) return;
             if (string.IsNullOrEmpty(text))
             {
-                _connectionStatus.Text = "就绪";
+                _connectionStatus.Text = L10n.T("就绪");
                 _connectionStatus.ForeColor = GdtermColorTable.Muted;
-                SetStatusTip(_connectionStatus, "连接: 就绪");
+                SetStatusTip(_connectionStatus, L10n.T("连接: 就绪"));
             }
             else
             {
@@ -192,7 +192,7 @@ namespace Gdterm.UI.Controls
                 _connectionStatus.ForeColor = text.IndexOf("失败", StringComparison.Ordinal) >= 0
                     ? GdtermColorTable.Danger
                     : GdtermColorTable.Warning;
-                SetStatusTip(_connectionStatus, "连接: " + text);
+                SetStatusTip(_connectionStatus, L10n.T("连接: ") + text);
             }
         }
 
@@ -253,7 +253,7 @@ namespace Gdterm.UI.Controls
             // 左：分组下拉按钮
             _groupBtn = new AntdUI.Button
             {
-                Text = "全部 ▾",
+                Text = L10n.T("全部 ▾"),
                 AutoSize = true,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Muted,
@@ -327,17 +327,17 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Background
             };
 
-            _connectionStatus = new ToolStripStatusLabel("就绪") { ForeColor = GdtermColorTable.Muted, AutoSize = true, Spring = false };
+            _connectionStatus = new ToolStripStatusLabel(L10n.T("就绪")) { ForeColor = GdtermColorTable.Muted, AutoSize = true, Spring = false };
             _terminalSizeLabel = new ToolStripStatusLabel("80×24") { ForeColor = GdtermColorTable.Muted, AutoSize = true };
             _encodingLabel = new ToolStripStatusLabel("UTF-8") { ForeColor = GdtermColorTable.Muted, AutoSize = true };
 
             strip.Items.Add(_connectionStatus);
             strip.Items.Add(new ToolStripSeparator());
             // P3：彩点(●语义色) + 中性短词。旧实现用 ⚡🔑✦🔒 emoji，雅黑无字形→豆腐块，且丢了短词。
-            _tunnelStatus   = MakeStatusPair(strip, out _tunnelDot,   "隧道",   GdtermColorTable.Muted,   "隧道: 无（点击打开端口转发面板）", "tunnel");
-            _keepassStatus  = MakeStatusPair(strip, out _keepassDot,  "密码库", GdtermColorTable.Muted,   "密码库: 锁定（点击打开密码库管理）", "keepass");
-            _aiStatus       = MakeStatusPair(strip, out _aiDot,       "AI",     GdtermColorTable.Success, "AI: 就绪（点击打开 AI 助手设置）", "ai");
-            _securityStatus = MakeStatusPair(strip, out _securityDot, "安全",   GdtermColorTable.Muted,   "安全: 已锁定（点击修改主密码）", "security");
+            _tunnelStatus   = MakeStatusPair(strip, out _tunnelDot,   L10n.T("隧道"),   GdtermColorTable.Muted,   L10n.T("隧道: 无（点击打开端口转发面板）"), "tunnel");
+            _keepassStatus  = MakeStatusPair(strip, out _keepassDot,  L10n.T("密码库"), GdtermColorTable.Muted,   L10n.T("密码库: 锁定（点击打开密码库管理）"), "keepass");
+            _aiStatus       = MakeStatusPair(strip, out _aiDot,       "AI",     GdtermColorTable.Success, L10n.T("AI: 就绪（点击打开 AI 助手设置）"), "ai");
+            _securityStatus = MakeStatusPair(strip, out _securityDot, L10n.T("安全"),   GdtermColorTable.Muted,   L10n.T("安全: 已锁定（点击修改主密码）"), "security");
             strip.Items.Add(_terminalSizeLabel);
             strip.Items.Add(new ToolStripSeparator());
             strip.Items.Add(_encodingLabel);
@@ -393,10 +393,10 @@ namespace Gdterm.UI.Controls
                 .OrderBy(g => g)
                 .ToList();
 
-            AddGroupMenuItem("全部", null);
+            AddGroupMenuItem(L10n.T("全部"), null);
             foreach (var g in groups) AddGroupMenuItem(g, g);
             _groupMenu.Items.Add(new ToolStripSeparator());
-            AddGroupMenuItem("tmux 键组", "__tmux__");
+            AddGroupMenuItem(L10n.T("tmux 键组"), "__tmux__");
 
             // 当前项勾选态
             string currentKey = _isTmux ? "__tmux__" : (_activeGroup ?? "");
@@ -449,12 +449,12 @@ namespace Gdterm.UI.Controls
                 _groupBtn.ForeColor = GdtermColorTable.Accent;
                 _pinBtn.Visible = true;
                 _pinBtn.ForeColor = _tmuxPinned ? GdtermColorTable.Accent : GdtermColorTable.Muted;
-                _pinBtn.ToolTipText2(_tmuxPinned ? "已钉住：tmux 键组常驻" : "钉住：tmux 键组常驻展示");
+                _pinBtn.ToolTipText2(_tmuxPinned ? L10n.T("已钉住：tmux 键组常驻") : L10n.T("钉住：tmux 键组常驻展示"));
                 x = BuildTmuxKeys(x, dpi, avail);
             }
             else
             {
-                _groupBtn.Text = (_activeGroup ?? "全部") + " ▾";
+                _groupBtn.Text = (_activeGroup ?? L10n.T("全部")) + " ▾";
                 _groupBtn.ForeColor = _activeGroup == null ? GdtermColorTable.Muted : GdtermColorTable.Accent;
                 _pinBtn.Visible = false;
 
@@ -496,8 +496,8 @@ namespace Gdterm.UI.Controls
                         TabStop = false,
                         Padding = AddButtonPadding()
                     };
-                    add.Click += (s, e) => AddRequested?.Invoke(_activeGroup ?? "自定义");
-                    add.ToolTipText2("添加快捷命令");
+                    add.Click += (s, e) => AddRequested?.Invoke(_activeGroup ?? L10n.T("自定义"));
+                    add.ToolTipText2(L10n.T("添加快捷命令"));
                     x = PlaceControl(add, x, dpi);
                 }
             }
@@ -528,7 +528,7 @@ namespace Gdterm.UI.Controls
                 TabStop = false,
                 Padding = new Padding(DpiScale.V(this, 7), DpiScale.V(this, 2), DpiScale.V(this, 7), DpiScale.V(this, 2))
             };
-            more.ToolTipText2("显示其余快捷命令");
+            more.ToolTipText2(L10n.T("显示其余快捷命令"));
             var menu = new ContextMenuStrip
             {
                 BackColor = GdtermColorTable.Surface2,
@@ -537,14 +537,14 @@ namespace Gdterm.UI.Controls
             foreach (var cmd in rest)
             {
                 var c = cmd;
-                var item = new ToolStripMenuItem(c.Name ?? "(未命名命令)") { ToolTipText = c.Description ?? c.Command ?? "" };
+                var item = new ToolStripMenuItem(c.Name ?? L10n.T("(未命名命令)")) { ToolTipText = c.Description ?? c.Command ?? "" };
                 item.Click += (s, e) => SendCommand(c, more);
                 menu.Items.Add(item);
             }
             // 兜底：+ 钮在极窄窗被跳过时，用户仍可从此处添加
             menu.Items.Add(new ToolStripSeparator());
-            var addItem = new ToolStripMenuItem("添加快捷命令…");
-            addItem.Click += (s, e) => AddRequested?.Invoke(_activeGroup ?? "自定义");
+            var addItem = new ToolStripMenuItem(L10n.T("添加快捷命令…"));
+            addItem.Click += (s, e) => AddRequested?.Invoke(_activeGroup ?? L10n.T("自定义"));
             menu.Items.Add(addItem);
             more.ContextMenuStrip = menu;
             more.Click += (s, e) => menu.Show(more, new Point(0, more.Height));
@@ -635,9 +635,9 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Surface2,
                 ForeColor = GdtermColorTable.Foreground
             };
-            var miEdit = new ToolStripMenuItem("编辑"); miEdit.Click += (s, e) => EditRequested?.Invoke(cmd);
-            var miCopy = new ToolStripMenuItem("复制命令"); miCopy.Click += (s, e) => { try { Clipboard.SetText(ResolveCommand(cmd)); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("BottomBarPanel", exSwallowed); } catch { } } };
-            var miDel = new ToolStripMenuItem("删除"); miDel.Click += (s, e) =>
+            var miEdit = new ToolStripMenuItem(L10n.T("编辑")); miEdit.Click += (s, e) => EditRequested?.Invoke(cmd);
+            var miCopy = new ToolStripMenuItem(L10n.T("复制命令")); miCopy.Click += (s, e) => { try { Clipboard.SetText(ResolveCommand(cmd)); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("BottomBarPanel", exSwallowed); } catch { } } };
+            var miDel = new ToolStripMenuItem(L10n.T("删除")); miDel.Click += (s, e) =>
             {
                 // 先落盘再刷内存：有注入走 store.Delete（失败则不动），无注入仅内存删
                 if (DeletePersisted != null)
@@ -651,7 +651,7 @@ namespace Gdterm.UI.Controls
             ctx.Items.Add(miEdit); ctx.Items.Add(miCopy); ctx.Items.Add(miDel);
             btn.ContextMenuStrip = ctx;
 
-            btn.ToolTipText2(string.Format("{0}\n命令: {1}{2}",
+            btn.ToolTipText2(string.Format(L10n.T("{0}\n命令: {1}{2}"),
                 cmd.Description ?? cmd.Name,
                 cmd.PreCommand != null ? cmd.PreCommand + " && " : "",
                 cmd.Command));
@@ -678,20 +678,20 @@ namespace Gdterm.UI.Controls
             var keyFont = FormFontPolicy.UiFont(-0.5f);
 
             // 前缀选择器：tmux(C-b) 与 screen(C-a) 都兼容，点选切换 _prefix
-            x = PlaceControl(CreatePrefixButton("C-b", "\u0002", "tmux 默认前缀 C-b"), x, dpi);
-            x = PlaceControl(CreatePrefixButton("C-a", "\u0001", "screen 默认前缀 C-a"), x, dpi);
+            x = PlaceControl(CreatePrefixButton("C-b", "\u0002", L10n.T("tmux 默认前缀 C-b")), x, dpi);
+            x = PlaceControl(CreatePrefixButton("C-a", "\u0001", L10n.T("screen 默认前缀 C-a")), x, dpi);
             x = PlaceTmuxSeparator(x);
 
             var groups = new[]
             {
                 // window：前后窗 + 重命名 + 杀窗口（PC 高频，,& 不用翻菜单找）
-                new[] { new TmuxKey{Label="◀Win",Key="p",Tip="prev window"}, new TmuxKey{Label="Win▶",Key="n",Tip="next window"}, new TmuxKey{Label="改名,",Key=",",Tip="rename window"}, new TmuxKey{Label="杀窗&",Key="&",Tip="kill window"} },
+                new[] { new TmuxKey{Label="◀Win",Key="p",Tip="prev window"}, new TmuxKey{Label="Win▶",Key="n",Tip="next window"}, new TmuxKey{Label=L10n.T("改名,"),Key=",",Tip="rename window"}, new TmuxKey{Label=L10n.T("杀窗&"),Key="&",Tip="kill window"} },
                 new[] { new TmuxKey{Label="▲Buf",Key="[",Tip="copy mode ↑"}, new TmuxKey{Label="PgUp",Raw="\u001b[5~",Tip="page up"}, new TmuxKey{Label="PgDn",Raw="\u001b[6~",Tip="page down"} },
                 // pane：o 轮切是 PC 最高频，切 pane 不翻菜单
-                new[] { new TmuxKey{Label="|Pane",Key="%",Tip="split vertical"}, new TmuxKey{Label="—Pane",Key="\"",Tip="split horizontal"}, new TmuxKey{Label="o切换",Key="o",Tip="next pane"}, new TmuxKey{Label="Zoom",Key="z",Tip="zoom pane"}, new TmuxKey{Label="Kill○",Key="x",Tip="kill pane"} },
+                new[] { new TmuxKey{Label="|Pane",Key="%",Tip="split vertical"}, new TmuxKey{Label="—Pane",Key="\"",Tip="split horizontal"}, new TmuxKey{Label=L10n.T("o切换"),Key="o",Tip="next pane"}, new TmuxKey{Label="Zoom",Key="z",Tip="zoom pane"}, new TmuxKey{Label="Kill○",Key="x",Tip="kill pane"} },
                 new[] { new TmuxKey{Label="Copy",Key="[",Tip="copy mode"}, new TmuxKey{Label="Paste",Key="]",Tip="paste buffer"} },
                 // session：s 会话列表 / : 命令模式 / t 时钟是 PC 高频
-                new[] { new TmuxKey{Label="NewWin",Key="c",Tip="new window"}, new TmuxKey{Label="List",Key="w",Tip="list windows"}, new TmuxKey{Label="s会话",Key="s",Tip="list sessions"}, new TmuxKey{Label=":命令",Key=":",Tip="command prompt"}, new TmuxKey{Label="Detach",Key="d",Tip="detach"} }
+                new[] { new TmuxKey{Label="NewWin",Key="c",Tip="new window"}, new TmuxKey{Label="List",Key="w",Tip="list windows"}, new TmuxKey{Label=L10n.T("s会话"),Key="s",Tip="list sessions"}, new TmuxKey{Label=L10n.T(":命令"),Key=":",Tip="command prompt"}, new TmuxKey{Label="Detach",Key="d",Tip="detach"} }
             };
 
             // 展平为「键 / 组分隔」序列：放不下时把剩余整段搬进「…」菜单，绝不静默丢键
@@ -769,7 +769,7 @@ namespace Gdterm.UI.Controls
                 TabStop = false,
                 Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 2), DpiScale.V(this, 6), DpiScale.V(this, 2))
             };
-            more.ToolTipText2("更多 tmux/screen 键");
+            more.ToolTipText2(L10n.T("更多 tmux/screen 键"));
             var menu = new ContextMenuStrip { BackColor = GdtermColorTable.Surface2, ForeColor = GdtermColorTable.Foreground };
             foreach (var s in rest)
             {
@@ -823,7 +823,7 @@ namespace Gdterm.UI.Controls
                 || (_activeSession?.IsConnected == true);
             if (!connected)
             {
-                ShowTooltip(button, "没有活动的终端会话");
+                ShowTooltip(button, L10n.T("没有活动的终端会话"));
                 return;
             }
             try
@@ -833,7 +833,7 @@ namespace Gdterm.UI.Controls
             }
             catch (Exception ex)
             {
-                ShowTooltip(button, "发送失败: " + ex.Message);
+                ShowTooltip(button, L10n.T("发送失败: ") + ex.Message);
             }
         }
 

@@ -304,7 +304,7 @@ namespace Gdterm.UI.Controls
                 SetMenuItemEnabled("_onlineHostPortItem", hasHostPort);
             };
 
-            var copyItem = new ToolStripMenuItem("复制(&C)");
+            var copyItem = new ToolStripMenuItem(L10n.T("复制(&C)"));
             copyItem.Name = "_copyItem";
             copyItem.Click += (s, e) =>
             {
@@ -316,7 +316,7 @@ namespace Gdterm.UI.Controls
                 catch (Exception ex) { DiagLog.Swallowed("TerminalControl.Copy", ex); }
             };
 
-            var pasteItem = new ToolStripMenuItem("粘贴(&V)");
+            var pasteItem = new ToolStripMenuItem(L10n.T("粘贴(&V)"));
             pasteItem.Name = "_pasteItem";
             pasteItem.Click += (s, e) =>
             {
@@ -328,7 +328,7 @@ namespace Gdterm.UI.Controls
             _termMenu.Items.Add(pasteItem);
             _termMenu.Items.Add(new ToolStripSeparator());
 
-            var clearItem = new ToolStripMenuItem("清屏(&L)");
+            var clearItem = new ToolStripMenuItem(L10n.T("清屏(&L)"));
             clearItem.Name = "_clearItem";
             clearItem.Click += (s, e) =>
             {
@@ -336,7 +336,7 @@ namespace Gdterm.UI.Controls
             };
             _termMenu.Items.Add(clearItem);
 
-            var searchItem = new ToolStripMenuItem("查找(&F)...");
+            var searchItem = new ToolStripMenuItem(L10n.T("查找(&F)..."));
             searchItem.Name = "_searchItem";
             searchItem.Click += (s, e) =>
             {
@@ -345,16 +345,16 @@ namespace Gdterm.UI.Controls
             _termMenu.Items.Add(searchItem);
 
             // 在线动作（nyaterm 对比吸收 A4）：选中文本 → 浏览器搜索/翻译/IP 查询
-            var onlineMenu = new ToolStripMenuItem("在线(&S)");
-            var onlineSearchItem = new ToolStripMenuItem("搜索(Bing)(&G)");
+            var onlineMenu = new ToolStripMenuItem(L10n.T("在线(&S)"));
+            var onlineSearchItem = new ToolStripMenuItem(L10n.T("搜索(Bing)(&G)"));
             onlineSearchItem.Name = "_onlineSearchItem";
             onlineSearchItem.Click += (s, e) => OpenOnlineUrl(
                 () => Gdterm.Core.OnlineLinks.BuildSearchUrl(GetSelection()), "TerminalControl.OnlineSearch");
-            var onlineTranslateItem = new ToolStripMenuItem("翻译(&T)");
+            var onlineTranslateItem = new ToolStripMenuItem(L10n.T("翻译(&T)"));
             onlineTranslateItem.Name = "_onlineTranslateItem";
             onlineTranslateItem.Click += (s, e) => OpenOnlineUrl(
                 () => Gdterm.Core.OnlineLinks.BuildTranslateUrl(GetSelection()), "TerminalControl.OnlineTranslate");
-            var onlineIpItem = new ToolStripMenuItem("IP 查询(&I)");
+            var onlineIpItem = new ToolStripMenuItem(L10n.T("IP 查询(&I)"));
             onlineIpItem.Name = "_onlineIpItem";
             onlineIpItem.Click += (s, e) =>
             {
@@ -363,8 +363,8 @@ namespace Gdterm.UI.Controls
                     var ip = Gdterm.Core.OnlineLinks.ExtractFirstIpv4(GetSelection());
                     if (ip == null)
                     {
-                        MessageBox.Show(this, "选中文本中未找到合法 IPv4 地址。",
-                            "IP 查询", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show(this, L10n.T("选中文本中未找到合法 IPv4 地址。"),
+                            L10n.T("IP 查询"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                         return;
                     }
                     OpenOnlineUrl(() => Gdterm.Core.OnlineLinks.BuildIpLookupUrl(ip), "TerminalControl.OnlineIp");
@@ -374,7 +374,7 @@ namespace Gdterm.UI.Controls
             onlineMenu.DropDownItems.Add(onlineSearchItem);
             onlineMenu.DropDownItems.Add(onlineTranslateItem);
             onlineMenu.DropDownItems.Add(onlineIpItem);
-            var onlineHostPortItem = new ToolStripMenuItem("打开对应连接(host:port)(&O)");
+            var onlineHostPortItem = new ToolStripMenuItem(L10n.T("打开对应连接(host:port)(&O)"));
             onlineHostPortItem.Name = "_onlineHostPortItem";
             onlineHostPortItem.Click += (s, e) =>
             {
@@ -383,8 +383,8 @@ namespace Gdterm.UI.Controls
                     var hp = Gdterm.Core.OnlineLinks.ExtractFirstHostPort(GetSelection());
                     if (hp == null)
                     {
-                        MessageBox.Show(this, "选中文本中未找到 host:port 地址。",
-                            "打开连接", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show(this, L10n.T("选中文本中未找到 host:port 地址。"),
+                            L10n.T("打开连接"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                         return;
                     }
                     var hpe = HostPortOpenRequested;
@@ -396,7 +396,7 @@ namespace Gdterm.UI.Controls
             _termMenu.Items.Add(onlineMenu);
             _termMenu.Items.Add(new ToolStripSeparator());
 
-            var reconnectItem = new ToolStripMenuItem("重连(&R)");
+            var reconnectItem = new ToolStripMenuItem(L10n.T("重连(&R)"));
             reconnectItem.Name = "_reconnectItem";
             reconnectItem.Click += (s, e) =>
             {
@@ -404,7 +404,7 @@ namespace Gdterm.UI.Controls
             };
             _termMenu.Items.Add(reconnectItem);
 
-            var exportItem = new ToolStripMenuItem("导出缓冲(&E)...");
+            var exportItem = new ToolStripMenuItem(L10n.T("导出缓冲(&E)..."));
             exportItem.Name = "_exportItem";
             exportItem.Click += (s, e) =>
             {
@@ -413,7 +413,7 @@ namespace Gdterm.UI.Controls
             _termMenu.Items.Add(exportItem);
             _termMenu.Items.Add(new ToolStripSeparator());
 
-            var settingsItem = new ToolStripMenuItem("外观设置(&A)...");
+            var settingsItem = new ToolStripMenuItem(L10n.T("外观设置(&A)..."));
             settingsItem.Name = "_settingsItem";
             settingsItem.Click += (s, e) =>
             {
@@ -927,14 +927,14 @@ namespace Gdterm.UI.Controls
                 {
                     try
                     {
-                        _renderer?.Write("\r\n\x1b[32m[本地终端] 可输入命令；输入 exit 退出\x1b[0m\r\n");
+                        _renderer?.Write(L10n.T("\r\n\x1b[32m[本地终端] 可输入命令；输入 exit 退出\x1b[0m\r\n"));
                     }
                     catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 }
             }
             catch (Exception ex)
             {
-                try { _renderer?.Write("\r\n\x1b[31m本地终端启动失败: " + ex.Message + "\x1b[0m\r\n"); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+                try { _renderer?.Write(L10n.T("\r\n\x1b[31m本地终端启动失败: ") + ex.Message + "\x1b[0m\r\n"); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 DiagLog.Swallowed("TerminalControl.AttachLocal", ex);
             }
         }
@@ -989,8 +989,8 @@ public async void Connect()
                         void WarnNoCred()
                         {
                             _renderer?.Write(
-                                "\r\n\x1b[33m[认证] 未注入密码/私钥。请先解锁 KeePass，并在连接上关联凭据，" +
-                                "或在密码库中为该主机建立条目。\x1b[0m\r\n");
+                                L10n.T("\r\n\x1b[33m[认证] 未注入密码/私钥。请先解锁 KeePass，并在连接上关联凭据，") +
+                                L10n.T("或在密码库中为该主机建立条目。\x1b[0m\r\n"));
                         }
                         if (InvokeRequired) BeginInvoke(new Action(WarnNoCred));
                         else WarnNoCred();
@@ -1005,7 +1005,7 @@ public async void Connect()
                 if (_config.Protocol == ProtocolType.Serial)
                 {
                     if (_terminalFactory == null)
-                        throw new InvalidOperationException("ITerminalSessionFactory 未注入，无法创建串口会话");
+                        throw new InvalidOperationException(L10n.T("ITerminalSessionFactory 未注入，无法创建串口会话"));
                     session = _terminalFactory.CreateSerial();
                     await Task.Run(() => session.Connect(_config, credential, rows, cols)).ConfigureAwait(false);
                 }
@@ -1013,7 +1013,7 @@ public async void Connect()
                 {
                     // Telnet 明文：仅直连/跳板转发入口；凭据仅取 Username（交换机 login 仍由设备交互式提示）。
                     if (_terminalFactory == null)
-                        throw new InvalidOperationException("ITerminalSessionFactory 未注入，无法创建 Telnet 会话");
+                        throw new InvalidOperationException(L10n.T("ITerminalSessionFactory 未注入，无法创建 Telnet 会话"));
                     session = _terminalFactory.CreateTelnet();
                     bool needTunnelTelnet = _tunnelManager != null && (
                         (_config.JumpChain != null && _config.JumpChain.Hops != null && _config.JumpChain.Hops.Count > 0)
@@ -1033,7 +1033,7 @@ public async void Connect()
                 else
                 {
                     if (_terminalFactory == null)
-                        throw new InvalidOperationException("ITerminalSessionFactory 未注入，无法创建 SSH 会话");
+                        throw new InvalidOperationException(L10n.T("ITerminalSessionFactory 未注入，无法创建 SSH 会话"));
                     session = _terminalFactory.Create(new TerminalEndpoint { Host = _config.Host, Port = _config.Port });
 
                     // 跳板在 JumpChain；Tunnel 仅端口转发参数。任一存在且有隧道管理器则走隧道。
@@ -1118,7 +1118,7 @@ public async void Connect()
                 if (_disposed) return;
                 void WriteFail()
                 {
-                    _renderer?.Write("\r\n\x1b[31m连接失败: " + ex.Message + "\x1b[0m\r\n");
+                    _renderer?.Write(L10n.T("\r\n\x1b[31m连接失败: ") + ex.Message + "\x1b[0m\r\n");
                 }
                 if (InvokeRequired) BeginInvoke(new Action(WriteFail));
                 else WriteFail();
@@ -1196,7 +1196,7 @@ public async void Connect()
                 catch (Exception ex)
                 {
                     DiagLog.Swallowed("TerminalControl.ResumeRendering.Local", ex);
-                    try { _renderer?.Write("\r\n\x1b[31m本地终端启动失败: " + ex.Message + "\x1b[0m\r\n"); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+                    try { _renderer?.Write(L10n.T("\r\n\x1b[31m本地终端启动失败: ") + ex.Message + "\x1b[0m\r\n"); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 }
             }
             else
@@ -1315,8 +1315,8 @@ public async void Connect()
                 {
                     MessageBox.Show(
                         FindForm(),
-                        "危险命令检测失败，已阻止发送该命令。\n" + ex.Message,
-                        "安全拦截",
+                        L10n.T("危险命令检测失败，已阻止发送该命令。\n") + ex.Message,
+                        L10n.T("安全拦截"),
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Warning);
                 }
@@ -1398,17 +1398,17 @@ public async void Connect()
             {
                 if (_session == null || !_session.IsConnected)
                 {
-                    System.Windows.Forms.MessageBox.Show(FindForm(), "请先连接终端。", "Zmodem 接收",
+                    System.Windows.Forms.MessageBox.Show(FindForm(), L10n.T("请先连接终端。"), L10n.T("Zmodem 接收"),
                         System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                     return;
                 }
                 if (_session.IsZmodemReceiving)
                 {
-                    System.Windows.Forms.MessageBox.Show(FindForm(), "已有接收在进行中。", "Zmodem 接收",
+                    System.Windows.Forms.MessageBox.Show(FindForm(), L10n.T("已有接收在进行中。"), L10n.T("Zmodem 接收"),
                         System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                     return;
                 }
-                using (var dlg = new System.Windows.Forms.FolderBrowserDialog { Description = "选择 Zmodem 接收保存目录" })
+                using (var dlg = new System.Windows.Forms.FolderBrowserDialog { Description = L10n.T("选择 Zmodem 接收保存目录") })
                 {
                     if (dlg.ShowDialog(FindForm()) != System.Windows.Forms.DialogResult.OK) return;
                     try
@@ -1417,7 +1417,7 @@ public async void Connect()
                     }
                     catch (NotSupportedException nse)
                     {
-                        System.Windows.Forms.MessageBox.Show(FindForm(), nse.Message, "Zmodem 接收",
+                        System.Windows.Forms.MessageBox.Show(FindForm(), nse.Message, L10n.T("Zmodem 接收"),
                             System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
                     }
                 }
