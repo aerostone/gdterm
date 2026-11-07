@@ -637,8 +637,22 @@ namespace Gdterm.Terminal.Rendering
                 try { _redrawTimer.Stop(); } catch { }
                 return;
             }
+            RenderFrameNow();
+            if (!_needsRedraw && !_engine.Changed)
+            {
+                try { _redrawTimer.Stop(); } catch { }
+            }
+        }
 
-            bool paint = false;
+        /// <summary>
+        /// 同步帧：快照 + 脏行差分 + 同步重画（与 16ms 定时器跳一次 tick 等价，
+        /// 但不经过异步消息泵）。perf 基准与需要确定性帧的测试用它；
+        /// 生产路径仍走定时器合并（一帧内多次 Write 只画一次）。
+        /// </summary>
+        internal void RenderFrameNow()
+        {
+            if (_disposed || _isPaused) return;
+            bool paint;
             lock (_lock)
             {
                 if (_needsRedraw || _engine.Changed)
@@ -647,15 +661,11 @@ namespace Gdterm.Terminal.Rendering
                     _needsRedraw = false;
                     paint = true;
                 }
-                else
-                {
-                    try { _redrawTimer.Stop(); } catch { }
-                }
+                else paint = false;
             }
-
             if (paint && !_canvas.IsDisposed)
             {
-                try { _canvas.Invalidate(); } catch { }
+                try { _canvas.Invalidate(); _canvas.Update(); } catch { }
             }
         }
 

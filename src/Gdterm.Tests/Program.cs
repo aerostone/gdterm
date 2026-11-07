@@ -20,6 +20,15 @@ namespace Gdterm.Tests
     {
         public static int Main(string[] args)
         {
+            // 渲染性能基准：--perf-bench [out.json]（P2-8 基线；Windows GDI 路径）。
+            // 放在单测之前：CI 里单测已经单独跑过，基准模式不必重复。
+            int perfIdx = Array.IndexOf(args, "--perf-bench");
+            if (perfIdx >= 0)
+            {
+                string perfOut = perfIdx + 1 < args.Length ? args[perfIdx + 1] : null;
+                return PerfBench.Run(perfOut);
+            }
+
             Console.WriteLine("=== gdterm unit tests (zero-NuGet runner) ===");
             Assert.Reset();
 

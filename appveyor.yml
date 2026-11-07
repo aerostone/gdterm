@@ -83,6 +83,12 @@ test_script:
       }
       if ($smokeExit -ne 0) { throw "UI smoke failed exit=$smokeExit (evidence uploaded before this)" }
       if ($checkExit -ne 0) { throw "ui-tree-check gate failed exit=$checkExit" }
+      # ===== 渲染性能基准（P2-8）：大 cat 场景帧耗时/脏行命中/分配，纯 ASCII 输出 =====
+      # 基线阶段不做回归棘轮（先量出数字），崩溃（非零退出）才红
+      Write-Host "Running render perf bench"
+      & $testExe --perf-bench perf-bench.json
+      if ($LASTEXITCODE -ne 0) { throw "perf-bench crashed exit=$LASTEXITCODE" }
+      if (Test-Path perf-bench.json) { Push-AppveyorArtifact $PWD\perf-bench.json -FileName "perf-bench.json" }
       # ===== 编码守卫：全仓文本必须是合法 UTF-8，BOM 只许出现在白名单内 =====
       # 与 .editorconfig 同口径（.ps1 带 BOM，其余纯 UTF-8）；仅 stdlib，无 pip 依赖
       Write-Host "Running encoding guard"

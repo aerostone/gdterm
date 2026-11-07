@@ -115,6 +115,7 @@
     <Compile Include="Terminal\MacroRecorderTests.cs" />
     <Compile Include="Terminal\TerminalNotificationTests.cs" />
     <Compile Include="Terminal\TriggerAndLimitsTests.cs" />
+    <Compile Include="Terminal\PerfBench.cs" />
     <Compile Include="Core\TerminalProfileTests.cs" />
     <Compile Include="Scanning\ScanPluginTests.cs" />
     <Compile Include="Ui\UiSmokeRunner.cs" />
