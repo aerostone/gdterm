@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
@@ -20,7 +21,7 @@ namespace Gdterm.UI.Controls
     /// </summary>
     public sealed class TableShell<T> : Panel where T : class
     {
-        private const string DefaultOrder = "默认顺序";
+        private static string DefaultOrder => L10n.T("默认顺序");
 
         private readonly AntdUI.Table _table;
         private readonly List<T> _all = new List<T>();
@@ -68,7 +69,7 @@ namespace Gdterm.UI.Controls
             FilterBox = new AntdUI.Input
             {
                 Name = "TableShellFilter",
-                PlaceholderText = "过滤当前表格…",
+                PlaceholderText = L10n.T("过滤当前表格…"),
                 AllowClear = true,
                 MinimumSize = new Size(DpiScale.V(this, 120), fieldH),
                 Width = DpiScale.V(this, 168),
@@ -199,8 +200,8 @@ namespace Gdterm.UI.Controls
 
             bool filtered = q.Length > 0;
             _countLabel.Text = !filtered && _shown.Count == _all.Count
-                ? (_all.Count == 0 ? string.Empty : "共 " + _all.Count + " 条")
-                : _shown.Count + " / " + _all.Count + " 条";
+                ? (_all.Count == 0 ? string.Empty : L10n.T("共 ") + _all.Count + L10n.T(" 条"))
+                : _shown.Count + " / " + _all.Count + L10n.T(" 条");
 
             var h = ViewChanged;
             if (h != null) h(_shown);
@@ -224,12 +225,12 @@ namespace Gdterm.UI.Controls
         {
             if (_shown.Count == 0)
             {
-                ToastNotifier.Warning("没有可导出的行");
+                ToastNotifier.Warning(L10n.T("没有可导出的行"));
                 return;
             }
             using (var dlg = new SaveFileDialog
             {
-                Title = "导出为 CSV",
+                Title = L10n.T("导出为 CSV"),
                 Filter = "CSV (*.csv)|*.csv",
                 FileName = string.IsNullOrEmpty(baseName) ? "export" : baseName,
                 DefaultExt = "csv"
@@ -251,12 +252,12 @@ namespace Gdterm.UI.Controls
                     }
                     using (var sw = new StreamWriter(dlg.FileName, false, new UTF8Encoding(true)))
                         sw.Write(sb.ToString());
-                    ToastNotifier.Success("已导出 " + _shown.Count + " 行到 " + Path.GetFileName(dlg.FileName));
+                    ToastNotifier.Success(L10n.T("已导出 ") + _shown.Count + L10n.T(" 行到 ") + Path.GetFileName(dlg.FileName));
                 }
                 catch (Exception ex)
                 {
                     try { DiagLog.Error("TableShell.ExportCsv", ex); } catch (Exception) { }
-                    ToastNotifier.Error("导出失败：" + ex.Message);
+                    ToastNotifier.Error(L10n.T("导出失败：") + ex.Message);
                 }
             }
         }

@@ -66,6 +66,15 @@ namespace Gdterm.Core
             ["确认修改"] = "Confirm change",
             ["确认新密码"] = "Confirm new password",
             ["请输入当前密码"] = "Enter the current password",
+            // —— 扫描插件库（批次4s：ScanPluginStore） ——
+            ["manifest.json 缺少 id"] = "manifest.json is missing id",
+            ["manifest.json 缺少 name"] = "manifest.json is missing name",
+            ["scriptFile 越出插件目录"] = "scriptFile escapes the plugin directory",
+            ["targets 为空（windows/linux）"] = "targets is empty (windows/linux)",
+            ["清单解析失败: "] = "Manifest parse failed: ",
+            ["缺少 manifest.json"] = "manifest.json is missing",
+            ["缺少 scriptFile"] = "scriptFile is missing",
+            ["脚本不存在: "] = "Script not found: ",
             // —— 工具箱（批次4r：ToolboxPanel） ——
             ["复制全部"] = "Copy all",
             ["复制选中"] = "Copy selection",

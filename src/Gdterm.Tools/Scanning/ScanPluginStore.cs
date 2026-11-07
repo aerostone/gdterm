@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Timers;
 using System.Web.Script.Serialization;
+using Gdterm.Core;
 
 namespace Gdterm.Tools.Scanning
 {
@@ -117,20 +118,20 @@ namespace Gdterm.Tools.Scanning
             {
                 var manifestPath = Path.Combine(pluginDir, "manifest.json");
                 if (!File.Exists(manifestPath))
-                    return BadPlugin(id, null, source, "缺少 manifest.json");
+                    return BadPlugin(id, null, source, L10n.T("缺少 manifest.json"));
 
                 var json = File.ReadAllText(manifestPath);
                 
                 var serializer = new JavaScriptSerializer();
                 var manifest = serializer.Deserialize<ScanPluginManifest>(json);
                 if (manifest == null || string.IsNullOrWhiteSpace(manifest.Id))
-                    return BadPlugin(id, null, source, "manifest.json 缺少 id");
+                    return BadPlugin(id, null, source, L10n.T("manifest.json 缺少 id"));
                 if (string.IsNullOrWhiteSpace(manifest.Name))
-                    return BadPlugin(manifest.Id, manifest, source, "manifest.json 缺少 name");
+                    return BadPlugin(manifest.Id, manifest, source, L10n.T("manifest.json 缺少 name"));
                 if (manifest.Targets == null || manifest.Targets.Count == 0)
-                    return BadPlugin(manifest.Id, manifest, source, "targets 为空（windows/linux）");
+                    return BadPlugin(manifest.Id, manifest, source, L10n.T("targets 为空（windows/linux）"));
                 if (string.IsNullOrWhiteSpace(manifest.ScriptFile))
-                    return BadPlugin(manifest.Id, manifest, source, "缺少 scriptFile");
+                    return BadPlugin(manifest.Id, manifest, source, L10n.T("缺少 scriptFile"));
 
                 // 安全约束：脚本必须落在本插件目录内，禁止 ../ 逃逸；
                 // 前缀比对必须带目录分隔符，避免同级目录 scanner-extra 之类的前缀绕过
@@ -139,10 +140,10 @@ namespace Gdterm.Tools.Scanning
                 var dirPrefix = dirFull.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal)
                     ? dirFull : dirFull + Path.DirectorySeparatorChar;
                 if (!scriptPath.StartsWith(dirPrefix, StringComparison.OrdinalIgnoreCase))
-                    return BadPlugin(manifest.Id, manifest, source, "scriptFile 越出插件目录");
+                    return BadPlugin(manifest.Id, manifest, source, L10n.T("scriptFile 越出插件目录"));
 
                 if (!File.Exists(scriptPath))
-                    return BadPlugin(manifest.Id, manifest, source, "脚本不存在: " + manifest.ScriptFile);
+                    return BadPlugin(manifest.Id, manifest, source, L10n.T("脚本不存在: ") + manifest.ScriptFile);
 
                 if (manifest.TimeoutSeconds <= 0) manifest.TimeoutSeconds = 60;
 
@@ -160,7 +161,7 @@ namespace Gdterm.Tools.Scanning
             }
             catch (Exception ex)
             {
-                return BadPlugin(id, null, source, "清单解析失败: " + ex.Message);
+                return BadPlugin(id, null, source, L10n.T("清单解析失败: ") + ex.Message);
             }
         }
 

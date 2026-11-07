@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Gdterm.Core;
 
 namespace Gdterm.Tools.Scanning
 {
@@ -56,7 +57,7 @@ namespace Gdterm.Tools.Scanning
             {
                 if (plugin == null || !plugin.IsRunnable)
                 {
-                    result.RuntimeError = plugin != null && plugin.LoadError != null ? plugin.LoadError : "插件不可运行";
+                    result.RuntimeError = plugin != null && plugin.LoadError != null ? plugin.LoadError : L10n.T("插件不可运行");
                     return result;
                 }
 
@@ -64,15 +65,15 @@ namespace Gdterm.Tools.Scanning
                 // Unsigned 的首次确认在 UI 层（ScannerCenterForm）完成并记入台账。
                 if (plugin.Trust == ScanTrust.Invalid)
                 {
-                    result.RuntimeError = "签名校验失败：插件内容与官方签名不符，疑似被篡改，已拒绝执行";
+                    result.RuntimeError = L10n.T("签名校验失败：插件内容与官方签名不符，疑似被篡改，已拒绝执行");
                     return result;
                 }
 
                 var kind = manifest.Targets[0].Trim().ToLowerInvariant();
                 if (!channel.Supports(kind))
                 {
-                    result.RuntimeError = "通道 " + channel.Name + " 不支持目标 " + kind
-                        + (kind == "windows" ? "（远端 Windows 需已安装 OpenSSH Server + PowerShell）" : "（需先连接 SSH 远程主机）");
+                    result.RuntimeError = L10n.T("通道 ") + channel.Name + L10n.T(" 不支持目标 ") + kind
+                        + (kind == "windows" ? L10n.T("（远端 Windows 需已安装 OpenSSH Server + PowerShell）") : L10n.T("（需先连接 SSH 远程主机）"));
                     return result;
                 }
 
@@ -83,7 +84,7 @@ namespace Gdterm.Tools.Scanning
                 if (plugin.VerifiedScriptSha256 == null || currentScriptHash == null
                     || !string.Equals(currentScriptHash, plugin.VerifiedScriptSha256, StringComparison.Ordinal))
                 {
-                    result.RuntimeError = "脚本内容在加载后被变更，与信任判定时不一致，已拒绝执行；请刷新插件列表后重试";
+                    result.RuntimeError = L10n.T("脚本内容在加载后被变更，与信任判定时不一致，已拒绝执行；请刷新插件列表后重试");
                     return result;
                 }
                 var manifestPath = Path.Combine(Path.GetDirectoryName(plugin.ScriptPath), "manifest.json");
@@ -91,7 +92,7 @@ namespace Gdterm.Tools.Scanning
                 if (plugin.VerifiedManifestSha256 == null || currentManifestHash == null
                     || !string.Equals(currentManifestHash, plugin.VerifiedManifestSha256, StringComparison.Ordinal))
                 {
-                    result.RuntimeError = "manifest 在加载后被变更，与信任判定时不一致，已拒绝执行；请刷新插件列表后重试";
+                    result.RuntimeError = L10n.T("manifest 在加载后被变更，与信任判定时不一致，已拒绝执行；请刷新插件列表后重试");
                     return result;
                 }
 
@@ -109,7 +110,7 @@ namespace Gdterm.Tools.Scanning
                 if (!result.Success && result.Findings.Count == 0 && output.RuntimeError == null)
                 {
                     result.RuntimeError = string.IsNullOrWhiteSpace(result.ErrorOutput)
-                        ? "脚本退出码 " + output.ExitCode
+                        ? L10n.T("脚本退出码 ") + output.ExitCode
                         : result.ErrorOutput.Trim();
                 }
             }
@@ -168,7 +169,7 @@ namespace Gdterm.Tools.Scanning
         private static string Truncate(string s)
         {
             if (string.IsNullOrEmpty(s)) return s ?? "";
-            return s.Length <= MaxRawChars ? s : s.Substring(0, MaxRawChars) + "\r\n…(已截断)";
+            return s.Length <= MaxRawChars ? s : s.Substring(0, MaxRawChars) + L10n.T("\r\n…(已截断)");
         }
     }
 }

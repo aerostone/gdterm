@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Gdterm.Core;
 
 namespace Gdterm.Terminal
 {
@@ -109,11 +110,11 @@ namespace Gdterm.Terminal
         public string ExportAsText()
         {
             var sb = new StringBuilder();
-            sb.AppendLine("gdterm 多通道录制报告");
+            sb.AppendLine(L10n.T("gdterm 多通道录制报告"));
             sb.AppendLine("====================");
-            sb.AppendLine(string.Format("时长: {0}", Duration));
-            sb.AppendLine(string.Format("条目: {0}", _entries.Count));
-            sb.AppendLine("会话: " + _sessionNames.Count);
+            sb.AppendLine(string.Format(L10n.T("时长: {0}"), Duration));
+            sb.AppendLine(string.Format(L10n.T("条目: {0}"), _entries.Count));
+            sb.AppendLine(L10n.T("会话: ") + _sessionNames.Count);
             sb.AppendLine();
 
             foreach (var entry in _entries)
@@ -134,13 +135,13 @@ namespace Gdterm.Terminal
         {
             var sb = new StringBuilder();
             sb.AppendLine("<!DOCTYPE html><html><head><meta charset='utf-8'>");
-            sb.AppendLine("<title>gdterm 录制报告</title>");
+            sb.AppendLine(L10n.T("<title>gdterm 录制报告</title>"));
             sb.AppendLine("<style>body{font-family:monospace;background:#1e1e1e;color:#d4d4d4;padding:20px}");
             sb.AppendLine(".entry{margin:2px 0;padding:4px 8px;border-radius:3px}");
             sb.AppendLine(".input{background:#264f78}.output{background:#1e3a1e}");
             sb.AppendLine(".time{color:#888;margin-right:10px}.session{color:#569cd6;margin-right:10px}</style></head><body>");
-            sb.AppendLine("<h2>gdterm 多通道录制报告</h2>");
-            sb.AppendLine(string.Format("<p>时长: {0} | 条目: {1} | 会话: {2}</p>", Duration, _entries.Count, _sessionNames.Count));
+            sb.AppendLine(L10n.T("<h2>gdterm 多通道录制报告</h2>"));
+            sb.AppendLine(string.Format(L10n.T("<p>时长: {0} | 条目: {1} | 会话: {2}</p>"), Duration, _entries.Count, _sessionNames.Count));
             sb.AppendLine("<pre>");
 
             foreach (var entry in _entries)
@@ -194,7 +195,7 @@ namespace Gdterm.Terminal
         /// <summary>从文件加载录制</summary>
         public void LoadFromFile(string filePath)
         {
-            if (!File.Exists(filePath)) throw new FileNotFoundException("录制文件不存在", filePath);
+            if (!File.Exists(filePath)) throw new FileNotFoundException(L10n.T("录制文件不存在"), filePath);
 
             _entries.Clear();
             _sessionNames.Clear();
