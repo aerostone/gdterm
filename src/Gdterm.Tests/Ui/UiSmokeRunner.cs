@@ -150,11 +150,13 @@ namespace Gdterm.Tests.Ui
                         var h = FindByName(f, nm);
                         Check(h != null && h.Visible, nm + " 空状态可见");
                     }
-                    // 右列左缘与左列同 pad（原 0：空态下左右不对称）
+                    // 右列左缘与左列同 pad（原 0：空态下左右不对称）。
+                    // 发现表现在包在 TableShell 里（Parent 是壳而非列 Panel），不能再直接比
+                    // Parent 相对的 Left——改为沿父链走到列 Panel 累加偏移（gutter），两列内缩相等才算对齐。
                     var pt = FindByName(f, "ScannerPluginTable");
                     var ft = FindByName(f, "ScannerFindingTable");
-                    Check(pt != null && ft != null && pt.Left == ft.Left,
-                        "右列左缘对齐 Left=" + (pt != null ? pt.Left : -1) + "/" + (ft != null ? ft.Left : -1));
+                    Check(pt != null && ft != null && Math.Abs(LeftGutter(pt) - LeftGutter(ft)) <= 2,
+                        "右列左缘对齐 gutter=" + (pt != null ? LeftGutter(pt) : -1) + "/" + (ft != null ? LeftGutter(ft) : -1) + " (≤2px 容差:壳边框)");
                     Check(f.KeyPreview, "KeyPreview 已开（ESC 可达）");
                     Shot(f, Path.Combine(outDir, "scanner-center.png"));
                     File.WriteAllText(Path.Combine(outDir, "scanner-center.json"), UiTreeDumper.Dump(f), System.Text.Encoding.UTF8);
@@ -347,6 +349,16 @@ namespace Gdterm.Tests.Ui
         /// “停靠对不算重叠”而漏判，故在 C# 侧落门（CI 真跑得到；tools/ui-tree-check.py 不参与流水线）。
         /// 免判：Fill 与 Fill 兄弟（同格覆盖层，如 KeePass 空库引导）不算遮挡。
         /// </summary>
+        /// <summary>表左缘相对其列 Panel 左缘的内缩偏移：沿父链（穿过 TableShell 壳）走到
+        /// Panel/UserControl 止，逐层累加 Left。两列各自的内缩相等即“左缘对齐”。</summary>
+        private static int LeftGutter(Control t)
+        {
+            int x = t.Left;
+            for (var p = t.Parent; p != null && (p is Panel || p is UserControl); p = p.Parent)
+                x += p.Left;
+            return x;
+        }
+
         internal static void AssertNoDockOverlap(Control root, string where)
         {
             int bad = 0;

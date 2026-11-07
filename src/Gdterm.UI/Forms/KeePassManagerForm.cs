@@ -30,6 +30,7 @@ namespace Gdterm.UI.Forms
         private readonly Action _connectionsChanged;
         private AntdUI.Input _searchBox;
         private AntdUI.Table _entryTable;
+        private TableShell<EntryRow> _shell;
         private AntdUI.Label _statusLabel;
         private AntdUI.Button _btnNewConnection;
         /// <summary>空库引导层：覆盖表区，仅在“加载成功且 0 条目”时可见（UX change 2026-09-25）。</summary>
@@ -149,6 +150,47 @@ namespace Gdterm.UI.Forms
             _entryTable.CellClick += OnEntryCellClicked;         // 单击=选中（高亮自动跟随，状态栏回显）
             _entryTable.CellDoubleClick += OnEntryCellDoubleClicked; // 双击=复制密码
 
+            // 表壳：排序 + 导出（条目多时按标题/用户/分组/URL/修改时间排；搜索走工具栏的 _searchBox，
+            // 故 showFilter:false 避免两套过滤叠加。排序作用在“当前搜索结果”内）。
+            bool hasUsedBy = _connectionStore != null;
+            _shell = new TableShell<EntryRow>(_entryTable,
+                hasUsedBy
+                    ? new[] { "标题", "用户名", "关联连接", "分组路径", "URL", "最后修改" }
+                    : new[] { "标题", "用户名", "分组路径", "URL", "最后修改" },
+                r => string.Join(" ", new[] { r.Title, r.Username, r.UsedBy, r.GroupPath, r.Url, r.Modified }),
+                (r, i) =>
+                {
+                    if (hasUsedBy)
+                    {
+                        switch (i)
+                        {
+                            case 0: return r.Title;
+                            case 1: return r.Username;
+                            case 2: return r.UsedBy;
+                            case 3: return r.GroupPath;
+                            case 4: return r.Url;
+                            default: return r.Modified;
+                        }
+                    }
+                    switch (i)
+                    {
+                        case 0: return r.Title;
+                        case 1: return r.Username;
+                        case 2: return r.GroupPath;
+                        case 3: return r.Url;
+                        default: return r.Modified;
+                    }
+                },
+                showFilter: false);
+            _shell.AddAction("导出", (s, e) => _shell.ExportCsv(FindForm(), "keepass-entries")).Name = "KeePassMgrExportButton";
+            // 可见顺序变化（搜索过滤 / 排序）时把「可见行 → 源条目」写回 _view（SelectedIndex-1 反查靠它）
+            _shell.ViewChanged += list =>
+            {
+                var v = new List<KeePassEntrySummary>();
+                foreach (var r in list) if (r.Source != null) v.Add(r.Source);
+                _view = v;
+            };
+
             // 状态栏（等宽字体行高，底部左对齐内边距）
             _statusLabel = new AntdUI.Label {
                 Name = "KeePassStatusLabel",
@@ -188,7 +230,7 @@ namespace Gdterm.UI.Forms
             // 表 + 引导层同格：引导后加并置前，Dock=Fill 覆盖表区（两矩形全等，树检包含关系豁免重叠）
             var tableHost = new Panel { Dock = DockStyle.Fill, BackColor = GdtermColorTable.Background };
             _entryTable.Dock = DockStyle.Fill;
-            tableHost.Controls.Add(_entryTable);
+            tableHost.Controls.Add(_shell);
             _emptyGuide = EmptyStateView.Attach(tableHost, "还没有条目",
                     "点『添加』创建第一条；读取现有 KeePass 库需先在主界面解锁", "添加第一条", OnAddClick);
             // 名字是被 ui-smoke 断言过的契约（KeePassManagerEmpty 用例），换实现也得留着
@@ -244,6 +286,7 @@ namespace Gdterm.UI.Forms
             public string GroupPath { get; set; }
             public string Url { get; set; }
             public string Modified { get; set; }
+            public KeePassEntrySummary Source { get; set; }   // 表壳 ViewChanged 反查源条目用
         }
 
         /// <summary>重建 entryId → 连接名列表 映射（连接的 CredentialRefId 直接引用）。</summary>
@@ -324,10 +367,11 @@ namespace Gdterm.UI.Forms
                     Url = entry.Url ?? "",
                     Modified = entry.LastModified > DateTime.MinValue
                         ? entry.LastModified.ToLocalTime().ToString("yyyy-MM-dd HH:mm")
-                        : ""
+                        : "",
+                    Source = entry
                 });
             }
-            _entryTable.DataSource = rows;
+            _shell.SetItems(rows);   // 壳置 DataSource + 触发 ViewChanged 重建 _view（排序/过滤同步）
             int total = _entries.Count;
             _statusLabel.Text = filter.Length == 0
                 ? $"共 {total} 个条目"
