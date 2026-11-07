@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Gdterm.Core;
 
 namespace Gdterm.Security.Otp
 {
@@ -31,12 +32,12 @@ namespace Gdterm.Security.Otp
         public static OtpAuthUri Parse(string uri)
         {
             if (string.IsNullOrWhiteSpace(uri))
-                throw new FormatException("OTP URI 为空");
+                throw new FormatException(L10n.T("OTP URI 为空"));
 
             var u = uri.Trim();
             const string Prefix = "otpauth://";
             if (u.IndexOf(Prefix, StringComparison.OrdinalIgnoreCase) != 0)
-                throw new FormatException("不是 otpauth:// URI");
+                throw new FormatException(L10n.T("不是 otpauth:// URI"));
 
             var rest = u.Substring(Prefix.Length);
             int q = rest.IndexOf('?');
@@ -45,11 +46,11 @@ namespace Gdterm.Security.Otp
 
             int slash = head.IndexOf('/');
             if (slash <= 0)
-                throw new FormatException("URI 缺少类型段（totp/hotp）");
+                throw new FormatException(L10n.T("URI 缺少类型段（totp/hotp）"));
 
             var type = head.Substring(0, slash).Trim().ToLowerInvariant();
             if (type != "totp" && type != "hotp")
-                throw new FormatException("未知 OTP 类型: " + type);
+                throw new FormatException(L10n.T("未知 OTP 类型: ") + type);
 
             // label 语义：含 ':' 时按「Issuer:account」（account 可含 @）；
             // 不含 ':' 且含 '@' 时按「account@issuer」启发式；issuer 参数优先级最高。
@@ -75,14 +76,14 @@ namespace Gdterm.Security.Otp
             var params_ = ParseQuery(query);
             var secret = GetParam(params_, "secret");
             if (string.IsNullOrWhiteSpace(secret))
-                throw new FormatException("URI 缺少 secret 参数");
+                throw new FormatException(L10n.T("URI 缺少 secret 参数"));
 
             var digits = GetInt(params_, "digits", 6);
             if (digits < 6 || digits > 8)
-                throw new FormatException("digits 非法（6-8）: " + digits);
+                throw new FormatException(L10n.T("digits 非法（6-8）: ") + digits);
             var period = GetInt(params_, "period", 30);
             if (period <= 0 || period > 300)
-                throw new FormatException("period 非法: " + period);
+                throw new FormatException(L10n.T("period 非法: ") + period);
 
             long? counter = null;
             if (type == "hotp")

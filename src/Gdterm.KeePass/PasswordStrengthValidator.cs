@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Gdterm.Core;
 
 namespace Gdterm.KeePass
 {
@@ -27,27 +28,27 @@ namespace Gdterm.KeePass
 
             if (string.IsNullOrEmpty(password))
             {
-                violations.Add("密码不能为空");
+                violations.Add(L10n.T("密码不能为空"));
                 return violations;
             }
 
             if (password.Length < 12)
-                violations.Add("密码长度不得少于12个字符");
+                violations.Add(L10n.T("密码长度不得少于12个字符"));
 
             if (!password.Any(char.IsUpper))
-                violations.Add("密码必须包含至少一个大写字母");
+                violations.Add(L10n.T("密码必须包含至少一个大写字母"));
 
             if (!password.Any(char.IsLower))
-                violations.Add("密码必须包含至少一个小写字母");
+                violations.Add(L10n.T("密码必须包含至少一个小写字母"));
 
             if (!password.Any(char.IsDigit))
-                violations.Add("密码必须包含至少一个数字");
+                violations.Add(L10n.T("密码必须包含至少一个数字"));
 
             if (!password.Any(ch => !char.IsLetterOrDigit(ch)))
-                violations.Add("密码必须包含至少一个特殊字符");
+                violations.Add(L10n.T("密码必须包含至少一个特殊字符"));
 
             if (IsCommonWeakPassword(password))
-                violations.Add("密码不能使用常见弱密码");
+                violations.Add(L10n.T("密码不能使用常见弱密码"));
 
             return violations;
         }

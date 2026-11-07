@@ -18,6 +18,7 @@ using Gdterm.UI.Services;
 using Gdterm.UI.Diagnostics;
 using TerminalControl = Gdterm.UI.Controls.TerminalControl;
 using Gdterm.Security;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
@@ -173,14 +174,14 @@ namespace Gdterm.UI.Controls
 
             // 右键菜单（参考 Xshell/MobaXterm Tab 右键）
             _tabContextMenu = new ContextMenuStrip();
-            AddCtxItem(_tabContextMenu, "关闭当前(&C)", "close", (s, e) => TryCloseSelected());
-            AddCtxItem(_tabContextMenu, "关闭其他(&O)", "close", (s, e) => CloseOthers());
-            AddCtxItem(_tabContextMenu, "关闭右侧全部(&R)", "close", (s, e) => CloseRight());
+            AddCtxItem(_tabContextMenu, L10n.T("关闭当前(&C)"), "close", (s, e) => TryCloseSelected());
+            AddCtxItem(_tabContextMenu, L10n.T("关闭其他(&O)"), "close", (s, e) => CloseOthers());
+            AddCtxItem(_tabContextMenu, L10n.T("关闭右侧全部(&R)"), "close", (s, e) => CloseRight());
             _tabContextMenu.Items.Add("-");
-            AddCtxItem(_tabContextMenu, "水平拆分(&H)", "splith", (s, e) => SplitHorizontal());
-            AddCtxItem(_tabContextMenu, "垂直拆分(&V)", "splitv", (s, e) => SplitVertical());
+            AddCtxItem(_tabContextMenu, L10n.T("水平拆分(&H)"), "splith", (s, e) => SplitHorizontal());
+            AddCtxItem(_tabContextMenu, L10n.T("垂直拆分(&V)"), "splitv", (s, e) => SplitVertical());
             _tabContextMenu.Items.Add("-");
-            AddCtxItem(_tabContextMenu, "重连当前(&E)", "reconnect", (s, e) => { try { ReconnectActiveTab(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } } });
+            AddCtxItem(_tabContextMenu, L10n.T("重连当前(&E)"), "reconnect", (s, e) => { try { ReconnectActiveTab(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } } });
         }
 
         public void OpenConnection(ConnectionConfig config)

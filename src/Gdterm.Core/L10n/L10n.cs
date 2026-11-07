@@ -66,6 +66,30 @@ namespace Gdterm.Core
             ["确认修改"] = "Confirm change",
             ["确认新密码"] = "Confirm new password",
             ["请输入当前密码"] = "Enter the current password",
+            // —— 标签容器（批次4v：TabContainerControl） ——
+            ["关闭其他(&O)"] = "Close others(&O)",
+            ["关闭右侧全部(&R)"] = "Close all to the right(&R)",
+            ["关闭当前(&C)"] = "Close current(&C)",
+            ["垂直拆分(&V)"] = "Split vertical(&V)",
+            ["水平拆分(&H)"] = "Split horizontal(&H)",
+            ["重连当前(&E)"] = "Reconnect current(&E)",
+            // —— 主密码验证（批次4v：MasterPasswordPrompt） ——
+            ["安全验证"] = "Security verification",
+            ["密码不正确"] = "Incorrect password",
+            ["应用已锁定，请先解锁"] = "The app is locked; unlock it first",
+            ["操作"] = "Action",
+            ["需要验证主密码："] = " requires master password verification:",
+            ["验证"] = "Verify",
+            // —— 密码强度校验（批次4v：PasswordStrengthValidator） ——
+            ["密码不能使用常见弱密码"] = "The password must not be a common weak password",
+            // —— OTP URI（批次4v：OtpAuthUri） ——
+            ["OTP URI 为空"] = "OTP URI is empty",
+            ["URI 缺少 secret 参数"] = "URI is missing the secret parameter",
+            ["URI 缺少类型段（totp/hotp）"] = "URI is missing the type segment (totp/hotp)",
+            ["digits 非法（6-8）: "] = "Invalid digits (6-8): ",
+            ["period 非法: "] = "Invalid period: ",
+            ["不是 otpauth:// URI"] = "Not an otpauth:// URI",
+            ["未知 OTP 类型: "] = "Unknown OTP type: ",
             // —— SFTP 权限（批次4u：SftpPermissionForm） ——
             ["八进制"] = "Octal",
             ["八进制每位只能是 0-7，已回退到 "] = "Each octal digit must be 0-7; reverted to ",

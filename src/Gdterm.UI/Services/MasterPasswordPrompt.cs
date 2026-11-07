@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.Security;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Services
 {
@@ -20,14 +21,14 @@ namespace Gdterm.UI.Services
 
             if (securityManager.IsLocked)
             {
-                MessageBox.Show(owner, "应用已锁定，请先解锁", "提示",
+                MessageBox.Show(owner, L10n.T("应用已锁定，请先解锁"), L10n.T("提示"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
 
             using (var dialog = new Form())
             {
-                dialog.Text = "安全验证";
+                dialog.Text = L10n.T("安全验证");
                 dialog.Size = DpiScale.S(dialog, 380, 180);
                 dialog.StartPosition = FormStartPosition.CenterParent;
                 dialog.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -36,7 +37,7 @@ namespace Gdterm.UI.Services
                 dialog.BackColor = GdtermColorTable.Surface;
 
                 var label = new AntdUI.Label {
-                    Text = (action ?? "操作") + "需要验证主密码：",
+                    Text = (action ?? L10n.T("操作")) + L10n.T("需要验证主密码："),
                     Font = Services.FormFontPolicy.UiFont(+1f),
                     ForeColor = GdtermColorTable.Foreground,
                     Location = DpiScale.P(dialog, 15, 15),
@@ -61,7 +62,7 @@ namespace Gdterm.UI.Services
                     Size = DpiScale.S(dialog, 335, 20)
                 };
                 var okBtn = new AntdUI.Button {
-                    Text = "验证",
+                    Text = L10n.T("验证"),
                     Size = DpiScale.S(dialog, 80, 32),
                     Location = DpiScale.P(dialog, 270, 105),
                     // 隐式 Default 钮忽略 BackColor（深字深底隐形，见 509df1b）→ 显式 Primary
@@ -76,13 +77,13 @@ namespace Gdterm.UI.Services
                     }
                     else
                     {
-                        errorLabel.Text = "密码不正确";
+                        errorLabel.Text = L10n.T("密码不正确");
                         pwdBox.SelectAll();
                         pwdBox.Focus();
                     }
                 };
                 var cancelBtn = new AntdUI.Button {
-                    Text = "取消",
+                    Text = L10n.T("取消"),
                     Size = DpiScale.S(dialog, 80, 32),
                     Location = DpiScale.P(dialog, 185, 105),
                     DialogResult = DialogResult.Cancel,
