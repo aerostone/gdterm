@@ -19,6 +19,7 @@ namespace Gdterm.UI.Controls
         private List<LogonScript> _scripts;
         private ListView _lvScripts;
         private AntdUI.Button _btnAdd, _btnEdit, _btnDelete;
+        private EmptyStateView _empty;
 
         public LogonScriptPanel(LogonScriptStore store)
         {
@@ -67,6 +68,10 @@ namespace Gdterm.UI.Controls
 
             Controls.Add(_lvScripts);
             Controls.Add(toolbar);
+            // 空态引导：脚本列表为空时此前是纯空白（CI 0.1.383 EMPTY_MISSING）
+            _empty = EmptyStateView.Attach(this, "还没有登录脚本",
+                "登录后按顺序自动执行命令，可绑定到单个连接或应用到全部连接",
+                "新建脚本", (s2, e2) => AddScript());
         }
 
         private AntdUI.Button CreateBtn(string text)
@@ -94,6 +99,7 @@ namespace Gdterm.UI.Controls
                 item.Tag = s;
                 _lvScripts.Items.Add(item);
             }
+            if (_empty != null) _empty.SetEmpty(_lvScripts.Items.Count == 0);
         }
 
         private void AddScript()

@@ -222,8 +222,9 @@ namespace Gdterm.Tests.Ui
                     new Gdterm.Logging.CommandHistoryStore(Path.Combine(tmp, "cmdhist"))), empty: EmptyExpect.Visible);
                 tryPanel("port-forward", () => new PortForwardPanel(portManager), empty: EmptyExpect.Visible);
                 tryPanel("secret-scan", () => new SecretScanPanel(secretScanner, null), empty: EmptyExpect.Ignore);
+                // 快捷键仓库开箱即带内置预设（tmux 等）→ 表非空，空态层应隐藏
                 tryPanel("key-binding", () => new KeyBindingPanel(
-                    new Gdterm.Connections.TerminalKeyBindingStore(Path.Combine(tmp, "keybind.json"))), empty: EmptyExpect.Visible);
+                    new Gdterm.Connections.TerminalKeyBindingStore(Path.Combine(tmp, "keybind.json"))), empty: EmptyExpect.Hidden);
                 tryPanel("toolbox", () => new ToolboxPanel(toolRegistry), empty: EmptyExpect.Ignore);
                 tryPanel("logon-script", () => new LogonScriptPanel(
                     new Gdterm.Connections.LogonScriptStore(Path.Combine(tmp, "logon.json"))), empty: EmptyExpect.Visible);

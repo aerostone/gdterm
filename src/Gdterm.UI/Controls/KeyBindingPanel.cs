@@ -29,6 +29,7 @@ namespace Gdterm.UI.Controls
         private AntdUI.Button _btnReset;
         private AntdUI.Checkbox _chkIntercept;
         private TableShell<BindingRow> _shell;
+        private EmptyStateView _empty;
 
         /// <summary>当绑定变更时触发（通知外部刷新 TerminalControl 的 resolver）</summary>
         public event Action BindingsChanged;
@@ -154,6 +155,10 @@ namespace Gdterm.UI.Controls
             };
 
             Controls.Add(_shell);
+            // 空态引导：绑定表为空时此前就是一片背景色 + 一排操作按钮，用户不知道"没有"还是"没读到"
+            _empty = EmptyStateView.Attach(this, "还没有自定义快捷键",
+                "把常用的组合键绑到终端动作上；内置默认绑定可以用上方「预设」一键切回",
+                "新建绑定", (s2, e2) => OnAdd(this, EventArgs.Empty));
             Controls.Add(bottomPanel);
             Controls.Add(topPanel);
             _table.AccessibleName = "快捷键绑定表";
@@ -229,6 +234,7 @@ namespace Gdterm.UI.Controls
                 });
             }
             _shell.SetItems(rows);
+            if (_empty != null) _empty.SetEmpty(rows.Count == 0);
         }
 
         private TerminalKeyBinding SelectedBinding()
