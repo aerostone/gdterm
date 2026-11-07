@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Gdterm.Terminal;
+using Gdterm.UI.Controls;
 using Gdterm.UI.Diagnostics;
 using Gdterm.Core;
 
@@ -17,9 +18,10 @@ namespace Gdterm.UI.Services
         private readonly AutoReconnectWatchdog _watchdog;
         private readonly Func<string, string> _resolveName;
         private readonly Func<string, bool> _isActiveSession;
-        private readonly Action<string> _setStatusBar;
+        private readonly Action<string, BottomBarPanel.ConnectionStatusLevel> _setStatusBar;
         private readonly HashSet<string> _outageToasted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, string> _lastText = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        /// <summary>文本 + 显式级别按 sessionId 记账（i18n 后不能靠「文本含失败」推断颜色）。</summary>
+        private readonly Dictionary<string, string[]> _lastText = new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase);
         private readonly object _sync = new object();
         private bool _disposed;
 
@@ -27,7 +29,7 @@ namespace Gdterm.UI.Services
             AutoReconnectWatchdog watchdog,
             Func<string, string> resolveName,
             Func<string, bool> isActiveSession,
-            Action<string> setStatusBar)
+            Action<string, BottomBarPanel.ConnectionStatusLevel> setStatusBar)
         {
             _watchdog = watchdog;
             _resolveName = resolveName ?? (id => id);
@@ -45,12 +47,12 @@ namespace Gdterm.UI.Services
             catch { return sessionId ?? ""; }
         }
 
-        private void Apply(string sessionId, string text)
+        private void Apply(string sessionId, string text, BottomBarPanel.ConnectionStatusLevel level)
         {
-            lock (_sync) _lastText[sessionId ?? ""] = text;
+            lock (_sync) _lastText[sessionId ?? ""] = new[] { text ?? "", level == BottomBarPanel.ConnectionStatusLevel.Failed ? "failed" : "reconnecting" };
             if (_isActiveSession(sessionId))
             {
-                try { _setStatusBar?.Invoke(text); }
+                try { _setStatusBar?.Invoke(text, level); }
                 catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionStateNotifier", exSwallowed); } catch { } }
             }
         }
@@ -64,7 +66,7 @@ namespace Gdterm.UI.Services
                 var err = string.IsNullOrEmpty(e.ErrorMessage) ? "" : " err=" + e.ErrorMessage;
                 DiagLog.Info("ConnectionState", "retrying session=" + e.SessionId +
                     " " + e.RetryCount + "/" + e.MaxRetries + " in " + e.NextRetryDelayMs + "ms" + err);
-                Apply(e.SessionId, L10n.T("重连中 ") + e.RetryCount + "/" + e.MaxRetries + " · " + name);
+                Apply(e.SessionId, L10n.T("重连中 ") + e.RetryCount + "/" + e.MaxRetries + " · " + name, BottomBarPanel.ConnectionStatusLevel.Reconnecting);
                 bool first;
                 lock (_sync) first = _outageToasted.Add(e.SessionId ?? "");
                 if (first)
@@ -81,7 +83,7 @@ namespace Gdterm.UI.Services
                 lock (_sync) _outageToasted.Remove(e.SessionId ?? "");
                 var name = Name(e.SessionId);
                 DiagLog.Info("ConnectionState", "recovered session=" + e.SessionId + " name=" + name);
-                Apply(e.SessionId, "");
+                Apply(e.SessionId, "", BottomBarPanel.ConnectionStatusLevel.Reconnecting);
                 ToastNotifier.Show(L10n.T("连接已恢复: ") + name, ToastNotifier.Level.Success);
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionStateNotifier", exSwallowed); } catch { } }
@@ -96,7 +98,7 @@ namespace Gdterm.UI.Services
                 var name = Name(e.SessionId);
                 DiagLog.Info("ConnectionState", "give up session=" + e.SessionId +
                     " attempts=" + e.RetryCount + " err=" + (e.ErrorMessage ?? ""));
-                Apply(e.SessionId, L10n.T("重连失败 · ") + name);
+                Apply(e.SessionId, L10n.T("重连失败 · ") + name, BottomBarPanel.ConnectionStatusLevel.Failed);
                 ToastNotifier.Show(L10n.T("重连失败: ") + name + L10n.T("（可手动重连）"), ToastNotifier.Level.Error);
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionStateNotifier", exSwallowed); } catch { } }
@@ -108,15 +110,15 @@ namespace Gdterm.UI.Services
         public void RefreshStatusBar()
         {
             if (_disposed || _setStatusBar == null) return;
-            string replay = null;
+            string replay = null; BottomBarPanel.ConnectionStatusLevel replayLevel = BottomBarPanel.ConnectionStatusLevel.Reconnecting;
             lock (_sync)
             {
                 foreach (var kv in _lastText)
                 {
-                    if (_isActiveSession(kv.Key)) { replay = kv.Value; break; }
+                    if (_isActiveSession(kv.Key)) { replay = kv.Value[0]; replayLevel = kv.Value[1] == "failed" ? BottomBarPanel.ConnectionStatusLevel.Failed : BottomBarPanel.ConnectionStatusLevel.Reconnecting; break; }
                 }
             }
-            try { _setStatusBar(replay ?? ""); }
+            try { _setStatusBar(replay ?? "", replayLevel); }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionStateNotifier", exSwallowed); } catch { } }
         }
 

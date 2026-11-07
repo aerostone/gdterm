@@ -402,7 +402,7 @@ namespace Gdterm.UI.Forms
                 _reconnectWatchdog,
                 id => _tabContainer != null ? _tabContainer.TryGetDisplayName(id) : null,
                 id => _tabContainer != null && _tabContainer.IsActiveSessionId(id),
-                t => _statusBar?.UpdateConnectionStatus(t));
+                (t, lvl) => _statusBar?.UpdateConnectionStatus(t, lvl));
             FormClosed += (s, e) =>
             {
                 try { _connectionStateNotifier?.Dispose(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }

@@ -26,6 +26,10 @@ namespace Gdterm.UI.Controls
     /// </summary>
     public class BottomBarPanel : UserControl
     {
+        /// <summary>连接状态段的颜色级别（调用方显式传入）。
+        /// i18n 后不能再用「文本是否含 失败」嗅探——英文 "Reconnect failed" 不含中文，颜色会错落到 Warning。</summary>
+        public enum ConnectionStatusLevel { Reconnecting, Failed }
+
         // ── 常量（设计 px）──
         private const int DesignHeight = 30;
 
@@ -176,10 +180,11 @@ namespace Gdterm.UI.Controls
             SetStatusTip(_keepassStatus, unlocked ? L10n.T("密码库: 已解锁") : L10n.T("密码库: 锁定"));
         }
 
-        /// <summary>连接状态段（A1）：空=就绪(Muted)；含"失败"=Danger；其余重连中=Warning。自带线程 marshal。</summary>
-        public void UpdateConnectionStatus(string text)
+        /// <summary>连接状态段（A1）：空=就绪(Muted)；级别决定颜色（Failed=Danger / Reconnecting=Warning）。自带线程 marshal。
+        /// 级别由调用方显式传入（i18n 后文本嗅探不可靠，见 ConnectionStatusLevel 注释）。</summary>
+        public void UpdateConnectionStatus(string text, ConnectionStatusLevel level = ConnectionStatusLevel.Reconnecting)
         {
-            if (InvokeRequired) { BeginInvoke(new Action<string>(UpdateConnectionStatus), text ?? ""); return; }
+            if (InvokeRequired) { BeginInvoke(new Action<string, ConnectionStatusLevel>(UpdateConnectionStatus), text ?? "", level); return; }
             if (_connectionStatus == null) return;
             if (string.IsNullOrEmpty(text))
             {
@@ -190,7 +195,7 @@ namespace Gdterm.UI.Controls
             else
             {
                 _connectionStatus.Text = text;
-                _connectionStatus.ForeColor = text.IndexOf("失败", StringComparison.Ordinal) >= 0
+                _connectionStatus.ForeColor = level == ConnectionStatusLevel.Failed
                     ? GdtermColorTable.Danger
                     : GdtermColorTable.Warning;
                 SetStatusTip(_connectionStatus, L10n.T("连接: ") + text);
