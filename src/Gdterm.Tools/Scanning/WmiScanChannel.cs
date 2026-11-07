@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Management;
 using System.Text;
+using Gdterm.Core;
 
 namespace Gdterm.Tools.Scanning
 {
@@ -28,7 +29,7 @@ namespace Gdterm.Tools.Scanning
             _password = password ?? "";
         }
 
-        public string Name { get { return "WMI 远端(" + _host + ")"; } }
+        public string Name { get { return L10n.T("WMI 远端(") + _host + ")"; } }
 
         public bool Supports(string scriptKind)
         {
@@ -40,7 +41,7 @@ namespace Gdterm.Tools.Scanning
             var output = new ScanExecutionOutput();
             if (_host.Length == 0)
             {
-                output.RuntimeError = "未填写远程主机地址";
+                output.RuntimeError = L10n.T("未填写远程主机地址");
                 return output;
             }
             if (timeoutSeconds <= 0) timeoutSeconds = 60;
@@ -92,7 +93,7 @@ namespace Gdterm.Tools.Scanning
             }
             catch (ManagementException ex)
             {
-                output.RuntimeError = "WMI 操作失败: " + ex.Message + HintSuffix();
+                output.RuntimeError = L10n.T("WMI 操作失败: ") + ex.Message + HintSuffix();
             }
             catch (Exception ex)
             {
@@ -145,7 +146,7 @@ namespace Gdterm.Tools.Scanning
                     uint rc = outParams["ReturnValue"] != null ? Convert.ToUInt32(outParams["ReturnValue"]) : 8;
                     if (rc != 0)
                     {
-                        output.RuntimeError = "Win32_Process.Create 失败，返回码 " + rc + "（2=拒绝访问 3=路径未找到 8=未知失败 9=路径不存在 21=参数无效）" + HintSuffix();
+                        output.RuntimeError = L10n.T("Win32_Process.Create 失败，返回码 ") + rc + L10n.T("（2=拒绝访问 3=路径未找到 8=未知失败 9=路径不存在 21=参数无效）") + HintSuffix();
                         return 0;
                     }
                     return Convert.ToUInt32(outParams["ProcessId"]);
@@ -171,9 +172,9 @@ namespace Gdterm.Tools.Scanning
             }
             // finding-14：超时后尽力终止远端进程，避免残留 powershell 与临时文件
             if (TryTerminateRemote(scope, pid))
-                output.RuntimeError = "执行超时（" + timeoutSeconds + "s），已终止远端进程 PID " + pid;
+                output.RuntimeError = L10n.T("执行超时（") + timeoutSeconds + L10n.T("s），已终止远端进程 PID ") + pid;
             else
-                output.RuntimeError = "执行超时（" + timeoutSeconds + "s）——远端进程可能仍在运行，请到目标机任务管理器确认 PID " + pid;
+                output.RuntimeError = L10n.T("执行超时（") + timeoutSeconds + L10n.T("s）——远端进程可能仍在运行，请到目标机任务管理器确认 PID ") + pid;
         }
 
         /// <summary>best-effort 终止远端 Win32_Process；失败不抛出（超时提示已足够指导人工处理）。</summary>
@@ -225,7 +226,7 @@ namespace Gdterm.Tools.Scanning
                     // finding-14：仅在尚无更早错误时才写取回失败——避免覆盖 stdout/stderr 阶段已有的提示
                     if (output.Stdout == null && output.Stderr == null && output.RuntimeError == null
                         && uncPath.EndsWith("_o.txt", StringComparison.Ordinal))
-                        output.RuntimeError = "取回结果失败：文件不存在——ADMIN$ 共享可能被关闭。" + HintSuffix();
+                        output.RuntimeError = L10n.T("取回结果失败：文件不存在——ADMIN$ 共享可能被关闭。") + HintSuffix();
                     return null;
                 }
                 return File.ReadAllText(uncPath, Encoding.UTF8);
@@ -233,7 +234,7 @@ namespace Gdterm.Tools.Scanning
             catch (Exception ex)
             {
                 if (output.RuntimeError == null)
-                    output.RuntimeError = "取回结果失败: " + ex.Message + "——需开启 ADMIN$ 管理共享。" + HintSuffix();
+                    output.RuntimeError = L10n.T("取回结果失败: ") + ex.Message + L10n.T("——需开启 ADMIN$ 管理共享。") + HintSuffix();
                 return null;
             }
         }
@@ -250,12 +251,12 @@ namespace Gdterm.Tools.Scanning
 
         private static string HintSuffix()
         {
-            return "\r\n提示：WMI 通道要求目标管理员权限且 ADMIN$ 共享可用；若不可满足请改用 SSH 通道（目标安装 OpenSSH Server）。";
+            return L10n.T("\r\n提示：WMI 通道要求目标管理员权限且 ADMIN$ 共享可用；若不可满足请改用 SSH 通道（目标安装 OpenSSH Server）。");
         }
 
         private static string DescribeAccessDenied(UnauthorizedAccessException ex)
         {
-            return "访问被拒绝: " + ex.Message + " —— 当前账号对目标没有管理员权限。" + HintSuffix();
+            return L10n.T("访问被拒绝: ") + ex.Message + L10n.T(" —— 当前账号对目标没有管理员权限。") + HintSuffix();
         }
 
         private static string DescribeComError(System.Runtime.InteropServices.COMException ex)
@@ -263,9 +264,9 @@ namespace Gdterm.Tools.Scanning
             // 0x800706BA RPC 服务器不可用 / 0x80070005 拒绝访问 / 0x800A0046 等 DCOM 拒绝
             var hr = ex.HResult & 0xFFFF;
             var extra = "";
-            if (ex.HResult == unchecked((int)0x800706BA)) extra = "（RPC 不可达：检查目标防火墙放行 WMI/DCOM）";
-            else if (ex.HResult == unchecked((int)0x80070005)) extra = "（凭据被拒绝：核对用户名格式 DOMAIN\\user 与密码）";
-            return "WMI 连接失败: " + ex.Message + extra + HintSuffix();
+            if (ex.HResult == unchecked((int)0x800706BA)) extra = L10n.T("（RPC 不可达：检查目标防火墙放行 WMI/DCOM）");
+            else if (ex.HResult == unchecked((int)0x80070005)) extra = L10n.T("（凭据被拒绝：核对用户名格式 DOMAIN\\user 与密码）");
+            return L10n.T("WMI 连接失败: ") + ex.Message + extra + HintSuffix();
         }
     }
 }

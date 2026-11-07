@@ -6,6 +6,7 @@ using Gdterm.Terminal;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 using Gdterm.UI.Diagnostics;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
@@ -51,14 +52,14 @@ namespace Gdterm.UI.Controls
             }
             _monitor = monitor;
             _loading = true;
-            if (_lblHint != null) _lblHint.Text = "正在等待首个采样…";
+            if (_lblHint != null) _lblHint.Text = L10n.T("正在等待首个采样…");
             if (_monitor != null)
             {
                 _monitor.SnapshotUpdated += OnSnapshot;
                 try { _monitor.Start(3000); }
                 catch (Exception ex)
                 {
-                    SetHint("采样启动失败：" + ex.Message, true);
+                    SetHint(L10n.T("采样启动失败：") + ex.Message, true);
                     try { DiagLog.Error("HealthMonitorPanel.Start", ex); } catch (Exception) { }
                 }
             }
@@ -92,11 +93,11 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 10), DpiScale.V(this, 12), DpiScale.V(this, 10))
             };
 
-            _lblStatus = CreateCard("● 状态", "未知", GdtermColorTable.Muted);
-            _lblUptime = CreateCard("⏱ 运行时间", "00:00:00", GdtermColorTable.Foreground);
-            _lblLatency = CreateCard("⚡ 延迟", "— ms", GdtermColorTable.Success);
-            _lblReconnects = CreateCard("↻ 重连", "0", GdtermColorTable.Warning);
-            _lblHint = CreateCard("采样", "正在等待首个采样…", GdtermColorTable.Muted);
+            _lblStatus = CreateCard(L10n.T("● 状态"), L10n.T("未知"), GdtermColorTable.Muted);
+            _lblUptime = CreateCard(L10n.T("⏱ 运行时间"), "00:00:00", GdtermColorTable.Foreground);
+            _lblLatency = CreateCard(L10n.T("⚡ 延迟"), "— ms", GdtermColorTable.Success);
+            _lblReconnects = CreateCard(L10n.T("↻ 重连"), "0", GdtermColorTable.Warning);
+            _lblHint = CreateCard(L10n.T("采样"), L10n.T("正在等待首个采样…"), GdtermColorTable.Muted);
             _lblHint.Font = _labelFont;
 
             cards.Controls.AddRange(new Control[] { _lblStatus, _lblUptime, _lblLatency, _lblReconnects, _lblHint });
@@ -149,7 +150,7 @@ namespace Gdterm.UI.Controls
                 BeginInvoke((Action)(() =>
                 {
                     _loading = false;
-                    _lblStatus.Text = snapshot.IsConnected ? "● 已连接" : "○ 断开";
+                    _lblStatus.Text = snapshot.IsConnected ? L10n.T("● 已连接") : L10n.T("○ 断开");
                     _lblStatus.ForeColor = snapshot.IsConnected ? GdtermColorTable.Success : GdtermColorTable.Danger;
                     _lblUptime.Text = FormatTimeSpan(snapshot.Uptime);
                     _lblLatency.Text = string.Format("{0:F0}ms", snapshot.LatencyMs);
@@ -159,12 +160,12 @@ namespace Gdterm.UI.Controls
                     {
                         _lastConnected = snapshot.IsConnected;
                         if (!snapshot.IsConnected)
-                            SetHint(string.IsNullOrEmpty(snapshot.StatusText) ? "连接已断开，正在等待重连…" : snapshot.StatusText, true);
+                            SetHint(string.IsNullOrEmpty(snapshot.StatusText) ? L10n.T("连接已断开，正在等待重连…") : snapshot.StatusText, true);
                         else
-                            SetHint("已恢复连接", false);
+                            SetHint(L10n.T("已恢复连接"), false);
                     }
                     else if (snapshot.IsConnected)
-                        SetHint("采样于 " + snapshot.Timestamp.ToString("HH:mm:ss"), false);
+                        SetHint(L10n.T("采样于 ") + snapshot.Timestamp.ToString("HH:mm:ss"), false);
                 }));
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("HealthMonitorPanel", exSwallowed); } catch { } }
@@ -182,7 +183,7 @@ namespace Gdterm.UI.Controls
             var chartRect = new Rectangle(rect.Left + left, rect.Top + top, rect.Width - left - right, rect.Height - top - bottom);
 
             // 标题
-            g.DrawString("连接状态", _titleFont, Brushes.Gray, rect.Left + left, 8);
+            g.DrawString(L10n.T("连接状态"), _titleFont, Brushes.Gray, rect.Left + left, 8);
 
             // 网格线
             using (var pen = new Pen(GdtermColorTable.Surface, 1))
@@ -200,7 +201,7 @@ namespace Gdterm.UI.Controls
             if (snapshots.Count < 2)
             {
                 // 此前这里直接 return：首帧前图区纯背景色，用户以为图表坏了
-                var msg = _loading ? "正在等待首个采样…" : "采样点不足，稍等几秒即出曲线";
+                var msg = _loading ? L10n.T("正在等待首个采样…") : L10n.T("采样点不足，稍等几秒即出曲线");
                 g.DrawString(msg, _labelFont, GetBrush(GdtermColorTable.Muted),
                     chartRect.Left + 8, chartRect.Top + chartRect.Height / 2f - 8);
                 return;
@@ -220,8 +221,8 @@ namespace Gdterm.UI.Controls
             }
 
             // 左侧标签
-            g.DrawString("在线", _labelFont, Brushes.Gray, 8, chartRect.Top + chartRect.Height * 0.15f);
-            g.DrawString("离线", _labelFont, Brushes.Gray, 8, chartRect.Top + chartRect.Height * 0.75f);
+            g.DrawString(L10n.T("在线"), _labelFont, Brushes.Gray, 8, chartRect.Top + chartRect.Height * 0.15f);
+            g.DrawString(L10n.T("离线"), _labelFont, Brushes.Gray, 8, chartRect.Top + chartRect.Height * 0.75f);
         }
 
         private static string FormatTimeSpan(TimeSpan ts)

@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
@@ -30,7 +31,7 @@ namespace Gdterm.UI.Controls
             ForeColor = GdtermColorTable.Foreground;
 
             _clear = new AntdUI.Button {
-                Text = "清空",
+                Text = L10n.T("清空"),
                 Dock = DockStyle.Bottom,
                 Height = 28,
                 BackColor = GdtermColorTable.Surface,
@@ -43,21 +44,21 @@ namespace Gdterm.UI.Controls
                 if (n == 0)
                 {
                     // 空列表点「清空」不该什么也不发生：这是最容易让用户怀疑按钮坏了的地方
-                    ToastNotifier.Info("通知中心已经是空的");
+                    ToastNotifier.Info(L10n.T("通知中心已经是空的"));
                     return;
                 }
-                if (MessageBox.Show(this.FindForm(), "清空 " + n + " 条通知？清空后无法恢复。", "通知中心",
+                if (MessageBox.Show(this.FindForm(), L10n.T("清空 ") + n + L10n.T(" 条通知？清空后无法恢复。"), L10n.T("通知中心"),
                         MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
                 try
                 {
                     lock (Sync) Buffer.Clear();
                     Reload();
-                    ToastNotifier.Success("已清空 " + n + " 条通知", 2000);
+                    ToastNotifier.Success(L10n.T("已清空 ") + n + L10n.T(" 条通知"), 2000);
                 }
                 catch (Exception ex)
                 {
                     try { DiagLog.Error("NotificationCenter.Clear", ex); } catch (Exception) { }
-                    ToastNotifier.Error("清空失败：" + ex.Message);
+                    ToastNotifier.Error(L10n.T("清空失败：") + ex.Message);
                 }
             };
 
@@ -72,16 +73,16 @@ namespace Gdterm.UI.Controls
                 ForeColor = GdtermColorTable.Foreground,
                 Font = Services.FormFontPolicy.MonoFont()
             };
-            _list.Columns.Add("内容", 200);
+            _list.Columns.Add(L10n.T("内容"), 200);
             FitColumn();
             _list.SizeChanged += (s, e) => FitColumn();
 
             // 表壳：过滤 + 排序 + 导出（导出无选中时作用于当前可见条目）
-            _shell = new ListShell(_list, "按时间/级别/内容过滤…");
-            _shell.AddAction("导出", (s, e) => _shell.ExportCsv(this.FindForm(), "notifications")).Name = "NotificationExportButton";
+            _shell = new ListShell(_list, L10n.T("按时间/级别/内容过滤…"));
+            _shell.AddAction(L10n.T("导出"), (s, e) => _shell.ExportCsv(this.FindForm(), "notifications")).Name = "NotificationExportButton";
 
             var title = new AntdUI.Label {
-                Text = "通知中心",
+                Text = L10n.T("通知中心"),
                 Dock = DockStyle.Top,
                 Height = Math.Max(DpiScale.V(this, 28), FormFontPolicy.LineBox(FormFontPolicy.UiFont(+1f), this)),
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -102,8 +103,8 @@ namespace Gdterm.UI.Controls
             Controls.Add(title);
 
             // 审计 C1：通知中心空态（“没有通知”和“没加载出来”此前长得一模一样）
-            _empty = EmptyStateView.Attach(this, "暂无通知",
-                "连接状态变化、扫描结果、导入导出等操作会在这里留痕");
+            _empty = EmptyStateView.Attach(this, L10n.T("暂无通知"),
+                L10n.T("连接状态变化、扫描结果、导入导出等操作会在这里留痕"));
             // 首帧必须反映缓冲区现状：此前只在 Push 时刷新，侧栏一打开是空白表 + 隐藏空态，
             // 看着像"通知全丢了"（CI 0.1.381 侧栏 dump 实证空态未显示）。
             Reload();
@@ -150,13 +151,13 @@ namespace Gdterm.UI.Controls
             try
             {
                 Clipboard.SetText(text);
-                ToastNotifier.Success("已复制通知", 2000);
+                ToastNotifier.Success(L10n.T("已复制通知"), 2000);
             }
             catch (Exception ex)
             {
                 // 剪贴板被别的进程占用是常见失败：不能静默
                 try { DiagLog.Error("NotificationCenter.Copy", ex); } catch (Exception) { }
-                ToastNotifier.Error("复制失败：" + ex.Message);
+                ToastNotifier.Error(L10n.T("复制失败：") + ex.Message);
             }
         }
 
@@ -172,7 +173,7 @@ namespace Gdterm.UI.Controls
             catch (Exception ex)
             {
                 try { DiagLog.Error("NotificationCenter.Remove", ex); } catch (Exception) { }
-                ToastNotifier.Error("删除通知失败：" + ex.Message);
+                ToastNotifier.Error(L10n.T("删除通知失败：") + ex.Message);
             }
         }
 

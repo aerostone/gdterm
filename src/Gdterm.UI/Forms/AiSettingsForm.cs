@@ -5,6 +5,7 @@ using Gdterm.AI;
 using Gdterm.AI.Models;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Forms
 {
@@ -36,7 +37,7 @@ namespace Gdterm.UI.Forms
 
         private void InitializeComponent()
         {
-            Text = "AI 设置";
+            Text = L10n.T("AI 设置");
             Size = DpiScale.S(this, 520, 500); // 初始基准，构造末尾按内容自适应重设
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -58,7 +59,7 @@ namespace Gdterm.UI.Forms
             int y = DpiScale.V(this, 18);
 
             var titleLabel = new AntdUI.Label {
-                Text = "AI 模型配置",
+                Text = L10n.T("AI 模型配置"),
                 Font = Gdterm.UI.Services.FormFontPolicy.UiFont(+5f, FontStyle.Bold),
                 AutoSize = true,
                 Location = new Point(pad, y)
@@ -67,16 +68,16 @@ namespace Gdterm.UI.Forms
             y += Math.Max(DpiScale.V(this, 36), FormFontPolicy.RowStep(this));
 
             var subtitleLabel = new AntdUI.Label {
-                Text = "配置 OpenAI 兼容 API 端点和模型参数",
+                Text = L10n.T("配置 OpenAI 兼容 API 端点和模型参数"),
                 AutoSize = true,
                 Location = new Point(pad, y)
             };
             Controls.Add(subtitleLabel);
             y += Math.Max(DpiScale.V(this, 36), FormFontPolicy.RowStep(this));
 
-            _nameBox = AddField("配置名称", labelX, boxX, y, boxW, fieldH);
+            _nameBox = AddField(L10n.T("配置名称"), labelX, boxX, y, boxW, fieldH);
             y += rowH;
-            _endpointBox = AddField("端点 URL", labelX, boxX, y, boxW, fieldH);
+            _endpointBox = AddField(L10n.T("端点 URL"), labelX, boxX, y, boxW, fieldH);
             _endpointBox.PlaceholderText = "https://api.openai.com/v1";
             y += rowH;
 
@@ -89,7 +90,7 @@ namespace Gdterm.UI.Forms
                 UseSystemPasswordChar = true
             };
             _showKeyCheck = new AntdUI.Checkbox {
-                Text = "显示",
+                Text = L10n.T("显示"),
                 AutoSize = true,
                 Location = new Point(boxX + boxW - DpiScale.V(this, 66), y + DpiScale.V(this, 10))
             };
@@ -101,12 +102,12 @@ namespace Gdterm.UI.Forms
             Controls.Add(_showKeyCheck);
             y += rowH;
 
-            _modelBox = AddField("模型名称", labelX, boxX, y, boxW, fieldH);
+            _modelBox = AddField(L10n.T("模型名称"), labelX, boxX, y, boxW, fieldH);
             _modelBox.PlaceholderText = "gpt-4";
             y += rowH;
 
             // Max Tokens
-            Controls.Add(MakeLabel("最大 Token", labelX, y, fieldH));
+            Controls.Add(MakeLabel(L10n.T("最大 Token"), labelX, y, fieldH));
             _maxTokensSpinner = new AntdUI.InputNumber {
                 Location = new Point(boxX, y),
                 Size = new Size(DpiScale.V(this, 140), fieldH),
@@ -119,7 +120,7 @@ namespace Gdterm.UI.Forms
             y += rowH;
 
             // Temperature
-            Controls.Add(MakeLabel("温度", labelX, y, fieldH));
+            Controls.Add(MakeLabel(L10n.T("温度"), labelX, y, fieldH));
             _temperatureSpinner = new AntdUI.InputNumber {
                 Location = new Point(boxX, y),
                 Size = new Size(DpiScale.V(this, 140), fieldH),
@@ -145,7 +146,7 @@ namespace Gdterm.UI.Forms
             int btnGap = DpiScale.V(this, 8);
             // 按钮：Windows 惯例主按钮最右，取消在其左（修复：原先主按钮在左侧）
             var cancelButton = new AntdUI.Button {
-                Text = "取消",
+                Text = L10n.T("取消"),
                 Size = new Size(btnW, fieldH),
                 Location = new Point(boxX + boxW - btnW, y)
             };
@@ -153,7 +154,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(cancelButton);
 
             var saveButton = new AntdUI.Button {
-                Text = "保存",
+                Text = L10n.T("保存"),
                 Type = AntdUI.TTypeMini.Primary,
                 Size = new Size(btnW, fieldH),
                 Location = new Point(boxX + boxW - btnW * 2 - btnGap, y)
@@ -202,12 +203,12 @@ namespace Gdterm.UI.Forms
                 }
                 else
                 {
-                    _nameBox.Text = "默认模型";
+                    _nameBox.Text = L10n.T("默认模型");
                     _endpointBox.Text = "https://api.openai.com/v1";
                     _modelBox.Text = "gpt-4";
                     _maxTokensSpinner.Value = 2048;
                     _temperatureSpinner.Value = 0.7m;
-                    _statusLabel.Text = "未配置模型，请填写以上信息后保存";
+                    _statusLabel.Text = L10n.T("未配置模型，请填写以上信息后保存");
                 }
             }
             catch (Exception ex)
@@ -222,7 +223,7 @@ namespace Gdterm.UI.Forms
             // 验证必填项
             if (string.IsNullOrWhiteSpace(_endpointBox.Text))
             {
-                _statusLabel.Text = "端点 URL 不能为空";
+                _statusLabel.Text = L10n.T("端点 URL 不能为空");
                 _statusLabel.ForeColor = GdtermColorTable.Danger;
                 _endpointBox.Focus();
                 return;
@@ -230,7 +231,7 @@ namespace Gdterm.UI.Forms
 
             if (string.IsNullOrWhiteSpace(_modelBox.Text))
             {
-                _statusLabel.Text = "模型名称不能为空";
+                _statusLabel.Text = L10n.T("模型名称不能为空");
                 _statusLabel.ForeColor = GdtermColorTable.Danger;
                 _modelBox.Focus();
                 return;
