@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using System.Linq;
+using Gdterm.Core;
 
 namespace Gdterm.Terminal
 {
@@ -88,7 +89,7 @@ namespace Gdterm.Terminal
         public static ReadyState Detect(IList<string> recentOutput)
         {
             if (recentOutput == null || recentOutput.Count == 0)
-                return new ReadyState(false, "无输出", ReadyReason.NoOutput);
+                return new ReadyState(false, L10n.T("无输出"), ReadyReason.NoOutput);
 
             // 取最后一行非空行
             var lastLine = "";
@@ -103,7 +104,7 @@ namespace Gdterm.Terminal
             }
 
             if (string.IsNullOrEmpty(lastLine))
-                return new ReadyState(false, "无输出", ReadyReason.NoOutput);
+                return new ReadyState(false, L10n.T("无输出"), ReadyReason.NoOutput);
 
             // 检查是否匹配非就绪状态
             var lastLineLower = lastLine.ToLowerInvariant();
@@ -139,12 +140,12 @@ namespace Gdterm.Terminal
             {
                 if (pattern.IsMatch(lastLine))
                 {
-                    return new ReadyState(true, "命令就绪", ReadyReason.PromptDetected);
+                    return new ReadyState(true, L10n.T("命令就绪"), ReadyReason.PromptDetected);
                 }
             }
 
             // 默认：无法确定，视为未就绪（保守策略）
-            return new ReadyState(false, "未检测到提示符", ReadyReason.NoPrompt);
+            return new ReadyState(false, L10n.T("未检测到提示符"), ReadyReason.NoPrompt);
         }
 
         /// <summary>

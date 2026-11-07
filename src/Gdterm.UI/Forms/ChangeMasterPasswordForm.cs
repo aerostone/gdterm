@@ -6,6 +6,7 @@ using Gdterm.Security;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 using Gdterm.UI.Diagnostics;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Forms
 {
@@ -59,7 +60,7 @@ namespace Gdterm.UI.Forms
 
         private void InitializeComponent()
         {
-            Text = "修改主密码";
+            Text = L10n.T("修改主密码");
             Size = DpiScale.S(this, 500, 470); // 初始基准，构造末尾按内容自适应重设
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -82,7 +83,7 @@ namespace Gdterm.UI.Forms
             int y = DpiScale.V(this, 20);
 
             var titleLabel = new AntdUI.Label {
-                Text = "修改主密码",
+                Text = L10n.T("修改主密码"),
                 Font = Gdterm.UI.Services.FormFontPolicy.UiFont(+6f, FontStyle.Bold),
                 AutoSize = true,
                 Location = new Point(labelX, y)
@@ -91,28 +92,28 @@ namespace Gdterm.UI.Forms
             y += Math.Max(DpiScale.V(this, 46), FormFontPolicy.RowStep(this) + DpiScale.V(this, 10));
 
             var tipLabel = new AntdUI.Label {
-                Text = "修改后，KeePass 密码库 (gdterm.kdbx) 将用新主密码重新加密。\n请妥善保管新密码，丢失将无法找回。",
+                Text = L10n.T("修改后，KeePass 密码库 (gdterm.kdbx) 将用新主密码重新加密。\n请妥善保管新密码，丢失将无法找回。"),
                 AutoSize = true,
                 Location = new Point(labelX, y)
             };
             Controls.Add(tipLabel);
             y += Math.Max(DpiScale.V(this, 58), FormFontPolicy.RowStep(this) * 2);
 
-            Controls.Add(MakeFieldLabel("当前密码", labelX, y, fieldH));
+            Controls.Add(MakeFieldLabel(L10n.T("当前密码"), labelX, y, fieldH));
             _oldBox = MakePasswordBox(boxX, y, boxWidth, fieldH);
             y += rowH;
 
-            Controls.Add(MakeFieldLabel("新密码", labelX, y, fieldH));
+            Controls.Add(MakeFieldLabel(L10n.T("新密码"), labelX, y, fieldH));
             _newBox = MakePasswordBox(boxX, y, boxWidth, fieldH);
             _newBox.TextChanged += OnNewPasswordChanged;
             y += rowH;
 
-            Controls.Add(MakeFieldLabel("确认新密码", labelX, y, fieldH));
+            Controls.Add(MakeFieldLabel(L10n.T("确认新密码"), labelX, y, fieldH));
             _confirmBox = MakePasswordBox(boxX, y, boxWidth, fieldH);
             y += rowH;
 
             _strengthLabel = new AntdUI.Label {
-                Text = "密码强度：未输入",
+                Text = L10n.T("密码强度：未输入"),
                 AutoSize = true,
                 Location = new Point(boxX, y)
             };
@@ -129,7 +130,7 @@ namespace Gdterm.UI.Forms
             y += rowH;
 
             _showPwdCheck = new AntdUI.Checkbox {
-                Text = "显示密码",
+                Text = L10n.T("显示密码"),
                 AutoSize = true,
                 Location = new Point(labelX, y)
             };
@@ -147,7 +148,7 @@ namespace Gdterm.UI.Forms
             int btnGap = DpiScale.V(this, 8);
             // 按钮：Windows 惯例主按钮最右（修复：原先确认修改在左侧）
             var cancelButton = new AntdUI.Button {
-                Text = "取消",
+                Text = L10n.T("取消"),
                 Size = new Size(btnW2, fieldH),
                 Location = new Point(clientW - pad - btnW2, y)
             };
@@ -155,7 +156,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(cancelButton);
 
             _okButton = new AntdUI.Button {
-                Text = "确认修改",
+                Text = L10n.T("确认修改"),
                 Type = AntdUI.TTypeMini.Primary,
                 Size = new Size(btnW, fieldH),
                 Location = new Point(clientW - pad - btnW - btnGap - btnW2, y)
@@ -193,7 +194,7 @@ namespace Gdterm.UI.Forms
             var pwd = _newBox.Text;
             if (string.IsNullOrEmpty(pwd))
             {
-                _strengthLabel.Text = "密码强度：未输入";
+                _strengthLabel.Text = L10n.T("密码强度：未输入");
                 _strengthLabel.ForeColor = GdtermColorTable.Muted;
                 return;
             }
@@ -208,9 +209,9 @@ namespace Gdterm.UI.Forms
 
             string strength;
             Color color;
-            if (score <= 2) { strength = "弱"; color = GdtermColorTable.Danger; }
-            else if (score <= 4) { strength = "中"; color = GdtermColorTable.Warning; }
-            else { strength = "强"; color = GdtermColorTable.Success; }
+            if (score <= 2) { strength = L10n.T("弱"); color = GdtermColorTable.Danger; }
+            else if (score <= 4) { strength = L10n.T("中"); color = GdtermColorTable.Warning; }
+            else { strength = L10n.T("强"); color = GdtermColorTable.Success; }
 
             _strengthLabel.Text = $"密码强度：{strength}（{pwd.Length} 字符）";
             _strengthLabel.ForeColor = color;
@@ -226,7 +227,7 @@ namespace Gdterm.UI.Forms
 
             if (string.IsNullOrEmpty(oldPw))
             {
-                _errorLabel.Text = "请输入当前密码";
+                _errorLabel.Text = L10n.T("请输入当前密码");
                 _oldBox.Focus();
                 return;
             }
@@ -234,28 +235,28 @@ namespace Gdterm.UI.Forms
             // 先验证当前密码正确（不改变锁定状态）
             if (_securityManager != null && !_securityManager.VerifyMasterPassword(oldPw))
             {
-                _errorLabel.Text = "当前密码不正确";
+                _errorLabel.Text = L10n.T("当前密码不正确");
                 _oldBox.Focus();
                 return;
             }
 
             if (string.IsNullOrEmpty(newPw))
             {
-                _errorLabel.Text = "新密码不能为空";
+                _errorLabel.Text = L10n.T("新密码不能为空");
                 _newBox.Focus();
                 return;
             }
 
             if (newPw != confirmPw)
             {
-                _errorLabel.Text = "两次输入的新密码不一致";
+                _errorLabel.Text = L10n.T("两次输入的新密码不一致");
                 _confirmBox.Focus();
                 return;
             }
 
             if (newPw == oldPw)
             {
-                _errorLabel.Text = "新密码不能与当前密码相同";
+                _errorLabel.Text = L10n.T("新密码不能与当前密码相同");
                 _newBox.Focus();
                 return;
             }
@@ -276,14 +277,14 @@ namespace Gdterm.UI.Forms
             }
             catch (WeakPasswordException ex)
             {
-                _errorLabel.Text = "新密码不符合要求：" + (ex.Violations != null && ex.Violations.Count > 0
+                _errorLabel.Text = L10n.T("新密码不符合要求：") + (ex.Violations != null && ex.Violations.Count > 0
                     ? string.Join("; ", ex.Violations)
                     : ex.Message);
                 _newBox.Focus();
             }
             catch (Exception ex)
             {
-                _errorLabel.Text = "修改失败：" + ex.Message;
+                _errorLabel.Text = L10n.T("修改失败：") + ex.Message;
             }
         }
     }

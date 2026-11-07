@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Gdterm.UI.Services;
+using Gdterm.Core;
 using Gdterm.Core.Models;
 using Gdterm.Sftp;
 using Gdterm.Tunnel;
@@ -99,7 +100,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Top,
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 4), DpiScale.V(this, 6), DpiScale.V(this, 4)),
-                Text = "  连接 " + (_config != null ? _config.Host : "?") + " …",
+                Text = L10n.T("  连接 ") + (_config != null ? _config.Host : "?") + " …",
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleLeft,
                 BackColor = GdtermColorTable.Surface
@@ -116,12 +117,12 @@ namespace Gdterm.UI.Controls
             _local = new FilePaneControl(new LocalFilePaneProvider());
             _local.EntriesDropped += entries => OnTransfer(entries, targetIsRemote: false); // 拖到本地=下载
             _local.TransferToPeerRequested += entries => OnTransfer(entries, targetIsRemote: true); // 本地→对侧=上传
-            AddPane(_split.Panel1, _local, "本地", GdtermColorTable.Info);
+            AddPane(_split.Panel1, _local, L10n.T("本地"), GdtermColorTable.Info);
 
             // Panel2：连接成功前只有占位——升级为标准空态层（带「重试连接」入口，
             // 原来连接失败后这个占位就永远停在那儿，只能关标签页重开）
-            _remotePlaceholder = EmptyStateView.Attach(_split.Panel2, "正在连接 " + (_config != null ? _config.Host : "") + " …",
-                "连接成功后这里显示远端目录，可拖拽或双击在两栏间传输");
+            _remotePlaceholder = EmptyStateView.Attach(_split.Panel2, L10n.T("正在连接 ") + (_config != null ? _config.Host : "") + " …",
+                L10n.T("连接成功后这里显示远端目录，可拖拽或双击在两栏间传输"));
             _split.Panel2.Controls.Add(_remotePlaceholder);
 
             var queueBar = new FlowLayoutPanel
@@ -135,7 +136,7 @@ namespace Gdterm.UI.Controls
             };
             _queueLabel = new AntdUI.Label {
                 AutoSize = true,
-                Text = "传输队列空闲",
+                Text = L10n.T("传输队列空闲"),
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleLeft
             };
@@ -185,7 +186,7 @@ namespace Gdterm.UI.Controls
                     await _sftp.ConnectAsync(_config, _credential, CancellationToken.None);
                 }
 
-                _connStatus.Text = "  已连接 " + _config.Host + "  ·  " + (_config.Username ?? "");
+                _connStatus.Text = L10n.T("  已连接 ") + _config.Host + "  ·  " + (_config.Username ?? "");
                 _connStatus.ForeColor = GdtermColorTable.Accent;
 
                 // 连接成功：用远端栏替换占位
@@ -195,7 +196,7 @@ namespace Gdterm.UI.Controls
                 _remote.TransferToPeerRequested += entries => OnTransfer(entries, targetIsRemote: false); // 远程→对侧=下载
                 var follow = new AntdUI.Checkbox
                 {
-                    Text = "跟随终端目录",
+                    Text = L10n.T("跟随终端目录"),
                     Checked = _followCwd,
                     AutoSize = true,
                     Dock = DockStyle.Top,
@@ -205,16 +206,16 @@ namespace Gdterm.UI.Controls
                     Font = Services.FormFontPolicy.UiFont()
                 };
                 follow.CheckedChanged += (s2, e2) => { _followCwd = follow.Checked; };
-                AddPane(_split.Panel2, _remote, "远程 " + _config.Host, GdtermColorTable.Accent, follow);
+                AddPane(_split.Panel2, _remote, L10n.T("远程 ") + _config.Host, GdtermColorTable.Accent, follow);
                 _remote.Navigate(string.IsNullOrEmpty(_pendingFollow) ? "/" : _pendingFollow);
             }
             catch (Exception ex)
             {
-                _connStatus.Text = "  连接失败: " + ex.Message + "  （关闭此标签页后重试）";
+                _connStatus.Text = L10n.T("  连接失败: ") + ex.Message + L10n.T("  （关闭此标签页后重试）");
                 _connStatus.ForeColor = GdtermColorTable.Danger;
                 if (_remotePlaceholder != null)
-                    _remotePlaceholder.SetEmpty(true, "连接失败", ex.Message + "；关闭此标签页后重新打开即可重连");
-                try { ToastNotifier.Error("SFTP 连接失败：" + ex.Message); } catch (Exception) { }
+                    _remotePlaceholder.SetEmpty(true, L10n.T("连接失败"), ex.Message + L10n.T("；关闭此标签页后重新打开即可重连"));
+                try { ToastNotifier.Error(L10n.T("SFTP 连接失败：") + ex.Message); } catch (Exception) { }
                 try { DiagLog.Info("SftpDualPane.Connect", "failed: " + ex.Message); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SftpDualPanePanel", exSwallowed); } catch { } }
             }
         }
@@ -228,11 +229,11 @@ namespace Gdterm.UI.Controls
             var targetPath = targetPane.CurrentPath;
             if (string.IsNullOrEmpty(targetPath)) return; // 伪根（此电脑）不可作传输目标（无真实路径）
             var upload = targetIsRemote;
-            var direction = upload ? "上传" : "下载";
+            var direction = upload ? L10n.T("上传") : L10n.T("下载");
 
             _activeTransfers++;
             UpdateQueueStatus();
-            TransferCenterPanel.Record("双栏" + direction + "开始  " + entries.Length + " 项  → " + targetPath);
+            TransferCenterPanel.Record(L10n.T("双栏") + direction + L10n.T("开始  ") + entries.Length + L10n.T(" 项  → ") + targetPath);
 
             Task.Run(async () =>
             {
@@ -243,7 +244,7 @@ namespace Gdterm.UI.Controls
                     var name = e.Name;
                     try
                     {
-                        ReportQueue("正在" + direction + " " + name + " …");
+                        ReportQueue(L10n.T("正在") + direction + " " + name + " …");
                         if (upload)
                         {
                             if (e.IsDirectory)
@@ -273,18 +274,18 @@ namespace Gdterm.UI.Controls
                 if (t.IsFaulted)
                 {
                     UpdateQueueStatus();
-                    MessageBox.Show(this, "传输失败:\n" + t.Exception.GetBaseException().Message,
-                        "SFTP 传输", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(this, L10n.T("传输失败:\n") + t.Exception.GetBaseException().Message,
+                        L10n.T("SFTP 传输"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
                 }
                 var r = t.Result;
-                var msg = "传输完成: " + r.ok + " 成功" + (r.fail > 0 ? "，" + r.fail + " 失败" : "");
+                var msg = L10n.T("传输完成: ") + r.ok + L10n.T(" 成功") + (r.fail > 0 ? "，" + r.fail + L10n.T(" 失败") : "");
                 UpdateQueueStatus(msg);
-                TransferCenterPanel.Record("双栏" + direction + "完成  " + msg + "  → " + targetPath);
+                TransferCenterPanel.Record(L10n.T("双栏") + direction + L10n.T("完成  ") + msg + "  → " + targetPath);
                 if (r.fail > 0)
                 {
-                    MessageBox.Show(this, "部分传输失败:\n" + string.Join("\n", r.errors.Take(10).ToArray()),
-                        "SFTP 传输", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show(this, L10n.T("部分传输失败:\n") + string.Join("\n", r.errors.Take(10).ToArray()),
+                        L10n.T("SFTP 传输"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
                 targetPane.Refresh();
             }, TaskScheduler.FromCurrentSynchronizationContext());
@@ -303,9 +304,9 @@ namespace Gdterm.UI.Controls
         private void UpdateQueueStatus(string idleText = null)
         {
             if (_activeTransfers > 0)
-                _queueLabel.Text = "  传输中… (" + _activeTransfers + " 个任务)";
+                _queueLabel.Text = L10n.T("  传输中… (") + _activeTransfers + L10n.T(" 个任务)");
             else
-                _queueLabel.Text = "  " + (idleText ?? "传输队列空闲");
+                _queueLabel.Text = "  " + (idleText ?? L10n.T("传输队列空闲"));
         }
 
         // ── 递归目录传输 ──────────────────────────────────
@@ -322,7 +323,7 @@ namespace Gdterm.UI.Controls
                 try { await _sftp.ListDirectoryAsync(remoteDir, CancellationToken.None); }
                 catch (Exception ex2)
                 {
-                    throw new Exception("无法创建远程目录 " + remoteDir + ": " + ex2.Message, ex2);
+                    throw new Exception(L10n.T("无法创建远程目录 ") + remoteDir + ": " + ex2.Message, ex2);
                 }
             }
         }
