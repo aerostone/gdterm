@@ -7,6 +7,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Services
 {
@@ -81,7 +82,7 @@ namespace Gdterm.UI.Services
                     var resp = await http.GetAsync(url).ConfigureAwait(false);
                     if (resp.StatusCode == HttpStatusCode.NotFound)
                     {
-                        result.Error = "仓库没有 release";
+                        result.Error = L10n.T("仓库没有 release");
                         return result;
                     }
                     if (!resp.IsSuccessStatusCode)
@@ -99,7 +100,7 @@ namespace Gdterm.UI.Services
                     result.Version = Normalize(result.Tag);
                     if (string.IsNullOrEmpty(result.Version))
                     {
-                        result.Error = "release 里没有版本号";
+                        result.Error = L10n.T("release 里没有版本号");
                         return result;
                     }
                     result.IsNewer = CompareVersions(result.Version, CurrentVersion) > 0;

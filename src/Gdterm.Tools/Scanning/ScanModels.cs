@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Gdterm.Core;
 
 namespace Gdterm.Tools.Scanning
 {
@@ -86,8 +87,8 @@ namespace Gdterm.Tools.Scanning
 
         public bool IsRunnable { get { return LoadError == null && Manifest != null && Manifest.Enabled && File.Exists(ScriptPath); } }
 
-        public string DisplayName { get { return Manifest != null ? Manifest.Name : (RawId ?? "(未知)"); } }
-        public string Id { get { return Manifest != null ? Manifest.Id : (RawId ?? "(未知)"); } }
+        public string DisplayName { get { return Manifest != null ? Manifest.Name : (RawId ?? L10n.T("(未知)")); } }
+        public string Id { get { return Manifest != null ? Manifest.Id : (RawId ?? L10n.T("(未知)")); } }
 
         public string TargetSummary
         {

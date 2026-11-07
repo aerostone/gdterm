@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
@@ -55,7 +56,7 @@ namespace Gdterm.UI.Controls
     /// <summary>本地文件系统面板数据源。path=="" 表示"此电脑"盘符伪根。</summary>
     internal sealed class LocalFilePaneProvider : IFilePaneProvider
     {
-        public string Title { get { return "本地"; } }
+        public string Title { get { return L10n.T("本地"); } }
 
         public string HomePath
         {
@@ -158,7 +159,7 @@ namespace Gdterm.UI.Controls
         public SftpFilePaneProvider(Gdterm.Sftp.ISftpService sftp, string title)
         {
             _sftp = sftp;
-            _title = string.IsNullOrEmpty(title) ? "远程" : title;
+            _title = string.IsNullOrEmpty(title) ? L10n.T("远程") : title;
         }
 
         public string Title { get { return _title; } }

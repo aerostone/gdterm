@@ -6,6 +6,7 @@ using System.Text;
 using System.Windows.Forms;
 using Gdterm.Terminal.Rendering.Vt;
 using Gdterm.Terminal.Themes;
+using Gdterm.Core;
 
 namespace Gdterm.Terminal.Rendering
 {
@@ -147,7 +148,7 @@ namespace Gdterm.Terminal.Rendering
             get
             {
                 if (string.IsNullOrEmpty(_appliedCjkFontName)) return null;
-                return _cjkLoadFailed ? _appliedCjkFontName + "(加载失败)" : _appliedCjkFontName;
+                return _cjkLoadFailed ? _appliedCjkFontName + L10n.T("(加载失败)") : _appliedCjkFontName;
             }
         }
         /// <summary>单个 ASCII 单元格像素宽。</summary>

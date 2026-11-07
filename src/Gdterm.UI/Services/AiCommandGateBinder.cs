@@ -6,6 +6,7 @@ using Gdterm.UI.Controls;
 using TerminalControl = Gdterm.UI.Controls.TerminalControl;
 using Gdterm.Security;
 using Gdterm.UI.Diagnostics;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Services
 {
@@ -55,8 +56,8 @@ namespace Gdterm.UI.Services
                     {
                         MessageBox.Show(
                             owner,
-                            "危险命令检测失败，已阻止 AI 执行该命令。\n" + ex.Message,
-                            "安全拦截",
+                            L10n.T("危险命令检测失败，已阻止 AI 执行该命令。\n") + ex.Message,
+                            L10n.T("安全拦截"),
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Warning);
                     }

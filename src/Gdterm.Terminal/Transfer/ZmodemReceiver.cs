@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Gdterm.Core;
 
 namespace Gdterm.Terminal.Transfer
 {
@@ -321,7 +322,7 @@ namespace Gdterm.Terminal.Transfer
                         catch { }
                         if (_fileSize >= 0 && _received != _fileSize)
                         {
-                            Fail("大小对账失败：期望 " + _fileSize + " 实收 " + _received);
+                            Fail(L10n.T("大小对账失败：期望 ") + _fileSize + L10n.T(" 实收 ") + _received);
                             _replies.Enqueue(BuildHexReply(ZNAK, 0));
                             break;
                         }
@@ -338,7 +339,7 @@ namespace Gdterm.Terminal.Transfer
                     break;
                 case ZABORT:
                 case ZSKIP:
-                    Fail(ftype == ZABORT ? "对端中止" : "对端跳过");
+                    Fail(ftype == ZABORT ? L10n.T("对端中止") : L10n.T("对端跳过"));
                     try { if (_file != null) { _file.Dispose(); _file = null; } }
                     catch { }
                     _state = RecvState.Aborted;

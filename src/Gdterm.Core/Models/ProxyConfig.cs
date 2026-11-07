@@ -1,4 +1,5 @@
 using System;
+using Gdterm.Core;
 
 namespace Gdterm.Core.Models
 {
@@ -60,14 +61,14 @@ namespace Gdterm.Core.Models
                 case ProxyKind.Http: return "HTTP";
                 case ProxyKind.Socks4: return "SOCKS4";
                 case ProxyKind.Socks5: return "SOCKS5";
-                default: return "不使用代理";
+                default: return L10n.T("不使用代理");
             }
         }
 
         /// <summary>日志/状态栏摘要（绝不含密码）。</summary>
         public string Describe()
         {
-            if (!IsUsable) return "直连";
+            if (!IsUsable) return L10n.T("直连");
             var user = string.IsNullOrEmpty(Username) ? "" : Username + "@";
             return DisplayName(Kind) + " " + user + Host + ":" + Port;
         }

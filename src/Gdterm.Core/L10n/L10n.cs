@@ -66,6 +66,24 @@ namespace Gdterm.Core
             ["确认修改"] = "Confirm change",
             ["确认新密码"] = "Confirm new password",
             ["请输入当前密码"] = "Enter the current password",
+            // —— GDI 渲染器（批次5b：CellGdiRenderer，仅字体状态） ——
+            ["(加载失败)"] = " (load failed)",
+            // —— Zmodem 接收（批次5b：ZmodemReceiver） ——
+            ["大小对账失败：期望 "] = "Size mismatch: expected ",
+            [" 实收 "] = " received ",
+            ["对端中止"] = "Aborted by the peer",
+            ["对端跳过"] = "Skipped by the peer",
+            // —— 文件面板（批次5b：FilePaneModel） ——
+            ["远程"] = "Remote",
+            // —— AI 命令门禁（批次5b：AiCommandGateBinder） ——
+            ["危险命令检测失败，已阻止 AI 执行该命令。\n"] = "Dangerous command detection failed; the AI command was blocked.\n",
+            // —— 更新检查（批次5b：UpdateChecker） ——
+            ["仓库没有 release"] = "The repository has no release",
+            ["release 里没有版本号"] = "The release has no version number",
+            // —— 代理配置（批次5b：ProxyConfig） ——
+            ["直连"] = "Direct",
+            // —— 扫描模型（批次5b：ScanModels） ——
+            ["(未知)"] = "(unknown)",
             // —— RDP 客户端工厂（批次5a：RdpClientFactory，仅异常） ——
             ["rdp_engine=freerdp 但未找到 wfreerdp.exe（期望位置：<程序目录>\\lib\\freerdp\\wfreerdp.exe 或 freerdp\\wfreerdp.exe 或 vendor\\freerdp\\wfreerdp.exe）"] = "rdp_engine=freerdp but wfreerdp.exe was not found (expected at <app dir>\\lib\\freerdp\\wfreerdp.exe, freerdp\\wfreerdp.exe, or vendor\\freerdp\\wfreerdp.exe)",
             // —— OTP 存储（批次5a：OtpStoreJson） ——
