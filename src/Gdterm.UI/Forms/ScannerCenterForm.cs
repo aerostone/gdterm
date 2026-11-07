@@ -58,7 +58,7 @@ namespace Gdterm.UI.Forms
             _store = store;
             _remoteSessionFactory = remoteSessionFactory;
 
-            Text = "扫描中心（插件）";
+            Text = L10n.T("扫描中心（插件）");
             StartPosition = FormStartPosition.CenterParent;
             BackColor = GdtermColorTable.Background;
             ForeColor = GdtermColorTable.Foreground;
@@ -94,7 +94,7 @@ namespace Gdterm.UI.Forms
             e.Handled = true;
             if (_running)
             {
-                AntdUI.Message.warn(this, "扫描进行中，请等待本次扫描完成后再关闭");
+                AntdUI.Message.warn(this, L10n.T("扫描进行中，请等待本次扫描完成后再关闭"));
                 return;
             }
             Close();
@@ -124,7 +124,7 @@ namespace Gdterm.UI.Forms
                 BackColor = GdtermColorTable.Background
             };
             top.Controls.Add(new AntdUI.Label {
-                Text = "目标:",
+                Text = L10n.T("目标:"),
                 AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
                 Anchor = AnchorStyles.Left,
@@ -135,26 +135,26 @@ namespace Gdterm.UI.Forms
                 Width = DpiScale.V(this, 250),
                 MinimumSize = new Size(0, fieldH)
             };
-            _targetCombo.Items.Add("本机（Windows）");
-            _targetCombo.Items.Add("当前远程主机（SSH 已连）");
-            _targetCombo.Items.Add("远程 Windows（WMI·免SSH）");
+            _targetCombo.Items.Add(L10n.T("本机（Windows）"));
+            _targetCombo.Items.Add(L10n.T("当前远程主机（SSH 已连）"));
+            _targetCombo.Items.Add(L10n.T("远程 Windows（WMI·免SSH）"));
             _targetCombo.SelectedIndex = 0;
             _targetCombo.SelectedIndexChanged += (s, ev) => { UpdateWmiPanelVisibility(); UpdateRunButtonState(); };
             top.Controls.Add(_targetCombo);
 
-            _runButton = new AntdUI.Button { Text = "运行选中", Type = AntdUI.TTypeMini.Primary, AutoSize = true, Padding = btnPadding, Margin = new Padding(DpiScale.V(this, 2), 0, DpiScale.V(this, 2), 0) };
+            _runButton = new AntdUI.Button { Text = L10n.T("运行选中"), Type = AntdUI.TTypeMini.Primary, AutoSize = true, Padding = btnPadding, Margin = new Padding(DpiScale.V(this, 2), 0, DpiScale.V(this, 2), 0) };
             _runButton.Click += OnRunClicked;
             top.Controls.Add(_runButton);
 
-            _reloadButton = new AntdUI.Button { Text = "重新加载插件", Type = AntdUI.TTypeMini.Default, AutoSize = true, Padding = btnPadding, Margin = new Padding(DpiScale.V(this, 2), 0, DpiScale.V(this, 2), 0) };
+            _reloadButton = new AntdUI.Button { Text = L10n.T("重新加载插件"), Type = AntdUI.TTypeMini.Default, AutoSize = true, Padding = btnPadding, Margin = new Padding(DpiScale.V(this, 2), 0, DpiScale.V(this, 2), 0) };
             _reloadButton.Click += (s, ev) => _store.Reload();
             top.Controls.Add(_reloadButton);
 
-            _openFolderButton = new AntdUI.Button { Text = "打开插件目录", Type = AntdUI.TTypeMini.Default, AutoSize = true, Padding = btnPadding, Margin = new Padding(DpiScale.V(this, 2), 0, DpiScale.V(this, 2), 0) };
+            _openFolderButton = new AntdUI.Button { Text = L10n.T("打开插件目录"), Type = AntdUI.TTypeMini.Default, AutoSize = true, Padding = btnPadding, Margin = new Padding(DpiScale.V(this, 2), 0, DpiScale.V(this, 2), 0) };
             _openFolderButton.Click += OnOpenPluginsFolder;
             top.Controls.Add(_openFolderButton);
 
-            _newPluginButton = new AntdUI.Button { Text = "新建插件模板", Type = AntdUI.TTypeMini.Default, AutoSize = true, Padding = btnPadding, Margin = new Padding(DpiScale.V(this, 2), 0, DpiScale.V(this, 2), 0) };
+            _newPluginButton = new AntdUI.Button { Text = L10n.T("新建插件模板"), Type = AntdUI.TTypeMini.Default, AutoSize = true, Padding = btnPadding, Margin = new Padding(DpiScale.V(this, 2), 0, DpiScale.V(this, 2), 0) };
             _newPluginButton.Click += OnNewPluginTemplate;
             top.Controls.Add(_newPluginButton);
 
@@ -187,12 +187,12 @@ namespace Gdterm.UI.Forms
                 BorderWidth = 0,
                 RowHeight = rowH
             };
-            _pluginTable.Columns.Add(new AntdUI.Column("Name", "插件", AntdUI.ColumnAlign.Left) { Width = "24%" });
-            _pluginTable.Columns.Add(new AntdUI.Column("Target", "目标", AntdUI.ColumnAlign.Left) { Width = "18%" });
-            _pluginTable.Columns.Add(new AntdUI.Column("Category", "分类", AntdUI.ColumnAlign.Left) { Width = "14%" });
-            _pluginTable.Columns.Add(new AntdUI.Column("Source", "来源", AntdUI.ColumnAlign.Left) { Width = "16%" });
-            _pluginTable.Columns.Add(new AntdUI.Column("Trust", "签名", AntdUI.ColumnAlign.Left) { Width = "12%" });
-            _pluginTable.Columns.Add(new AntdUI.Column("Version", "版本", AntdUI.ColumnAlign.Left) { Width = "16%" });
+            _pluginTable.Columns.Add(new AntdUI.Column("Name", L10n.T("插件"), AntdUI.ColumnAlign.Left) { Width = "24%" });
+            _pluginTable.Columns.Add(new AntdUI.Column("Target", L10n.T("目标"), AntdUI.ColumnAlign.Left) { Width = "18%" });
+            _pluginTable.Columns.Add(new AntdUI.Column("Category", L10n.T("分类"), AntdUI.ColumnAlign.Left) { Width = "14%" });
+            _pluginTable.Columns.Add(new AntdUI.Column("Source", L10n.T("来源"), AntdUI.ColumnAlign.Left) { Width = "16%" });
+            _pluginTable.Columns.Add(new AntdUI.Column("Trust", L10n.T("签名"), AntdUI.ColumnAlign.Left) { Width = "12%" });
+            _pluginTable.Columns.Add(new AntdUI.Column("Version", L10n.T("版本"), AntdUI.ColumnAlign.Left) { Width = "16%" });
             _pluginTable.CheckedChanged += (s, ev) => UpdateRunButtonState();
             _pluginTable.CellDoubleClick += (s, ev) => { if (!_running && SelectedRunnablePlugins().Count > 0) OnRunClicked(null, null); };
             pluginPanel.Controls.Add(_pluginTable);
@@ -202,7 +202,7 @@ namespace Gdterm.UI.Forms
                 Name = "ScannerPluginEmptyHint",
                 Dock = DockStyle.Bottom,
                 Height = Math.Max(DpiScale.V(this, 20), hintH),
-                Text = "还没有插件：先放入脚本文件（下方提示有入口）",  // 左列仅 ~284px，长文案会被硬裁
+                Text = L10n.T("还没有插件：先放入脚本文件（下方提示有入口）"),  // 左列仅 ~284px，长文案会被硬裁
                 TextAlign = ContentAlignment.MiddleLeft,
                 ForeColor = GdtermColorTable.Muted,
                 Visible = false
@@ -212,16 +212,16 @@ namespace Gdterm.UI.Forms
                 Name = "ScannerPluginTipHint",
                 Dock = DockStyle.Bottom,
                 Height = Math.Max(DpiScale.V(this, 20), hintH),
-                Text = "提示：双击运行；在 插件目录 增删改脚本即热更新（无需重启）",
+                Text = L10n.T("提示：双击运行；在 插件目录 增删改脚本即热更新（无需重启）"),
                 TextAlign = ContentAlignment.MiddleLeft,
                 ForeColor = GdtermColorTable.Muted
             };
             pluginPanel.Controls.Add(pluginHint);
             // 审计 C1：把原来那行 20px 的「还没有插件」小字升级成标准空态层——
             // 0 插件时用户最需要的是「下一步做什么」，底部一行灰字等于没说。
-            _pluginEmpty = EmptyStateView.Attach(pluginPanel, "还没有扫描插件",
-                "在插件目录放入脚本即自动生效（无需重启）；也可点「新建模板」生成骨架",
-                "新建模板", (s2, e2) => OnNewPluginTemplate(s2, e2));
+            _pluginEmpty = EmptyStateView.Attach(pluginPanel, L10n.T("还没有扫描插件"),
+                L10n.T("在插件目录放入脚本即自动生效（无需重启）；也可点「新建模板」生成骨架"),
+                L10n.T("新建模板"), (s2, e2) => OnNewPluginTemplate(s2, e2));
             _split.Panel1.Controls.Add(pluginPanel);
 
             // 右：发现 + 原始输出
@@ -240,21 +240,21 @@ namespace Gdterm.UI.Forms
                 BorderWidth = 0,
                 RowHeight = rowH
             };
-            _findingTable.Columns.Add(new AntdUI.Column("Severity", "级别", AntdUI.ColumnAlign.Left) { Width = "12%" });
-            _findingTable.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left) { Width = "28%" });
-            _findingTable.Columns.Add(new AntdUI.Column("Detail", "详情", AntdUI.ColumnAlign.Left) { Width = "60%" });
+            _findingTable.Columns.Add(new AntdUI.Column("Severity", L10n.T("级别"), AntdUI.ColumnAlign.Left) { Width = "12%" });
+            _findingTable.Columns.Add(new AntdUI.Column("Title", L10n.T("标题"), AntdUI.ColumnAlign.Left) { Width = "28%" });
+            _findingTable.Columns.Add(new AntdUI.Column("Detail", L10n.T("详情"), AntdUI.ColumnAlign.Left) { Width = "60%" });
             // 表壳：发现过滤 + 排序 + 导出（只读展示表，无选中耦合；发现多时可按级别/标题排、按关键词过滤）。
             _findingShell = new TableShell<FindingRow>(_findingTable,
-                new[] { "级别", "标题", "详情" },
+                new[] { L10n.T("级别"), L10n.T("标题"), L10n.T("详情") },
                 r => string.Join(" ", new[] { r.Severity, r.Title, r.Detail }),
                 (r, i) => { switch (i) { case 0: return r.Severity; case 1: return r.Title; default: return r.Detail; } });
-            _findingShell.AddAction("导出", (s, e) => _findingShell.ExportCsv(FindForm(), "scan-findings")).Name = "ScannerFindingExportButton";
+            _findingShell.AddAction(L10n.T("导出"), (s, e) => _findingShell.ExportCsv(FindForm(), "scan-findings")).Name = "ScannerFindingExportButton";
             findingPanel.Controls.Add(_findingShell);
             var findingHeader = new AntdUI.Label {
                 Name = "ScannerFindingHeader",
                 Dock = DockStyle.Top,
                 Height = headerH,
-                Text = "发现（0）",
+                Text = L10n.Tf("发现（{0}）", 0),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Font = new Font(Font, FontStyle.Bold),
                 ForeColor = GdtermColorTable.Foreground
@@ -268,7 +268,7 @@ namespace Gdterm.UI.Forms
                 Name = "ScannerFindingEmptyHint",
                 Dock = DockStyle.Bottom,
                 Height = Math.Max(DpiScale.V(this, 20), hintH),
-                Text = "还没有发现：选好目标后点『运行选中』开始扫描",
+                Text = L10n.T("还没有发现：选好目标后点『运行选中』开始扫描"),
                 TextAlign = ContentAlignment.MiddleLeft,
                 ForeColor = GdtermColorTable.Muted,
                 Visible = false
@@ -286,14 +286,14 @@ namespace Gdterm.UI.Forms
                 Font = Services.FormFontPolicy.MonoFont()
             };
             rawPanel.Controls.Add(_rawOutput);
-            var rawHeader = new AntdUI.Label { Name = "ScannerRawHeader", Dock = DockStyle.Top, Height = headerH, Text = "原始输出", TextAlign = ContentAlignment.MiddleLeft, Font = new Font(Font, FontStyle.Bold), ForeColor = GdtermColorTable.Foreground };
+            var rawHeader = new AntdUI.Label { Name = "ScannerRawHeader", Dock = DockStyle.Top, Height = headerH, Text = L10n.T("原始输出"), TextAlign = ContentAlignment.MiddleLeft, Font = new Font(Font, FontStyle.Bold), ForeColor = GdtermColorTable.Foreground };
             rawPanel.Controls.Add(rawHeader);
             _rawEmptyHint = new AntdUI.Label
             {
                 Name = "ScannerRawEmptyHint",
                 Dock = DockStyle.Bottom,
                 Height = Math.Max(DpiScale.V(this, 20), hintH),
-                Text = "还没有输出：扫描完成后在此显示脚本原始输出",
+                Text = L10n.T("还没有输出：扫描完成后在此显示脚本原始输出"),
                 TextAlign = ContentAlignment.MiddleLeft,
                 ForeColor = GdtermColorTable.Muted,
                 Visible = false
@@ -366,13 +366,13 @@ namespace Gdterm.UI.Forms
             foreach (var p in _store.Plugins)
             {
                 _pluginRows.Add(p);
-                var state = p.LoadError != null ? "（加载失败）" : (!p.IsRunnable ? " [已停用]" : "");
+                var state = p.LoadError != null ? L10n.T("（加载失败）") : (!p.IsRunnable ? L10n.T(" [已停用]") : "");
                 rows.Add(new PluginRow
                 {
                     Name = p.DisplayName + state,
                     Target = p.TargetSummary,
                     Category = p.Manifest != null ? (p.Manifest.Category ?? "-") : "-",
-                    Source = p.Source == "builtin" ? "内置" : "用户",
+                    Source = p.Source == "builtin" ? L10n.T("内置") : L10n.T("用户"),
                     Trust = TrustBadge(p),
                     Version = p.Manifest != null ? (p.Manifest.Version ?? "-") : "-"
                 });
@@ -396,7 +396,7 @@ namespace Gdterm.UI.Forms
         {
             var total = _store.Plugins.Count;
             var runnable = _store.Plugins.Count(x => x.IsRunnable);
-            _hotStateLabel.Text = string.Format("热更新监控中 · {0} 个插件（可运行 {1}）", total, runnable);
+            _hotStateLabel.Text = L10n.Tf("热更新监控中 · {0} 个插件（可运行 {1}）", total, runnable);
         }
 
         /// <summary>WMI 目标的主机/凭据行；仅选中 WMI 目标时显示。</summary>
@@ -406,17 +406,17 @@ namespace Gdterm.UI.Forms
             int wmiFieldH = FormFontPolicy.FieldHeight(this);
             _wmiPanel = new Panel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Visible = false, BackColor = GdtermColorTable.Background };
             var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, Padding = new Padding(pad, DpiScale.V(this, 4), pad, DpiScale.V(this, 4)), BackColor = GdtermColorTable.Background };
-            flow.Controls.Add(new AntdUI.Label { Text = "主机:", AutoSize = true, ForeColor = GdtermColorTable.Muted, Anchor = AnchorStyles.Left, Margin = new Padding(DpiScale.V(this, 3), 0, DpiScale.V(this, 4), 0) });
+            flow.Controls.Add(new AntdUI.Label { Text = L10n.T("主机:"), AutoSize = true, ForeColor = GdtermColorTable.Muted, Anchor = AnchorStyles.Left, Margin = new Padding(DpiScale.V(this, 3), 0, DpiScale.V(this, 4), 0) });
             _wmiHost = new AntdUI.Input { Width = DpiScale.V(this, 160), MinimumSize = new Size(0, wmiFieldH) };
             flow.Controls.Add(_wmiHost);
-            flow.Controls.Add(new AntdUI.Label { Text = "用户名:", AutoSize = true, ForeColor = GdtermColorTable.Muted, Anchor = AnchorStyles.Left, Margin = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 4), 0) });
+            flow.Controls.Add(new AntdUI.Label { Text = L10n.T("用户名:"), AutoSize = true, ForeColor = GdtermColorTable.Muted, Anchor = AnchorStyles.Left, Margin = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 4), 0) });
             _wmiUser = new AntdUI.Input { Width = DpiScale.V(this, 140), MinimumSize = new Size(0, wmiFieldH) };
             flow.Controls.Add(_wmiUser);
-            flow.Controls.Add(new AntdUI.Label { Text = "密码:", AutoSize = true, ForeColor = GdtermColorTable.Muted, Anchor = AnchorStyles.Left, Margin = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 4), 0) });
+            flow.Controls.Add(new AntdUI.Label { Text = L10n.T("密码:"), AutoSize = true, ForeColor = GdtermColorTable.Muted, Anchor = AnchorStyles.Left, Margin = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 4), 0) });
             _wmiPass = new AntdUI.Input { Width = DpiScale.V(this, 140), MinimumSize = new Size(0, wmiFieldH), UseSystemPasswordChar = true };
             flow.Controls.Add(_wmiPass);
             flow.Controls.Add(new AntdUI.Label {
-                Text = "留空凭据=用当前身份；域账号格式 DOMAIN\\user；需目标管理员权限 + ADMIN$ 共享",
+                Text = L10n.T("留空凭据=用当前身份；域账号格式 DOMAIN\\user；需目标管理员权限 + ADMIN$ 共享"),
                 AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
                 Anchor = AnchorStyles.Left,
@@ -447,9 +447,9 @@ namespace Gdterm.UI.Forms
             if (p.LoadError != null) return "-";
             switch (p.Trust)
             {
-                case ScanTrust.Trusted: return "官方签名";
-                case ScanTrust.Invalid: return "签名无效!";
-                default: return "未签名";
+                case ScanTrust.Trusted: return L10n.T("官方签名");
+                case ScanTrust.Invalid: return L10n.T("签名无效!");
+                default: return L10n.T("未签名");
             }
         }
 
@@ -496,7 +496,7 @@ namespace Gdterm.UI.Forms
                 var host = (_wmiHost != null ? _wmiHost.Text : "").Trim();
                 if (host.Length == 0)
                 {
-                    validationError = "请填写远程主机地址（IP 或机器名）";
+                    validationError = L10n.T("请填写远程主机地址（IP 或机器名）");
                     return null;
                 }
                 return new Gdterm.Tools.Scanning.WmiScanChannel(host,
@@ -508,7 +508,7 @@ namespace Gdterm.UI.Forms
                 var session = _remoteSessionFactory != null ? _remoteSessionFactory() : null;
                 if (session == null || !session.IsConnected)
                 {
-                    validationError = "没有已连接的 SSH 远程主机。若目标无法安装 OpenSSH Server，可改选「远程 Windows（WMI·免SSH）」。";
+                    validationError = L10n.T("没有已连接的 SSH 远程主机。若目标无法安装 OpenSSH Server，可改选「远程 Windows（WMI·免SSH）」。");
                     return null;
                 }
                 return new SshScanChannel(session);
@@ -526,7 +526,7 @@ namespace Gdterm.UI.Forms
             }
             catch (Exception ex)
             {
-                AntdUI.Message.error(this, "打开目录失败: " + ex.Message);
+                AntdUI.Message.error(this, L10n.T("打开目录失败: ") + ex.Message);
             }
         }
 
@@ -543,7 +543,7 @@ namespace Gdterm.UI.Forms
                 var dir = Path.Combine(root, "my-demo-plugin");
                 if (Directory.Exists(dir))
                 {
-                    AntdUI.Message.warn(this, "示例插件已存在：" + dir);
+                    AntdUI.Message.warn(this, L10n.T("示例插件已存在：") + dir);
                 }
                 else
                 {
@@ -556,7 +556,7 @@ namespace Gdterm.UI.Forms
             }
             catch (Exception ex)
             {
-                AntdUI.Message.error(this, "创建插件模板失败: " + ex.Message);
+                AntdUI.Message.error(this, L10n.T("创建插件模板失败: ") + ex.Message);
             }
         }
 
@@ -591,11 +591,11 @@ namespace Gdterm.UI.Forms
         private async void OnRunClicked(object sender, EventArgs e)
         {
             // 审计 C2：重入不再静默丢弃，给出「上一次还在跑」的可见反馈
-            if (_running) { Services.BusyScope.Nudge(this, "上一次扫描还在执行，请稍候…"); return; }
+            if (_running) { Services.BusyScope.Nudge(this, L10n.T("上一次扫描还在执行，请稍候…")); return; }
             var plugins = SelectedRunnablePlugins();
             if (plugins.Count == 0)
             {
-                AntdUI.Message.warn(this, "请至少勾选一个可运行的扫描插件");
+                AntdUI.Message.warn(this, L10n.T("请至少勾选一个可运行的扫描插件"));
                 return;
             }
 
@@ -605,16 +605,16 @@ namespace Gdterm.UI.Forms
                 if (p.Trust == ScanTrust.Invalid)
                 {
                     AntdUI.Message.error(this,
-                        "插件「" + p.DisplayName + "」的官方签名校验失败：" + p.ScriptPath +
-                        " 内容可能与发布时不一致（疑似被篡改），已拒绝运行。");
+                        L10n.T("插件「") + p.DisplayName + L10n.T("」的官方签名校验失败：") + p.ScriptPath +
+                        L10n.T(" 内容可能与发布时不一致（疑似被篡改），已拒绝运行。"));
                     return;
                 }
                 if (p.Trust == ScanTrust.Unsigned && !_store.IsApproved(p))
                 {
                     var r = MessageBox.Show(this,
-                        "插件「" + p.DisplayName + "」未经官方签名，无法验证来源。\r\n\r\n" +
-                        "脚本: " + p.ScriptPath + "\r\n\r\n是否信任并运行？\r\n（批准按内容哈希记账；之后修改该插件会再次询问）",
-                        "运行未签名插件", MessageBoxButtons.YesNo, MessageBoxIcon.Warning,
+                        L10n.T("插件「") + p.DisplayName + L10n.T("」未经官方签名，无法验证来源。\r\n\r\n") +
+                        L10n.T("脚本: ") + p.ScriptPath + "\r\n\r\n" + L10n.T("是否信任并运行？\r\n（批准按内容哈希记账；之后修改该插件会再次询问）"),
+                        L10n.T("运行未签名插件"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning,
                         MessageBoxDefaultButton.Button2);
                     if (r != DialogResult.Yes) return;
                     _store.Approve(p);
@@ -645,7 +645,7 @@ namespace Gdterm.UI.Forms
                 var results = new List<ScanRunResult>();
                 var runner = _runner;
                 // 审计 C2：等待光标 + 取消令牌（窗口关闭/Dispose 时停止派发后续插件）
-                using (var busy = Services.BusyScope.Begin(this, "正在执行扫描插件…"))
+                using (var busy = Services.BusyScope.Begin(this, L10n.T("正在执行扫描插件…")))
                 {
                     await Task.Run(() =>
                     {
@@ -664,7 +664,7 @@ namespace Gdterm.UI.Forms
             catch (Exception ex)
             {
                 if (!IsDisposed)
-                    AntdUI.Message.error(this, "扫描执行失败: " + ex.Message);
+                    AntdUI.Message.error(this, L10n.T("扫描执行失败: ") + ex.Message);
             }
             finally
             {
@@ -709,7 +709,7 @@ namespace Gdterm.UI.Forms
 
         private void SetFindingCount(int n)
         {
-            if (_findingHeader != null) _findingHeader.Text = "发现（" + n + "）";
+            if (_findingHeader != null) _findingHeader.Text = L10n.Tf("发现（{0}）", n);
             UpdateEmptyHints();
         }
 
@@ -726,11 +726,11 @@ namespace Gdterm.UI.Forms
         {
             switch ((s ?? "").ToLowerInvariant())
             {
-                case "critical": return "严重";
-                case "high": return "高";
-                case "medium": return "中";
-                case "low": return "低";
-                default: return "信息";
+                case "critical": return L10n.T("严重");
+                case "high": return L10n.T("高");
+                case "medium": return L10n.T("中");
+                case "low": return L10n.T("低");
+                default: return L10n.T("信息");
             }
         }
 

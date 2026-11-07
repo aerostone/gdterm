@@ -209,7 +209,7 @@ namespace Gdterm.UI.Forms
 
         private void InitializeComponent()
         {
-            Text = _isNew ? "新建连接" : $"编辑连接 — {_config.Name}";
+            Text = _isNew ? L10n.T("新建连接") : L10n.Tf("编辑连接 — {0}", _config.Name);
             int labelW = DpiScale.V(this, 96);
             // 窗体自身由 PerMonitorV2 处理缩放，子控件才使用 DpiScale。
             ClientSize = new Size(560, 390);
@@ -236,17 +236,17 @@ namespace Gdterm.UI.Forms
             basicLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
             basicLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
-            _nameBox = AddRow(basicLayout, 0, "名称", new AntdUI.Input());
-            _nameBox.PlaceholderText = "可选，留空则用 主机:端口";
-            _protocolCombo = AddRow(basicLayout, 1, "协议", new AntdUI.Select());
+            _nameBox = AddRow(basicLayout, 0, L10n.T("名称"), new AntdUI.Input());
+            _nameBox.PlaceholderText = L10n.T("可选，留空则用 主机:端口");
+            _protocolCombo = AddRow(basicLayout, 1, L10n.T("协议"), new AntdUI.Select());
             _protocolCombo.Items.AddRange(new object[] { "SSH", "RDP", "Serial", "Telnet" });
             _protocolCombo.SelectedIndexChanged += OnProtocolChanged;
-            _hostBox = AddRow(basicLayout, 2, "主机", new AntdUI.Input());
-            _hostBox.PlaceholderText = "IP 或主机名，如 192.168.1.10";
-            _portBox = AddRow(basicLayout, 3, "端口", new AntdUI.InputNumber { Minimum = 1, Maximum = 65535, Value = 22 });
-            _usernameBox = AddRow(basicLayout, 4, "用户名", new AntdUI.Input());
-            _groupPathBox = AddRow(basicLayout, 5, "分组", new AntdUI.Input());
-            _groupPathBox.PlaceholderText = "如: Web/生产";
+            _hostBox = AddRow(basicLayout, 2, L10n.T("主机"), new AntdUI.Input());
+            _hostBox.PlaceholderText = L10n.T("IP 或主机名，如 192.168.1.10");
+            _portBox = AddRow(basicLayout, 3, L10n.T("端口"), new AntdUI.InputNumber { Minimum = 1, Maximum = 65535, Value = 22 });
+            _usernameBox = AddRow(basicLayout, 4, L10n.T("用户名"), new AntdUI.Input());
+            _groupPathBox = AddRow(basicLayout, 5, L10n.T("分组"), new AntdUI.Input());
+            _groupPathBox.PlaceholderText = L10n.T("如: Web/生产");
             topPanel.Controls.Add(basicLayout);
 
             // ===== 凭据行（原独立标签页收为一行）=====
@@ -257,14 +257,14 @@ namespace Gdterm.UI.Forms
             // 隐藏的 UUID 存储框（不入布局，仅作保存时读取的存储）
             _credentialRefBox = new AntdUI.Input { Visible = false, Enabled = false };
             credRow.Controls.Add(new AntdUI.Label {
-                Text = "凭据",
+                Text = L10n.T("凭据"),
                 AutoSize = true,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleRight,
                 Padding = new Padding(0, 0, DpiScale.V(this, 8), 0)
             }, 0, 0);
             _credentialTitleLabel = new AntdUI.Label {
-                Text = "未选（按主机+用户名自动匹配）",
+                Text = L10n.T("未选（按主机+用户名自动匹配）"),
                 ForeColor = GdtermColorTable.Muted,
                 AutoSize = true,
                 Dock = DockStyle.Fill,
@@ -273,7 +273,7 @@ namespace Gdterm.UI.Forms
             credRow.Controls.Add(_credentialTitleLabel, 1, 0);
             var credBtns = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = false, AutoSize = true };
             var btnPickCred = new AntdUI.Button {
-                Text = "选择凭据...",
+                Text = L10n.T("选择凭据..."),
                 Type = AntdUI.TTypeMini.Primary,
                 AutoSize = true,
                 // AutoSize 钮显式 Padding：无 Padding 时高 36 与 38 行不齐（287 dump 实测）
@@ -282,7 +282,7 @@ namespace Gdterm.UI.Forms
             };
             btnPickCred.Click += OnPickCredential;
             var btnClearCred = new AntdUI.Button {
-                Text = "清除",
+                Text = L10n.T("清除"),
                 Type = AntdUI.TTypeMini.Default,
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
@@ -298,7 +298,7 @@ namespace Gdterm.UI.Forms
             var linkRow = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, Padding = new Padding(0, DpiScale.V(this, 6), 0, 0) };
             _moreLink = new AntdUI.HyperlinkLabel
             {
-                Text = "更多选项 ▾",
+                Text = L10n.T("更多选项 ▾"),
                 AutoSize = true,
                 Margin = new Padding(0)
             };
@@ -319,26 +319,26 @@ namespace Gdterm.UI.Forms
             };
 
             // --- SSH 区 ---
-            _secSsh = MakeSection("SSH 隧道 / 跳板");
+            _secSsh = MakeSection(L10n.T("SSH 隧道 / 跳板"));
             var sshLayout = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true };
             sshLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
             sshLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            _tunnelCheck = new AntdUI.Checkbox { Text = "使用 SSH 隧道（跳板机）", AutoSize = true };
+            _tunnelCheck = new AntdUI.Checkbox { Text = L10n.T("使用 SSH 隧道（跳板机）"), AutoSize = true };
             sshLayout.Controls.Add(_tunnelCheck, 0, 0); sshLayout.SetColumnSpan(_tunnelCheck, 2);
-            _tunnelHostBox = AddRow(sshLayout, 1, "跳板主机", new AntdUI.Input());
-            _tunnelPortBox = AddRow(sshLayout, 2, "跳板端口", new AntdUI.InputNumber { Minimum = 1, Maximum = 65535, Value = 22 });
-            _tunnelUserBox = AddRow(sshLayout, 3, "跳板用户", new AntdUI.Input());
-            _keepaliveBox = AddRow(sshLayout, 4, "保活秒数", new AntdUI.InputNumber { Minimum = 0, Maximum = 3600, Value = 30 });
+            _tunnelHostBox = AddRow(sshLayout, 1, L10n.T("跳板主机"), new AntdUI.Input());
+            _tunnelPortBox = AddRow(sshLayout, 2, L10n.T("跳板端口"), new AntdUI.InputNumber { Minimum = 1, Maximum = 65535, Value = 22 });
+            _tunnelUserBox = AddRow(sshLayout, 3, L10n.T("跳板用户"), new AntdUI.Input());
+            _keepaliveBox = AddRow(sshLayout, 4, L10n.T("保活秒数"), new AntdUI.InputNumber { Minimum = 0, Maximum = 3600, Value = 30 });
             SectionContent(_secSsh, sshLayout);
             _advFlow.Controls.Add(_secSsh);
 
             // --- 代理区（HTTP / SOCKS5）---
-            _secProxy = MakeSection("代理（HTTP / SOCKS）");
+            _secProxy = MakeSection(L10n.T("代理（HTTP / SOCKS）"));
             var proxyLayout = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true };
             proxyLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
             proxyLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            _proxyKindCombo = AddRow(proxyLayout, 0, "类型", new AntdUI.Select());
-            _proxyKindCombo.Items.Add("不使用代理");
+            _proxyKindCombo = AddRow(proxyLayout, 0, L10n.T("类型"), new AntdUI.Select());
+            _proxyKindCombo.Items.Add(L10n.T("不使用代理"));
             _proxyKindCombo.Items.Add("HTTP");
             _proxyKindCombo.Items.Add("SOCKS5");
             _proxyKindCombo.Items.Add("SOCKS4");
@@ -357,15 +357,15 @@ namespace Gdterm.UI.Forms
                 }
                 catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnDialog.ProxyKind", exSwallowed); } catch { } }
             };
-            _proxyHostBox = AddRow(proxyLayout, 1, "代理主机", new AntdUI.Input());
+            _proxyHostBox = AddRow(proxyLayout, 1, L10n.T("代理主机"), new AntdUI.Input());
             _proxyHostBox.PlaceholderText = "proxy.corp.local";
-            _proxyPortBox = AddRow(proxyLayout, 2, "代理端口", new AntdUI.InputNumber { Minimum = 1, Maximum = 65535, Value = 8080 });
-            _proxyUserBox = AddRow(proxyLayout, 3, "代理用户", new AntdUI.Input());
-            _proxyUserBox.PlaceholderText = "可选";
-            _proxyPassBox = AddRow(proxyLayout, 4, "代理密码", new AntdUI.Input { UseSystemPasswordChar = true });
+            _proxyPortBox = AddRow(proxyLayout, 2, L10n.T("代理端口"), new AntdUI.InputNumber { Minimum = 1, Maximum = 65535, Value = 8080 });
+            _proxyUserBox = AddRow(proxyLayout, 3, L10n.T("代理用户"), new AntdUI.Input());
+            _proxyUserBox.PlaceholderText = L10n.T("可选");
+            _proxyPassBox = AddRow(proxyLayout, 4, L10n.T("代理密码"), new AntdUI.Input { UseSystemPasswordChar = true });
             var proxyHint = new AntdUI.Label
             {
-                Text = "先连代理再握手；SOCKS5 支持用户名/密码。密码与主机一样由主密码保护落盘。",
+                Text = L10n.T("先连代理再握手；SOCKS5 支持用户名/密码。密码与主机一样由主密码保护落盘。"),
                 AutoSize = false,
                 Dock = DockStyle.Fill,
                 Height = DpiScale.V(this, 20),
@@ -377,11 +377,11 @@ namespace Gdterm.UI.Forms
             _advFlow.Controls.Add(_secProxy);
 
             // --- 终端区（TERM / locale）---
-            _secTerm = MakeSection("终端");
+            _secTerm = MakeSection(L10n.T("终端"));
             var termLayout = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true };
             termLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
             termLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            _termCombo = AddRow(termLayout, 0, "终端类型", new AntdUI.Select());
+            _termCombo = AddRow(termLayout, 0, L10n.T("终端类型"), new AntdUI.Select());
             // 内置常见 TERM（旧主机常要 vt100/ansi/linux）；配置里是别的值时按需补进候选
             var termItems = new System.Collections.Generic.List<object>
             {
@@ -390,9 +390,9 @@ namespace Gdterm.UI.Forms
             for (int ti = 0; ti < termItems.Count; ti++) _termCombo.Items.Add(termItems[ti]);
             _termCombo.SelectedValue = "xterm-256color";
             _localeBox = AddRow(termLayout, 1, "Locale", new AntdUI.Input());
-            _localeBox.PlaceholderText = "如 zh_CN.UTF-8（留空不改远端环境）";
+            _localeBox.PlaceholderText = L10n.T("如 zh_CN.UTF-8（留空不改远端环境）");
             // 回滚行数：之前是写死的 2000 硬顶，Xshell/MobaXterm 都是万行级（P1-5）
-            _scrollbackBox = AddRow(termLayout, 2, "回滚行数",
+            _scrollbackBox = AddRow(termLayout, 2, L10n.T("回滚行数"),
                 new AntdUI.InputNumber { Minimum = Gdterm.Core.Constants.TerminalLimits.MinScrollback,
                                          Maximum = Gdterm.Core.Constants.TerminalLimits.MaxScrollback,
                                          Increment = 1000,
@@ -401,7 +401,7 @@ namespace Gdterm.UI.Forms
             // ui-tree-check 会把"零尺寸可见叶"判失败（0.1.364 实测）。
             var termHint = new AntdUI.Label
             {
-                Text = "TERM 决定 pty 协商类型；Locale 登录后 export",
+                Text = L10n.T("TERM 决定 pty 协商类型；Locale 登录后 export"),
                 AutoSize = false,
                 Dock = DockStyle.Fill,
                 Height = DpiScale.V(this, 20),
@@ -413,25 +413,25 @@ namespace Gdterm.UI.Forms
             _advFlow.Controls.Add(_secTerm);
 
             // --- RDP 区 ---
-            _secRdp = MakeSection("RDP 选项");
+            _secRdp = MakeSection(L10n.T("RDP 选项"));
             var rdpGrid = new TableLayoutPanel { ColumnCount = 2, AutoSize = true };
             rdpGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
             rdpGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             // 域名仅 RDP 域账户有意义——从基本信息移到这里
-            _domainBox = AddRow(rdpGrid, 0, "RDP域名", new AntdUI.Input());
-            _domainBox.PlaceholderText = "域账户如 CONTOSO，普通账户留空";
+            _domainBox = AddRow(rdpGrid, 0, L10n.T("RDP域名"), new AntdUI.Input());
+            _domainBox.PlaceholderText = L10n.T("域账户如 CONTOSO，普通账户留空");
             var rdpChecks = new TableLayoutPanel { ColumnCount = 2, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 4, 0, 4) };
             rdpChecks.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
             rdpChecks.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
-            _rdpDriveCheck = new AntdUI.Checkbox { Text = "本地磁盘", AutoSize = true };
-            _rdpClipboardCheck = new AntdUI.Checkbox { Text = "剪贴板", AutoSize = true, Checked = true };
-            _rdpPrinterCheck = new AntdUI.Checkbox { Text = "打印机", AutoSize = true };
-            _rdpFullScreenCheck = new AntdUI.Checkbox { Text = "全屏", AutoSize = true };
-            _rdpNlaCheck = new AntdUI.Checkbox { Text = "NLA 认证", AutoSize = true, Checked = true };
-            _rdpForceNlaCheck = new AntdUI.Checkbox { Text = "强制 NLA", AutoSize = true, Checked = false };
-            _rdpTcpDumpCheck = new AntdUI.Checkbox { Text = "抓包（TCP dump）", AutoSize = true, Checked = false,
+            _rdpDriveCheck = new AntdUI.Checkbox { Text = L10n.T("本地磁盘"), AutoSize = true };
+            _rdpClipboardCheck = new AntdUI.Checkbox { Text = L10n.T("剪贴板"), AutoSize = true, Checked = true };
+            _rdpPrinterCheck = new AntdUI.Checkbox { Text = L10n.T("打印机"), AutoSize = true };
+            _rdpFullScreenCheck = new AntdUI.Checkbox { Text = L10n.T("全屏"), AutoSize = true };
+            _rdpNlaCheck = new AntdUI.Checkbox { Text = L10n.T("NLA 认证"), AutoSize = true, Checked = true };
+            _rdpForceNlaCheck = new AntdUI.Checkbox { Text = L10n.T("强制 NLA"), AutoSize = true, Checked = false };
+            _rdpTcpDumpCheck = new AntdUI.Checkbox { Text = L10n.T("抓包（TCP dump）"), AutoSize = true, Checked = false,
                 Visible = Program.DebugConfig != null && Program.DebugConfig.Enabled };
-            _rdpPasslineCheck = new AntdUI.Checkbox { Text = "命令行传密码（自动登录；任务管理器可见）", AutoSize = true, Checked = true };
+            _rdpPasslineCheck = new AntdUI.Checkbox { Text = L10n.T("命令行传密码（自动登录；任务管理器可见）"), AutoSize = true, Checked = true };
             var rdpCheckList = new Control[] { _rdpDriveCheck, _rdpClipboardCheck, _rdpPrinterCheck, _rdpFullScreenCheck, _rdpNlaCheck, _rdpForceNlaCheck, _rdpTcpDumpCheck, _rdpPasslineCheck };
             for (int ci = 0; ci < rdpCheckList.Length; ci++)
             {
@@ -443,7 +443,7 @@ namespace Gdterm.UI.Forms
             var depthPanel = new TableLayoutPanel { ColumnCount = 2, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, DpiScale.V(this, 4)) };
             depthPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
             depthPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            depthPanel.Controls.Add(new AntdUI.Label { Text = "色深:", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight }, 0, 0);
+            depthPanel.Controls.Add(new AntdUI.Label { Text = L10n.T("色深:"), AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight }, 0, 0);
             _rdpColorDepth = new AntdUI.InputNumber { Minimum = 8, Maximum = 32, Value = 32, Increment = 8, Width = DpiScale.V(this, 60), Dock = DockStyle.Left,
                 // Flow 子无 Dock 高会被压 0（288 dump 实测 h=0）→ MinimumSize 保底 38 行
                 MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this)) };
@@ -455,53 +455,53 @@ namespace Gdterm.UI.Forms
             var enginePanel = new TableLayoutPanel { ColumnCount = 2, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, DpiScale.V(this, 4)) };
             enginePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
             enginePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            enginePanel.Controls.Add(new AntdUI.Label { Text = "渲染引擎:", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight }, 0, 0);
+            enginePanel.Controls.Add(new AntdUI.Label { Text = L10n.T("渲染引擎:"), AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight }, 0, 0);
             _rdpEngineCombo = new AntdUI.Select { Width = DpiScale.V(this, 170), Dock = DockStyle.Left,
                 MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this)) };
-            _rdpEngineCombo.Items.AddRange(new object[] { "自动（优先 FreeRDP）", "FreeRDP 进程嵌入", "系统 mstsc（兼容模式）" });
+            _rdpEngineCombo.Items.AddRange(new object[] { L10n.T("自动（优先 FreeRDP）"), L10n.T("FreeRDP 进程嵌入"), L10n.T("系统 mstsc（兼容模式）") });
             enginePanel.Controls.Add(_rdpEngineCombo, 1, 0);
             rdpGrid.Controls.Add(enginePanel, 1, 3);
             // 负载均衡 token：堡垒机/NetScaler 下发的 LB_LOAD_BALANCE_INFO Cookie（如 tsv://... 或 Cookie: msts=...）
             var lbPanel = new TableLayoutPanel { ColumnCount = 2, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, DpiScale.V(this, 4)) };
             lbPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
             lbPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            lbPanel.Controls.Add(new AntdUI.Label { Text = "负载均衡:", AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight }, 0, 0);
+            lbPanel.Controls.Add(new AntdUI.Label { Text = L10n.T("负载均衡:"), AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight }, 0, 0);
             _rdpLoadBalanceBox = new AntdUI.Input { Width = DpiScale.V(this, 230),
                 MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this)) };
-            _rdpLoadBalanceBox.PlaceholderText = "如 Cookie: msts=NSFVERIFYHASH=... (选填)";
+            _rdpLoadBalanceBox.PlaceholderText = L10n.T("如 Cookie: msts=NSFVERIFYHASH=... (选填)");
             lbPanel.Controls.Add(_rdpLoadBalanceBox, 1, 0);
             rdpGrid.Controls.Add(lbPanel, 1, 4);
             SectionContent(_secRdp, rdpGrid);
             _advFlow.Controls.Add(_secRdp);
 
             // --- Serial 区 ---
-            _secSerial = MakeSection("串口参数");
+            _secSerial = MakeSection(L10n.T("串口参数"));
             var serialLayout = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true };
             serialLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
             serialLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            _serialPortCombo = AddRow(serialLayout, 0, "端口", new AntdUI.Select());
+            _serialPortCombo = AddRow(serialLayout, 0, L10n.T("端口"), new AntdUI.Select());
             _serialPortCombo.Items.AddRange(new object[] { "COM1", "COM2", "COM3", "COM4", "/dev/ttyS0", "/dev/ttyUSB0" });
-            _serialBaudCombo = AddRow(serialLayout, 1, "波特率", new AntdUI.Select());
+            _serialBaudCombo = AddRow(serialLayout, 1, L10n.T("波特率"), new AntdUI.Select());
             _serialBaudCombo.Items.AddRange(new object[] { "9600", "19200", "38400", "57600", "115200" });
             _serialBaudCombo.SelectedValue = "9600";
-            _serialDataBitsCombo = AddRow(serialLayout, 2, "数据位", new AntdUI.Select());
+            _serialDataBitsCombo = AddRow(serialLayout, 2, L10n.T("数据位"), new AntdUI.Select());
             _serialDataBitsCombo.Items.AddRange(new object[] { "5", "6", "7", "8" });
             _serialDataBitsCombo.SelectedValue = "8";
-            _serialStopBitsCombo = AddRow(serialLayout, 3, "停止位", new AntdUI.Select());
+            _serialStopBitsCombo = AddRow(serialLayout, 3, L10n.T("停止位"), new AntdUI.Select());
             _serialStopBitsCombo.Items.AddRange(new object[] { "1", "1.5", "2" });
             _serialStopBitsCombo.SelectedValue = "1";
-            _serialParityCombo = AddRow(serialLayout, 4, "校验位", new AntdUI.Select());
+            _serialParityCombo = AddRow(serialLayout, 4, L10n.T("校验位"), new AntdUI.Select());
             _serialParityCombo.Items.AddRange(new object[] { "None", "Odd", "Even", "Mark", "Space" });
             _serialParityCombo.SelectedValue = "None";
             SectionContent(_secSerial, serialLayout);
             _advFlow.Controls.Add(_secSerial);
 
             // --- 备注 ---
-            var notesSec = MakeSection("备注");
+            var notesSec = MakeSection(L10n.T("备注"));
             _notesBox = new AntdUI.Input {
                 Multiline = true,
                 MinimumSize = new Size(0, FormFontPolicy.RowStep(this) * 2),
-                PlaceholderText = "服务器用途、特殊配置、注意事项..."
+                PlaceholderText = L10n.T("服务器用途、特殊配置、注意事项...")
             };
             SectionContent(notesSec, _notesBox);
             _advFlow.Controls.Add(notesSec);
@@ -521,14 +521,14 @@ namespace Gdterm.UI.Forms
             };
             _btnPanel = btnPanel;
             var okBtn = new AntdUI.Button {
-                Text = _isNew ? "创建" : "保存",
+                Text = _isNew ? L10n.T("创建") : L10n.T("保存"),
                 Type = AntdUI.TTypeMini.Primary,
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5)),
                 Margin = new Padding(0)
             };
             var cancelBtn = new AntdUI.Button {
-                Text = "取消",
+                Text = L10n.T("取消"),
                 Type = AntdUI.TTypeMini.Default,
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5)),
@@ -636,14 +636,14 @@ namespace Gdterm.UI.Forms
                     Height = desired;
                 }
                 _expandedDelta = h + 16; // 记账用名义值；封顶时收起也按名义值减回，保证能回到原始高度附近
-                _moreLink.Text = "收起高级选项 ▴";
+                _moreLink.Text = L10n.T("收起高级选项 ▴");
             }
             else
             {
                 Height -= _expandedDelta > 0 ? _expandedDelta : Math.Max(_advFlow.Height, _advFlow.PreferredSize.Height) + 16;
                 if (Height < MinimumTrackingHeight()) Height = MinimumTrackingHeight();
                 _advancedHost.Visible = false;
-                _moreLink.Text = "更多选项 ▾";
+                _moreLink.Text = L10n.T("更多选项 ▾");
             }
             _expanded = expand;
             DiagLog.Info("ConnDialog", "ToggleAdvanced done Height=" + Height);
@@ -998,7 +998,7 @@ namespace Gdterm.UI.Forms
         {
             if (_keepass == null)
             {
-                AntdUI.Message.warn(this, "密码库服务不可用。");
+                AntdUI.Message.warn(this, L10n.T("密码库服务不可用。"));
                 return;
             }
             // 一体化 change：未解锁不再死端警告“请先解锁密码库”（用户得自己去工具菜单解锁再回来），
@@ -1069,7 +1069,7 @@ namespace Gdterm.UI.Forms
             if (_keepass == null || !_keepass.IsUnlocked)
             {
                 // 未解锁时仅显示 UUID 前 8 位，避免用户面对原始 UUID。
-                _credentialTitleLabel.Text = "已选 UUID: " + (uuid.Length > 12 ? uuid.Substring(0, 12) + "…" : uuid);
+                _credentialTitleLabel.Text = L10n.T("已选 UUID: ") + (uuid.Length > 12 ? uuid.Substring(0, 12) + "…" : uuid);
                 _credentialTitleLabel.ForeColor = GdtermColorTable.Foreground;
                 return;
             }
@@ -1078,18 +1078,18 @@ namespace Gdterm.UI.Forms
                 var entry = _keepass.GetEntry(uuid);
                 if (entry == null)
                 {
-                    _credentialTitleLabel.Text = "凭据已被删除（清除后自动匹配）";
+                    _credentialTitleLabel.Text = L10n.T("凭据已被删除（清除后自动匹配）");
                     _credentialTitleLabel.ForeColor = GdtermColorTable.Warning;
                     return;
                 }
-                var title = string.IsNullOrWhiteSpace(entry.Title) ? "(无标题)" : entry.Title;
+                var title = string.IsNullOrWhiteSpace(entry.Title) ? L10n.T("(无标题)") : entry.Title;
                 var user = string.IsNullOrWhiteSpace(entry.Username) ? "" : " — " + entry.Username;
-                _credentialTitleLabel.Text = "已选: " + title + user;
+                _credentialTitleLabel.Text = L10n.T("已选: ") + title + user;
                 _credentialTitleLabel.ForeColor = GdtermColorTable.Success;
             }
             catch
             {
-                _credentialTitleLabel.Text = "已选 UUID: " + (uuid.Length > 12 ? uuid.Substring(0, 12) + "…" : uuid);
+                _credentialTitleLabel.Text = L10n.T("已选 UUID: ") + (uuid.Length > 12 ? uuid.Substring(0, 12) + "…" : uuid);
                 _credentialTitleLabel.ForeColor = GdtermColorTable.Foreground;
             }
         }
@@ -1105,14 +1105,14 @@ namespace Gdterm.UI.Forms
             if (!string.IsNullOrWhiteSpace(_credentialRefBox.Text)) return; // 已显式选择，展示由 RefreshCredentialTitle 负责
             if (_keepass == null || !_keepass.IsUnlocked)
             {
-                _credentialTitleLabel.Text = "未选（解锁密码库后按主机+用户名自动匹配）";
+                _credentialTitleLabel.Text = L10n.T("未选（解锁密码库后按主机+用户名自动匹配）");
                 _credentialTitleLabel.ForeColor = GdtermColorTable.Muted;
                 return;
             }
             var host = _hostBox == null ? "" : _hostBox.Text.Trim();
             if (string.IsNullOrEmpty(host))
             {
-                _credentialTitleLabel.Text = "未选（按主机+用户名自动匹配）";
+                _credentialTitleLabel.Text = L10n.T("未选（按主机+用户名自动匹配）");
                 _credentialTitleLabel.ForeColor = GdtermColorTable.Muted;
                 return;
             }
@@ -1128,21 +1128,21 @@ namespace Gdterm.UI.Forms
                 var hit = _keepass.FindEntryByConnection(draft);
                 if (hit != null)
                 {
-                    var t = string.IsNullOrWhiteSpace(hit.Title) ? "(无标题)" : hit.Title;
+                    var t = string.IsNullOrWhiteSpace(hit.Title) ? L10n.T("(无标题)") : hit.Title;
                     var u = string.IsNullOrWhiteSpace(hit.Username) ? "" : " — " + hit.Username;
-                    _credentialTitleLabel.Text = "自动匹配: " + t + u;
+                    _credentialTitleLabel.Text = L10n.T("自动匹配: ") + t + u;
                     _credentialTitleLabel.ForeColor = GdtermColorTable.Success;
                 }
                 else
                 {
-                    _credentialTitleLabel.Text = "未匹配到凭据（连接时需手输密码，或点『选择凭据』新建）";
+                    _credentialTitleLabel.Text = L10n.T("未匹配到凭据（连接时需手输密码，或点『选择凭据』新建）");
                     _credentialTitleLabel.ForeColor = GdtermColorTable.Warning;
                 }
             }
             catch (System.Exception exSwallowed)
             {
                 try { DiagLog.Swallowed("ConnDialog.AutoMatch", exSwallowed); } catch { }
-                _credentialTitleLabel.Text = "未选（按主机+用户名自动匹配）";
+                _credentialTitleLabel.Text = L10n.T("未选（按主机+用户名自动匹配）");
                 _credentialTitleLabel.ForeColor = GdtermColorTable.Muted;
             }
         }

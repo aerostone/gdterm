@@ -76,9 +76,9 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(DpiScale.V(this, 3))
             };
 
-            _btnRecord = MkBtn(this, "● 录制", "开始录制当前活动终端的后续全部按键");
-            _btnStop = MkBtn(this, "■ 停止", "停止录制，未保存的宏保留在内存");
-            _btnReplay = MkBtn(this, "▶ 回放", "把选中宏回放到当前活动终端（直接发送，不过危险命令确认）");
+            _btnRecord = MkBtn(this, L10n.T("● 录制"), L10n.T("开始录制当前活动终端的后续全部按键"));
+            _btnStop = MkBtn(this, L10n.T("■ 停止"), L10n.T("停止录制，未保存的宏保留在内存"));
+            _btnReplay = MkBtn(this, L10n.T("▶ 回放"), L10n.T("把选中宏回放到当前活动终端（直接发送，不过危险命令确认）"));
             _speedBox = new AntdUI.Select
             {
                 Width = DpiScale.V(this, 96),
@@ -87,10 +87,10 @@ namespace Gdterm.UI.Controls
             };
             _speedBox.Items.AddRange(new object[] { "1x", "2x", "4x" });
             _speedBox.SelectedIndex = 0;
-            _speedBox.ToolTipText2("回放速度");
-            _btnSave = MkBtn(this, "保存", "把刚录完的宏存为文件");
-            _btnLoad = MkBtn(this, "载入", "从文件载入宏");
-            _btnDelete = MkBtn(this, "删除", "删除选中的宏文件");
+            _speedBox.ToolTipText2(L10n.T("回放速度"));
+            _btnSave = MkBtn(this, L10n.T("保存"), L10n.T("把刚录完的宏存为文件"));
+            _btnLoad = MkBtn(this, L10n.T("载入"), L10n.T("从文件载入宏"));
+            _btnDelete = MkBtn(this, L10n.T("删除"), L10n.T("删除选中的宏文件"));
 
             _btnRecord.Click += (s, e) => StartRecording();
             _btnStop.Click += (s, e) => StopRecording();
@@ -113,15 +113,15 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground
             };
-            _macroList.Columns.Add("宏", 180);
-            _macroList.Columns.Add("步数", 60);
-            _macroList.Columns.Add("时长", 80);
-            _macroList.Columns.Add("来源", 140);
+            _macroList.Columns.Add(L10n.T("宏"), 180);
+            _macroList.Columns.Add(L10n.T("步数"), 60);
+            _macroList.Columns.Add(L10n.T("时长"), 80);
+            _macroList.Columns.Add(L10n.T("来源"), 140);
             _macroList.DoubleClick += (s, e) => ReplaySelected();
 
             // 列表壳：过滤 + 排序 + 导出（原先 0 项，宏一多就只能靠滚）
-            _shell = new ListShell(_macroList, "过滤宏名/来源…");
-            var btnExport = _shell.AddAction("导出", (s, e) => _shell.ExportCsv(FindForm(), "macros"));
+            _shell = new ListShell(_macroList, L10n.T("过滤宏名/来源…"));
+            var btnExport = _shell.AddAction(L10n.T("导出"), (s, e) => _shell.ExportCsv(FindForm(), "macros"));
             btnExport.Name = "MacroExportButton";
 
             // ── 底部状态（含 Muted 危险提示）──
@@ -129,7 +129,7 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Bottom,
                 AutoSize = true,
-                Text = "回放直接发送，不经过危险命令确认；请先在测试机验证。",
+                Text = L10n.T("回放直接发送，不经过危险命令确认；请先在测试机验证。"),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(3, 0, 0, 0),
                 BackColor = GdtermColorTable.Surface,
@@ -139,17 +139,17 @@ namespace Gdterm.UI.Controls
             Controls.Add(_shell);
             Controls.Add(toolPanel);
             Controls.Add(_statusLabel);
-            _macroList.AccessibleName = "宏列表";
-            _macroList.AccessibleDescription = "已保存的宏：名称/步数/时长/来源";
+            _macroList.AccessibleName = L10n.T("宏列表");
+            _macroList.AccessibleDescription = L10n.T("已保存的宏：名称/步数/时长/来源");
             // 无障碍名称回填：ListView/Table 本身没有 Text，AutoName 只补有文本的控件，
             // 列表名单独设（读屏软件念"宏列表"而不是"列表"）
             try { UiA11y.AutoName(this); } catch (Exception) { }
 
 
             // 审计 C1：空态引导 —— 宏目录为空时此前只剩一行状态提示，看不出该录还是该载入
-            _empty = EmptyStateView.Attach(this, "还没有保存的宏",
-                "点「● 录制」录下当前终端的按键序列，或「载入」从 data/macros/ 里选已有的宏文件",
-                "开始录制", (s2, e2) => StartRecording());
+            _empty = EmptyStateView.Attach(this, L10n.T("还没有保存的宏"),
+                L10n.T("点「● 录制」录下当前终端的按键序列，或「载入」从 data/macros/ 里选已有的宏文件"),
+                L10n.T("开始录制"), (s2, e2) => StartRecording());
 
             UpdateButtons();
         }
@@ -197,14 +197,14 @@ namespace Gdterm.UI.Controls
             var tc = ActiveTerminal();
             if (tc == null)
             {
-                MessageBox.Show(FindForm(), "请先打开终端标签。", "宏录制",
+                MessageBox.Show(FindForm(), L10n.T("请先打开终端标签。"), L10n.T("宏录制"),
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             var sess = tc.Session;
             if (sess == null || !sess.IsConnected)
             {
-                MessageBox.Show(FindForm(), "当前终端未连接。", "宏录制",
+                MessageBox.Show(FindForm(), L10n.T("当前终端未连接。"), L10n.T("宏录制"),
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -214,12 +214,12 @@ namespace Gdterm.UI.Controls
                 _recordSource = tc;
                 _pendingMacro = null;
                 StartTick();
-                SetStatus("正在录制… 录制源锁定为当前标签页；切换标签不影响录制。");
-                ToastNotifier.Info("宏录制已开始");
+                SetStatus(L10n.T("正在录制… 录制源锁定为当前标签页；切换标签不影响录制。"));
+                ToastNotifier.Info(L10n.T("宏录制已开始"));
             }
             catch (Exception ex)
             {
-                MessageBox.Show(FindForm(), "开始录制失败：\n" + ex.Message, "宏录制",
+                MessageBox.Show(FindForm(), L10n.T("开始录制失败：\n") + ex.Message, L10n.T("宏录制"),
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             UpdateButtons();
@@ -234,20 +234,20 @@ namespace Gdterm.UI.Controls
                 StopTick();
                 if (_pendingMacro == null || _pendingMacro.StepCount == 0)
                 {
-                    SetStatus("本次录制为空（未捕获到按键）。");
-                    ToastNotifier.Warning("录制为空，未捕获到按键");
+                    SetStatus(L10n.T("本次录制为空（未捕获到按键）。"));
+                    ToastNotifier.Warning(L10n.T("录制为空，未捕获到按键"));
                 }
                 else
                 {
-                    SetStatus("录制完成：" + _pendingMacro.StepCount + " 步 / "
-                        + _pendingMacro.Duration.TotalSeconds.ToString("0.0") + "s。点「保存」存为文件。");
-                    ToastNotifier.Success("录制完成：" + _pendingMacro.StepCount + " 步");
+                    SetStatus(L10n.T("录制完成：") + _pendingMacro.StepCount + L10n.T(" 步 / ") +
+                        _pendingMacro.Duration.TotalSeconds.ToString("0.0") + L10n.T("s。点「保存」存为文件。"));
+                    ToastNotifier.Success(L10n.T("录制完成：") + _pendingMacro.StepCount + L10n.T(" 步"));
                 }
                 _recordSource = null;
             }
             catch (Exception ex)
             {
-                MessageBox.Show(FindForm(), "停止录制失败：\n" + ex.Message, "宏录制",
+                MessageBox.Show(FindForm(), L10n.T("停止录制失败：\n") + ex.Message, L10n.T("宏录制"),
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             UpdateButtons();
@@ -262,8 +262,8 @@ namespace Gdterm.UI.Controls
                 try
                 {
                     if (_recordSource != null && _recordSource.IsMacroRecording)
-                        SetStatus("正在录制… " + _recordSource.MacroStepCount + " 步 / "
-                            + _recordSource.MacroDuration.TotalSeconds.ToString("0.0") + "s");
+                        SetStatus(L10n.T("正在录制… ") + _recordSource.MacroStepCount + L10n.T(" 步 / ") +
+                            _recordSource.MacroDuration.TotalSeconds.ToString("0.0") + L10n.T("s"));
                     else
                         StopTick();
                 }
@@ -293,19 +293,19 @@ namespace Gdterm.UI.Controls
             var tc = ActiveTerminal();
             if (tc == null)
             {
-                MessageBox.Show(FindForm(), "请先打开终端标签。", "宏回放",
+                MessageBox.Show(FindForm(), L10n.T("请先打开终端标签。"), L10n.T("宏回放"),
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             var sess = tc.Session;
             if (sess == null || !sess.IsConnected)
             {
-                MessageBox.Show(FindForm(), "当前终端未连接。", "宏回放",
+                MessageBox.Show(FindForm(), L10n.T("当前终端未连接。"), L10n.T("宏回放"),
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             double speed = Speed();
-            SetStatus("正在回放 " + Path.GetFileNameWithoutExtension(path) + "（" + speed + "x）…");
+            SetStatus(L10n.T("正在回放 ") + Path.GetFileNameWithoutExtension(path) + L10n.T("（") + speed + L10n.T("x）…"));
             Task.Run(async () =>
             {
                 try
@@ -320,14 +320,14 @@ namespace Gdterm.UI.Controls
                 var err = t.Result as Exception;
                 if (err != null)
                 {
-                    SetStatus("回放失败：" + err.Message);
-                    MessageBox.Show(FindForm(), "回放失败：\n" + err.Message, "宏回放",
+                    SetStatus(L10n.T("回放失败：") + err.Message);
+                    MessageBox.Show(FindForm(), L10n.T("回放失败：\n") + err.Message, L10n.T("宏回放"),
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 else
                 {
-                    SetStatus("回放完成。");
-                    ToastNotifier.Success("宏回放完成");
+                    SetStatus(L10n.T("回放完成。"));
+                    ToastNotifier.Success(L10n.T("宏回放完成"));
                 }
                 UpdateButtons();
             }, TaskScheduler.FromCurrentSynchronizationContext());
@@ -340,7 +340,7 @@ namespace Gdterm.UI.Controls
             if (InvokeRequired) { Invoke(new Action(RefreshMacroList)); return; }
             var items = new System.Collections.Generic.List<ListViewItem>();
             // 每个宏都要读盘 + 反序列化，几十条时同步刷新会明显迟滞：套 BusyScope 给即时反馈
-            using (BusyScope.Begin(this, "正在读取宏…", false, _btnLoad))
+            using (BusyScope.Begin(this, L10n.T("正在读取宏…"), false, _btnLoad))
             {
             string[] files;
             try { files = Directory.GetFiles(_macroDir, "*.json"); }
@@ -356,7 +356,7 @@ namespace Gdterm.UI.Controls
                     steps = rec.StepCount.ToString();
                     dur = rec.Duration.TotalSeconds.ToString("0.0") + "s";
                 }
-                catch { steps = "损坏"; }
+                catch { steps = L10n.T("损坏"); }
                 var item = new ListViewItem(name);
                 item.SubItems.Add(steps);
                 item.SubItems.Add(dur);
@@ -372,8 +372,8 @@ namespace Gdterm.UI.Controls
                 bool readFailed = false;
                 try { Directory.GetFiles(_macroDir, "*.json"); } catch { readFailed = true; }
                 // 用全量判空：过滤到 0 条时该亮的是壳的「没有匹配」，不是「还没有保存的宏」
-                _empty.SetEmpty(_shell.AllItems.Count == 0, readFailed ? "无法读取宏目录" : null,
-                    readFailed ? "检查 data/macros/ 是否存在且可写" : null);
+                _empty.SetEmpty(_shell.AllItems.Count == 0, readFailed ? L10n.T("无法读取宏目录") : null,
+                    readFailed ? L10n.T("检查 data/macros/ 是否存在且可写") : null);
             }
             UpdateButtons();
         }
@@ -381,7 +381,7 @@ namespace Gdterm.UI.Controls
         private void SavePending()
         {
             if (_pendingMacro == null || _pendingMacro.StepCount == 0) return;
-            using (var dlg = new Gdterm.UI.Forms.TextInputForm("保存宏", "宏名称（存于 data/macros/）：", "macro-" + DateTime.Now.ToString("yyyyMMdd-HHmm")))
+            using (var dlg = new Gdterm.UI.Forms.TextInputForm(L10n.T("保存宏"), L10n.T("宏名称（存于 data/macros/）："), "macro-" + DateTime.Now.ToString("yyyyMMdd-HHmm")))
             {
                 if (dlg.ShowDialog(FindForm()) != DialogResult.OK) return;
                 var name = (dlg.InputText ?? "").Trim();
@@ -390,7 +390,7 @@ namespace Gdterm.UI.Controls
                 var path = Path.Combine(_macroDir, name + ".json");
                 if (File.Exists(path))
                 {
-                    if (MessageBox.Show(FindForm(), "已存在同名宏，覆盖？", "保存宏",
+                    if (MessageBox.Show(FindForm(), L10n.T("已存在同名宏，覆盖？"), L10n.T("保存宏"),
                         MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
                 }
                 try
@@ -398,12 +398,12 @@ namespace Gdterm.UI.Controls
                     _pendingMacro.SaveToFile(path);
                     _pendingMacro = null;
                     RefreshMacroList();
-                    SetStatus("已保存：" + name);
-                    ToastNotifier.Success("宏已保存");
+                    SetStatus(L10n.T("已保存：") + name);
+                    ToastNotifier.Success(L10n.T("宏已保存"));
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(FindForm(), "保存失败：\n" + ex.Message, "保存宏",
+                    MessageBox.Show(FindForm(), L10n.T("保存失败：\n") + ex.Message, L10n.T("保存宏"),
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
@@ -414,8 +414,8 @@ namespace Gdterm.UI.Controls
         {
             using (var dlg = new OpenFileDialog
             {
-                Title = "载入宏文件",
-                Filter = "宏文件 (*.json)|*.json",
+                Title = L10n.T("载入宏文件"),
+                Filter = L10n.T("宏文件 (*.json)|*.json"),
                 InitialDirectory = _macroDir
             })
             {
@@ -428,11 +428,11 @@ namespace Gdterm.UI.Controls
                     if (!string.Equals(dlg.FileName, dest, StringComparison.OrdinalIgnoreCase))
                         File.Copy(dlg.FileName, dest, true);
                     RefreshMacroList();
-                    SetStatus("已载入：" + name);
+                    SetStatus(L10n.T("已载入：") + name);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(FindForm(), "载入失败：\n" + ex.Message, "载入宏",
+                    MessageBox.Show(FindForm(), L10n.T("载入失败：\n") + ex.Message, L10n.T("载入宏"),
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
@@ -445,9 +445,9 @@ namespace Gdterm.UI.Controls
             var picked = _shell.SelectedOrChecked();
             if (picked.Count == 0) return;
             string tip = picked.Count == 1
-                ? "删除宏「" + Path.GetFileNameWithoutExtension((string)picked[0].Tag) + "」？"
-                : "删除选中的 " + picked.Count + " 个宏？";
-            if (MessageBox.Show(FindForm(), tip, "删除宏",
+                ? L10n.T("删除宏「") + Path.GetFileNameWithoutExtension((string)picked[0].Tag) + L10n.T("」？")
+                : L10n.T("删除选中的 ") + picked.Count + L10n.T(" 个宏？");
+            if (MessageBox.Show(FindForm(), tip, L10n.T("删除宏"),
                 MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
             int ok = 0, fail = 0;
             try
@@ -460,13 +460,13 @@ namespace Gdterm.UI.Controls
                     catch (Exception) { fail++; }
                 }
                 RefreshMacroList();
-                SetStatus(fail == 0 ? "已删除 " + ok + " 个宏。" : "删除完成：" + ok + " 成功，" + fail + " 失败。");
-                if (fail == 0) ToastNotifier.Success("已删除 " + ok + " 个宏");
-                else ToastNotifier.Warning(fail + " 个宏删除失败（可能被占用或权限不足）");
+                SetStatus(fail == 0 ? L10n.T("已删除 ") + ok + L10n.T(" 个宏。") : L10n.T("删除完成：") + ok + L10n.T(" 成功，") + fail + L10n.T(" 失败。"));
+                if (fail == 0) ToastNotifier.Success(L10n.T("已删除 ") + ok + L10n.T(" 个宏"));
+                else ToastNotifier.Warning(fail + L10n.T(" 个宏删除失败（可能被占用或权限不足）"));
             }
             catch (Exception ex)
             {
-                MessageBox.Show(FindForm(), "删除失败：\n" + ex.Message, "删除宏",
+                MessageBox.Show(FindForm(), L10n.T("删除失败：\n") + ex.Message, L10n.T("删除宏"),
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             UpdateButtons();
