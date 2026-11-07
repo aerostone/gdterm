@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using Gdterm.Tools.Models;
+using Gdterm.Core;
 
 namespace Gdterm.Tools.Scanning
 {
@@ -39,7 +40,7 @@ namespace Gdterm.Tools.Scanning
     /// </summary>
     public class LocalScanChannel : IScanChannel
     {
-        public string Name { get { return "本机"; } }
+        public string Name { get { return L10n.T("本机"); } }
 
         public bool Supports(string scriptKind)
         {
@@ -69,7 +70,7 @@ namespace Gdterm.Tools.Scanning
             {
                 return new ScanExecutionOutput
                 {
-                    RuntimeError = "未找到 PowerShell（已尝试 PATH、pwsh、System32\\WindowsPowerShell、Program Files\\PowerShell\\7）"
+                    RuntimeError = L10n.T("未找到 PowerShell（已尝试 PATH、pwsh、System32\\WindowsPowerShell、Program Files\\PowerShell\\7）")
                 };
             }
             // 前置 UTF-8 控制台编码：重定向输出默认走 OEM 代码页，中文会乱码
@@ -122,7 +123,7 @@ namespace Gdterm.Tools.Scanning
             {
                 return new ScanExecutionOutput
                 {
-                    RuntimeError = "本机是 Windows：linux 脚本请选择“当前远程主机（SSH）”目标执行"
+                    RuntimeError = L10n.T("本机是 Windows：linux 脚本请选择“当前远程主机（SSH）”目标执行")
                 };
             }
             var psi = new ProcessStartInfo
@@ -147,7 +148,7 @@ namespace Gdterm.Tools.Scanning
                 {
                     if (proc == null)
                     {
-                        output.RuntimeError = "进程启动失败";
+                        output.RuntimeError = L10n.T("进程启动失败");
                         return output;
                     }
                     if (feedStdin != null)
@@ -171,7 +172,7 @@ namespace Gdterm.Tools.Scanning
                     if (!proc.WaitForExit(timeoutSeconds * 1000))
                     {
                         try { proc.Kill(); } catch { }
-                        output.RuntimeError = "执行超时（" + timeoutSeconds + "s），已终止";
+                        output.RuntimeError = L10n.T("执行超时（") + timeoutSeconds + L10n.T("s），已终止");
                         output.Stdout = so.ToString();
                         output.Stderr = se.ToString();
                         return output;
@@ -203,7 +204,7 @@ namespace Gdterm.Tools.Scanning
             _session = session;
         }
 
-        public string Name { get { return "SSH 远端"; } }
+        public string Name { get { return L10n.T("SSH 远端"); } }
 
         /// <summary>超过此大小的脚本才需要 SFTP 上传；以内一律 base64 内联。</summary>
         internal const int InlineScriptLimit = 200 * 1024;
@@ -234,7 +235,7 @@ namespace Gdterm.Tools.Scanning
             var output = new ScanExecutionOutput();
             if (_session == null || !_session.IsConnected)
             {
-                output.RuntimeError = "远程会话未连接";
+                output.RuntimeError = L10n.T("远程会话未连接");
                 return output;
             }
             try

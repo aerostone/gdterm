@@ -13,6 +13,7 @@ using KeePassLib.Interfaces;
 using KeePassLib.Keys;
 using KeePassLib.Serialization;
 using KeePassLib.Security;
+using Gdterm.Core;
 
 namespace Gdterm.KeePass
 {
@@ -206,7 +207,7 @@ namespace Gdterm.KeePass
             EnsureUnlocked();
             if (entry == null) throw new ArgumentNullException(nameof(entry));
             if (string.IsNullOrEmpty(entry.Id))
-                throw new ArgumentException("条目 Id 不能为空", nameof(entry));
+                throw new ArgumentException(L10n.T("条目 Id 不能为空"), nameof(entry));
 
             // 密码强度只警告不阻断（同 CreateEntry）
 
@@ -597,7 +598,7 @@ namespace Gdterm.KeePass
                 // 检测空密码
                 if (string.IsNullOrEmpty(password))
                 {
-                    issue.Issue = "密码为空";
+                    issue.Issue = L10n.T("密码为空");
                     issue.StrengthScore = 0;
                     report.EmptyPasswords.Add(issue);
                     continue;
@@ -610,7 +611,7 @@ namespace Gdterm.KeePass
                 // 检测弱密码
                 if (score <= 40)
                 {
-                    issue.Issue = score <= 20 ? "极弱密码" : "弱密码";
+                    issue.Issue = score <= 20 ? L10n.T("极弱密码") : L10n.T("弱密码");
                     report.WeakPasswords.Add(issue);
                 }
 
@@ -672,13 +673,13 @@ namespace Gdterm.KeePass
             report.HealthScore = Math.Max(0, 100 - deductions);
 
             if (report.HealthScore >= 90)
-                report.Summary = "密码库健康状况良好";
+                report.Summary = L10n.T("密码库健康状况良好");
             else if (report.HealthScore >= 70)
-                report.Summary = "密码库存在一些需要关注的问题";
+                report.Summary = L10n.T("密码库存在一些需要关注的问题");
             else if (report.HealthScore >= 50)
-                report.Summary = "密码库有较多安全隐患，建议尽快处理";
+                report.Summary = L10n.T("密码库有较多安全隐患，建议尽快处理");
             else
-                report.Summary = "密码库安全状况较差，请立即处理";
+                report.Summary = L10n.T("密码库安全状况较差，请立即处理");
 
             return report;
         }
@@ -740,7 +741,7 @@ namespace Gdterm.KeePass
         private void EnsureUnlocked()
         {
             if (!IsUnlocked)
-                throw new InvalidOperationException("密码库未解锁，请先调用 UnlockAsync");
+                throw new InvalidOperationException(L10n.T("密码库未解锁，请先调用 UnlockAsync"));
         }
 
         private PwEntry FindEntryByUuid(string uuidHex)

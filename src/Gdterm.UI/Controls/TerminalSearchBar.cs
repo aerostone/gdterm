@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
@@ -55,13 +56,13 @@ namespace Gdterm.UI.Controls
                 if (e.KeyCode == Keys.F3) { NavigateRequested?.Invoke(!e.Shift); }
             };
 
-            _chkCase = CreateChk("Aa", "区分大小写");
-            _chkRegex = CreateChk(".*", "正则表达式");
-            _chkWholeWord = CreateChk("W", "全字匹配");
+            _chkCase = CreateChk("Aa", L10n.T("区分大小写"));
+            _chkRegex = CreateChk(".*", L10n.T("正则表达式"));
+            _chkWholeWord = CreateChk("W", L10n.T("全字匹配"));
 
-            _btnPrev = CreateBtn("▲", "上一个 (Shift+F3)");
-            _btnNext = CreateBtn("▼", "下一个 (F3)");
-            _btnClose = CreateBtn("✕", "关闭 (Esc)");
+            _btnPrev = CreateBtn("▲", L10n.T("上一个 (Shift+F3)"));
+            _btnNext = CreateBtn("▼", L10n.T("下一个 (F3)"));
+            _btnClose = CreateBtn("✕", L10n.T("关闭 (Esc)"));
             _btnClose.ForeColor = GdtermColorTable.Muted;
 
             _lblCount = new AntdUI.Label {
@@ -126,7 +127,7 @@ namespace Gdterm.UI.Controls
         /// <summary>更新匹配计数</summary>
         public void UpdateMatchCount(int current, int total)
         {
-            _lblCount.Text = total > 0 ? string.Format("{0}/{1}", current + 1, total) : "无匹配";
+            _lblCount.Text = total > 0 ? string.Format("{0}/{1}", current + 1, total) : L10n.T("无匹配");
             _lblCount.ForeColor = total > 0 ? GdtermColorTable.Success : GdtermColorTable.Danger;
         }
 

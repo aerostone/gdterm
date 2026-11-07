@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Forms
 {
@@ -23,7 +24,7 @@ namespace Gdterm.UI.Forms
             Font = FormFontPolicy.UiFont();
             BackColor = GdtermColorTable.Background;
             ForeColor = GdtermColorTable.Foreground;
-            Text = "权限：" + (fileName ?? "");
+            Text = L10n.T("权限：") + (fileName ?? "");
             FormBorderStyle = FormBorderStyle.FixedDialog;
             // AntdUI.Window 自绘边框忽略 FixedDialog 语义，显式禁缩放
             Resizable = false;
@@ -39,8 +40,8 @@ namespace Gdterm.UI.Forms
             int chkW = DpiScale.V(this, 60);
             int y = pad;
 
-            string[] rows = { "属主", "属组", "其他" };
-            string[] cols = { "读取(r)", "写入(w)", "执行(x)" };
+            string[] rows = { L10n.T("属主"), L10n.T("属组"), L10n.T("其他") };
+            string[] cols = { L10n.T("读取(r)"), L10n.T("写入(w)"), L10n.T("执行(x)") };
             for (int r = 0; r < 3; r++)
             {
                 var lbl = new AntdUI.Label
@@ -72,7 +73,7 @@ namespace Gdterm.UI.Forms
             // octal 行
             var octLbl = new AntdUI.Label
             {
-                Text = "八进制",
+                Text = L10n.T("八进制"),
                 Location = new Point(pad, y + (fieldH - FontHeight) / 2),
                 Size = new Size(labelW, fieldH),
                 ForeColor = GdtermColorTable.Muted,
@@ -99,7 +100,7 @@ namespace Gdterm.UI.Forms
             var btnH = Math.Max(DpiScale.V(this, 32), FormFontPolicy.RowStep(this));
             var btnCancel = new AntdUI.Button
             {
-                Text = "取消",
+                Text = L10n.T("取消"),
                 DialogResult = DialogResult.Cancel,
                 Size = new Size(btnW, btnH),
                 Location = new Point(pad + labelW + DpiScale.V(this, 8) + 3 * (chkW + DpiScale.V(this, 8)) - 2 * btnW - DpiScale.V(this, 8), y),
@@ -108,7 +109,7 @@ namespace Gdterm.UI.Forms
             };
             var btnOk = new AntdUI.Button
             {
-                Text = "应用",
+                Text = L10n.T("应用"),
                 DialogResult = DialogResult.OK,
                 Size = new Size(btnW, btnH),
                 Location = new Point(btnCancel.Right + DpiScale.V(this, 8), y),
@@ -185,7 +186,7 @@ namespace Gdterm.UI.Forms
                     if (!_warnedIllegalOctal)
                     {
                         _warnedIllegalOctal = true;
-                        AntdUI.Message.warn(this, "八进制每位只能是 0-7，已回退到 " + OctalMode.ToString("D3"));
+                        AntdUI.Message.warn(this, L10n.T("八进制每位只能是 0-7，已回退到 ") + OctalMode.ToString("D3"));
                     }
                     return;
                 }
