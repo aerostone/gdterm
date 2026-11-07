@@ -66,6 +66,33 @@ namespace Gdterm.Core
             ["确认修改"] = "Confirm change",
             ["确认新密码"] = "Confirm new password",
             ["请输入当前密码"] = "Enter the current password",
+            // —— 多通道（批次4q：MultiChannelManager） ——
+            ["会话不存在"] = "Session not found",
+            ["会话不存在或未连接"] = "Session not found or not connected",
+            ["会话未连接"] = "Session not connected",
+            ["已加入多通道"] = "Added to the multi-channel",
+            ["已移出多通道"] = "Removed from the multi-channel",
+            ["无法获取终端状态"] = "Cannot get the terminal state",
+            ["默认"] = "Default",
+            // —— 协议标签页（批次4q：ProtocolTabOpener） ——
+            ["ITerminalSessionFactory 未注入，无法创建本地终端"] = "ITerminalSessionFactory not injected; cannot create the local terminal",
+            ["RDP 已断开: "] = "RDP disconnected: ",
+            ["RDP 连接失败: "] = "RDP connection failed: ",
+            ["不支持的协议: "] = "Unsupported protocol: ",
+            ["抓包代理已启动 127.0.0.1:{0} → {1}:{2}, dump → {3}"] = "Capture proxy started at 127.0.0.1:{0} → {1}:{2}, dump → {3}",
+            ["本地 Shell"] = "Local shell",
+            ["远程桌面"] = "Remote desktop",
+            // —— 密码库解锁（批次4q：KeePassUnlockForm） ——
+            ["主密码"] = "Master password",
+            ["密码错误或密码库文件损坏"] = "Wrong password or the password store file is corrupted",
+            ["解锁"] = "Unlock",
+            ["解锁中..."] = "Unlocking...",
+            ["解锁密码库"] = "Unlock the password store",
+            ["请输入主密码以解锁 KeePass 密码库"] = "Enter the master password to unlock the KeePass store",
+            ["请输入密码"] = "Enter the password",
+            ["🔐 密码库已锁定"] = "🔐 Password store is locked",
+            // —— 扫描中心（批次4q：ScannerCenterForm） ——
+            ["[运行错误] "] = "[run error] ",
             // —— 连接树（批次4p：ConnectionTreeControl） ——
             ["删除(&D)"] = "Delete(&D)",
             ["复制主机地址(&O)"] = "Copy host address(&O)",
