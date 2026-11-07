@@ -305,18 +305,11 @@ namespace Gdterm.UI.Forms
                     });
                 }
             }
-            // 表壳：问题过滤 + 排序 + 导出（只读表、无选中耦合；行激活靠 table.DataSource 反查，
-            // 即壳的当前可见行，CurrentRow 仍正确）
-            var shell = new TableShell<IssueRow>(table,
-                new[] { "标题", "用户名", "分组", "问题", "强度" },
-                r => string.Join(" ", new[] { r.Title, r.Username, r.GroupPath, r.Issue, r.Strength }),
-                (r, i) => { switch (i) { case 0: return r.Title; case 1: return r.Username; case 2: return r.GroupPath; case 3: return r.Issue; default: return r.Strength; } });
-            shell.AddAction("导出", (s, e) => shell.ExportCsv(this, "password-" + name)).Name = "PwdHealthIssueExportButton";
-            shell.SetItems(rows);
+            table.DataSource = rows;
             WireRowActivation(table, DescribeIssue);
 
             var host = new Panel { Dock = DockStyle.Fill, BackColor = GdtermColorTable.Background };
-            host.Controls.Add(shell);
+            host.Controls.Add(table);
             EmptyStateView.Attach(host, "这一类没有发现问题",
                 "「" + name + "」检查通过；规则变更或条目录入变化后重开本窗口即可复检");
             var empty = host.Controls.OfType<EmptyStateView>().FirstOrDefault();
@@ -367,17 +360,11 @@ namespace Gdterm.UI.Forms
                     first = false;
                 }
             }
-            // 表壳：重复密码过滤 + 排序 + 导出（只读表，按组平铺展示）
-            var shell = new TableShell<DupRow>(listView,
-                new[] { "密码哈希", "条目标题", "用户名", "分组" },
-                r => string.Join(" ", new[] { r.Hash, r.Title, r.Username, r.GroupPath }),
-                (r, i) => { switch (i) { case 0: return r.Hash; case 1: return r.Title; case 2: return r.Username; default: return r.GroupPath; } });
-            shell.AddAction("导出", (s, e) => shell.ExportCsv(this, "password-" + name)).Name = "PwdHealthDupExportButton";
-            shell.SetItems(rows);
+            listView.DataSource = rows;
             WireRowActivation(listView, DescribeDup);
 
             var dupHost = new Panel { Dock = DockStyle.Fill, BackColor = GdtermColorTable.Background };
-            dupHost.Controls.Add(shell);
+            dupHost.Controls.Add(listView);
             EmptyStateView.Attach(dupHost, "没有重复密码",
                 "每个条目都用了唯一密码；同一密码被复用时会在这里按组列出");
             var dupEmpty = dupHost.Controls.OfType<EmptyStateView>().FirstOrDefault();

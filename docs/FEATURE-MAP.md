@@ -173,13 +173,16 @@
 |---|---|---|
 | AI 助手设置 `page.AiSettingsForm` | 0/7 | 失败提示、危险操作确认、无障碍名称、撤销/回收站、搜索/过滤、导入、导出 |
 | 命令面板 `page.CommandPaletteForm` | 2/9 | 排序、分页/虚拟滚动、多选/批量、导出、撤销/回收站、加载中/忙碌、无障碍名称 |
+| 密码健康报告 `page.PasswordHealthForm` | 2/9 | 搜索/过滤、排序、分页/虚拟滚动、多选/批量、导出、撤销/回收站、无障碍名称 |
 | 密码库条目选择 `page.KeePassEntryPicker` | 2/9 | 排序、分页/虚拟滚动、多选/批量、导出、撤销/回收站、加载中/忙碌、无障碍名称 |
 | 快速跳转 `page.ConnectionQuickJumpForm` | 2/9 | 排序、分页/虚拟滚动、多选/批量、导出、撤销/回收站、加载中/忙碌、无障碍名称 |
+| 扫描中心 `page.ScannerCenterForm` | 2/9 | 搜索/过滤、排序、分页/虚拟滚动、多选/批量、导出、撤销/回收站、无障碍名称 |
 | 欢迎页 `page.WelcomePanel` | 1/8 | 列表/数据展示、回车/双击激活、搜索/过滤、失败提示、加载中/忙碌、键盘/快捷键、无障碍名称 |
 | 连接属性 `page.ConnectionDialog` | 0/7 | 失败提示、危险操作确认、无障碍名称、撤销/回收站、搜索/过滤、导入、导出 |
 | 通知中心 `page.NotificationCenterPanel` | 2/9 | 搜索/过滤、排序、分页/虚拟滚动、多选/批量、撤销/回收站、加载中/忙碌、无障碍名称 |
 | 外观设置 `page.AppearanceSettingsForm` | 1/7 | 危险操作确认、无障碍名称、撤销/回收站、搜索/过滤、导入、导出 |
 | 多通道广播 `page.MultiChannelPanel` | 3/9 | 搜索/过滤、排序、分页/虚拟滚动、撤销/回收站、加载中/忙碌、无障碍名称 |
+| 密码库管理 `page.KeePassManagerForm` | 3/9 | 排序、分页/虚拟滚动、多选/批量、导出、加载中/忙碌、无障碍名称 |
 | 运维工具箱 `page.ToolboxPanel` | 2/8 | 搜索/过滤、失败提示、加载中/忙碌、配置持久化、键盘/快捷键、无障碍名称 |
 | SFTP 权限修改 `page.SftpPermissionForm` | 0/5 | 配置持久化、失败提示、无障碍名称、危险操作确认、撤销/回收站 |
 | 主机资源监控 `page.RemoteMonitorPanel` | 0/5 | 列表/数据展示、分页/虚拟滚动、键盘/快捷键、导出、空态引导 |
@@ -192,10 +195,7 @@
 | SSH 密钥管理 `page.SshKeyManagerForm` | 1/5 | 配置持久化、无障碍名称、危险操作确认、撤销/回收站 |
 | 传输中心 `page.TransferCenterPanel` | 5/9 | 分页/虚拟滚动、多选/批量、撤销/回收站、加载中/忙碌 |
 | 修改主密码 `page.ChangeMasterPasswordForm` | 1/5 | 配置持久化、失败提示、无障碍名称、撤销/回收站 |
-| 密码健康报告 `page.PasswordHealthForm` | 5/9 | 分页/虚拟滚动、多选/批量、撤销/回收站、无障碍名称 |
-| 密码库管理 `page.KeePassManagerForm` | 5/9 | 分页/虚拟滚动、多选/批量、加载中/忙碌、无障碍名称 |
 | 密码库解锁 `page.KeePassUnlockForm` | 1/5 | 配置持久化、无障碍名称、危险操作确认、撤销/回收站 |
-| 扫描中心 `page.ScannerCenterForm` | 5/9 | 分页/虚拟滚动、多选/批量、撤销/回收站、无障碍名称 |
 | 文件面板（单栏） `page.FilePaneControl` | 5/9 | 分页/虚拟滚动、多选/批量、撤销/回收站、无障碍名称 |
 | 添加 OTP `page.AddOtpForm` | 1/5 | 配置持久化、无障碍名称、危险操作确认、撤销/回收站 |
 | 危险命令确认 `page.DangerousCommandDialog` | 1/4 | 失败提示、输入校验、无障碍名称 |

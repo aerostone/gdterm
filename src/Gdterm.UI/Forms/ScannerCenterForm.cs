@@ -31,7 +31,6 @@ namespace Gdterm.UI.Forms
         private AntdUI.Button _runButton;
         private AntdUI.Table _pluginTable;
         private AntdUI.Table _findingTable;
-        private TableShell<FindingRow> _findingShell;
         private System.Collections.Generic.List<ScanPlugin> _pluginRows = new System.Collections.Generic.List<ScanPlugin>();
         private System.Collections.Generic.List<ScanFinding> _findingRows = new System.Collections.Generic.List<ScanFinding>();
         private AntdUI.Label _findingHeader;
@@ -243,13 +242,7 @@ namespace Gdterm.UI.Forms
             _findingTable.Columns.Add(new AntdUI.Column("Severity", "级别", AntdUI.ColumnAlign.Left) { Width = "12%" });
             _findingTable.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left) { Width = "28%" });
             _findingTable.Columns.Add(new AntdUI.Column("Detail", "详情", AntdUI.ColumnAlign.Left) { Width = "60%" });
-            // 表壳：发现过滤 + 排序 + 导出（只读展示表，无选中耦合；发现多时可按级别/标题排、按关键词过滤）。
-            _findingShell = new TableShell<FindingRow>(_findingTable,
-                new[] { "级别", "标题", "详情" },
-                r => string.Join(" ", new[] { r.Severity, r.Title, r.Detail }),
-                (r, i) => { switch (i) { case 0: return r.Severity; case 1: return r.Title; default: return r.Detail; } });
-            _findingShell.AddAction("导出", (s, e) => _findingShell.ExportCsv(FindForm(), "scan-findings")).Name = "ScannerFindingExportButton";
-            findingPanel.Controls.Add(_findingShell);
+            findingPanel.Controls.Add(_findingTable);
             var findingHeader = new AntdUI.Label {
                 Name = "ScannerFindingHeader",
                 Dock = DockStyle.Top,
@@ -633,7 +626,7 @@ namespace Gdterm.UI.Forms
             _running = true;
             UpdateRunButtonState();
             _findingRows.Clear();
-            _findingShell.SetItems(new List<FindingRow>());
+            _findingTable.DataSource = new List<FindingRow>();
             SetFindingCount(0);
             _rawOutput.Text = "";
             UpdateEmptyHints();
@@ -693,7 +686,7 @@ namespace Gdterm.UI.Forms
             {
                 rows.Add(new FindingRow { Severity = SeverityLabel(f.Severity), Title = f.Title, Detail = f.Detail });
             }
-            _findingShell.SetItems(rows);
+            _findingTable.DataSource = rows;
             SetFindingCount(_findingRows.Count);
 
             if (!string.IsNullOrEmpty(r.RawOutput)) _rawOutput.AppendText(r.RawOutput + Environment.NewLine);
