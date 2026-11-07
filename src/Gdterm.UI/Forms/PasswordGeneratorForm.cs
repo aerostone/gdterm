@@ -5,6 +5,7 @@ using System.Text;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Forms
 {
@@ -46,7 +47,7 @@ namespace Gdterm.UI.Forms
 
         private void InitializeComponent()
         {
-            Text = "密码生成器";
+            Text = L10n.T("密码生成器");
             Size = DpiScale.S(this, 520, 600); // 初始基准，构造末尾按内容自适应重设
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -67,7 +68,7 @@ namespace Gdterm.UI.Forms
 
             // 标题
             var titleLabel = new AntdUI.Label {
-                Text = "🔑 密码生成器",
+                Text = L10n.T("🔑 密码生成器"),
                 Font = new Font("Segoe UI Emoji", 15F, FontStyle.Bold),
                 AutoSize = true,
                 Location = new Point(pad, y)
@@ -76,7 +77,7 @@ namespace Gdterm.UI.Forms
             y += Math.Max(DpiScale.V(this, 52), FormFontPolicy.RowStep(this) + DpiScale.V(this, 14));
 
             // 密码长度
-            var lengthLabel = new AntdUI.Label { Text = "密码长度", AutoSize = true, Location = new Point(pad, y + DpiScale.V(this, 10)) };
+            var lengthLabel = new AntdUI.Label { Text = L10n.T("密码长度"), AutoSize = true, Location = new Point(pad, y + DpiScale.V(this, 10)) };
             Controls.Add(lengthLabel);
 
             _lengthSpinner = new AntdUI.InputNumber {
@@ -108,23 +109,23 @@ namespace Gdterm.UI.Forms
             y += rowH + DpiScale.V(this, 4);
 
             // 字符集选项
-            var charsetTitle = new AntdUI.Label { Text = "字符集", AutoSize = true, Location = new Point(pad, y) };
+            var charsetTitle = new AntdUI.Label { Text = L10n.T("字符集"), AutoSize = true, Location = new Point(pad, y) };
             Controls.Add(charsetTitle);
             y += Math.Max(DpiScale.V(this, 32), FormFontPolicy.RowStep(this));
 
             int col2X = pad + DpiScale.V(this, 220);
-            _upperCheck = CreateCheck("大写字母 (A-Z)", pad, y);
-            _digitCheck = CreateCheck("数字 (0-9)", col2X, y);
+            _upperCheck = CreateCheck(L10n.T("大写字母 (A-Z)"), pad, y);
+            _digitCheck = CreateCheck(L10n.T("数字 (0-9)"), col2X, y);
             y += Math.Max(DpiScale.V(this, 32), FormFontPolicy.RowStep(this));
-            _lowerCheck = CreateCheck("小写字母 (a-z)", pad, y);
-            _specialCheck = CreateCheck("特殊字符 (!@#$...)", col2X, y);
+            _lowerCheck = CreateCheck(L10n.T("小写字母 (a-z)"), pad, y);
+            _specialCheck = CreateCheck(L10n.T("特殊字符 (!@#$...)"), col2X, y);
             y += Math.Max(DpiScale.V(this, 32), FormFontPolicy.RowStep(this));
-            _ambiguousCheck = CreateCheck("排除易混淆字符 (Il1O0)", pad, y);
+            _ambiguousCheck = CreateCheck(L10n.T("排除易混淆字符 (Il1O0)"), pad, y);
             _ambiguousCheck.CheckedChanged += (s, e) => GeneratePassword();
             y += Math.Max(DpiScale.V(this, 44), FormFontPolicy.RowStep(this) + DpiScale.V(this, 12));
 
             // 生成结果
-            var resultLabel = new AntdUI.Label { Text = "生成结果", AutoSize = true, Location = new Point(pad, y) };
+            var resultLabel = new AntdUI.Label { Text = L10n.T("生成结果"), AutoSize = true, Location = new Point(pad, y) };
             Controls.Add(resultLabel);
             y += DpiScale.V(this, 28);
 
@@ -138,14 +139,14 @@ namespace Gdterm.UI.Forms
             Controls.Add(_resultBox);
 
             _strengthLabel = new AntdUI.Label {
-                Text = "强度：—",
+                Text = L10n.T("强度：—"),
                 AutoSize = true,
                 Location = new Point(pad, y + resultH + DpiScale.V(this, 8))
             };
             Controls.Add(_strengthLabel);
 
             var generateBtn = new AntdUI.Button {
-                Text = "🔄 重新生成",
+                Text = L10n.T("🔄 重新生成"),
                 Location = new Point(pad + DpiScale.V(this, 312), y),
                 Size = new Size(DpiScale.V(this, 150), resultH),
                 Type = AntdUI.TTypeMini.Primary
@@ -154,7 +155,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(generateBtn);
 
             _copyBtn = new AntdUI.Button {
-                Text = "📋 复制",
+                Text = L10n.T("📋 复制"),
                 Location = new Point(pad + DpiScale.V(this, 312), y + resultH + DpiScale.V(this, 8)),
                 Size = new Size(DpiScale.V(this, 150), fieldH)
             };
@@ -163,7 +164,7 @@ namespace Gdterm.UI.Forms
             y += resultH + fieldH + DpiScale.V(this, 16);
 
             var generate10Btn = new AntdUI.Button {
-                Text = "批量生成 10 个",
+                Text = L10n.T("批量生成 10 个"),
                 Location = new Point(pad, y),
                 Size = new Size(DpiScale.V(this, 130), fieldH)
             };
@@ -171,7 +172,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(generate10Btn);
             // 关闭按钮（审计 F6：本窗体无提交概念，不加"确定"；ESC/按钮双通道关闭）
             var closeBtn = new AntdUI.Button {
-                Text = "关闭",
+                Text = L10n.T("关闭"),
                 Location = new Point(clientW - pad - DpiScale.V(this, 130), y),
                 Size = new Size(DpiScale.V(this, 130), fieldH),
                 DialogResult = DialogResult.Cancel,
@@ -183,7 +184,7 @@ namespace Gdterm.UI.Forms
 
             // 历史记录（只读多行 Input，双击复制整行由 KeyDown/MouseUp 简化为一键复制全部）
             var historyLabel = new AntdUI.Label {
-                Text = "本次生成记录（双击复制）",
+                Text = L10n.T("本次生成记录（双击复制）"),
                 AutoSize = true,
                 Location = new Point(pad, y)
             };
@@ -228,7 +229,7 @@ namespace Gdterm.UI.Forms
             if (charset.Length == 0)
             {
                 _resultBox.Text = "";
-                _strengthLabel.Text = "强度：请至少选择一种字符集";
+                _strengthLabel.Text = L10n.T("强度：请至少选择一种字符集");
                 return;
             }
 
@@ -280,12 +281,12 @@ namespace Gdterm.UI.Forms
 
             string strength;
             Color color;
-            if (entropy < 40) { strength = "弱"; color = GdtermColorTable.Danger; }
-            else if (entropy < 60) { strength = "中"; color = GdtermColorTable.Warning; }
-            else if (entropy < 80) { strength = "强"; color = GdtermColorTable.Success; }
-            else { strength = "极强"; color = GdtermColorTable.Success; }
+            if (entropy < 40) { strength = L10n.T("弱"); color = GdtermColorTable.Danger; }
+            else if (entropy < 60) { strength = L10n.T("中"); color = GdtermColorTable.Warning; }
+            else if (entropy < 80) { strength = L10n.T("强"); color = GdtermColorTable.Success; }
+            else { strength = L10n.T("极强"); color = GdtermColorTable.Success; }
 
-            _strengthLabel.Text = $"强度：{strength}（{entropy:F0} bit 熵）";
+            _strengthLabel.Text = L10n.Tf("强度：{0}（{1:F0} bit 熵）", strength, entropy);
             _strengthLabel.ForeColor = color;
         }
 
@@ -301,7 +302,7 @@ namespace Gdterm.UI.Forms
                     // 短暂提示
                     var btn = (AntdUI.Button)sender;
                     var originalText = btn.Text;
-                    btn.Text = "✓ 已复制(30s清空)";
+                    btn.Text = L10n.T("✓ 已复制(30s清空)");
                     var timer = new Timer { Interval = 1500 };
                     timer.Tick += (s, ev) => { btn.Text = originalText; timer.Stop(); timer.Dispose(); };
                     timer.Start();

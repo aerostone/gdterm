@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Text;
 using System.Threading.Tasks;
+using Gdterm.Core;
 using Gdterm.Core.Security;
 using Gdterm.Tools.Models;
 
@@ -16,9 +17,9 @@ namespace Gdterm.Tools.Modules
         private TimeSyncConfig _config;
 
         public string ToolId { get { return "time-sync"; } }
-        public string DisplayName { get { return "时间同步"; } }
-        public string Description { get { return "本地和远程NTP时间同步"; } }
-        public string Category { get { return "系统"; } }
+        public string DisplayName { get { return L10n.T("时间同步"); } }
+        public string Description { get { return L10n.T("本地和远程NTP时间同步"); } }
+        public string Category { get { return L10n.T("系统"); } }
         public bool HasRemoteSession { get { return _session != null && _session.IsConnected; } }
 
         public event EventHandler<string> OutputReceived;
@@ -45,7 +46,7 @@ namespace Gdterm.Tools.Modules
             {
                 return new RemoteCommandResult { Command = "w32tm", ExitCode = -1, Stderr = ex.Message };
             }
-            OnOutput("本地同步: " + ntpServer);
+            OnOutput(L10n.T("本地同步: ") + ntpServer);
             // Windows: w32tm /resync /computer:NTP
             return ExecuteLocal("w32tm", "/resync /computer:" + ntpServer);
         }
@@ -60,7 +61,7 @@ namespace Gdterm.Tools.Modules
         public RemoteCommandResult SyncRemoteTime(string ntpServer)
         {
             if (!HasRemoteSession)
-                return new RemoteCommandResult { Command = "remote-time", ExitCode = -1, Stderr = "未连接远程SSH" };
+                return new RemoteCommandResult { Command = "remote-time", ExitCode = -1, Stderr = L10n.T("未连接远程SSH") };
             // SEC-01: NTP 服务器白名单 + shell 引号
             try
             {
@@ -79,7 +80,7 @@ namespace Gdterm.Tools.Modules
             {
                 // 获取同步前时间
                 var beforeResult = ExecuteRemote("date '+%Y-%m-%d %H:%M:%S' && timedatectl status 2>/dev/null | grep -i 'synchronized\\|NTP'");
-                sb.AppendLine("=== 同步前 ===").AppendLine(beforeResult.Stdout);
+                sb.AppendLine(L10n.T("=== 同步前 ===")).AppendLine(beforeResult.Stdout);
 
                 // 检测并执行时间同步——ntpServer 已用 ShellQuote 包裹为 POSIX 安全单引号
                 var syncResult = ExecuteRemote(
@@ -91,14 +92,14 @@ namespace Gdterm.Tools.Modules
 
                 // 获取同步后时间
                 var afterResult = ExecuteRemote("date '+%Y-%m-%d %H:%M:%S'");
-                sb.AppendLine("=== 同步后 ===").AppendLine(afterResult.Stdout);
-                sb.AppendLine("=== NTP服务器 ===").AppendLine(ntpServer);
+                sb.AppendLine(L10n.T("=== 同步后 ===")).AppendLine(afterResult.Stdout);
+                sb.AppendLine(L10n.T("=== NTP服务器 ===")).AppendLine(ntpServer);
 
-                OnOutput("远程时间同步" + (syncResult.ExitCode == 0 ? "成功" : "尝试完成"));
+                OnOutput(L10n.T("远程时间同步") + (syncResult.ExitCode == 0 ? L10n.T("成功") : L10n.T("尝试完成")));
             }
             catch (Exception ex)
             {
-                sb.AppendLine("异常: " + ex.Message);
+                sb.AppendLine(L10n.T("异常: ") + ex.Message);
             }
 
             sw.Stop();
@@ -109,7 +110,7 @@ namespace Gdterm.Tools.Modules
         public RemoteCommandResult QueryRemoteTime()
         {
             if (!HasRemoteSession)
-                return new RemoteCommandResult { Command = "remote-time-query", ExitCode = -1, Stderr = "未连接远程SSH" };
+                return new RemoteCommandResult { Command = "remote-time-query", ExitCode = -1, Stderr = L10n.T("未连接远程SSH") };
 
             return ExecuteRemote("echo '=== 系统时间 ===' && date '+%Y-%m-%d %H:%M:%S %Z' && echo && echo '=== timedatectl ===' && timedatectl status 2>/dev/null && echo && echo '=== chrony ===' && chronyc tracking 2>/dev/null && echo && echo '=== ntpstat ===' && ntpstat 2>/dev/null");
         }
@@ -142,7 +143,7 @@ namespace Gdterm.Tools.Modules
         private RemoteCommandResult ExecuteRemote(string command)
         {
             if (_session == null)
-                return new RemoteCommandResult { Command = command, ExitCode = -1, Stderr = "SSH 未连接" };
+                return new RemoteCommandResult { Command = command, ExitCode = -1, Stderr = L10n.T("SSH 未连接") };
             return _session.RunCommand(command);
         }
 
@@ -156,7 +157,7 @@ namespace Gdterm.Tools.Modules
             Func<T, string> render)
         {
             var root = output.Parent as System.Windows.Forms.Control;
-            Action setRunning = () => { status.Text = "执行中..."; status.ForeColor = System.Drawing.Color.FromArgb(255, 200, 80); };
+            Action setRunning = () => { status.Text = L10n.T("执行中..."); status.ForeColor = System.Drawing.Color.FromArgb(255, 200, 80); };
             if (root != null && root.IsHandleCreated) root.BeginInvoke(setRunning); else setRunning();
 
             Task.Run(() =>
@@ -168,8 +169,8 @@ namespace Gdterm.Tools.Modules
                 }
                 catch (Exception ex)
                 {
-                    ToolPanelHelper.AppendLine(output, "失败: " + ex.Message);
-                    SetStatus(root, status, "失败: " + ex.Message, System.Drawing.Color.FromArgb(255, 100, 100));
+                    ToolPanelHelper.AppendLine(output, L10n.T("失败: ") + ex.Message);
+                    SetStatus(root, status, L10n.T("失败: ") + ex.Message, System.Drawing.Color.FromArgb(255, 100, 100));
                 }
             });
         }
@@ -184,32 +185,32 @@ namespace Gdterm.Tools.Modules
         {
             return ToolPanelHelper.CreateActionPanel(
                 DisplayName,
-                "输入 NTP 服务器后点执行；空则用默认阿里云 NTP。远程需先绑定 SSH 会话。",
+                L10n.T("输入 NTP 服务器后点执行；空则用默认阿里云 NTP。远程需先绑定 SSH 会话。"),
                 null,
                 (inputs, output, status) =>
                 {
-                    var ntp = string.IsNullOrWhiteSpace(inputs[0].Text) || inputs[0].Text.StartsWith("目标")
+                    var ntp = string.IsNullOrWhiteSpace(inputs[0].Text) || inputs[0].Text.StartsWith(L10n.T("目标"))
                         ? "ntp.aliyun.com" : inputs[0].Text.Trim();
                     // SEC-01: 入口处提前拒绝非法 NTP 服务器名
                     try { ShellArgument.ValidateNtpServer(ntp); }
                     catch (ArgumentException ex)
                     {
-                        status.Text = "无效 NTP 服务器";
-                        ToolPanelHelper.AppendLine(output, "错误: " + ex.Message);
+                        status.Text = L10n.T("无效 NTP 服务器");
+                        ToolPanelHelper.AppendLine(output, L10n.T("错误: ") + ex.Message);
                         return;
                     }
                     // finding-05：w32tm/远程 SSH 同步可能耗时，后台执行防 UI 冻结
                     RunBackground(output, status, () =>
                     {
                         var local = SyncLocalTime(ntp);
-                        ToolPanelHelper.AppendLine(output, "[本地] exit=" + local.ExitCode + " " + local.Stdout + local.Stderr);
+                        ToolPanelHelper.AppendLine(output, L10n.T("[本地] exit=") + local.ExitCode + " " + local.Stdout + local.Stderr);
                         if (HasRemoteSession)
                         {
                             var remote = SyncRemoteTime(ntp);
-                            ToolPanelHelper.AppendLine(output, "[远程] exit=" + remote.ExitCode + " " + remote.Stdout + remote.Stderr);
+                            ToolPanelHelper.AppendLine(output, L10n.T("[远程] exit=") + remote.ExitCode + " " + remote.Stdout + remote.Stderr);
                         }
                         return true;
-                    }, _ => "完成");
+                    }, _ => L10n.T("完成"));
                 });
         }
 

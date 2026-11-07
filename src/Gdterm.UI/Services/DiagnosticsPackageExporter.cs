@@ -7,6 +7,7 @@ using System.Text;
 using System.Windows.Forms;
 using Gdterm.Logging;
 using Gdterm.UI.Diagnostics;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Services
 {
@@ -30,9 +31,9 @@ namespace Gdterm.UI.Services
             string target = null;
             using (var dlg = new SaveFileDialog
             {
-                Title = "导出诊断包",
+                Title = L10n.T("导出诊断包"),
                 FileName = "gdterm-diag-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".zip",
-                Filter = "ZIP 压缩包 (*.zip)|*.zip"
+                Filter = L10n.T("ZIP 压缩包 (*.zip)|*.zip")
             })
             {
                 if (dlg.ShowDialog(owner) != DialogResult.OK) return null;
@@ -65,14 +66,14 @@ namespace Gdterm.UI.Services
                         Path.Combine(dataDir, "config"), "config", written);
 
                     if (written.Count <= 2)
-                        throw new Exception("没有可收集的内容（logs/data 目录为空？）");
+                        throw new Exception(L10n.T("没有可收集的内容（logs/data 目录为空？）"));
                 }
                 return target;
             }
             catch (Exception ex)
             {
                 try { DiagLog.Swallowed("DiagnosticsPackageExporter", ex); } catch { /* 诊断路径不二次抛 */ }
-                MessageBox.Show(owner, "导出诊断包失败：" + ex.Message, "错误",
+                MessageBox.Show(owner, L10n.T("导出诊断包失败：") + ex.Message, L10n.T("错误"),
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return null;
             }
@@ -89,35 +90,35 @@ namespace Gdterm.UI.Services
                 as System.Reflection.AssemblyInformationalVersionAttribute;
 
             var sb = new StringBuilder();
-            sb.AppendLine("gdterm 诊断包");
-            sb.AppendLine("生成时间: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-            sb.AppendLine("版本: " + (v != null ? v.ToString() : "?"));
+            sb.AppendLine(L10n.T("gdterm 诊断包"));
+            sb.AppendLine(L10n.T("生成时间: ") + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+            sb.AppendLine(L10n.T("版本: ") + (v != null ? v.ToString() : "?"));
             if (info != null && !string.IsNullOrEmpty(info.InformationalVersion))
-                sb.AppendLine("构建: " + info.InformationalVersion);
-            sb.AppendLine("系统: " + Environment.OSVersion.VersionString);
-            sb.AppendLine("位数: " + (Environment.Is64BitProcess ? "x64" : "x86"));
+                sb.AppendLine(L10n.T("构建: ") + info.InformationalVersion);
+            sb.AppendLine(L10n.T("系统: ") + Environment.OSVersion.VersionString);
+            sb.AppendLine(L10n.T("位数: ") + (Environment.Is64BitProcess ? "x64" : "x86"));
             sb.AppendLine("CLR: " + Environment.Version);
-            sb.AppendLine("CPU: " + Environment.ProcessorCount + " 核");
-            sb.AppendLine("区域: " + (System.Globalization.CultureInfo.CurrentUICulture.Name));
+            sb.AppendLine("CPU: " + Environment.ProcessorCount + L10n.T(" 核"));
+            sb.AppendLine(L10n.T("区域: ") + (System.Globalization.CultureInfo.CurrentUICulture.Name));
             return sb.ToString();
         }
 
         private static string BuildReadmeText()
         {
             return
-                "gdterm 诊断包说明\r\n" +
+                L10n.T("gdterm 诊断包说明\r\n") +
                 "=================\r\n" +
-                "本包由 gdterm「帮助 → 导出诊断包」生成，所有文本均已自动脱敏\r\n" +
-                "（密码/token/密钥类模式替换为 ***）。\r\n\r\n" +
-                "包含：\r\n" +
-                "  meta/version.txt   版本与环境信息\r\n" +
-                "  logs/diag.log      主诊断日志（尾部 " + MaxFileBytes / 1024 + "KB）\r\n" +
-                "  logs/terminal/     近期终端会话日志（最新 10 个，各尾部 " + MaxFileBytes / 1024 + "KB）\r\n" +
-                "  config/            data/config 下的 JSON 配置（脱敏后）\r\n\r\n" +
-                "有意排除（敏感）：\r\n" +
-                "  - 密码/凭据库文件（.kdbx 等）\r\n" +
-                "  - logs/commands（命令历史，可能含粘贴的密钥）\r\n" +
-                "  - 连接配置中的密码字段（gdterm 本身不落盘密码）\r\n";
+                L10n.T("本包由 gdterm「帮助 → 导出诊断包」生成，所有文本均已自动脱敏\r\n") +
+                L10n.T("（密码/token/密钥类模式替换为 ***）。\r\n\r\n") +
+                L10n.T("包含：\r\n") +
+                L10n.T("  meta/version.txt   版本与环境信息\r\n") +
+                L10n.T("  logs/diag.log      主诊断日志（尾部 ") + MaxFileBytes / 1024 + "KB）\r\n" +
+                L10n.T("  logs/terminal/     近期终端会话日志（最新 10 个，各尾部 ") + MaxFileBytes / 1024 + "KB）\r\n" +
+                L10n.T("  config/            data/config 下的 JSON 配置（脱敏后）\r\n\r\n") +
+                L10n.T("有意排除（敏感）：\r\n") +
+                L10n.T("  - 密码/凭据库文件（.kdbx 等）\r\n") +
+                L10n.T("  - logs/commands（命令历史，可能含粘贴的密钥）\r\n") +
+                L10n.T("  - 连接配置中的密码字段（gdterm 本身不落盘密码）\r\n");
         }
 
         // ========== 收集 ==========
