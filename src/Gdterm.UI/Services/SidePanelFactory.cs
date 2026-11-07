@@ -1,6 +1,7 @@
 using System;
 using Gdterm.AI;
 using Gdterm.Connections;
+using Gdterm.Core;
 using Gdterm.Core.Models;
 using System.Collections.Generic;
 using System.Drawing;
@@ -80,7 +81,7 @@ namespace Gdterm.UI.Services
         public Control CreateToolboxPanel()
         {
             if (_toolRegistry == null)
-                return Unavailable("工具箱未初始化");
+                return Unavailable(L10n.T("工具箱未初始化"));
             var panel = new ToolboxPanel(_toolRegistry);
             if (_bridge != null) _bridge.BindToolbox(panel);
             else
@@ -93,7 +94,7 @@ namespace Gdterm.UI.Services
         public Control CreateSecretScanPanel()
         {
             if (_secretScanner == null)
-                return Unavailable("扫描器未初始化");
+                return Unavailable(L10n.T("扫描器未初始化"));
             return new SecretScanPanel(_secretScanner, _securityManager);
         }
 
@@ -123,21 +124,21 @@ namespace Gdterm.UI.Services
         public Control CreateHistoryPanel()
         {
             if (_commandHistoryStore == null)
-                return Unavailable("命令历史未初始化");
+                return Unavailable(L10n.T("命令历史未初始化"));
             return new CommandHistoryPanel(_commandHistoryStore);
         }
 
         public Control CreateAiChatPanel(Func<TerminalControl> getActiveTerminal, IAiAssistantService aiService)
         {
             if (aiService == null)
-                return Unavailable("AI 服务未初始化");
+                return Unavailable(L10n.T("AI 服务未初始化"));
             return new AiChatPanel(aiService, getActiveTerminal ?? (() => _tabs != null ? _tabs.GetActiveTerminalControl() : null));
         }
 
         public Control CreateCommandTemplatePanel(Func<TerminalControl> getActiveTerminal, CommandTemplateStore store)
         {
             if (store == null)
-                return Unavailable("命令模板库未初始化");
+                return Unavailable(L10n.T("命令模板库未初始化"));
             return new CommandTemplatePanel(store, getActiveTerminal ?? (() => _tabs != null ? _tabs.GetActiveTerminalControl() : null));
         }
 
@@ -172,21 +173,21 @@ namespace Gdterm.UI.Services
             }
             catch (Exception ex)
             {
-                return Unavailable("端口转发不可用: " + ex.Message);
+                return Unavailable(L10n.T("端口转发不可用: ") + ex.Message);
             }
         }
 
         public Control CreateHighlightPanel()
         {
             if (_highlightStore == null)
-                return Unavailable("高亮存储未初始化");
+                return Unavailable(L10n.T("高亮存储未初始化"));
             return new HighlightRulePanel(_highlightStore);
         }
 
         public Control CreateKeyBindingPanel()
         {
             if (_keyBindingStore == null)
-                return Unavailable("快捷键存储未初始化");
+                return Unavailable(L10n.T("快捷键存储未初始化"));
             return new KeyBindingPanel(_keyBindingStore);
         }
 
@@ -200,7 +201,7 @@ namespace Gdterm.UI.Services
             }
             catch (Exception ex)
             {
-                return Unavailable("登录脚本: " + ex.Message);
+                return Unavailable(L10n.T("登录脚本: ") + ex.Message);
             }
         }
 
@@ -228,7 +229,7 @@ namespace Gdterm.UI.Services
             var tc = _tabs?.GetActiveTerminalControl();
             if (tc == null)
             {
-                MessageBox.Show(_dialogOwner, "请先打开终端标签", "查找",
+                MessageBox.Show(_dialogOwner, L10n.T("请先打开终端标签"), L10n.T("查找"),
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
@@ -358,7 +359,7 @@ namespace Gdterm.UI.Services
         public Control CreateBookmarksPanel(Action<ConnectionConfig> onOpen)
         {
             if (_bookmarkStore == null)
-                return Unavailable("书签存储未初始化");
+                return Unavailable(L10n.T("书签存储未初始化"));
             var panel = new SessionBookmarksPanel(_bookmarkStore, _connectionStore);
             if (onOpen != null)
                 panel.OpenConnectionRequested += onOpen;

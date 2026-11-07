@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using Gdterm.Connections;
+using Gdterm.Core;
 using Gdterm.Core.Enums;
 using Gdterm.Core.Models;
 using Gdterm.KeePass;
@@ -65,7 +66,7 @@ namespace Gdterm.UI.Controls
                 // 跟随字号的唯一方式是 MinimumSize 地板（与 AntdUI 输入框 38 地板同一语义）
                 MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this))
             };
-            try { Gdterm.UI.Diagnostics.WinFormsCompat.SetCueBanner(_filterBox, "输入主机/名称/分组过滤…"); }
+            try { Gdterm.UI.Diagnostics.WinFormsCompat.SetCueBanner(_filterBox, L10n.T("输入主机/名称/分组过滤…")); }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionTreeControl", exSwallowed); } catch { } }
             _filterBox.TextChanged += (s, e) => ApplyFilter(_filterBox.Text);
 
@@ -98,36 +99,36 @@ namespace Gdterm.UI.Controls
             // 顺序按使用频率：连接/复制地址（主机节点专属）→ 本地终端 → 新建/编辑/删除
             _contextMenu = new ContextMenuStrip();
 
-            var itemConnect = new ToolStripMenuItem("连接(&C)", null, OnConnect);
+            var itemConnect = new ToolStripMenuItem(L10n.T("连接(&C)"), null, OnConnect);
             itemConnect.Tag = "connect";
             AttachMenuIcon(itemConnect, "globe");
             _contextMenu.Items.Add(itemConnect);
 
-            var itemCopyHost = new ToolStripMenuItem("复制主机地址(&O)", null, OnCopyHost);
+            var itemCopyHost = new ToolStripMenuItem(L10n.T("复制主机地址(&O)"), null, OnCopyHost);
             AttachMenuIcon(itemCopyHost, "copy");
             itemCopyHost.Tag = "copyhost";
             _contextMenu.Items.Add(itemCopyHost);
 
             _contextMenu.Items.Add(new ToolStripSeparator { Tag = "sep0" });
 
-            var itemLocal = new ToolStripMenuItem("本地终端(&L)", null, OnOpenLocalTerminal);
+            var itemLocal = new ToolStripMenuItem(L10n.T("本地终端(&L)"), null, OnOpenLocalTerminal);
             itemLocal.Tag = "local";
             AttachMenuIcon(itemLocal, "terminal");
             _contextMenu.Items.Add(itemLocal);
 
-            var itemNew = new ToolStripMenuItem("新建连接(&N)", null, OnNewConnection);
+            var itemNew = new ToolStripMenuItem(L10n.T("新建连接(&N)"), null, OnNewConnection);
             itemNew.Tag = "new";
             AttachMenuIcon(itemNew, "new");
             _contextMenu.Items.Add(itemNew);
 
-            var itemEdit = new ToolStripMenuItem("编辑(&E)", null, OnEditConnection);
+            var itemEdit = new ToolStripMenuItem(L10n.T("编辑(&E)"), null, OnEditConnection);
             itemEdit.Tag = "edit";
             AttachMenuIcon(itemEdit, "pencil");
             _contextMenu.Items.Add(itemEdit);
 
             _contextMenu.Items.Add(new ToolStripSeparator { Tag = "sep1" });
 
-            var itemDelete = new ToolStripMenuItem("删除(&D)", null, OnDeleteConnection);
+            var itemDelete = new ToolStripMenuItem(L10n.T("删除(&D)"), null, OnDeleteConnection);
             itemDelete.Tag = "delete";
             AttachMenuIcon(itemDelete, "close");
             _contextMenu.Items.Add(itemDelete);
@@ -311,7 +312,7 @@ namespace Gdterm.UI.Controls
             _treeView.Nodes.Clear();
             var groupNodes = new Dictionary<string, TreeNode>();
 
-            var rootNode = new TreeNode("所有连接") { ImageKey = "folder", SelectedImageKey = "folder" };
+            var rootNode = new TreeNode(L10n.T("所有连接")) { ImageKey = "folder", SelectedImageKey = "folder" };
             _treeView.Nodes.Add(rootNode);
 
             foreach (var config in connections)
@@ -536,7 +537,7 @@ namespace Gdterm.UI.Controls
             catch (Exception ex)
             {
                 Gdterm.UI.Diagnostics.DiagLog.Swallowed("ConnectionTree.DragDrop", ex);
-                Gdterm.UI.Diagnostics.ToastNotifier.Error("移动失败: " + ex.Message);
+                Gdterm.UI.Diagnostics.ToastNotifier.Error(L10n.T("移动失败: ") + ex.Message);
             }
         }
 
@@ -615,7 +616,7 @@ namespace Gdterm.UI.Controls
             else
             {
                 // 根节点 / 空白：只允许顶层新建连接，编辑/删除/连接禁用
-                itemNew.Text = "新建连接(&N)";
+                itemNew.Text = L10n.T("新建连接(&N)");
                 itemEdit.Enabled = false;
                 itemDel.Enabled = false;
                 itemConn.Enabled = false;
@@ -807,7 +808,7 @@ namespace Gdterm.UI.Controls
             {
                 var result = MessageBox.Show(
                     $"确定删除连接 '{config.Name}'？\n\n此操作不可撤销。",
-                    "确认删除",
+                    L10n.T("确认删除"),
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Warning);
 

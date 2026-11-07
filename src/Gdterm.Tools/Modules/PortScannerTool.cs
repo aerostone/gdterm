@@ -6,6 +6,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Gdterm.Core;
 
 namespace Gdterm.Tools.Modules
 {
@@ -30,9 +31,9 @@ namespace Gdterm.Tools.Modules
         private CancellationTokenSource _cts;
 
         public string ToolId { get { return "port-scanner"; } }
-        public string DisplayName { get { return "端口扫描"; } }
-        public string Description { get { return "异步TCP端口扫描"; } }
-        public string Category { get { return "网络"; } }
+        public string DisplayName { get { return L10n.T("端口扫描"); } }
+        public string Description { get { return L10n.T("异步TCP端口扫描"); } }
+        public string Category { get { return L10n.T("网络"); } }
 
         public event EventHandler<PortScanResult> PortScanned;
         public event EventHandler<string> ScanCompleted;
@@ -78,7 +79,7 @@ namespace Gdterm.Tools.Modules
             await Task.WhenAll(tasks);
             var list = new List<PortScanResult>(results);
             list.Sort((a, b) => a.Port.CompareTo(b.Port));
-            ScanCompleted?.Invoke(this, string.Format("扫描完成: {0}:{1}-{2}, 发现{3}个开放端口", host, startPort, endPort, FindOpenCount(list)));
+            ScanCompleted?.Invoke(this, string.Format(L10n.T("扫描完成: {0}:{1}-{2}, 发现{3}个开放端口"), host, startPort, endPort, FindOpenCount(list)));
             return list;
         }
 
@@ -152,14 +153,14 @@ namespace Gdterm.Tools.Modules
         {
             return ToolPanelHelper.CreateActionPanel(
                 DisplayName,
-                Description + "  格式: host startPort endPort  例: 192.168.1.1 1 1024",
+                Description + L10n.T("  格式: host startPort endPort  例: 192.168.1.1 1 1024"),
                 null,
                 (inputs, output, status) =>
                 {
                     var parts = (inputs[0].Text ?? "").Split(new[] { ' ', ',' }, StringSplitOptions.RemoveEmptyEntries);
                     if (parts.Length < 1)
                     {
-                        status.Text = "请输入主机";
+                        status.Text = L10n.T("请输入主机");
                         return;
                     }
                     var host = parts[0];
@@ -176,7 +177,7 @@ namespace Gdterm.Tools.Modules
                     var root = output.Parent as System.Windows.Forms.Control;
                     Action ui = () =>
                     {
-                        status.Text = "扫描中...";
+                        status.Text = L10n.T("扫描中...");
                         status.ForeColor = System.Drawing.Color.FromArgb(255, 200, 80);
                     };
                     if (root != null && root.IsHandleCreated) root.BeginInvoke(ui); else ui();
@@ -190,20 +191,20 @@ namespace Gdterm.Tools.Modules
                                 : await ScanCommonPortsAsync(host);
                             foreach (var r in results)
                                 if (r.IsOpen) ToolPanelHelper.AppendLine(output, r.Host + ":" + r.Port + " open " + r.Service);
-                            ToolPanelHelper.AppendLine(output, string.Format("完成：开放 {0} / 扫描 {1} 个端口", FindOpenCount(results), results.Count));
+                            ToolPanelHelper.AppendLine(output, string.Format(L10n.T("完成：开放 {0} / 扫描 {1} 个端口"), FindOpenCount(results), results.Count));
                             Action doneUi = () =>
                             {
-                                status.Text = "完成，开放 " + FindOpenCount(results) + " 个端口";
+                                status.Text = L10n.T("完成，开放 ") + FindOpenCount(results) + L10n.T(" 个端口");
                                 status.ForeColor = System.Drawing.Color.FromArgb(120, 200, 120);
                             };
                             if (root != null && root.IsHandleCreated) root.BeginInvoke(doneUi); else doneUi();
                         }
                         catch (Exception ex)
                         {
-                            ToolPanelHelper.AppendLine(output, "扫描失败: " + ex.Message);
+                            ToolPanelHelper.AppendLine(output, L10n.T("扫描失败: ") + ex.Message);
                             Action failUi = () =>
                             {
-                                status.Text = "失败: " + ex.Message;
+                                status.Text = L10n.T("失败: ") + ex.Message;
                                 status.ForeColor = System.Drawing.Color.FromArgb(255, 100, 100);
                             };
                             if (root != null && root.IsHandleCreated) root.BeginInvoke(failUi); else failUi();

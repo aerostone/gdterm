@@ -1,4 +1,5 @@
 using System.Drawing;
+using Gdterm.Core;
 
 namespace Gdterm.Terminal.Themes
 {
@@ -64,7 +65,7 @@ namespace Gdterm.Terminal.Themes
         public static TerminalColorScheme Classic { get; } = new TerminalColorScheme
         {
             Name = "经典",
-            Description = "默认暗色主题，适合日常使用",
+            Description = L10n.T("默认暗色主题，适合日常使用"),
             Background = Color.FromArgb(0, 0, 0),
             Foreground = Color.FromArgb(204, 204, 204),
             CursorColor = Color.FromArgb(204, 204, 204),
@@ -99,7 +100,7 @@ namespace Gdterm.Terminal.Themes
         public static TerminalColorScheme HighContrast { get; } = new TerminalColorScheme
         {
             Name = "高对比度",
-            Description = "远程桌面/投影仪专用，最大亮度差异",
+            Description = L10n.T("远程桌面/投影仪专用，最大亮度差异"),
             Background = Color.FromArgb(0, 0, 0),
             Foreground = Color.FromArgb(255, 255, 255),
             CursorColor = Color.FromArgb(255, 255, 0),
@@ -134,7 +135,7 @@ namespace Gdterm.Terminal.Themes
         public static TerminalColorScheme SolarizedDark { get; } = new TerminalColorScheme
         {
             Name = "Solarized 暗色",
-            Description = "低对比度护眼主题，长时间使用不疲劳",
+            Description = L10n.T("低对比度护眼主题，长时间使用不疲劳"),
             Background = Color.FromArgb(0, 43, 54),
             Foreground = Color.FromArgb(131, 148, 150),
             CursorColor = Color.FromArgb(131, 148, 150),
@@ -167,7 +168,7 @@ namespace Gdterm.Terminal.Themes
         public static TerminalColorScheme Monokai { get; } = new TerminalColorScheme
         {
             Name = "Monokai",
-            Description = "经典代码编辑器配色",
+            Description = L10n.T("经典代码编辑器配色"),
             Background = Color.FromArgb(39, 40, 34),
             Foreground = Color.FromArgb(248, 248, 242),
             CursorColor = Color.FromArgb(248, 248, 242),
@@ -200,7 +201,7 @@ namespace Gdterm.Terminal.Themes
         public static TerminalColorScheme Dracula { get; } = new TerminalColorScheme
         {
             Name = "Dracula",
-            Description = "流行的暗紫色主题",
+            Description = L10n.T("流行的暗紫色主题"),
             Background = Color.FromArgb(40, 42, 54),
             Foreground = Color.FromArgb(248, 248, 242),
             CursorColor = Color.FromArgb(68, 71, 90),
@@ -233,7 +234,7 @@ namespace Gdterm.Terminal.Themes
         public static TerminalColorScheme GreenTerminal { get; } = new TerminalColorScheme
         {
             Name = "绿色终端",
-            Description = "复古绿色终端风格",
+            Description = L10n.T("复古绿色终端风格"),
             Background = Color.FromArgb(0, 0, 0),
             Foreground = Color.FromArgb(0, 255, 0),
             CursorColor = Color.FromArgb(0, 255, 0),
@@ -266,7 +267,7 @@ namespace Gdterm.Terminal.Themes
         public static TerminalColorScheme Light { get; } = new TerminalColorScheme
         {
             Name = "白色",
-            Description = "浅色背景，适合强光环境",
+            Description = L10n.T("浅色背景，适合强光环境"),
             Background = Color.FromArgb(255, 255, 255),
             Foreground = Color.FromArgb(0, 0, 0),
             CursorColor = Color.FromArgb(0, 0, 0),
