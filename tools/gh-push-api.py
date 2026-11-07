@@ -88,6 +88,10 @@ def main():
     for line in diff:
         parts = line.split("\t")
         status, path = parts[0], parts[-1]
+        # R100/C100（重命名/拷贝）：diff --name-status 给两列路径——旧路径必须显式删除，
+        # 否则远端残留旧文件、tree 与本地不一致（2025-07 L10n.cs 迁移事故）。
+        if status[:1] in ("R", "C") and len(parts) >= 3:
+            entries.append({"path": parts[1], "mode": "100644", "type": "blob", "sha": None})
         if status.startswith("D"):
             entries.append({"path": path, "mode": "100644", "type": "blob", "sha": None})
             continue
