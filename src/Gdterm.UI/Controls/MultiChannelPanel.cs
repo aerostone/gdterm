@@ -22,6 +22,7 @@ namespace Gdterm.UI.Controls
         private readonly MultiChannelRecorder _recorder;
         private CancellationTokenSource _replayCts;
         private ListView _sessionList;
+        private ListShell _shell;
         private AntdUI.Button _btnSelectAll;
         private AntdUI.Button _btnDeselectAll;
         private AntdUI.Button _btnBroadcast;
@@ -103,6 +104,9 @@ namespace Gdterm.UI.Controls
             _sessionList.Columns.Add("终端", 55);
             _sessionList.Columns.Add("命令数", 45);
 
+            // 表壳：过滤 + 排序（连接多了按主机/分组找会话）。不出「导出」——工具栏已有录制导出，
+            // 会话列表是实时状态，再放一个 CSV 导出只会让人分不清导的是哪个。
+
             // 命令输入框
             var inputPanel = new TableLayoutPanel
             {
@@ -149,7 +153,8 @@ namespace Gdterm.UI.Controls
             _empty = EmptyStateView.Attach(this, "还没有可广播的会话",
                 "打开任意 SSH/串口标签后会自动出现在这里；只有停在命令提示符的会话可加入",
                 "刷新列表", (s2, e2) => { RefreshList(); ToastNotifier.Info("已刷新会话列表", 1500); });
-            Controls.Add(_sessionList);
+            _shell = new ListShell(_sessionList, "按主机/分组过滤会话…");
+            Controls.Add(_shell);
             Controls.Add(toolbar);
             Controls.Add(inputPanel);
             Controls.Add(_statusLabel);
@@ -367,10 +372,8 @@ namespace Gdterm.UI.Controls
                 return;
             }
 
-            _sessionList.BeginUpdate();
-            _sessionList.Items.Clear();
-
             var sessions = _manager.GetAllSessions();
+            var items = new System.Collections.Generic.List<ListViewItem>();
             foreach (var session in sessions)
             {
                 var item = new ListViewItem(session.DisplayName);
@@ -397,10 +400,11 @@ namespace Gdterm.UI.Controls
                 else if (session.ReadyState != null && !session.ReadyState.IsReady)
                     item.ForeColor = GdtermColorTable.Warning;
 
-                _sessionList.Items.Add(item);
+                items.Add(item);
             }
 
-            _sessionList.EndUpdate();
+            // 壳重建可见集：勾选/选中按对象身份保留（Apply 内做），状态列变化不丢用户的勾选
+            _shell.SetItems(items);
             if (_empty != null) _empty.SetEmpty(sessions.Count == 0);
             UpdateStatus();
         }

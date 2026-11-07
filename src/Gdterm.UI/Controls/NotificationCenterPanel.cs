@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
@@ -8,15 +9,17 @@ namespace Gdterm.UI.Controls
 {
     /// <summary>
     /// 简易通知中心：汇总 Toast 级别事件（内存环形缓冲）。
+    /// 列表走 ListShell：过滤 + 排序 + 导出（所见即所得——无选中时导出当前可见条目）。
     /// </summary>
     public sealed class NotificationCenterPanel : UserControl
     {
         private static readonly object Sync = new object();
-        private static readonly System.Collections.Generic.List<string> Buffer =
-            new System.Collections.Generic.List<string>();
+        private static readonly List<string> Buffer =
+            new List<string>();
         private const int Max = 200;
 
-        private readonly ListBox _list;
+        private readonly ListView _list;
+        private ListShell _shell;
         private EmptyStateView _empty;
         private readonly AntdUI.Button _clear;
 
@@ -58,14 +61,24 @@ namespace Gdterm.UI.Controls
                 }
             };
 
-            _list = new ListBox
-            {
+            // 单列 ListView（行自带 HH:mm:ss 前缀，定宽时间戳让自然序排序 = 时间序）；
+            // 原 ListBox 无列概念，排序/导出无从谈起
+            _list = new ListView {
                 Dock = DockStyle.Fill,
+                View = View.Details,
+                FullRowSelect = true,
+                HideSelection = false,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
-                Font = Services.FormFontPolicy.MonoFont(),
-                IntegralHeight = false
+                Font = Services.FormFontPolicy.MonoFont()
             };
+            _list.Columns.Add("内容", 200);
+            FitColumn();
+            _list.SizeChanged += (s, e) => FitColumn();
+
+            // 表壳：过滤 + 排序 + 导出（导出无选中时作用于当前可见条目）
+            _shell = new ListShell(_list, "按时间/级别/内容过滤…");
+            _shell.AddAction("导出", (s, e) => _shell.ExportCsv(this.FindForm(), "notifications")).Name = "NotificationExportButton";
 
             var title = new AntdUI.Label {
                 Text = "通知中心",
@@ -84,7 +97,7 @@ namespace Gdterm.UI.Controls
                 if (e.KeyCode == Keys.Delete) { RemoveSelected(); e.Handled = true; }
             };
 
-            Controls.Add(_list);
+            Controls.Add(_shell);
             Controls.Add(_clear);
             Controls.Add(title);
 
@@ -94,6 +107,13 @@ namespace Gdterm.UI.Controls
             // 首帧必须反映缓冲区现状：此前只在 Push 时刷新，侧栏一打开是空白表 + 隐藏空态，
             // 看着像"通知全丢了"（CI 0.1.381 侧栏 dump 实证空态未显示）。
             Reload();
+        }
+
+        private void FitColumn()
+        {
+            if (_list.Columns.Count == 0) return;
+            int w = _list.ClientSize.Width - SystemInformation.VerticalScrollBarWidth - 4;
+            _list.Columns[0].Width = Math.Max(60, w);
         }
 
         public static void Push(string level, string message)
@@ -114,20 +134,19 @@ namespace Gdterm.UI.Controls
 
         public void Reload()
         {
-            _list.BeginUpdate();
-            _list.Items.Clear();
+            var items = new List<ListViewItem>();
             lock (Sync)
             {
-                foreach (var line in Buffer) _list.Items.Add(line);
+                foreach (var line in Buffer) items.Add(new ListViewItem(line));
             }
-            _list.EndUpdate();
-            if (_empty != null) _empty.SetEmpty(_list.Items.Count == 0);
+            _shell.SetItems(items);
+            if (_empty != null) _empty.SetEmpty(_shell.AllItems.Count == 0);
         }
 
         private void CopySelected()
         {
-            if (_list.SelectedItem == null) return;
-            var text = _list.SelectedItem.ToString();
+            if (_list.SelectedItems.Count == 0) return;
+            var text = _list.SelectedItems[0].Text;
             try
             {
                 Clipboard.SetText(text);
@@ -143,8 +162,8 @@ namespace Gdterm.UI.Controls
 
         private void RemoveSelected()
         {
-            if (_list.SelectedItem == null) return;
-            var text = _list.SelectedItem.ToString();
+            if (_list.SelectedItems.Count == 0) return;
+            var text = _list.SelectedItems[0].Text;
             try
             {
                 lock (Sync) Buffer.Remove(text);
