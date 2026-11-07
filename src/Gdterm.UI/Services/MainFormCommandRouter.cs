@@ -1,5 +1,6 @@
 using System;
 using System.Windows.Forms;
+using Gdterm.UI;
 using Gdterm.UI.Controls;
 
 namespace Gdterm.UI.Services
@@ -55,22 +56,15 @@ namespace Gdterm.UI.Services
             {
                 // 快速跳转（普通 Ctrl+K 是 shell kill-line，不能被抢）——实际路由点在 MainForm.ProcessCmdKey（先于本 router），
                 // 登记于此仅为帮助文本同源
-                new HotkeyEntry(Keys.Control | Keys.Shift | Keys.K, "快速跳转连接", null),
-                new HotkeyEntry(Keys.Control | Keys.Shift | Keys.O, "命令面板", null),
-                new HotkeyEntry(Keys.Control | Keys.Shift | Keys.R, "重连当前标签",
-                    () => _tabs?.ReconnectActiveTab()),
-                new HotkeyEntry(Keys.Control | Keys.Shift | Keys.W, "关闭当前标签",
-                    () => _tabs?.CloseActiveTab()),
-                new HotkeyEntry(Keys.Control | Keys.Shift | Keys.F, "终端查找",
-                    () => _sidePanels?.AttachSearchBar(_tabs)),
-                new HotkeyEntry(Keys.Control | Keys.Shift | Keys.P, "片段搜索",
-                    () => _sideHost?.ShowSnippetSearch(_sidePanels, _tabs)),
-                new HotkeyEntry(Keys.Control | Keys.Shift | Keys.H, "宏录制",
-                    () => { try { _sideHost?.Show(_sidePanels.CreateMacroPanel()); } catch { } }),
-                new HotkeyEntry(Keys.Control | Keys.Shift | Keys.G, "AI 助手聊天",
-                    () => { try { if (_showAiChat != null) _showAiChat(); } catch { } }),
-                new HotkeyEntry(Keys.Control | Keys.Shift | Keys.Z, "Zmodem 接收",
-                    () =>
+                new HotkeyEntry(Keys.Control | Keys.Shift | Keys.K, L10n.T("快速跳转连接"), null),
+                new HotkeyEntry(Keys.Control | Keys.Shift | Keys.O, L10n.T("命令面板"), null),
+                new HotkeyEntry(Keys.Control | Keys.Shift | Keys.R, L10n.T("重连当前标签"), () => _tabs?.ReconnectActiveTab()),
+                new HotkeyEntry(Keys.Control | Keys.Shift | Keys.W, L10n.T("关闭当前标签"), () => _tabs?.CloseActiveTab()),
+                new HotkeyEntry(Keys.Control | Keys.Shift | Keys.F, L10n.T("终端查找"), () => _sidePanels?.AttachSearchBar(_tabs)),
+                new HotkeyEntry(Keys.Control | Keys.Shift | Keys.P, L10n.T("片段搜索"), () => _sideHost?.ShowSnippetSearch(_sidePanels, _tabs)),
+                new HotkeyEntry(Keys.Control | Keys.Shift | Keys.H, L10n.T("宏录制"), () => { try { _sideHost?.Show(_sidePanels.CreateMacroPanel()); } catch { } }),
+                new HotkeyEntry(Keys.Control | Keys.Shift | Keys.G, L10n.T("AI 助手聊天"), () => { try { if (_showAiChat != null) _showAiChat(); } catch { } }),
+                new HotkeyEntry(Keys.Control | Keys.Shift | Keys.Z, L10n.T("Zmodem 接收"), () =>
                     {
                         try
                         {

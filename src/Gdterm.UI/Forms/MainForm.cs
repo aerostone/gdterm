@@ -264,7 +264,7 @@ namespace Gdterm.UI.Forms
 
         private void InitializeComponent()
         {
-            Text = "gdterm - 绿色运维客户端";
+            Text = L10n.T("gdterm - 绿色运维客户端");
             KeyPreview = true; // Esc/F11 在终端焦点时也能回到主窗体
             // app.manifest 声明 PerMonitorV2 让 WinForms 按屏自动缩放；不要在这里再叠手工 Scale，
             // 否则控件会被缩放两次导致字号超大、布局错乱（DpiHelper 已废弃）。
@@ -347,8 +347,8 @@ namespace Gdterm.UI.Forms
                     }
                     else
                     {
-                        MessageBox.Show(this, "连接列表中未找到 host 为 " + e.Host + " 的连接。",
-                            "打开连接", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show(this, L10n.Tf("连接列表中未找到 host 为 {0} 的连接。", e.Host),
+                            L10n.T("打开连接"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                 }
                 catch (Exception ex) { DiagLog.Swallowed("MainForm.HostPortOpen", ex); }
@@ -808,13 +808,13 @@ namespace Gdterm.UI.Forms
                 var tc = _tabContainer?.GetActiveTerminalControl();
                 if (tc == null || !tc.IsConnected)
                 {
-                    ToastNotifier.Info("当前没有活动的终端会话"); return;
+                    ToastNotifier.Info(L10n.T("当前没有活动的终端会话")); return;
                 }
 
                 using (var dlg = new SaveFileDialog())
                 {
-                    dlg.Title = "导出终端缓冲";
-                    dlg.Filter = "文本文件 (*.txt)|*.txt|HTML 文件 (*.html)|*.html|所有文件 (*.*)|*.*";
+                    dlg.Title = L10n.T("导出终端缓冲");
+                    dlg.Filter = L10n.T("文本文件 (*.txt)|*.txt|HTML 文件 (*.html)|*.html|所有文件 (*.*)|*.txt");
                     dlg.FileName = "terminal-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".txt";
                     if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
@@ -827,13 +827,13 @@ namespace Gdterm.UI.Forms
                     else
                         content = Gdterm.Terminal.TerminalBufferExport.ExportAsText(new System.Collections.Generic.List<string>(lines), host);
                     Gdterm.Terminal.TerminalBufferExport.SaveToFile(content, dlg.FileName);
-                    ToastNotifier.Success("已导出缓冲");
+                    ToastNotifier.Success(L10n.T("已导出缓冲"));
                 }
             }
             catch (Exception ex)
             {
                 Gdterm.UI.Diagnostics.DiagLog.Swallowed("MainForm.ExportBuffer", ex);
-                MessageBox.Show(this, "导出失败：" + ex.Message, "导出缓冲",
+                MessageBox.Show(this, L10n.Tf("导出失败：{0}", ex.Message), L10n.T("导出缓冲"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
@@ -918,14 +918,14 @@ namespace Gdterm.UI.Forms
             }
 
             var menu = new ContextMenuStrip();
-            menu.Items.Add("显示主窗口", null, (s, e) => RestoreFromTray());
-            menu.Items.Add("本地终端", null, (s, e) =>
+            menu.Items.Add(L10n.T("显示主窗口"), null, (s, e) => RestoreFromTray());
+            menu.Items.Add(L10n.T("本地终端"), null, (s, e) =>
             {
                 RestoreFromTray();
                 try { _tabContainer?.OpenLocalTerminal(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.OpenLocalTerminal(tray)", ex); }
             });
             menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add("退出", null, (s, e) =>
+            menu.Items.Add(L10n.T("退出"), null, (s, e) =>
             {
                 _confirmExitPending = true;
                 try { _trayIcon.Visible = false; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
@@ -959,7 +959,7 @@ namespace Gdterm.UI.Forms
                     try
                     {
                         _trayIcon.ShowBalloonTip(1200, "gdterm",
-                            "已最小化到托盘，双击图标恢复。", ToolTipIcon.Info);
+                            L10n.T("已最小化到托盘，双击图标恢复。"), ToolTipIcon.Info);
                     }
                     catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
                 }
@@ -985,8 +985,8 @@ namespace Gdterm.UI.Forms
             try
             {
                 var result = MessageBox.Show(this,
-                    "确定要退出 gdterm 吗？\n\n所有打开的连接会话将被关闭。",
-                    "退出确认",
+                    L10n.T("确定要退出 gdterm 吗？\n\n所有打开的连接会话将被关闭。"),
+                    L10n.T("退出确认"),
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Question,
                     MessageBoxDefaultButton.Button2);
@@ -1065,39 +1065,39 @@ namespace Gdterm.UI.Forms
                 foreach (var e in _cmdRouter.Entries)
                 {
                     if (e.Run == null) continue;
-                    Add(e.Desc, "命令", e.Run, MainFormCommandRouter.FormatKeys(e.Combo));
+                    Add(e.Desc, L10n.T("命令"), e.Run, MainFormCommandRouter.FormatKeys(e.Combo));
                 }
             }
-            Add("快速跳转连接", "命令", OpenQuickJump, "Ctrl+Shift+K", "jump 连接 host");
+            Add(L10n.T("快速跳转连接"), L10n.T("命令"), OpenQuickJump, "Ctrl+Shift+K", "jump 连接 host");
 
             // 2) 新建/导入导出/退出（文件菜单）
-            Add("新建连接", "命令", () => _openCoord?.NewConnection(), null, "new 连接 会话");
-            Add("导入连接（mRemoteNG/SecureCRT/Xshell/MobaXterm/WindTerm）", "命令",
+            Add(L10n.T("新建连接"), L10n.T("命令"), () => _openCoord?.NewConnection(), null, "new 连接 会话");
+            Add(L10n.T("导入连接（mRemoteNG/SecureCRT/Xshell/MobaXterm/WindTerm）"), L10n.T("命令"),
                 () => ConnectionImportExportUi.Import(this, _connectionStore, () => { try { _connectionTree?.LoadConnections(); } catch { } }),
                 null, "import xshell mobaxterm windterm");
-            Add("导出连接", "命令", () => ConnectionImportExportUi.Export(this, _connectionStore), null, "export");
-            Add("打开本地终端", "命令", () => _tabContainer?.OpenLocalTerminal(), null, "local shell");
-            Add("SFTP 文件浏览器（当前会话）", "命令", () => _openCoord?.OpenSftpFromActive(), null, "sftp 文件");
+            Add(L10n.T("导出连接"), L10n.T("命令"), () => ConnectionImportExportUi.Export(this, _connectionStore), null, "export");
+            Add(L10n.T("打开本地终端"), L10n.T("命令"), () => _tabContainer?.OpenLocalTerminal(), null, "local shell");
+            Add(L10n.T("SFTP 文件浏览器（当前会话）"), L10n.T("命令"), () => _openCoord?.OpenSftpFromActive(), null, "sftp 文件");
 
             // 3) 视图（视图菜单）
-            Add("标准视图", "视图", () => _viewMode?.SetViewMode(ViewMode.Standard));
-            Add("专注模式（全屏）", "视图", () => _viewMode?.SetViewMode(ViewMode.Focus), "F11");
-            Add("紧凑视图", "视图", () => _viewMode?.SetViewMode(ViewMode.Compact));
-            Add("切换连接树", "视图", () => _viewMode?.ToggleConnectionTree());
-            Add("水平分割", "视图", () => _tabContainer?.SplitHorizontal());
-            Add("垂直分割", "视图", () => _tabContainer?.SplitVertical());
-            Add("关闭当前标签", "视图", () => _tabContainer?.CloseActiveTab());
+            Add(L10n.T("标准视图"), L10n.T("视图"), () => _viewMode?.SetViewMode(ViewMode.Standard));
+            Add(L10n.T("专注模式（全屏）"), L10n.T("视图"), () => _viewMode?.SetViewMode(ViewMode.Focus), "F11");
+            Add(L10n.T("紧凑视图"), L10n.T("视图"), () => _viewMode?.SetViewMode(ViewMode.Compact));
+            Add(L10n.T("切换连接树"), L10n.T("视图"), () => _viewMode?.ToggleConnectionTree());
+            Add(L10n.T("水平分割"), L10n.T("视图"), () => _tabContainer?.SplitHorizontal());
+            Add(L10n.T("垂直分割"), L10n.T("视图"), () => _tabContainer?.SplitVertical());
+            Add(L10n.T("关闭当前标签"), L10n.T("视图"), () => _tabContainer?.CloseActiveTab());
 
             // 4) 侧面板（面板菜单）
-            Add("终端查找", "面板", () => _sidePanels?.AttachSearchBar(_tabContainer), "Ctrl+Shift+F", "search 搜索");
-            Add("高亮规则", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateHighlightPanel()));
-            Add("键位绑定", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateKeyBindingPanel()));
-            Add("登录脚本", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateLogonScriptPanel()));
-            Add("多通道广播", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateMultiChannelPanel()));
-            Add("批量命令", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateBatchPanel()));
-            Add("宏录制", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateMacroPanel()), "Ctrl+Shift+H");
-            Add("命令历史", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateHistoryPanel()));
-            Add("命令模板", "面板", () =>
+            Add(L10n.T("终端查找"), L10n.T("面板"), () => _sidePanels?.AttachSearchBar(_tabContainer), "Ctrl+Shift+F", "search 搜索");
+            Add(L10n.T("高亮规则"), L10n.T("面板"), () => _sidePanelHost?.Show(_sidePanels?.CreateHighlightPanel()));
+            Add(L10n.T("键位绑定"), L10n.T("面板"), () => _sidePanelHost?.Show(_sidePanels?.CreateKeyBindingPanel()));
+            Add(L10n.T("登录脚本"), L10n.T("面板"), () => _sidePanelHost?.Show(_sidePanels?.CreateLogonScriptPanel()));
+            Add(L10n.T("多通道广播"), L10n.T("面板"), () => _sidePanelHost?.Show(_sidePanels?.CreateMultiChannelPanel()));
+            Add(L10n.T("批量命令"), L10n.T("面板"), () => _sidePanelHost?.Show(_sidePanels?.CreateBatchPanel()));
+            Add(L10n.T("宏录制"), L10n.T("面板"), () => _sidePanelHost?.Show(_sidePanels?.CreateMacroPanel()), "Ctrl+Shift+H");
+            Add(L10n.T("命令历史"), L10n.T("面板"), () => _sidePanelHost?.Show(_sidePanels?.CreateHistoryPanel()));
+            Add(L10n.T("命令模板"), L10n.T("面板"), () =>
             {
                 try
                 {
@@ -1107,34 +1107,34 @@ namespace Gdterm.UI.Forms
                 }
                 catch (Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.Palette", exSwallowed); } catch { } }
             });
-            Add("健康监控", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateHealthPanel()));
-            Add("主机资源", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateRemoteMonitorPanel()), null, "cpu 内存 磁盘 负载 网络 资源 monitor");
-            Add("端口转发", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreatePortForwardPanel()));
-            Add("运维工具箱", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateToolboxPanel()));
-            Add("敏感信息扫描", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateSecretScanPanel()), null, "secret scan");
-            Add("收藏", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateBookmarksPanel(cfg =>
+            Add(L10n.T("健康监控"), L10n.T("面板"), () => _sidePanelHost?.Show(_sidePanels?.CreateHealthPanel()));
+            Add(L10n.T("主机资源"), L10n.T("面板"), () => _sidePanelHost?.Show(_sidePanels?.CreateRemoteMonitorPanel()), null, "cpu 内存 磁盘 负载 网络 资源 monitor");
+            Add(L10n.T("端口转发"), L10n.T("面板"), () => _sidePanelHost?.Show(_sidePanels?.CreatePortForwardPanel()));
+            Add(L10n.T("运维工具箱"), L10n.T("面板"), () => _sidePanelHost?.Show(_sidePanels?.CreateToolboxPanel()));
+            Add(L10n.T("敏感信息扫描"), L10n.T("面板"), () => _sidePanelHost?.Show(_sidePanels?.CreateSecretScanPanel()), null, "secret scan");
+            Add(L10n.T("收藏"), L10n.T("面板"), () => _sidePanelHost?.Show(_sidePanels?.CreateBookmarksPanel(cfg =>
             {
                 if (cfg != null) _openCoord?.OpenConnection(cfg);
             })), null, "bookmark");
-            Add("传输中心", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateTransferCenterPanel()));
-            Add("通知中心", "面板", () => _sidePanelHost?.Show(_sidePanels?.CreateNotificationCenterPanel()));
-            Add("AI 助手聊天", "面板", ShowAiChatPanel, "Ctrl+Shift+G", "ai 聊天");
+            Add(L10n.T("传输中心"), L10n.T("面板"), () => _sidePanelHost?.Show(_sidePanels?.CreateTransferCenterPanel()));
+            Add(L10n.T("通知中心"), L10n.T("面板"), () => _sidePanelHost?.Show(_sidePanels?.CreateNotificationCenterPanel()));
+            Add(L10n.T("AI 助手聊天"), L10n.T("面板"), ShowAiChatPanel, "Ctrl+Shift+G", "ai 聊天");
 
             // 5) 工具/设置/帮助（工具菜单）
-            Add("密码库管理（KeePass）", "工具", () => _toolsDialogs?.OpenKeePassManager(), null, "keepass 密码库");
-            Add("密码健康报告", "工具", () => _toolsDialogs?.OpenPasswordHealth());
-            Add("密码生成器", "工具", () => _toolsDialogs?.OpenPasswordGenerator());
-            Add("修改主密码", "工具", () => _toolsDialogs?.OpenChangeMasterPassword());
-            Add("OTP 管理器", "工具", () => _toolsDialogs?.OpenOtpManager());
-            Add("SSH 密钥管理", "工具", () => _toolsDialogs?.OpenSshKeyManager());
-            Add("扫描中心", "工具", () => _toolsDialogs?.OpenScannerCenter());
-            Add("外观设置", "设置", () => _toolsDialogs?.OpenAppearanceSettings());
-            Add("AI 设置", "设置", () => _toolsDialogs?.OpenAiSettings());
-            Add("危险命令设置", "设置", () => _toolsDialogs?.OpenDangerousCmdSettings());
-            Add("快捷键列表", "帮助", () => _toolsDialogs?.ShowHotkeysHelp());
-            Add("打开日志文件夹", "帮助", () => { try { _toolsDialogs?.ShowLogsFolder(); } catch { } });
-            Add("导出诊断包", "帮助", () => { try { _toolsDialogs?.ShowDiagnosticsPackage(); } catch { } });
-            Add("关于 gdterm", "帮助", () => _toolsDialogs?.ShowAbout());
+            Add(L10n.T("密码库管理（KeePass）"), L10n.T("工具"), () => _toolsDialogs?.OpenKeePassManager(), null, "keepass 密码库");
+            Add(L10n.T("密码健康报告"), L10n.T("工具"), () => _toolsDialogs?.OpenPasswordHealth());
+            Add(L10n.T("密码生成器"), L10n.T("工具"), () => _toolsDialogs?.OpenPasswordGenerator());
+            Add(L10n.T("修改主密码"), L10n.T("工具"), () => _toolsDialogs?.OpenChangeMasterPassword());
+            Add(L10n.T("OTP 管理器"), L10n.T("工具"), () => _toolsDialogs?.OpenOtpManager());
+            Add(L10n.T("SSH 密钥管理"), L10n.T("工具"), () => _toolsDialogs?.OpenSshKeyManager());
+            Add(L10n.T("扫描中心"), L10n.T("工具"), () => _toolsDialogs?.OpenScannerCenter());
+            Add(L10n.T("外观设置"), L10n.T("设置"), () => _toolsDialogs?.OpenAppearanceSettings());
+            Add(L10n.T("AI 设置"), L10n.T("设置"), () => _toolsDialogs?.OpenAiSettings());
+            Add(L10n.T("危险命令设置"), L10n.T("设置"), () => _toolsDialogs?.OpenDangerousCmdSettings());
+            Add(L10n.T("快捷键列表"), L10n.T("帮助"), () => _toolsDialogs?.ShowHotkeysHelp());
+            Add(L10n.T("打开日志文件夹"), L10n.T("帮助"), () => { try { _toolsDialogs?.ShowLogsFolder(); } catch { } });
+            Add(L10n.T("导出诊断包"), L10n.T("帮助"), () => { try { _toolsDialogs?.ShowDiagnosticsPackage(); } catch { } });
+            Add(L10n.T("关于 gdterm"), L10n.T("帮助"), () => _toolsDialogs?.ShowAbout());
 
             // 6) 动态：已开标签 + 全部连接
             try
@@ -1144,8 +1144,8 @@ namespace Gdterm.UI.Forms
                     foreach (var st in _tabContainer.GetOpenTabStates())
                     {
                         var id = st.ConnectionId;
-                        Add((st.IsActive ? "切换标签: " : "打开标签: ") + st.Title,
-                            st.IsActive ? "标签(当前)" : "标签",
+                        Add((st.IsActive ? L10n.T("切换标签: ") : L10n.T("打开标签: ")) + st.Title,
+                            st.IsActive ? L10n.T("标签(当前)") : "标签",
                             () => _tabContainer?.ActivateTabByConnectionId(id),
                             null, st.Host + " " + st.Protocol);
                     }
@@ -1156,8 +1156,8 @@ namespace Gdterm.UI.Forms
                     {
                         if (c == null) continue;
                         var cfg = c;
-                        Add("连接: " + c.Name,
-                            "连接",
+                        Add(L10n.T("连接: ") + c.Name,
+                            L10n.T("连接"),
                             () => _openCoord?.OpenConnection(cfg),
                             null, (c.Host ?? "") + " " + c.Protocol + " " + (c.GroupPath ?? ""));
                     }
