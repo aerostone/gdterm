@@ -3,6 +3,7 @@ using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Runtime.InteropServices.ComTypes;
 using System.Windows.Forms;
+using Gdterm.Core;
 using Gdterm.Core.Models;
 using Gdterm.Rdp.Models;
 
@@ -110,7 +111,7 @@ namespace Gdterm.Rdp
             {
                 var clsid = PickClsid();
                 if (clsid == null)
-                    throw new InvalidOperationException("mstscax ActiveX 未注册（需要 Windows 远程桌面组件）");
+                    throw new InvalidOperationException(L10n.T("mstscax ActiveX 未注册（需要 Windows 远程桌面组件）"));
                 RdpLog.Info("RdpClient.ctor", "clsid=" + clsid);
 
                 _ax = new RdpAxHost(clsid) { Dock = DockStyle.Fill };
@@ -122,7 +123,7 @@ namespace Gdterm.Rdp
                 _ax = null;
                 var label = new Label
                 {
-                    Text = "RDP 控件不可用（需要 Windows 环境 + mstscax ActiveX）",
+                    Text = L10n.T("RDP 控件不可用（需要 Windows 环境 + mstscax ActiveX）"),
                     Dock = DockStyle.Fill,
                     TextAlign = System.Drawing.ContentAlignment.MiddleCenter
                 };
@@ -197,7 +198,7 @@ namespace Gdterm.Rdp
         private object RequireOcx()
         {
             if (_ax == null)
-                throw new InvalidOperationException("RDP 控件不可用（需要 Windows 环境 + mstscax ActiveX）");
+                throw new InvalidOperationException(L10n.T("RDP 控件不可用（需要 Windows 环境 + mstscax ActiveX）"));
             return EnsureOcx();
         }
 
@@ -210,7 +211,7 @@ namespace Gdterm.Rdp
             if (_ocx == null)
             {
                 RdpLog.Info("RdpClient.EnsureOcx", "GetOcx returned null");
-                throw new InvalidOperationException("RDP ActiveX 实例化失败");
+                throw new InvalidOperationException(L10n.T("RDP ActiveX 实例化失败"));
             }
             _adv = ResolveAdvancedSettings(_ocx);
             RdpLog.Info("RdpClient.EnsureOcx", "ocx=" + _ocx.GetType().Name + " adv=" + (_adv != null ? "ok" : "null"));
@@ -356,8 +357,8 @@ namespace Gdterm.Rdp
             }
             if (reason == 2056)
             {
-                msg = msg + "\r\n\r\n嵌入式 RDP 控件需要访问许可存储 HKLM\\SOFTWARE\\Microsoft\\MSLicensing。" +
-                      "请以管理员身份运行一次 gdterm（或先用系统 mstsc 连接一次目标机）以初始化许可存储。";
+                msg = msg + L10n.T("\r\n\r\n嵌入式 RDP 控件需要访问许可存储 HKLM\\SOFTWARE\\Microsoft\\MSLicensing。") +
+                      L10n.T("请以管理员身份运行一次 gdterm（或先用系统 mstsc 连接一次目标机）以初始化许可存储。");
             }
             RdpLog.Info("RdpClient.Event", "OnDisconnected reason=" + reason + " ext=" + ext + " desc=" + (desc ?? "<null>") + " msg=" + msg);
             // 1-3 是官方标注“非错误”的正常断开；0 无信息——若非用户主动断开则视为异常
@@ -388,7 +389,7 @@ namespace Gdterm.Rdp
         internal void RaiseFatalError(int errorCode)
         {
             RdpLog.Info("RdpClient.Event", "OnFatalError code=" + errorCode);
-            StateChanged?.Invoke(this, new RdpStateChangedEventArgs(false, "fatal-error", "RDP 致命错误 (代码 " + errorCode + ")"));
+            StateChanged?.Invoke(this, new RdpStateChangedEventArgs(false, "fatal-error", L10n.T("RDP 致命错误 (代码 ") + errorCode + ")"));
         }
 
         // ===== IDispatch 后期绑定辅助 =====
@@ -440,54 +441,54 @@ namespace Gdterm.Rdp
         {
             switch (reasonCode)
             {
-                case 0: return "无可用信息";
-                case 1: return "本地断开（非错误）";
-                case 2: return "远端用户断开（非错误）";
-                case 3: return "服务器断开（非错误）";
-                case 260: return "DNS 名称解析失败";
-                case 262: return "内存不足";
-                case 264: return "连接超时";
-                case 516: return "Socket 连接失败";
-                case 518: return "内存不足";
-                case 520: return "主机未找到";
-                case 772: return "Windows 套接字 send 失败";
-                case 774: return "内存不足";
-                case 776: return "指定的 IP 地址无效";
-                case 1028: return "Windows 套接字 recv 失败";
-                case 1030: return "安全数据无效";
-                case 1032: return "内部错误";
-                case 1286: return "指定的加密方法无效";
-                case 1288: return "DNS 查找失败";
-                case 1540: return "gethostbyname 调用失败";
-                case 1542: return "服务器安全数据无效";
-                case 1544: return "内部定时器错误";
-                case 1796: return "超时";
-                case 1798: return "服务器证书解包失败";
-                case 2052: return "指定的 IP 地址错误";
-                case 2055: return "登录失败（用户名或密码错误）";
-                case 2056: return "许可协商失败";
-                case 2308: return "Socket 已关闭";
-                case 2310: return "内部安全错误";
-                case 2312: return "许可超时";
-                case 2566: return "内部安全错误";
-                case 2567: return "指定用户无账户";
-                case 2822: return "加密错误";
-                case 2823: return "账户已禁用";
-                case 3078: return "解密错误";
-                case 3079: return "账户受限";
-                case 3080: return "解压缩错误";
-                case 3335: return "账户已锁定";
-                case 3591: return "账户已过期";
-                case 3847: return "密码已过期";
-                case 4615: return "首次登录前必须更改密码";
-                case 5639: return "策略不支持凭据委派";
-                case 5895: return "未经相互认证不允许凭据委派";
-                case 6151: return "无法联系身份验证机构";
-                case 6919: return "收到的证书已过期";
-                case 7175: return "智能卡 PIN 码错误";
-                case 8455: return "服务器认证策略要求输入新凭据";
-                case 8711: return "智能卡已锁定";
-                default: return "断开连接 (原因代码: " + reasonCode + ")";
+                case 0: return L10n.T("无可用信息");
+                case 1: return L10n.T("本地断开（非错误）");
+                case 2: return L10n.T("远端用户断开（非错误）");
+                case 3: return L10n.T("服务器断开（非错误）");
+                case 260: return L10n.T("DNS 名称解析失败");
+                case 262: return L10n.T("内存不足");
+                case 264: return L10n.T("连接超时");
+                case 516: return L10n.T("Socket 连接失败");
+                case 518: return L10n.T("内存不足");
+                case 520: return L10n.T("主机未找到");
+                case 772: return L10n.T("Windows 套接字 send 失败");
+                case 774: return L10n.T("内存不足");
+                case 776: return L10n.T("指定的 IP 地址无效");
+                case 1028: return L10n.T("Windows 套接字 recv 失败");
+                case 1030: return L10n.T("安全数据无效");
+                case 1032: return L10n.T("内部错误");
+                case 1286: return L10n.T("指定的加密方法无效");
+                case 1288: return L10n.T("DNS 查找失败");
+                case 1540: return L10n.T("gethostbyname 调用失败");
+                case 1542: return L10n.T("服务器安全数据无效");
+                case 1544: return L10n.T("内部定时器错误");
+                case 1796: return L10n.T("超时");
+                case 1798: return L10n.T("服务器证书解包失败");
+                case 2052: return L10n.T("指定的 IP 地址错误");
+                case 2055: return L10n.T("登录失败（用户名或密码错误）");
+                case 2056: return L10n.T("许可协商失败");
+                case 2308: return L10n.T("Socket 已关闭");
+                case 2310: return L10n.T("内部安全错误");
+                case 2312: return L10n.T("许可超时");
+                case 2566: return L10n.T("内部安全错误");
+                case 2567: return L10n.T("指定用户无账户");
+                case 2822: return L10n.T("加密错误");
+                case 2823: return L10n.T("账户已禁用");
+                case 3078: return L10n.T("解密错误");
+                case 3079: return L10n.T("账户受限");
+                case 3080: return L10n.T("解压缩错误");
+                case 3335: return L10n.T("账户已锁定");
+                case 3591: return L10n.T("账户已过期");
+                case 3847: return L10n.T("密码已过期");
+                case 4615: return L10n.T("首次登录前必须更改密码");
+                case 5639: return L10n.T("策略不支持凭据委派");
+                case 5895: return L10n.T("未经相互认证不允许凭据委派");
+                case 6151: return L10n.T("无法联系身份验证机构");
+                case 6919: return L10n.T("收到的证书已过期");
+                case 7175: return L10n.T("智能卡 PIN 码错误");
+                case 8455: return L10n.T("服务器认证策略要求输入新凭据");
+                case 8711: return L10n.T("智能卡已锁定");
+                default: return L10n.T("断开连接 (原因代码: ") + reasonCode + ")";
             }
         }
 
@@ -497,31 +498,31 @@ namespace Gdterm.Rdp
             switch (ext)
             {
                 case 0: return null;
-                case 1: return "本地 API 发起断开";
-                case 2: return "本地 API 发起注销";
-                case 3: return "服务器空闲超时";
-                case 4: return "服务器登录超时";
-                case 5: return "被其他连接替换";
-                case 6: return "内存不足";
-                case 7: return "服务器拒绝连接";
-                case 8: return "服务器因 FIPS 拒绝连接";
-                case 9: return "权限不足";
-                case 10: return "需要新凭据";
-                case 11: return "用户发起 RPC 断开";
-                case 12: return "用户注销";
-                case 256: return "许可-内部错误";
-                case 257: return "许可-无许可服务器";
-                case 258: return "许可-无许可证";
-                case 259: return "许可-客户端消息错误";
-                case 260: return "许可-硬件 ID 与许可证不匹配";
-                case 261: return "许可-客户端许可证错误";
-                case 262: return "许可-无法完成协议";
-                case 263: return "许可-客户端终止协议";
-                case 264: return "许可-客户端加密错误";
-                case 265: return "许可-无法升级许可证";
-                case 266: return "许可-不允许远程连接";
-                case 267: return "许可-创建许可存储被拒绝";
-                case 768: return "凭据无效";
+                case 1: return L10n.T("本地 API 发起断开");
+                case 2: return L10n.T("本地 API 发起注销");
+                case 3: return L10n.T("服务器空闲超时");
+                case 4: return L10n.T("服务器登录超时");
+                case 5: return L10n.T("被其他连接替换");
+                case 6: return L10n.T("内存不足");
+                case 7: return L10n.T("服务器拒绝连接");
+                case 8: return L10n.T("服务器因 FIPS 拒绝连接");
+                case 9: return L10n.T("权限不足");
+                case 10: return L10n.T("需要新凭据");
+                case 11: return L10n.T("用户发起 RPC 断开");
+                case 12: return L10n.T("用户注销");
+                case 256: return L10n.T("许可-内部错误");
+                case 257: return L10n.T("许可-无许可服务器");
+                case 258: return L10n.T("许可-无许可证");
+                case 259: return L10n.T("许可-客户端消息错误");
+                case 260: return L10n.T("许可-硬件 ID 与许可证不匹配");
+                case 261: return L10n.T("许可-客户端许可证错误");
+                case 262: return L10n.T("许可-无法完成协议");
+                case 263: return L10n.T("许可-客户端终止协议");
+                case 264: return L10n.T("许可-客户端加密错误");
+                case 265: return L10n.T("许可-无法升级许可证");
+                case 266: return L10n.T("许可-不允许远程连接");
+                case 267: return L10n.T("许可-创建许可存储被拒绝");
+                case 768: return L10n.T("凭据无效");
                 default: return null;
             }
         }
@@ -544,7 +545,7 @@ namespace Gdterm.Rdp
                     {
                         if (ro == null)
                         {
-                            RdpLog.Info("RdpClient.MSLicensing", "proc=" + proc + " store=missing（将以管理员身份运行一次来创建）");
+                            RdpLog.Info("RdpClient.MSLicensing", "proc=" + proc + L10n.T(" store=missing（将以管理员身份运行一次来创建）"));
                             return;
                         }
                     }

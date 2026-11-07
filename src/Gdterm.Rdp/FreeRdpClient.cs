@@ -11,6 +11,7 @@ using System.Threading;
 using System.Windows.Forms;
 // 双命名空间均有 Timer：显式绑定到线程定时器，WinForms 定时器用嵌套别名
 using Timer = System.Threading.Timer;
+using Gdterm.Core;
 using Gdterm.Core.Models;
 using Gdterm.Rdp.Models;
 
@@ -327,10 +328,10 @@ namespace Gdterm.Rdp
             var exe = FindExecutable();
             if (exe == null)
                 throw new InvalidOperationException(
-                    "未找到 RDP 引擎 wfreerdp.exe。发行包 freerdp\\ 目录应自带该引擎"
-                    + "（官方已停发 2.x Windows 二进制，由本项目 CI 从源码构建打包，请勿单独下载 3.x 替换——"
-                    + "3.x 已移除 /parent-window 嵌入）。请用完整发行包重新解压；"
-                    + "或在连接元数据设置 rdp_engine=mstscax 改用 ActiveX。");
+                    L10n.T("未找到 RDP 引擎 wfreerdp.exe。发行包 freerdp\\ 目录应自带该引擎")
+                    + L10n.T("（官方已停发 2.x Windows 二进制，由本项目 CI 从源码构建打包，请勿单独下载 3.x 替换——")
+                    + L10n.T("3.x 已移除 /parent-window 嵌入）。请用完整发行包重新解压；")
+                    + L10n.T("或在连接元数据设置 rdp_engine=mstscax 改用 ActiveX。"));
 
             // 启动前依赖预检：缺 DLL 时 Windows 会弹「找不到 xxx.dll」错误框且进程假活，
             // 导致误报 connected 后再掉线（退出码 0xC0000135）。快速失败并给出可操作提示。
@@ -339,9 +340,9 @@ namespace Gdterm.Rdp
             {
                 RdpLog.Info("FreeRdp.Precheck", "missing dll=" + missingDll + " exe=" + exe);
                 throw new InvalidOperationException(
-                    "FreeRDP 运行库不完整：缺少 " + missingDll
-                    + "（目录：" + Path.GetDirectoryName(exe) + "）。"
-                    + "正常情况下发行包已自带全部运行库——请重新解压完整发行包覆盖；若被杀毒软件隔离请恢复并加白名单。");
+                    L10n.T("FreeRDP 运行库不完整：缺少 ") + missingDll
+                    + L10n.T("（目录：") + Path.GetDirectoryName(exe) + "）。"
+                    + L10n.T("正常情况下发行包已自带全部运行库——请重新解压完整发行包覆盖；若被杀毒软件隔离请恢复并加白名单。"));
             }
             try { RdpLog.Info("FreeRdp.Precheck", "ok exe=" + exe); } catch { }
 
@@ -428,7 +429,7 @@ namespace Gdterm.Rdp
                 else
                 {
                     logArgs.Add("/p:<skipped-by-rdp_passline=false>");
-                    RdpLog.Info("FreeRdp.Start", "rdp_passline=false：跳过命令行密码，等待登录页输入");
+                    RdpLog.Info("FreeRdp.Start", L10n.T("rdp_passline=false：跳过命令行密码，等待登录页输入"));
                 }
             }
             if (!string.IsNullOrEmpty(domain)) AddArg(args, logArgs, "/d:" + Q(domain));
@@ -815,7 +816,7 @@ namespace Gdterm.Rdp
                     && !TryAutoReconnectWithToken(code))
                 {
                     var normal = code == 0 || _userInitiatedDisconnect;
-                    var msg = normal ? "连接已关闭" : DescribeExitCode(code);
+                    var msg = normal ? L10n.T("连接已关闭") : DescribeExitCode(code);
                     var handler = StateChanged;
                     if (handler != null)
                         handler(this, new RdpStateChangedEventArgs(false, normal ? "closed" : "disconnected", msg));
@@ -877,32 +878,32 @@ namespace Gdterm.Rdp
         {
             switch (code)
             {
-                case 0x00: return "正常退出";
-                case 0x01: return "已断开";
-                case 0x02: return "已处于连接中";
-                case 0x03: return "连接失败（网络不可达或端口拒绝）";
-                case 0x04: return "调用顺序错误";
-                case 0x05: return "安全协商失败（NLA/TLS 不匹配）";
-                case 0x06: return "TLS 连接失败";
-                case 0x07: return "连接被取消";
-                case 0x08: return "预连接失败";
-                case 0x09: return "连接错误";
-                case 0x0A: return "DNS 解析失败";
-                case 0x0B: return "主机名未找到";
-                case 0x0C: return "传输层连接失败";
-                case 0x0D: return "认证失败（用户名或密码错误）";
-                case 0x0E: return "通用认证失败";
-                case 0x0F: return "KDC 不可达（域认证）";
+                case 0x00: return L10n.T("正常退出");
+                case 0x01: return L10n.T("已断开");
+                case 0x02: return L10n.T("已处于连接中");
+                case 0x03: return L10n.T("连接失败（网络不可达或端口拒绝）");
+                case 0x04: return L10n.T("调用顺序错误");
+                case 0x05: return L10n.T("安全协商失败（NLA/TLS 不匹配）");
+                case 0x06: return L10n.T("TLS 连接失败");
+                case 0x07: return L10n.T("连接被取消");
+                case 0x08: return L10n.T("预连接失败");
+                case 0x09: return L10n.T("连接错误");
+                case 0x0A: return L10n.T("DNS 解析失败");
+                case 0x0B: return L10n.T("主机名未找到");
+                case 0x0C: return L10n.T("传输层连接失败");
+                case 0x0D: return L10n.T("认证失败（用户名或密码错误）");
+                case 0x0E: return L10n.T("通用认证失败");
+                case 0x0F: return L10n.T("KDC 不可达（域认证）");
                 default:
                     // ERRINFO_*（0x10000 段，MS-RDPBCGR 2.2.5.1.1）：服务器在会话中主动上报的错误信息
-                    if (code == 0x1000C) return "服务器主动注销了此会话（LOGOFF_BY_USER）：常见于堡垒机会话超时/被顶号/管理员强制注销；若在堡垒机登录页输入密码后仍断开，请检查堡垒机单会话限制或账号在其它客户端登录";
-                    if (code == 0x10004) return "服务器强制断开（策略限制或会话被接管）";
+                    if (code == 0x1000C) return L10n.T("服务器主动注销了此会话（LOGOFF_BY_USER）：常见于堡垒机会话超时/被顶号/管理员强制注销；若在堡垒机登录页输入密码后仍断开，请检查堡垒机单会话限制或账号在其它客户端登录");
+                    if (code == 0x10004) return L10n.T("服务器强制断开（策略限制或会话被接管）");
                     // NTSTATUS：加载器/运行库级失败，与 ERRCONNECT_* 区分
-                    if (code == unchecked((int)0xC0000135)) return "缺少依赖 DLL（如 libcrypto-3-x.dll），请补全 freerdp\\ 目录后重试";
-                    if (code == unchecked((int)0xC000007B)) return "DLL 架构不匹配（x64/x86 混用），请换用与程序位数一致的 FreeRDP 包";
-                    if (code == unchecked((int)0xC0000142)) return "DLL 初始化失败（运行库损坏或版本不匹配）";
-                    if (code == unchecked((int)0x8000FFFF)) return "未知内部错误";
-                    return "连接断开（退出码 " + code + "/0x" + code.ToString("X") + "，详见日志）";
+                    if (code == unchecked((int)0xC0000135)) return L10n.T("缺少依赖 DLL（如 libcrypto-3-x.dll），请补全 freerdp\\ 目录后重试");
+                    if (code == unchecked((int)0xC000007B)) return L10n.T("DLL 架构不匹配（x64/x86 混用），请换用与程序位数一致的 FreeRDP 包");
+                    if (code == unchecked((int)0xC0000142)) return L10n.T("DLL 初始化失败（运行库损坏或版本不匹配）");
+                    if (code == unchecked((int)0x8000FFFF)) return L10n.T("未知内部错误");
+                    return L10n.T("连接断开（退出码 ") + code + "/0x" + code.ToString("X") + L10n.T("，详见日志）");
             }
         }
 
