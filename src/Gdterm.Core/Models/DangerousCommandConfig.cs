@@ -43,34 +43,34 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "rm-rf-root",
-                    Name = "递归删除根目录",
+                    Name = L10n.T("递归删除根目录"),
                     Pattern = @"rm\s+.*-[^\s]*r[^\s]*f[^\s]*\s+/",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Critical,
                     ConfirmCount = 3,
-                    Description = "递归强制删除根目录，将导致系统完全损坏",
+                    Description = L10n.T("递归强制删除根目录，将导致系统完全损坏"),
                     Category = "filesystem"
                 },
                 new DangerousCommandRule
                 {
                     Id = "rm-rf-root-star",
-                    Name = "递归删除根目录通配",
+                    Name = L10n.T("递归删除根目录通配"),
                     Pattern = @"rm\s+.*-[^\s]*r[^\s]*f[^\s]*\s+/\*",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Critical,
                     ConfirmCount = 3,
-                    Description = "递归强制删除根目录下所有内容",
+                    Description = L10n.T("递归强制删除根目录下所有内容"),
                     Category = "filesystem"
                 },
                 new DangerousCommandRule
                 {
                     Id = "rm-rf-home",
-                    Name = "删除用户主目录",
+                    Name = L10n.T("删除用户主目录"),
                     Pattern = @"rm\s+.*-[^\s]*r[^\s]*f[^\s]*\s+(~/|~|\$HOME)",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Critical,
                     ConfirmCount = 3,
-                    Description = "递归强制删除用户主目录，所有个人数据将丢失",
+                    Description = L10n.T("递归强制删除用户主目录，所有个人数据将丢失"),
                     Category = "filesystem"
                 },
 
@@ -78,45 +78,45 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "dd-disk-wipe",
-                    Name = "dd 磁盘写入",
+                    Name = L10n.T("dd 磁盘写入"),
                     Pattern = @"dd\s+.*of=/dev/[shv]",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Critical,
                     ConfirmCount = 3,
-                    Description = "dd 直接写入磁盘设备，将覆盖所有数据且不可恢复",
+                    Description = L10n.T("dd 直接写入磁盘设备，将覆盖所有数据且不可恢复"),
                     Category = "disk"
                 },
                 new DangerousCommandRule
                 {
                     Id = "mkfs-format",
-                    Name = "格式化磁盘",
+                    Name = L10n.T("格式化磁盘"),
                     Pattern = @"mkfs\.",
                     PatternType = PatternType.Contains,
                     Level = DangerLevel.Critical,
                     ConfirmCount = 3,
-                    Description = "格式化文件系统，目标分区所有数据将被清除",
+                    Description = L10n.T("格式化文件系统，目标分区所有数据将被清除"),
                     Category = "disk"
                 },
                 new DangerousCommandRule
                 {
                     Id = "mkfs-all",
-                    Name = "mkfs 格式化",
+                    Name = L10n.T("mkfs 格式化"),
                     Pattern = @"mkfs ",
                     PatternType = PatternType.Contains,
                     Level = DangerLevel.Critical,
                     ConfirmCount = 3,
-                    Description = "格式化文件系统，目标分区所有数据将被清除",
+                    Description = L10n.T("格式化文件系统，目标分区所有数据将被清除"),
                     Category = "disk"
                 },
                 new DangerousCommandRule
                 {
                     Id = "raw-write-sda",
-                    Name = "直接写入磁盘设备",
+                    Name = L10n.T("直接写入磁盘设备"),
                     Pattern = @">\s*/dev/[shv]d[a-z]",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Critical,
                     ConfirmCount = 3,
-                    Description = "直接重定向写入磁盘设备文件",
+                    Description = L10n.T("直接重定向写入磁盘设备文件"),
                     Category = "disk"
                 },
 
@@ -124,12 +124,12 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "fork-bomb",
-                    Name = "Fork 炸弹",
+                    Name = L10n.T("Fork 炸弹"),
                     Pattern = @":\(\)\{\s*:\|:&\s*\};:",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Critical,
                     ConfirmCount = 3,
-                    Description = "无限 fork 进程，将导致系统资源耗尽崩溃",
+                    Description = L10n.T("无限 fork 进程，将导致系统资源耗尽崩溃"),
                     Category = "system"
                 },
 
@@ -137,34 +137,34 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "chmod-777-root",
-                    Name = "根目录权限 777",
+                    Name = L10n.T("根目录权限 777"),
                     Pattern = @"chmod\s+.*777\s+/",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Critical,
                     ConfirmCount = 3,
-                    Description = "将根目录权限设为 777，系统安全完全失控",
+                    Description = L10n.T("将根目录权限设为 777，系统安全完全失控"),
                     Category = "permissions"
                 },
                 new DangerousCommandRule
                 {
                     Id = "chmod-r-root",
-                    Name = "递归修改根目录权限",
+                    Name = L10n.T("递归修改根目录权限"),
                     Pattern = @"chmod\s+-[^\s]*R\s+",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Critical,
                     ConfirmCount = 3,
-                    Description = "递归修改权限，可能影响系统关键文件",
+                    Description = L10n.T("递归修改权限，可能影响系统关键文件"),
                     Category = "permissions"
                 },
                 new DangerousCommandRule
                 {
                     Id = "chown-r-root",
-                    Name = "递归修改根目录所有者",
+                    Name = L10n.T("递归修改根目录所有者"),
                     Pattern = @"chown\s+-[^\s]*R\s+",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Critical,
                     ConfirmCount = 3,
-                    Description = "递归修改文件所有者，可能破坏系统权限结构",
+                    Description = L10n.T("递归修改文件所有者，可能破坏系统权限结构"),
                     Category = "permissions"
                 },
             });
@@ -176,45 +176,45 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "kill-9-1",
-                    Name = "杀死 init 进程",
+                    Name = L10n.T("杀死 init 进程"),
                     Pattern = @"kill\s+-9\s+1\s*$",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "杀死 PID 1 (init/systemd) 将导致系统关机",
+                    Description = L10n.T("杀死 PID 1 (init/systemd) 将导致系统关机"),
                     Category = "process"
                 },
                 new DangerousCommandRule
                 {
                     Id = "killall-9",
-                    Name = "杀死所有进程",
+                    Name = L10n.T("杀死所有进程"),
                     Pattern = @"killall\s+-9",
                     PatternType = PatternType.Contains,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "强制杀死所有匹配进程，可能导致服务中断",
+                    Description = L10n.T("强制杀死所有匹配进程，可能导致服务中断"),
                     Category = "process"
                 },
                 new DangerousCommandRule
                 {
                     Id = "kill-all-processes",
-                    Name = "杀死所有进程",
+                    Name = L10n.T("杀死所有进程"),
                     Pattern = @"kill\s+-9\s+-1",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "杀死系统所有进程，等同于系统关机",
+                    Description = L10n.T("杀死系统所有进程，等同于系统关机"),
                     Category = "process"
                 },
                 new DangerousCommandRule
                 {
                     Id = "pkill-all",
-                    Name = "pkill 全部进程",
+                    Name = L10n.T("pkill 全部进程"),
                     Pattern = @"pkill\s+-9\s+\*",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "强制杀死所有进程",
+                    Description = L10n.T("强制杀死所有进程"),
                     Category = "process"
                 },
 
@@ -222,45 +222,45 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "shutdown",
-                    Name = "关机",
+                    Name = L10n.T("关机"),
                     Pattern = "shutdown ",
                     PatternType = PatternType.Contains,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "系统关机命令，所有连接将断开",
+                    Description = L10n.T("系统关机命令，所有连接将断开"),
                     Category = "system"
                 },
                 new DangerousCommandRule
                 {
                     Id = "reboot",
-                    Name = "重启",
+                    Name = L10n.T("重启"),
                     Pattern = "reboot",
                     PatternType = PatternType.Equals,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "系统重启，所有连接将断开",
+                    Description = L10n.T("系统重启，所有连接将断开"),
                     Category = "system"
                 },
                 new DangerousCommandRule
                 {
                     Id = "halt",
-                    Name = "停机",
+                    Name = L10n.T("停机"),
                     Pattern = "halt",
                     PatternType = PatternType.Equals,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "系统停机",
+                    Description = L10n.T("系统停机"),
                     Category = "system"
                 },
                 new DangerousCommandRule
                 {
                     Id = "poweroff",
-                    Name = "断电关机",
+                    Name = L10n.T("断电关机"),
                     Pattern = "poweroff",
                     PatternType = PatternType.Equals,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "立即断电关机",
+                    Description = L10n.T("立即断电关机"),
                     Category = "system"
                 },
 
@@ -268,45 +268,45 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "iptables-flush",
-                    Name = "清空防火墙规则",
+                    Name = L10n.T("清空防火墙规则"),
                     Pattern = "iptables -F",
                     PatternType = PatternType.Contains,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "清空所有防火墙规则，服务器将暴露在网络中",
+                    Description = L10n.T("清空所有防火墙规则，服务器将暴露在网络中"),
                     Category = "firewall"
                 },
                 new DangerousCommandRule
                 {
                     Id = "iptables-delete",
-                    Name = "删除防火墙规则",
+                    Name = L10n.T("删除防火墙规则"),
                     Pattern = "iptables -D",
                     PatternType = PatternType.Contains,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "删除指定防火墙规则",
+                    Description = L10n.T("删除指定防火墙规则"),
                     Category = "firewall"
                 },
                 new DangerousCommandRule
                 {
                     Id = "firewalld-stop",
-                    Name = "停止防火墙服务",
+                    Name = L10n.T("停止防火墙服务"),
                     Pattern = @"systemctl\s+(stop|disable)\s+firewalld",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "停止/禁用 firewalld，服务器防火墙将关闭",
+                    Description = L10n.T("停止/禁用 firewalld，服务器防火墙将关闭"),
                     Category = "firewall"
                 },
                 new DangerousCommandRule
                 {
                     Id = "ufw-disable",
-                    Name = "禁用 UFW 防火墙",
+                    Name = L10n.T("禁用 UFW 防火墙"),
                     Pattern = "ufw disable",
                     PatternType = PatternType.Contains,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "禁用 UFW 防火墙",
+                    Description = L10n.T("禁用 UFW 防火墙"),
                     Category = "firewall"
                 },
 
@@ -314,23 +314,23 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "userdel-root",
-                    Name = "删除 root 用户",
+                    Name = L10n.T("删除 root 用户"),
                     Pattern = @"userdel\s+.*root",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "删除 root 用户将导致系统无法管理",
+                    Description = L10n.T("删除 root 用户将导致系统无法管理"),
                     Category = "user"
                 },
                 new DangerousCommandRule
                 {
                     Id = "passwd-root",
-                    Name = "修改 root 密码",
+                    Name = L10n.T("修改 root 密码"),
                     Pattern = @"passwd\s+root",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "修改 root 密码将影响所有依赖 root 认证的服务",
+                    Description = L10n.T("修改 root 密码将影响所有依赖 root 认证的服务"),
                     Category = "user"
                 },
 
@@ -338,12 +338,12 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "ssh-keygen-overwrite",
-                    Name = "覆盖 SSH 密钥",
+                    Name = L10n.T("覆盖 SSH 密钥"),
                     Pattern = "ssh-keygen",
                     PatternType = PatternType.Contains,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "生成新 SSH 密钥可能覆盖现有密钥，导致无法远程登录",
+                    Description = L10n.T("生成新 SSH 密钥可能覆盖现有密钥，导致无法远程登录"),
                     Category = "ssh"
                 },
 
@@ -351,23 +351,23 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "fdisk",
-                    Name = "磁盘分区操作",
+                    Name = L10n.T("磁盘分区操作"),
                     Pattern = "fdisk ",
                     PatternType = PatternType.Contains,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "磁盘分区操作，错误操作将导致数据丢失",
+                    Description = L10n.T("磁盘分区操作，错误操作将导致数据丢失"),
                     Category = "disk"
                 },
                 new DangerousCommandRule
                 {
                     Id = "parted",
-                    Name = "磁盘分区操作",
+                    Name = L10n.T("磁盘分区操作"),
                     Pattern = "parted ",
                     PatternType = PatternType.Contains,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "磁盘分区操作",
+                    Description = L10n.T("磁盘分区操作"),
                     Category = "disk"
                 },
 
@@ -375,12 +375,12 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "crontab-remove",
-                    Name = "删除所有定时任务",
+                    Name = L10n.T("删除所有定时任务"),
                     Pattern = "crontab -r",
                     PatternType = PatternType.Equals,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "删除当前用户所有定时任务，不可恢复",
+                    Description = L10n.T("删除当前用户所有定时任务，不可恢复"),
                     Category = "system"
                 },
 
@@ -388,23 +388,23 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "apt-remove-all",
-                    Name = "卸载关键包",
+                    Name = L10n.T("卸载关键包"),
                     Pattern = @"apt\s+.*remove\s+.*linux-(image|kernel|headers)",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "卸载 Linux 内核包，系统将无法启动",
+                    Description = L10n.T("卸载 Linux 内核包，系统将无法启动"),
                     Category = "package"
                 },
                 new DangerousCommandRule
                 {
                     Id = "yum-remove-all",
-                    Name = "卸载关键包",
+                    Name = L10n.T("卸载关键包"),
                     Pattern = @"yum\s+.*remove\s+.*kernel",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "卸载内核包",
+                    Description = L10n.T("卸载内核包"),
                     Category = "package"
                 },
             });
@@ -416,45 +416,45 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "curl-pipe-sh",
-                    Name = "下载并执行脚本",
+                    Name = L10n.T("下载并执行脚本"),
                     Pattern = @"curl\s+.*\|\s*(ba)?sh",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "从网络下载脚本并直接执行，可能包含恶意代码",
+                    Description = L10n.T("从网络下载脚本并直接执行，可能包含恶意代码"),
                     Category = "network"
                 },
                 new DangerousCommandRule
                 {
                     Id = "wget-pipe-sh",
-                    Name = "下载并执行脚本",
+                    Name = L10n.T("下载并执行脚本"),
                     Pattern = @"wget\s+.*\|\s*(ba)?sh",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "从网络下载脚本并直接执行",
+                    Description = L10n.T("从网络下载脚本并直接执行"),
                     Category = "network"
                 },
                 new DangerousCommandRule
                 {
                     Id = "curl-pipe-bash-exec",
-                    Name = "下载并执行脚本",
+                    Name = L10n.T("下载并执行脚本"),
                     Pattern = @"curl\s+.*\|\s*sudo\s+(ba)?sh",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "以 root 权限下载并执行远程脚本",
+                    Description = L10n.T("以 root 权限下载并执行远程脚本"),
                     Category = "network"
                 },
                 new DangerousCommandRule
                 {
                     Id = "wget-pipe-bash-exec",
-                    Name = "下载并执行脚本",
+                    Name = L10n.T("下载并执行脚本"),
                     Pattern = @"wget\s+.*\|\s*sudo\s+(ba)?sh",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
-                    Description = "以 root 权限下载并执行远程脚本",
+                    Description = L10n.T("以 root 权限下载并执行远程脚本"),
                     Category = "network"
                 },
 
@@ -462,34 +462,34 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "sudo-su",
-                    Name = "切换到 root",
+                    Name = L10n.T("切换到 root"),
                     Pattern = "sudo su",
                     PatternType = PatternType.Contains,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "切换到 root 用户，后续所有命令以 root 执行",
+                    Description = L10n.T("切换到 root 用户，后续所有命令以 root 执行"),
                     Category = "privilege"
                 },
                 new DangerousCommandRule
                 {
                     Id = "sudo-bash",
-                    Name = "以 root 打开 shell",
+                    Name = L10n.T("以 root 打开 shell"),
                     Pattern = "sudo bash",
                     PatternType = PatternType.Contains,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "以 root 身份打开新 shell",
+                    Description = L10n.T("以 root 身份打开新 shell"),
                     Category = "privilege"
                 },
                 new DangerousCommandRule
                 {
                     Id = "sudo-i",
-                    Name = "以 root 打开登录 shell",
+                    Name = L10n.T("以 root 打开登录 shell"),
                     Pattern = "sudo -i",
                     PatternType = PatternType.Equals,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "以 root 身份打开登录 shell",
+                    Description = L10n.T("以 root 身份打开登录 shell"),
                     Category = "privilege"
                 },
 
@@ -497,34 +497,34 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "systemctl-stop",
-                    Name = "停止系统服务",
+                    Name = L10n.T("停止系统服务"),
                     Pattern = @"systemctl\s+stop\s+",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "停止系统服务，可能影响业务运行",
+                    Description = L10n.T("停止系统服务，可能影响业务运行"),
                     Category = "service"
                 },
                 new DangerousCommandRule
                 {
                     Id = "systemctl-disable",
-                    Name = "禁用系统服务",
+                    Name = L10n.T("禁用系统服务"),
                     Pattern = @"systemctl\s+disable\s+",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "禁用系统服务开机自启",
+                    Description = L10n.T("禁用系统服务开机自启"),
                     Category = "service"
                 },
                 new DangerousCommandRule
                 {
                     Id = "service-stop",
-                    Name = "停止服务",
+                    Name = L10n.T("停止服务"),
                     Pattern = @"service\s+\S+\s+stop",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "停止服务",
+                    Description = L10n.T("停止服务"),
                     Category = "service"
                 },
 
@@ -532,23 +532,23 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "ifconfig-down",
-                    Name = "禁用网卡",
+                    Name = L10n.T("禁用网卡"),
                     Pattern = @"ifconfig\s+\S+\s+down",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "禁用网络接口，将断开网络连接",
+                    Description = L10n.T("禁用网络接口，将断开网络连接"),
                     Category = "network"
                 },
                 new DangerousCommandRule
                 {
                     Id = "ip-link-down",
-                    Name = "禁用网卡",
+                    Name = L10n.T("禁用网卡"),
                     Pattern = @"ip\s+link\s+set\s+\S+\s+down",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "禁用网络接口",
+                    Description = L10n.T("禁用网络接口"),
                     Category = "network"
                 },
 
@@ -556,12 +556,12 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "history-clear",
-                    Name = "清除命令历史",
+                    Name = L10n.T("清除命令历史"),
                     Pattern = "history -c",
                     PatternType = PatternType.Equals,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "清除命令历史记录，可能隐藏操作痕迹",
+                    Description = L10n.T("清除命令历史记录，可能隐藏操作痕迹"),
                     Category = "audit"
                 },
 
@@ -569,45 +569,45 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "git-reset-hard",
-                    Name = "Git 硬重置",
+                    Name = L10n.T("Git 硬重置"),
                     Pattern = "git reset --hard",
                     PatternType = PatternType.Contains,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "Git 硬重置，所有未提交的修改将丢失",
+                    Description = L10n.T("Git 硬重置，所有未提交的修改将丢失"),
                     Category = "git"
                 },
                 new DangerousCommandRule
                 {
                     Id = "git-clean-fd",
-                    Name = "Git 清理未跟踪文件",
+                    Name = L10n.T("Git 清理未跟踪文件"),
                     Pattern = "git clean -fd",
                     PatternType = PatternType.Contains,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "删除所有未跟踪的文件和目录，不可恢复",
+                    Description = L10n.T("删除所有未跟踪的文件和目录，不可恢复"),
                     Category = "git"
                 },
                 new DangerousCommandRule
                 {
                     Id = "git-push-force",
-                    Name = "Git 强制推送",
+                    Name = L10n.T("Git 强制推送"),
                     Pattern = "git push --force",
                     PatternType = PatternType.Contains,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "强制推送可能覆盖远程仓库历史",
+                    Description = L10n.T("强制推送可能覆盖远程仓库历史"),
                     Category = "git"
                 },
                 new DangerousCommandRule
                 {
                     Id = "git-push-f",
-                    Name = "Git 强制推送",
+                    Name = L10n.T("Git 强制推送"),
                     Pattern = "git push -f ",
                     PatternType = PatternType.Contains,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "强制推送（简写）",
+                    Description = L10n.T("强制推送（简写）"),
                     Category = "git"
                 },
 
@@ -615,34 +615,34 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "docker-rm-all",
-                    Name = "删除所有容器",
+                    Name = L10n.T("删除所有容器"),
                     Pattern = @"docker\s+rm\s+.*-f.*-a",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "强制删除所有容器",
+                    Description = L10n.T("强制删除所有容器"),
                     Category = "docker"
                 },
                 new DangerousCommandRule
                 {
                     Id = "docker-rmi-all",
-                    Name = "删除所有镜像",
+                    Name = L10n.T("删除所有镜像"),
                     Pattern = @"docker\s+rmi\s+.*-f.*-a",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "强制删除所有镜像",
+                    Description = L10n.T("强制删除所有镜像"),
                     Category = "docker"
                 },
                 new DangerousCommandRule
                 {
                     Id = "docker-prune",
-                    Name = "Docker 清理",
+                    Name = L10n.T("Docker 清理"),
                     Pattern = "docker system prune",
                     PatternType = PatternType.Contains,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "清理 Docker 未使用的资源",
+                    Description = L10n.T("清理 Docker 未使用的资源"),
                     Category = "docker"
                 },
 
@@ -650,23 +650,23 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "rm-bashrc",
-                    Name = "删除 shell 配置",
+                    Name = L10n.T("删除 shell 配置"),
                     Pattern = @"rm\s+.*\.(bashrc|bash_profile|profile|zshrc)",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "删除 shell 配置文件，可能导致登录异常",
+                    Description = L10n.T("删除 shell 配置文件，可能导致登录异常"),
                     Category = "config"
                 },
                 new DangerousCommandRule
                 {
                     Id = "rm-ssh-config",
-                    Name = "删除 SSH 配置",
+                    Name = L10n.T("删除 SSH 配置"),
                     Pattern = @"rm\s+.*\.ssh/",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "删除 SSH 配置或密钥文件",
+                    Description = L10n.T("删除 SSH 配置或密钥文件"),
                     Category = "config"
                 },
 
@@ -674,23 +674,23 @@ namespace Gdterm.Core.Models
                 new DangerousCommandRule
                 {
                     Id = "rm-var-log",
-                    Name = "删除日志目录",
+                    Name = L10n.T("删除日志目录"),
                     Pattern = @"rm\s+.*-r.*\s+/var/log",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "递归删除日志目录，可能丢失审计记录",
+                    Description = L10n.T("递归删除日志目录，可能丢失审计记录"),
                     Category = "filesystem"
                 },
                 new DangerousCommandRule
                 {
                     Id = "rm-tmp-star",
-                    Name = "清空临时目录",
+                    Name = L10n.T("清空临时目录"),
                     Pattern = @"rm\s+.*-r.*/tmp/\*",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Medium,
                     ConfirmCount = 1,
-                    Description = "清空 /tmp 目录，可能影响正在运行的程序",
+                    Description = L10n.T("清空 /tmp 目录，可能影响正在运行的程序"),
                     Category = "filesystem"
                 },
             });

@@ -9,6 +9,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Gdterm.Core;
 
 namespace Gdterm.Security
 {
@@ -217,7 +218,7 @@ namespace Gdterm.Security
                     Severity = FindingSeverity.Medium,
                     Category = FindingCategory.SensitiveFile,
                     FilePath = filePath,
-                    Description = string.Format("旧格式 Excel 文件（{0}KB，建议手动检查是否含密码）", fileSize / 1024),
+                    Description = string.Format(L10n.T("旧格式 Excel 文件（{0}KB，建议手动检查是否含密码）"), fileSize / 1024),
                     RuleName = "XlsPasswordCandidate"
                 });
                 return findings;
@@ -355,7 +356,7 @@ namespace Gdterm.Security
                     Severity = FindingSeverity.High,
                     Category = FindingCategory.SensitiveFile,
                     FilePath = filePath,
-                    Description = string.Format("检测到敏感文件: {0}", fileName),
+                    Description = string.Format(L10n.T("检测到敏感文件: {0}"), fileName),
                     RuleName = "SensitiveFileName"
                 };
             }
@@ -378,8 +379,8 @@ namespace Gdterm.Security
                         Category = FindingCategory.Password,
                         FilePath = filePath,
                         Description = isDoc
-                            ? string.Format("疑似密码本：文件名含 \"{0}\"，类型 {1}", keyword, ext)
-                            : string.Format("敏感关键词：文件名含 \"{0}\"", keyword),
+                            ? string.Format(L10n.T("疑似密码本：文件名含 \"{0}\"，类型 {1}"), keyword, ext)
+                            : string.Format(L10n.T("敏感关键词：文件名含 \"{0}\""), keyword),
                         RuleName = "FileNameKeyword"
                     };
                 }
@@ -395,7 +396,7 @@ namespace Gdterm.Security
                         Severity = FindingSeverity.Critical,
                         Category = FindingCategory.Password,
                         FilePath = filePath,
-                        Description = string.Format("疑似密码本（模式匹配）: {0}", fileName),
+                        Description = string.Format(L10n.T("疑似密码本（模式匹配）: {0}"), fileName),
                         RuleName = "FileNamePattern"
                     };
                 }
@@ -409,7 +410,7 @@ namespace Gdterm.Security
                     Severity = FindingSeverity.Medium,
                     Category = FindingCategory.PrivateKey,
                     FilePath = filePath,
-                    Description = string.Format("检测到密钥/证书文件: {0}", ext),
+                    Description = string.Format(L10n.T("检测到密钥/证书文件: {0}"), ext),
                     RuleName = "SensitiveExtension"
                 };
             }
@@ -427,7 +428,7 @@ namespace Gdterm.Security
                     Severity = FindingSeverity.Medium,
                     Category = FindingCategory.SensitiveFile,
                     FilePath = filePath,
-                    Description = "敏感目录中的文件",
+                    Description = L10n.T("敏感目录中的文件"),
                     RuleName = "SensitiveDirectory"
                 };
             }
@@ -463,7 +464,7 @@ namespace Gdterm.Security
                         LineNumber = lineNumber,
                         MatchedContent = value,
                         Entropy = entropy,
-                        Description = string.Format("高熵字符串 (熵={0:F2})", entropy),
+                        Description = string.Format(L10n.T("高熵字符串 (熵={0:F2})"), entropy),
                         RuleName = "ShannonEntropy"
                     });
                 }
@@ -531,7 +532,7 @@ namespace Gdterm.Security
         {
             // AWS
             new PatternRule("AWS Access Key", @"(?<![A-Z0-9])[A-Z0-9]{20}(?![A-Z0-9])", FindingCategory.CloudCredential, FindingSeverity.Critical,
-                "AWS Access Key ID 格式"),
+                L10n.T("AWS Access Key ID 格式")),
             new PatternRule("AWS Secret Key", @"(?i)aws[_\-]?secret[_\-]?access[_\-]?key[\s]*[=:][\s]*['""]?([A-Za-z0-9/+=]{40})", FindingCategory.CloudCredential, FindingSeverity.Critical),
 
             // GitHub/GitLab
@@ -836,7 +837,7 @@ namespace Gdterm.Security
                         LineNumber = i + 1,
                         MatchedContent = text,
                         Entropy = entropy,
-                        Description = string.Format("Office 文档中的高熵字符串 (熵={0:F2})", entropy),
+                        Description = string.Format(L10n.T("Office 文档中的高熵字符串 (熵={0:F2})"), entropy),
                         RuleName = "OfficeShannonEntropy"
                     });
                 }
@@ -891,7 +892,7 @@ namespace Gdterm.Security
                         Severity = FindingSeverity.Critical,
                         Category = FindingCategory.Password,
                         FilePath = filePath,
-                        Description = string.Format("疑似密码表：列 '{0}' 标题含密码关键词（{1}行数据）", header, totalRows),
+                        Description = string.Format(L10n.T("疑似密码表：列 '{0}' 标题含密码关键词（{1}行数据）"), header, totalRows),
                         RuleName = "PasswordColumnHeader"
                     });
                 }
@@ -902,7 +903,7 @@ namespace Gdterm.Security
                         Severity = FindingSeverity.High,
                         Category = FindingCategory.Password,
                         FilePath = filePath,
-                        Description = string.Format("疑似密码表：列 {0} 有 {1}/{2} 行为高熵字符串", col + 1, highEntropyCount, totalRows),
+                        Description = string.Format(L10n.T("疑似密码表：列 {0} 有 {1}/{2} 行为高熵字符串"), col + 1, highEntropyCount, totalRows),
                         RuleName = "PasswordColumnEntropy"
                     });
                 }
@@ -934,7 +935,7 @@ namespace Gdterm.Security
                         Severity = FindingSeverity.High,
                         Category = FindingCategory.Password,
                         FilePath = filePath,
-                        Description = string.Format("疑似密码表：{0} 个单元格中有 {1} 个高熵字符串 ({2:F0}%)",
+                        Description = string.Format(L10n.T("疑似密码表：{0} 个单元格中有 {1} 个高熵字符串 ({2:F0}%)"),
                             total, highEntropy, (double)highEntropy / total * 100),
                         RuleName = "ExcelPasswordSheet"
                     }
