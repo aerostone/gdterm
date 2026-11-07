@@ -8,7 +8,7 @@
 #   none           当前零验证 —— 技术债，见 docs/UI-UX-VERIFICATION.md §5 收敛计划
 #
 # floor：dump 条目数下限。删/降级任何 dump 覆盖都会让门变红（棘轮）。
-# floor: 22
+# floor: 39
 #
 Forms/MainForm.cs | dump:mainform | 主壳：菜单/树/Tab/底栏/状态
 Forms/AiSettingsForm.cs | dump:ai-settings |
@@ -25,31 +25,31 @@ Forms/QuickCommandEditorForm.cs | dump:quickcmd-editor |
 Forms/ScannerCenterForm.cs | dump:scanner-center |
 Forms/SetupWizardForm.cs | dump:setup-wizard |
 Forms/SshKeyManagerForm.cs | dump:sshkey-manager |
-Forms/SftpPermissionForm.cs | none | 唯一未进 dump 的窗体；建议补 Show 用例
+Forms/SftpPermissionForm.cs | dump:sftp-permission | 唯一未进 dump 的窗体；建议补 Show 用例
 Controls/TransferProgressDialog.cs | dump:transfer-progress |
 Controls/CommandPaletteForm.cs | manual:transient modal (hotkey-triggered, input-driven filtering) | A1 command palette; structure consistent with QuickJump
 Controls/AiChatPanel.cs | none | 侧栏常驻
-Controls/BatchCommandPanel.cs | none | 侧栏常驻
+Controls/BatchCommandPanel.cs | dump:batch-command | 侧栏常驻
 Controls/BottomBarPanel.cs | none | 主壳底栏（mainform dump 内含节点，但无独立断言）
 Controls/CommandHistoryPanel.cs | dump:command-history | 侧栏常驻（审计 C7-2 入 dump）
-Controls/CommandTemplatePanel.cs | none | 侧栏常驻
+Controls/CommandTemplatePanel.cs | dump:command-template | 侧栏常驻
 Controls/ConnectionQuickJumpForm.cs | none | 模态浮层
 Controls/ConnectionTreeControl.cs | none | 主壳常驻（mainform dump 内含节点）
 Controls/DangerousCommandDialog.cs | none | 模态浮层
 Controls/FilePaneControl.cs | none | SFTP 双栏
-Controls/HealthMonitorPanel.cs | none | 侧栏常驻
-Controls/HighlightRulePanel.cs | none | 侧栏常驻
+Controls/HealthMonitorPanel.cs | dump:health-monitor | 侧栏常驻
+Controls/HighlightRulePanel.cs | dump:highlight-rule | 侧栏常驻
 Controls/KeyBindingPanel.cs | dump:key-binding | 侧栏常驻（审计 C7-2 入 dump）
 Controls/LockOverlayControl.cs | none | 主壳遮罩（mainform 锁定态 dump 内含）
 Controls/LogonScriptPanel.cs | dump:logon-script | 侧栏常驻（审计 C7-2 入 dump）
-Controls/MacroPanel.cs | none | 侧栏常驻
-Controls/MultiChannelPanel.cs | none | 侧栏常驻
-Controls/NotificationCenterPanel.cs | none | 侧栏常驻
+Controls/MacroPanel.cs | dump:macro | 侧栏常驻
+Controls/MultiChannelPanel.cs | dump:multi-channel | 侧栏常驻
+Controls/NotificationCenterPanel.cs | dump:notification-center | 侧栏常驻
 Controls/PortForwardPanel.cs | dump:port-forward | 侧栏常驻（审计 C7-2 入 dump）
 Controls/SecretScanPanel.cs | dump:secret-scan | 侧栏常驻（审计 C7-2 入 dump）
-Controls/SessionBookmarksPanel.cs | none | 侧栏常驻
+Controls/SessionBookmarksPanel.cs | dump:bookmarks | 侧栏常驻
 Controls/SftpDualPanePanel.cs | none | 标签页常驻
-Controls/SnippetSearchPanel.cs | none | 模态浮层
+Controls/SnippetSearchPanel.cs | dump:snippet-search | 模态浮层
 Controls/SplitPaneControl.cs | none | 分屏容器
 Controls/TabContainerControl.cs | none | 主壳常驻（mainform dump 内含节点）
 Controls/TerminalControl.cs | none | 主工作区
@@ -60,7 +60,7 @@ Controls/TerminalControl.Triggers.cs | manual:随宿主 | 部分类：输出触�
 Controls/RemoteMonitorPanel.cs | manual:需真实 SSH 会话 | 主机资源面板（P1-4），采样靠独立 SSH 连接，无 dump 意义
 Controls/TerminalSearchBar.cs | none | 终端内浮条
 Controls/ToolboxPanel.cs | dump:toolbox | 侧栏常驻（审计 C7-2 入 dump）
-Controls/TransferCenterPanel.cs | none | 侧栏常驻
+Controls/TransferCenterPanel.cs | dump:transfer-center | 侧栏常驻
 Controls/WelcomePanel.cs | none | 标签页常驻
 Controls/MenuTip.cs | manual:瞬态 | 菜单悬停提示，无稳定生命周期
 Controls/TerminalCompletion.cs | manual:瞬态 | 补全候选数据源

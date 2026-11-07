@@ -14,7 +14,7 @@ using Gdterm.UI.Forms;
 namespace Gdterm.Tests.Ui
 {
     /// <summary>
-    /// 独立对话框冒烟：11 个窗体 Show + dump 盒模型 + 基础断言（控件数/ClientSize 非零）。
+    /// 独立对话框冒烟：全部独立窗体逐个 Show + dump 盒模型 + 基础断言（控件数/ClientSize 非零）。
     /// 全依赖 tmp 隔离，不连主机不碰真实 data/。每个窗体独立 try/catch，一个炸不影响其余。
     /// </summary>
     public static class DialogsSmoke
@@ -55,6 +55,10 @@ namespace Gdterm.Tests.Ui
                 {
                     new ConnectionConfig { Name = "已存在的主机", Protocol = ProtocolType.SSH, Host = "10.0.0.9", Port = 22 }
                 }), outDir, log, check);
+
+            // SFTP 权限编辑：此前是唯一没有 dump 的窗体（registry 里自己都写着"建议补 Show 用例"）。
+            // 3×3 复选 + octal 双向联动靠反射量不到，至少把盒模型和"确定/取消绑定"锁住。
+            Show("sftp-permission", () => (Form)new SftpPermissionForm("report.csv", "rw-r--r--", 644), outDir, log, check);
 
             check(_oneFails == 0, "dialogs-one-fail=" + _oneFails + " (==0)");
             try { Directory.Delete(tmp, true); } catch { }

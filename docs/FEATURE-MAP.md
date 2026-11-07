@@ -121,11 +121,11 @@
 | AI 助手 `page.AiChatPanel` | 终端 > AI 助手 | panel | 100% (1/1) | — | — |
 | AI 助手设置 `page.AiSettingsForm` | 工具 > AI 助手设置 | settings | 100% (3/3) | — | ai-settings | |
 | 外观设置 `page.AppearanceSettingsForm` | 工具 > 外观设置 | settings | 100% (3/3) | — | appearance-settings | |
-| 批量命令 `page.BatchCommandPanel` | 终端 > 批量命令 | editor | 100% (3/3) | — | — |
+| 批量命令 `page.BatchCommandPanel` | 终端 > 批量命令 | editor | 100% (3/3) | — | batch-command | 侧栏常驻 |
 | 修改主密码 `page.ChangeMasterPasswordForm` | 工具 > 修改主密码 | input | 100% (2/2) | — | change-masterpwd | |
 | 命令历史 `page.CommandHistoryPanel` | 终端 > 命令历史 | list | 100% (4/4) | — | command-history | 侧栏常驻（审计 C7-2 入 dump） |
 | 命令面板 `page.CommandPaletteForm` | Ctrl+Shift+P 风格入口 | list | 100% (4/4) | — | — |
-| 命令模板库 `page.CommandTemplatePanel` | 终端 > 命令模板库 | list | 100% (4/4) | — | 随宿主 | 列表壳（过滤/排序/批量/导出），随 command-history 等宿主 dump |
+| 命令模板库 `page.CommandTemplatePanel` | 终端 > 命令模板库 | list | 100% (4/4) | — | command-template | 侧栏常驻 |
 | 连接属性 `page.ConnectionDialog` | 文件 > 新建连接 | settings | 100% (3/3) | — | connection-ssh,connection-rdp,connection-serial | 三协议 + 高级区展开 |
 | 连接导入/导出 `page.ConnectionImportExport` | 文件 > 导入连接 / 导出连接 | input | 100% (2/2) | — | import-preview | 导入连接预览裁定框（新增/跳过两类行，回车导入/Esc 取消） |
 | 快速跳转 `page.ConnectionQuickJumpForm` | 文件 > 快速跳转连接 | list | 100% (4/4) | — | — |
@@ -133,16 +133,16 @@
 | 危险命令规则 `page.DangerousCommandConfigForm` | 工具 > 危险命令规则 | list | 100% (4/4) | — | dangerous-cmd | |
 | 危险命令确认 `page.DangerousCommandDialog` | 终端 > 命中危险命令 | dialog | 100% (1/1) | — | — |
 | 文件面板（单栏） `page.FilePaneControl` | SFTP > 单栏 | list | 100% (4/4) | — | — |
-| 健康监控 `page.HealthMonitorPanel` | 终端 > 健康监控 | monitor | 100% (2/2) | — | — |
-| 高亮规则 `page.HighlightRulePanel` | 终端 > 高亮规则 | list | 100% (4/4) | — | — |
+| 健康监控 `page.HealthMonitorPanel` | 终端 > 健康监控 | monitor | 100% (2/2) | — | health-monitor | 侧栏常驻 |
+| 高亮规则 `page.HighlightRulePanel` | 终端 > 高亮规则 | list | 100% (4/4) | — | highlight-rule | 侧栏常驻 |
 | 密码库条目选择 `page.KeePassEntryPicker` | 密码库 > 选择条目 | list | 100% (4/4) | — | keepass-picker | |
 | 密码库管理 `page.KeePassManagerForm` | 工具 > 密码库管理 | list | 100% (4/4) | — | keepass-manager,keepass-manager-empty | 有数据 / 空态两态 |
 | 密码库解锁 `page.KeePassUnlockForm` | 密码库 > 解锁 | input | 100% (2/2) | — | keepass-unlock | |
 | 快捷键绑定 `page.KeyBindingPanel` | 工具 > 快捷键绑定 | list | 100% (3/3) | — | key-binding | 侧栏常驻（审计 C7-2 入 dump） |
 | 登录脚本 `page.LogonScriptPanel` | 终端 > 登录脚本 | editor | 100% (3/3) | — | logon-script | 侧栏常驻（审计 C7-2 入 dump） |
-| 宏录制 `page.MacroPanel` | 终端 > 宏录制 | list | 100% (4/4) | — | 随宿主 | 列表壳（过滤/排序/批量/导出），随 command-history 等宿主 dump |
-| 多通道广播 `page.MultiChannelPanel` | 终端 > 多通道广播 | list | 100% (4/4) | — | — |
-| 通知中心 `page.NotificationCenterPanel` | 工具 > 通知中心 | list | 100% (4/4) | — | — |
+| 宏录制 `page.MacroPanel` | 终端 > 宏录制 | list | 100% (4/4) | — | macro | 侧栏常驻 |
+| 多通道广播 `page.MultiChannelPanel` | 终端 > 多通道广播 | list | 100% (4/4) | — | multi-channel | 侧栏常驻 |
+| 通知中心 `page.NotificationCenterPanel` | 工具 > 通知中心 | list | 100% (4/4) | — | notification-center | 侧栏常驻 |
 | OTP 动态码管理 `page.OtpManagerForm` | 工具 > OTP 动态码管理 | list | 100% (4/4) | — | otp-manager | B1 OTP manager; smoke 建 tmp 空库 dump，条目态需人工过 |
 | 密码生成器 `page.PasswordGeneratorForm` | 工具 > 密码生成器 | input | 100% (2/2) | — | pwd-generator | |
 | 密码健康报告 `page.PasswordHealthForm` | 工具 > 密码健康报告 | list | 100% (4/4) | — | password-health | |
@@ -151,13 +151,13 @@
 | 主机资源监控 `page.RemoteMonitorPanel` | 终端 > 主机资源（远端 CPU/内存） | monitor | 100% (2/2) | — | — |
 | 扫描中心 `page.ScannerCenterForm` | 工具 > 扫描中心（插件） | list | 100% (4/4) | — | scanner-center | |
 | 敏感信息扫描 `page.SecretScanPanel` | 工具 > 敏感信息扫描 | list | 100% (4/4) | — | secret-scan | 侧栏常驻（审计 C7-2 入 dump） |
-| 书签 / 最近连接 `page.SessionBookmarksPanel` | 连接 > 书签 / 最近连接 | list | 100% (4/4) | — | 随宿主 | 列表壳（过滤/排序/批量/导出），随 command-history 等宿主 dump |
+| 书签 / 最近连接 `page.SessionBookmarksPanel` | 连接 > 书签 / 最近连接 | list | 100% (4/4) | — | bookmarks | 侧栏常驻 |
 | 首次启动向导 `page.SetupWizardForm` | 首启 | wizard | 100% (3/3) | — | setup-wizard | |
 | SFTP 双栏 `page.SftpDualPanePanel` | 文件 > SFTP 浏览器 | list | 100% (4/4) | — | — |
-| SFTP 权限修改 `page.SftpPermissionForm` | SFTP > 右键 > 权限 | input | 100% (2/2) | — | — |
+| SFTP 权限修改 `page.SftpPermissionForm` | SFTP > 右键 > 权限 | input | 100% (2/2) | — | sftp-permission | 唯一未进 dump 的窗体；建议补 Show 用例 |
 | SSH 密钥管理 `page.SshKeyManagerForm` | 工具 > SSH 密钥管理 | input | 100% (2/2) | — | sshkey-manager | |
 | 运维工具箱 `page.ToolboxPanel` | 工具 > 运维工具箱 | panel | 100% (0/0) | — | toolbox | 侧栏常驻（审计 C7-2 入 dump） |
-| 传输中心 `page.TransferCenterPanel` | 工具 > 传输中心 | list | 100% (4/4) | — | 随宿主 | 列表壳（过滤/排序/批量/导出），随 command-history 等宿主 dump |
+| 传输中心 `page.TransferCenterPanel` | 工具 > 传输中心 | list | 100% (4/4) | — | transfer-center | 侧栏常驻 |
 | 传输进度 `page.TransferProgressDialog` | SFTP > 上传/下载 | progress | 100% (2/2) | — | transfer-progress | |
 | 欢迎页 `page.WelcomePanel` | mainform > 空标签页 | panel | 100% (0/0) | — | — |
 

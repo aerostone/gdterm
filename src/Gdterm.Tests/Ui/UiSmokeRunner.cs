@@ -213,11 +213,31 @@ namespace Gdterm.Tests.Ui
                 tryPanel("logon-script", () => new LogonScriptPanel(
                     new Gdterm.Connections.LogonScriptStore(Path.Combine(tmp, "logon.json"))), false);
 
+                // ===== 2026-11 补：此前这 10 个侧栏面板没有任何 dump =====
+                // registry 里它们全是 dump:none，意味着"渲染成空白页"也没人会发现
+                // （树形断言只能覆盖被构造过的面板）。这里逐个用 tmp 空库构造 + dump；
+                // 空数据源的必须自带空态引导（expectEmpty:true 会断言 EmptyStateView 可见）。
+                tryPanel("macro", () => new MacroPanel(Path.Combine(tmp, "macros"), null), expectEmpty: true);
+                tryPanel("bookmarks", () => new SessionBookmarksPanel(
+                    new Gdterm.Connections.BookmarkStoreJson(Path.Combine(tmp, "bookmarks")),
+                    new Gdterm.Connections.ConnectionStoreJson(Path.Combine(tmp, "conns.json"))), expectEmpty: true);
+                tryPanel("command-template", () => new CommandTemplatePanel(
+                    new Gdterm.Connections.CommandTemplateStore(Path.Combine(tmp, "tpl.json")), null), expectEmpty: true);
+                tryPanel("highlight-rule", () => new HighlightRulePanel(
+                    new Gdterm.Connections.HighlightStore(Path.Combine(tmp, "highlight.json"))), expectEmpty: true);
+                tryPanel("transfer-center", () => new TransferCenterPanel(), expectEmpty: true);
+                tryPanel("notification-center", () => new NotificationCenterPanel(), expectEmpty: true);
+                tryPanel("multi-channel", () => new MultiChannelPanel(new Gdterm.Terminal.MultiChannelManager()), expectEmpty: true);
+                tryPanel("batch-command", () => new BatchCommandPanel(), false);
+                tryPanel("health-monitor", () => new HealthMonitorPanel(), false);
+                tryPanel("snippet-search", () => new SnippetSearchPanel(
+                    new System.Collections.Generic.List<Gdterm.Core.Models.QuickCommand>()), false);
+
                 try { Directory.Delete(tmp, true); } catch { }
                 try { toolRegistry.Dispose(); } catch { }
                 try { secretScanner.Dispose(); } catch { }
                 try { portManager.Dispose(); } catch { }
-                Check(failures.Count == 0, "侧栏面板失败 " + failures.Count + "/6: " +
+                Check(failures.Count == 0, "侧栏面板失败 " + failures.Count + "/16: " +
                     string.Join(" | ", failures));
                 Console.WriteLine("  side-panels done");
             });
