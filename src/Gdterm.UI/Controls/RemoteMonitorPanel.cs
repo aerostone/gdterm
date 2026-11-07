@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Globalization;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Gdterm.Core;
 using Gdterm.Core.Enums;
 using Gdterm.Core.Models;
 using Gdterm.Terminal.Monitoring;
@@ -61,7 +62,7 @@ namespace Gdterm.UI.Controls
 
             var title = new AntdUI.Label
             {
-                Text = "主机资源",
+                Text = L10n.T("主机资源"),
                 AutoSize = true,
                 Dock = DockStyle.Fill,
                 Font = Services.FormFontPolicy.UiFont(+1f),
@@ -70,9 +71,9 @@ namespace Gdterm.UI.Controls
             root.Controls.Add(title, 0, 0);
 
             _cpuBar = new MetricBar { Caption = "CPU" };
-            _memBar = new MetricBar { Caption = "内存" };
+            _memBar = new MetricBar { Caption = L10n.T("内存") };
             _swapBar = new MetricBar { Caption = "Swap" };
-            _diskBar = new MetricBar { Caption = "磁盘 /" };
+            _diskBar = new MetricBar { Caption = L10n.T("磁盘 /") };
             root.Controls.Add(_cpuBar, 0, 1);
             root.Controls.Add(_memBar, 0, 2);
             root.Controls.Add(_swapBar, 0, 3);
@@ -91,7 +92,7 @@ namespace Gdterm.UI.Controls
 
             _statusLabel = new AntdUI.Label
             {
-                Text = "等待会话…",
+                Text = L10n.T("等待会话…"),
                 AutoSize = false,
                 Dock = DockStyle.Fill,
                 Height = DpiScale.V(this, 22),
@@ -114,7 +115,7 @@ namespace Gdterm.UI.Controls
 
             var hint = new AntdUI.Label
             {
-                Text = "每 5 秒在独立 SSH 连接上只读采集 /proc，不干扰终端。",
+                Text = L10n.T("每 5 秒在独立 SSH 连接上只读采集 /proc，不干扰终端。"),
                 AutoSize = false,
                 Dock = DockStyle.Fill,
                 Height = DpiScale.V(this, 34),
@@ -137,7 +138,7 @@ namespace Gdterm.UI.Controls
         {
             _loading = loading;
             if (_firstLoadBar != null && _firstLoadBar.Visible != loading) _firstLoadBar.Visible = loading;
-            if (loading) SetStatus("正在连接采样（首个快照约 1-3 秒）…", true);
+            if (loading) SetStatus(L10n.T("正在连接采样（首个快照约 1-3 秒）…"), true);
         }
 
         private void Tick()
@@ -147,7 +148,7 @@ namespace Gdterm.UI.Controls
             if (cfg == null)
             {
                 SetLoading(false);
-                SetStatus("无活动 SSH 会话（连上后自动开始）", false);
+                SetStatus(L10n.T("无活动 SSH 会话（连上后自动开始）"), false);
                 ResetBars("—");
                 return;
             }
@@ -156,7 +157,7 @@ namespace Gdterm.UI.Controls
             if (cred == null)
             {
                 SetLoading(false);
-                SetStatus("缺少凭据，无法采样（重连后恢复）", false);
+                SetStatus(L10n.T("缺少凭据，无法采样（重连后恢复）"), false);
                 ResetBars("—");
                 return;
             }
@@ -175,7 +176,7 @@ namespace Gdterm.UI.Controls
                     _sampler = null;
                     _samplerKey = null;
                     SetLoading(false);
-                    SetStatus("采样器初始化失败: " + ex.Message, false);
+                    SetStatus(L10n.T("采样器初始化失败: ") + ex.Message, false);
                     try { DiagLog.Error("RemoteMonitorPanel.Init", ex); } catch (Exception) { }
                     return;
                 }
@@ -198,11 +199,11 @@ namespace Gdterm.UI.Controls
                         try
                         {
                             if (t.IsFaulted || t.Result == null)
-                                ReportSampleFailure(t.Exception != null ? t.Exception.GetBaseException().Message : "空结果");
+                                ReportSampleFailure(t.Exception != null ? t.Exception.GetBaseException().Message : L10n.T("空结果"));
                             else
                                 Render(t.Result);
                         }
-                        catch (Exception ex) { SetStatus("渲染失败: " + ex.Message, false); }
+                        catch (Exception ex) { SetStatus(L10n.T("渲染失败: ") + ex.Message, false); }
                     }));
                 }
                 catch (Exception) { /* 控件已销毁 */ }
@@ -217,11 +218,11 @@ namespace Gdterm.UI.Controls
         private void ReportSampleFailure(string message)
         {
             SetLoading(false);
-            SetStatus("采样失败: " + message, false);
+            SetStatus(L10n.T("采样失败: ") + message, false);
             if (_failing) return;
             _failing = true;
             try { DiagLog.Error("RemoteMonitorPanel.Sample", message); } catch (Exception) { }
-            ToastNotifier.Warning("主机资源采样失败：" + message);
+            ToastNotifier.Warning(L10n.T("主机资源采样失败：") + message);
         }
 
         private void Render(RemoteStatsSnapshot s)
@@ -244,12 +245,12 @@ namespace Gdterm.UI.Controls
             _diskBar.Detail = s.DiskTotalKb > 0
                 ? string.Format(CultureInfo.InvariantCulture,"{0:0.0}% / {1}", s.DiskPercent, FormatKb(s.DiskTotalKb))
                 : null;
-            _swapBar.Detail = s.SwapPercent <= 0 ? "未启用" : null;
+            _swapBar.Detail = s.SwapPercent <= 0 ? L10n.T("未启用") : null;
 
             _infoLabel.Text = string.Format(CultureInfo.InvariantCulture,
-                "负载(1m) {0:0.00}    网络 ↓ {1:0.0} KiB/s  ↑ {2:0.0} KiB/s",
+                L10n.T("负载(1m) {0:0.00}    网络 ↓ {1:0.0} KiB/s  ↑ {2:0.0} KiB/s"),
                 s.Load1, s.NetRxKbps, s.NetTxKbps);
-            SetStatus("采样于 " + s.SampledAt.ToString("HH:mm:ss", CultureInfo.InvariantCulture), true);
+            SetStatus(L10n.T("采样于 ") + s.SampledAt.ToString("HH:mm:ss", CultureInfo.InvariantCulture), true);
         }
 
         private void ResetBars(string detail)

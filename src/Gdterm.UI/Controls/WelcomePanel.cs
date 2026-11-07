@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.Connections;
+using Gdterm.Core;
 using Gdterm.Core.Models;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
@@ -60,7 +61,7 @@ namespace Gdterm.UI.Controls
                 TextAlign = ContentAlignment.MiddleLeft
             };
             var subtitle = new AntdUI.Label {
-                Text = "便携运维终端  ·  选择最近会话或新建连接",
+                Text = L10n.T("便携运维终端  ·  选择最近会话或新建连接"),
                 Dock = DockStyle.Fill,
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleLeft,
@@ -83,14 +84,14 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Background,
                 Padding = new Padding(0, DpiScale.V(this, 8), 0, DpiScale.V(this, 8))
             };
-            actions.Controls.Add(MakeAction("新建连接", () => { if (NewConnectionRequested != null) NewConnectionRequested(); }));
-            actions.Controls.Add(MakeAction("本地终端", () => { if (OpenLocalTerminalRequested != null) OpenLocalTerminalRequested(); }));
-            actions.Controls.Add(MakeAction("书签", () => { if (OpenBookmarksRequested != null) OpenBookmarksRequested(); }));
-            actions.Controls.Add(MakeAction("密码库", () => { if (OpenKeePassRequested != null) OpenKeePassRequested(); }));
+            actions.Controls.Add(MakeAction(L10n.T("新建连接"), () => { if (NewConnectionRequested != null) NewConnectionRequested(); }));
+            actions.Controls.Add(MakeAction(L10n.T("本地终端"), () => { if (OpenLocalTerminalRequested != null) OpenLocalTerminalRequested(); }));
+            actions.Controls.Add(MakeAction(L10n.T("书签"), () => { if (OpenBookmarksRequested != null) OpenBookmarksRequested(); }));
+            actions.Controls.Add(MakeAction(L10n.T("密码库"), () => { if (OpenKeePassRequested != null) OpenKeePassRequested(); }));
             root.Controls.Add(actions, 0, 1);
 
-            root.Controls.Add(MakeSection("最近连接", out _recentHost), 0, 2);
-            root.Controls.Add(MakeSection("收藏 / 书签", out _favHost), 0, 3);
+            root.Controls.Add(MakeSection(L10n.T("最近连接"), out _recentHost), 0, 2);
+            root.Controls.Add(MakeSection(L10n.T("收藏 / 书签"), out _favHost), 0, 3);
 
             Controls.Add(root);
             Reload();
@@ -108,8 +109,8 @@ namespace Gdterm.UI.Controls
                     foreach (var r in _bookmarks.GetRecentConnections(8) ?? new List<RecentConnection>())
                     {
                         if (r == null) continue;
-                        var title = !string.IsNullOrEmpty(r.Host) ? r.Host : (r.ConnectionId ?? "连接");
-                        var sub = (r.Protocol ?? "") + "  " + (r.Success ? "成功" : "失败")
+                        var title = !string.IsNullOrEmpty(r.Host) ? r.Host : (r.ConnectionId ?? L10n.T("连接"));
+                        var sub = (r.Protocol ?? "") + "  " + (r.Success ? L10n.T("成功") : L10n.T("失败"))
                                   + "  " + r.ConnectedAt.ToString("MM-dd HH:mm");
                         AddRow(_recentHost, title, sub, () => OpenRecent(r));
                     }
@@ -118,7 +119,7 @@ namespace Gdterm.UI.Controls
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("WelcomePanel", exSwallowed); } catch { } }
 
             if (_recentHost.Controls.Count == 0)
-                AddEmpty(_recentHost, "暂无最近连接 — 双击左侧树或点「新建连接」开始");
+                AddEmpty(_recentHost, L10n.T("暂无最近连接 — 双击左侧树或点「新建连接」开始"));
 
             try
             {
@@ -129,7 +130,7 @@ namespace Gdterm.UI.Controls
                     foreach (var b in all)
                     {
                         if (b == null || !b.IsFavorite) continue;
-                        AddRow(_favHost, b.Name ?? b.ConnectionId ?? "书签",
+                        AddRow(_favHost, b.Name ?? b.ConnectionId ?? L10n.T("书签"),
                             b.Tags ?? b.ConnectionId ?? "",
                             () => OpenBookmark(b));
                         n++;
@@ -140,7 +141,7 @@ namespace Gdterm.UI.Controls
                         foreach (var b in all)
                         {
                             if (b == null) continue;
-                            AddRow(_favHost, b.Name ?? b.ConnectionId ?? "书签",
+                            AddRow(_favHost, b.Name ?? b.ConnectionId ?? L10n.T("书签"),
                                 b.Tags ?? "",
                                 () => OpenBookmark(b));
                             n++;
@@ -152,7 +153,7 @@ namespace Gdterm.UI.Controls
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("WelcomePanel", exSwallowed); } catch { } }
 
             if (_favHost.Controls.Count == 0)
-                AddEmpty(_favHost, "暂无收藏 — 在书签面板中标记收藏后显示在这里");
+                AddEmpty(_favHost, L10n.T("暂无收藏 — 在书签面板中标记收藏后显示在这里"));
         }
 
         private void OpenRecent(RecentConnection r)
@@ -162,7 +163,7 @@ namespace Gdterm.UI.Controls
             {
                 var cfg = _store.GetById(r.ConnectionId);
                 if (cfg != null && OpenConnectionRequested != null) OpenConnectionRequested(cfg);
-                else ToastNotifier.Warning("连接配置已不存在: " + (r.Host ?? r.ConnectionId));
+                else ToastNotifier.Warning(L10n.T("连接配置已不存在: ") + (r.Host ?? r.ConnectionId));
             }
             catch (Exception ex) { ToastNotifier.Error(ex.Message); }
         }
@@ -174,7 +175,7 @@ namespace Gdterm.UI.Controls
             {
                 var cfg = _store.GetById(b.ConnectionId);
                 if (cfg != null && OpenConnectionRequested != null) OpenConnectionRequested(cfg);
-                else ToastNotifier.Warning("书签对应连接不存在: " + (b.Name ?? b.ConnectionId));
+                else ToastNotifier.Warning(L10n.T("书签对应连接不存在: ") + (b.Name ?? b.ConnectionId));
             }
             catch (Exception ex) { ToastNotifier.Error(ex.Message); }
         }

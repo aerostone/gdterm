@@ -8,6 +8,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Gdterm.Core;
 
 namespace Gdterm.Tools.Modules
 {
@@ -17,9 +18,9 @@ namespace Gdterm.Tools.Modules
     public class NetworkScannerTool : IToolModule
     {
         public string ToolId { get { return "net-scanner"; } }
-        public string DisplayName { get { return "网络扫描"; } }
-        public string Description { get { return "IP扫描/DNS/Traceroute/Ping监控/子网计算/WHOIS"; } }
-        public string Category { get { return "网络"; } }
+        public string DisplayName { get { return L10n.T("网络扫描"); } }
+        public string Description { get { return L10n.T("IP扫描/DNS/Traceroute/Ping监控/子网计算/WHOIS"); } }
+        public string Category { get { return L10n.T("网络"); } }
 
         public event EventHandler<string> OutputReceived;
 
@@ -85,7 +86,7 @@ namespace Gdterm.Tools.Modules
             await Task.WhenAll(tasks);
             var list = new List<HostScanResult>(results);
             list.Sort((a, b) => CompareIP(a.IP, b.IP));
-            OnOutput(string.Format("子网扫描完成: {0}, 发现{1}台主机", cidr, CountAlive(list)));
+            OnOutput(string.Format(L10n.T("子网扫描完成: {0}, 发现{1}台主机"), cidr, CountAlive(list)));
             return list;
         }
 
@@ -111,7 +112,7 @@ namespace Gdterm.Tools.Modules
             {
                 result.Error = ex.Message;
             }
-            OnOutput(string.Format("DNS: {0} → {1}", hostname, result.IPv4 ?? "无结果"));
+            OnOutput(string.Format("DNS: {0} → {1}", hostname, result.IPv4 ?? L10n.T("无结果")));
             return result;
         }
 
@@ -262,7 +263,7 @@ namespace Gdterm.Tools.Modules
             }
             catch (Exception ex)
             {
-                return "WHOIS查询失败: " + ex.Message;
+                return L10n.T("WHOIS查询失败: ") + ex.Message;
             }
         }
 
@@ -331,7 +332,7 @@ namespace Gdterm.Tools.Modules
             var root = output.Parent as System.Windows.Forms.Control;
             Action setRunning = () =>
             {
-                status.Text = "执行中...";
+                status.Text = L10n.T("执行中...");
                 status.ForeColor = System.Drawing.Color.FromArgb(255, 200, 80);
             };
             if (root != null && root.IsHandleCreated) root.BeginInvoke(setRunning); else setRunning();
@@ -346,8 +347,8 @@ namespace Gdterm.Tools.Modules
                 }
                 catch (Exception ex)
                 {
-                    ToolPanelHelper.AppendLine(output, "失败: " + ex.Message);
-                    SetStatus(root, status, "失败: " + ex.Message, System.Drawing.Color.FromArgb(255, 100, 100));
+                    ToolPanelHelper.AppendLine(output, L10n.T("失败: ") + ex.Message);
+                    SetStatus(root, status, L10n.T("失败: ") + ex.Message, System.Drawing.Color.FromArgb(255, 100, 100));
                 }
             });
         }
@@ -362,14 +363,14 @@ namespace Gdterm.Tools.Modules
         {
             return ToolPanelHelper.CreateActionPanel(
                 DisplayName,
-                "子网扫描 例: 192.168.1.0/24  | DNS 例: dns example.com  | 路由跟踪 例: tr 8.8.8.8",
+                L10n.T("子网扫描 例: 192.168.1.0/24  | DNS 例: dns example.com  | 路由跟踪 例: tr 8.8.8.8"),
                 null,
                 (inputs, output, status) =>
                 {
                     var text = (inputs[0].Text ?? "").Trim();
-                    if (string.IsNullOrEmpty(text) || text.StartsWith("目标"))
+                    if (string.IsNullOrEmpty(text) || text.StartsWith(L10n.T("目标")))
                     {
-                        status.Text = "请输入参数";
+                        status.Text = L10n.T("请输入参数");
                         return;
                     }
                     var parts = text.Split(new[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
@@ -381,7 +382,7 @@ namespace Gdterm.Tools.Modules
                             (dns.IsSuccess ? "OK" : "FAIL") + " " + dns.HostName +
                             " v4=" + (dns.IPv4 ?? "-") + " v6=" + (dns.IPv6 ?? "-") +
                             (string.IsNullOrEmpty(dns.Error) ? "" : " err=" + dns.Error));
-                        status.Text = "DNS 完成";
+                        status.Text = L10n.T("DNS 完成");
                         return;
                     }
                     if ((parts[0].Equals("tr", StringComparison.OrdinalIgnoreCase) ||
@@ -393,7 +394,7 @@ namespace Gdterm.Tools.Modules
                             foreach (var h in hops)
                                 ToolPanelHelper.AppendLine(output,
                                     h.Hop + " " + (h.Address ?? "*") + " " + (h.HostName ?? "") + " " + h.LatencyMs + "ms");
-                            return "traceroute 完成（" + hops.Count + " 跳）";
+                            return L10n.T("traceroute 完成（") + hops.Count + L10n.T(" 跳）");
                         });
                         return;
                     }
@@ -404,7 +405,7 @@ namespace Gdterm.Tools.Modules
                         foreach (var h in hosts)
                             if (h.IsAlive)
                                 ToolPanelHelper.AppendLine(output, h.IP + " " + (h.HostName ?? "") + " " + h.LatencyMs + "ms");
-                        return "存活 " + CountAlive(hosts) + " / " + hosts.Count;
+                        return L10n.T("存活 ") + CountAlive(hosts) + " / " + hosts.Count;
                     });
                 });
         }

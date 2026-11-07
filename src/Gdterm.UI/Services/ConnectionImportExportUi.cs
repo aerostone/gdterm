@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
 using Gdterm.Connections;
+using Gdterm.Core;
 using Gdterm.Core.Models;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.ImportExport;
@@ -19,12 +20,12 @@ namespace Gdterm.UI.Services
 
             using (var dlg = new OpenFileDialog
             {
-                Title = "导入连接",
+                Title = L10n.T("导入连接"),
                 Multiselect = true,
-                Filter = "所有支持格式 (*.xsh;*.ini;*.json;user.sessions)|*.xsh;*.ini;*.json;user.sessions|"
-                    + "Xshell 会话 (*.xsh)|*.xsh|"
-                    + "MobaXterm 配置 (*.ini)|*.ini|"
-                    + "WindTerm 会话 (user.sessions)|user.sessions|"
+                Filter = L10n.T("所有支持格式 (*.xsh;*.ini;*.json;user.sessions)|*.xsh;*.ini;*.json;user.sessions|")
+                    + L10n.T("Xshell 会话 (*.xsh)|*.xsh|")
+                    + L10n.T("MobaXterm 配置 (*.ini)|*.ini|")
+                    + L10n.T("WindTerm 会话 (user.sessions)|user.sessions|")
                     + "JSON (*.json)|*.json|"
                     + "CSV (*.csv)|*.csv|"
                     + "mRemoteNG XML (*.xml)|*.xml"
@@ -53,8 +54,8 @@ namespace Gdterm.UI.Services
                     if (imported.Count == 0)
                     {
                         MessageBox.Show(owner,
-                            "未找到可导入的连接" + (bad.Count > 0 ? "\n无法解析：" + string.Join("\n", bad.ToArray()) : ""),
-                            "导入", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                            L10n.T("未找到可导入的连接") + (bad.Count > 0 ? L10n.T("\n无法解析：") + string.Join("\n", bad.ToArray()) : ""),
+                            L10n.T("导入"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                         return;
                     }
                     var existing = store.LoadAll();
@@ -70,15 +71,15 @@ namespace Gdterm.UI.Services
                     foreach (var conn in merge.NewConnections)
                         store.Add(conn);
                     if (onReloaded != null) onReloaded();
-                    var skippedNote = merge.Duplicates.Count > 0 ? "\n跳过 " + merge.Duplicates.Count + " 条重复" : "";
-                    var badNote = bad.Count > 0 ? "\n无法解析 " + bad.Count + " 个文件（已跳过）" : "";
+                    var skippedNote = merge.Duplicates.Count > 0 ? L10n.T("\n跳过 ") + merge.Duplicates.Count + L10n.T(" 条重复") : "";
+                    var badNote = bad.Count > 0 ? L10n.T("\n无法解析 ") + bad.Count + L10n.T(" 个文件（已跳过）") : "";
                     MessageBox.Show(owner,
-                        "导入完成：\n新增 " + merge.NewConnections.Count + skippedNote + badNote,
-                        "导入成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        L10n.T("导入完成：\n新增 ") + merge.NewConnections.Count + skippedNote + badNote,
+                        L10n.T("导入成功"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(owner, "导入失败：" + ex.Message, "错误",
+                    MessageBox.Show(owner, L10n.T("导入失败：") + ex.Message, L10n.T("错误"),
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
@@ -91,13 +92,13 @@ namespace Gdterm.UI.Services
             var connections = store.LoadAll();
             if (connections.Count == 0)
             {
-                MessageBox.Show(owner, "没有可导出的连接", "导出",
+                MessageBox.Show(owner, L10n.T("没有可导出的连接"), L10n.T("导出"),
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             using (var dlg = new SaveFileDialog
             {
-                Title = "导出连接",
+                Title = L10n.T("导出连接"),
                 Filter = "JSON|*.json|CSV|*.csv",
                 FileName = "gdterm-connections"
             })
@@ -109,12 +110,12 @@ namespace Gdterm.UI.Services
                         ConnectionImporterExporter.ExportAsCsv(connections, dlg.FileName);
                     else
                         ConnectionImporterExporter.ExportAsJson(connections, dlg.FileName);
-                    MessageBox.Show(owner, "已导出 " + connections.Count + " 个连接", "导出成功",
+                    MessageBox.Show(owner, L10n.T("已导出 ") + connections.Count + L10n.T(" 个连接"), L10n.T("导出成功"),
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(owner, "导出失败：" + ex.Message, "错误",
+                    MessageBox.Show(owner, L10n.T("导出失败：") + ex.Message, L10n.T("错误"),
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
