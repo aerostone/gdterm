@@ -43,7 +43,7 @@ namespace Gdterm.UI.Forms
 
         private void InitializeComponent()
         {
-            Text = "密码健康报告";
+            Text = L10n.T("密码健康报告");
             Size = DpiScale.S(this, 700, 550);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -65,14 +65,14 @@ namespace Gdterm.UI.Forms
             };
 
             _scoreLabel = new AntdUI.Label {
-                Text = "健康评分：—",
+                Text = L10n.T("健康评分：—"),
                 Font = Services.FormFontPolicy.UiFont(+9f, FontStyle.Bold),
                 Location = DpiScale.P(this, 15, 8),
                 Size = DpiScale.S(this, 250, 32)
             };
 
             _summaryLabel = new AntdUI.Label {
-                Text = "正在分析...",
+                Text = L10n.T("正在分析..."),
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 Location = DpiScale.P(this, 15, 40),
                 Size = DpiScale.S(this, 650, rowH),
@@ -83,7 +83,7 @@ namespace Gdterm.UI.Forms
             // 否则 0 行 + 规则文案让人误以为功能未跑。
             _scanStateLabel = new AntdUI.Label {
                 Name = "HealthScanStateLabel",
-                Text = "上次扫描：—",
+                Text = L10n.T("上次扫描：—"),
                 // 与评分同行右侧（显式 Location 不吃 Panel.Padding，abs 左缘=面板左+275）
                 Location = DpiScale.P(this, 275, 10),
                 Size = DpiScale.S(this, 395, 24),
@@ -114,7 +114,7 @@ namespace Gdterm.UI.Forms
             var closeButton = new AntdUI.Button
             {
                 Name = "HealthCloseButton",
-                Text = "关闭",
+                Text = L10n.T("关闭"),
                 AutoSize = true,
                 Type = AntdUI.TTypeMini.Default,
                 Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
@@ -132,11 +132,11 @@ namespace Gdterm.UI.Forms
 
         private async void LoadReportAsync()
         {
-            using (var busy = BusyScope.Begin(this, "正在分析密码健康…"))
+            using (var busy = BusyScope.Begin(this, L10n.T("正在分析密码健康…")))
             {
-                if (_scanStateLabel != null) _scanStateLabel.Text = "正在分析…";
-                _scoreLabel.Text = "健康评分：分析中…";
-                _summaryLabel.Text = "正在读取密码库条目（重复/弱/过期检查）";
+                if (_scanStateLabel != null) _scanStateLabel.Text = L10n.T("正在分析…");
+                _scoreLabel.Text = L10n.T("健康评分：分析中…");
+                _summaryLabel.Text = L10n.T("正在读取密码库条目（重复/弱/过期检查）");
 
                 PasswordHealthReport report = null;
                 Exception failure = null;
@@ -156,13 +156,13 @@ namespace Gdterm.UI.Forms
 
                 if (failure != null)
                 {
-                    _scoreLabel.Text = "分析失败";
+                    _scoreLabel.Text = L10n.T("分析失败");
                     _scoreLabel.ForeColor = GdtermColorTable.Danger;
-                    _summaryLabel.Text = failure.Message + "（可直接重试，无需重开窗口）";
-                    if (_scanStateLabel != null) _scanStateLabel.Text = "上次扫描：失败";
+                    _summaryLabel.Text = failure.Message + L10n.T("（可直接重试，无需重开窗口）");
+                    if (_scanStateLabel != null) _scanStateLabel.Text = L10n.T("上次扫描：失败");
                     // 原来只有一行红字：既不留痕也不能重试
                     try { DiagLog.Error("PasswordHealth.Analyze", failure); } catch (Exception) { }
-                    try { ToastNotifier.Error("密码健康分析失败：" + failure.Message); } catch (Exception) { }
+                    try { ToastNotifier.Error(L10n.T("密码健康分析失败：") + failure.Message); } catch (Exception) { }
                     ShowRetryTab(failure.Message);
                     return;
                 }
@@ -179,39 +179,39 @@ namespace Gdterm.UI.Forms
             else if (report.HealthScore >= 50) scoreColor = GdtermColorTable.Warning;
             else scoreColor = GdtermColorTable.Danger;
 
-            _scoreLabel.Text = $"健康评分：{report.HealthScore}/100";
+            _scoreLabel.Text = L10n.Tf("健康评分：{0}/100", report.HealthScore);
             _scoreLabel.ForeColor = scoreColor;
-            _summaryLabel.Text = $"{report.Summary}（共 {report.TotalEntries} 个条目）";
+            _summaryLabel.Text = L10n.Tf("{0}（共 {1} 个条目）", report.Summary, report.TotalEntries);
             if (_scanStateLabel != null)
-                _scanStateLabel.Text = $"上次扫描：{DateTime.Now:HH:mm:ss} · {report.TotalEntries} 个条目";
+                _scanStateLabel.Text = L10n.Tf("上次扫描：{0} · {1} 个条目", DateTime.Now.ToString("HH:mm:ss"), report.TotalEntries);
 
             // 清空标签页
             _tabControl.Pages.Clear();
 
             // 空密码标签页
-            AddIssueTab("空密码", report.EmptyPasswords, GdtermColorTable.Danger);
+            AddIssueTab(L10n.T("空密码"), report.EmptyPasswords, GdtermColorTable.Danger);
 
             // 弱密码标签页
-            AddIssueTab("弱密码", report.WeakPasswords, GdtermColorTable.Warning);
+            AddIssueTab(L10n.T("弱密码"), report.WeakPasswords, GdtermColorTable.Warning);
 
             // 重复密码标签页
-            AddDuplicateTab("重复密码", report.DuplicatePasswords);
+            AddDuplicateTab(L10n.T("重复密码"), report.DuplicatePasswords);
 
             // 过期密码标签页
-            AddIssueTab("过期密码", report.ExpiredPasswords, GdtermColorTable.Warning);
+            AddIssueTab(L10n.T("过期密码"), report.ExpiredPasswords, GdtermColorTable.Warning);
         }
 
         /// <summary>分析失败页：说明 + 一键重试（失败后窗口不再只是"死"在那里）。</summary>
         private void ShowRetryTab(string message)
         {
             _tabControl.Pages.Clear();
-            var tab = new AntdUI.TabPage { Text = "  分析失败  " };
+            var tab = new AntdUI.TabPage { Text = L10n.T("  分析失败  ") };
             var host = new Panel { Dock = DockStyle.Fill, BackColor = GdtermColorTable.Background };
             tab.Controls.Add(host);
             _tabControl.Pages.Add(tab);
-            EmptyStateView.Attach(host, "读取密码库失败",
-                message + "；解锁密码库或检查 KDBX 文件后点下方按钮重试",
-                "重试分析", (s2, e2) => LoadReportAsync());
+            EmptyStateView.Attach(host, L10n.T("读取密码库失败"),
+                message + L10n.T("；解锁密码库或检查 KDBX 文件后点下方按钮重试"),
+                L10n.T("重试分析"), (s2, e2) => LoadReportAsync());
         }
 
         /// <summary>行激活：双击把这一条复制到剪贴板（拿去改密码/贴给同事时不用手抄）。</summary>
@@ -226,12 +226,12 @@ namespace Gdterm.UI.Forms
                     var text = row == null ? null : describe(row);
                     if (string.IsNullOrEmpty(text)) return;
                     Clipboard.SetText(text);
-                    ToastNotifier.Success("已复制：" + text, 2000);
+                    ToastNotifier.Success(L10n.T("已复制：") + text, 2000);
                 }
                 catch (Exception ex)
                 {
                     try { DiagLog.Error("PasswordHealth.Copy", ex); } catch (Exception) { }
-                    ToastNotifier.Error("复制失败：" + ex.Message);
+                    ToastNotifier.Error(L10n.T("复制失败：") + ex.Message);
                 }
             };
             table.DoubleClick += copy;
@@ -284,11 +284,11 @@ namespace Gdterm.UI.Forms
                 BorderWidth = 0,
                 RowHeight = rowH
             };
-            table.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left) { Width = "22%" });
-            table.Columns.Add(new AntdUI.Column("Username", "用户名", AntdUI.ColumnAlign.Left) { Width = "18%" });
-            table.Columns.Add(new AntdUI.Column("GroupPath", "分组", AntdUI.ColumnAlign.Left) { Width = "20%" });
-            table.Columns.Add(new AntdUI.Column("Issue", "问题", AntdUI.ColumnAlign.Left) { Width = "25%" });
-            table.Columns.Add(new AntdUI.Column("Strength", "强度", AntdUI.ColumnAlign.Left) { Width = "15%" });
+            table.Columns.Add(new AntdUI.Column("Title", L10n.T("标题"), AntdUI.ColumnAlign.Left) { Width = "22%" });
+            table.Columns.Add(new AntdUI.Column("Username", L10n.T("用户名"), AntdUI.ColumnAlign.Left) { Width = "18%" });
+            table.Columns.Add(new AntdUI.Column("GroupPath", L10n.T("分组"), AntdUI.ColumnAlign.Left) { Width = "20%" });
+            table.Columns.Add(new AntdUI.Column("Issue", L10n.T("问题"), AntdUI.ColumnAlign.Left) { Width = "25%" });
+            table.Columns.Add(new AntdUI.Column("Strength", L10n.T("强度"), AntdUI.ColumnAlign.Left) { Width = "15%" });
 
             var rows = new List<IssueRow>();
             if (issues != null)
@@ -297,7 +297,7 @@ namespace Gdterm.UI.Forms
                 {
                     rows.Add(new IssueRow
                     {
-                        Title = issue.Title ?? "(无标题)",
+                        Title = issue.Title ?? L10n.T("(无标题)"),
                         Username = issue.Username ?? "",
                         GroupPath = issue.GroupPath ?? "",
                         Issue = issue.Issue ?? "",
@@ -308,17 +308,17 @@ namespace Gdterm.UI.Forms
             // 表壳：问题过滤 + 排序 + 导出（只读表、无选中耦合；行激活靠 table.DataSource 反查，
             // 即壳的当前可见行，CurrentRow 仍正确）
             var shell = new TableShell<IssueRow>(table,
-                new[] { "标题", "用户名", "分组", "问题", "强度" },
+                new[] { L10n.T("标题"), L10n.T("用户名"), L10n.T("分组"), L10n.T("问题"), L10n.T("强度") },
                 r => string.Join(" ", new[] { r.Title, r.Username, r.GroupPath, r.Issue, r.Strength }),
                 (r, i) => { switch (i) { case 0: return r.Title; case 1: return r.Username; case 2: return r.GroupPath; case 3: return r.Issue; default: return r.Strength; } });
-            shell.AddAction("导出", (s, e) => shell.ExportCsv(this, "password-" + name)).Name = "PwdHealthIssueExportButton";
+            shell.AddAction(L10n.T("导出"), (s, e) => shell.ExportCsv(this, "password-" + name)).Name = "PwdHealthIssueExportButton";
             shell.SetItems(rows);
             WireRowActivation(table, DescribeIssue);
 
             var host = new Panel { Dock = DockStyle.Fill, BackColor = GdtermColorTable.Background };
             host.Controls.Add(shell);
-            EmptyStateView.Attach(host, "这一类没有发现问题",
-                "「" + name + "」检查通过；规则变更或条目录入变化后重开本窗口即可复检");
+            EmptyStateView.Attach(host, L10n.T("这一类没有发现问题"),
+                L10n.Tf("「{0}」检查通过；规则变更或条目录入变化后重开本窗口即可复检", name));
             var empty = host.Controls.OfType<EmptyStateView>().FirstOrDefault();
             if (empty != null) empty.SetEmpty(rows.Count == 0);
 
@@ -337,7 +337,7 @@ namespace Gdterm.UI.Forms
         private void AddDuplicateTab(string name, System.Collections.Generic.IList<DuplicatePasswordGroup> groups)
         {
             int rowH = Math.Max(DpiScale.V(this, 24), FormFontPolicy.RowStep(this)); // 表格阅读行：24 地板
-            var tab = new AntdUI.TabPage { Text = $"  {name} ({groups.Count} 组)  " };
+            var tab = new AntdUI.TabPage { Text = L10n.Tf("  {0} ({1} 组)  ", name, groups.Count) };
 
             var listView = new AntdUI.Table
             {
@@ -346,10 +346,10 @@ namespace Gdterm.UI.Forms
                 BorderWidth = 0,
                 RowHeight = rowH
             };
-            listView.Columns.Add(new AntdUI.Column("Hash", "密码哈希", AntdUI.ColumnAlign.Left) { Width = "30%" });
-            listView.Columns.Add(new AntdUI.Column("Title", "条目标题", AntdUI.ColumnAlign.Left) { Width = "25%" });
-            listView.Columns.Add(new AntdUI.Column("Username", "用户名", AntdUI.ColumnAlign.Left) { Width = "20%" });
-            listView.Columns.Add(new AntdUI.Column("GroupPath", "分组", AntdUI.ColumnAlign.Left) { Width = "25%" });
+            listView.Columns.Add(new AntdUI.Column("Hash", L10n.T("密码哈希"), AntdUI.ColumnAlign.Left) { Width = "30%" });
+            listView.Columns.Add(new AntdUI.Column("Title", L10n.T("条目标题"), AntdUI.ColumnAlign.Left) { Width = "25%" });
+            listView.Columns.Add(new AntdUI.Column("Username", L10n.T("用户名"), AntdUI.ColumnAlign.Left) { Width = "20%" });
+            listView.Columns.Add(new AntdUI.Column("GroupPath", L10n.T("分组"), AntdUI.ColumnAlign.Left) { Width = "25%" });
 
             var rows = new List<DupRow>();
             foreach (var group in groups)
@@ -360,7 +360,7 @@ namespace Gdterm.UI.Forms
                     rows.Add(new DupRow
                     {
                         Hash = first ? group.PasswordHash : "",
-                        Title = entry.Title ?? "(无标题)",
+                        Title = entry.Title ?? L10n.T("(无标题)"),
                         Username = entry.Username ?? "",
                         GroupPath = entry.GroupPath ?? ""
                     });
@@ -369,17 +369,17 @@ namespace Gdterm.UI.Forms
             }
             // 表壳：重复密码过滤 + 排序 + 导出（只读表，按组平铺展示）
             var shell = new TableShell<DupRow>(listView,
-                new[] { "密码哈希", "条目标题", "用户名", "分组" },
+                new[] { L10n.T("密码哈希"), L10n.T("条目标题"), L10n.T("用户名"), L10n.T("分组") },
                 r => string.Join(" ", new[] { r.Hash, r.Title, r.Username, r.GroupPath }),
                 (r, i) => { switch (i) { case 0: return r.Hash; case 1: return r.Title; case 2: return r.Username; default: return r.GroupPath; } });
-            shell.AddAction("导出", (s, e) => shell.ExportCsv(this, "password-" + name)).Name = "PwdHealthDupExportButton";
+            shell.AddAction(L10n.T("导出"), (s, e) => shell.ExportCsv(this, "password-" + name)).Name = "PwdHealthDupExportButton";
             shell.SetItems(rows);
             WireRowActivation(listView, DescribeDup);
 
             var dupHost = new Panel { Dock = DockStyle.Fill, BackColor = GdtermColorTable.Background };
             dupHost.Controls.Add(shell);
-            EmptyStateView.Attach(dupHost, "没有重复密码",
-                "每个条目都用了唯一密码；同一密码被复用时会在这里按组列出");
+            EmptyStateView.Attach(dupHost, L10n.T("没有重复密码"),
+                L10n.T("每个条目都用了唯一密码；同一密码被复用时会在这里按组列出"));
             var dupEmpty = dupHost.Controls.OfType<EmptyStateView>().FirstOrDefault();
             if (dupEmpty != null) dupEmpty.SetEmpty(rows.Count == 0);
 

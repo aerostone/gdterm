@@ -64,12 +64,12 @@ namespace Gdterm.UI.Controls
             top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             top.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-            var btnHome = MakeBtn("⌂", "主目录", (s, e) => Navigate(_provider.HomePath));
-            var btnUp = MakeBtn("↑", "上级目录 (Backspace)", (s, e) => NavigateUp());
-            var btnRefresh = MakeBtn("⟳", "刷新 (F5)", (s, e) => Refresh());
-            var btnMkdir = MakeBtn("＋", "新建目录 (F7)", (s, e) => Mkdir());
-            var btnRename = MakeBtn("改", "重命名 (F2)", (s, e) => RenameSelected());
-            var btnDelete = MakeBtn("✕", "删除 (Del)", (s, e) => DeleteSelected());
+            var btnHome = MakeBtn("⌂", L10n.T("主目录"), (s, e) => Navigate(_provider.HomePath));
+            var btnUp = MakeBtn("↑", L10n.T("上级目录 (Backspace)"), (s, e) => NavigateUp());
+            var btnRefresh = MakeBtn("⟳", L10n.T("刷新 (F5)"), (s, e) => Refresh());
+            var btnMkdir = MakeBtn("＋", L10n.T("新建目录 (F7)"), (s, e) => Mkdir());
+            var btnRename = MakeBtn("改", L10n.T("重命名 (F2)"), (s, e) => RenameSelected());
+            var btnDelete = MakeBtn("✕", L10n.T("删除 (Del)"), (s, e) => DeleteSelected());
 
             var buttons = new FlowLayoutPanel
             {
@@ -112,10 +112,10 @@ namespace Gdterm.UI.Controls
                 Font = Services.FormFontPolicy.MonoFont(),
                 AllowDrop = true
             };
-            _list.Columns.Add("名称", DpiScale.V(this, 240));
-            _list.Columns.Add("大小", DpiScale.V(this, 80));
-            _list.Columns.Add("修改时间", DpiScale.V(this, 130));
-            _list.Columns.Add("权限", DpiScale.V(this, 90));
+            _list.Columns.Add(L10n.T("名称"), DpiScale.V(this, 240));
+            _list.Columns.Add(L10n.T("大小"), DpiScale.V(this, 80));
+            _list.Columns.Add(L10n.T("修改时间"), DpiScale.V(this, 130));
+            _list.Columns.Add(L10n.T("权限"), DpiScale.V(this, 90));
             _list.DoubleClick += (s, e) => OpenSelected();
             _list.KeyDown += OnListKeyDown;
 
@@ -157,16 +157,16 @@ namespace Gdterm.UI.Controls
 
             // 列表壳：过滤 + 排序 + 导出（目录文件多时按名称/大小/修改时间找某个文件；
             // 勾选批量走右键/拖拽，不受过滤影响，故 showFilter:true 安全）
-            _shell = new ListShell(_list, "过滤文件名…");
-            _shell.AddAction("导出", (s, e) => _shell.ExportCsv(FindForm(), "file-list")).Name = "FileListExportButton";
+            _shell = new ListShell(_list, L10n.T("过滤文件名…"));
+            _shell.AddAction(L10n.T("导出"), (s, e) => _shell.ExportCsv(FindForm(), "file-list")).Name = "FileListExportButton";
 
             Controls.Add(_shell);
             Controls.Add(_status);
             Controls.Add(top);
 
             // 审计 C1：空目录/读取失败此前都只是一片空列表（状态栏那行字容易被忽略）
-            _empty = EmptyStateView.Attach(this, "这个目录是空的",
-                "拖文件到这里可直接上传；点「刷新」重新读取", "刷新", (s2, e2) => Refresh());
+            _empty = EmptyStateView.Attach(this, L10n.T("这个目录是空的"),
+                L10n.T("拖文件到这里可直接上传；点「刷新」重新读取"), L10n.T("刷新"), (s2, e2) => Refresh());
         }
 
         private ContextMenuStrip BuildContextMenu()
@@ -175,19 +175,19 @@ namespace Gdterm.UI.Controls
             ctx.BackColor = GdtermColorTable.Surface;
             ctx.ForeColor = GdtermColorTable.Foreground;
 
-            var miTransfer = new ToolStripMenuItem("传输到对侧") { Enabled = false };
+            var miTransfer = new ToolStripMenuItem(L10n.T("传输到对侧")) { Enabled = false };
             miTransfer.Click += (s, e) => RequestTransferToPeer();
-            var miRename = new ToolStripMenuItem("重命名") { Enabled = false };
+            var miRename = new ToolStripMenuItem(L10n.T("重命名")) { Enabled = false };
             miRename.Click += (s, e) => RenameSelected();
-            var miMkdir = new ToolStripMenuItem("新建目录");
+            var miMkdir = new ToolStripMenuItem(L10n.T("新建目录"));
             miMkdir.Click += (s, e) => Mkdir();
-            var miDelete = new ToolStripMenuItem("删除") { Enabled = false };
+            var miDelete = new ToolStripMenuItem(L10n.T("删除")) { Enabled = false };
             miDelete.Click += (s, e) => DeleteSelected();
-            var miPreview = new ToolStripMenuItem("预览 (F3)") { Enabled = false };
+            var miPreview = new ToolStripMenuItem(L10n.T("预览 (F3)")) { Enabled = false };
             miPreview.Click += (s, e) => PreviewSelected();
-            var miProps = new ToolStripMenuItem("属性...") { Enabled = false };
+            var miProps = new ToolStripMenuItem(L10n.T("属性...")) { Enabled = false };
             miProps.Click += (s, e) => ShowPropsSelected();
-            var miRefresh = new ToolStripMenuItem("刷新");
+            var miRefresh = new ToolStripMenuItem(L10n.T("刷新"));
             miRefresh.Click += (s, e) => Refresh();
 
             _list.ItemSelectionChanged += (s, e) =>
@@ -245,9 +245,9 @@ namespace Gdterm.UI.Controls
         {
             var sel = _list.SelectedItems.Count;
             if (sel == 0)
-                _status.Text = _currentPath == null ? " " : (_currentPath.Length == 0 ? "此电脑" : _currentPath);
+                _status.Text = _currentPath == null ? " " : (_currentPath.Length == 0 ? L10n.T("此电脑") : _currentPath);
             else
-                _status.Text = sel + " 项已选";
+                _status.Text = sel + L10n.T(" 项已选");
         }
 
         private void OpenSelected()
@@ -275,7 +275,7 @@ namespace Gdterm.UI.Controls
         {
             if (_busy) return;
             _busy = true;
-            _status.Text = "加载 " + (string.IsNullOrEmpty(path) ? "此电脑" : path) + " …";
+            _status.Text = L10n.T("加载 ") + (string.IsNullOrEmpty(path) ? L10n.T("此电脑") : path) + L10n.T(" …");
             var captured = path;
             Task.Run(() => _provider.List(captured)).ContinueWith(t =>
             {
@@ -283,26 +283,26 @@ namespace Gdterm.UI.Controls
                 if (t.IsFaulted)
                 {
                     var msg = t.Exception.GetBaseException().Message;
-                    _status.Text = "读取失败: " + msg;
+                    _status.Text = L10n.T("读取失败: ") + msg;
                     try { DiagLog.Error("FilePaneControl.Navigate", t.Exception); } catch (Exception) { }
                     // 失败不能只留状态栏一行：目录读不出来时列表是空的，正好和"空目录"长得一样
                     if (_empty != null)
                     {
-                        _empty.SetEmpty(true, "读取失败", msg);
+                        _empty.SetEmpty(true, L10n.T("读取失败"), msg);
                         if (_empty.ActionButton != null) _empty.ActionButton.Visible = true;
                     }
-                    ToastNotifier.Error("目录读取失败：" + msg);
+                    ToastNotifier.Error(L10n.T("目录读取失败：") + msg);
                     return;
                 }
                 var entries = t.Result;
                 _currentPath = captured ?? "";   // null→""（本地盘符伪根），便于 Refresh 原地重列
-                _pathBox.Text = string.IsNullOrEmpty(captured) ? "此电脑" : captured;
+                _pathBox.Text = string.IsNullOrEmpty(captured) ? L10n.T("此电脑") : captured;
                 RenderList(entries);
-                _status.Text = (string.IsNullOrEmpty(captured) ? "此电脑" : captured) + "  (" + entries.Count + " 项)";
+                _status.Text = (string.IsNullOrEmpty(captured) ? L10n.T("此电脑") : captured) + L10n.T("  (") + entries.Count + L10n.T(" 项)");
                 if (_empty != null)
                 {
-                    _empty.SetEmpty(entries.Count == 0, "这个目录是空的",
-                        "拖文件到这里可直接上传；点「刷新」重新读取");
+                    _empty.SetEmpty(entries.Count == 0, L10n.T("这个目录是空的"),
+                        L10n.T("拖文件到这里可直接上传；点「刷新」重新读取"));
                     if (_empty.ActionButton != null) _empty.ActionButton.Visible = true;
                 }
             }, TaskScheduler.FromCurrentSynchronizationContext());
@@ -348,9 +348,9 @@ namespace Gdterm.UI.Controls
         private void Mkdir()
         {
             if (_currentPath == null) return;
-            var name = InputBox.Show(FindForm(), "新建目录", "目录名:");
+            var name = InputBox.Show(FindForm(), L10n.T("新建目录"), L10n.T("目录名:"));
             if (string.IsNullOrWhiteSpace(name)) return;
-            RunFsOp("新建目录", () =>
+            RunFsOp(L10n.T("新建目录"), () =>
             {
                 _provider.Mkdir(_provider.Combine(_currentPath, name.Trim()));
             }, refresh: true);
@@ -360,9 +360,9 @@ namespace Gdterm.UI.Controls
         {
             var entries = SelectedEntries();
             if (entries.Length == 0) return;
-            if (MessageBox.Show(FindForm(), "确认删除 " + DescribeEntries(entries) + " ?", "文件操作",
+            if (MessageBox.Show(FindForm(), L10n.T("确认删除 ") + DescribeEntries(entries) + L10n.T(" ?"), L10n.T("文件操作"),
                 MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
-            RunFsOp("删除", () =>
+            RunFsOp(L10n.T("删除"), () =>
             {
                 foreach (var e in entries) _provider.Delete(e.FullPath, e.IsDirectory);
             }, refresh: true);
@@ -373,9 +373,9 @@ namespace Gdterm.UI.Controls
             if (_list.SelectedItems.Count == 0) return;
             var entry = _list.SelectedItems[0].Tag as FileEntry;
             if (entry == null) return;
-            var newName = InputBox.Show(FindForm(), "重命名 " + entry.Name, "新名称:", entry.Name);
+            var newName = InputBox.Show(FindForm(), L10n.T("重命名 ") + entry.Name, L10n.T("新名称:"), entry.Name);
             if (string.IsNullOrWhiteSpace(newName) || newName == entry.Name) return;
-            RunFsOp("重命名", () =>
+            RunFsOp(L10n.T("重命名"), () =>
             {
                 _provider.Rename(entry.FullPath, _provider.Combine(_currentPath, newName.Trim()), entry.IsDirectory);
             }, refresh: true);
@@ -398,7 +398,7 @@ namespace Gdterm.UI.Controls
                     // A2：下载/打开移后台 + 30s 超时，禁止 UI 线程 GetResult（对齐下方文本预览路径）。
                     var tmp = Path.Combine(Path.GetTempPath(), "gdterm_img_" + Guid.NewGuid().ToString("N") + Path.GetExtension(entry.Name));
                     var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                    _status.Text = "预览加载图片 " + entry.Name + " …";
+                    _status.Text = L10n.T("预览加载图片 ") + entry.Name + L10n.T(" …");
                     Task.Run(async () =>
                     {
                         try
@@ -407,25 +407,25 @@ namespace Gdterm.UI.Controls
                             try { System.Diagnostics.Process.Start(tmp); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("FilePaneControl", exSwallowed); } catch { } }
                             return (string)null;
                         }
-                        catch (OperationCanceledException) { return "下载超时（30s）"; }
+                        catch (OperationCanceledException) { return L10n.T("下载超时（30s）"); }
                         catch (Exception ex) { return ex.Message; }
                     }).ContinueWith(t =>
                     {
                         if (IsDisposed) return;
                         _status.Text = entry.FullPath;
                         if (t.Result != null)
-                            MessageBox.Show(FindForm(), "图片打开失败:\n" + t.Result,
-                                "预览", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            MessageBox.Show(FindForm(), L10n.T("图片打开失败:\n") + t.Result,
+                                L10n.T("预览"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }, TaskScheduler.FromCurrentSynchronizationContext());
                     return;
                 }
                 if (!Gdterm.Sftp.SftpEnhancements.IsTextFile(entry.Name))
                 {
-                    MessageBox.Show(FindForm(), "该类型暂不支持预览（仅文本/图片）。", "预览",
+                    MessageBox.Show(FindForm(), L10n.T("该类型暂不支持预览（仅文本/图片）。"), L10n.T("预览"),
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                     return;
                 }
-                _status.Text = "预览加载 " + entry.Name + " …";
+                _status.Text = L10n.T("预览加载 ") + entry.Name + L10n.T(" …");
                 Task.Run(async () =>
                 {
                     try
@@ -433,7 +433,7 @@ namespace Gdterm.UI.Controls
                         return await Gdterm.Sftp.SftpEnhancements.PreviewTextFileAsync(
                             sftp, entry.FullPath, 100, CancellationToken.None);
                     }
-                    catch (Exception ex) { return "预览失败: " + ex.Message; }
+                    catch (Exception ex) { return L10n.T("预览失败: ") + ex.Message; }
                 }).ContinueWith(t =>
                 {
                     _status.Text = entry.FullPath;
@@ -457,14 +457,14 @@ namespace Gdterm.UI.Controls
                     string line;
                     int count = 0;
                     while ((line = reader.ReadLine()) != null && count < 100) { lines.Add(line); count++; }
-                    if (!reader.EndOfStream) lines.Add("... （仅显示前 100 行）");
+                    if (!reader.EndOfStream) lines.Add(L10n.T("... （仅显示前 100 行）"));
                 }
                 PreviewBox.Show(FindForm(), entry.Name, string.Join("\n", lines));
             }
             catch (Exception ex)
             {
-                MessageBox.Show(FindForm(), "预览失败:\n" + ex.Message,
-                    "预览", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(FindForm(), L10n.T("预览失败:\n") + ex.Message,
+                    L10n.T("预览"), MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -483,7 +483,7 @@ namespace Gdterm.UI.Controls
                 using (var dlg = new Gdterm.UI.Forms.SftpPermissionForm(entry.Name, entry.Permissions, octal))
                 {
                     if (dlg.ShowDialog(FindForm()) != DialogResult.OK) return;
-                    RunFsOp("修改权限", () =>
+                    RunFsOp(L10n.T("修改权限"), () =>
                     {
                         sftp.ChmodAsync(entry.FullPath, dlg.OctalMode, CancellationToken.None).GetAwaiter().GetResult();
                     }, refresh: true);
@@ -491,9 +491,9 @@ namespace Gdterm.UI.Controls
                 return;
             }
             MessageBox.Show(FindForm(),
-                "名称: " + entry.Name + "\n大小: " + FormatSize(entry.SizeBytes)
-                + "\n修改: " + (entry.LastModified == DateTime.MinValue ? "-" : entry.LastModified.ToString("yyyy-MM-dd HH:mm")),
-                "属性", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                L10n.T("名称: ") + entry.Name + L10n.T("\n大小: ") + FormatSize(entry.SizeBytes)
+                + L10n.T("\n修改: ") + (entry.LastModified == DateTime.MinValue ? "-" : entry.LastModified.ToString("yyyy-MM-dd HH:mm")),
+                L10n.T("属性"), MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void RunFsOp(string opName, Action op, bool refresh)
@@ -506,13 +506,13 @@ namespace Gdterm.UI.Controls
                 _busy = false;
                 if (t.IsFaulted)
                 {
-                    _status.Text = opName + "失败: " + t.Exception.GetBaseException().Message;
-                    MessageBox.Show(FindForm(), opName + "失败:\n" + t.Exception.GetBaseException().Message,
-                        "文件操作", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    _status.Text = opName + L10n.T("失败: ") + t.Exception.GetBaseException().Message;
+                    MessageBox.Show(FindForm(), opName + L10n.T("失败:\n") + t.Exception.GetBaseException().Message,
+                        L10n.T("文件操作"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
                 else
                 {
-                    _status.Text = opName + "完成";
+                    _status.Text = opName + L10n.T("完成");
                     if (refresh) Refresh();
                 }
             }, TaskScheduler.FromCurrentSynchronizationContext());
@@ -523,9 +523,9 @@ namespace Gdterm.UI.Controls
             if (entries.Length == 1)
             {
                 var e = entries[0];
-                return e.IsDirectory ? "目录 " + e.Name : "文件 " + e.Name;
+                return e.IsDirectory ? L10n.T("目录 ") + e.Name : L10n.T("文件 ") + e.Name;
             }
-            return entries.Length + " 个条目";
+            return entries.Length + L10n.T(" 个条目");
         }
 
         private static string FormatSize(long bytes)
@@ -543,7 +543,7 @@ namespace Gdterm.UI.Controls
         {
             using (var f = new Form
             {
-                Text = "预览：" + (title ?? ""),
+                Text = L10n.T("预览：") + (title ?? ""),
                 StartPosition = FormStartPosition.CenterParent,
                 FormBorderStyle = FormBorderStyle.Sizable,
                 MaximizeBox = true,
@@ -565,7 +565,7 @@ namespace Gdterm.UI.Controls
                     ForeColor = GdtermColorTable.Foreground,
                 };
                 var flow = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(DpiScale.V(f, 12), DpiScale.V(f, 6), DpiScale.V(f, 12), DpiScale.V(f, 6)) };
-                var close = new AntdUI.Button { Text = "关闭", DialogResult = DialogResult.OK, AutoSize = true, Padding = new Padding(DpiScale.V(f, 12), DpiScale.V(f, 4), DpiScale.V(f, 12), DpiScale.V(f, 4)), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+                var close = new AntdUI.Button { Text = L10n.T("关闭"), DialogResult = DialogResult.OK, AutoSize = true, Padding = new Padding(DpiScale.V(f, 12), DpiScale.V(f, 4), DpiScale.V(f, 12), DpiScale.V(f, 4)), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
                 flow.Controls.Add(close);
                 f.Controls.Add(box);
                 f.Controls.Add(flow);
@@ -604,8 +604,8 @@ namespace Gdterm.UI.Controls
                 };
                 if (!string.IsNullOrEmpty(initial)) box.Text = initial;
                 var flow = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(DpiScale.V(f, 12), DpiScale.V(f, 6), DpiScale.V(f, 12), DpiScale.V(f, 6)) };
-                var cancel = new AntdUI.Button { Text = "取消", DialogResult = DialogResult.Cancel, AutoSize = true, Padding = new Padding(DpiScale.V(f, 12), DpiScale.V(f, 4), DpiScale.V(f, 12), DpiScale.V(f, 4)), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
-                var ok = new AntdUI.Button { Text = "确定", DialogResult = DialogResult.OK, AutoSize = true, Padding = new Padding(DpiScale.V(f, 12), DpiScale.V(f, 4), DpiScale.V(f, 12), DpiScale.V(f, 4)), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+                var cancel = new AntdUI.Button { Text = L10n.T("取消"), DialogResult = DialogResult.Cancel, AutoSize = true, Padding = new Padding(DpiScale.V(f, 12), DpiScale.V(f, 4), DpiScale.V(f, 12), DpiScale.V(f, 4)), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+                var ok = new AntdUI.Button { Text = L10n.T("确定"), DialogResult = DialogResult.OK, AutoSize = true, Padding = new Padding(DpiScale.V(f, 12), DpiScale.V(f, 4), DpiScale.V(f, 12), DpiScale.V(f, 4)), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
                 flow.Controls.Add(cancel); // RightToLeft 流序：先加靠右
                 flow.Controls.Add(ok);
                 f.Controls.Add(box);

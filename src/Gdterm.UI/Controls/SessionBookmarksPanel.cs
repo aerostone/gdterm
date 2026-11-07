@@ -44,7 +44,7 @@ namespace Gdterm.UI.Controls
             Dock = DockStyle.Fill;
 
             var title = new AntdUI.Label {
-                Text = "书签 / 最近连接",
+                Text = L10n.T("书签 / 最近连接"),
                 Dock = DockStyle.Top,
                 AutoSize = true,
                 ForeColor = GdtermColorTable.Foreground,
@@ -71,13 +71,13 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(DpiScale.V(this, 4), DpiScale.V(this, 2), DpiScale.V(this, 4), DpiScale.V(this, 2))
             };
-            var addBtn = MakeButton("添加书签");
+            var addBtn = MakeButton(L10n.T("添加书签"));
             addBtn.Click += OnAddBookmark;
-            var delBtn = MakeButton("删除");
+            var delBtn = MakeButton(L10n.T("删除"));
             delBtn.Click += OnDeleteBookmark;
-            var favBtn = MakeButton("收藏/取消");
+            var favBtn = MakeButton(L10n.T("收藏/取消"));
             favBtn.Click += OnToggleFavorite;
-            var refreshBtn = MakeButton("刷新");
+            var refreshBtn = MakeButton(L10n.T("刷新"));
             refreshBtn.Click += (s, e) => Reload();
             toolbar.Controls.AddRange(new Control[] { addBtn, delBtn, favBtn, refreshBtn });
 
@@ -98,12 +98,12 @@ namespace Gdterm.UI.Controls
                 SplitterWidth = 4
             };
 
-            _bookmarksList = CreateListView("书签");
+            _bookmarksList = CreateListView(L10n.T("书签"));
             _bookmarksList.CheckBoxes = true;   // 批量删除/收藏
-            _bookmarksList.Columns.Add("名称", 140);
-            _bookmarksList.Columns.Add("连接", 100);
-            _bookmarksList.Columns.Add("标签", 80);
-            _bookmarksList.Columns.Add("次数", 50);
+            _bookmarksList.Columns.Add(L10n.T("名称"), 140);
+            _bookmarksList.Columns.Add(L10n.T("连接"), 100);
+            _bookmarksList.Columns.Add(L10n.T("标签"), 80);
+            _bookmarksList.Columns.Add(L10n.T("次数"), 50);
             _bookmarksList.DoubleClick += (s, e) => OpenSelectedBookmark();
             _bookmarksList.KeyDown += (s, e) =>
             {
@@ -113,7 +113,7 @@ namespace Gdterm.UI.Controls
 
             // 两个列表各配一个壳：排序 + 导出（书签页自己有搜索框，壳不再出第二个过滤）
             _shellBookmarks = new ListShell(_bookmarksList, showFilter: false);
-            _shellBookmarks.AddAction("导出", (s2, e2) => _shellBookmarks.ExportCsv(FindForm(), "bookmarks")).Name = "BookmarkExportButton";
+            _shellBookmarks.AddAction(L10n.T("导出"), (s2, e2) => _shellBookmarks.ExportCsv(FindForm(), "bookmarks")).Name = "BookmarkExportButton";
             _bookmarksList.KeyDown += (s2, e2) =>
             {
                 if (e2.Control && e2.KeyCode == Keys.F) { _searchBox.Focus(); _searchBox.SelectAll(); e2.SuppressKeyPress = true; }
@@ -121,7 +121,7 @@ namespace Gdterm.UI.Controls
 
             var bmHost = new Panel { Dock = DockStyle.Fill };
             var bmLabel = new AntdUI.Label {
-                Text = "收藏书签",
+                Text = L10n.T("收藏书签"),
                 Dock = DockStyle.Top,
                 Height = Math.Max(DpiScale.V(this, 20), FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this)),
                 ForeColor = GdtermColorTable.Muted,
@@ -130,18 +130,18 @@ namespace Gdterm.UI.Controls
             bmHost.Controls.Add(_shellBookmarks);
             bmHost.Controls.Add(bmLabel);
 
-            _recentList = CreateListView("最近");
+            _recentList = CreateListView(L10n.T("最近"));
             _shellRecent = new ListShell(_recentList);
-            _shellRecent.AddAction("导出", (s2, e2) => _shellRecent.ExportCsv(FindForm(), "recent-connections")).Name = "RecentExportButton";
-            _recentList.Columns.Add("主机", 140);
-            _recentList.Columns.Add("协议", 60);
-            _recentList.Columns.Add("时间", 120);
-            _recentList.Columns.Add("结果", 50);
+            _shellRecent.AddAction(L10n.T("导出"), (s2, e2) => _shellRecent.ExportCsv(FindForm(), "recent-connections")).Name = "RecentExportButton";
+            _recentList.Columns.Add(L10n.T("主机"), 140);
+            _recentList.Columns.Add(L10n.T("协议"), 60);
+            _recentList.Columns.Add(L10n.T("时间"), 120);
+            _recentList.Columns.Add(L10n.T("结果"), 50);
             _recentList.DoubleClick += (s, e) => OpenSelectedRecent();
 
             var recentHost = new Panel { Dock = DockStyle.Fill };
             var recentLabel = new AntdUI.Label {
-                Text = "最近连接",
+                Text = L10n.T("最近连接"),
                 Dock = DockStyle.Top,
                 Height = Math.Max(DpiScale.V(this, 20), FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this)),
                 ForeColor = GdtermColorTable.Muted,
@@ -158,19 +158,19 @@ namespace Gdterm.UI.Controls
             Controls.Add(_searchBox);
             Controls.Add(title);
             Controls.Add(_statusLabel);
-            _bookmarksList.AccessibleName = "书签列表";
-            _recentList.AccessibleName = "最近连接列表";
+            _bookmarksList.AccessibleName = L10n.T("书签列表");
+            _recentList.AccessibleName = L10n.T("最近连接列表");
             // 无障碍名称回填：ListView/Table 本身没有 Text，AutoName 只补有文本的控件，
             // 列表名单独设（读屏软件念"宏列表"而不是"列表"）
             try { UiA11y.AutoName(this); } catch (Exception) { }
 
 
             // 审计 C1：两个列表各自要有空态 —— 只有书签没记录、只有记录没书签都是常态
-            _emptyBookmarks = EmptyStateView.Attach(bmHost, "还没有书签",
-                "把常用会话收进书签，下次按名称/标签就能搜到",
-                "添加书签", (s2, e2) => OnAddBookmark(s2, e2));
-            _emptyRecent = EmptyStateView.Attach(recentHost, "还没有连接记录",
-                "连过的会话会按时间倒序留在这里，成功/失败一目了然");
+            _emptyBookmarks = EmptyStateView.Attach(bmHost, L10n.T("还没有书签"),
+                L10n.T("把常用会话收进书签，下次按名称/标签就能搜到"),
+                L10n.T("添加书签"), (s2, e2) => OnAddBookmark(s2, e2));
+            _emptyRecent = EmptyStateView.Attach(recentHost, L10n.T("还没有连接记录"),
+                L10n.T("连过的会话会按时间倒序留在这里，成功/失败一目了然"));
 
             // 布局顺序：Bottom 先加会被挤；用 Resume 后设 splitter
             split.SplitterDistance = 220;
@@ -214,7 +214,7 @@ namespace Gdterm.UI.Controls
 
         private void FilterBookmarks()
         {
-            using (BusyScope.Begin(this, "正在读取书签…", false))
+            using (BusyScope.Begin(this, L10n.T("正在读取书签…"), false))
             {
             _bookmarksList.BeginUpdate();
             _bookmarksList.Items.Clear();
@@ -235,7 +235,7 @@ namespace Gdterm.UI.Controls
                         if (hay.IndexOf(q.ToLowerInvariant(), StringComparison.Ordinal) < 0)
                             continue;
                     }
-                    var item = new ListViewItem(b.Name ?? "(未命名)")
+                    var item = new ListViewItem(b.Name ?? L10n.T("(未命名)"))
                     {
                         Tag = b,
                         ForeColor = b.IsFavorite ? GdtermColorTable.Warning : GdtermColorTable.Foreground
@@ -246,13 +246,13 @@ namespace Gdterm.UI.Controls
                     rows.Add(item);
                 }
                 _shellBookmarks.SetItems(rows);
-                _statusLabel.Text = "书签 " + _shellBookmarks.AllItems.Count + " 条";
+                _statusLabel.Text = L10n.T("书签 ") + _shellBookmarks.AllItems.Count + L10n.T(" 条");
             }
             catch (Exception ex)
             {
-                _statusLabel.Text = "加载失败: " + ex.Message;
+                _statusLabel.Text = L10n.T("加载失败: ") + ex.Message;
                 try { DiagLog.Error("SessionBookmarksPanel.Filter", ex); } catch (Exception) { }
-                ToastNotifier.Error("书签加载失败：" + ex.Message);
+                ToastNotifier.Error(L10n.T("书签加载失败：") + ex.Message);
             }
             finally
             {
@@ -268,8 +268,8 @@ namespace Gdterm.UI.Controls
                     }
                     catch (Exception) { }
                     _emptyBookmarks.SetEmpty(_shellBookmarks.AllItems.Count == 0,
-                        hasAny ? "没有匹配的书签" : null,
-                        hasAny ? "换个名称/标签再搜，或清空搜索框" : null);
+                        hasAny ? L10n.T("没有匹配的书签") : null,
+                        hasAny ? L10n.T("换个名称/标签再搜，或清空搜索框") : null);
                 }
             }
             }
@@ -292,7 +292,7 @@ namespace Gdterm.UI.Controls
                     };
                     item.SubItems.Add(r.Protocol ?? "");
                     item.SubItems.Add(r.ConnectedAt.ToLocalTime().ToString("MM-dd HH:mm"));
-                    item.SubItems.Add(r.Success ? "OK" : "失败");
+                    item.SubItems.Add(r.Success ? "OK" : L10n.T("失败"));
                     rows.Add(item);
                 }
                 _shellRecent.SetItems(rows);
@@ -300,7 +300,7 @@ namespace Gdterm.UI.Controls
             catch (Exception ex)
             {
                 try { DiagLog.Error("SessionBookmarksPanel.Recent", ex); } catch (Exception) { }
-                ToastNotifier.Error("最近连接加载失败：" + ex.Message);
+                ToastNotifier.Error(L10n.T("最近连接加载失败：") + ex.Message);
             }
             finally
             {
@@ -313,20 +313,20 @@ namespace Gdterm.UI.Controls
         {
             if (_connectionStore == null)
             {
-                MessageBox.Show("连接存储不可用", "书签", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(L10n.T("连接存储不可用"), L10n.T("书签"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             var connections = _connectionStore.LoadAll();
             if (connections == null || connections.Count == 0)
             {
-                MessageBox.Show("没有可添加的连接", "书签", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(L10n.T("没有可添加的连接"), L10n.T("书签"), MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             using (var dlg = new Form())
             {
-                dlg.Text = "添加书签";
+                dlg.Text = L10n.T("添加书签");
                 // ClientSize 在按钮行后按行高动态计算（见下方）
                 dlg.StartPosition = FormStartPosition.CenterParent;
                 dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -341,7 +341,7 @@ namespace Gdterm.UI.Controls
                 int rowH = fieldH + DpiScale.V(this, 12);
                 int pad = DpiScale.V(this, 15);
                 int y = DpiScale.V(this, 18);
-                var lblName = new AntdUI.Label { Text = "名称", ForeColor = GdtermColorTable.Muted, Location = new Point(pad, y), AutoSize = true };
+                var lblName = new AntdUI.Label { Text = L10n.T("名称"), ForeColor = GdtermColorTable.Muted, Location = new Point(pad, y), AutoSize = true };
                 y += Services.FormFontPolicy.RowStep(this);
                 var nameBox = new AntdUI.Input {
                     Location = new Point(pad, y),
@@ -350,7 +350,7 @@ namespace Gdterm.UI.Controls
                     ForeColor = GdtermColorTable.Foreground
                 };
                 y += rowH;
-                var lblConn = new AntdUI.Label { Text = "连接", ForeColor = GdtermColorTable.Muted, Location = new Point(pad, y), AutoSize = true };
+                var lblConn = new AntdUI.Label { Text = L10n.T("连接"), ForeColor = GdtermColorTable.Muted, Location = new Point(pad, y), AutoSize = true };
                 y += Services.FormFontPolicy.RowStep(this);
                 var combo = new AntdUI.Select {
                     Location = new Point(pad, y),
@@ -365,7 +365,7 @@ namespace Gdterm.UI.Controls
 
                 int btnH = Math.Max(DpiScale.V(this, 30), fieldH);
                 var ok = new AntdUI.Button {
-                    Text = "保存",
+                    Text = L10n.T("保存"),
                     DialogResult = DialogResult.OK,
                     Location = new Point(pad + DpiScale.V(this, 310) - DpiScale.V(this, 80), y),
                     Size = new Size(DpiScale.V(this, 80), btnH),
@@ -399,7 +399,7 @@ namespace Gdterm.UI.Controls
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show("添加失败: " + ex.Message, "书签", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    MessageBox.Show(L10n.T("添加失败: ") + ex.Message, L10n.T("书签"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
@@ -414,9 +414,9 @@ namespace Gdterm.UI.Controls
             }
             if (targets.Count == 0) return;
             string ask = targets.Count == 1
-                ? "删除书签「" + targets[0].Name + "」？"
-                : "删除选中的 " + targets.Count + " 个书签？";
-            if (MessageBox.Show(ask, "确认",
+                ? L10n.Tf("删除书签「{0}」？", targets[0].Name)
+                : L10n.Tf("删除选中的 {0} 个书签？", targets.Count);
+            if (MessageBox.Show(ask, L10n.T("确认"),
                     MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return;
             try
@@ -428,12 +428,12 @@ namespace Gdterm.UI.Controls
                     catch (Exception) { fail++; }
                 }
                 Reload();
-                if (fail == 0) ToastNotifier.Success("已删除 " + ok + " 个书签");
-                else ToastNotifier.Warning("删除完成：" + ok + " 成功，" + fail + " 失败");
+                if (fail == 0) ToastNotifier.Success(L10n.T("已删除 ") + ok + L10n.T(" 个书签"));
+                else ToastNotifier.Warning(L10n.T("删除完成：") + ok + L10n.T(" 成功，") + fail + L10n.T(" 失败"));
             }
             catch (Exception ex)
             {
-                MessageBox.Show("删除失败: " + ex.Message, "书签", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(L10n.T("删除失败: ") + ex.Message, L10n.T("书签"), MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -450,7 +450,7 @@ namespace Gdterm.UI.Controls
             }
             catch (Exception ex)
             {
-                MessageBox.Show("更新失败: " + ex.Message, "书签", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(L10n.T("更新失败: ") + ex.Message, L10n.T("书签"), MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
 
@@ -462,7 +462,7 @@ namespace Gdterm.UI.Controls
             var cfg = ResolveConnection(bm.ConnectionId);
             if (cfg == null)
             {
-                MessageBox.Show("找不到连接: " + bm.ConnectionId, "书签",
+                MessageBox.Show(L10n.T("找不到连接: ") + bm.ConnectionId, L10n.T("书签"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -480,7 +480,7 @@ namespace Gdterm.UI.Controls
             var cfg = ResolveConnection(r.ConnectionId);
             if (cfg == null)
             {
-                MessageBox.Show("找不到连接: " + r.ConnectionId, "最近",
+                MessageBox.Show(L10n.T("找不到连接: ") + r.ConnectionId, L10n.T("最近"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
