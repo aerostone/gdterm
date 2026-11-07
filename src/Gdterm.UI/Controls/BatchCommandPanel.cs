@@ -11,6 +11,7 @@ using Gdterm.Terminal;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 using Gdterm.UI.Diagnostics;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
@@ -87,14 +88,14 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(DpiScale.V(this, 8))
             };
 
-            var lblCmd = new AntdUI.Label { Text = "命令:", AutoSize = true, Margin = new Padding(0, DpiScale.V(this, 6), DpiScale.V(this, 8), 0), Font = font, ForeColor = GdtermColorTable.Foreground };
+            var lblCmd = new AntdUI.Label { Text = L10n.T("命令:"), AutoSize = true, Margin = new Padding(0, DpiScale.V(this, 6), DpiScale.V(this, 8), 0), Font = font, ForeColor = GdtermColorTable.Foreground };
             // 输入框高度与项目 38 地板统一（原先 28 在大字号下文字被裁）
             // 宽度不写死 500：侧栏只有 ~360，固定宽会顶出右边界（CI 0.1.381 越界 x=16 w=500）。
             // 先给一个设计宽，随后由 FitCommandBox 按宿主实际宽夹取。
             _txtCommand = new AntdUI.Input { Width = DpiScale.V(this, 500), Height = FormFontPolicy.FieldHeight(this), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.MonoFont(), Margin = new Padding(0, DpiScale.V(this, 1), DpiScale.V(this, 8), 0)};
             _txtCommand.KeyDown += OnCommandKeyDown;
 
-            _btnExecute = new AntdUI.Button { Text = "▶ 执行", AutoSize = true, Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)), Type = AntdUI.TTypeMini.Primary, Font = font, Margin = new Padding(0, 0, DpiScale.V(this, 8), 0) };
+            _btnExecute = new AntdUI.Button { Text = L10n.T("▶ 执行"), AutoSize = true, Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)), Type = AntdUI.TTypeMini.Primary, Font = font, Margin = new Padding(0, 0, DpiScale.V(this, 8), 0) };
             _btnExecute.Click += (s, e) => ExecuteCommand();
 
             _lblStatus = new AntdUI.Label { Text = "", AutoSize = true, Margin = new Padding(0, DpiScale.V(this, 6), 0, 0), Font = font, ForeColor = GdtermColorTable.Muted };
@@ -108,9 +109,9 @@ namespace Gdterm.UI.Controls
             var leftPanel = new Panel { Dock = DockStyle.Left, Width = 250, BackColor = GdtermColorTable.Surface, Padding = new Padding(4) };
 
             var leftHeader = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, BackColor = GdtermColorTable.Surface, Padding = new Padding(DpiScale.V(this, 4)) };
-            _btnSelectAll = new AntdUI.Button { Text = "全选", AutoSize = true, Margin = new Padding(0, 0, DpiScale.V(this, 6), 0), Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 3), DpiScale.V(this, 10), DpiScale.V(this, 3)), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-1f) };
+            _btnSelectAll = new AntdUI.Button { Text = L10n.T("全选"), AutoSize = true, Margin = new Padding(0, 0, DpiScale.V(this, 6), 0), Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 3), DpiScale.V(this, 10), DpiScale.V(this, 3)), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-1f) };
             _btnSelectAll.Click += (s, e) => { foreach (ListViewItem item in _lvSessions.Items) item.Checked = true; };
-            var btnDeselect = new AntdUI.Button { Text = "取消", AutoSize = true, Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 3), DpiScale.V(this, 10), DpiScale.V(this, 3)), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-1f) };
+            var btnDeselect = new AntdUI.Button { Text = L10n.T("取消"), AutoSize = true, Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 3), DpiScale.V(this, 10), DpiScale.V(this, 3)), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-1f) };
             btnDeselect.Click += (s, e) => { foreach (ListViewItem item in _lvSessions.Items) item.Checked = false; };
             leftHeader.Controls.AddRange(new Control[] { _btnSelectAll, btnDeselect });
 
@@ -124,8 +125,8 @@ namespace Gdterm.UI.Controls
                 Font = Services.FormFontPolicy.MonoFont(),
                 FullRowSelect = true
             };
-            _lvSessions.Columns.Add("会话", 200);
-            _lvSessions.Columns.Add("状态", 40);
+            _lvSessions.Columns.Add(L10n.T("会话"), 200);
+            _lvSessions.Columns.Add(L10n.T("状态"), 40);
 
             // 列表壳：排序 + 计数（会话多时按名字/状态排；不加过滤——勾选批量执行依赖全量可见，
             // 过滤后“全选”只作用于可见子集，语义会变，故这里 showFilter:false 只开排序）
@@ -228,9 +229,9 @@ namespace Gdterm.UI.Controls
             if (string.IsNullOrEmpty(command))
             {
                 // 原来这里直接 return：点「执行」毫无反应，用户以为按钮坏了
-                _lblStatus.Text = "请先输入要执行的命令";
+                _lblStatus.Text = L10n.T("请先输入要执行的命令");
                 _lblStatus.ForeColor = GdtermColorTable.Warning;
-                ToastNotifier.Warning("请输入要批量执行的命令");
+                ToastNotifier.Warning(L10n.T("请输入要批量执行的命令"));
                 _txtCommand.Focus();
                 return;
             }
@@ -244,7 +245,7 @@ namespace Gdterm.UI.Controls
 
             if (selected.Count == 0)
             {
-                _lblStatus.Text = "请勾选至少一个会话";
+                _lblStatus.Text = L10n.T("请勾选至少一个会话");
                 _lblStatus.ForeColor = GdtermColorTable.Danger;
                 return;
             }
@@ -262,7 +263,7 @@ namespace Gdterm.UI.Controls
                             dlg.ShowDialog(FindForm());
                             if (!dlg.IsConfirmed)
                             {
-                                _lblStatus.Text = "已取消危险命令";
+                                _lblStatus.Text = L10n.T("已取消危险命令");
                                 _lblStatus.ForeColor = GdtermColorTable.Warning;
                                 return;
                             }
@@ -278,13 +279,13 @@ namespace Gdterm.UI.Controls
 
             RememberCommand(command);
             _btnExecute.Enabled = false;
-            _lblStatus.Text = string.Format("正在向 {0} 个会话发送...", selected.Count);
+            _lblStatus.Text = string.Format(L10n.T("正在向 {0} 个会话发送..."), selected.Count);
             _lblStatus.ForeColor = GdtermColorTable.Foreground;
 
             _rtbResults.Clear();
-            AppendResult("━━━ 批量命令执行 ━━━\n", GdtermColorTable.Success);
-            AppendResult(string.Format("命令: {0}\n", command), GdtermColorTable.Foreground);
-            AppendResult(string.Format("目标: {0} 个会话\n\n", selected.Count), GdtermColorTable.Muted);
+            AppendResult(L10n.T("━━━ 批量命令执行 ━━━\n"), GdtermColorTable.Success);
+            AppendResult(string.Format(L10n.T("命令: {0}\n"), command), GdtermColorTable.Foreground);
+            AppendResult(string.Format(L10n.T("目标: {0} 个会话\n\n"), selected.Count), GdtermColorTable.Muted);
 
             var results = await _executor.ExecuteAsync(selected, command, 15000);
 
@@ -295,14 +296,14 @@ namespace Gdterm.UI.Controls
                 foreach (var line in result.Output.Take(20))
                     AppendResult("│  " + line + "\n", GdtermColorTable.Muted);
                 if (result.Output.Count > 20)
-                    AppendResult(string.Format("│  ... ({0} 行)\n", result.Output.Count), GdtermColorTable.Muted);
+                    AppendResult(string.Format(L10n.T("│  ... ({0} 行)\n"), result.Output.Count), GdtermColorTable.Muted);
                 if (!string.IsNullOrEmpty(result.ErrorMessage))
-                    AppendResult("│  错误: " + result.ErrorMessage + "\n", GdtermColorTable.Danger);
+                    AppendResult(L10n.T("│  错误: ") + result.ErrorMessage + "\n", GdtermColorTable.Danger);
                 AppendResult("└────────────────\n\n", GdtermColorTable.Border);
             }
 
             _btnExecute.Enabled = true;
-            _lblStatus.Text = string.Format("完成: {0} 成功 / {1} 总计",
+            _lblStatus.Text = string.Format(L10n.T("完成: {0} 成功 / {1} 总计"),
                 results.Count(r => r.IsSuccess), results.Count);
             _lblStatus.ForeColor = GdtermColorTable.Success;
         }

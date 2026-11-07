@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
@@ -35,7 +36,7 @@ namespace Gdterm.UI.Controls
             ForeColor = GdtermColorTable.Foreground;
 
             var title = new AntdUI.Label {
-                Text = "传输中心",
+                Text = L10n.T("传输中心"),
                 Dock = DockStyle.Top,
                 Height = Math.Max(DpiScale.V(this, 28), FormFontPolicy.LineBox(FormFontPolicy.UiFont(+1f), this)),
                 Font = Services.FormFontPolicy.UiFont(+1f, FontStyle.Bold),
@@ -51,19 +52,19 @@ namespace Gdterm.UI.Controls
                 ForeColor = GdtermColorTable.Foreground,
                 Font = Services.FormFontPolicy.MonoFont()
             };
-            _list.Columns.Add("时间", DpiScale.V(this, 70));
-            _list.Columns.Add("说明", DpiScale.V(this, 360));
+            _list.Columns.Add(L10n.T("时间"), DpiScale.V(this, 70));
+            _list.Columns.Add(L10n.T("说明"), DpiScale.V(this, 360));
             var tip = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
                 Height = Math.Max(DpiScale.V(this, 22), FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this)),
-                Text = "上传/下载完成后会出现在此列表",
+                Text = L10n.T("上传/下载完成后会出现在此列表"),
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(DpiScale.V(this, 8), 0, 0, 0)
             };
             // 清空按钮（此前只有 Record/Reload，无清空入口，用户报 Record-only）
             var clear = new AntdUI.Button {
-                Text = "清空",
+                Text = L10n.T("清空"),
                 Dock = DockStyle.Bottom,
                 Height = Math.Max(DpiScale.V(this, 28), FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this)),
                 BackColor = GdtermColorTable.Surface,
@@ -75,10 +76,10 @@ namespace Gdterm.UI.Controls
                 lock (Sync) n = Jobs.Count;
                 if (n == 0)
                 {
-                    ToastNotifier.Info("传输记录已经是空的");
+                    ToastNotifier.Info(L10n.T("传输记录已经是空的"));
                     return;
                 }
-                if (MessageBox.Show(FindForm(), "清空 " + n + " 条传输记录？", "传输中心",
+                if (MessageBox.Show(FindForm(), L10n.T("清空 ") + n + L10n.T(" 条传输记录？"), L10n.T("传输中心"),
                         MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
                 try
                 {
@@ -88,7 +89,7 @@ namespace Gdterm.UI.Controls
                 catch (Exception ex)
                 {
                     try { DiagLog.Error("TransferCenter.Clear", ex); } catch (Exception) { }
-                    ToastNotifier.Error("清空失败：" + ex.Message);
+                    ToastNotifier.Error(L10n.T("清空失败：") + ex.Message);
                 }
             };
 
@@ -99,17 +100,17 @@ namespace Gdterm.UI.Controls
                 if (e.KeyCode == Keys.Enter) { CopySelected(); e.Handled = true; }
             };
 
-            _shell = new ListShell(_list, "过滤传输记录…");
-            _shell.AddAction("导出", (s2, e2) => _shell.ExportCsv(FindForm(), "transfers")).Name = "TransferExportButton";
+            _shell = new ListShell(_list, L10n.T("过滤传输记录…"));
+            _shell.AddAction(L10n.T("导出"), (s2, e2) => _shell.ExportCsv(FindForm(), "transfers")).Name = "TransferExportButton";
 
             Controls.Add(_shell);
             Controls.Add(tip);
             Controls.Add(clear);
             Controls.Add(title);
-            _empty = EmptyStateView.Attach(this, "还没有传输记录",
-                "从 SFTP 面板上传/下载、Zmodem 收发的文件，完成后都会记在这里",
-                "打开传输日志目录", (s2, e2) => OpenLogDir());
-            _list.AccessibleName = "传输记录列表";
+            _empty = EmptyStateView.Attach(this, L10n.T("还没有传输记录"),
+                L10n.T("从 SFTP 面板上传/下载、Zmodem 收发的文件，完成后都会记在这里"),
+                L10n.T("打开传输日志目录"), (s2, e2) => OpenLogDir());
+            _list.AccessibleName = L10n.T("传输记录列表");
             // 无障碍名称回填：ListView/Table 本身没有 Text，AutoName 只补有文本的控件，
             // 列表名单独设（读屏软件念"宏列表"而不是"列表"）
             try { UiA11y.AutoName(this); } catch (Exception) { }
@@ -154,12 +155,12 @@ namespace Gdterm.UI.Controls
             try
             {
                 Clipboard.SetText(it.Text + "  " + (it.SubItems.Count > 1 ? it.SubItems[1].Text : ""));
-                ToastNotifier.Success("已复制传输记录", 2000);
+                ToastNotifier.Success(L10n.T("已复制传输记录"), 2000);
             }
             catch (Exception ex)
             {
                 try { DiagLog.Error("TransferCenter.Copy", ex); } catch (Exception) { }
-                ToastNotifier.Error("复制失败：" + ex.Message);
+                ToastNotifier.Error(L10n.T("复制失败：") + ex.Message);
             }
         }
 
@@ -175,7 +176,7 @@ namespace Gdterm.UI.Controls
             catch (Exception ex)
             {
                 try { DiagLog.Error("TransferCenter.OpenLogDir", ex); } catch (Exception) { }
-                ToastNotifier.Error("打开日志目录失败：" + ex.Message);
+                ToastNotifier.Error(L10n.T("打开日志目录失败：") + ex.Message);
             }
         }
 

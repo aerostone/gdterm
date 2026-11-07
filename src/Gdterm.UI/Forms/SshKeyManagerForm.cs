@@ -8,6 +8,7 @@ using Gdterm.KeePass.Models;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Forms
 {
@@ -27,7 +28,7 @@ namespace Gdterm.UI.Forms
         public SshKeyManagerForm(IKeePassService keepass)
         {
             _keepass = keepass;
-            Text = "SSH 密钥管理";
+            Text = L10n.T("SSH 密钥管理");
             FormBorderStyle = FormBorderStyle.FixedDialog;
             Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             StartPosition = FormStartPosition.CenterParent;
@@ -48,26 +49,26 @@ namespace Gdterm.UI.Forms
             int fieldH = FormFontPolicy.FieldHeight(this);
             int rowH = fieldH + DpiScale.V(this, 12);
             int y = DpiScale.V(this, 20);
-            _title = Labeled(ref y, "条目标题", "SSH Key", boxX, boxW, fieldH, rowH);
-            _user = Labeled(ref y, "用户名", "root", boxX, boxW, fieldH, rowH);
-            _host = Labeled(ref y, "主机名", "", boxX, boxW, fieldH, rowH);
-            _passphrase = Labeled(ref y, "密钥口令", "", boxX, boxW, fieldH, rowH);
+            _title = Labeled(ref y, L10n.T("条目标题"), "SSH Key", boxX, boxW, fieldH, rowH);
+            _user = Labeled(ref y, L10n.T("用户名"), "root", boxX, boxW, fieldH, rowH);
+            _host = Labeled(ref y, L10n.T("主机名"), "", boxX, boxW, fieldH, rowH);
+            _passphrase = Labeled(ref y, L10n.T("密钥口令"), "", boxX, boxW, fieldH, rowH);
             _passphrase.UseSystemPasswordChar = true;
 
-            Controls.Add(MakeLabel("私钥文件", pad, y, fieldH));
+            Controls.Add(MakeLabel(L10n.T("私钥文件"), pad, y, fieldH));
             _keyPath = new AntdUI.Input {
                 Location = new Point(boxX, y),
                 Size = new Size(boxW - DpiScale.V(this, 100), fieldH)
             };
             Controls.Add(_keyPath);
             var browse = new AntdUI.Button {
-                Text = "浏览…",
+                Text = L10n.T("浏览…"),
                 Location = new Point(boxX + boxW - DpiScale.V(this, 90), y),
                 Size = new Size(DpiScale.V(this, 90), fieldH)
             };
             browse.Click += (s, e) =>
             {
-                using (var dlg = new OpenFileDialog { Title = "选择 PEM 私钥", Filter = "密钥文件|*.pem;*.key;id_rsa;id_ed25519;*.*|所有|*.*" })
+                using (var dlg = new OpenFileDialog { Title = L10n.T("选择 PEM 私钥"), Filter = L10n.T("密钥文件|*.pem;*.key;id_rsa;id_ed25519;*.*|所有|*.*") })
                 {
                     if (dlg.ShowDialog(this) == DialogResult.OK)
                     {
@@ -78,12 +79,12 @@ namespace Gdterm.UI.Forms
                             _preview.Text = raw.Length > 2000 ? raw.Substring(0, 2000) + "\n…" : raw;
                             // 选了非私钥文件（比如 .pub 公钥或别的文本）要当场说，而不是等导入后才由服务端拒绝
                             if (raw.IndexOf("PRIVATE KEY", StringComparison.Ordinal) < 0)
-                                AntdUI.Message.warn(this, "这个文件里没有 PRIVATE KEY 头，可能不是私钥（.pub 公钥无法用于认证）");
+                                AntdUI.Message.warn(this, L10n.T("这个文件里没有 PRIVATE KEY 头，可能不是私钥（.pub 公钥无法用于认证）"));
                         }
                         catch (Exception ex)
                         {
                             _preview.Text = ex.Message;
-                            ToastNotifier.Error("读取私钥文件失败：" + ex.Message);
+                            ToastNotifier.Error(L10n.T("读取私钥文件失败：") + ex.Message);
                         }
                     }
                 }
@@ -91,7 +92,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(browse);
             y += rowH;
 
-            Controls.Add(MakeLabel("预览", pad, y, fieldH));
+            Controls.Add(MakeLabel(L10n.T("预览"), pad, y, fieldH));
             int previewH = DpiScale.V(this, 190);
             _preview = new AntdUI.Input {
                 Location = new Point(boxX, y),
@@ -108,7 +109,7 @@ namespace Gdterm.UI.Forms
             int btnW2 = DpiScale.V(this, 88);
             int btnGap = DpiScale.V(this, 8);
             var cancel = new AntdUI.Button {
-                Text = "关闭",
+                Text = L10n.T("关闭"),
                 Location = new Point(clientW - pad - btnW2, y),
                 Size = new Size(btnW2, fieldH)
             };
@@ -116,7 +117,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(cancel);
 
             var ok = new AntdUI.Button {
-                Text = "导入到密码库",
+                Text = L10n.T("导入到密码库"),
                 Type = AntdUI.TTypeMini.Primary,
                 Location = new Point(clientW - pad - btnW - btnGap - btnW2, y),
                 Size = new Size(btnW, fieldH)
@@ -139,12 +140,12 @@ namespace Gdterm.UI.Forms
         {
             if (_keepass == null || !_keepass.IsUnlocked)
             {
-                AntdUI.Message.warn(this, "请先解锁密码库。");
+                AntdUI.Message.warn(this, L10n.T("请先解锁密码库。"));
                 return;
             }
             if (string.IsNullOrWhiteSpace(_keyPath.Text) || !File.Exists(_keyPath.Text))
             {
-                AntdUI.Message.warn(this, "请选择有效的私钥文件。");
+                AntdUI.Message.warn(this, L10n.T("请选择有效的私钥文件。"));
                 return;
             }
             try
@@ -165,13 +166,13 @@ namespace Gdterm.UI.Forms
                     return; // 用户取消密钥短语强度警告
                 var created = _keepass.CreateEntry(entry);
                 // A4：通知中心留痕已由 ToastNotifier.Show 统一承接，删除此处直连（否则重复入中心）
-                ToastNotifier.Success("密钥已导入: " + entry.Title + " (" + (created != null ? created.Id : "") + ")");
+                ToastNotifier.Success(L10n.T("密钥已导入: ") + entry.Title + " (" + (created != null ? created.Id : "") + ")");
                 DialogResult = DialogResult.OK;
                 Close();
             }
             catch (Exception ex)
             {
-                AntdUI.Message.error(this, "导入失败: " + ex.Message);
+                AntdUI.Message.error(this, L10n.T("导入失败: ") + ex.Message);
             }
         }
 

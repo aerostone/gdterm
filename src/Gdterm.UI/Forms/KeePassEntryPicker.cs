@@ -9,6 +9,7 @@ using Gdterm.UI.Controls;
 using Gdterm.UI.Services;
 using Gdterm.UI.Diagnostics;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Forms
 {
@@ -44,7 +45,7 @@ namespace Gdterm.UI.Forms
 
         private void InitializeComponent()
         {
-            Text = "选择凭据";
+            Text = L10n.T("选择凭据");
             Size = DpiScale.S(this, 520, 420);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -66,7 +67,7 @@ namespace Gdterm.UI.Forms
             };
             _searchBox = new AntdUI.Input {
                 Dock = DockStyle.Fill,
-                PlaceholderText = "搜索..."
+                PlaceholderText = L10n.T("搜索...")
             };
             _searchBox.TextChanged += (s, e) => ApplyFilter();
             searchPanel.Controls.Add(_searchBox);
@@ -80,16 +81,16 @@ namespace Gdterm.UI.Forms
 
                 RowHeight = Math.Max(DpiScale.V(this, 24), FormFontPolicy.RowStep(this)) // 表格阅读行：24 地板
             };
-            _table.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left) { Width = "30%" });
-            _table.Columns.Add(new AntdUI.Column("Username", "用户名", AntdUI.ColumnAlign.Left) { Width = "30%" });
-            _table.Columns.Add(new AntdUI.Column("GroupPath", "分组", AntdUI.ColumnAlign.Left) { Width = "40%" });
+            _table.Columns.Add(new AntdUI.Column("Title", L10n.T("标题"), AntdUI.ColumnAlign.Left) { Width = "30%" });
+            _table.Columns.Add(new AntdUI.Column("Username", L10n.T("用户名"), AntdUI.ColumnAlign.Left) { Width = "30%" });
+            _table.Columns.Add(new AntdUI.Column("GroupPath", L10n.T("分组"), AntdUI.ColumnAlign.Left) { Width = "40%" });
             _table.CellClick += (s, e) => UpdateSelectionState();
             _table.CellDoubleClick += (s, e) => SelectEntry();
 
             // 统一到 EmptyStateView：原来的手工 Panel + 单行居中标签既没有标题层级，
             // 也不带“去管理密码库”的下一步动作。
-            _emptyState = EmptyStateView.Attach(this, "密码库中没有可选凭据",
-                "在「管理…」里新建一条，或取消本次选择", "管理密码库…", (s2, e2) => OpenManager());
+            _emptyState = EmptyStateView.Attach(this, L10n.T("密码库中没有可选凭据"),
+                L10n.T("在「管理…」里新建一条，或取消本次选择"), L10n.T("管理密码库…"), (s2, e2) => OpenManager());
 
             // 停靠子控件不会可靠撑开 Panel.AutoSize；按钮栏改为表格，取消按钮始终占据可点击空间。
             var btnPanel = new TableLayoutPanel
@@ -108,7 +109,7 @@ namespace Gdterm.UI.Forms
             btnPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             btnPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             var btnNew = new AntdUI.Button {
-                Text = "新建凭据",
+                Text = L10n.T("新建凭据"),
                 Type = AntdUI.TTypeMini.Default,
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
@@ -116,7 +117,7 @@ namespace Gdterm.UI.Forms
             };
             btnNew.Click += (s, e) => CreateNewEntry();
             var btnManage = new AntdUI.Button {
-                Text = "管理凭据…",
+                Text = L10n.T("管理凭据…"),
                 Type = AntdUI.TTypeMini.Default,
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
@@ -124,7 +125,7 @@ namespace Gdterm.UI.Forms
             };
             btnManage.Click += (s, e) => OpenManager();
             _selectButton = new AntdUI.Button {
-                Text = "选择",
+                Text = L10n.T("选择"),
                 Type = AntdUI.TTypeMini.Primary,
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
@@ -133,7 +134,7 @@ namespace Gdterm.UI.Forms
             };
             _selectButton.Click += (s, e) => SelectEntry();
             var btnCancel = new AntdUI.Button {
-                Text = "取消",
+                Text = L10n.T("取消"),
                 Type = AntdUI.TTypeMini.Default,
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
@@ -165,9 +166,9 @@ namespace Gdterm.UI.Forms
                 // 密码库没解锁/文件被占用时原来直接抛到 WinForms 未处理异常
                 _entries = new List<KeePassEntrySummary>();
                 try { DiagLog.Error("KeePassEntryPicker.ListEntries", ex); } catch (Exception) { }
-                ToastNotifier.Error("读取密码库失败：" + ex.Message);
+                ToastNotifier.Error(L10n.T("读取密码库失败：") + ex.Message);
                 if (_emptyState != null)
-                    _emptyState.SetEmpty(true, "密码库读取失败", ex.Message);
+                    _emptyState.SetEmpty(true, L10n.T("密码库读取失败"), ex.Message);
             }
             PopulateList(_entries);
         }
@@ -199,9 +200,9 @@ namespace Gdterm.UI.Forms
             if (_emptyState != null)
             {
                 if (isEmpty && !string.IsNullOrWhiteSpace(_searchBox.Text))
-                    _emptyState.SetEmpty(true, "没有匹配的凭据", "调整搜索词，或清空后重试");
+                    _emptyState.SetEmpty(true, L10n.T("没有匹配的凭据"), L10n.T("调整搜索词，或清空后重试"));
                 else if (isEmpty)
-                    _emptyState.SetEmpty(true, "密码库中没有可选凭据", "在「管理…」里新建一条，或取消本次选择");
+                    _emptyState.SetEmpty(true, L10n.T("密码库中没有可选凭据"), L10n.T("在「管理…」里新建一条，或取消本次选择"));
                 else
                     _emptyState.SetEmpty(false);
             }
@@ -281,7 +282,7 @@ namespace Gdterm.UI.Forms
                     }
                     catch (Exception ex)
                     {
-                        AntdUI.Message.error(this, "创建凭据失败: " + ex.Message);
+                        AntdUI.Message.error(this, L10n.T("创建凭据失败: ") + ex.Message);
                     }
                 }
             }
@@ -307,7 +308,7 @@ namespace Gdterm.UI.Forms
             }
             catch (Exception ex)
             {
-                AntdUI.Message.error(this, "打开密码库管理器失败: " + ex.Message);
+                AntdUI.Message.error(this, L10n.T("打开密码库管理器失败: ") + ex.Message);
             }
         }
     }
