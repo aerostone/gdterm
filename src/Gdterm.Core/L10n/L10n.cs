@@ -54,6 +54,17 @@ namespace Gdterm.Core
         public static readonly Dictionary<string, string> En =
             new Dictionary<string, string>(StringComparer.Ordinal)
         {
+            // —— 仓库配置工具（批次4i：RepoConfigTool） ——
+            ["仓库配置"] = "Repo configuration",
+            ["列出远程软件源（需已绑定 SSH）。参数可填 'list'。"] = "List remote repositories (bound SSH required). Parameter can be 'list'.",
+            ["删除仓库: "] = "Remove repository: ",
+            ["刷新缓存: "] = "Cache refresh: ",
+            ["备份: "] = "Backup: ",
+            ["未绑定远程 SSH"] = "No bound remote SSH",
+            ["添加仓库: "] = "Add repository: ",
+            ["添加结果: "] = "Add result: ",
+            ["请先在活跃 SSH 会话上使用远程工具"] = "Use a remote tool from an active SSH session first",
+            ["远程yum/apt/zypper软件仓库配置管理"] = "Manage remote yum/apt/zypper package repositories",
             // —— 密码生成器（批次4i：PasswordGeneratorForm） ——
             ["✓ 已复制(30s清空)"] = "✓ Copied (cleared in 30s)",
             ["大写字母 (A-Z)"] = "Uppercase (A-Z)",

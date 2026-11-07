@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Text;
+using Gdterm.Core;
 using Gdterm.Core.Security;
 using Gdterm.Tools.Models;
 
@@ -14,9 +15,9 @@ namespace Gdterm.Tools.Modules
         private ISshRemoteSession _session;
 
         public string ToolId { get { return "repo-config"; } }
-        public string DisplayName { get { return "仓库配置"; } }
-        public string Description { get { return "远程yum/apt/zypper软件仓库配置管理"; } }
-        public string Category { get { return "系统"; } }
+        public string DisplayName { get { return L10n.T("仓库配置"); } }
+        public string Description { get { return L10n.T("远程yum/apt/zypper软件仓库配置管理"); } }
+        public string Category { get { return L10n.T("系统"); } }
         public bool HasRemoteSession { get { return _session != null && _session.IsConnected; } }
 
         public event EventHandler<string> OutputReceived;
@@ -30,7 +31,7 @@ namespace Gdterm.Tools.Modules
         public RemoteCommandResult ListRepos()
         {
             if (!HasRemoteSession)
-                return new RemoteCommandResult { Command = "repo-list", ExitCode = -1, Stderr = "未连接远程SSH" };
+                return new RemoteCommandResult { Command = "repo-list", ExitCode = -1, Stderr = L10n.T("未连接远程SSH") };
 
             return ExecuteRemote(
                 "echo '=== 检测包管理器 ===' && " +
@@ -45,7 +46,7 @@ namespace Gdterm.Tools.Modules
         public RemoteCommandResult AddRepo(string name, string url, bool enabled = true)
         {
             if (!HasRemoteSession)
-                return new RemoteCommandResult { Command = "repo-add", ExitCode = -1, Stderr = "未连接远程SSH" };
+                return new RemoteCommandResult { Command = "repo-add", ExitCode = -1, Stderr = L10n.T("未连接远程SSH") };
             // SEC-01: name 走白名单（yum repo ID 字符集），url 走协议白名单 + 元字符拦截
             try
             {
@@ -70,7 +71,7 @@ namespace Gdterm.Tools.Modules
                     "cp /etc/apt/sources.list /tmp/gdterm_repo_backup/ 2>/dev/null; " +
                     "cp -r /etc/apt/sources.list.d/ /tmp/gdterm_repo_backup/ 2>/dev/null; " +
                     "echo '备份完成'");
-                sb.AppendLine("备份: ").AppendLine(backupResult.Stdout);
+                sb.AppendLine(L10n.T("备份: ")).AppendLine(backupResult.Stdout);
 
                 // 添加仓库
                 string addCmd;
@@ -93,17 +94,17 @@ namespace Gdterm.Tools.Modules
 
                 var addResult = ExecuteRemote(addCmd);
                 exitCode = addResult.ExitCode;
-                sb.AppendLine("添加结果: ").AppendLine(addResult.Stdout);
+                sb.AppendLine(L10n.T("添加结果: ")).AppendLine(addResult.Stdout);
 
                 // 刷新缓存
                 var refreshResult = ExecuteRemote("yum clean all 2>/dev/null; dnf clean all 2>/dev/null; apt update 2>/dev/null; zypper refresh 2>/dev/null");
-                sb.AppendLine("刷新缓存: ").AppendLine(refreshResult.Stdout);
+                sb.AppendLine(L10n.T("刷新缓存: ")).AppendLine(refreshResult.Stdout);
 
-                OnOutput("添加仓库: " + name);
+                OnOutput(L10n.T("添加仓库: ") + name);
             }
             catch (Exception ex)
             {
-                sb.AppendLine("异常: " + ex.Message);
+                sb.AppendLine(L10n.T("异常: ") + ex.Message);
             }
 
             sw.Stop();
@@ -114,7 +115,7 @@ namespace Gdterm.Tools.Modules
         public RemoteCommandResult RemoveRepo(string name)
         {
             if (!HasRemoteSession)
-                return new RemoteCommandResult { Command = "repo-remove", ExitCode = -1, Stderr = "未连接远程SSH" };
+                return new RemoteCommandResult { Command = "repo-remove", ExitCode = -1, Stderr = L10n.T("未连接远程SSH") };
             // SEC-01: name 白名单后才可拼到 rm/sed/
             try { ShellArgument.ValidateRepoName(name); }
             catch (ArgumentException ex)
@@ -129,14 +130,14 @@ namespace Gdterm.Tools.Modules
                 "yum clean all 2>/dev/null; apt update 2>/dev/null; echo 'done'",
                 name));
 
-            OnOutput("删除仓库: " + name);
+            OnOutput(L10n.T("删除仓库: ") + name);
             return result;
         }
 
         private RemoteCommandResult ExecuteRemote(string command)
         {
             if (_session == null)
-                return new RemoteCommandResult { Command = command, ExitCode = -1, Stderr = "SSH 未连接" };
+                return new RemoteCommandResult { Command = command, ExitCode = -1, Stderr = L10n.T("SSH 未连接") };
             return _session.RunCommand(command);
         }
 
@@ -150,7 +151,7 @@ namespace Gdterm.Tools.Modules
             Func<T, string> render)
         {
             var root = output.Parent as System.Windows.Forms.Control;
-            Action setRunning = () => { status.Text = "执行中..."; status.ForeColor = System.Drawing.Color.FromArgb(255, 200, 80); };
+            Action setRunning = () => { status.Text = L10n.T("执行中..."); status.ForeColor = System.Drawing.Color.FromArgb(255, 200, 80); };
             if (root != null && root.IsHandleCreated) root.BeginInvoke(setRunning); else setRunning();
 
             System.Threading.Tasks.Task.Run(() =>
@@ -162,8 +163,8 @@ namespace Gdterm.Tools.Modules
                 }
                 catch (Exception ex)
                 {
-                    ToolPanelHelper.AppendLine(output, "失败: " + ex.Message);
-                    SetStatus(root, status, "失败: " + ex.Message, System.Drawing.Color.FromArgb(255, 100, 100));
+                    ToolPanelHelper.AppendLine(output, L10n.T("失败: ") + ex.Message);
+                    SetStatus(root, status, L10n.T("失败: ") + ex.Message, System.Drawing.Color.FromArgb(255, 100, 100));
                 }
             });
         }
@@ -178,19 +179,19 @@ namespace Gdterm.Tools.Modules
         {
             return ToolPanelHelper.CreateActionPanel(
                 DisplayName,
-                "列出远程软件源（需已绑定 SSH）。参数可填 'list'。",
+                L10n.T("列出远程软件源（需已绑定 SSH）。参数可填 'list'。"),
                 null,
                 (inputs, output, status) =>
                 {
                     if (!HasRemoteSession)
                     {
-                        status.Text = "未绑定远程 SSH";
-                        ToolPanelHelper.AppendLine(output, "请先在活跃 SSH 会话上使用远程工具");
+                        status.Text = L10n.T("未绑定远程 SSH");
+                        ToolPanelHelper.AppendLine(output, L10n.T("请先在活跃 SSH 会话上使用远程工具"));
                         return;
                     }
                     // finding-05：远程 apt/yum 查询可耗时，后台执行防 UI 冻结
                     RunBackground(output, status, ListRepos,
-                        r => { ToolPanelHelper.AppendLine(output, r.Stdout ?? r.Stderr ?? ""); return r.IsSuccess ? "完成" : "失败"; });
+                        r => { ToolPanelHelper.AppendLine(output, r.Stdout ?? r.Stderr ?? ""); return r.IsSuccess ? L10n.T("完成") : L10n.T("失败"); });
                 });
         }
 
