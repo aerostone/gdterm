@@ -48,6 +48,9 @@ namespace Gdterm.UI.Controls
             _cellText = cellText;
 
             Dock = DockStyle.Fill;
+            // 壳是透明包裹层：关掉 UserControl 默认 Fixed3D 2px 边框，否则被包表格相对列 Panel
+            // 会多缩进 2px（左列无壳、右列有壳 → 两列左缘错位，ScannerCenter 左缘对齐断言即崩）
+            BorderStyle = BorderStyle.None;
             BackColor = GdtermColorTable.Background;
 
             int fieldH = FormFontPolicy.FieldHeight(this);
