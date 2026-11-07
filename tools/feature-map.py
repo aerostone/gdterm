@@ -87,10 +87,13 @@ def brace_body(text, start):
 # 1. 入口树：菜单 → 回调 → 工厂方法 → 页面类 → 文件
 # --------------------------------------------------------------------------
 
-MENU_MK = re.compile(r'Mk\(\s*"([^"]+)"\s*,\s*cb\.(\w+)\s*,\s*"([^"]*)"\s*\)')
-MENU_NEW = re.compile(r'var\s+(\w+)\s*=\s*new\s+ToolStripMenuItem\(\s*"([^"]+)"')
-MENU_ONLY_NEW = re.compile(r'DropDownItems\.Add\(\s*new\s+ToolStripMenuItem\(\s*"([^"]+)"')
-MENU_L1 = re.compile(r'var\s+(\w+)\s*=\s*new\s+ToolStripMenuItem\(\s*"([^"]+)"\s*\)\s*;')
+# i18n 感知（P2-10）：字面量可能被 L10n.T()/Tf() 包装——剥壳提取，保持菜单大纲不漂移
+_TW = r'(?:L10n\.T(?:f)?\(\s*)?'   # 可选包装前缀
+_TE = r'(?:\s*\))*'                 # 可选包装闭括号（0-2 个）
+MENU_MK = re.compile(r'Mk\(\s*' + _TW + r'"([^"]+)"' + _TE + r'\s*,\s*cb\.(\w+)\s*,\s*' + _TW + r'"([^"]*)"' + _TE + r'\s*\)')
+MENU_NEW = re.compile(r'var\s+(\w+)\s*=\s*new\s+ToolStripMenuItem\(\s*' + _TW + r'"([^"]+)"' + _TE)
+MENU_ONLY_NEW = re.compile(r'DropDownItems\.Add\(\s*new\s+ToolStripMenuItem\(\s*' + _TW + r'"([^"]+)"' + _TE)
+MENU_L1 = re.compile(r'var\s+(\w+)\s*=\s*new\s+ToolStripMenuItem\(\s*' + _TW + r'"([^"]+)"' + _TE + r'\s*\)\s*;')
 CB_PROP = re.compile(r'^\s{8,}(\w+)\s*=', re.M)
 
 SHORTCUT = re.compile(r'\s*(Ctrl\+Shift\+\w|Ctrl\+\w|Alt\+\w|F\d+)\s*$')
