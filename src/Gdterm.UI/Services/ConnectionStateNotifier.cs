@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Gdterm.Terminal;
 using Gdterm.UI.Diagnostics;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Services
 {
@@ -63,11 +64,11 @@ namespace Gdterm.UI.Services
                 var err = string.IsNullOrEmpty(e.ErrorMessage) ? "" : " err=" + e.ErrorMessage;
                 DiagLog.Info("ConnectionState", "retrying session=" + e.SessionId +
                     " " + e.RetryCount + "/" + e.MaxRetries + " in " + e.NextRetryDelayMs + "ms" + err);
-                Apply(e.SessionId, "重连中 " + e.RetryCount + "/" + e.MaxRetries + " · " + name);
+                Apply(e.SessionId, L10n.T("重连中 ") + e.RetryCount + "/" + e.MaxRetries + " · " + name);
                 bool first;
                 lock (_sync) first = _outageToasted.Add(e.SessionId ?? "");
                 if (first)
-                    ToastNotifier.Show("连接断开，正在重连: " + name, ToastNotifier.Level.Warning);
+                    ToastNotifier.Show(L10n.T("连接断开，正在重连: ") + name, ToastNotifier.Level.Warning);
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionStateNotifier", exSwallowed); } catch { } }
         }
@@ -81,7 +82,7 @@ namespace Gdterm.UI.Services
                 var name = Name(e.SessionId);
                 DiagLog.Info("ConnectionState", "recovered session=" + e.SessionId + " name=" + name);
                 Apply(e.SessionId, "");
-                ToastNotifier.Show("连接已恢复: " + name, ToastNotifier.Level.Success);
+                ToastNotifier.Show(L10n.T("连接已恢复: ") + name, ToastNotifier.Level.Success);
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionStateNotifier", exSwallowed); } catch { } }
         }
@@ -95,8 +96,8 @@ namespace Gdterm.UI.Services
                 var name = Name(e.SessionId);
                 DiagLog.Info("ConnectionState", "give up session=" + e.SessionId +
                     " attempts=" + e.RetryCount + " err=" + (e.ErrorMessage ?? ""));
-                Apply(e.SessionId, "重连失败 · " + name);
-                ToastNotifier.Show("重连失败: " + name + "（可手动重连）", ToastNotifier.Level.Error);
+                Apply(e.SessionId, L10n.T("重连失败 · ") + name);
+                ToastNotifier.Show(L10n.T("重连失败: ") + name + L10n.T("（可手动重连）"), ToastNotifier.Level.Error);
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionStateNotifier", exSwallowed); } catch { } }
         }

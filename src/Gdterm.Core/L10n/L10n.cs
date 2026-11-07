@@ -66,6 +66,25 @@ namespace Gdterm.Core
             ["确认修改"] = "Confirm change",
             ["确认新密码"] = "Confirm new password",
             ["请输入当前密码"] = "Enter the current password",
+            // —— 命令面板（批次4x2：CommandPaletteForm） ——
+            ["命令执行失败："] = "Command execution failed: ",
+            ["命令面板 (Ctrl+Shift+O)"] = "Command palette (Ctrl+Shift+O)",
+            ["试试关键词：新建 / sftp / 标签名 / 主机名"] = "Try keywords: new / sftp / tab name / host name",
+            ["输入命令 / 标签 / 连接…（如：新建、sftp、prod）"] = "Type a command / tab / connection… (e.g. new, sftp, prod)",
+            // —— 连接状态通知（批次4x2：ConnectionStateNotifier） ——
+            ["连接已恢复: "] = "Connection restored: ",
+            ["连接断开，正在重连: "] = "Connection lost; reconnecting: ",
+            ["重连中 "] = "Reconnecting ",
+            ["重连失败 · "] = "Reconnect failed · ",
+            ["重连失败: "] = "Reconnect failed: ",
+            ["（可手动重连）"] = " (you can reconnect manually)",
+            // —— 工具面板助手（批次4x2：ToolPanelHelper） ——
+            ["目标/参数"] = "Target / arguments",
+            // —— 串口会话（批次4x2：SerialSession） ——
+            ["Zmodem 接收仅支持 SSH 会话（当前：串口）。"] = "Zmodem receive only supports SSH sessions (current: serial).",
+            ["串口未连接"] = "Serial port not connected",
+            ["串口连接不支持隧道模式"] = "Serial connections do not support tunnel mode",
+            ["串口配置不能为空，请设置 ConnectionConfig.Serial"] = "Serial config is empty; set ConnectionConfig.Serial",
             // —— 批量命令（批次4w：BatchCommandExecutor） ——
             ["执行超时"] = "Execution timed out",
             ["跳过"] = "Skipped",

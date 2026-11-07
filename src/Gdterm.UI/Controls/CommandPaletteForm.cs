@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
@@ -35,7 +36,7 @@ namespace Gdterm.UI.Controls
         public CommandPaletteForm(IList<PaletteCommand> commands)
         {
             _all = commands != null ? new List<PaletteCommand>(commands) : new List<PaletteCommand>();
-            Text = "命令面板 (Ctrl+Shift+O)";
+            Text = L10n.T("命令面板 (Ctrl+Shift+O)");
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
             Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             AutoHandDpi = false; // 尺寸已按 DpiScale 预缩放，关掉 AntdUI 的自动 DPI 避免二次放大
@@ -50,7 +51,7 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Top,
                 MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this)),
-                PlaceholderText = "输入命令 / 标签 / 连接…（如：新建、sftp、prod）",
+                PlaceholderText = L10n.T("输入命令 / 标签 / 连接…（如：新建、sftp、prod）"),
                 AllowClear = true,
                 Font = Services.FormFontPolicy.UiFont(+1f)
             };
@@ -76,8 +77,8 @@ namespace Gdterm.UI.Controls
             Controls.Add(_filter);
             // 空态用真空态层（此前是往列表塞一条不可选中的占位字符串，
             // 键盘上下键会选中它、回车又什么都不做——症状是"命令面板卡住"）
-            _empty = EmptyStateView.Attach(this, "没有匹配的命令",
-                "试试关键词：新建 / sftp / 标签名 / 主机名", null, null);
+            _empty = EmptyStateView.Attach(this, L10n.T("没有匹配的命令"),
+                L10n.T("试试关键词：新建 / sftp / 标签名 / 主机名"), null, null);
             Gdterm.UI.Services.FormFontPolicy.Apply(this);
             ApplyFilter();
             KeyDown += (s, e) =>
@@ -149,7 +150,7 @@ namespace Gdterm.UI.Controls
             catch (Exception ex)
             {
                 try { DiagLog.Error("CommandPalette.Run", ex); } catch (Exception) { }
-                ToastNotifier.Error("命令执行失败：" + ex.Message);
+                ToastNotifier.Error(L10n.T("命令执行失败：") + ex.Message);
             }
         }
 

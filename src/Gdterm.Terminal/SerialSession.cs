@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using Gdterm.Core.Models;
 using Gdterm.Terminal.Models;
+using Gdterm.Core;
 
 namespace Gdterm.Terminal
 {
@@ -44,7 +45,7 @@ namespace Gdterm.Terminal
         {
             if (config == null) throw new ArgumentNullException(nameof(config));
             if (config.Serial == null)
-                throw new ArgumentException("串口配置不能为空，请设置 ConnectionConfig.Serial");
+                throw new ArgumentException(L10n.T("串口配置不能为空，请设置 ConnectionConfig.Serial"));
 
             ConnectionId = config.Id;
             Hostname = config.Serial.PortName;
@@ -84,12 +85,12 @@ namespace Gdterm.Terminal
         /// </summary>
         public void ConnectViaTunnel(ConnectionConfig config, CredentialPayload credential, TunnelEndpoint tunnelEndpoint, int rows = 24, int columns = 80)
         {
-            throw new NotSupportedException("串口连接不支持隧道模式");
+            throw new NotSupportedException(L10n.T("串口连接不支持隧道模式"));
         }
 
         public void SendInput(string text)
         {
-            if (!IsConnected) throw new InvalidOperationException("串口未连接");
+            if (!IsConnected) throw new InvalidOperationException(L10n.T("串口未连接"));
             if (string.IsNullOrEmpty(text)) return;
 
             _port.Write(text);
@@ -100,7 +101,7 @@ namespace Gdterm.Terminal
         /// </summary>
         public void SendBytes(byte[] data)
         {
-            if (!IsConnected) throw new InvalidOperationException("串口未连接");
+            if (!IsConnected) throw new InvalidOperationException(L10n.T("串口未连接"));
             if (data == null || data.Length == 0) return;
 
             _port.Write(data, 0, data.Length);
@@ -116,7 +117,7 @@ namespace Gdterm.Terminal
 
         public void StartZmodemReceive(string saveDirectory)
         {
-            throw new NotSupportedException("Zmodem 接收仅支持 SSH 会话（当前：串口）。");
+            throw new NotSupportedException(L10n.T("Zmodem 接收仅支持 SSH 会话（当前：串口）。"));
         }
 
         /// <summary>
@@ -124,7 +125,7 @@ namespace Gdterm.Terminal
         /// </summary>
         public void SendBreak(int durationMs = 100)
         {
-            if (!IsConnected) throw new InvalidOperationException("串口未连接");
+            if (!IsConnected) throw new InvalidOperationException(L10n.T("串口未连接"));
 
             // 在后台线程执行，避免阻塞 UI
             _port.BreakState = true;

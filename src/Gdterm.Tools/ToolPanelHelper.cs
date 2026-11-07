@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using Gdterm.Core;
 
 namespace Gdterm.Tools
 {
@@ -58,7 +59,7 @@ namespace Gdterm.Tools
                 Dock = DockStyle.Bottom,
                 Height = 22,
                 ForeColor = Color.FromArgb(120, 200, 120),
-                Text = "就绪"
+                Text = L10n.T("就绪")
             };
 
             var output = new RichTextBox
@@ -91,14 +92,14 @@ namespace Gdterm.Tools
             }
 
             // 标准：Host / Args
-            var hostBox = MakeTextBox("目标/参数");
+            var hostBox = MakeTextBox(L10n.T("目标/参数"));
             hostBox.Dock = DockStyle.Top;
             inputHost.Controls.Add(hostBox);
             inputs.Add(hostBox);
 
             var runBtn = new Button
             {
-                Text = "执行",
+                Text = L10n.T("执行"),
                 Dock = DockStyle.Right,
                 Width = 80,
                 Height = 28,
@@ -110,13 +111,13 @@ namespace Gdterm.Tools
             {
                 try
                 {
-                    status.Text = "执行中...";
+                    status.Text = L10n.T("执行中...");
                     status.ForeColor = Color.FromArgb(255, 200, 80);
                     onRun?.Invoke(inputs.ToArray(), output, status);
                 }
                 catch (Exception ex)
                 {
-                    status.Text = "失败: " + ex.Message;
+                    status.Text = L10n.T("失败: ") + ex.Message;
                     status.ForeColor = Color.FromArgb(255, 100, 100);
                     output.AppendText(ex.Message + Environment.NewLine);
                 }
