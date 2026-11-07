@@ -225,6 +225,7 @@
     <Compile Include="Services\SidePanelHost.cs" />
     <Compile Include="Services\ViewModeController.cs" />
     <Compile Include="Services\MainFormMenuBuilder.cs" />
+    <Compile Include="L10n\L10n.cs" />
     <Compile Include="Services\ConnectionImportExportUi.cs" />
     <Compile Include="Services\DiagnosticsPackageExporter.cs" />
     <Compile Include="Services\MasterPasswordPrompt.cs" />

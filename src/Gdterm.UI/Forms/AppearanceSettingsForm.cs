@@ -32,6 +32,8 @@ namespace Gdterm.UI.Forms
         private AntdUI.InputNumber _uiSizeNum;
         private AntdUI.Select _uiThemeCombo;
         private AntdUI.InputNumber _opacityNum;
+        // 界面语言（重启生效）
+        private AntdUI.Select _langCombo;
         private int _fieldHeight = 38;
         private int _rowHeight = 44;
 
@@ -51,7 +53,7 @@ namespace Gdterm.UI.Forms
 
         private void BuildUi()
         {
-            Text = "外观设置";
+            Text = L10n.T("外观设置");
             Font = FormFontPolicy.UiFont();
             Size = DpiScale.S(this, 520, 560); // 初始基准，末尾按内容自适应重设
             StartPosition = FormStartPosition.CenterParent;
@@ -74,21 +76,21 @@ namespace Gdterm.UI.Forms
             int y = 22;
 
             // —— 终端字体 ——
-            Controls.Add(MakeLabel("终端字体", colLabel, y));
+            Controls.Add(MakeLabel(L10n.T("终端字体"), colLabel, y));
             _fontCombo = MakeSelect(valueW, FillTerminalFonts);
             _fontCombo.Location = new Point(colValue, y);
             Controls.Add(_fontCombo);
             y += rowH;
 
             // —— 字号 ——
-            Controls.Add(MakeLabel("字号 (pt)", colLabel, y));
+            Controls.Add(MakeLabel(L10n.T("字号 (pt)"), colLabel, y));
             _sizeNum = MakeNumber(8, 36, 12);
             _sizeNum.Location = new Point(colValue, y);
             Controls.Add(_sizeNum);
             y += rowH;
 
             // —— 配色方案 ——
-            Controls.Add(MakeLabel("配色方案", colLabel, y));
+            Controls.Add(MakeLabel(L10n.T("配色方案"), colLabel, y));
             _schemeCombo = MakeSelect(valueW, null);
             foreach (var name in new[]
             {
@@ -100,7 +102,7 @@ namespace Gdterm.UI.Forms
             y += rowH;
 
             // —— 中日韩补充字体（Xshell 风格双字体）——
-            Controls.Add(MakeLabel("中日韩字体", colLabel, y));
+            Controls.Add(MakeLabel(L10n.T("中日韩字体"), colLabel, y));
             _cjkFontCombo = MakeSelect(valueW, null);
             _cjkFontCombo.Items.Add(""); // 空表示跟随主字体
             _cjkFontCombo.Items.Add("Microsoft YaHei Mono");
@@ -133,7 +135,7 @@ namespace Gdterm.UI.Forms
             y += rowH;
 
             // —— UI 外壳主题（与终端 ColorScheme 独立）——
-            Controls.Add(MakeLabel("界面主题", colLabel, y));
+            Controls.Add(MakeLabel(L10n.T("界面主题"), colLabel, y));
             _uiThemeCombo = MakeSelect(valueW, null);
             foreach (var name in new[] { "Dark", "Darker", "OLED" })
                 _uiThemeCombo.Items.Add(name);
@@ -142,7 +144,7 @@ namespace Gdterm.UI.Forms
             y += rowH;
 
             // —— 界面字体 + 字号（同行）——
-            Controls.Add(MakeLabel("界面字体", colLabel, y));
+            Controls.Add(MakeLabel(L10n.T("界面字体"), colLabel, y));
             _uiFontCombo = MakeSelect(valueW, FillUiFonts);
             _uiFontCombo.Location = new Point(colValue, y);
             Controls.Add(_uiFontCombo);
@@ -153,7 +155,7 @@ namespace Gdterm.UI.Forms
             y += rowH;
 
             // —— 窗口不透明度 30-100（路线图 terminal-enhancements；WinForms 整窗 Opacity，即时生效）——
-            Controls.Add(MakeLabel("不透明度 %", colLabel, y));
+            Controls.Add(MakeLabel(L10n.T("不透明度 %"), colLabel, y));
             _opacityNum = MakeNumber(30, 100, 100);
             _opacityNum.Location = new Point(colValue, y);
             Controls.Add(_opacityNum);
@@ -161,18 +163,34 @@ namespace Gdterm.UI.Forms
 
             // —— DPI ——
             _dpiAwareCheck = new AntdUI.Checkbox {
-                Text = "启用 DPI 感知（需重启，减轻菜单模糊）",
+                Text = L10n.T("启用 DPI 感知（需重启，减轻菜单模糊）"),
                 Location = new Point(colLabel, y),
                 AutoSize = true,
                 Checked = true,
                 ForeColor = GdtermColorTable.Foreground
             };
             Controls.Add(_dpiAwareCheck);
-            y += rowH + 2;
+            y += rowH;
+
+            // —— 界面语言（重启生效；选项名用各自母语自标识，业界惯例）——
+            Controls.Add(MakeLabel(L10n.T("界面语言"), colLabel, y));
+            _langCombo = MakeSelect(valueW, null);
+            _langCombo.Items.Add(L10n.T("中文"));
+            _langCombo.Items.Add("English");
+            _langCombo.Location = new Point(colValue, y);
+            Controls.Add(_langCombo);
+            var langHint = new AntdUI.Label {
+                Text = L10n.T("重启后生效"),
+                AutoSize = true,
+                Location = new Point(colValue + valueW + DpiScale.V(this, 10), y + DpiScale.V(this, 10)),
+                ForeColor = GdtermColorTable.Muted
+            };
+            Controls.Add(langHint);
+            y += rowH;
 
             // —— 预览（ReadOnly Input 展示）——
             _preview = new AntdUI.Input {
-                Text = "AaBbCc 0123 预览 Preview",
+                Text = L10n.T("AaBbCc 0123 预览 Preview"),
                 Location = new Point(colLabel, y),
                 Size = new Size(clientW - pad * 2, Math.Max(DpiScale.V(this, 64), _fieldHeight + DpiScale.V(this, 20))),
                 ReadOnly = true,
@@ -185,7 +203,7 @@ namespace Gdterm.UI.Forms
             y += _preview.Height + DpiScale.V(this, 14);
 
             var resetHint = new AntdUI.Label {
-                Text = "字体异常可恢复默认",
+                Text = L10n.T("字体异常可恢复默认"),
                 AutoSize = true,
                 Location = new Point(colLabel, y),
                 ForeColor = GdtermColorTable.Muted
@@ -195,13 +213,13 @@ namespace Gdterm.UI.Forms
 
             // ── 底部按钮条：主(保存) + 恢复默认 + 取消 ──
             // Type 自绘：手写 BackColor/ForeColor 会被 AntdUI 绘制管线忽略，只留 Type
-            _btnOk = new AntdUI.Button { Text = "保存", Type = AntdUI.TTypeMini.Primary, Size = new Size(DpiScale.V(this, 88), _fieldHeight) };
+            _btnOk = new AntdUI.Button { Text = L10n.T("保存"), Type = AntdUI.TTypeMini.Primary, Size = new Size(DpiScale.V(this, 88), _fieldHeight) };
             _btnOk.Click += (s, e) => SaveResult();
 
-            _btnReset = new AntdUI.Button { Text = "恢复默认", Type = AntdUI.TTypeMini.Default, Size = new Size(DpiScale.V(this, 96), _fieldHeight) };
+            _btnReset = new AntdUI.Button { Text = L10n.T("恢复默认"), Type = AntdUI.TTypeMini.Default, Size = new Size(DpiScale.V(this, 96), _fieldHeight) };
             _btnReset.Click += (s, e) => ResetToDefaults();
 
-            _btnCancel = new AntdUI.Button { Text = "取消", Type = AntdUI.TTypeMini.Default, Size = new Size(DpiScale.V(this, 88), _fieldHeight) };
+            _btnCancel = new AntdUI.Button { Text = L10n.T("取消"), Type = AntdUI.TTypeMini.Default, Size = new Size(DpiScale.V(this, 88), _fieldHeight) };
             _btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
 
             int btnTotal = DpiScale.V(this, 88 + 8 + 96 + 8 + 88);
@@ -304,29 +322,29 @@ namespace Gdterm.UI.Forms
             int size = (int)_sizeNum.Value;
             if (size < 6 || size > 48)
             {
-                AntdUI.Message.warn(this, "终端字号需在 6–48 之间（当前 " + size + "）");
+                AntdUI.Message.warn(this, L10n.Tf("终端字号需在 6–48 之间（当前 {0}）", size));
                 _sizeNum.Focus();
                 return false;
             }
             int uiSize = (int)_uiSizeNum.Value;
             if (uiSize < 6 || uiSize > 36)
             {
-                AntdUI.Message.warn(this, "界面字号需在 6–36 之间（当前 " + uiSize + "）");
+                AntdUI.Message.warn(this, L10n.Tf("界面字号需在 6–36 之间（当前 {0}）", uiSize));
                 _uiSizeNum.Focus();
                 return false;
             }
             if (_opacityNum != null && ((int)_opacityNum.Value < 30 || (int)_opacityNum.Value > 100))
             {
-                AntdUI.Message.warn(this, "窗口不透明度需在 30–100 之间");
+                AntdUI.Message.warn(this, L10n.T("窗口不透明度需在 30–100 之间"));
                 return false;
             }
             var missing = new List<string>();
-            if (!FontExists(_fontCombo)) missing.Add("终端字体");
-            if (!FontExists(_uiFontCombo)) missing.Add("界面字体");
+            if (!FontExists(_fontCombo)) missing.Add(L10n.T("终端字体"));
+            if (!FontExists(_uiFontCombo)) missing.Add(L10n.T("界面字体"));
             if (missing.Count > 0)
             {
                 // 不拦保存（用户可能故意先配好再去装字体），但必须说清楚会 fallback
-                AntdUI.Message.warn(this, string.Join("、", missing) + " 在本机未安装，将回退到系统默认字体");
+                AntdUI.Message.warn(this, string.Join(L10n.IsEnglish ? ", " : "、", missing) + L10n.T(" 在本机未安装，将回退到系统默认字体"));
                 DiagLog.Info("Appearance.Validate", "missing fonts: " + string.Join(",", missing));
             }
             return true;
@@ -360,6 +378,7 @@ namespace Gdterm.UI.Forms
                 UIFontName = _uiFontCombo.SelectedValue != null ? _uiFontCombo.SelectedValue.ToString() : FormFontPolicy.UiFontName,
                 UIFontSize = (int)_uiSizeNum.Value,
                 WindowOpacity = _opacityNum != null ? (int)_opacityNum.Value : 100,
+                Language = _langCombo != null && _langCombo.SelectedIndex == 1 ? L10n.En : L10n.Zh,
                 QuickBarGroup = old != null ? old.QuickBarGroup : null,
                 PinTmux = old != null && old.PinTmux
             };
@@ -375,7 +394,7 @@ namespace Gdterm.UI.Forms
             {
                 DiagLog.Swallowed("Appearance.Save", ex);
                 // A7：保存失败不落 OK、不关窗——否则调用方会误报"外观已保存"
-                AntdUI.Message.error(this, "外观保存失败: " + ex.Message);
+                AntdUI.Message.error(this, L10n.Tf("外观保存失败: {0}", ex.Message));
                 return;
             }
             DialogResult = DialogResult.OK;
@@ -388,11 +407,8 @@ namespace Gdterm.UI.Forms
         /// </summary>
         private void ResetToDefaults()
         {
-            var dr = AntdUI.Modal.open(this, "恢复默认外观",
-                "将恢复以下默认值：\n" +
-                "  终端字体 Consolas 12pt / 配色 Classic\n" +
-                "  界面字体 " + FormFontPolicy.UiFontName + " 9pt / 界面主题 Dark\n" +
-                "  不透明度 100% / DPI 感知 开启\n\n确定恢复？",
+            var dr = AntdUI.Modal.open(this, L10n.T("恢复默认外观"),
+                L10n.Tf("将恢复以下默认值：\n  终端字体 Consolas 12pt / 配色 Classic\n  界面字体 {0} 9pt / 界面主题 Dark\n  不透明度 100% / DPI 感知 开启\n\n确定恢复？", FormFontPolicy.UiFontName),
                 AntdUI.TType.Warn);
             if (dr != DialogResult.Yes && dr != DialogResult.OK)
                 return;
@@ -410,7 +426,7 @@ namespace Gdterm.UI.Forms
             {
                 DiagLog.Swallowed("Appearance.Reset", ex);
                 // A7：恢复失败不回显——d 未落盘，继续回显=展示未保存的假默认
-                AntdUI.Message.error(this, "恢复默认外观失败: " + ex.Message);
+                AntdUI.Message.error(this, L10n.Tf("恢复默认外观失败: {0}", ex.Message));
                 return;
             }
 
@@ -457,6 +473,8 @@ namespace Gdterm.UI.Forms
             SelectCombo(_uiFontCombo, s.UIFontName ?? FormFontPolicy.UiFontName);
             _uiSizeNum.Value = ClampNum(_uiSizeNum, s.UIFontSize > 0 ? s.UIFontSize : 9);
             if (_opacityNum != null) _opacityNum.Value = ClampNum(_opacityNum, s.WindowOpacity >= 30 && s.WindowOpacity <= 100 ? s.WindowOpacity : 100);
+            // 界面语言回显（索引 0=中文 1=English；与选项添加顺序对应）
+            if (_langCombo != null) _langCombo.SelectedIndex = L10n.IsEnglish ? 1 : 0;
             UpdatePreview();
         }
 
@@ -516,6 +534,8 @@ namespace Gdterm.UI.Forms
         public string QuickBarGroup { get; set; }
         /// <summary>tmux 键组钉住常驻。</summary>
         public bool PinTmux { get; set; }
+        /// <summary>界面语言（"zh" 默认 / "en"）；启动时由 Program 加载到 L10n。</summary>
+        public string Language { get; set; } = "zh";
         /// <summary>窗口不透明度（整窗 Opacity；终端画布为不透明子控件，WinForms 下无逐区透明）。</summary>
         public int WindowOpacity { get; set; } = 100;
 
@@ -560,6 +580,8 @@ namespace Gdterm.UI.Forms
                         s.QuickBarGroup = val;
                     else if (string.Equals(key, "pinTmux", StringComparison.OrdinalIgnoreCase))
                         s.PinTmux = val == "1" || string.Equals(val, "true", StringComparison.OrdinalIgnoreCase);
+                    else if (string.Equals(key, "language", StringComparison.OrdinalIgnoreCase))
+                        s.Language = val;
                     else if (string.Equals(key, "windowOpacity", StringComparison.OrdinalIgnoreCase))
                     {
                         int n;
@@ -588,6 +610,7 @@ namespace Gdterm.UI.Forms
                 "uiFontSize=" + UIFontSize + "\r\n" +
                 "quickBarGroup=" + (QuickBarGroup ?? "") + "\r\n" +
                 "pinTmux=" + (PinTmux ? "1" : "0") + "\r\n" +
+                "language=" + (Language ?? "zh") + "\r\n" +
                 "windowOpacity=" + WindowOpacity + "\r\n");
         }
 

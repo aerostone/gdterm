@@ -112,40 +112,40 @@ namespace Gdterm.UI.Services
             }
 
             // ===== 文件：打开类动作 + 数据 + 退出 =====
-            var fileMenu = new ToolStripMenuItem("文件(&F)");
-            fileMenu.DropDownItems.Add(Mk("新建连接(&N)...", cb.NewConnection, "new"));
-            fileMenu.DropDownItems.Add(Mk("快速跳转连接 Ctrl+Shift+K", cb.QuickJump, "quickjump"));
+            var fileMenu = new ToolStripMenuItem(L10n.T("文件(&F)"));
+            fileMenu.DropDownItems.Add(Mk(L10n.T("新建连接(&N)..."), cb.NewConnection, "new"));
+            fileMenu.DropDownItems.Add(Mk(L10n.T("快速跳转连接 Ctrl+Shift+K"), cb.QuickJump, "quickjump"));
             fileMenu.DropDownItems.Add(new ToolStripSeparator());
-            fileMenu.DropDownItems.Add(Mk("本地终端(&L)", cb.OpenLocalTerminal, "terminal"));
-            fileMenu.DropDownItems.Add(Mk("SFTP 浏览器(&S)", cb.OpenSftp, "folder"));
+            fileMenu.DropDownItems.Add(Mk(L10n.T("本地终端(&L)"), cb.OpenLocalTerminal, "terminal"));
+            fileMenu.DropDownItems.Add(Mk(L10n.T("SFTP 浏览器(&S)"), cb.OpenSftp, "folder"));
             fileMenu.DropDownItems.Add(new ToolStripSeparator());
-            fileMenu.DropDownItems.Add(Mk("导入连接(&I)...", cb.ImportConnections, "import"));
-            fileMenu.DropDownItems.Add(Mk("导出连接(&E)...", cb.ExportConnections, "export"));
+            fileMenu.DropDownItems.Add(Mk(L10n.T("导入连接(&I)..."), cb.ImportConnections, "import"));
+            fileMenu.DropDownItems.Add(Mk(L10n.T("导出连接(&E)..."), cb.ExportConnections, "export"));
             fileMenu.DropDownItems.Add(new ToolStripSeparator());
-            fileMenu.DropDownItems.Add(Mk("退出(&X)", cb.Exit, "exit"));
+            fileMenu.DropDownItems.Add(Mk(L10n.T("退出(&X)"), cb.Exit, "exit"));
             menu.Items.Add(fileMenu);
 
             // ===== 连接：当前会话操作 + 连接资产 =====
-            var connectionMenu = new ToolStripMenuItem("连接(&C)");
-            connectionMenu.DropDownItems.Add(Mk("重连当前标签 Ctrl+Shift+R", cb.ReconnectActive, "reconnect"));
-            connectionMenu.DropDownItems.Add(Mk("关闭当前标签 Ctrl+Shift+W", cb.CloseActive, "close"));
+            var connectionMenu = new ToolStripMenuItem(L10n.T("连接(&C)"));
+            connectionMenu.DropDownItems.Add(Mk(L10n.T("重连当前标签 Ctrl+Shift+R"), cb.ReconnectActive, "reconnect"));
+            connectionMenu.DropDownItems.Add(Mk(L10n.T("关闭当前标签 Ctrl+Shift+W"), cb.CloseActive, "close"));
             connectionMenu.DropDownItems.Add(new ToolStripSeparator());
-            connectionMenu.DropDownItems.Add(Mk("书签 / 最近连接(&B)", cb.ShowBookmarks, "bookmark"));
+            connectionMenu.DropDownItems.Add(Mk(L10n.T("书签 / 最近连接(&B)"), cb.ShowBookmarks, "bookmark"));
             menu.Items.Add(connectionMenu);
 
             // ===== 视图：外观与布局 =====
-            var viewMenu = new ToolStripMenuItem("视图(&V)");
-            var viewStandard = new ToolStripMenuItem("标准视图(&S)") { Checked = true };
+            var viewMenu = new ToolStripMenuItem(L10n.T("视图(&V)"));
+            var viewStandard = new ToolStripMenuItem(L10n.T("标准视图(&S)")) { Checked = true };
             viewStandard.Click += cb.ViewStandard;
-            var viewFocus = new ToolStripMenuItem("专注模式(&F)");
+            var viewFocus = new ToolStripMenuItem(L10n.T("专注模式(&F)"));
             viewFocus.Click += cb.ViewFocus;
-            var viewCompact = new ToolStripMenuItem("紧凑模式(&C)");
+            var viewCompact = new ToolStripMenuItem(L10n.T("紧凑模式(&C)"));
             viewCompact.Click += cb.ViewCompact;
             viewMenu.DropDownItems.Add(viewStandard);
             viewMenu.DropDownItems.Add(viewFocus);
             viewMenu.DropDownItems.Add(viewCompact);
             viewMenu.DropDownItems.Add(new ToolStripSeparator());
-            var toggleTree = new ToolStripMenuItem("切换连接面板(&T)")
+            var toggleTree = new ToolStripMenuItem(L10n.T("切换连接面板(&T)"))
             {
                 // Ctrl+Shift+L：普通 Ctrl+L 是 shell 清屏，不能被菜单抢走,
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.L
@@ -153,16 +153,16 @@ namespace Gdterm.UI.Services
             toggleTree.Click += cb.ToggleTree;
             AttachIcon(toggleTree, "globe");
             viewMenu.DropDownItems.Add(toggleTree);
-            var toggleTreePin = new ToolStripMenuItem("自动隐藏连接面板(&P)");
+            var toggleTreePin = new ToolStripMenuItem(L10n.T("自动隐藏连接面板(&P)"));
             toggleTreePin.Click += cb.ToggleTreePin;
             AttachIcon(toggleTreePin, "splith");
             viewMenu.DropDownItems.Add(toggleTreePin);
             viewMenu.DropDownItems.Add(new ToolStripSeparator());
-            viewMenu.DropDownItems.Add(Mk("水平分割", cb.SplitHorizontal, "splith"));
-            viewMenu.DropDownItems.Add(Mk("垂直分割", cb.SplitVertical, "splitv"));
+            viewMenu.DropDownItems.Add(Mk(L10n.T("水平分割"), cb.SplitHorizontal, "splith"));
+            viewMenu.DropDownItems.Add(Mk(L10n.T("垂直分割"), cb.SplitVertical, "splitv"));
             viewMenu.DropDownItems.Add(new ToolStripSeparator());
-            viewMenu.DropDownItems.Add(Mk("快捷命令栏", cb.ToggleQuickBar, "batch"));
-            var toggleTmux = new ToolStripMenuItem("tmux 快捷面板")
+            viewMenu.DropDownItems.Add(Mk(L10n.T("快捷命令栏"), cb.ToggleQuickBar, "batch"));
+            var toggleTmux = new ToolStripMenuItem(L10n.T("tmux 快捷面板"))
             {
                 // Ctrl+Shift+M：与现有 UI 动作约定一致（Ctrl+Shift+字母）,
                 ShortcutKeys = Keys.Control | Keys.Shift | Keys.M
@@ -173,47 +173,47 @@ namespace Gdterm.UI.Services
             menu.Items.Add(viewMenu);
 
             // ===== 终端：终端内搜索 + 会话功能 =====
-            var termMenu = new ToolStripMenuItem("终端(&E)");
-            termMenu.DropDownItems.Add(Mk("查找 Ctrl+Shift+F", cb.ShowSearch, "search"));
-            termMenu.DropDownItems.Add(Mk("片段搜索 Ctrl+Shift+P", cb.ShowSnippet, "snippet"));
+            var termMenu = new ToolStripMenuItem(L10n.T("终端(&E)"));
+            termMenu.DropDownItems.Add(Mk(L10n.T("查找 Ctrl+Shift+F"), cb.ShowSearch, "search"));
+            termMenu.DropDownItems.Add(Mk(L10n.T("片段搜索 Ctrl+Shift+P"), cb.ShowSnippet, "snippet"));
             termMenu.DropDownItems.Add(new ToolStripSeparator());
-            termMenu.DropDownItems.Add(Mk("高亮规则", cb.ShowHighlight, "highlight"));
-            termMenu.DropDownItems.Add(Mk("登录脚本", cb.ShowLogonScript, "script"));
+            termMenu.DropDownItems.Add(Mk(L10n.T("高亮规则"), cb.ShowHighlight, "highlight"));
+            termMenu.DropDownItems.Add(Mk(L10n.T("登录脚本"), cb.ShowLogonScript, "script"));
             termMenu.DropDownItems.Add(new ToolStripSeparator());
-            termMenu.DropDownItems.Add(Mk("多通道广播", cb.ShowMultiChannel, "broadcast"));
-            termMenu.DropDownItems.Add(Mk("批量命令", cb.ShowBatch, "batch"));
-            termMenu.DropDownItems.Add(Mk("宏录制 Ctrl+Shift+H", cb.ShowMacro, "macro"));
-            termMenu.DropDownItems.Add(Mk("命令历史", cb.ShowHistory, "history"));
-            termMenu.DropDownItems.Add(Mk("AI 助手 Ctrl+Shift+G", cb.ShowAiChat, "ai"));
-            termMenu.DropDownItems.Add(Mk("命令模板库", cb.ShowCmdTemplates, "template"));
+            termMenu.DropDownItems.Add(Mk(L10n.T("多通道广播"), cb.ShowMultiChannel, "broadcast"));
+            termMenu.DropDownItems.Add(Mk(L10n.T("批量命令"), cb.ShowBatch, "batch"));
+            termMenu.DropDownItems.Add(Mk(L10n.T("宏录制 Ctrl+Shift+H"), cb.ShowMacro, "macro"));
+            termMenu.DropDownItems.Add(Mk(L10n.T("命令历史"), cb.ShowHistory, "history"));
+            termMenu.DropDownItems.Add(Mk(L10n.T("AI 助手 Ctrl+Shift+G"), cb.ShowAiChat, "ai"));
+            termMenu.DropDownItems.Add(Mk(L10n.T("命令模板库"), cb.ShowCmdTemplates, "template"));
             termMenu.DropDownItems.Add(new ToolStripSeparator());
-            termMenu.DropDownItems.Add(Mk("健康监控", cb.ShowHealth, "health"));
-            termMenu.DropDownItems.Add(Mk("主机资源（远端 CPU/内存）", cb.ShowRemoteMonitor, "cpu"));
-            termMenu.DropDownItems.Add(Mk("端口转发", cb.ShowPortForward, "forward"));
+            termMenu.DropDownItems.Add(Mk(L10n.T("健康监控"), cb.ShowHealth, "health"));
+            termMenu.DropDownItems.Add(Mk(L10n.T("主机资源（远端 CPU/内存）"), cb.ShowRemoteMonitor, "cpu"));
+            termMenu.DropDownItems.Add(Mk(L10n.T("端口转发"), cb.ShowPortForward, "forward"));
             menu.Items.Add(termMenu);
 
             // ===== 工具：独立工具 + 安全集群 + 设置集群 =====
-            var toolsMenu = new ToolStripMenuItem("工具(&T)");
-            toolsMenu.DropDownItems.Add(Mk("运维工具箱", cb.ShowToolbox, "toolbox"));
-            toolsMenu.DropDownItems.Add(Mk("敏感信息扫描", cb.ShowSecretScan, "scaneye"));
-            toolsMenu.DropDownItems.Add(Mk("扫描中心（插件）", cb.ShowScannerCenter, "radar")); // finding-16：与敏感信息扫描图标区分
+            var toolsMenu = new ToolStripMenuItem(L10n.T("工具(&T)"));
+            toolsMenu.DropDownItems.Add(Mk(L10n.T("运维工具箱"), cb.ShowToolbox, "toolbox"));
+            toolsMenu.DropDownItems.Add(Mk(L10n.T("敏感信息扫描"), cb.ShowSecretScan, "scaneye"));
+            toolsMenu.DropDownItems.Add(Mk(L10n.T("扫描中心（插件）"), cb.ShowScannerCenter, "radar")); // finding-16：与敏感信息扫描图标区分
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
-            toolsMenu.DropDownItems.Add(Mk("传输中心", cb.ShowTransferCenter, "transfer"));
-            toolsMenu.DropDownItems.Add(Mk("通知中心", cb.ShowNotificationCenter, "notify"));
+            toolsMenu.DropDownItems.Add(Mk(L10n.T("传输中心"), cb.ShowTransferCenter, "transfer"));
+            toolsMenu.DropDownItems.Add(Mk(L10n.T("通知中心"), cb.ShowNotificationCenter, "notify"));
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
-            toolsMenu.DropDownItems.Add(Mk("密码库管理(&K)", cb.KeePassManager, "lock"));
-            toolsMenu.DropDownItems.Add(Mk("密码健康报告(&H)", cb.PasswordHealth, "shield"));
-            toolsMenu.DropDownItems.Add(Mk("密码生成器(&G)", cb.PasswordGenerator, "key"));
-            toolsMenu.DropDownItems.Add(Mk("SSH 密钥管理", cb.SshKeyManager, "key"));
-            toolsMenu.DropDownItems.Add(Mk("修改主密码(&M)...", cb.ChangeMasterPassword, "pencil"));
-            toolsMenu.DropDownItems.Add(Mk("OTP 动态码管理(&T)…", cb.OtpManager, "key"));
+            toolsMenu.DropDownItems.Add(Mk(L10n.T("密码库管理(&K)"), cb.KeePassManager, "lock"));
+            toolsMenu.DropDownItems.Add(Mk(L10n.T("密码健康报告(&H)"), cb.PasswordHealth, "shield"));
+            toolsMenu.DropDownItems.Add(Mk(L10n.T("密码生成器(&G)"), cb.PasswordGenerator, "key"));
+            toolsMenu.DropDownItems.Add(Mk(L10n.T("SSH 密钥管理"), cb.SshKeyManager, "key"));
+            toolsMenu.DropDownItems.Add(Mk(L10n.T("修改主密码(&M)..."), cb.ChangeMasterPassword, "pencil"));
+            toolsMenu.DropDownItems.Add(Mk(L10n.T("OTP 动态码管理(&T)…"), cb.OtpManager, "key"));
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
-            toolsMenu.DropDownItems.Add(Mk("外观设置(&R)...", cb.AppearanceSettings, "brush"));
-            toolsMenu.DropDownItems.Add(Mk("AI 助手设置(&I)", cb.AiSettings, "ai"));
-            toolsMenu.DropDownItems.Add(Mk("危险命令规则(&D)", cb.DangerousCmdSettings, "warning"));
-            toolsMenu.DropDownItems.Add(Mk("快捷键绑定", cb.ShowKeyBinding, "keyboard"));
+            toolsMenu.DropDownItems.Add(Mk(L10n.T("外观设置(&R)..."), cb.AppearanceSettings, "brush"));
+            toolsMenu.DropDownItems.Add(Mk(L10n.T("AI 助手设置(&I)"), cb.AiSettings, "ai"));
+            toolsMenu.DropDownItems.Add(Mk(L10n.T("危险命令规则(&D)"), cb.DangerousCmdSettings, "warning"));
+            toolsMenu.DropDownItems.Add(Mk(L10n.T("快捷键绑定"), cb.ShowKeyBinding, "keyboard"));
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
-            var debugItem = new ToolStripMenuItem("调试模式(&D)")
+            var debugItem = new ToolStripMenuItem(L10n.T("调试模式(&D)"))
             {
                 CheckOnClick = true,
                 Checked = Gdterm.UI.Program.DebugConfig != null && Gdterm.UI.Program.DebugConfig.Enabled
@@ -224,14 +224,14 @@ namespace Gdterm.UI.Services
             menu.Items.Add(toolsMenu);
 
             // ===== 帮助 =====
-            var helpMenu = new ToolStripMenuItem("帮助(&H)");
-            helpMenu.DropDownItems.Add(Mk("快捷键列表", cb.ShowHotkeys, "helpq"));
-            helpMenu.DropDownItems.Add(Mk("检查更新…", cb.ShowUpdateCheck, "update"));
-            helpMenu.DropDownItems.Add(Mk("打开日志文件夹", cb.ShowLogsFolder, "logs"));
+            var helpMenu = new ToolStripMenuItem(L10n.T("帮助(&H)"));
+            helpMenu.DropDownItems.Add(Mk(L10n.T("快捷键列表"), cb.ShowHotkeys, "helpq"));
+            helpMenu.DropDownItems.Add(Mk(L10n.T("检查更新…"), cb.ShowUpdateCheck, "update"));
+            helpMenu.DropDownItems.Add(Mk(L10n.T("打开日志文件夹"), cb.ShowLogsFolder, "logs"));
             if (cb.DiagnosticsPackage != null)
-                helpMenu.DropDownItems.Add(Mk("导出诊断包…", cb.DiagnosticsPackage, "export"));
+                helpMenu.DropDownItems.Add(Mk(L10n.T("导出诊断包…"), cb.DiagnosticsPackage, "export"));
             helpMenu.DropDownItems.Add(new ToolStripSeparator());
-            helpMenu.DropDownItems.Add(Mk("关于 gdterm", cb.About, "info"));
+            helpMenu.DropDownItems.Add(Mk(L10n.T("关于 gdterm"), cb.About, "info"));
             menu.Items.Add(helpMenu);
 
             return new Result
