@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Windows.Forms;
 using Gdterm.UI.Controls;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Services
 {
@@ -25,15 +26,15 @@ namespace Gdterm.UI.Services
         /// <summary>常见符号的语义名（含全角/半角与几何图形变体）。</summary>
         private static readonly Dictionary<string, string> Symbols = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            { "×", "关闭" }, { "✕", "关闭" }, { "✖", "关闭" }, { "╳", "关闭" },
-            { "+", "添加" }, { "＋", "添加" },
-            { "−", "移除" }, { "-", "移除" }, { "－", "移除" },
-            { "↑", "上移" }, { "↓", "下移" },
-            { "←", "后退" }, { "→", "前进" },
-            { "…", "更多" }, { "...", "更多" },
-            { "▸", "展开" }, { "▾", "折叠" },
-            { "⚙", "设置" }, { "🔒", "锁定" }, { "🔓", "解锁" },
-            { "× ", "关闭" }
+            { "×", L10n.T("关闭") }, { "✕", L10n.T("关闭") }, { "✖", L10n.T("关闭") }, { "╳", L10n.T("关闭") },
+            { "+", L10n.T("添加") }, { "＋", L10n.T("添加") },
+            { "−", L10n.T("移除") }, { "-", L10n.T("移除") }, { "－", L10n.T("移除") },
+            { "↑", L10n.T("上移") }, { "↓", L10n.T("下移") },
+            { "←", L10n.T("后退") }, { "→", L10n.T("前进") },
+            { "…", L10n.T("更多") }, { "...", L10n.T("更多") },
+            { "▸", L10n.T("展开") }, { "▾", L10n.T("折叠") },
+            { "⚙", L10n.T("设置") }, { "🔒", L10n.T("锁定") }, { "🔓", L10n.T("解锁") },
+            { "× ", L10n.T("关闭") }
         };
 
         /// <summary>字形 → 语义名；非符号返回 null。</summary>

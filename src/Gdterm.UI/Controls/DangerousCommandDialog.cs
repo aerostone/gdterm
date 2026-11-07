@@ -5,6 +5,7 @@ using Gdterm.Core.Models;
 using Gdterm.Security;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
@@ -135,7 +136,7 @@ namespace Gdterm.UI.Controls
 
             // 记住选择
             _rememberChoice = new AntdUI.Checkbox {
-                Text = "记住此命令，下次不再警告（加入白名单）",
+                Text = L10n.T("记住此命令，下次不再警告（加入白名单）"),
                 ForeColor = textColor,
                 Dock = DockStyle.Top,
                 AutoSize = true,
@@ -152,7 +153,7 @@ namespace Gdterm.UI.Controls
             };
 
             _cancelButton = new AntdUI.Button {
-                Text = "取消 (Esc)",
+                Text = L10n.T("取消 (Esc)"),
                 AutoSize = true,
                 Type = AntdUI.TTypeMini.Default,
                 Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5))
@@ -210,7 +211,7 @@ namespace Gdterm.UI.Controls
                 if (_currentConfirm == _checkResult.ConfirmCount - 1)
                 {
                     _confirmButton.Type = AntdUI.TTypeMini.Error;
-                    _confirmButton.Text = "⚠ 确认执行 ⚠";
+                    _confirmButton.Text = L10n.T("⚠ 确认执行 ⚠");
                 }
             }
         }
@@ -226,7 +227,7 @@ namespace Gdterm.UI.Controls
         private string GetConfirmButtonText()
         {
             var remaining = _checkResult.ConfirmCount - _currentConfirm;
-            if (remaining == 1) return "⚠ 最终确认 ⚠";
+            if (remaining == 1) return L10n.T("⚠ 最终确认 ⚠");
             return $"确认 ({_currentConfirm + 1}/{_checkResult.ConfirmCount})";
         }
 
@@ -246,21 +247,21 @@ namespace Gdterm.UI.Controls
                     bg = GdtermColorTable.Background;
                     accent = GdtermColorTable.Danger;
                     text = GdtermColorTable.Danger;
-                    levelText = "严重危险";
+                    levelText = L10n.T("严重危险");
                     emoji = "🔴";
                     break;
                 case DangerLevel.High:
                     bg = GdtermColorTable.Background;
                     accent = GdtermColorTable.Warning;
                     text = GdtermColorTable.Warning;
-                    levelText = "高风险";
+                    levelText = L10n.T("高风险");
                     emoji = "🟠";
                     break;
                 default: // Medium
                     bg = GdtermColorTable.Background;
                     accent = GdtermColorTable.Warning;
                     text = GdtermColorTable.Warning;
-                    levelText = "中等风险";
+                    levelText = L10n.T("中等风险");
                     emoji = "🟡";
                     break;
             }

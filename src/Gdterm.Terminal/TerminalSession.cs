@@ -5,6 +5,7 @@ using Gdterm.Core.Models;
 using Gdterm.Terminal.Diagnostics;
 using Gdterm.Terminal.Models;
 using Renci.SshNet;
+using Gdterm.Core;
 
 namespace Gdterm.Terminal
 {
@@ -145,7 +146,7 @@ namespace Gdterm.Terminal
 
         public void SendInput(string text)
         {
-            if (!IsConnected) throw new InvalidOperationException("终端未连接");
+            if (!IsConnected) throw new InvalidOperationException(L10n.T("终端未连接"));
             if (string.IsNullOrEmpty(text)) return;
 
             _shellStream.Write(text);
@@ -154,7 +155,7 @@ namespace Gdterm.Terminal
 
         public void SendBytes(byte[] data)
         {
-            if (!IsConnected) throw new InvalidOperationException("终端未连接");
+            if (!IsConnected) throw new InvalidOperationException(L10n.T("终端未连接"));
             if (data == null || data.Length == 0) return;
             _shellStream.Write(data, 0, data.Length);
             _shellStream.Flush();
@@ -168,9 +169,9 @@ namespace Gdterm.Terminal
         /// <summary>开始 Zmodem 接收（用户确认后调用）：后续远端字节进 Receiver，含帧包抑制渲染。</summary>
         public void StartZmodemReceive(string saveDirectory)
         {
-            if (!IsConnected) throw new InvalidOperationException("终端未连接");
+            if (!IsConnected) throw new InvalidOperationException(L10n.T("终端未连接"));
             if (string.IsNullOrEmpty(saveDirectory)) throw new ArgumentNullException("saveDirectory");
-            if (_zmodemRx != null) throw new InvalidOperationException("已有接收在进行中");
+            if (_zmodemRx != null) throw new InvalidOperationException(L10n.T("已有接收在进行中"));
             var rx = new Transfer.ZmodemReceiver();
             rx.Start(saveDirectory);
             if (!_zmodemEventsWired)
@@ -183,7 +184,7 @@ namespace Gdterm.Terminal
                 {
                     OutputReceived?.Invoke(this, new TerminalOutputEventArgs
                     {
-                        Text = "\r\n[Zmodem] 开始接收 " + (fe != null ? fe.FileName : "") + "（" + (fe != null ? fe.FileSize : 0) + " 字节）…\r\n",
+                        Text = L10n.T("\r\n[Zmodem] 开始接收 ") + (fe != null ? fe.FileName : "") + "（" + (fe != null ? fe.FileSize : 0) + L10n.T(" 字节）…\r\n"),
                         Timestamp = DateTime.UtcNow
                     });
                 }
@@ -195,7 +196,7 @@ namespace Gdterm.Terminal
                 {
                     OutputReceived?.Invoke(this, new TerminalOutputEventArgs
                     {
-                        Text = "\r\n[Zmodem] 接收完成 " + (fe != null ? fe.FileName : "") + "（" + (fe != null ? fe.FileSize : 0) + " 字节）。\r\n",
+                        Text = L10n.T("\r\n[Zmodem] 接收完成 ") + (fe != null ? fe.FileName : "") + "（" + (fe != null ? fe.FileSize : 0) + L10n.T(" 字节）。\r\n"),
                         Timestamp = DateTime.UtcNow
                     });
                 }
@@ -207,7 +208,7 @@ namespace Gdterm.Terminal
                 {
                     OutputReceived?.Invoke(this, new TerminalOutputEventArgs
                     {
-                        Text = "\r\n[Zmodem] 接收失败：" + (ee != null ? ee.Error : "?") + "\r\n",
+                        Text = L10n.T("\r\n[Zmodem] 接收失败：") + (ee != null ? ee.Error : "?") + "\r\n",
                         Timestamp = DateTime.UtcNow
                     });
                 }
@@ -405,7 +406,7 @@ namespace Gdterm.Terminal
                             _zmodemHinted = true;
                             OutputReceived?.Invoke(this, new TerminalOutputEventArgs
                             {
-                                Text = "\r\n[Zmodem] 检测到远端 sz 发送请求。按 Ctrl+Shift+Z 接收（或用 SFTP 浏览器传文件）。\r\n",
+                                Text = L10n.T("\r\n[Zmodem] 检测到远端 sz 发送请求。按 Ctrl+Shift+Z 接收（或用 SFTP 浏览器传文件）。\r\n"),
                                 Timestamp = DateTime.UtcNow
                             });
                         }

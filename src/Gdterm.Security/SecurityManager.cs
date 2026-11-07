@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Timers;
 using Gdterm.Security.Models;
+using Gdterm.Core;
 
 namespace Gdterm.Security
 {
@@ -120,10 +121,10 @@ namespace Gdterm.Security
             if (_passwordConfig != null)
             {
                 if (string.IsNullOrEmpty(oldPassword))
-                    throw new ArgumentException("必须提供旧密码");
+                    throw new ArgumentException(L10n.T("必须提供旧密码"));
 
                 if (!VerifyPassword(oldPassword, _passwordConfig))
-                    throw new ArgumentException("旧密码不正确");
+                    throw new ArgumentException(L10n.T("旧密码不正确"));
             }
 
             // 校验新密码强度
@@ -280,24 +281,24 @@ namespace Gdterm.Security
 
             if (string.IsNullOrEmpty(password))
             {
-                violations.Add("密码不能为空");
+                violations.Add(L10n.T("密码不能为空"));
                 return violations;
             }
 
             if (password.Length < 12)
-                violations.Add("密码长度不得少于12个字符");
+                violations.Add(L10n.T("密码长度不得少于12个字符"));
 
             if (!password.Any(char.IsUpper))
-                violations.Add("密码必须包含至少一个大写字母");
+                violations.Add(L10n.T("密码必须包含至少一个大写字母"));
 
             if (!password.Any(char.IsLower))
-                violations.Add("密码必须包含至少一个小写字母");
+                violations.Add(L10n.T("密码必须包含至少一个小写字母"));
 
             if (!password.Any(char.IsDigit))
-                violations.Add("密码必须包含至少一个数字");
+                violations.Add(L10n.T("密码必须包含至少一个数字"));
 
             if (!password.Any(ch => !char.IsLetterOrDigit(ch)))
-                violations.Add("密码必须包含至少一个特殊字符");
+                violations.Add(L10n.T("密码必须包含至少一个特殊字符"));
 
             return violations;
         }
