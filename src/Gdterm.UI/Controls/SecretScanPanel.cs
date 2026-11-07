@@ -51,7 +51,7 @@ namespace Gdterm.UI.Controls
             topPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             _lblScore = new AntdUI.Label {
-                Text = "安全评分: --",
+                Text = L10n.T("安全评分: --"),
                 Font = Services.FormFontPolicy.UiFont(+11f, FontStyle.Bold),
                 ForeColor = GdtermColorTable.Success,
                 AutoSize = true,
@@ -59,7 +59,7 @@ namespace Gdterm.UI.Controls
             };
 
             _lblStats = new AntdUI.Label {
-                Text = "等待扫描...",
+                Text = L10n.T("等待扫描..."),
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = GdtermColorTable.Muted,
                 AutoSize = true,
@@ -67,7 +67,7 @@ namespace Gdterm.UI.Controls
             };
 
             _btnScan = new AntdUI.Button {
-                Text = "开始扫描",
+                Text = L10n.T("开始扫描"),
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 5), DpiScale.V(this, 10), DpiScale.V(this, 5)),
                 Margin = new Padding(0, 0, DpiScale.V(this, 8), 0),
@@ -78,7 +78,7 @@ namespace Gdterm.UI.Controls
             _btnScan.Click += (s, e) => StartScan();
 
             _btnStop = new AntdUI.Button {
-                Text = "停止",
+                Text = L10n.T("停止"),
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 5), DpiScale.V(this, 10), DpiScale.V(this, 5)),
                 Type = AntdUI.TTypeMini.Error,
@@ -111,13 +111,13 @@ namespace Gdterm.UI.Controls
                 GridLines = false,
                 MultiSelect = false
             };
-            _lvFindings.Columns.Add("严重程度", 80);
-            _lvFindings.Columns.Add("类别", 100);
-            _lvFindings.Columns.Add("规则", 120);
-            _lvFindings.Columns.Add("文件路径", 300);
-            _lvFindings.Columns.Add("行号", 50);
-            _lvFindings.Columns.Add("内容（脱敏）", 200);
-            _lvFindings.Columns.Add("描述", 200);
+            _lvFindings.Columns.Add(L10n.T("严重程度"), 80);
+            _lvFindings.Columns.Add(L10n.T("类别"), 100);
+            _lvFindings.Columns.Add(L10n.T("规则"), 120);
+            _lvFindings.Columns.Add(L10n.T("文件路径"), 300);
+            _lvFindings.Columns.Add(L10n.T("行号"), 50);
+            _lvFindings.Columns.Add(L10n.T("内容（脱敏）"), 200);
+            _lvFindings.Columns.Add(L10n.T("描述"), 200);
             _lvFindings.DoubleClick += OnFindingDoubleClick;
 
             // ── 底部状态栏 ──
@@ -137,20 +137,20 @@ namespace Gdterm.UI.Controls
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(0),
-                Text = "选择扫描路径后点击「开始扫描」"
+                Text = L10n.T("选择扫描路径后点击「开始扫描」")
             };
             bottomPanel.Controls.Add(_lblStatus);
 
-            _shell = new ListShell(_lvFindings, "过滤规则/文件/内容…");
-            var btnExport = _shell.AddAction("导出", (s2, e2) => _shell.ExportCsv(FindForm(), "secret-scan"));
+            _shell = new ListShell(_lvFindings, L10n.T("过滤规则/文件/内容…"));
+            var btnExport = _shell.AddAction(L10n.T("导出"), (s2, e2) => _shell.ExportCsv(FindForm(), "secret-scan"));
             btnExport.Name = "SecretScanExportButton";
 
             Controls.Add(_shell);
             Controls.Add(_progress);
             // 审计 C1：空态引导 —— 「扫完 0 个发现」与「还没扫」此前都只是一片空列表
-            _empty = EmptyStateView.Attach(this, "还没有扫描结果",
-                "选一个目录开始扫描，命中密钥/口令/私钥等高危模式的文件会列在这里",
-                "开始扫描", (s2, e2) => StartScan());
+            _empty = EmptyStateView.Attach(this, L10n.T("还没有扫描结果"),
+                L10n.T("选一个目录开始扫描，命中密钥/口令/私钥等高危模式的文件会列在这里"),
+                L10n.T("开始扫描"), (s2, e2) => StartScan());
             _empty.SetEmpty(true);
             Controls.Add(topPanel);
             Controls.Add(bottomPanel);
@@ -160,7 +160,7 @@ namespace Gdterm.UI.Controls
             _scanner.ProgressChanged += OnProgressChanged;
             _scanner.ScanCompleted += OnScanCompleted;
             _scanner.ErrorOccurred += OnError;
-            _lvFindings.AccessibleName = "敏感信息扫描结果";
+            _lvFindings.AccessibleName = L10n.T("敏感信息扫描结果");
             // 无障碍名称回填：ListView/Table 本身没有 Text，AutoName 只补有文本的控件，
             // 列表名单独设（读屏软件念"宏列表"而不是"列表"）
             try { UiA11y.AutoName(this); } catch (Exception) { }
@@ -174,8 +174,8 @@ namespace Gdterm.UI.Controls
             _btnScan.Enabled = false;
             _btnStop.Enabled = true;
             _progress.Style = ProgressBarStyle.Marquee;
-            _lblStatus.Text = "扫描中...";
-            _lblScore.Text = "安全评分: 扫描中...";
+            _lblStatus.Text = L10n.T("扫描中...");
+            _lblScore.Text = L10n.T("安全评分: 扫描中...");
             _lblScore.ForeColor = GdtermColorTable.Success;
 
             _scanner.StartScanAsync();
@@ -187,7 +187,7 @@ namespace Gdterm.UI.Controls
             _btnScan.Enabled = true;
             _btnStop.Enabled = false;
             _progress.Style = ProgressBarStyle.Continuous;
-            _lblStatus.Text = "扫描已停止";
+            _lblStatus.Text = L10n.T("扫描已停止");
         }
 
         private void OnFindingDetected(SecretFinding finding)
@@ -205,13 +205,13 @@ namespace Gdterm.UI.Controls
             item.Tag = finding;
 
             _shell.AddItem(item);
-            _lblStats.Text = string.Format("已发现 {0} 个问题", _shell.AllItems.Count);
+            _lblStats.Text = string.Format(L10n.T("已发现 {0} 个问题"), _shell.AllItems.Count);
         }
 
         private void OnProgressChanged(int current, int total)
         {
             if (InvokeRequired) { BeginInvoke(new Action(() => OnProgressChanged(current, total))); return; }
-            _lblStatus.Text = string.Format("扫描进度: {0}/{1} 文件", current, total);
+            _lblStatus.Text = string.Format(L10n.T("扫描进度: {0}/{1} 文件"), current, total);
         }
 
         private void OnScanCompleted(SecretScanReport report)
@@ -224,17 +224,17 @@ namespace Gdterm.UI.Controls
             _progress.Value = 100;
 
             var score = report.SecurityScore;
-            _lblScore.Text = string.Format("安全评分: {0}", score);
+            _lblScore.Text = string.Format(L10n.T("安全评分: {0}"), score);
             _lblScore.ForeColor = score >= 80 ? GdtermColorTable.Success :
                                   score >= 60 ? GdtermColorTable.Warning :
                                   score >= 40 ? GdtermColorTable.Warning :
                                   GdtermColorTable.Danger;
 
-            _lblStats.Text = string.Format("扫描完成: {0} 文件 | {1} 个发现 (严重:{2} 高:{3} 中:{4} 低:{5})",
+            _lblStats.Text = string.Format(L10n.T("扫描完成: {0} 文件 | {1} 个发现 (严重:{2} 高:{3} 中:{4} 低:{5})"),
                 report.FilesScanned, report.TotalFindings,
                 report.CriticalCount, report.HighCount, report.MediumCount, report.LowCount);
 
-            _lblStatus.Text = string.Format("扫描耗时: {0:F1}秒", report.Duration.TotalSeconds);
+            _lblStatus.Text = string.Format(L10n.T("扫描耗时: {0:F1}秒"), report.Duration.TotalSeconds);
 
             if (_empty != null)
             {
@@ -242,8 +242,8 @@ namespace Gdterm.UI.Controls
                 if (_lvFindings.Items.Count > 0) _empty.SetEmpty(false);
                 else if (report.FilesScanned > 0)
                 {
-                    _empty.SetEmpty(true, "没有发现敏感信息",
-                        string.Format("已扫描 {0} 个文件，未命中已知密钥/口令模式", report.FilesScanned));
+                    _empty.SetEmpty(true, L10n.T("没有发现敏感信息"),
+                        string.Format(L10n.T("已扫描 {0} 个文件，未命中已知密钥/口令模式"), report.FilesScanned));
                     if (_empty.ActionButton != null) _empty.ActionButton.Visible = false;
                 }
                 else
@@ -259,14 +259,14 @@ namespace Gdterm.UI.Controls
         private void OnError(string error)
         {
             if (InvokeRequired) { BeginInvoke(new Action(() => OnError(error))); return; }
-            _lblStatus.Text = "错误: " + error;
+            _lblStatus.Text = L10n.T("错误: ") + error;
             _btnScan.Enabled = true;
             _btnStop.Enabled = false;
             _progress.Style = ProgressBarStyle.Continuous;
             // 失败必须能被人看见：状态栏在面板底部，扫描出错时用户往往已经切走
             var owner = FindForm();
-            if (owner != null) AntdUI.Message.error(owner, "扫描失败：" + error);
-            else ToastNotifier.Error("扫描失败：" + error);
+            if (owner != null) AntdUI.Message.error(owner, L10n.T("扫描失败：") + error);
+            else ToastNotifier.Error(L10n.T("扫描失败：") + error);
         }
 
         private void OnFindingDoubleClick(object sender, EventArgs e)
@@ -278,7 +278,7 @@ namespace Gdterm.UI.Controls
             // 显示详情对话框
             var form = new Form
             {
-                Text = "发现详情",
+                Text = L10n.T("发现详情"),
                 Size = DpiScale.S(this, 600, 400),
                 StartPosition = FormStartPosition.CenterParent,
                 BackColor = GdtermColorTable.Background,
@@ -305,13 +305,13 @@ namespace Gdterm.UI.Controls
             Action refreshText = () =>
             {
                 txt.Text = string.Format(
-                    "规则: {0}\n严重程度: {1}\n类别: {2}\n文件: {3}\n行号: {4}\n\n匹配内容{5}:\n{6}\n\n描述: {7}",
+                    L10n.T("规则: {0}\n严重程度: {1}\n类别: {2}\n文件: {3}\n行号: {4}\n\n匹配内容{5}:\n{6}\n\n描述: {7}"),
                     finding.RuleName,
                     GetSeverityText(finding.Severity),
                     finding.Category,
                     finding.FilePath,
                     finding.LineNumber,
-                    revealed ? "（明文）" : "（已脱敏）",
+                    revealed ? L10n.T("（明文）") : L10n.T("（已脱敏）"),
                     matchDisplay,
                     finding.Description);
             };
@@ -328,7 +328,7 @@ namespace Gdterm.UI.Controls
             };
 
             var btnReveal = new AntdUI.Button {
-                Text = "显示明文",
+                Text = L10n.T("显示明文"),
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(form, 10), DpiScale.V(form, 4), DpiScale.V(form, 10), DpiScale.V(form, 4)),
                 Margin = new Padding(0, 0, DpiScale.V(form, 8), 0),
@@ -340,12 +340,12 @@ namespace Gdterm.UI.Controls
                 if (revealed) return;
                 if (_security != null)
                 {
-                    if (!Gdterm.UI.Services.MasterPasswordPrompt.Confirm(form, _security, "查看敏感匹配内容"))
+                    if (!Gdterm.UI.Services.MasterPasswordPrompt.Confirm(form, _security, L10n.T("查看敏感匹配内容")))
                         return;
                 }
                 else
                 {
-                    var r = MessageBox.Show(form, "确认显示完整匹配内容？", "gdterm",
+                    var r = MessageBox.Show(form, L10n.T("确认显示完整匹配内容？"), "gdterm",
                         MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                     if (r != DialogResult.Yes) return;
                 }
@@ -356,7 +356,7 @@ namespace Gdterm.UI.Controls
             };
 
             var btnWhitelist = new AntdUI.Button {
-                Text = "加入白名单",
+                Text = L10n.T("加入白名单"),
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(form, 10), DpiScale.V(form, 4), DpiScale.V(form, 10), DpiScale.V(form, 4)),
                 BackColor = GdtermColorTable.Surface2,
@@ -365,7 +365,7 @@ namespace Gdterm.UI.Controls
             btnWhitelist.Click += (s2, e2) =>
             {
                 _scanner.AddToWhitelist(finding.FilePath, finding.MatchedContent);
-                MessageBox.Show("已加入白名单", "gdterm", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(L10n.T("已加入白名单"), "gdterm", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 form.Close();
             };
 
@@ -380,10 +380,10 @@ namespace Gdterm.UI.Controls
         {
             switch (severity)
             {
-                case FindingSeverity.Critical: return "🔴 严重";
-                case FindingSeverity.High: return "🟠 高";
-                case FindingSeverity.Medium: return "🟡 中";
-                case FindingSeverity.Low: return "🟢 低";
+                case FindingSeverity.Critical: return L10n.T("🔴 严重");
+                case FindingSeverity.High: return L10n.T("🟠 高");
+                case FindingSeverity.Medium: return L10n.T("🟡 中");
+                case FindingSeverity.Low: return L10n.T("🟢 低");
                 default: return severity.ToString();
             }
         }

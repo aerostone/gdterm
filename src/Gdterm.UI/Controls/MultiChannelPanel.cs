@@ -73,13 +73,13 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(DpiScale.V(this, 3))
             };
 
-            _btnSelectAll = CreateToolbarButton("全选就绪");
-            _btnDeselectAll = CreateToolbarButton("取消");
-            _btnBroadcast = CreateToolbarButton("广播");
+            _btnSelectAll = CreateToolbarButton(L10n.T("全选就绪"));
+            _btnDeselectAll = CreateToolbarButton(L10n.T("取消"));
+            _btnBroadcast = CreateToolbarButton(L10n.T("广播"));
             _btnBroadcast.Enabled = false;
-            _btnRecord = CreateToolbarButton("录制");
-            _btnReplay = CreateToolbarButton("回放");
-            _btnExport = CreateToolbarButton("导出");
+            _btnRecord = CreateToolbarButton(L10n.T("录制"));
+            _btnReplay = CreateToolbarButton(L10n.T("回放"));
+            _btnExport = CreateToolbarButton(L10n.T("导出"));
             // 录制器未注入时录制链置灰（广播不受影响；SidePanelFactory 正常注入单例故常态可用）。
             bool recOk = _recorder != null;
             _btnRecord.Enabled = recOk;
@@ -98,11 +98,11 @@ namespace Gdterm.UI.Controls
                 GridLines = true,
                 HeaderStyle = ColumnHeaderStyle.Nonclickable
             };
-            _sessionList.Columns.Add("主机", 100);
-            _sessionList.Columns.Add("分组", 50);
-            _sessionList.Columns.Add("状态", 60);
-            _sessionList.Columns.Add("终端", 55);
-            _sessionList.Columns.Add("命令数", 45);
+            _sessionList.Columns.Add(L10n.T("主机"), 100);
+            _sessionList.Columns.Add(L10n.T("分组"), 50);
+            _sessionList.Columns.Add(L10n.T("状态"), 60);
+            _sessionList.Columns.Add(L10n.T("终端"), 55);
+            _sessionList.Columns.Add(L10n.T("命令数"), 45);
 
             // 表壳：过滤 + 排序（连接多了按主机/分组找会话）。不出「导出」——工具栏已有录制导出，
             // 会话列表是实时状态，再放一个 CSV 导出只会让人分不清导的是哪个。
@@ -131,7 +131,7 @@ namespace Gdterm.UI.Controls
             var inputHint = new AntdUI.Label {
                 Dock = DockStyle.Fill,
                 AutoSize = true,
-                Text = "输入命令后按 Enter 广播到所有选中会话",
+                Text = L10n.T("输入命令后按 Enter 广播到所有选中会话"),
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleLeft
             };
@@ -143,17 +143,17 @@ namespace Gdterm.UI.Controls
             _statusLabel = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
                 AutoSize = true,
-                Text = "就绪",
+                Text = L10n.T("就绪"),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(DpiScale.V(this, 3), 0, 0, 0),
                 BackColor = GdtermColorTable.Surface
             };
 
             // 空态：一个终端都没打开时列表是纯空白 + 一排灰按钮，等于让用户猜「先干什么」
-            _empty = EmptyStateView.Attach(this, "还没有可广播的会话",
-                "打开任意 SSH/串口标签后会自动出现在这里；只有停在命令提示符的会话可加入",
-                "刷新列表", (s2, e2) => { RefreshList(); ToastNotifier.Info("已刷新会话列表", 1500); });
-            _shell = new ListShell(_sessionList, "按主机/分组过滤会话…");
+            _empty = EmptyStateView.Attach(this, L10n.T("还没有可广播的会话"),
+                L10n.T("打开任意 SSH/串口标签后会自动出现在这里；只有停在命令提示符的会话可加入"),
+                L10n.T("刷新列表"), (s2, e2) => { RefreshList(); ToastNotifier.Info(L10n.T("已刷新会话列表"), 1500); });
+            _shell = new ListShell(_sessionList, L10n.T("按主机/分组过滤会话…"));
             Controls.Add(_shell);
             Controls.Add(toolbar);
             Controls.Add(inputPanel);
@@ -285,8 +285,8 @@ namespace Gdterm.UI.Controls
                 if (_recorder.IsRecording)
                 {
                     _recorder.StopRecording();
-                    _btnRecord.Text = "录制";
-                    _statusLabel.Text = "录制停止（" + _recorder.EntryCount + " 条）";
+                    _btnRecord.Text = L10n.T("录制");
+                    _statusLabel.Text = L10n.T("录制停止（") + _recorder.EntryCount + L10n.T(" 条）");
                     return;
                 }
                 _recorder.StartRecording();
@@ -296,14 +296,14 @@ namespace Gdterm.UI.Controls
                         _recorder.RegisterSession(s.SessionId, s.DisplayName ?? s.SessionId);
                 }
                 catch (System.Exception exSwallowed) { try { Gdterm.UI.Diagnostics.DiagLog.Swallowed("MultiChannel", exSwallowed); } catch { } }
-                _btnRecord.Text = "停止";
-                _statusLabel.Text = "录制中…（广播输入记入时间线）";
+                _btnRecord.Text = L10n.T("停止");
+                _statusLabel.Text = L10n.T("录制中…（广播输入记入时间线）");
             }
             catch (System.Exception ex)
             {
-                _statusLabel.Text = "录制失败: " + ex.Message;
+                _statusLabel.Text = L10n.T("录制失败: ") + ex.Message;
                 try { DiagLog.Error("MultiChannel.Record", ex); } catch { }
-                ToastNotifier.Error("录制失败：" + ex.Message);
+                ToastNotifier.Error(L10n.T("录制失败：") + ex.Message);
             }
         }
 
@@ -311,13 +311,13 @@ namespace Gdterm.UI.Controls
         private void ReplayRecording()
         {
             if (_recorder == null || _recorder.IsRecording) return;
-            if (_recorder.EntryCount == 0) { _statusLabel.Text = "无录制内容"; return; }
+            if (_recorder.EntryCount == 0) { _statusLabel.Text = L10n.T("无录制内容"); return; }
             try
             {
                 if (_replayCts != null) { try { _replayCts.Cancel(); } catch { } }
                 _replayCts = new CancellationTokenSource();
                 var token = _replayCts.Token;
-                _statusLabel.Text = "回放中…";
+                _statusLabel.Text = L10n.T("回放中…");
                 Task.Run(async () =>
                 {
                     try
@@ -334,20 +334,20 @@ namespace Gdterm.UI.Controls
                             catch { }
                         }
                         await _recorder.ReplayAsync(map, 1.0, null, token);
-                        BeginInvoke(new Action(() => { _statusLabel.Text = "回放完成"; }));
+                        BeginInvoke(new Action(() => { _statusLabel.Text = L10n.T("回放完成"); }));
                     }
-                    catch (OperationCanceledException) { BeginInvoke(new Action(() => { _statusLabel.Text = "回放已取消"; })); }
-                    catch (System.Exception ex) { BeginInvoke(new Action(() => { _statusLabel.Text = "回放失败: " + ex.Message; })); }
+                    catch (OperationCanceledException) { BeginInvoke(new Action(() => { _statusLabel.Text = L10n.T("回放已取消"); })); }
+                    catch (System.Exception ex) { BeginInvoke(new Action(() => { _statusLabel.Text = L10n.T("回放失败: ") + ex.Message; })); }
                 }, token);
             }
-            catch (System.Exception ex) { _statusLabel.Text = "回放失败: " + ex.Message; }
+            catch (System.Exception ex) { _statusLabel.Text = L10n.T("回放失败: ") + ex.Message; }
         }
 
         /// <summary>导出：落盘 JSON 录制 + 同名 HTML 时间线报告（与宏录制 data/macros 分目录）。</summary>
         private void ExportRecording()
         {
             if (_recorder == null || _recorder.IsRecording) return;
-            if (_recorder.EntryCount == 0) { _statusLabel.Text = "无录制内容"; return; }
+            if (_recorder.EntryCount == 0) { _statusLabel.Text = L10n.T("无录制内容"); return; }
             try
             {
                 Directory.CreateDirectory(RecordDir);
@@ -356,9 +356,9 @@ namespace Gdterm.UI.Controls
                 var htmlPath = Path.Combine(RecordDir, "sync-" + stamp + ".html");
                 _recorder.SaveToFile(jsonPath);
                 File.WriteAllText(htmlPath, _recorder.ExportAsHtml(), System.Text.Encoding.UTF8);
-                _statusLabel.Text = "已导出 " + Path.GetFileName(jsonPath);
+                _statusLabel.Text = L10n.T("已导出 ") + Path.GetFileName(jsonPath);
             }
-            catch (System.Exception ex) { _statusLabel.Text = "导出失败: " + ex.Message; }
+            catch (System.Exception ex) { _statusLabel.Text = L10n.T("导出失败: ") + ex.Message; }
         }
 
         /// <summary>
@@ -380,13 +380,13 @@ namespace Gdterm.UI.Controls
                 item.SubItems.Add(session.Group);
 
                 // 连接状态
-                item.SubItems.Add(session.IsConnected ? "● 已连接" : "○ 断开");
+                item.SubItems.Add(session.IsConnected ? L10n.T("● 已连接") : L10n.T("○ 断开"));
 
                 // 终端就绪状态
                 var readyText = "—";
                 if (session.IsConnected && session.ReadyState != null)
                 {
-                    readyText = session.ReadyState.IsReady ? "✓ 就绪" : "✗ 忙";
+                    readyText = session.ReadyState.IsReady ? L10n.T("✓ 就绪") : L10n.T("✗ 忙");
                 }
                 item.SubItems.Add(readyText);
 
@@ -415,7 +415,7 @@ namespace Gdterm.UI.Controls
             if (rejected.Count > 0)
             {
                 var msg = string.Join("\n", rejected.ConvertAll(r => $"• {r.Message}"));
-                _statusLabel.Text = $"✗ {rejected.Count} 个会话未就绪";
+                _statusLabel.Text = L10n.Tf("✗ {0} 个会话未就绪", rejected.Count);
                 _statusLabel.ForeColor = GdtermColorTable.Danger;
             }
             else
@@ -430,8 +430,8 @@ namespace Gdterm.UI.Controls
             var selected = _manager.SelectedCount;
             _statusLabel.ForeColor = GdtermColorTable.Foreground;
             _statusLabel.Text = selected > 0
-                ? $"已选中 {selected}/{total} 个就绪会话，广播模式已激活"
-                : $"共 {total} 个会话，未选择广播目标";
+                ? L10n.Tf("已选中 {0}/{1} 个就绪会话，广播模式已激活", selected, total)
+                : L10n.Tf("共 {0} 个会话，未选择广播目标", total);
         }
     }
 }

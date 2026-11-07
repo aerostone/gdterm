@@ -64,7 +64,7 @@ namespace Gdterm.UI.Forms
 
         private void InitializeComponent()
         {
-            Text = "gdterm - 首次使用设置";
+            Text = L10n.T("gdterm - 首次使用设置");
             ClientSize = DpiScale.S(this, 560, 480);
             MinimumSize = DpiScale.S(this, 520, 440);
             StartPosition = FormStartPosition.CenterScreen;
@@ -92,7 +92,7 @@ namespace Gdterm.UI.Forms
             headerPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             var titleLabel = new AntdUI.Label {
-                Text = "欢迎使用 gdterm",
+                Text = L10n.T("欢迎使用 gdterm"),
                 // 标题强调：相对当前字体放大加粗，不硬编码字族/磅值（规范规则③）,
                 Font = new Font(Font.FontFamily, Font.Size + 6f, FontStyle.Bold),
                 ForeColor = GdtermColorTable.Foreground,
@@ -101,7 +101,7 @@ namespace Gdterm.UI.Forms
             };
 
             var subtitleLabel = new AntdUI.Label {
-                Text = "绿色运维客户端 · 首次使用请完成以下设置",
+                Text = L10n.T("绿色运维客户端 · 首次使用请完成以下设置"),
                 ForeColor = GdtermColorTable.Muted,
                 AutoSize = true,
                 TextAlign = ContentAlignment.TopLeft
@@ -144,7 +144,7 @@ namespace Gdterm.UI.Forms
             };
 
             _nextButton = new AntdUI.Button {
-                Text = "开始设置 →",
+                Text = L10n.T("开始设置 →"),
                 AutoSize = true,
                 Type = AntdUI.TTypeMini.Primary,
                 Cursor = Cursors.Hand,
@@ -157,7 +157,7 @@ namespace Gdterm.UI.Forms
             // 取消按钮（审计 F6）：完成前可见，点击/ESC 均走 Close() → 既有 FormClosing 确认；完成后隐藏
             _cancelButton = new AntdUI.Button
             {
-                Text = "取消",
+                Text = L10n.T("取消"),
                 AutoSize = true,
                 Cursor = Cursors.Hand,
                 Name = "cancelButton",
@@ -194,8 +194,8 @@ namespace Gdterm.UI.Forms
                 if (!IsCompleted && e.CloseReason == CloseReason.UserClosing)
                 {
                     var dr = MessageBox.Show(
-                        "尚未设置主密码。\n\n点击「是」退出 gdterm（下次启动仍需完成设置）；\n点击「否」返回继续设置。",
-                        "确认退出",
+                        L10n.T("尚未设置主密码。\n\n点击「是」退出 gdterm（下次启动仍需完成设置）；\n点击「否」返回继续设置。"),
+                        L10n.T("确认退出"),
                         MessageBoxButtons.YesNo,
                         MessageBoxIcon.Question,
                         MessageBoxDefaultButton.Button2);
@@ -207,9 +207,9 @@ namespace Gdterm.UI.Forms
         private static string BuildStepText(int step)
         {
             // 高亮当前步
-            string s1 = step == 0 ? "● 欢迎" : "○ 欢迎";
-            string s2 = step == 1 ? "● 设置主密码" : "○ 设置主密码";
-            string s3 = step == 2 ? "● 完成" : "○ 完成";
+            string s1 = step == 0 ? L10n.T("● 欢迎") : L10n.T("○ 欢迎");
+            string s2 = step == 1 ? L10n.T("● 设置主密码") : L10n.T("○ 设置主密码");
+            string s3 = step == 2 ? L10n.T("● 完成") : L10n.T("○ 完成");
             return s1 + "    →    " + s2 + "    →    " + s3;
         }
 
@@ -232,12 +232,12 @@ namespace Gdterm.UI.Forms
 
             var infoLabel = new AntdUI.Label {
                 Text =
-                    "为了保护您的连接信息和密码数据，gdterm 使用主密码加密所有敏感信息。\r\n\r\n" +
-                    "在开始之前，您需要：\r\n\r\n" +
-                    "    ·  设置一个强主密码（至少 12 位）\r\n" +
-                    "    ·  密码需包含大小写字母、数字和特殊字符\r\n" +
-                    "    ·  此密码用于锁定/解锁应用和加密配置\r\n\r\n" +
-                    "请牢记此密码，忘记后无法恢复数据。",
+                    L10n.T("为了保护您的连接信息和密码数据，gdterm 使用主密码加密所有敏感信息。\r\n\r\n") +
+                    L10n.T("在开始之前，您需要：\r\n\r\n") +
+                    L10n.T("    ·  设置一个强主密码（至少 12 位）\r\n") +
+                    L10n.T("    ·  密码需包含大小写字母、数字和特殊字符\r\n") +
+                    L10n.T("    ·  此密码用于锁定/解锁应用和加密配置\r\n\r\n") +
+                    L10n.T("请牢记此密码，忘记后无法恢复数据。"),
                 ForeColor = GdtermColorTable.Foreground,
                 Dock = DockStyle.Fill,
                 AutoSize = false,
@@ -274,7 +274,7 @@ namespace Gdterm.UI.Forms
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
 
             var promptLabel = new AntdUI.Label {
-                Text = "请设置主密码",
+                Text = L10n.T("请设置主密码"),
                 Font = new Font(Font.FontFamily, Font.Size + 2f, FontStyle.Bold),
                 ForeColor = GdtermColorTable.Foreground,
                 Dock = DockStyle.Fill,
@@ -284,7 +284,7 @@ namespace Gdterm.UI.Forms
             layout.Controls.Add(promptLabel, 0, 0);
 
             var pwdLabel = new AntdUI.Label {
-                Text = "密码",
+                Text = L10n.T("密码"),
                 ForeColor = GdtermColorTable.Foreground,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft
@@ -300,7 +300,7 @@ namespace Gdterm.UI.Forms
             layout.Controls.Add(_passwordBox, 1, 1);
 
             var confirmLabel = new AntdUI.Label {
-                Text = "确认",
+                Text = L10n.T("确认"),
                 ForeColor = GdtermColorTable.Foreground,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft
@@ -315,7 +315,7 @@ namespace Gdterm.UI.Forms
             layout.Controls.Add(_confirmBox, 1, 2);
 
             _strengthLabel = new AntdUI.Label {
-                Text = "密码强度：未输入",
+                Text = L10n.T("密码强度：未输入"),
                 ForeColor = GdtermColorTable.Muted,
                 Dock = DockStyle.Fill,
                 AutoSize = true,
@@ -335,7 +335,7 @@ namespace Gdterm.UI.Forms
             layout.Controls.Add(_errorLabel, 0, 4);
 
             var showPwdCheck = new AntdUI.Checkbox {
-                Text = "显示密码",
+                Text = L10n.T("显示密码"),
                 Dock = DockStyle.Left,
                 AutoSize = true,
                 Margin = new Padding(0, DpiScale.V(this, 4), 0, 0)
@@ -373,7 +373,7 @@ namespace Gdterm.UI.Forms
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 30f));
 
             var doneLabel = new AntdUI.Label {
-                Text = "设置完成",
+                Text = L10n.T("设置完成"),
                 // 标题强调：相对当前字体放大加粗（规范规则③）,
                 Font = new Font(Font.FontFamily, Font.Size + 7f, FontStyle.Bold),
                 ForeColor = GdtermColorTable.Success,
@@ -384,11 +384,11 @@ namespace Gdterm.UI.Forms
 
             var summaryLabel = new AntdUI.Label {
                 Text =
-                    "主密码已设置，您的数据将被安全加密。\r\n\r\n" +
-                    "·  配置文件保存在 data/ 目录，可整体迁移\r\n" +
-                    "·  空闲 5 分钟后自动锁定\r\n" +
-                    "·  Ctrl+` 全局热键可快速呼出/隐藏窗口\r\n\r\n" +
-                    "点击「进入 gdterm」开始使用。",
+                    L10n.T("主密码已设置，您的数据将被安全加密。\r\n\r\n") +
+                    L10n.T("·  配置文件保存在 data/ 目录，可整体迁移\r\n") +
+                    L10n.T("·  空闲 5 分钟后自动锁定\r\n") +
+                    L10n.T("·  Ctrl+` 全局热键可快速呼出/隐藏窗口\r\n\r\n") +
+                    L10n.T("点击「进入 gdterm」开始使用。"),
                 ForeColor = GdtermColorTable.Foreground,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.TopCenter
@@ -415,15 +415,15 @@ namespace Gdterm.UI.Forms
             {
                 case 0:
                     panel = _welcomePanel;
-                    _nextButton.Text = "开始设置 →";
+                    _nextButton.Text = L10n.T("开始设置 →");
                     break;
                 case 1:
                     panel = _passwordPanel;
-                    _nextButton.Text = "确认设置 →";
+                    _nextButton.Text = L10n.T("确认设置 →");
                     break;
                 case 2:
                     panel = _completePanel;
-                    _nextButton.Text = "进入 gdterm";
+                    _nextButton.Text = L10n.T("进入 gdterm");
                     break;
                 default:
                     return;
@@ -464,7 +464,7 @@ namespace Gdterm.UI.Forms
             var pwd = _passwordBox.Text;
             if (string.IsNullOrEmpty(pwd))
             {
-                _strengthLabel.Text = "密码强度：未输入";
+                _strengthLabel.Text = L10n.T("密码强度：未输入");
                 _strengthLabel.ForeColor = GdtermColorTable.Muted;
                 return;
             }
@@ -479,11 +479,11 @@ namespace Gdterm.UI.Forms
 
             string strength;
             Color color;
-            if (score <= 2) { strength = "弱"; color = GdtermColorTable.Danger; }
-            else if (score <= 4) { strength = "中"; color = GdtermColorTable.Warning; }
-            else { strength = "强"; color = GdtermColorTable.Success; }
+            if (score <= 2) { strength = L10n.T("弱"); color = GdtermColorTable.Danger; }
+            else if (score <= 4) { strength = L10n.T("中"); color = GdtermColorTable.Warning; }
+            else { strength = L10n.T("强"); color = GdtermColorTable.Success; }
 
-            _strengthLabel.Text = string.Format("密码强度：{0}（{1} 字符）", strength, pwd.Length);
+            _strengthLabel.Text = string.Format(L10n.T("密码强度：{0}（{1} 字符）"), strength, pwd.Length);
             _strengthLabel.ForeColor = color;
         }
 
@@ -494,13 +494,13 @@ namespace Gdterm.UI.Forms
 
             if (string.IsNullOrEmpty(password))
             {
-                _errorLabel.Text = "密码不能为空";
+                _errorLabel.Text = L10n.T("密码不能为空");
                 return false;
             }
 
             if (password != confirm)
             {
-                _errorLabel.Text = "两次输入的密码不一致";
+                _errorLabel.Text = L10n.T("两次输入的密码不一致");
                 return false;
             }
 
@@ -514,12 +514,12 @@ namespace Gdterm.UI.Forms
             }
             catch (WeakPasswordException ex)
             {
-                _errorLabel.Text = "密码不符合要求：\n· " + string.Join("\n· ", ex.Violations);
+                _errorLabel.Text = L10n.T("密码不符合要求：\n· ") + string.Join("\n· ", ex.Violations);
                 return false;
             }
             catch (Exception ex)
             {
-                _errorLabel.Text = "设置失败：" + ex.Message;
+                _errorLabel.Text = L10n.T("设置失败：") + ex.Message;
                 return false;
             }
         }

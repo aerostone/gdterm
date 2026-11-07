@@ -82,7 +82,7 @@ namespace Gdterm.UI.Services
         {
             if (_otpStore == null)
             {
-                MessageBox.Show(_owner, "OTP 存储未初始化。", "OTP", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(_owner, L10n.T("OTP 存储未初始化。"), "OTP", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             using (var form = new OtpManagerForm(_otpStore))
@@ -94,19 +94,19 @@ namespace Gdterm.UI.Services
         {
             string tableLines = null;
             try { tableLines = _hotkeyTableLines != null ? _hotkeyTableLines() : null; } catch { }
-            return "快捷键（UI 动作均为 Ctrl+Shift 组合，普通 Ctrl 留给终端）：\n\n" +
-                   "Ctrl + `            呼出/隐藏窗口\n" +
+            return L10n.T("快捷键（UI 动作均为 Ctrl+Shift 组合，普通 Ctrl 留给终端）：\n\n") +
+                   L10n.T("Ctrl + `            呼出/隐藏窗口\n") +
                    (tableLines ?? "") + "\n" +
-                   "Ctrl + Shift + L    切换连接面板\n" +
-                   "Ctrl + Shift + M    tmux 快捷面板（底栏 tmux 键组切换）\n" +
-                   "Alt + 8             tmux 键组与全部之间快速切换\n" +
-                   "Ctrl + Tab          下一个标签（Ctrl+Shift+Tab 上一个）\n" +
-                   "Ctrl + Alt + 1..9   直达第 N 个标签\n" +
-                   "中键点标签头        关闭该标签\n" +
-                   "Esc / F11           退出专注模式\n" +
-                   "右上角按钮          退出专注（专注模式下可见）\n\n" +
-                   "提示：在终端里，普通 Ctrl 组合直接发给 shell，\n" +
-                   "例如 Ctrl+R 反向搜索历史、Ctrl+W 删词、Ctrl+L 清屏。";
+                   L10n.T("Ctrl + Shift + L    切换连接面板\n") +
+                   L10n.T("Ctrl + Shift + M    tmux 快捷面板（底栏 tmux 键组切换）\n") +
+                   L10n.T("Alt + 8             tmux 键组与全部之间快速切换\n") +
+                   L10n.T("Ctrl + Tab          下一个标签（Ctrl+Shift+Tab 上一个）\n") +
+                   L10n.T("Ctrl + Alt + 1..9   直达第 N 个标签\n") +
+                   L10n.T("中键点标签头        关闭该标签\n") +
+                   L10n.T("Esc / F11           退出专注模式\n") +
+                   L10n.T("右上角按钮          退出专注（专注模式下可见）\n\n") +
+                   L10n.T("提示：在终端里，普通 Ctrl 组合直接发给 shell，\n") +
+                   L10n.T("例如 Ctrl+R 反向搜索历史、Ctrl+W 删词、Ctrl+L 清屏。");
         }
 
         /// <summary>
@@ -117,7 +117,7 @@ namespace Gdterm.UI.Services
         {
             if (_keepassService == null)
             {
-                MessageBox.Show(_owner, "密码服务不可用", action, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(_owner, L10n.T("密码服务不可用"), action, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
             if (_keepassService.IsUnlocked) return true;
@@ -133,31 +133,31 @@ namespace Gdterm.UI.Services
             catch (Exception ex)
             {
                 Gdterm.UI.Diagnostics.DiagLog.Swallowed("ToolsDialogs.KeePassUnlock", ex);
-                MessageBox.Show(_owner, "解锁失败: " + ex.Message, action, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(_owner, L10n.T("解锁失败: ") + ex.Message, action, MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return false;
             }
         }
 
         public void OpenKeePassManager()
         {
-            if (!ReAuthenticate("访问密码库管理")) return;
-            if (!EnsureKeePassUnlocked("密码库管理")) return;
+            if (!ReAuthenticate(L10n.T("访问密码库管理"))) return;
+            if (!EnsureKeePassUnlocked(L10n.T("密码库管理"))) return;
             using (var form = new KeePassManagerForm(_keepassService, _connectionStore, _connectionsChanged))
                 form.ShowDialog(_owner);
         }
 
         public void OpenPasswordHealth()
         {
-            if (!ReAuthenticate("查看密码健康报告")) return;
-            if (!EnsureKeePassUnlocked("密码健康报告")) return;
+            if (!ReAuthenticate(L10n.T("查看密码健康报告"))) return;
+            if (!EnsureKeePassUnlocked(L10n.T("密码健康报告"))) return;
             using (var form = new PasswordHealthForm(_keepassService))
                 form.ShowDialog(_owner);
         }
 
         public void OpenSshKeyManager()
         {
-            if (!ReAuthenticate("管理 SSH 密钥")) return;
-            if (!EnsureKeePassUnlocked("SSH 密钥管理")) return;
+            if (!ReAuthenticate(L10n.T("管理 SSH 密钥"))) return;
+            if (!EnsureKeePassUnlocked(L10n.T("SSH 密钥管理"))) return;
             using (var form = new SshKeyManagerForm(_keepassService))
                 form.ShowDialog(_owner);
         }
@@ -195,13 +195,13 @@ namespace Gdterm.UI.Services
                         }
                     }
                     catch (Exception ex) { Gdterm.UI.Diagnostics.DiagLog.Swallowed("ToolsDialogs.ApplyUIFont", ex); }
-                    try { Gdterm.UI.Diagnostics.ToastNotifier.Success("外观已保存（DPI 需重启）"); }
+                    try { Gdterm.UI.Diagnostics.ToastNotifier.Success(L10n.T("外观已保存（DPI 需重启）")); }
                     catch
                     {
                         MessageBox.Show(
                             _owner,
-                            "外观已保存。终端与界面字体已即时生效；DPI 感知需重启应用。",
-                            "外观设置",
+                            L10n.T("外观已保存。终端与界面字体已即时生效；DPI 感知需重启应用。"),
+                            L10n.T("外观设置"),
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Information);
                     }
@@ -258,7 +258,7 @@ namespace Gdterm.UI.Services
 
             using (var form = new Form
             {
-                Text = "检查更新",
+                Text = L10n.T("检查更新"),
                 StartPosition = FormStartPosition.CenterParent,
                 FormBorderStyle = FormBorderStyle.FixedDialog,
                 MaximizeBox = false,
@@ -271,9 +271,9 @@ namespace Gdterm.UI.Services
                 int fieldH = FormFontPolicy.FieldHeight(form);
                 var head = new AntdUI.Label
                 {
-                    Text = failed ? "检查失败：" + (info != null ? info.Error : "未知错误")
-                         : newer ? "发现新版本 " + info.Version
-                         : "已是最新版本（" + UpdateChecker.CurrentVersion + "）",
+                    Text = failed ? L10n.T("检查失败：") + (info != null ? info.Error : L10n.T("未知错误"))
+                         : newer ? L10n.T("发现新版本 ") + info.Version
+                         : L10n.T("已是最新版本（") + UpdateChecker.CurrentVersion + "）",
                     AutoSize = true,
                     Location = new Point(pad, pad),
                     ForeColor = failed ? GdtermColorTable.Danger
@@ -294,18 +294,18 @@ namespace Gdterm.UI.Services
                     Font = FormFontPolicy.MonoFont(),
                     Location = new Point(pad, pad + DpiScale.V(form, 34)),
                     Size = new Size(DpiScale.V(form, 520), DpiScale.V(form, 220)),
-                    Text = failed ? "无法获取 release 信息，请检查网络后重试；也可直接打开项目主页查看。"
-                         : newer ? (info.Name ?? "") + "\r\n\r\n" + (info.Body ?? "（该 release 未写说明）")
-                         : "当前版本：" + UpdateChecker.CurrentVersion
-                    + "\r\n最新版本：" + (info != null ? info.Version : "?")
-                    + "\r\n\r\n没有可用的更新。"
+                    Text = failed ? L10n.T("无法获取 release 信息，请检查网络后重试；也可直接打开项目主页查看。")
+                         : newer ? (info.Name ?? "") + "\r\n\r\n" + (info.Body ?? L10n.T("（该 release 未写说明）"))
+                         : L10n.T("当前版本：") + UpdateChecker.CurrentVersion
+                    + L10n.T("\r\n最新版本：") + (info != null ? info.Version : "?")
+                    + L10n.T("\r\n\r\n没有可用的更新。")
                 };
                 form.Controls.Add(body);
 
                 int btnY = body.Bottom + DpiScale.V(form, 12);
                 var btnOpen = new AntdUI.Button
                 {
-                    Text = newer ? "打开下载页" : "打开项目主页",
+                    Text = newer ? L10n.T("打开下载页") : L10n.T("打开项目主页"),
                     Size = new Size(DpiScale.V(form, 110), fieldH),
                     Location = new Point(pad, btnY),
                     Type = AntdUI.TTypeMini.Primary
@@ -320,7 +320,7 @@ namespace Gdterm.UI.Services
                 };
                 var btnClose = new AntdUI.Button
                 {
-                    Text = "关闭",
+                    Text = L10n.T("关闭"),
                     Size = new Size(DpiScale.V(form, 90), fieldH),
                     Location = new Point(body.Right - DpiScale.V(form, 90), btnY),
                     BackColor = GdtermColorTable.Surface2,
@@ -345,13 +345,13 @@ namespace Gdterm.UI.Services
         {
             if (_securityManager == null)
             {
-                MessageBox.Show(_owner, "安全模块未初始化", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(_owner, L10n.T("安全模块未初始化"), L10n.T("提示"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             // 必须先解锁主会话，否则无法拿到旧主密码 / 无法重加密 kdbx
             if (_securityManager.IsLocked)
             {
-                if (!MasterPasswordPrompt.Confirm(_owner, _securityManager, "修改主密码"))
+                if (!MasterPasswordPrompt.Confirm(_owner, _securityManager, L10n.T("修改主密码")))
                     return;
             }
 
@@ -368,7 +368,7 @@ namespace Gdterm.UI.Services
                         {
                             var ok = await _keepassService.ChangeMasterPasswordAsync(args.OldPassword, args.NewPassword);
                             if (!ok)
-                                throw new InvalidOperationException("密码库重加密失败：旧密码不正确或文件损坏");
+                                throw new InvalidOperationException(L10n.T("密码库重加密失败：旧密码不正确或文件损坏"));
                         }
 
                         // 2) 更新 SecurityManager 哈希（同时会重新强度校验）
@@ -380,7 +380,7 @@ namespace Gdterm.UI.Services
                     catch (Exception ex)
                     {
                         Gdterm.UI.Diagnostics.DiagLog.Swallowed("ToolsDialogs.ChangeMasterPassword", ex);
-                        MessageBox.Show(form, "修改主密码失败: " + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        MessageBox.Show(form, L10n.T("修改主密码失败: ") + ex.Message, L10n.T("错误"), MessageBoxButtons.OK, MessageBoxIcon.Error);
                     }
                 };
                 form.ShowDialog(_owner);
@@ -398,7 +398,7 @@ namespace Gdterm.UI.Services
             MessageBox.Show(
                 _owner,
                 BuildHotkeyHelpText(),
-                "快捷键", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                L10n.T("快捷键"), MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>用资源管理器打开诊断日志目录（程序主目录 logs\），方便排查问题。</summary>
@@ -418,7 +418,7 @@ namespace Gdterm.UI.Services
             if (path != null)
             {
                 try { DiagLog.Info("ToolsDialogs", "diagnostics package exported: " + path); } catch { }
-                try { ToastNotifier.Success("已导出诊断包：" + path + "（已脱敏，可直接发给维护者）"); }
+                try { ToastNotifier.Success(L10n.T("已导出诊断包：") + path + L10n.T("（已脱敏，可直接发给维护者）")); }
                 catch { /* Toast 不可用时日志已留痕 */ }
             }
         }
@@ -430,14 +430,14 @@ namespace Gdterm.UI.Services
             var v = asm.GetName().Version;
             var info = Attribute.GetCustomAttribute(asm, typeof(System.Reflection.AssemblyInformationalVersionAttribute))
                        as System.Reflection.AssemblyInformationalVersionAttribute;
-            var verLine = "版本 " + (v != null ? v.ToString(3) : "?");
+            var verLine = L10n.T("版本 ") + (v != null ? v.ToString(3) : "?");
             if (!string.IsNullOrEmpty(info != null ? info.InformationalVersion : null)
                 && info.InformationalVersion != (v != null ? v.ToString() : null))
                 verLine += "\r\ngit: " + info.InformationalVersion;
             MessageBox.Show(
                 _owner,
-                "gdterm - 绿色运维客户端\n" + verLine + "\n\nSSH / RDP / SFTP / 串口 / 本地终端 / 运维工具箱",
-                "关于", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                L10n.T("gdterm - 绿色运维客户端\n") + verLine + L10n.T("\n\nSSH / RDP / SFTP / 串口 / 本地终端 / 运维工具箱"),
+                L10n.T("关于"), MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         /// <summary>
@@ -455,7 +455,7 @@ namespace Gdterm.UI.Services
             catch (Exception ex)
             {
                 Gdterm.UI.Diagnostics.DiagLog.Swallowed("ToolsDialogs.ScannerCenter", ex);
-                MessageBox.Show(_owner, "打开扫描中心失败: " + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(_owner, L10n.T("打开扫描中心失败: ") + ex.Message, L10n.T("错误"), MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }
