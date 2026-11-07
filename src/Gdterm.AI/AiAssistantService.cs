@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Gdterm.AI.Models;
 using Gdterm.Terminal;
+using Gdterm.Core;
 
 namespace Gdterm.AI
 {
@@ -38,10 +39,10 @@ namespace Gdterm.AI
         public async Task<AiResponse> SendMessageAsync(string message, ITerminalSession session, CancellationToken ct)
         {
             if (string.IsNullOrEmpty(message))
-                return new AiResponse { IsSuccess = false, ErrorMessage = "消息不能为空" };
+                return new AiResponse { IsSuccess = false, ErrorMessage = L10n.T("消息不能为空") };
 
             if (Configuration == null || string.IsNullOrEmpty(Configuration.ApiEndpoint))
-                return new AiResponse { IsSuccess = false, ErrorMessage = "AI 服务未配置" };
+                return new AiResponse { IsSuccess = false, ErrorMessage = L10n.T("AI 服务未配置") };
 
             try
             {
@@ -71,7 +72,7 @@ namespace Gdterm.AI
             }
             catch (OperationCanceledException)
             {
-                return new AiResponse { IsSuccess = false, ErrorMessage = "请求已取消" };
+                return new AiResponse { IsSuccess = false, ErrorMessage = L10n.T("请求已取消") };
             }
             catch (Exception ex)
             {
@@ -360,9 +361,9 @@ namespace Gdterm.AI
         public async Task<AiResponse> SendMessageStreamingAsync(string message, ITerminalSession session, CancellationToken ct, Action<string> onToken)
         {
             if (string.IsNullOrEmpty(message))
-                return new AiResponse { IsSuccess = false, ErrorMessage = "消息不能为空" };
+                return new AiResponse { IsSuccess = false, ErrorMessage = L10n.T("消息不能为空") };
             if (Configuration == null || string.IsNullOrEmpty(Configuration.ApiEndpoint))
-                return new AiResponse { IsSuccess = false, ErrorMessage = "AI 服务未配置" };
+                return new AiResponse { IsSuccess = false, ErrorMessage = L10n.T("AI 服务未配置") };
 
             try
             {
@@ -427,7 +428,7 @@ namespace Gdterm.AI
             }
             catch (OperationCanceledException)
             {
-                return new AiResponse { IsSuccess = false, ErrorMessage = "请求已取消" };
+                return new AiResponse { IsSuccess = false, ErrorMessage = L10n.T("请求已取消") };
             }
             catch (Exception ex)
             {

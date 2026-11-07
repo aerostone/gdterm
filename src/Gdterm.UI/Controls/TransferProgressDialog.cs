@@ -3,6 +3,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
@@ -25,7 +26,7 @@ namespace Gdterm.UI.Controls
 
         public TransferProgressDialog(string title)
         {
-            Text = string.IsNullOrEmpty(title) ? "传输" : title;
+            Text = string.IsNullOrEmpty(title) ? L10n.T("传输") : title;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             AutoHandDpi = false; // 尺寸已按 DpiScale 预缩放，关掉 AntdUI 的自动 DPI 避免二次放大
@@ -42,7 +43,7 @@ namespace Gdterm.UI.Controls
             int fieldH = FormFontPolicy.FieldHeight(this);
 
             _titleLabel = new AntdUI.Label {
-                Text = title ?? "传输中…",
+                Text = title ?? L10n.T("传输中…"),
                 Dock = DockStyle.Top,
                 AutoSize = true,
                 Padding = new Padding(padH, DpiScale.V(this, 14), padH, 0),
@@ -50,7 +51,7 @@ namespace Gdterm.UI.Controls
                 ForeColor = GdtermColorTable.Foreground
             };
             _detailLabel = new AntdUI.Label {
-                Text = "准备中…",
+                Text = L10n.T("准备中…"),
                 Dock = DockStyle.Top,
                 AutoSize = true,
                 Padding = new Padding(padH, DpiScale.V(this, 8), padH, 0),
@@ -90,7 +91,7 @@ namespace Gdterm.UI.Controls
                 Anchor = AnchorStyles.Left
             };
             _cancelButton = new AntdUI.Button {
-                Text = "取消",
+                Text = L10n.T("取消"),
                 AutoSize = true,
                 Type = AntdUI.TTypeMini.Default,
                 Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 4), DpiScale.V(this, 12), DpiScale.V(this, 4))
@@ -162,26 +163,26 @@ namespace Gdterm.UI.Controls
             _completed = true;
             _lastSuccess = success;
             _loading = false;
-            _cancelButton.Text = "关闭";
+            _cancelButton.Text = L10n.T("关闭");
             _cancelButton.Enabled = true;
             // 此前这里是每次 Complete 都再挂一个 Click lambda（累积）+ 一句 `Click -= null` 的无效代码，
             // 现在统一走 OnCancelClick，按 _completed 分支。
             if (success)
             {
                 _bar.Value = 100;
-                _detailLabel.Text = message ?? "完成";
+                _detailLabel.Text = message ?? L10n.T("完成");
                 _detailLabel.ForeColor = GdtermColorTable.Accent;
                 _percentLabel.Text = "100%";
             }
             else
             {
                 _bar.Style = ProgressBarStyle.Continuous;
-                _detailLabel.Text = message ?? "失败";
+                _detailLabel.Text = message ?? L10n.T("失败");
                 _detailLabel.ForeColor = GdtermColorTable.Danger;
-                _percentLabel.Text = "已中断";
+                _percentLabel.Text = L10n.T("已中断");
                 // 失败要么是网络断、要么是权限/磁盘满：必须留痕并主动说一声（对话框可能已经不在前台）
-                try { DiagLog.Error("TransferProgressDialog.Complete", message ?? "传输失败"); } catch (Exception) { }
-                ToastNotifier.Error(message ?? "传输失败");
+                try { DiagLog.Error("TransferProgressDialog.Complete", message ?? L10n.T("传输失败")); } catch (Exception) { }
+                ToastNotifier.Error(message ?? L10n.T("传输失败"));
             }
         }
 
@@ -197,7 +198,7 @@ namespace Gdterm.UI.Controls
                     return;
                 }
                 _cancelled = true;
-                _detailLabel.Text = "正在取消…";
+                _detailLabel.Text = L10n.T("正在取消…");
                 _cancelButton.Enabled = false;
             }
             catch (Exception exSwallowed) { try { DiagLog.Swallowed("TransferProgressDialog.Cancel", exSwallowed); } catch { } }
@@ -239,7 +240,7 @@ namespace Gdterm.UI.Controls
             _dialog.Report(
                 value.BytesTransferred,
                 value.TotalBytes,
-                string.IsNullOrEmpty(_fileName) ? "传输中…" : ("传输 " + _fileName));
+                string.IsNullOrEmpty(_fileName) ? L10n.T("传输中…") : (L10n.T("传输 ") + _fileName));
         }
     }
 }

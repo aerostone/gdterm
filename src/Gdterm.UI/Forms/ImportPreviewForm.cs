@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
+using Gdterm.Core;
 using Gdterm.Core.Models;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Diagnostics;
@@ -32,7 +33,7 @@ namespace Gdterm.UI.Forms
             int addCount = add != null ? add.Count : 0;
             int skipCount = skipped != null ? skipped.Count : 0;
 
-            Text = "导入连接 · 预览";
+            Text = L10n.T("导入连接 · 预览");
             FormBorderStyle = FormBorderStyle.FixedDialog;
             Resizable = false;
             AutoHandDpi = false;
@@ -49,7 +50,7 @@ namespace Gdterm.UI.Forms
             {
                 Dock = DockStyle.Top,
                 AutoSize = true,
-                Text = "将新增 " + addCount + " 条连接" + (skipCount > 0 ? "，跳过 " + skipCount + " 条重复" : ""),
+                Text = L10n.T("将新增 ") + addCount + L10n.T(" 条连接") + (skipCount > 0 ? L10n.T("，跳过 ") + skipCount + L10n.T(" 条重复") : ""),
                 Font = FormFontPolicy.UiFont(+1f, FontStyle.Bold),
                 Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 10), DpiScale.V(this, 12), 0)
             };
@@ -58,7 +59,7 @@ namespace Gdterm.UI.Forms
             {
                 Dock = DockStyle.Top,
                 MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this)),
-                PlaceholderText = "在将要导入的条目里过滤（名称 / 主机）…",
+                PlaceholderText = L10n.T("在将要导入的条目里过滤（名称 / 主机）…"),
                 AllowClear = true,
                 Margin = new Padding(0)
             };
@@ -86,7 +87,7 @@ namespace Gdterm.UI.Forms
             if (skipped != null)
             {
                 foreach (var c in skipped)
-                    _all.Add(Format(c, "= 已存在，跳过 "));
+                    _all.Add(Format(c, L10n.T("= 已存在，跳过 ")));
             }
 
             var bottom = new FlowLayoutPanel
@@ -101,7 +102,7 @@ namespace Gdterm.UI.Forms
             };
             var ok = new AntdUI.Button
             {
-                Text = "导入",
+                Text = L10n.T("导入"),
                 Type = AntdUI.TTypeMini.Primary,
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 14), DpiScale.V(this, 4), DpiScale.V(this, 14), DpiScale.V(this, 4)),
@@ -112,7 +113,7 @@ namespace Gdterm.UI.Forms
             ok.Click += (s, e) => { Confirmed = true; DialogResult = DialogResult.OK; Close(); };
             var cancel = new AntdUI.Button
             {
-                Text = "取消",
+                Text = L10n.T("取消"),
                 Type = AntdUI.TTypeMini.Default,
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 14), DpiScale.V(this, 4), DpiScale.V(this, 14), DpiScale.V(this, 4)),
@@ -123,8 +124,8 @@ namespace Gdterm.UI.Forms
             bottom.Controls.Add(cancel);
 
             // 过滤后为空要给引导（列表型 UI 规则 R09）
-            _empty = EmptyStateView.Attach(this, "没有匹配的连接",
-                "清空过滤词可看到全部待导入条目");
+            _empty = EmptyStateView.Attach(this, L10n.T("没有匹配的连接"),
+                L10n.T("清空过滤词可看到全部待导入条目"));
             Controls.Add(_list);
             Controls.Add(_filter);
             Controls.Add(bottom);
@@ -139,8 +140,8 @@ namespace Gdterm.UI.Forms
 
         private static string Format(ConnectionConfig c, string prefix)
         {
-            if (c == null) return prefix + "(空)";
-            return prefix + (c.Name ?? "(无名称)") + "  " + c.Protocol + "  " + (c.Host ?? "") + ":" + c.Port;
+            if (c == null) return prefix + L10n.T("(空)");
+            return prefix + (c.Name ?? L10n.T("(无名称)")) + "  " + c.Protocol + "  " + (c.Host ?? "") + ":" + c.Port;
         }
 
         private void ApplyFilter()
@@ -164,9 +165,9 @@ namespace Gdterm.UI.Forms
             var names = files == null ? "" : string.Join("、", files.Take(3).ToArray());
             try { DiagLog.Error("ConnectionImport.Parse", ex); } catch (Exception) { }
             MessageBox.Show(owner,
-                "解析失败" + (string.IsNullOrEmpty(names) ? "" : "：" + names) + "\n" + (ex != null ? ex.Message : "未知错误")
-                + "\n\n支持格式：Xshell(.xsh)、MobaXterm(.ini)、WindTerm(user.sessions)、JSON、CSV、mRemoteNG(.xml)",
-                "导入连接", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                L10n.T("解析失败") + (string.IsNullOrEmpty(names) ? "" : "：" + names) + "\n" + (ex != null ? ex.Message : L10n.T("未知错误"))
+                + L10n.T("\n\n支持格式：Xshell(.xsh)、MobaXterm(.ini)、WindTerm(user.sessions)、JSON、CSV、mRemoteNG(.xml)"),
+                L10n.T("导入连接"), MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 }

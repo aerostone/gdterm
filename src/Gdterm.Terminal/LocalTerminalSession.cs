@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Gdterm.Core;
 using Gdterm.Core.Models;
 using Gdterm.Terminal.Diagnostics;
 using Gdterm.Terminal.Interop;
@@ -100,7 +101,7 @@ namespace Gdterm.Terminal
 
         public void ConnectViaTunnel(ConnectionConfig config, CredentialPayload credential, TunnelEndpoint tunnelEndpoint, int rows = 24, int columns = 80)
         {
-            throw new NotSupportedException("本地终端不支持隧道连接");
+            throw new NotSupportedException(L10n.T("本地终端不支持隧道连接"));
         }
 
         public void ConnectLocal()
@@ -119,7 +120,7 @@ namespace Gdterm.Terminal
                 {
                     _backend = LocalBackend.ConPty;
                     TerminalLog.Info("LocalSession.Started", "backend=ConPTY shell=" + _shellPath);
-                    RaiseOutput("\r\n[gdterm] 本地终端已启动 (ConPTY): " + _shellPath + "\r\n");
+                    RaiseOutput(L10n.T("\r\n[gdterm] 本地终端已启动 (ConPTY): ") + _shellPath + "\r\n");
                     return;
                 }
 
@@ -127,14 +128,14 @@ namespace Gdterm.Terminal
                 {
                     _backend = LocalBackend.WinPty;
                     TerminalLog.Info("LocalSession.Started", "backend=WinPty shell=" + _shellPath);
-                    RaiseOutput("\r\n[gdterm] 本地终端已启动 (winpty): " + _shellPath + "\r\n");
+                    RaiseOutput(L10n.T("\r\n[gdterm] 本地终端已启动 (winpty): ") + _shellPath + "\r\n");
                     return;
                 }
 
                 // 两个 PTY 后端都不可用/启动失败——回退到管道重定向（无真 PTY，交互式程序受限）
                 string reason = !conptyAvail && !winptyAvail
-                    ? "两个后端均不可用（需 Win10 1809+ 或 lib/winpty）"
-                    : "PTY 启动失败（详见上方 Swallowed 日志）";
+                    ? L10n.T("两个后端均不可用（需 Win10 1809+ 或 lib/winpty）")
+                    : L10n.T("PTY 启动失败（详见上方 Swallowed 日志）");
                 TerminalLog.Info("LocalSession.Fallback", "backend=Redirect reason=" + reason);
                 _backend = LocalBackend.Redirect;
                 StartRedirected();
@@ -169,7 +170,7 @@ namespace Gdterm.Terminal
                 _conpty.OnExited += OnPtyExited;
                 bool ok = _conpty.Start(BuildCommandLineForPty(), cwd, (short)_cols, (short)_rows);
                 if (!ok)
-                    TerminalLog.Info("LocalSession.ConPTY", "Start 返回 false cmd=" + BuildCommandLineForPty());
+                    TerminalLog.Info("LocalSession.ConPTY", L10n.T("Start 返回 false cmd=") + BuildCommandLineForPty());
                 return ok;
             }
             catch (Exception ex)
@@ -192,7 +193,7 @@ namespace Gdterm.Terminal
                 _winpty.OnExited += OnPtyExited;
                 bool ok = _winpty.Start(BuildCommandLineForPty(), cwd, (short)_cols, (short)_rows);
                 if (!ok)
-                    TerminalLog.Info("LocalSession.WinPty", "Start 返回 false cmd=" + BuildCommandLineForPty());
+                    TerminalLog.Info("LocalSession.WinPty", L10n.T("Start 返回 false cmd=") + BuildCommandLineForPty());
                 return ok;
             }
             catch (Exception ex)
@@ -226,7 +227,7 @@ namespace Gdterm.Terminal
             catch { }
             TerminalLog.Info("LocalSession.Exited",
                 "backend=" + _backend + " exitCode=" + (code == uint.MaxValue ? "unknown" : "0x" + code.ToString("X")));
-            RaiseOutput("\r\n[本地终端已退出]\r\n");
+            RaiseOutput(L10n.T("\r\n[本地终端已退出]\r\n"));
             RaiseDisconnected();
         }
 
@@ -293,7 +294,7 @@ namespace Gdterm.Terminal
             try
             {
                 if (!_process.Start())
-                    throw new InvalidOperationException("Process.Start 返回 false");
+                    throw new InvalidOperationException(L10n.T("Process.Start 返回 false"));
                 TerminalLog.Info("LocalSession.Started", "backend=Redirect pid=" + _process.Id + " shell=" + _shellPath);
 
                 _readCts = new CancellationTokenSource();
@@ -303,7 +304,7 @@ namespace Gdterm.Terminal
                 Task.Factory.StartNew(() => ReadLoop(stdout, token), token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
                 Task.Factory.StartNew(() => ReadLoop(stderr, token), token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
-                RaiseOutput("\r\n[gdterm] 本地终端已启动 (重定向): " + _shellPath + "\r\n");
+                RaiseOutput(L10n.T("\r\n[gdterm] 本地终端已启动 (重定向): ") + _shellPath + "\r\n");
                 try
                 {
                     _process.StandardInput.WriteLine();
@@ -315,7 +316,7 @@ namespace Gdterm.Terminal
             {
                 TerminalLog.Swallowed("LocalSession.Redirect.Start", ex);
                 CleanupProcess();
-                throw new InvalidOperationException("无法启动本地终端: " + ex.Message, ex);
+                throw new InvalidOperationException(L10n.T("无法启动本地终端: ") + ex.Message, ex);
             }
         }
 
@@ -399,7 +400,7 @@ namespace Gdterm.Terminal
 
         public void StartZmodemReceive(string saveDirectory)
         {
-            throw new NotSupportedException("Zmodem 接收仅支持 SSH 会话（当前：本地终端）。");
+            throw new NotSupportedException(L10n.T("Zmodem 接收仅支持 SSH 会话（当前：本地终端）。"));
         }
 
         public void SendBreak(int durationMs = 100)
@@ -485,7 +486,7 @@ namespace Gdterm.Terminal
             }
             catch { }
             TerminalLog.Info("LocalSession.Exited", "backend=Redirect exitCode=" + codeText);
-            RaiseOutput("\r\n[本地终端已退出]\r\n");
+            RaiseOutput(L10n.T("\r\n[本地终端已退出]\r\n"));
             RaiseDisconnected();
         }
 
