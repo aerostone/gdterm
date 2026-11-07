@@ -9,8 +9,6 @@ R04|Services/SidePanelHost.cs|Height = 28,
 R04|Services/SidePanelHost.cs|Width = 360,
 R04|Services/ViewModeController.cs|_connectionTree.Width = 200;
 R04|Services/ViewModeController.cs|_connectionTree.Width = 250;
-R08|Services/ConnectionImportExportUi.cs|MessageBox.Show(owner,
-R08|Services/ConnectionImportExportUi.cs|MessageBox.Show(owner, "已导出 " + connections.Count + " 个连接", "导出成功",
 R08|Services/ToolsDialogsLauncher.cs|MessageBox.Show(
 R09|Controls/BatchCommandPanel.cs|_lvSessions = new ListView
 R09|Controls/HighlightRulePanel.cs|_lvRules = new ListView

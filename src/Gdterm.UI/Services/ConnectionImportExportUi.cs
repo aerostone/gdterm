@@ -71,11 +71,10 @@ namespace Gdterm.UI.Services
                     foreach (var conn in merge.NewConnections)
                         store.Add(conn);
                     if (onReloaded != null) onReloaded();
-                    var skippedNote = merge.Duplicates.Count > 0 ? L10n.T("\n跳过 ") + merge.Duplicates.Count + L10n.T(" 条重复") : "";
-                    var badNote = bad.Count > 0 ? L10n.T("\n无法解析 ") + bad.Count + L10n.T(" 个文件（已跳过）") : "";
-                    MessageBox.Show(owner,
-                        L10n.T("导入完成：\n新增 ") + merge.NewConnections.Count + skippedNote + badNote,
-                        L10n.T("导入成功"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    var skippedNote = merge.Duplicates.Count > 0 ? L10n.T("，跳过 ") + merge.Duplicates.Count + L10n.T(" 条重复") : "";
+                    var badNote = bad.Count > 0 ? L10n.T("，无法解析 ") + bad.Count + L10n.T(" 个文件") : "";
+                    // §9.3：成功/完成用非阻断 toast（原阻断 MessageBox 触发 R08）
+                    ToastNotifier.Success(L10n.T("导入完成：新增 ") + merge.NewConnections.Count + skippedNote + badNote, 4000);
                 }
                 catch (Exception ex)
                 {
@@ -110,8 +109,8 @@ namespace Gdterm.UI.Services
                         ConnectionImporterExporter.ExportAsCsv(connections, dlg.FileName);
                     else
                         ConnectionImporterExporter.ExportAsJson(connections, dlg.FileName);
-                    MessageBox.Show(owner, L10n.T("已导出 ") + connections.Count + L10n.T(" 个连接"), L10n.T("导出成功"),
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    // §9.3：成功用非阻断 toast
+                    ToastNotifier.Success(L10n.T("已导出 ") + connections.Count + L10n.T(" 个连接"), 3000);
                 }
                 catch (Exception ex)
                 {

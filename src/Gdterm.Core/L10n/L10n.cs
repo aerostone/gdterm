@@ -156,6 +156,10 @@ namespace Gdterm.Core
             ["采样于 "] = "Sampled at ",
             ["采样器初始化失败: "] = "Sampler initialization failed: ",
             ["采样失败: "] = "Sampling failed: ",
+            [" 个文件"] = " file(s)",
+            ["导入完成：新增 "] = "Import finished: new ",
+            ["，无法解析 "] = ", unparseable ",
+            ["，跳过 "] = ", skipped ",
             // —— 连接导入导出（批次4m：ConnectionImportExportUi） ——
             [" 个文件（已跳过）"] = " file(s) (skipped)",
             [" 条重复"] = " duplicate(s)",
