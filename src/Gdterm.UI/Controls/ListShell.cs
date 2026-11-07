@@ -69,6 +69,8 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Top,
                 AutoSize = true,
+                // 构造期壳为 0×0：工具条先隐藏，首次获得真实尺寸时恢复（OnClientSizeChanged）
+                Visible = false,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 // 换行而非溢出：窄侧栏（360px）里过滤框+排序+按钮排不下时，
                 // 宁可工具条变两行（Dock=Top + AutoSize 会自然长高），也不能让按钮伸出父边界
@@ -164,6 +166,15 @@ namespace Gdterm.UI.Controls
 
             List.DoubleClick += (s, e) => RaiseActivated();
             List.KeyDown += OnListKeyDown;
+        }
+
+        protected override void OnClientSizeChanged(EventArgs e)
+        {
+            // 与 TableShell 同机制：AntdUI.Tabs 隐藏页 0×0 时，AutoSize 工具条的子件
+            // 会画到宿主左上角（WinForms 子窗不裁剪父边界）。零面积隐藏，有尺寸恢复。
+            bool hasArea = ClientSize.Width > 0 && ClientSize.Height > 0;
+            if (_bar.Visible != hasArea) _bar.Visible = hasArea;
+            base.OnClientSizeChanged(e);
         }
 
         /// <summary>宿主追加自己的动作按钮（导出 / 批量删除 / 启用…），进入同一行工具条。</summary>

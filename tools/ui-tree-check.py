@@ -104,9 +104,9 @@ def contains(a, b, tol=TOL):
             and b["y"] + b["h"] <= a["y"] + a["h"] + tol)
 
 
-def siblings_overlap(nodes):
-    """同父兄弟重叠：只查可见、非包含关系的两两交叠。"""
-    vis = [n for (n, _, _) in [(t[0], t[1], t[2]) for t in nodes] if sbool(n.get("visible")) and area(n.get("abs", {})) > 0]
+def siblings_overlap(nodes, av):
+    """同父兄弟重叠：只查有效可见（自身+全部祖先可见）、非包含关系的两两交叠。"""
+    vis = [n for (n, _, _) in [(t[0], t[1], t[2]) for t in nodes] if av.get(id(n), True) and area(n.get("abs", {})) > 0]
     bad = []
     for i in range(len(vis)):
         for j in range(i + 1, len(vis)):
@@ -117,6 +117,29 @@ def siblings_overlap(nodes):
             if ov >= OVERLAP_MIN:
                 bad.append((vis[i], vis[j], ov))
     return bad
+
+
+def ancestor_visible_map(tree):
+    """id(node) -> “该节点自身及全部祖先 visible”。
+
+    WinForms 隐藏父窗即隐藏整棵子窗树（渲染层面 Visible=false 向下传递），
+    所以隐藏祖先链里的控件永不绘出——几何规则应视为不存在。
+    背景（CI 0.1.389 dump 实证）：AntdUI.Tabs 隐藏页被置 Bounds(0,0,0,0)，
+    其内 AutoSize 子件按宽 0 折行叠高，若只看控件自身 Visible（true）会把
+    隐藏页里的布局判成“越界”——但源头修好后（工具条/空态盒随零面积隐藏），
+    隐藏链上的节点必须整链免判，否则仍会假红。注：零面积祖先不算隐藏
+    （子窗不裁剪），只有 visible=false 的祖先才免判。
+    """
+    m = {}
+    def rec(n, anc):
+        vis = anc and sbool(n.get("visible"))
+        m[id(n)] = vis
+        for c in _kids(n):
+            rec(c, vis)
+    m[id(tree)] = sbool(tree.get("visible"), True)
+    for c in _kids(tree):
+        rec(c, m[id(tree)])
+    return m
 
 
 def mainform_rules(tree, check):
@@ -169,6 +192,8 @@ def main():
         fname = fn
         all_nodes = walk(tree)
         print("  控件总数=%d" % len(all_nodes))
+        # 有效可见性：自身+全部祖先 visible（隐藏祖先链整链免判，见函数注释）
+        av = ancestor_visible_map(tree)
 
         # 按父分组查兄弟重叠
         by_parent = {}
@@ -178,7 +203,7 @@ def main():
         for pname, group in by_parent.items():
             if len(group) < 2:
                 continue
-            for a, b, ov in siblings_overlap(group):
+            for a, b, ov in siblings_overlap(group, av):
                 # Dock 相对布局天然相邻：Dock!=None 的跳过（停靠不算重叠）
                 if a.get("dock") != "None" or b.get("dock") != "None":
                     continue
@@ -195,7 +220,7 @@ def main():
         # ③父 AutoScroll=true（滚动容器内容高出是正常态，如 ConnectionDialog 高级区，288 实测）。
         oob = 0
         for n, pabs, pname, pnode, _pkey in all_nodes:
-            if pabs is None or not sbool(n.get("visible")):
+            if pabs is None or not av.get(id(n), True):
                 continue
             if n.get("dock") == "Fill":
                 continue
@@ -217,7 +242,7 @@ def main():
 
         # 零尺寸可见叶（Divider 线型 h<=2 豁免；Dock.Fill 未激活页豁免；零面积父链后代豁免）
         zero = [n for (n, pabs, _, _pnode, _pkey) in all_nodes
-                if sbool(n.get("visible")) and not n.get("children")
+                if av.get(id(n), True) and not n.get("children")
                 and (n.get("abs", {}).get("w", 1) <= 0 or n.get("abs", {}).get("h", 1) <= 0)
                 # 空文本 AutoSize Label 正常态（如 errorLabel，有错才撑开）
                 and not ("Divider" in n.get("type", "") and n.get("abs", {}).get("h", 99) <= 2)

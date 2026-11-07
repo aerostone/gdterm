@@ -124,6 +124,17 @@ namespace Gdterm.UI.Controls
             Controls.Add(_bar);
         }
 
+        protected override void OnClientSizeChanged(EventArgs e)
+        {
+            // AntdUI.Tabs 隐藏页机制（CI 0.1.389 dump 实证）：未激活页被置 Bounds(0,0,0,0)，
+            // 壳随之 0×0；AutoSize 工具条保持 38 高、其子件按宽 0 折行叠高，而 WinForms 子窗
+            // 不裁剪父边界——工具条整条画到宿主左上角（叠在 tab 头上），tree-check 的越界
+            // 规则正是抓到了这个真实渲染泄漏。零面积时隐藏工具条，页面激活获得真实尺寸后恢复。
+            bool hasArea = ClientSize.Width > 0 && ClientSize.Height > 0;
+            if (_bar.Visible != hasArea) _bar.Visible = hasArea;
+            base.OnClientSizeChanged(e);
+        }
+
         public AntdUI.Button AddAction(string text, EventHandler onClick, string name = null)
         {
             int fieldH = FormFontPolicy.FieldHeight(this);

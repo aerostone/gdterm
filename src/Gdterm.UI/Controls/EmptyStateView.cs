@@ -237,6 +237,12 @@ namespace Gdterm.UI.Controls
         private void CenterBox()
         {
             if (_box == null) return;
+            // AntdUI.Tabs 隐藏页 0×0（CI 0.1.389 dump 实证）：空态盒是 AutoSize，宿主塌成
+            // 0×0 后它仍保持理想尺寸画在 (0,0)——WinForms 子窗不裁剪父边界，会叠到 tab 头。
+            // 零面积时收起盒体，宿主恢复尺寸后 OnResize 再展开。
+            bool hasArea = ClientSize.Width > 0 && ClientSize.Height > 0;
+            if (_box.Visible != hasArea) _box.Visible = hasArea;
+            if (!hasArea) return;
             FitHeight();
             int w = _box.Width, h = _box.Height;
             if (w <= 0 || h <= 0) { _box.PerformLayout(); w = _box.Width; h = _box.Height; }
