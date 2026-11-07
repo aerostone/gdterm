@@ -96,6 +96,10 @@ test_script:
       $perfExit = $LASTEXITCODE
       if (Test-Path perf-bench.json) { Push-AppveyorArtifact $PWD\perf-bench.json -FileName "perf-bench.json" }
       if (Test-Path perf-bench-crash.txt) { Push-AppveyorArtifact $PWD\perf-bench-crash.txt -FileName "perf-bench-crash.txt" }
+      # SEH 取证（0.1.395-397 三连红）：过滤器落的异常代码/帧号 + minidump + 帧心跳
+      if (Test-Path perf-seh.txt) { Push-AppveyorArtifact $PWD\perf-seh.txt -FileName "perf-seh.txt" }
+      if (Test-Path perf-crash.dmp) { Push-AppveyorArtifact $PWD\perf-crash.dmp -FileName "perf-crash.dmp" }
+      if (Test-Path perf-progress.txt) { Push-AppveyorArtifact $PWD\perf-progress.txt -FileName "perf-progress.txt" }
       if ($perfExit -ne 0) { throw "perf-bench failed exit=$perfExit (evidence uploaded before this)" }
       # ===== 编码守卫：全仓文本必须是合法 UTF-8，BOM 只许出现在白名单内 =====
       # 与 .editorconfig 同口径（.ps1 带 BOM，其余纯 UTF-8）；仅 stdlib，无 pip 依赖

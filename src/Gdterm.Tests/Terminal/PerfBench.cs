@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Windows.Forms;
 using Gdterm.Terminal.Rendering;
@@ -25,6 +26,99 @@ namespace Gdterm.Tests.Terminal
         private const int Cols = 160;
         private const int Rows = 45;
         private const int History = 10000;   // 与 P1-5 默认回滚行数一致
+
+        // ── 取证埋点（0.1.395/396/397 三连 SEH，C# catch 接不住、crash 文件都落不下来）──
+        // SetUnhandledExceptionFilter 在 SEH 层回调（先于 CLR 终止）：纯 Win32 写证据——
+        // perf-seh.txt（异常代码+地址+帧号，手工十六进制、零 CLR 分配）+ perf-crash.dmp
+        // （dbghelp minidump：拉回后离线解析故障模块/线程栈），然后 ExitProcess。
+        // 若回调自身崩（极端情况），损失 = 现状（无证据），不更坏。
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        private delegate IntPtr SehFilterHandler(IntPtr ep);
+        [StructLayout(LayoutKind.Sequential)]
+        private sealed class ExceptionPointers
+        {
+            public IntPtr ExceptionRecord;
+            public IntPtr ContextRecord;
+        }
+        [DllImport("kernel32")]
+        private static extern uint SetUnhandledExceptionFilter(SehFilterHandler handler);
+        [DllImport("kernel32", CharSet = CharSet.Ansi)]
+        private static extern IntPtr CreateFileA(string name, uint desired, uint share,
+            IntPtr sa, uint disp, uint attrs, IntPtr template);
+        [DllImport("kernel32")]
+        private static extern bool WriteFile(IntPtr h, byte[] buf, uint n, out uint written, IntPtr ov);
+        [DllImport("kernel32")]
+        private static extern bool CloseHandle(IntPtr h);
+        [DllImport("kernel32")]
+        private static extern IntPtr GetCurrentProcess();
+        [DllImport("kernel32")]
+        private static extern uint GetProcessId(IntPtr process);
+        [DllImport("dbghelp.dll")]
+        private static extern bool MiniDumpWriteDump(IntPtr proc, uint pid, IntPtr file,
+            uint type, IntPtr exp, IntPtr u, IntPtr c);
+        [DllImport("kernel32")]
+        private static extern void ExitProcess(uint code);
+
+        private static int _frameNo;
+        private static SehFilterHandler _sehKeepAlive; // 防委托被 GC（回调是原生指针）
+        private static readonly byte[] HexChars = { (byte)'0',(byte)'1',(byte)'2',(byte)'3',(byte)'4',
+            (byte)'5',(byte)'6',(byte)'7',(byte)'8',(byte)'9',(byte)'a',(byte)'b',(byte)'c',(byte)'d',
+            (byte)'e',(byte)'f' };
+
+        /// <summary>回调内只走 P/Invoke + 整型运算：x64 EXCEPTION_RECORD 偏移 0=code(4B) 16=address(8B)。</summary>
+        private static IntPtr SehFilter(IntPtr ep)
+        {
+            try
+            {
+                var ptrs = (ExceptionPointers)Marshal.PtrToStructure(ep, typeof(ExceptionPointers));
+                // x64 EXCEPTION_RECORD：[0..3]=ExceptionCode, [16..23]=ExceptionAddress
+                int code = (int)Marshal.ReadInt32(ptrs.ExceptionRecord, 0);
+                long addr = Marshal.ReadInt64(ptrs.ExceptionRecord, 16);
+                var buf = new byte[128];
+                int p = 0;
+                string head = "gdterm perf SEH code=0x";
+                for (int i = 0; i < head.Length; i++) buf[p++] = (byte)head[i];
+                for (int i = 24; i >= 0; i -= 4) buf[p++] = HexChars[(code >> i) & 15];
+                string mid = " addr=0x";
+                for (int i = 0; i < mid.Length; i++) buf[p++] = (byte)mid[i];
+                for (int i = 56; i >= 0; i -= 4) buf[p++] = HexChars[(int)((addr >> i) & 15)];
+                string tail = " frame=";
+                for (int i = 0; i < tail.Length; i++) buf[p++] = (byte)tail[i];
+                // 帧号转 ASCII（无 CLR 数字格式化）
+                int fr = _frameNo;
+                char[] tmp = new char[12];
+                int t = 0;
+                if (fr == 0) tmp[t++] = '0';
+                while (fr > 0) { tmp[t++] = (char)('0' + fr % 10); fr /= 10; }
+                while (t > 0) buf[p++] = (byte)tmp[--t];
+                buf[p++] = 0x0a;
+                IntPtr h = CreateFileA("perf-seh.txt", 0x40000000, 0, IntPtr.Zero, 2, 0x80, IntPtr.Zero);
+                if (h != IntPtr.Zero && h != new IntPtr(-1))
+                {
+                    uint w; WriteFile(h, buf, (uint)p, out w, IntPtr.Zero);
+                    CloseHandle(h);
+                }
+                IntPtr dh = CreateFileA("perf-crash.dmp", 0x40000000, 0, IntPtr.Zero, 2, 0x80, IntPtr.Zero);
+                if (dh != IntPtr.Zero && dh != new IntPtr(-1))
+                {
+                    uint pid = GetProcessId(GetCurrentProcess());
+                    // 0x18 = Normal|UnloadedModules|ThreadContext；异常流由 pExceptionParam≠NULL 自动带上
+                    MiniDumpWriteDump(GetCurrentProcess(), pid, dh, 0x18, ep, IntPtr.Zero, IntPtr.Zero);
+                    CloseHandle(dh);
+                }
+            }
+            catch { }
+            ExitProcess(0xDEAD);   // 编译器不知其不返回——下面这行是死代码，仅为 CS0161
+            return IntPtr.Zero;
+        }
+
+        private static void Heartbeat(string scenario)
+        {
+            int n = _frameNo;
+            if (n % 20 == 0)
+                try { File.WriteAllText("perf-progress.txt", scenario + " frame=" + n + " t=" + Environment.TickCount); } catch { }
+            _frameNo = n + 1;
+        }
 
         public static int Run(string outJson)
         {
@@ -58,6 +152,8 @@ namespace Gdterm.Tests.Terminal
 
         private static int RunCore(string outJson)
         {
+            _sehKeepAlive = SehFilter;
+            SetUnhandledExceptionFilter(_sehKeepAlive);   // 取证：SEH 级捕获（先于 CLR 终止）
             // 0.1.395/396 教训：parentless canvas + Show() + 裸 Update() 在 CI 上硬崩
             // （SEH，C# catch 接不住，crash 文件都落不下来）。改用冒烟已验证的模式：
             // canvas 放进真实 Form（可见），帧由 DoEvents 消息泵驱动（UiSmokeRunner 同款，
@@ -168,6 +264,7 @@ namespace Gdterm.Tests.Terminal
                 var sw = Stopwatch.StartNew();
                 PumpFrame(r, canvas);
                 sw.Stop();
+                Heartbeat(name);
                 // 亚毫秒帧记 1ms：保留分辨力又不归零（Stopwatch 本身亚微秒精度，这里是口径选择）
                 ms[f] = Math.Max(1L, (long)sw.Elapsed.TotalMilliseconds);
                 snapMs[f] = r.LastSnapshotMs;
