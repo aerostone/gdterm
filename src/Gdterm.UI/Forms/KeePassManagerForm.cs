@@ -55,7 +55,7 @@ namespace Gdterm.UI.Forms
 
         private void InitializeComponent()
         {
-            Text = "KeePass 密码管理器";
+            Text = L10n.T("KeePass 密码管理器");
             Size = DpiScale.S(this, 700, 500);
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -95,17 +95,17 @@ namespace Gdterm.UI.Forms
                 BackColor = GdtermColorTable.Background
             };
 
-            toolbar.Controls.Add(MakeToolBtn("添加", OnAddClick, btnPadding, btnMarginR));
-            toolbar.Controls.Add(MakeToolBtn("编辑", OnEditClick, btnPadding, btnMarginR));
-            toolbar.Controls.Add(MakeToolBtn("删除", OnDeleteClick, btnPadding, btnMarginR));
+            toolbar.Controls.Add(MakeToolBtn(L10n.T("添加"), OnAddClick, btnPadding, btnMarginR));
+            toolbar.Controls.Add(MakeToolBtn(L10n.T("编辑"), OnEditClick, btnPadding, btnMarginR));
+            toolbar.Controls.Add(MakeToolBtn(L10n.T("删除"), OnDeleteClick, btnPadding, btnMarginR));
             toolbar.Controls.Add(new AntdUI.Divider { Orientation = AntdUI.TOrientation.Left, Thickness = 1f, Margin = new Padding(btnMargin) });
-            toolbar.Controls.Add(MakeToolBtn("复制密码", OnCopyPasswordClick, btnPadding, btnMarginR));
-            toolbar.Controls.Add(MakeToolBtn("复制用户名", OnCopyUsernameClick, btnPadding, btnMarginR));
+            toolbar.Controls.Add(MakeToolBtn(L10n.T("复制密码"), OnCopyPasswordClick, btnPadding, btnMarginR));
+            toolbar.Controls.Add(MakeToolBtn(L10n.T("复制用户名"), OnCopyUsernameClick, btnPadding, btnMarginR));
             toolbar.Controls.Add(new AntdUI.Divider { Orientation = AntdUI.TOrientation.Left, Thickness = 1f, Margin = new Padding(btnMargin) });
-            _btnNewConnection = MakeToolBtn("新建连接", OnNewConnectionFromEntry, btnPadding, btnMarginR);
+            _btnNewConnection = MakeToolBtn(L10n.T("新建连接"), OnNewConnectionFromEntry, btnPadding, btnMarginR);
             _btnNewConnection.Enabled = _connectionStore != null; // 无连接库时禁用（冒烟/内嵌场景）
             toolbar.Controls.Add(_btnNewConnection);
-            toolbar.Controls.Add(MakeToolBtn("刷新", (s, e) => LoadEntries(), btnPadding, btnMarginR));
+            toolbar.Controls.Add(MakeToolBtn(L10n.T("刷新"), (s, e) => LoadEntries(), btnPadding, btnMarginR));
 
             // 搜索框：标题/用户名/分组/URL 即时过滤（同选择器体验）
             _searchBox = new AntdUI.Input
@@ -113,7 +113,7 @@ namespace Gdterm.UI.Forms
                 Name = "KeePassSearchBox",
                 Dock = DockStyle.Fill,
                 Margin = new Padding(pad, DpiScale.V(this, 5), pad, DpiScale.V(this, 5)),
-                PlaceholderText = "搜索标题 / 用户名 / 分组 / URL…",
+                PlaceholderText = L10n.T("搜索标题 / 用户名 / 分组 / URL…"),
                 MinimumSize = new Size(DpiScale.V(this, 200), fieldH)
             };
             _searchBox.TextChanged += (s, e) => ApplyFilter();
@@ -132,20 +132,20 @@ namespace Gdterm.UI.Forms
             };
             if (_connectionStore != null)
             {
-                _entryTable.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left) { Width = "18%" });
-                _entryTable.Columns.Add(new AntdUI.Column("Username", "用户名", AntdUI.ColumnAlign.Left) { Width = "16%" });
-                _entryTable.Columns.Add(new AntdUI.Column("UsedBy", "关联连接", AntdUI.ColumnAlign.Left) { Width = "22%" });
-                _entryTable.Columns.Add(new AntdUI.Column("GroupPath", "分组路径", AntdUI.ColumnAlign.Left) { Width = "16%" });
+                _entryTable.Columns.Add(new AntdUI.Column("Title", L10n.T("标题"), AntdUI.ColumnAlign.Left) { Width = "18%" });
+                _entryTable.Columns.Add(new AntdUI.Column("Username", L10n.T("用户名"), AntdUI.ColumnAlign.Left) { Width = "16%" });
+                _entryTable.Columns.Add(new AntdUI.Column("UsedBy", L10n.T("关联连接"), AntdUI.ColumnAlign.Left) { Width = "22%" });
+                _entryTable.Columns.Add(new AntdUI.Column("GroupPath", L10n.T("分组路径"), AntdUI.ColumnAlign.Left) { Width = "16%" });
                 _entryTable.Columns.Add(new AntdUI.Column("Url", "URL", AntdUI.ColumnAlign.Left) { Width = "16%" });
-                _entryTable.Columns.Add(new AntdUI.Column("Modified", "最后修改", AntdUI.ColumnAlign.Left) { Width = "12%" });
+                _entryTable.Columns.Add(new AntdUI.Column("Modified", L10n.T("最后修改"), AntdUI.ColumnAlign.Left) { Width = "12%" });
             }
             else
             {
-                _entryTable.Columns.Add(new AntdUI.Column("Title", "标题", AntdUI.ColumnAlign.Left) { Width = "20%" });
-                _entryTable.Columns.Add(new AntdUI.Column("Username", "用户名", AntdUI.ColumnAlign.Left) { Width = "20%" });
-                _entryTable.Columns.Add(new AntdUI.Column("GroupPath", "分组路径", AntdUI.ColumnAlign.Left) { Width = "25%" });
+                _entryTable.Columns.Add(new AntdUI.Column("Title", L10n.T("标题"), AntdUI.ColumnAlign.Left) { Width = "20%" });
+                _entryTable.Columns.Add(new AntdUI.Column("Username", L10n.T("用户名"), AntdUI.ColumnAlign.Left) { Width = "20%" });
+                _entryTable.Columns.Add(new AntdUI.Column("GroupPath", L10n.T("分组路径"), AntdUI.ColumnAlign.Left) { Width = "25%" });
                 _entryTable.Columns.Add(new AntdUI.Column("Url", "URL", AntdUI.ColumnAlign.Left) { Width = "20%" });
-                _entryTable.Columns.Add(new AntdUI.Column("Modified", "最后修改", AntdUI.ColumnAlign.Left) { Width = "15%" });
+                _entryTable.Columns.Add(new AntdUI.Column("Modified", L10n.T("最后修改"), AntdUI.ColumnAlign.Left) { Width = "15%" });
             }
             _entryTable.CellClick += OnEntryCellClicked;         // 单击=选中（高亮自动跟随，状态栏回显）
             _entryTable.CellDoubleClick += OnEntryCellDoubleClicked; // 双击=复制密码
@@ -155,8 +155,8 @@ namespace Gdterm.UI.Forms
             bool hasUsedBy = _connectionStore != null;
             _shell = new TableShell<EntryRow>(_entryTable,
                 hasUsedBy
-                    ? new[] { "标题", "用户名", "关联连接", "分组路径", "URL", "最后修改" }
-                    : new[] { "标题", "用户名", "分组路径", "URL", "最后修改" },
+                    ? new[] { L10n.T("标题"), L10n.T("用户名"), L10n.T("关联连接"), L10n.T("分组路径"), L10n.T("URL"), L10n.T("最后修改") }
+                    : new[] { L10n.T("标题"), L10n.T("用户名"), L10n.T("分组路径"), L10n.T("URL"), L10n.T("最后修改") },
                 r => string.Join(" ", new[] { r.Title, r.Username, r.UsedBy, r.GroupPath, r.Url, r.Modified }),
                 (r, i) =>
                 {
@@ -182,7 +182,7 @@ namespace Gdterm.UI.Forms
                     }
                 },
                 showFilter: false);
-            _shell.AddAction("导出", (s, e) => _shell.ExportCsv(FindForm(), "keepass-entries")).Name = "KeePassMgrExportButton";
+            _shell.AddAction(L10n.T("导出"), (s, e) => _shell.ExportCsv(FindForm(), "keepass-entries")).Name = "KeePassMgrExportButton";
             // 可见顺序变化（搜索过滤 / 排序）时把「可见行 → 源条目」写回 _view（SelectedIndex-1 反查靠它）
             _shell.ViewChanged += list =>
             {
@@ -196,7 +196,7 @@ namespace Gdterm.UI.Forms
                 Name = "KeePassStatusLabel",
                 Dock = DockStyle.Bottom,
                 AutoSize = true,
-                Text = "就绪",
+                Text = L10n.T("就绪"),
                 TextAlign = ContentAlignment.MiddleLeft,
                 ForeColor = GdtermColorTable.Muted,
                 Padding = new Padding(pad, DpiScale.V(this, 5), pad, DpiScale.V(this, 5))
@@ -216,7 +216,7 @@ namespace Gdterm.UI.Forms
             var closeButton = new AntdUI.Button
             {
                 Name = "KeePassCloseButton",
-                Text = "关闭",
+                Text = L10n.T("关闭"),
                 AutoSize = true,
                 Type = AntdUI.TTypeMini.Default,
                 Padding = btnPadding,
@@ -231,8 +231,8 @@ namespace Gdterm.UI.Forms
             var tableHost = new Panel { Dock = DockStyle.Fill, BackColor = GdtermColorTable.Background };
             _entryTable.Dock = DockStyle.Fill;
             tableHost.Controls.Add(_shell);
-            _emptyGuide = EmptyStateView.Attach(tableHost, "还没有条目",
-                    "点『添加』创建第一条；读取现有 KeePass 库需先在主界面解锁", "添加第一条", OnAddClick);
+            _emptyGuide = EmptyStateView.Attach(tableHost, L10n.T("还没有条目"),
+                    L10n.T("点『添加』创建第一条；读取现有 KeePass 库需先在主界面解锁"), L10n.T("添加第一条"), OnAddClick);
             // 名字是被 ui-smoke 断言过的契约（KeePassManagerEmpty 用例），换实现也得留着
             if (_emptyGuide != null)
                 _emptyGuide.WithNames("KeePassEmptyGuide", "KeePassEmptyGuideAddButton", "KeePassEmptyGuideHint");
@@ -264,9 +264,9 @@ namespace Gdterm.UI.Forms
             var row = _view[idx];
             List<string> users;
             var usage = _usageByEntry.TryGetValue(row.Id, out users) && users.Count > 0
-                ? "｜关联 " + users.Count + " 个连接"
+                ? L10n.T("｜关联 ") + users.Count + L10n.T(" 个连接")
                 : "";
-            _statusLabel.Text = "已选中：" + (row.Title ?? "(无标题)") + usage;
+            _statusLabel.Text = L10n.T("已选中：") + (row.Title ?? L10n.T("(无标题)")) + usage;
         }
 
         /// <summary>AntdUI.Table 单元格双击：复制该行密码（行号同上减 1，映射 _view）。</summary>
@@ -306,7 +306,7 @@ namespace Gdterm.UI.Forms
                         names = new List<string>();
                         map[c.CredentialRefId] = names;
                     }
-                    var label = string.IsNullOrEmpty(c.Name) ? (c.Host ?? "(未命名)") : c.Name;
+                    var label = string.IsNullOrEmpty(c.Name) ? (c.Host ?? L10n.T("(未命名)")) : c.Name;
                     names.Add(label);
                 }
             }
@@ -329,7 +329,7 @@ namespace Gdterm.UI.Forms
             }
             catch (Exception ex)
             {
-                _statusLabel.Text = $"加载失败：{ex.Message}";
+                _statusLabel.Text = L10n.Tf("加载失败：{0}", ex.Message);
                 if (_emptyGuide != null) _emptyGuide.SetEmpty(false);
             }
         }
@@ -351,12 +351,12 @@ namespace Gdterm.UI.Forms
             var rows = new List<EntryRow>();
             foreach (var entry in _view)
             {
-                var title = entry.Title ?? "(无标题)";
+                var title = entry.Title ?? L10n.T("(无标题)");
                 if (entry.HasSshPrivateKey) title = "🔑 " + title;
                 string usedBy = "";
                 List<string> users;
                 if (_usageByEntry.TryGetValue(entry.Id, out users) && users.Count > 0)
-                    usedBy = users.Count == 1 ? users[0] : users[0] + " 等" + users.Count + " 项";
+                    usedBy = users.Count == 1 ? users[0] : users[0] + L10n.T(" 等") + users.Count + L10n.T(" 项");
                 rows.Add(new EntryRow
                 {
                     Id = entry.Id,
@@ -374,8 +374,8 @@ namespace Gdterm.UI.Forms
             _shell.SetItems(rows);   // 壳置 DataSource + 触发 ViewChanged 重建 _view（排序/过滤同步）
             int total = _entries.Count;
             _statusLabel.Text = filter.Length == 0
-                ? $"共 {total} 个条目"
-                : $"匹配 {_view.Count}/{total} 个条目";
+                ? L10n.Tf("共 {0} 个条目", total)
+                : L10n.Tf("匹配 {0}/{1} 个条目", _view.Count, total);
         }
 
         /// <summary>取当前选中（或最后点击）的条目 Id；无选中返回 null。
@@ -407,17 +407,17 @@ namespace Gdterm.UI.Forms
                         };
                         if (!KeePassPasswordWarning.ConfirmSaveIfWeak(this, _keepassService, entry.Password))
                         {
-                            _statusLabel.Text = "已取消：密码强度警告未确认";
+                            _statusLabel.Text = L10n.T("已取消：密码强度警告未确认");
                             return;
                         }
                         _keepassService.CreateEntry(entry);
                         LoadEntries();
-                        _statusLabel.Text = "条目已创建";
-                        try { ToastNotifier.Success("凭据已创建"); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("KeePassManagerForm", exSwallowed); } catch { } }
+                        _statusLabel.Text = L10n.T("条目已创建");
+                        try { ToastNotifier.Success(L10n.T("凭据已创建")); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("KeePassManagerForm", exSwallowed); } catch { } }
                     }
                     catch (Exception ex)
                     {
-                        AntdUI.Message.error(this, $"创建失败：{ex.Message}");
+                        AntdUI.Message.error(this, L10n.Tf("创建失败：{0}", ex.Message));
                     }
                 }
             }
@@ -433,7 +433,7 @@ namespace Gdterm.UI.Forms
                 var full = _keepassService.GetEntry(entryId);
                 if (full == null)
                 {
-                    AntdUI.Message.warn(this, "无法加载条目详情（可能已删除或库已锁定）。");
+                    AntdUI.Message.warn(this, L10n.T("无法加载条目详情（可能已删除或库已锁定）。"));
                     return;
                 }
 
@@ -454,19 +454,19 @@ namespace Gdterm.UI.Forms
                         full.AutoTypeSequence = dlg.EntryAutoType;
                         if (!KeePassPasswordWarning.ConfirmSaveIfWeak(this, _keepassService, full.Password))
                         {
-                            _statusLabel.Text = "已取消：密码强度警告未确认";
+                            _statusLabel.Text = L10n.T("已取消：密码强度警告未确认");
                             return;
                         }
                         _keepassService.UpdateEntry(full);
                         LoadEntries();
-                        _statusLabel.Text = "条目已更新：" + full.Title;
-                        try { ToastNotifier.Success("凭据已保存：" + full.Title); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("KeePassManagerForm", exSwallowed); } catch { } }
+                        _statusLabel.Text = L10n.T("条目已更新：") + full.Title;
+                        try { ToastNotifier.Success(L10n.T("凭据已保存：") + full.Title); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("KeePassManagerForm", exSwallowed); } catch { } }
                     }
                 }
             }
             catch (Exception ex)
             {
-                AntdUI.Message.error(this, "编辑失败：" + ex.Message);
+                AntdUI.Message.error(this, L10n.T("编辑失败：") + ex.Message);
             }
         }
 
@@ -475,18 +475,18 @@ namespace Gdterm.UI.Forms
             var entryId = SelectedEntryId();
             if (entryId == null) return;
             var row = _view.FirstOrDefault(x => x.Id == entryId); // IList<T> 无 Find，用 LINQ（.NET 4.6.2 兼容）
-            var title = row != null ? (row.Title ?? "(无标题)") : entryId;
+            var title = row != null ? (row.Title ?? L10n.T("(无标题)")) : entryId;
 
             // 一体化 change：被连接引用的凭据删除前提醒（否则连接静默回退自动匹配，用户无感）
             List<string> users;
             int usedCount = _usageByEntry.TryGetValue(entryId, out users) ? users.Count : 0;
-            var msg = $"确定要删除条目 \"{title}\" 吗？\n此操作不可撤销。";
+            var msg = L10n.Tf("确定要删除条目 \"{0}\" 吗？\n此操作不可撤销。", title);
             if (usedCount > 0)
-                msg += $"\n\n⚠ 有 {usedCount} 个连接正在引用该凭据，删除后这些连接将回退为自动匹配。";
+                msg += L10n.Tf("\n\n⚠ 有 {0} 个连接正在引用该凭据，删除后这些连接将回退为自动匹配。", usedCount);
 
             var confirm = MessageBox.Show(this,
                 msg,
-                "确认删除",
+                L10n.T("确认删除"),
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Warning);
 
@@ -496,12 +496,12 @@ namespace Gdterm.UI.Forms
                 {
                     _keepassService.DeleteEntry(entryId);
                     LoadEntries();
-                    _statusLabel.Text = $"已删除：{title}";
-                    try { ToastNotifier.Warning("已删除：" + title); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("KeePassManagerForm", exSwallowed); } catch { } }
+                    _statusLabel.Text = L10n.Tf("已删除：{0}", title);
+                    try { ToastNotifier.Warning(L10n.T("已删除：") + title); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("KeePassManagerForm", exSwallowed); } catch { } }
                 }
                 catch (Exception ex)
                 {
-                    AntdUI.Message.error(this, $"删除失败：{ex.Message}");
+                    AntdUI.Message.error(this, L10n.Tf("删除失败：{0}", ex.Message));
                 }
             }
         }
@@ -522,16 +522,16 @@ namespace Gdterm.UI.Forms
                 {
                     ClipboardProtector.SetTextWithTtl(credential.Password);
                     // 状态栏提示 TTL
-                    _statusLabel.Text = "密码已复制（约 30 秒后自动清空）";
+                    _statusLabel.Text = L10n.T("密码已复制（约 30 秒后自动清空）");
                 }
                 else
                 {
-                    _statusLabel.Text = "该条目没有密码";
+                    _statusLabel.Text = L10n.T("该条目没有密码");
                 }
             }
             catch (Exception ex)
             {
-                _statusLabel.Text = $"复制失败：{ex.Message}";
+                _statusLabel.Text = L10n.Tf("复制失败：{0}", ex.Message);
             }
         }
 
@@ -547,13 +547,13 @@ namespace Gdterm.UI.Forms
                 try
                 {
                     Clipboard.SetText(username);
-                    _statusLabel.Text = "用户名已复制到剪贴板";
+                    _statusLabel.Text = L10n.T("用户名已复制到剪贴板");
                 }
                 catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("KeePassManagerForm", exSwallowed); } catch { } }
             }
             else
             {
-                _statusLabel.Text = "该条目没有用户名";
+                _statusLabel.Text = L10n.T("该条目没有用户名");
             }
         }
 
@@ -565,25 +565,25 @@ namespace Gdterm.UI.Forms
         {
             if (_connectionStore == null)
             {
-                _statusLabel.Text = "连接库不可用（本入口需从主窗体打开）";
+                _statusLabel.Text = L10n.T("连接库不可用（本入口需从主窗体打开）");
                 return;
             }
             var entryId = SelectedEntryId();
             if (entryId == null)
             {
-                _statusLabel.Text = "请先选中一条凭据";
+                _statusLabel.Text = L10n.T("请先选中一条凭据");
                 return;
             }
             Gdterm.KeePass.Models.KeePassEntry full;
             try { full = _keepassService.GetEntry(entryId); }
             catch (Exception ex)
             {
-                AntdUI.Message.error(this, "读取条目失败：" + ex.Message);
+                AntdUI.Message.error(this, L10n.T("读取条目失败：") + ex.Message);
                 return;
             }
             if (full == null)
             {
-                AntdUI.Message.warn(this, "无法加载条目详情（可能已删除或库已锁定）。");
+                AntdUI.Message.warn(this, L10n.T("无法加载条目详情（可能已删除或库已锁定）。"));
                 return;
             }
             using (var dlg = new ConnectionDialog(full, _keepassService))
@@ -595,13 +595,13 @@ namespace Gdterm.UI.Forms
                         _connectionStore.Add(dlg.Result);
                         LoadEntries(); // 刷新“关联连接”列
                         var created = string.IsNullOrEmpty(dlg.Result.Name) ? dlg.Result.Host : dlg.Result.Name;
-                        _statusLabel.Text = "已创建连接：" + created + "（已绑定本条凭据）";
-                        try { ToastNotifier.Success("连接已创建并绑定该凭据"); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("KeePassManagerForm", exSwallowed); } catch { } }
+                        _statusLabel.Text = L10n.T("已创建连接：") + created + L10n.T("（已绑定本条凭据）");
+                        try { ToastNotifier.Success(L10n.T("连接已创建并绑定该凭据")); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("KeePassManagerForm", exSwallowed); } catch { } }
                         try { _connectionsChanged?.Invoke(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("KeePassManagerForm.ConnsChanged", exSwallowed); } catch { } }
                     }
                     catch (Exception ex)
                     {
-                        AntdUI.Message.error(this, "创建连接失败：" + ex.Message);
+                        AntdUI.Message.error(this, L10n.T("创建连接失败：") + ex.Message);
                     }
                 }
             }
@@ -650,7 +650,7 @@ namespace Gdterm.UI.Forms
         {
             if (entry == null) return;
             // 种子（无 Id）不切换为“编辑”标题——连接对话框预填新建凭据时仍是新建语义
-            if (!string.IsNullOrEmpty(entry.Id)) Text = "编辑密码条目";
+            if (!string.IsNullOrEmpty(entry.Id)) Text = L10n.T("编辑密码条目");
             _titleBox.Text = entry.Title ?? "";
             _usernameBox.Text = entry.Username ?? "";
             _passwordBox.Text = entry.Password ?? "";
@@ -665,7 +665,7 @@ namespace Gdterm.UI.Forms
 
         private void InitializeComponent()
         {
-            Text = "添加密码条目";
+            Text = L10n.T("添加密码条目");
             BackColor = GdtermColorTable.Background;
             ForeColor = GdtermColorTable.Foreground;
             Font = FormFontPolicy.UiFont(); // 布局前先设全局字体，RowStep 才能按真实字号算行距
@@ -704,14 +704,14 @@ namespace Gdterm.UI.Forms
                 Padding = new Padding(0, btnPadH, btnPadR, btnPadH)
             };
             var okButton = new AntdUI.Button {
-                Text = "保存",
+                Text = L10n.T("保存"),
                 AutoSize = true,
                 Type = AntdUI.TTypeMini.Primary,
                 Margin = new Padding(0)
             };
             okButton.Click += (s, e) => { DialogResult = DialogResult.OK; Close(); };
             var cancelButton = new AntdUI.Button {
-                Text = "取消",
+                Text = L10n.T("取消"),
                 AutoSize = true,
                 Type = AntdUI.TTypeMini.Default,
                 Margin = new Padding(0, 0, btnGap, 0)
@@ -733,8 +733,8 @@ namespace Gdterm.UI.Forms
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));   // 标签列按文字宽度自适应
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             int row = 0;
-            _titleBox = AddField(grid, ref row, "标题：", new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
-            _usernameBox = AddField(grid, ref row, "用户名：", new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
+            _titleBox = AddField(grid, ref row, L10n.T("标题："), new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
+            _usernameBox = AddField(grid, ref row, L10n.T("用户名："), new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
 
             _passwordBox = new AntdUI.Input {
                 // 等宽语义（终端/密码字符对齐），字号跟随全局 UI 字号
@@ -746,7 +746,7 @@ namespace Gdterm.UI.Forms
             pwdCell.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             pwdCell.Controls.Add(_passwordBox, 0, 0);
             var btnShowPwd = new AntdUI.Button {
-                Text = "显示",
+                Text = L10n.T("显示"),
                 AutoSize = true,
                 Type = AntdUI.TTypeMini.Default,
                 Padding = new Padding(btnShowPad, DpiScale.V(this, 3), btnShowPad, DpiScale.V(this, 3)),
@@ -755,17 +755,17 @@ namespace Gdterm.UI.Forms
             btnShowPwd.Click += (s, e) =>
             {
                 _passwordBox.UseSystemPasswordChar = !_passwordBox.UseSystemPasswordChar;
-                btnShowPwd.Text = _passwordBox.UseSystemPasswordChar ? "显示" : "隐藏";
+                btnShowPwd.Text = _passwordBox.UseSystemPasswordChar ? L10n.T("显示") : L10n.T("隐藏");
             };
             pwdCell.Controls.Add(btnShowPwd, 1, 0);
-            AddField(grid, ref row, "密码：", pwdCell, fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
+            AddField(grid, ref row, L10n.T("密码："), pwdCell, fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
 
             _urlBox = AddField(grid, ref row, "URL：", new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
-            _groupBox = AddField(grid, ref row, "分组：", new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
-            _hostBox = AddField(grid, ref row, "主机：", new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
-            _protocolBox = AddField(grid, ref row, "协议：", new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
+            _groupBox = AddField(grid, ref row, L10n.T("分组："), new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
+            _hostBox = AddField(grid, ref row, L10n.T("主机："), new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
+            _protocolBox = AddField(grid, ref row, L10n.T("协议："), new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
             if (string.IsNullOrEmpty(_protocolBox.Text)) _protocolBox.Text = "SSH";
-            _portBox = AddField(grid, ref row, "端口：", new AntdUI.InputNumber {
+            _portBox = AddField(grid, ref row, L10n.T("端口："), new AntdUI.InputNumber {
                 Minimum = 0,
                 Maximum = 65535,
                 Value = 22
@@ -778,7 +778,7 @@ namespace Gdterm.UI.Forms
                 Dock = DockStyle.Fill,
                 Margin = new Padding(0, ctrlPad, 0, ctrlPad)
             };
-            AddLabel(grid, row, "备注：", labelPadL, labelPadTop, labelPadR);
+            AddLabel(grid, row, L10n.T("备注："), labelPadL, labelPadTop, labelPadR);
             grid.Controls.Add(_notesBox, 1, row);
             row++;
 
