@@ -188,8 +188,9 @@ def parse_callbacks():
 def class_index():
     """类名 -> 源文件（UI 工程内）。"""
     idx = {}
-    for base, _dirs, files in os.walk(UI):
-        for fn in files:
+    for base, dirs, files in os.walk(UI):
+        dirs.sort()   # 确定性顺序（ext4/NTFS 目录序不同，排序后跨平台可复现）
+        for fn in sorted(files):
             if not fn.endswith(".cs"):
                 continue
             path = os.path.join(base, fn)
@@ -224,8 +225,9 @@ def method_body(name, cache={}):
         return cache[name]
     pat = re.compile(r'(?:public|private|internal|protected)[^;{}\(]*\b' + re.escape(name) + r'\s*\(')
     found = ""
-    for base, _dirs, files in os.walk(UI):
-        for fn in files:
+    for base, dirs, files in os.walk(UI):
+        dirs.sort()   # 同上：确定性顺序
+        for fn in sorted(files):
             if not fn.endswith(".cs"):
                 continue
             text = read(os.path.join(base, fn))
@@ -668,8 +670,27 @@ def main():
         ok = True
         old = read(DOCTARGET)
         if old != doc:
-            print("feature-map: docs/FEATURE-MAP.md 与代码/契约不一致 —— 跑 --write 重新生成")
+            print("feature-map: docs/FEATURE-MAP.md inconsistent with code/contracts -- run --write")
             ok = False
+            # 诊断（2026-07 跨平台排查）：定位第一个差异行，输出两侧 repr（纯 ASCII）
+            try:
+                print("DIAG len(old)=%d len(doc)=%d" % (len(old), len(doc)))
+                print("DIAG old_head=%r" % old[:120])
+                print("DIAG doc_head=%r" % doc[:120])
+                o_lines, d_lines = old.splitlines(), doc.splitlines()
+                print("DIAG old_lines=%d doc_lines=%d" % (len(o_lines), len(d_lines)))
+                shown = 0
+                for i in range(max(len(o_lines), len(d_lines))):
+                    ov = o_lines[i] if i < len(o_lines) else "<EOF>"
+                    dv = d_lines[i] if i < len(d_lines) else "<EOF>"
+                    if ov != dv:
+                        print("DIAG line %d OLD: %r" % (i + 1, ov[:160]))
+                        print("DIAG line %d NEW: %r" % (i + 1, dv[:160]))
+                        shown += 1
+                        if shown >= 5:
+                            break
+            except Exception as ex:
+                print("DIAG (diag failed: %s)" % ex)
         if unregistered:
             print("feature-map: %d 个一级菜单入口没有登记页面契约：" % len(unregistered))
             for u in unregistered:
