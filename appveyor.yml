@@ -75,7 +75,12 @@ test_script:
       $checkExit = 0
       if (Test-Path $smokeDir) {
         Write-Host "Running ui-tree-check gate -> $smokeDir"
-        & $py @pyArgs tools\ui-tree-check.py $smokeDir
+        # 0.1.395 教训：门报告只进控制台（匿名读不到）→ 红构建无从诊断。
+        # 现在报告同步落盘 ui-tree-check-report.txt 并推产物（证据先于宣判）。
+        $treeReport = & $py @pyArgs tools\ui-tree-check.py $smokeDir *>&1
+        $treeReport | ForEach-Object { Write-Host $_ }
+        Set-Content -Path "ui-tree-check-report.txt" -Value ($treeReport -join "`n") -Encoding UTF8
+        Push-AppveyorArtifact $PWD\ui-tree-check-report.txt -FileName "ui-tree-check-report.txt"
         $checkExit = $LASTEXITCODE
       } else {
         Write-Host "ui-tree-check skipped: no dumps (smoke already failed exit=$smokeExit)"
@@ -84,11 +89,14 @@ test_script:
       if ($smokeExit -ne 0) { throw "UI smoke failed exit=$smokeExit (evidence uploaded before this)" }
       if ($checkExit -ne 0) { throw "ui-tree-check gate failed exit=$checkExit" }
       # ===== 渲染性能基准（P2-8）：大 cat 场景帧耗时/脏行命中/分配，纯 ASCII 输出 =====
-      # 基线阶段不做回归棘轮（先量出数字），崩溃（非零退出）才红
+      # 基线阶段不做回归棘轮（先量出数字），崩溃（非零退出）才红；
+      # 证据先于宣判：json/crash 文件无论成败都先推产物，再统一宣判
       Write-Host "Running render perf bench"
       & $testExe --perf-bench perf-bench.json
-      if ($LASTEXITCODE -ne 0) { throw "perf-bench crashed exit=$LASTEXITCODE" }
+      $perfExit = $LASTEXITCODE
       if (Test-Path perf-bench.json) { Push-AppveyorArtifact $PWD\perf-bench.json -FileName "perf-bench.json" }
+      if (Test-Path perf-bench-crash.txt) { Push-AppveyorArtifact $PWD\perf-bench-crash.txt -FileName "perf-bench-crash.txt" }
+      if ($perfExit -ne 0) { throw "perf-bench failed exit=$perfExit (evidence uploaded before this)" }
       # ===== 编码守卫：全仓文本必须是合法 UTF-8，BOM 只许出现在白名单内 =====
       # 与 .editorconfig 同口径（.ps1 带 BOM，其余纯 UTF-8）；仅 stdlib，无 pip 依赖
       Write-Host "Running encoding guard"

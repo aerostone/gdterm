@@ -35,7 +35,28 @@ namespace Gdterm.Tests.Terminal
 
             Console.WriteLine("=== gdterm perf bench (render pipeline) ===");
             GC.Collect(); GC.WaitForPendingFinalizers();
+            try
+            {
+                return RunCore(outJson);
+            }
+            catch (Exception ex)
+            {
+                // 证据先于宣判：崩溃落盘（appveyor 步骤会把 crash 文件推成产物，
+                // CI 控制台匿名读不到）
+                var crash = new StringBuilder();
+                crash.Append("perf-bench crash: ").Append(ex.GetType().Name).Append('\n');
+                crash.Append(ex.Message).Append('\n').Append('\n');
+                for (var inner = ex.InnerException; inner != null; inner = inner.InnerException)
+                    crash.Append("inner: ").Append(inner.GetType().Name).Append(' ').Append(inner.Message).Append('\n');
+                crash.Append(ex.StackTrace);
+                Console.WriteLine(crash.ToString());
+                try { File.WriteAllText("perf-bench-crash.txt", crash.ToString(), new UTF8Encoding(true)); } catch { }
+                return 2;
+            }
+        }
 
+        private static int RunCore(string outJson)
+        {
             var r = new CellGdiRenderer(Rows, Cols, null, History);
             var canvas = (Control)r.GetControl();
             // 按 Consolas 12pt @96dpi 的实测格宽 9x18 给画布（ApplyFont 内部也会 RecomputeGrid）

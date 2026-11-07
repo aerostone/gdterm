@@ -641,10 +641,27 @@ namespace Gdterm.Terminal.Rendering
                 try { _redrawTimer.Stop(); } catch { }
                 return;
             }
-            RenderFrameNow();
-            if (!_needsRedraw && !_engine.Changed)
+
+            bool paint = false;
+            lock (_lock)
             {
-                try { _redrawTimer.Stop(); } catch { }
+                if (_needsRedraw || _engine.Changed)
+                {
+                    RefreshSnapshot(force: true);
+                    _needsRedraw = false;
+                    paint = true;
+                }
+                else
+                {
+                    try { _redrawTimer.Stop(); } catch { }
+                }
+            }
+
+            // 生产路径保持异步 Invalidate（0.1.395 教训：tick 内同步 Update() 在
+            // DoEvents 泵环境有重入风险，与基准的同步帧路径刻意分开）。
+            if (paint && !_canvas.IsDisposed)
+            {
+                try { _canvas.Invalidate(); } catch { }
             }
         }
 
