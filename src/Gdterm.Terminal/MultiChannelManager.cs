@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Gdterm.Core;
 
 namespace Gdterm.Terminal
 {
@@ -84,7 +85,7 @@ namespace Gdterm.Terminal
                     SessionId = sessionId,
                     Session = session,
                     DisplayName = displayName ?? sessionId,
-                    Group = group ?? "默认",
+                    Group = group ?? L10n.T("默认"),
                     IsSelected = false,
                     RegisteredAt = DateTime.UtcNow
                 };
@@ -116,7 +117,7 @@ namespace Gdterm.Terminal
             lock (_lock)
             {
                 if (!_sessions.TryGetValue(sessionId, out var session))
-                    return new SelectResult(false, "会话不存在");
+                    return new SelectResult(false, L10n.T("会话不存在"));
 
                 // 如果已选中，取消选择
                 if (session.IsSelected)
@@ -124,12 +125,12 @@ namespace Gdterm.Terminal
                     session.IsSelected = false;
                     _activeGroupIds.Remove(sessionId);
                     IsBroadcastMode = _activeGroupIds.Count > 1;
-                    return new SelectResult(true, "已移出多通道");
+                    return new SelectResult(true, L10n.T("已移出多通道"));
                 }
 
                 // 未选中，尝试选择——检测终端就绪
                 if (!session.Session.IsConnected)
-                    return new SelectResult(false, "会话未连接");
+                    return new SelectResult(false, L10n.T("会话未连接"));
 
                 var readyState = CheckTerminalReady(session.Session);
                 session.LastReadyState = readyState;
@@ -142,7 +143,7 @@ namespace Gdterm.Terminal
                     _activeGroupIds.Add(sessionId);
                 IsBroadcastMode = _activeGroupIds.Count > 1;
 
-                return new SelectResult(true, "已加入多通道");
+                return new SelectResult(true, L10n.T("已加入多通道"));
             }
         }
 
@@ -154,10 +155,10 @@ namespace Gdterm.Terminal
             lock (_lock)
             {
                 if (!_sessions.TryGetValue(sessionId, out var session))
-                    return new SelectResult(false, "会话不存在");
+                    return new SelectResult(false, L10n.T("会话不存在"));
 
                 if (!session.Session.IsConnected)
-                    return new SelectResult(false, "会话未连接");
+                    return new SelectResult(false, L10n.T("会话未连接"));
 
                 // 检测终端是否就绪
                 var readyState = CheckTerminalReady(session.Session);
@@ -171,7 +172,7 @@ namespace Gdterm.Terminal
                     _activeGroupIds.Add(sessionId);
                 IsBroadcastMode = _activeGroupIds.Count > 1;
 
-                return new SelectResult(true, "已加入多通道");
+                return new SelectResult(true, L10n.T("已加入多通道"));
             }
         }
 
@@ -368,7 +369,7 @@ namespace Gdterm.Terminal
                     session.LastReadyState = state;
                     return state;
                 }
-                return new ReadyState(false, "会话不存在或未连接", ReadyReason.NoOutput);
+                return new ReadyState(false, L10n.T("会话不存在或未连接"), ReadyReason.NoOutput);
             }
         }
 
@@ -444,7 +445,7 @@ namespace Gdterm.Terminal
             }
             catch
             {
-                return new ReadyState(false, "无法获取终端状态", ReadyReason.NoOutput);
+                return new ReadyState(false, L10n.T("无法获取终端状态"), ReadyReason.NoOutput);
             }
         }
 

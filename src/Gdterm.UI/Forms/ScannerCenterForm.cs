@@ -682,7 +682,7 @@ namespace Gdterm.UI.Forms
 
             if (!string.IsNullOrEmpty(r.RuntimeError))
             {
-                AppendRawLine("[运行错误] " + r.RuntimeError);
+                AppendRawLine(L10n.T("[运行错误] ") + r.RuntimeError);
             }
 
             foreach (var f in r.Findings)

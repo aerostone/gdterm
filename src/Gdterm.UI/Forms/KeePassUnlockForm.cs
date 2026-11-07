@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using Gdterm.KeePass;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Forms
 {
@@ -35,7 +36,7 @@ namespace Gdterm.UI.Forms
 
         private void InitializeComponent()
         {
-            Text = "解锁密码库";
+            Text = L10n.T("解锁密码库");
             Size = DpiScale.S(this, 440, 250); // 初始基准，构造末尾按内容自适应重设
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -55,7 +56,7 @@ namespace Gdterm.UI.Forms
 
             // ── 标题区 ──
             var title = new AntdUI.Label {
-                Text = "🔐 密码库已锁定",
+                Text = L10n.T("🔐 密码库已锁定"),
                 Font = new Font("Segoe UI Emoji", 14F, FontStyle.Bold),
                 AutoSize = true,
                 Location = new Point(pad, y)
@@ -64,7 +65,7 @@ namespace Gdterm.UI.Forms
             y += Math.Max(DpiScale.V(this, 44), FormFontPolicy.RowStep(this) + DpiScale.V(this, 10));
 
             _statusLabel = new AntdUI.Label {
-                Text = "请输入主密码以解锁 KeePass 密码库",
+                Text = L10n.T("请输入主密码以解锁 KeePass 密码库"),
                 AutoSize = true,
                 Location = new Point(pad, y)
             };
@@ -75,7 +76,7 @@ namespace Gdterm.UI.Forms
             _passwordBox = new AntdUI.Input {
                 Location = new Point(pad, y),
                 Size = new Size(clientW - pad * 2, fieldH),
-                PlaceholderText = "主密码",
+                PlaceholderText = L10n.T("主密码"),
                 UseSystemPasswordChar = true
             };
             _passwordBox.TextChanged += (s, e) =>
@@ -89,7 +90,7 @@ namespace Gdterm.UI.Forms
             int btnW = DpiScale.V(this, 96);
             int btnGap = DpiScale.V(this, 12);
             _cancelButton = new AntdUI.Button {
-                Text = "取消",
+                Text = L10n.T("取消"),
                 Size = new Size(btnW, fieldH),
                 Location = new Point(clientW - pad - btnW * 2 - btnGap, y),
                 Type = AntdUI.TTypeMini.Default
@@ -98,7 +99,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(_cancelButton);
 
             _unlockButton = new AntdUI.Button {
-                Text = "解锁",
+                Text = L10n.T("解锁"),
                 Size = new Size(btnW, fieldH),
                 Location = new Point(clientW - pad - btnW, y),
                 Type = AntdUI.TTypeMini.Primary
@@ -122,7 +123,7 @@ namespace Gdterm.UI.Forms
             if (_unlockButton != null && !_busy) _unlockButton.Enabled = ok;
             if (_statusLabel != null)
             {
-                _statusLabel.Text = ok ? "请输入主密码以解锁 KeePass 密码库" : "密码不能为空";
+                _statusLabel.Text = ok ? L10n.T("请输入主密码以解锁 KeePass 密码库") : L10n.T("密码不能为空");
                 _statusLabel.ForeColor = ok
                     ? System.Drawing.SystemColors.ControlText
                     : Gdterm.UI.Diagnostics.GdtermColorTable.Danger;
@@ -134,13 +135,13 @@ namespace Gdterm.UI.Forms
             var password = _passwordBox.Text;
             if (string.IsNullOrEmpty(password))
             {
-                AntdUI.Message.error(this, "请输入密码");
+                AntdUI.Message.error(this, L10n.T("请输入密码"));
                 return;
             }
 
             _busy = true;
             _unlockButton.Enabled = false;
-            _unlockButton.Text = "解锁中...";
+            _unlockButton.Text = L10n.T("解锁中...");
             UnlockAsync(password);
         }
 
@@ -157,7 +158,7 @@ namespace Gdterm.UI.Forms
                 }
                 else
                 {
-                    AntdUI.Message.error(this, "密码错误或密码库文件损坏");
+                    AntdUI.Message.error(this, L10n.T("密码错误或密码库文件损坏"));
                     _passwordBox.Text = "";
                     _passwordBox.Focus();
                 }
@@ -169,7 +170,7 @@ namespace Gdterm.UI.Forms
             finally
             {
                 _unlockButton.Enabled = true;
-                _unlockButton.Text = "解锁";
+                _unlockButton.Text = L10n.T("解锁");
             }
         }
 

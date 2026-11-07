@@ -1,5 +1,6 @@
 using System;
 using System.Windows.Forms;
+using Gdterm.Core;
 using Gdterm.Core.Enums;
 using Gdterm.Core.Models;
 using Gdterm.KeePass;
@@ -122,7 +123,7 @@ namespace Gdterm.UI.Services
                 case ProtocolType.Telnet:
                     return CreateTelnet(config);
                 default:
-                    MessageBox.Show("不支持的协议: " + config.Protocol, "错误",
+                    MessageBox.Show(L10n.T("不支持的协议: ") + config.Protocol, L10n.T("错误"),
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return null;
             }
@@ -209,7 +210,7 @@ namespace Gdterm.UI.Services
                         Metadata = config.Metadata
                     };
                     DiagLog.Info("RdpTab.Proxy",
-                        string.Format("抓包代理已启动 127.0.0.1:{0} → {1}:{2}, dump → {3}",
+                        string.Format(L10n.T("抓包代理已启动 127.0.0.1:{0} → {1}:{2}, dump → {3}"),
                             proxyPort, config.Host, config.Port, dumpDir));
                 }
                 catch (Exception ex)
@@ -287,7 +288,7 @@ namespace Gdterm.UI.Services
                         if (tcpDump) { try { RdpDumpProxy.Stop(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ProtocolTabOpener", exSwallowed); } catch { } } }
                         if (ev.Reason == "closed") return;
                         if (tab.IsDisposed) return;
-                        MessageBox.Show("RDP 已断开: " + (ev.ErrorMessage ?? ev.Reason), "远程桌面",
+                        MessageBox.Show(L10n.T("RDP 已断开: ") + (ev.ErrorMessage ?? ev.Reason), L10n.T("远程桌面"),
                             MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     }
                     catch (Exception ex2) { DiagLog.Swallowed("RdpTab.StateChanged", ex2); }
@@ -343,7 +344,7 @@ namespace Gdterm.UI.Services
                             ConnectionAction.Error);
                     }
                     catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ProtocolTabOpener", exSwallowed); } catch { } }
-                    MessageBox.Show("RDP 连接失败: " + ex.Message, "错误",
+                    MessageBox.Show(L10n.T("RDP 连接失败: ") + ex.Message, L10n.T("错误"),
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             };
@@ -385,7 +386,7 @@ namespace Gdterm.UI.Services
         {
             var tab = new TabPage(config.Name)
             {
-                ToolTipText = "Telnet: " + (config.Host ?? "Unknown") + ":" + (config.Port > 0 ? config.Port : 23) + "（明文）"
+                ToolTipText = "Telnet: " + (config.Host ?? "Unknown") + ":" + (config.Port > 0 ? config.Port : 23) + L10n.T("（明文）")
             };
 
             var terminalControl = new TerminalControl(
@@ -413,12 +414,12 @@ namespace Gdterm.UI.Services
         public OpenedTab CreateLocal(string shellPath = null)
         {
             if (_terminalFactory == null)
-                throw new InvalidOperationException("ITerminalSessionFactory 未注入，无法创建本地终端");
+                throw new InvalidOperationException(L10n.T("ITerminalSessionFactory 未注入，无法创建本地终端"));
 
             var local = _terminalFactory.CreateLocal(shellPath);
-            var tab = new TabPage("本地终端")
+            var tab = new TabPage(L10n.T("本地终端"))
             {
-                ToolTipText = "本地 Shell"
+                ToolTipText = L10n.T("本地 Shell")
             };
 
             var terminal = new TerminalControl(local, _auditLogger);
@@ -432,7 +433,7 @@ namespace Gdterm.UI.Services
                 Config = new ConnectionConfig
                 {
                     Id = "local-" + Guid.NewGuid().ToString("N").Substring(0, 8),
-                    Name = "本地终端",
+                    Name = L10n.T("本地终端"),
                     Host = "localhost",
                     Protocol = ProtocolType.SSH
                 },
