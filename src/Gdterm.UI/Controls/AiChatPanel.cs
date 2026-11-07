@@ -10,6 +10,7 @@ using TerminalControl = Gdterm.UI.Controls.TerminalControl;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
@@ -73,7 +74,7 @@ namespace Gdterm.UI.Controls
 
             _statusLabel = new AntdUI.Label
             {
-                Text = "AI 就绪：输入问题，Enter 发送",
+                Text = L10n.T("AI 就绪：输入问题，Enter 发送"),
                 Dock = DockStyle.Bottom,
                 AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
@@ -100,14 +101,14 @@ namespace Gdterm.UI.Controls
                 MinimumSize = new Size(0, fieldH),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
-                PlaceholderText = "问 AI：如 这台机器 CPU 为什么这么高？"
+                PlaceholderText = L10n.T("问 AI：如 这台机器 CPU 为什么这么高？")
             };
             _inputBox.KeyDown += OnInputKeyDown;
             bottomRow.Controls.Add(_inputBox, 0, 0);
 
             _btnSend = new AntdUI.Button
             {
-                Text = "发送",
+                Text = L10n.T("发送"),
                 Type = AntdUI.TTypeMini.Primary,
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 4), DpiScale.V(this, 12), DpiScale.V(this, 4)),
@@ -118,7 +119,7 @@ namespace Gdterm.UI.Controls
 
             _btnClear = new AntdUI.Button
             {
-                Text = "清空",
+                Text = L10n.T("清空"),
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
                 Margin = new Padding(DpiScale.V(this, 4), 0, 0, 0)
@@ -131,12 +132,12 @@ namespace Gdterm.UI.Controls
                     _historyBox.Clear();
                     if (_cmdBar != null) { _cmdBar.Controls.Clear(); _cmdBar.Visible = false; }
                     if (_empty != null) _empty.SetEmpty(true);
-                    AppendSys("已清空对话历史。");
+                    AppendSys(L10n.T("已清空对话历史。"));
                 }
                 catch (Exception ex)
                 {
                     try { DiagLog.Error("AiChatPanel.Clear", ex); } catch (Exception) { }
-                    ToastNotifier.Error("清空会话失败：" + ex.Message);
+                    ToastNotifier.Error(L10n.T("清空会话失败：") + ex.Message);
                 }
             };
             bottomRow.Controls.Add(_btnClear, 2, 0);
@@ -144,11 +145,11 @@ namespace Gdterm.UI.Controls
 
             // 审计 C1：空对话此前只有一行灰色小字，看着像「没加载出来」。
             // 改成空态引导：说明能力 + 一个可直接点的示例提问（点了就填进输入框）。
-            _empty = EmptyStateView.Attach(this, "AI 助手",
-                "回复里出现的命令会列在下方快捷条，点一下即发往当前终端（仍走危险命令确认）",
-                "试一个示例问题", (s2, e2) =>
+            _empty = EmptyStateView.Attach(this, L10n.T("AI 助手"),
+                L10n.T("回复里出现的命令会列在下方快捷条，点一下即发往当前终端（仍走危险命令确认）"),
+                L10n.T("试一个示例问题"), (s2, e2) =>
                 {
-                    _inputBox.Text = "这台机器 CPU 占用为什么这么高？给出排查命令";
+                    _inputBox.Text = L10n.T("这台机器 CPU 占用为什么这么高？给出排查命令");
                     _inputBox.Focus();
                     try { _inputBox.SelectAll(); } catch (Exception) { }
                 });
@@ -172,7 +173,7 @@ namespace Gdterm.UI.Controls
             if (text.Length == 0) return;
             _inputBox.Text = "";
             _sending = true;
-            _statusLabel.Text = "AI 思考中…";
+            _statusLabel.Text = L10n.T("AI 思考中…");
             _cmdBar.Controls.Clear();
             _cmdBar.Visible = false;
             AppendUser(text);
@@ -217,8 +218,8 @@ namespace Gdterm.UI.Controls
                     BeginInvoke(new Action(() =>
                     {
                         _sending = false;
-                        _statusLabel.Text = "发送失败";
-                        AppendSys("AI 调用失败：" + ex.Message);
+                        _statusLabel.Text = L10n.T("发送失败");
+                        AppendSys(L10n.T("AI 调用失败：") + ex.Message);
                     }));
                 }
             });
@@ -230,11 +231,11 @@ namespace Gdterm.UI.Controls
             try { if (_cts != null) { _cts.Dispose(); _cts = null; } } catch { }
             if (resp == null || !resp.IsSuccess)
             {
-                _statusLabel.Text = "AI 未配置或调用失败";
-                AppendSys(resp != null ? resp.ErrorMessage : "AI 返回为空。请检查 工具 → AI 助手设置。");
+                _statusLabel.Text = L10n.T("AI 未配置或调用失败");
+                AppendSys(resp != null ? resp.ErrorMessage : L10n.T("AI 返回为空。请检查 工具 → AI 助手设置。"));
                 return;
             }
-            _statusLabel.Text = "AI 就绪";
+            _statusLabel.Text = L10n.T("AI 就绪");
             var cmds = resp.SuggestedCommands;
             if (cmds == null || cmds.Count == 0) return;
             _cmdBar.Controls.Clear();
@@ -254,10 +255,10 @@ namespace Gdterm.UI.Controls
                     try
                     {
                         var tc = _getActiveTerminal != null ? _getActiveTerminal() : null;
-                        if (tc == null) { _statusLabel.Text = "无活动终端"; return; }
+                        if (tc == null) { _statusLabel.Text = L10n.T("无活动终端"); return; }
                         // 经命令行闸门：危险命令确认 + 审计（与片段搜索/底栏命令同链路）。
                         if (!tc.TrySendInput(c + "\r", isCommandLine: true)) return;
-                        _statusLabel.Text = "已发送到终端";
+                        _statusLabel.Text = L10n.T("已发送到终端");
                     }
                     catch (System.Exception exSwallowed) { try { Gdterm.UI.Diagnostics.DiagLog.Swallowed("AiChatPanel", exSwallowed); } catch { } }
                 };
@@ -269,7 +270,7 @@ namespace Gdterm.UI.Controls
         private void AppendUser(string text)
         {
             if (_empty != null) _empty.SetEmpty(false);
-            AppendLine("你： " + text, GdtermColorTable.Accent, true);
+            AppendLine(L10n.T("你： ") + text, GdtermColorTable.Accent, true);
         }
 
         private void AppendAssistantPrefix()

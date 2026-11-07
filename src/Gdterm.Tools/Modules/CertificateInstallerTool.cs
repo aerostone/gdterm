@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
+using Gdterm.Core;
 using Gdterm.Core.Security;
 using Gdterm.Tools.Models;
 
@@ -17,9 +18,9 @@ namespace Gdterm.Tools.Modules
         private CertificateInstallerConfig _config;
 
         public string ToolId { get { return "cert-installer"; } }
-        public string DisplayName { get { return "证书安装器"; } }
-        public string Description { get { return "本地和远程证书安装（PEM/DER/PFX/P12）"; } }
-        public string Category { get { return "安全"; } }
+        public string DisplayName { get { return L10n.T("证书安装器"); } }
+        public string Description { get { return L10n.T("本地和远程证书安装（PEM/DER/PFX/P12）"); } }
+        public string Category { get { return L10n.T("安全"); } }
         public bool HasRemoteSession { get { return _session != null && _session.IsConnected; } }
 
         public event EventHandler<string> OutputReceived;
@@ -47,7 +48,7 @@ namespace Gdterm.Tools.Modules
                 return new RemoteCommandResult { Command = "local-certutil", ExitCode = -1, Stderr = ex.Message };
             }
             if (!File.Exists(certPath))
-                return new RemoteCommandResult { Command = "local-certutil", ExitCode = -1, Stderr = "证书文件不存在: " + certPath };
+                return new RemoteCommandResult { Command = "local-certutil", ExitCode = -1, Stderr = L10n.T("证书文件不存在: ") + certPath };
 
             var store = isTrustedRoot ? "Root" : "My";
             // 双引号包裹 Windows 路径，内部双引号转义为 ""
@@ -55,7 +56,7 @@ namespace Gdterm.Tools.Modules
             var safeStore = "\"" + store + "\"";
             var args = "-addstore " + safeStore + " " + safePath;
             var result = ExecuteLocal("certutil", args);
-            OnOutput("本地证书安装" + (result.IsSuccess ? "成功" : "失败") + ": " + certPath);
+            OnOutput(L10n.T("本地证书安装") + (result.IsSuccess ? L10n.T("成功") : L10n.T("失败")) + ": " + certPath);
             return result;
         }
 
@@ -63,10 +64,10 @@ namespace Gdterm.Tools.Modules
         public RemoteCommandResult InstallRemote(string localCertPath, bool isTrustedRoot)
         {
             if (!HasRemoteSession)
-                return new RemoteCommandResult { Command = "remote-cert", ExitCode = -1, Stderr = "未连接远程SSH" };
+                return new RemoteCommandResult { Command = "remote-cert", ExitCode = -1, Stderr = L10n.T("未连接远程SSH") };
 
             if (!File.Exists(localCertPath))
-                return new RemoteCommandResult { Command = "remote-cert", ExitCode = -1, Stderr = "本地证书文件不存在" };
+                return new RemoteCommandResult { Command = "remote-cert", ExitCode = -1, Stderr = L10n.T("本地证书文件不存在") };
 
             var sw = System.Diagnostics.Stopwatch.StartNew();
             var sb = new StringBuilder();
@@ -115,10 +116,10 @@ namespace Gdterm.Tools.Modules
                         {
                             var verifyCmd = "openssl x509 -in " + ShellArgument.ShellQuote(remotePath) + " -text -noout 2>&1 | head -5";
                             var verifyResult = ExecuteRemote(verifyCmd);
-                            sb.AppendLine().AppendLine("=== 证书信息 ===").Append(verifyResult.Stdout);
+                            sb.AppendLine().AppendLine(L10n.T("=== 证书信息 ===")).Append(verifyResult.Stdout);
                         }
 
-                        OnOutput("远程证书安装" + (result.IsSuccess ? "成功" : "失败") + ": " + localCertPath);
+                        OnOutput(L10n.T("远程证书安装") + (result.IsSuccess ? L10n.T("成功") : L10n.T("失败")) + ": " + localCertPath);
                     }
                     finally
                     {
@@ -128,7 +129,7 @@ namespace Gdterm.Tools.Modules
             }
             catch (Exception ex)
             {
-                sb.AppendLine("异常: " + ex.Message);
+                sb.AppendLine(L10n.T("异常: ") + ex.Message);
             }
 
             sw.Stop();
@@ -148,7 +149,7 @@ namespace Gdterm.Tools.Modules
                 return new RemoteCommandResult { Command = "openssl", ExitCode = -1, Stderr = ex.Message };
             }
             if (!File.Exists(certPath))
-                return new RemoteCommandResult { Command = "openssl", ExitCode = -1, Stderr = "文件不存在" };
+                return new RemoteCommandResult { Command = "openssl", ExitCode = -1, Stderr = L10n.T("文件不存在") };
 
             var safePath = "\"" + certPath.Replace("\"", "\"\"") + "\"";
             return ExecuteLocal("openssl", "x509 -in " + safePath + " -text -noout");
@@ -182,7 +183,7 @@ namespace Gdterm.Tools.Modules
         private RemoteCommandResult ExecuteRemote(string command)
         {
             if (_session == null)
-                return new RemoteCommandResult { Command = command, ExitCode = -1, Stderr = "SSH 未连接" };
+                return new RemoteCommandResult { Command = command, ExitCode = -1, Stderr = L10n.T("SSH 未连接") };
             return _session.RunCommand(command);
         }
 
@@ -196,7 +197,7 @@ namespace Gdterm.Tools.Modules
             Func<T, string> render)
         {
             var root = output.Parent as System.Windows.Forms.Control;
-            Action setRunning = () => { status.Text = "执行中..."; status.ForeColor = System.Drawing.Color.FromArgb(255, 200, 80); };
+            Action setRunning = () => { status.Text = L10n.T("执行中..."); status.ForeColor = System.Drawing.Color.FromArgb(255, 200, 80); };
             if (root != null && root.IsHandleCreated) root.BeginInvoke(setRunning); else setRunning();
 
             Task.Run(() =>
@@ -208,8 +209,8 @@ namespace Gdterm.Tools.Modules
                 }
                 catch (Exception ex)
                 {
-                    ToolPanelHelper.AppendLine(output, "失败: " + ex.Message);
-                    SetStatus(root, status, "失败: " + ex.Message, System.Drawing.Color.FromArgb(255, 100, 100));
+                    ToolPanelHelper.AppendLine(output, L10n.T("失败: ") + ex.Message);
+                    SetStatus(root, status, L10n.T("失败: ") + ex.Message, System.Drawing.Color.FromArgb(255, 100, 100));
                 }
             });
         }
@@ -224,28 +225,28 @@ namespace Gdterm.Tools.Modules
         {
             return ToolPanelHelper.CreateActionPanel(
                 DisplayName,
-                "输入本地证书路径；勾选远程需先绑定 SSH。默认安装到本机受信任根。",
+                L10n.T("输入本地证书路径；勾选远程需先绑定 SSH。默认安装到本机受信任根。"),
                 null,
                 (inputs, output, status) =>
                 {
                     var path = (inputs[0].Text ?? "").Trim();
-                    if (string.IsNullOrEmpty(path) || path.StartsWith("目标"))
+                    if (string.IsNullOrEmpty(path) || path.StartsWith(L10n.T("目标")))
                     {
-                        status.Text = "请输入证书路径";
+                        status.Text = L10n.T("请输入证书路径");
                         return;
                     }
                     // finding-05：certutil 外部进程 + 远程 SSH 可能耗时，后台执行防 UI 冻结
                     RunBackground(output, status, () =>
                     {
                         var local = InstallLocal(path, true);
-                        ToolPanelHelper.AppendLine(output, "[本地] " + (local.Stdout ?? "") + (local.Stderr ?? ""));
+                        ToolPanelHelper.AppendLine(output, L10n.T("[本地] ") + (local.Stdout ?? "") + (local.Stderr ?? ""));
                         if (HasRemoteSession)
                         {
                             var remote = InstallRemote(path, true);
-                            ToolPanelHelper.AppendLine(output, "[远程] " + (remote.Stdout ?? "") + (remote.Stderr ?? ""));
+                            ToolPanelHelper.AppendLine(output, L10n.T("[远程] ") + (remote.Stdout ?? "") + (remote.Stderr ?? ""));
                         }
                         return true;
-                    }, _ => "完成");
+                    }, _ => L10n.T("完成"));
                 });
         }
 

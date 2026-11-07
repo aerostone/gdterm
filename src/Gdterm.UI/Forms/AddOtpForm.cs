@@ -4,6 +4,7 @@ using System.Windows.Forms;
 using Gdterm.Security.Otp;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Forms
 {
@@ -23,7 +24,7 @@ namespace Gdterm.UI.Forms
 
         public AddOtpForm()
         {
-            Text = "添加 OTP 条目";
+            Text = L10n.T("添加 OTP 条目");
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
             Resizable = false;
             AutoHandDpi = false;
@@ -39,12 +40,12 @@ namespace Gdterm.UI.Forms
 
             var pad = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 10), DpiScale.V(this, 12), DpiScale.V(this, 6));
 
-            var lblUri = MakeLabel("otpauth:// URI 或 Base32 密钥", pad);
+            var lblUri = MakeLabel(L10n.T("otpauth:// URI 或 Base32 密钥"), pad);
             _uri = new AntdUI.Input
             {
                 Dock = DockStyle.Top,
                 MinimumSize = new System.Drawing.Size(0, FormFontPolicy.FieldHeight(this)),
-                PlaceholderText = "otpauth://totp/Issuer:acct?secret=ABC…  或  直接粘贴 Base32 密钥",
+                PlaceholderText = L10n.T("otpauth://totp/Issuer:acct?secret=ABC…  或  直接粘贴 Base32 密钥"),
                 Font = FormFontPolicy.UiFont()
             };
             _uri.TextChanged += (s, e) => TryPrefillFromUri();
@@ -66,18 +67,18 @@ namespace Gdterm.UI.Forms
             row1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             for (int r = 0; r < 4; r++) row1.RowStyles.Add(new RowStyle(SizeType.Percent, 25f));
 
-            _issuer = new AntdUI.Input { MinimumSize = new System.Drawing.Size(120, fh), Font = FormFontPolicy.UiFont(), PlaceholderText = "如：GitHub" };
-            _account = new AntdUI.Input { MinimumSize = new System.Drawing.Size(120, fh), Font = FormFontPolicy.UiFont(), PlaceholderText = "如：user@example.com" };
+            _issuer = new AntdUI.Input { MinimumSize = new System.Drawing.Size(120, fh), Font = FormFontPolicy.UiFont(), PlaceholderText = L10n.T("如：GitHub") };
+            _account = new AntdUI.Input { MinimumSize = new System.Drawing.Size(120, fh), Font = FormFontPolicy.UiFont(), PlaceholderText = L10n.T("如：user@example.com") };
             _digits = new AntdUI.Input { MinimumSize = new System.Drawing.Size(120, fh), Font = FormFontPolicy.UiFont(), Text = "6" };
             _period = new AntdUI.Input { MinimumSize = new System.Drawing.Size(120, fh), Font = FormFontPolicy.UiFont(), Text = "30" };
 
-            row1.Controls.Add(TableLabel("发行方"), 0, 0);
+            row1.Controls.Add(TableLabel(L10n.T("发行方")), 0, 0);
             row1.Controls.Add(_issuer, 1, 0);
-            row1.Controls.Add(TableLabel("账户"), 0, 1);
+            row1.Controls.Add(TableLabel(L10n.T("账户")), 0, 1);
             row1.Controls.Add(_account, 1, 1);
-            row1.Controls.Add(TableLabel("位数(6-8)"), 0, 2);
+            row1.Controls.Add(TableLabel(L10n.T("位数(6-8)")), 0, 2);
             row1.Controls.Add(_digits, 1, 2);
-            row1.Controls.Add(TableLabel("周期(秒)"), 0, 3);
+            row1.Controls.Add(TableLabel(L10n.T("周期(秒)")), 0, 3);
             row1.Controls.Add(_period, 1, 3);
 
             // 底部按钮栏——FlowLayoutPanel 右向流（SetupWizardForm/PasswordHealthForm 同款惯例）。
@@ -94,7 +95,7 @@ namespace Gdterm.UI.Forms
             };
             var btnOk = new AntdUI.Button
             {
-                Text = "保存",
+                Text = L10n.T("保存"),
                 AutoSize = true,
                 Type = AntdUI.TTypeMini.Primary,
                 Cursor = Cursors.Hand,
@@ -105,7 +106,7 @@ namespace Gdterm.UI.Forms
             btnOk.Click += (s, e) => OnOk();
             var btnCancel = new AntdUI.Button
             {
-                Text = "取消",
+                Text = L10n.T("取消"),
                 AutoSize = true,
                 Cursor = Cursors.Hand,
                 Name = "btnCancel",
@@ -130,7 +131,7 @@ namespace Gdterm.UI.Forms
                 Font = FormFontPolicy.UiFont(),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(DpiScale.V(this, 14), DpiScale.V(this, 4), DpiScale.V(this, 14), 0),
-                Text = "提示：多数门户在「设置→两步验证」处提供 otpauth:// 链接（手机扫码界面长按二维码可复制链接）。\nURI 解析成功后会自动预填下方字段，可再修改。"
+                Text = L10n.T("提示：多数门户在「设置→两步验证」处提供 otpauth:// 链接（手机扫码界面长按二维码可复制链接）。\nURI 解析成功后会自动预填下方字段，可再修改。")
             };
             Controls.Add(hint);
             Controls.Add(row1);
@@ -196,7 +197,7 @@ namespace Gdterm.UI.Forms
                 try { parsed = OtpAuthUri.Parse(text); }
                 catch (FormatException ex)
                 {
-                    MessageBox.Show(this, "OTP URI 解析失败：\n" + ex.Message, "添加 OTP",
+                    MessageBox.Show(this, L10n.T("OTP URI 解析失败：\n") + ex.Message, L10n.T("添加 OTP"),
                         MessageBoxButtons.OK, MessageBoxIcon.Warning);
                     return;
                 }
@@ -205,7 +206,7 @@ namespace Gdterm.UI.Forms
             var secret = parsed != null ? parsed.Secret : text;
             if (string.IsNullOrWhiteSpace(secret))
             {
-                MessageBox.Show(this, "请粘贴 otpauth:// URI 或 Base32 密钥。", "添加 OTP",
+                MessageBox.Show(this, L10n.T("请粘贴 otpauth:// URI 或 Base32 密钥。"), L10n.T("添加 OTP"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -214,11 +215,11 @@ namespace Gdterm.UI.Forms
             {
                 var key = Base32.Decode(secret);
                 if (key.Length < 10)
-                    throw new FormatException("密钥太短（Base32 解码后需 ≥10 字节，常见为 20）");
+                    throw new FormatException(L10n.T("密钥太短（Base32 解码后需 ≥10 字节，常见为 20）"));
             }
             catch (FormatException ex)
             {
-                MessageBox.Show(this, "密钥不是合法的 Base32：\n" + ex.Message, "添加 OTP",
+                MessageBox.Show(this, L10n.T("密钥不是合法的 Base32：\n") + ex.Message, L10n.T("添加 OTP"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -226,13 +227,13 @@ namespace Gdterm.UI.Forms
             int digits, period;
             if (!int.TryParse((_digits.Text ?? "").Trim(), out digits) || digits < 6 || digits > 8)
             {
-                MessageBox.Show(this, "位数需为 6-8。", "添加 OTP",
+                MessageBox.Show(this, L10n.T("位数需为 6-8。"), L10n.T("添加 OTP"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             if (!int.TryParse((_period.Text ?? "").Trim(), out period) || period <= 0 || period > 300)
             {
-                MessageBox.Show(this, "周期需为 1-300 秒。", "添加 OTP",
+                MessageBox.Show(this, L10n.T("周期需为 1-300 秒。"), L10n.T("添加 OTP"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -259,7 +260,7 @@ namespace Gdterm.UI.Forms
 
             if (string.IsNullOrEmpty(Entry.Title))
             {
-                MessageBox.Show(this, "请填写发行方或账户（至少一项），便于日后识别。", "添加 OTP",
+                MessageBox.Show(this, L10n.T("请填写发行方或账户（至少一项），便于日后识别。"), L10n.T("添加 OTP"),
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }

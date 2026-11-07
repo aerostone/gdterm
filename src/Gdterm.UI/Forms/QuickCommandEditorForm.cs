@@ -1,6 +1,7 @@
 using System;
 using System.Drawing;
 using System.Windows.Forms;
+using Gdterm.Core;
 using Gdterm.Core.Models;
 using Gdterm.UI.Services;
 
@@ -32,7 +33,7 @@ namespace Gdterm.UI.Forms
 
         private void BuildUI(QuickCommand existing, string defaultGroup)
         {
-            Text = existing == null ? "添加快捷命令" : "编辑快捷命令";
+            Text = existing == null ? L10n.T("添加快捷命令") : L10n.T("编辑快捷命令");
             Size = DpiScale.S(this, 520, 560); // 初始基准，构造末尾按内容自适应重设
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -53,12 +54,12 @@ namespace Gdterm.UI.Forms
             int rowH = fieldH + DpiScale.V(this, 8);
 
             // 名称
-            AddLabel("名称", lblX, y, fieldH);
+            AddLabel(L10n.T("名称"), lblX, y, fieldH);
             _txtName = AddInput(inputX, y, inputW, fieldH);
             y += rowH;
 
             // 命令（多行）
-            AddLabel("命令", lblX, y, fieldH);
+            AddLabel(L10n.T("命令"), lblX, y, fieldH);
             _txtCommand = AddInput(inputX, y, inputW, fieldH);
             _txtCommand.Multiline = true;
             _txtCommand.Size = new Size(inputW, fieldH + DpiScale.V(this, 38));
@@ -66,7 +67,7 @@ namespace Gdterm.UI.Forms
 
             // 占位符提示
             var lblHint = new AntdUI.Label {
-                Text = "占位符: {host} {user} {date} {time} {datetime} {env:VAR_NAME}",
+                Text = L10n.T("占位符: {host} {user} {date} {time} {datetime} {env:VAR_NAME}"),
                 Location = new Point(inputX, y),
                 AutoSize = true
             };
@@ -74,39 +75,39 @@ namespace Gdterm.UI.Forms
             y += Math.Max(DpiScale.V(this, 32), FormFontPolicy.RowStep(this));
 
             // 分组
-            AddLabel("分组", lblX, y, fieldH);
+            AddLabel(L10n.T("分组"), lblX, y, fieldH);
             _cmbGroup = new AntdUI.Select {
                 Location = new Point(inputX, y),
                 Size = new Size(DpiScale.V(this, 200), fieldH)
             };
-            foreach (var g in new[] { "网络", "磁盘", "进程", "系统", "安全", "Docker", "自定义" })
+            foreach (var g in new[] { L10n.T("网络"), L10n.T("磁盘"), L10n.T("进程"), L10n.T("系统"), L10n.T("安全"), "Docker", L10n.T("自定义") })
                 _cmbGroup.Items.Add(g);
-            _cmbGroup.Text = !string.IsNullOrEmpty(defaultGroup) ? defaultGroup : "自定义";
+            _cmbGroup.Text = !string.IsNullOrEmpty(defaultGroup) ? defaultGroup : L10n.T("自定义");
             Controls.Add(_cmbGroup);
             y += rowH;
 
             // 执行前命令
-            AddLabel("前置命令", lblX, y, fieldH);
+            AddLabel(L10n.T("前置命令"), lblX, y, fieldH);
             _txtPreCommand = AddInput(inputX, y, inputW, fieldH);
-            _txtPreCommand.PlaceholderText = "如: sudo -i";
+            _txtPreCommand.PlaceholderText = L10n.T("如: sudo -i");
             y += rowH;
 
             // 执行后命令
-            AddLabel("后置命令", lblX, y, fieldH);
+            AddLabel(L10n.T("后置命令"), lblX, y, fieldH);
             _txtPostCommand = AddInput(inputX, y, inputW, fieldH);
-            _txtPostCommand.PlaceholderText = "如: cleanup (可选)";
+            _txtPostCommand.PlaceholderText = L10n.T("如: cleanup (可选)");
             y += rowH;
 
             // 需要 root + 排序（同一行两个控件，间距按 DPI 缩放）
             _chkRequiresRoot = new AntdUI.Checkbox {
-                Text = "需要 root 权限",
+                Text = L10n.T("需要 root 权限"),
                 Location = new Point(inputX, y + DpiScale.V(this, 8)),
                 AutoSize = true
             };
             Controls.Add(_chkRequiresRoot);
 
             int sortX = inputX + DpiScale.V(this, 185);
-            AddLabel("排序", sortX, y, fieldH);
+            AddLabel(L10n.T("排序"), sortX, y, fieldH);
             _numSortOrder = new AntdUI.InputNumber {
                 Location = new Point(sortX + DpiScale.V(this, 45), y),
                 Size = new Size(DpiScale.V(this, 80), fieldH),
@@ -118,13 +119,13 @@ namespace Gdterm.UI.Forms
             y += rowH;
 
             // 快捷键
-            AddLabel("快捷键", lblX, y, fieldH);
+            AddLabel(L10n.T("快捷键"), lblX, y, fieldH);
             _txtShortcut = AddInput(inputX, y, DpiScale.V(this, 160), fieldH);
-            _txtShortcut.PlaceholderText = "如: Ctrl+Shift+1";
+            _txtShortcut.PlaceholderText = L10n.T("如: Ctrl+Shift+1");
             y += rowH;
 
             // 描述
-            AddLabel("描述", lblX, y, fieldH);
+            AddLabel(L10n.T("描述"), lblX, y, fieldH);
             _txtDescription = AddInput(inputX, y, inputW, fieldH);
             y += rowH + DpiScale.V(this, 6);
 
@@ -132,7 +133,7 @@ namespace Gdterm.UI.Forms
             int btnGap = DpiScale.V(this, 8);
             // 按钮：Windows 惯例主按钮最右（修复：原先确定在左侧）
             var btnCancel = new AntdUI.Button {
-                Text = "取消",
+                Text = L10n.T("取消"),
                 Size = new Size(btnW, fieldH),
                 Location = new Point(clientW - DpiScale.V(this, 20) - btnW, y)
             };
@@ -140,7 +141,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(btnCancel);
 
             var btnOk = new AntdUI.Button {
-                Text = "保存",
+                Text = L10n.T("保存"),
                 Type = AntdUI.TTypeMini.Primary,
                 Size = new Size(btnW, fieldH),
                 Location = new Point(clientW - DpiScale.V(this, 20) - btnW * 2 - btnGap, y)
@@ -175,7 +176,7 @@ namespace Gdterm.UI.Forms
         {
             _txtName.Text = cmd.Name ?? "";
             _txtCommand.Text = cmd.Command ?? "";
-            _cmbGroup.Text = cmd.Group ?? "自定义";
+            _cmbGroup.Text = cmd.Group ?? L10n.T("自定义");
             _txtDescription.Text = cmd.Description ?? "";
             _chkRequiresRoot.Checked = cmd.RequiresRoot;
             _txtPreCommand.Text = cmd.PreCommand ?? "";
@@ -188,7 +189,7 @@ namespace Gdterm.UI.Forms
         {
             if (string.IsNullOrWhiteSpace(_txtName.Text) || string.IsNullOrWhiteSpace(_txtCommand.Text))
             {
-                AntdUI.Message.warn(this, "请填写名称和命令");
+                AntdUI.Message.warn(this, L10n.T("请填写名称和命令"));
                 return;
             }
 
@@ -197,7 +198,7 @@ namespace Gdterm.UI.Forms
                 Id = Guid.NewGuid().ToString("N").Substring(0, 8),
                 Name = _txtName.Text.Trim(),
                 Command = _txtCommand.Text.Trim(),
-                Group = string.IsNullOrWhiteSpace(_cmbGroup.Text) ? "自定义" : _cmbGroup.Text.Trim(),
+                Group = string.IsNullOrWhiteSpace(_cmbGroup.Text) ? L10n.T("自定义") : _cmbGroup.Text.Trim(),
                 Description = _txtDescription.Text.Trim(),
                 RequiresRoot = _chkRequiresRoot.Checked,
                 PreCommand = string.IsNullOrWhiteSpace(_txtPreCommand.Text) ? null : _txtPreCommand.Text.Trim(),
