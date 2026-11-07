@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using Gdterm.Core;
 
 namespace Gdterm.Connections
 {
@@ -99,7 +100,7 @@ namespace Gdterm.Connections
                     Name = ExtractString(obj, "name") ?? "",
                     Description = ExtractString(obj, "description") ?? "",
                     Command = ExtractString(obj, "command") ?? "",
-                    Category = ExtractString(obj, "category") ?? "通用",
+                    Category = ExtractString(obj, "category") ?? L10n.T("通用"),
                     UseCount = ExtractInt(obj, "useCount")
                 };
                 var tags = ExtractArray(obj, "tags");
@@ -191,7 +192,7 @@ namespace Gdterm.Connections
             {
                 Name = name ?? command.Substring(0, Math.Min(command.Length, 40)),
                 Command = command,
-                Category = "从历史创建"
+                Category = L10n.T("从历史创建")
             };
         }
 
@@ -199,16 +200,16 @@ namespace Gdterm.Connections
         {
             return new List<CommandTemplate>
             {
-                new CommandTemplate { Name = "磁盘空间检查", Command = "df -h", Category = "系统巡检", Description = "检查磁盘使用率", Tags = { "巡检", "磁盘" } },
-                new CommandTemplate { Name = "内存使用检查", Command = "free -h && cat /proc/meminfo | head -5", Category = "系统巡检", Description = "检查内存使用", Tags = { "巡检", "内存" } },
-                new CommandTemplate { Name = "系统负载检查", Command = "uptime && top -bn1 | head -15", Category = "系统巡检", Description = "检查系统负载和进程", Tags = { "巡检", "负载" } },
-                new CommandTemplate { Name = "网络连接检查", Command = "ss -tlnp && echo '---' && ip addr show", Category = "网络", Description = "检查监听端口和IP", Tags = { "网络", "端口" } },
-                new CommandTemplate { Name = "防火墙规则查看", Command = "iptables -L -n --line-numbers 2>/dev/null || firewall-cmd --list-all 2>/dev/null", Category = "安全", Description = "查看防火墙规则", Tags = { "安全", "防火墙" } },
-                new CommandTemplate { Name = "系统信息概览", Command = "echo '=== {host} ===' && uname -a && echo && cat /etc/os-release 2>/dev/null | head -3 && echo && uptime && echo && df -h /", Category = "系统巡检", Description = "一次性查看系统关键信息", Tags = { "巡检", "概览" } },
-                new CommandTemplate { Name = "Docker容器状态", Command = "docker ps -a --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}'", Category = "Docker", Description = "查看所有Docker容器状态", Tags = { "Docker" } },
-                new CommandTemplate { Name = "日志查看(最近100行)", Command = "tail -100 /var/log/syslog 2>/dev/null || tail -100 /var/log/messages", Category = "日志", Description = "查看系统日志最近100行", Tags = { "日志" } },
-                new CommandTemplate { Name = "备份目录(带日期)", Command = "tar czf /tmp/backup_{date}.tar.gz {prompt}", Category = "备份", Description = "压缩备份指定目录", Tags = { "备份", "压缩" } },
-                new CommandTemplate { Name = "进程查找", Command = "ps aux | grep -i '{prompt}' | grep -v grep", Category = "进程", Description = "按关键词查找进程", Tags = { "进程" } }
+                new CommandTemplate { Name = L10n.T("磁盘空间检查"), Command = "df -h", Category = L10n.T("系统巡检"), Description = L10n.T("检查磁盘使用率"), Tags = { L10n.T("巡检"), L10n.T("磁盘") } },
+                new CommandTemplate { Name = L10n.T("内存使用检查"), Command = "free -h && cat /proc/meminfo | head -5", Category = L10n.T("系统巡检"), Description = L10n.T("检查内存使用"), Tags = { L10n.T("巡检"), L10n.T("内存") } },
+                new CommandTemplate { Name = L10n.T("系统负载检查"), Command = "uptime && top -bn1 | head -15", Category = L10n.T("系统巡检"), Description = L10n.T("检查系统负载和进程"), Tags = { L10n.T("巡检"), L10n.T("负载") } },
+                new CommandTemplate { Name = L10n.T("网络连接检查"), Command = "ss -tlnp && echo '---' && ip addr show", Category = L10n.T("网络"), Description = L10n.T("检查监听端口和IP"), Tags = { L10n.T("网络"), L10n.T("端口") } },
+                new CommandTemplate { Name = L10n.T("防火墙规则查看"), Command = "iptables -L -n --line-numbers 2>/dev/null || firewall-cmd --list-all 2>/dev/null", Category = L10n.T("安全"), Description = L10n.T("查看防火墙规则"), Tags = { L10n.T("安全"), L10n.T("防火墙") } },
+                new CommandTemplate { Name = L10n.T("系统信息概览"), Command = "echo '=== {host} ===' && uname -a && echo && cat /etc/os-release 2>/dev/null | head -3 && echo && uptime && echo && df -h /", Category = L10n.T("系统巡检"), Description = L10n.T("一次性查看系统关键信息"), Tags = { L10n.T("巡检"), L10n.T("概览") } },
+                new CommandTemplate { Name = L10n.T("Docker容器状态"), Command = "docker ps -a --format 'table {{.Names}}\\t{{.Status}}\\t{{.Ports}}'", Category = "Docker", Description = L10n.T("查看所有Docker容器状态"), Tags = { "Docker" } },
+                new CommandTemplate { Name = L10n.T("日志查看(最近100行)"), Command = "tail -100 /var/log/syslog 2>/dev/null || tail -100 /var/log/messages", Category = L10n.T("日志"), Description = L10n.T("查看系统日志最近100行"), Tags = { L10n.T("日志") } },
+                new CommandTemplate { Name = L10n.T("备份目录(带日期)"), Command = "tar czf /tmp/backup_{date}.tar.gz {prompt}", Category = L10n.T("备份"), Description = L10n.T("压缩备份指定目录"), Tags = { L10n.T("备份"), L10n.T("压缩") } },
+                new CommandTemplate { Name = L10n.T("进程查找"), Command = "ps aux | grep -i '{prompt}' | grep -v grep", Category = L10n.T("进程"), Description = L10n.T("按关键词查找进程"), Tags = { L10n.T("进程") } }
             };
         }
 

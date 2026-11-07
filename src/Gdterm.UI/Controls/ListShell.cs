@@ -7,6 +7,7 @@ using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
@@ -30,7 +31,7 @@ namespace Gdterm.UI.Controls
     /// </summary>
     public sealed class ListShell : Panel
     {
-        private const string DefaultOrder = "默认顺序";
+        private static string DefaultOrder => L10n.T("默认顺序");
 
         private readonly List<ListViewItem> _all = new List<ListViewItem>();
         private readonly FlowLayoutPanel _bar;
@@ -53,13 +54,13 @@ namespace Gdterm.UI.Controls
         /// false = 页面自己已有搜索框（且搜索走后端查询，如命令历史），壳只提供排序/批量/导出，
         /// 不再塞第二个过滤框（两套过滤同时生效是负数体验）。
         /// </param>
-        public ListShell(ListView list, string filterHint = "过滤当前列表…", Func<ListViewItem, string> textOf = null,
+        public ListShell(ListView list, string filterHint = null, Func<ListViewItem, string> textOf = null,
             bool showFilter = true)
         {
             if (list == null) throw new ArgumentNullException("list");
             List = list;
             _textOf = textOf;
-            _filterHint = filterHint;
+            _filterHint = filterHint ?? L10n.T("过滤当前列表…");
 
             Dock = DockStyle.Fill;
             BackColor = GdtermColorTable.Background;
@@ -140,7 +141,7 @@ namespace Gdterm.UI.Controls
             List.Dock = DockStyle.Fill;
 
             // 过滤后为空：与宿主自己的空态是两件事（"库里没有" vs "这一屏没有"）
-            FilterEmpty = EmptyStateView.Attach(this, "没有匹配的条目", "换个关键词，或点右侧按钮清空过滤", "清空过滤",
+            FilterEmpty = EmptyStateView.Attach(this, L10n.T("没有匹配的条目"), L10n.T("换个关键词，或点右侧按钮清空过滤"), L10n.T("清空过滤"),
                 (s, e) => FilterBox.Text = string.Empty);
             FilterEmpty.Name = "ListShellFilterEmpty";
 
@@ -338,8 +339,8 @@ namespace Gdterm.UI.Controls
             int shown = List.Items.Count;
             bool filtered = (FilterBox.Text ?? string.Empty).Trim().Length > 0;
             _countLabel.Text = !filtered && shown == _all.Count
-                ? (_all.Count == 0 ? string.Empty : "共 " + _all.Count + " 条")
-                : shown + " / " + _all.Count + " 条";
+                ? (_all.Count == 0 ? string.Empty : L10n.T("共 ") + _all.Count + L10n.T(" 条"))
+                : shown + " / " + _all.Count + L10n.T(" 条");
         }
 
         private bool Matches(ListViewItem item, string q)
@@ -445,12 +446,12 @@ namespace Gdterm.UI.Controls
             var rows = SelectedOrChecked();
             if (rows.Count == 0)
             {
-                ToastNotifier.Warning("没有可导出的条目");
+                ToastNotifier.Warning(L10n.T("没有可导出的条目"));
                 return;
             }
             using (var dlg = new SaveFileDialog
             {
-                Title = "导出为 CSV",
+                Title = L10n.T("导出为 CSV"),
                 Filter = "CSV (*.csv)|*.csv",
                 FileName = string.IsNullOrEmpty(baseName) ? "export" : baseName,
                 DefaultExt = "csv"
@@ -478,12 +479,12 @@ namespace Gdterm.UI.Controls
                     // BOM 不能省：没有它 Excel 会把中文读成乱码（而记事本/VS Code 都正常，最容易误判"没问题"）
                     using (var sw = new StreamWriter(dlg.FileName, false, new UTF8Encoding(true)))
                         sw.Write(sb.ToString());
-                    ToastNotifier.Success("已导出 " + rows.Count + " 条到 " + Path.GetFileName(dlg.FileName));
+                    ToastNotifier.Success(L10n.T("已导出 ") + rows.Count + L10n.T(" 条到 ") + Path.GetFileName(dlg.FileName));
                 }
                 catch (Exception ex)
                 {
                     try { DiagLog.Error("ListShell.ExportCsv", ex); } catch (Exception) { }
-                    ToastNotifier.Error("导出失败：" + ex.Message);
+                    ToastNotifier.Error(L10n.T("导出失败：") + ex.Message);
                 }
             }
         }

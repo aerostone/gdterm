@@ -4,6 +4,7 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using Gdterm.Core;
 
 namespace Gdterm.Rdp
 {
@@ -52,7 +53,7 @@ namespace Gdterm.Rdp
         public void Start(int localPort, string targetHost, int targetPort)
         {
             if (_running)
-                throw new InvalidOperationException("代理已在运行中");
+                throw new InvalidOperationException(L10n.T("代理已在运行中"));
             if (string.IsNullOrEmpty(targetHost))
                 throw new ArgumentNullException("targetHost");
 
@@ -305,7 +306,7 @@ namespace Gdterm.Rdp
             lock (_lock)
             {
                 if (_instance != null && _instance.IsRunning)
-                    throw new InvalidOperationException("已有抓包代理在运行中");
+                    throw new InvalidOperationException(L10n.T("已有抓包代理在运行中"));
 
                 var port = RdpTcpProxy.PickFreePort();
                 _instance = new RdpTcpProxy(dumpDir);

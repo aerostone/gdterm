@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Windows.Forms;
 using Gdterm.Tools;
 using Gdterm.UI.Diagnostics;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
@@ -56,7 +57,7 @@ namespace Gdterm.UI.Controls
                 Height = Math.Max(Services.DpiScale.V(this, 35), Services.FormFontPolicy.LineBox(Services.FormFontPolicy.UiFont(+5f), this)),
                 Font = Services.FormFontPolicy.UiFont(+5f, FontStyle.Bold),
                 ForeColor = GdtermColorTable.Foreground,
-                Text = "运维工具箱"
+                Text = L10n.T("运维工具箱")
             };
 
             _lblDescription = new AntdUI.Label {
@@ -64,7 +65,7 @@ namespace Gdterm.UI.Controls
                 Height = Math.Max(Services.DpiScale.V(this, 25), Services.FormFontPolicy.LineBox(Services.FormFontPolicy.UiFont(), this)),
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = GdtermColorTable.Muted,
-                Text = "选择左侧工具开始使用"
+                Text = L10n.T("选择左侧工具开始使用")
             };
 
             var outputSplit = new Splitter { Dock = DockStyle.Top, Height = 3, BackColor = GdtermColorTable.Surface };
@@ -83,11 +84,11 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Surface2,
                 ForeColor = GdtermColorTable.Foreground
             };
-            var miCopyAll = new ToolStripMenuItem("复制全部");
+            var miCopyAll = new ToolStripMenuItem(L10n.T("复制全部"));
             miCopyAll.Click += (s, e) => { try { Clipboard.SetText(_txtOutput.Text ?? ""); } catch { } };
-            var miCopySel = new ToolStripMenuItem("复制选中");
+            var miCopySel = new ToolStripMenuItem(L10n.T("复制选中"));
             miCopySel.Click += (s, e) => { try { if (!string.IsNullOrEmpty(_txtOutput.SelectedText)) Clipboard.SetText(_txtOutput.SelectedText); } catch { } };
-            var miClear = new ToolStripMenuItem("清空");
+            var miClear = new ToolStripMenuItem(L10n.T("清空"));
             miClear.Click += (s, e) => { try { _txtOutput.Clear(); } catch { } };
             outputMenu.Items.Add(miCopySel);
             outputMenu.Items.Add(miCopyAll);
@@ -204,9 +205,9 @@ namespace Gdterm.UI.Controls
             {
                 _txtOutput.Visible = true;
                 var hint = (_remoteSession != null && _remoteSession.IsConnected)
-                    ? "已绑定活动 SSH 会话，可在工具内执行远程操作。"
-                    : "未绑定 SSH：请先打开并连接一个 SSH 终端标签，再执行远程工具。";
-                _txtOutput.Text = string.Format("工具: {0}\n分类: {1}\n描述: {2}\n\n{3}",
+                    ? L10n.T("已绑定活动 SSH 会话，可在工具内执行远程操作。")
+                    : L10n.T("未绑定 SSH：请先打开并连接一个 SSH 终端标签，再执行远程工具。");
+                _txtOutput.Text = string.Format(L10n.T("工具: {0}\n分类: {1}\n描述: {2}\n\n{3}"),
                     tool.DisplayName, tool.Category, tool.Description, hint);
             }
         }
