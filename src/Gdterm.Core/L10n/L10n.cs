@@ -66,6 +66,11 @@ namespace Gdterm.Core
             ["确认修改"] = "Confirm change",
             ["确认新密码"] = "Confirm new password",
             ["请输入当前密码"] = "Enter the current password",
+            // —— 密码强度警告（批次4z：KeePassPasswordWarning） ——
+            [" 条规则：\r\n  - "] = " rule(s):\r\n  - ",
+            ["\r\n\r\n仍要保存？建议尽快在远端修改为强密码。"] = "\r\n\r\nSave anyway? Change it to a strong password on the remote host as soon as possible.",
+            ["密码强度不足，违反 "] = "The password is too weak; it violates ",
+            ["密码强度警告"] = "Password strength warning",
             // —— 标签分屏（批次4z：TabSplitService） ——
             ["仅终端标签支持分屏"] = "Only terminal tabs support splitting",
             ["无法创建分屏终端"] = "Cannot create the split terminal",
