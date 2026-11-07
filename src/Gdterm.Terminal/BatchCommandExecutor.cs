@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Gdterm.Core;
 
 namespace Gdterm.Terminal
 {
@@ -63,12 +64,12 @@ namespace Gdterm.Terminal
                 if (session == null || !session.IsConnected)
                 {
                     result.IsSuccess = false;
-                    result.ErrorMessage = "会话未连接";
-                    SessionProgress?.Invoke(sessionId, "跳过");
+                    result.ErrorMessage = L10n.T("会话未连接");
+                    SessionProgress?.Invoke(sessionId, L10n.T("跳过"));
                     return result;
                 }
 
-                SessionProgress?.Invoke(sessionId, "执行中...");
+                SessionProgress?.Invoke(sessionId, L10n.T("执行中..."));
 
                 var output = new List<string>();
                 var tcs = new TaskCompletionSource<bool>();
@@ -95,16 +96,16 @@ namespace Gdterm.Terminal
 
                 result.Output = output;
                 result.IsSuccess = completedTask == tcs.Task;
-                if (!result.IsSuccess) result.ErrorMessage = "执行超时";
+                if (!result.IsSuccess) result.ErrorMessage = L10n.T("执行超时");
                 result.DurationMs = timeoutMs;
 
-                SessionProgress?.Invoke(sessionId, result.IsSuccess ? "完成" : "超时");
+                SessionProgress?.Invoke(sessionId, result.IsSuccess ? L10n.T("完成") : L10n.T("超时"));
             }
             catch (Exception ex)
             {
                 result.IsSuccess = false;
                 result.ErrorMessage = ex.Message;
-                SessionProgress?.Invoke(sessionId, "失败");
+                SessionProgress?.Invoke(sessionId, L10n.T("失败"));
             }
 
             return result;

@@ -66,6 +66,27 @@ namespace Gdterm.Core
             ["确认修改"] = "Confirm change",
             ["确认新密码"] = "Confirm new password",
             ["请输入当前密码"] = "Enter the current password",
+            // —— 批量命令（批次4w：BatchCommandExecutor） ——
+            ["执行超时"] = "Execution timed out",
+            ["跳过"] = "Skipped",
+            // —— Telnet 会话（批次4w：TelnetSession） ——
+            ["Telnet 主机地址不能为空"] = "The Telnet host must not be empty",
+            ["Telnet 未连接"] = "Telnet not connected",
+            ["Telnet 连接失败: "] = "Telnet connection failed: ",
+            ["Telnet 连接超时: "] = "Telnet connection timed out: ",
+            ["Zmodem 接收仅支持 SSH 会话（当前：Telnet）。"] = "Zmodem receive only supports SSH sessions (current: Telnet).",
+            // —— 锁屏覆盖层（批次4w：LockOverlayControl） ——
+            ["密码错误，请重试"] = "Wrong password; try again",
+            ["应用已锁定"] = "The app is locked",
+            ["请输入主密码解锁"] = "Enter the master password to unlock",
+            // —— 快速跳转（批次4w：ConnectionQuickJumpForm） ——
+            ["快速跳转连接 (Ctrl+Shift+K)"] = "Quick jump to a connection (Ctrl+Shift+K)",
+            ["改个关键词，或先去「连接 → 新建连接」把主机存下来"] = "Try another keyword, or first save the host under Connections → New connection",
+            ["检查 "] = "Check ",
+            ["读取连接列表失败："] = "Failed to load the connection list: ",
+            ["输入名称 / 主机 / 分组…"] = "Type a name / host / group…",
+            ["连接库读取失败"] = "Failed to read the connection store",
+            ["；恢复后重开本窗口即可重新加载"] = "; reopen this window to reload once fixed",
             // —— 标签容器（批次4v：TabContainerControl） ——
             ["关闭其他(&O)"] = "Close others(&O)",
             ["关闭右侧全部(&R)"] = "Close all to the right(&R)",

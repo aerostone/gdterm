@@ -7,6 +7,7 @@ using Gdterm.Connections;
 using Gdterm.Core.Models;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
@@ -26,7 +27,7 @@ namespace Gdterm.UI.Controls
         public ConnectionQuickJumpForm(IConnectionStore store)
         {
             _store = store;
-            Text = "快速跳转连接 (Ctrl+Shift+K)";
+            Text = L10n.T("快速跳转连接 (Ctrl+Shift+K)");
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
             Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
             AutoHandDpi = false; // 尺寸已按 DpiScale 预缩放，关掉 AntdUI 的自动 DPI 避免二次放大
@@ -40,7 +41,7 @@ namespace Gdterm.UI.Controls
             _filter = new AntdUI.Input {
                 Dock = DockStyle.Top,
                 MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this)),
-                PlaceholderText = "输入名称 / 主机 / 分组…",
+                PlaceholderText = L10n.T("输入名称 / 主机 / 分组…"),
                 AllowClear = true,
                 Font = Services.FormFontPolicy.UiFont(+1f)
             };
@@ -64,8 +65,8 @@ namespace Gdterm.UI.Controls
 
             Controls.Add(_list);
             Controls.Add(_filter);
-            _empty = EmptyStateView.Attach(this, "没有匹配的连接",
-                "改个关键词，或先去「连接 → 新建连接」把主机存下来", null, null);
+            _empty = EmptyStateView.Attach(this, L10n.T("没有匹配的连接"),
+                L10n.T("改个关键词，或先去「连接 → 新建连接」把主机存下来"), null, null);
             Gdterm.UI.Services.FormFontPolicy.Apply(this);
             LoadData();
             KeyDown += (s, e) =>
@@ -83,8 +84,8 @@ namespace Gdterm.UI.Controls
                 _all = new List<ConnectionConfig>();
                 try { DiagLog.Error("QuickJump.LoadAll", ex); } catch (Exception) { }
                 if (_empty != null)
-                    _empty.SetEmpty(true, "连接库读取失败", "检查 " + ex.Message + "；恢复后重开本窗口即可重新加载");
-                ToastNotifier.Error("读取连接列表失败：" + ex.Message);
+                    _empty.SetEmpty(true, L10n.T("连接库读取失败"), L10n.T("检查 ") + ex.Message + L10n.T("；恢复后重开本窗口即可重新加载"));
+                ToastNotifier.Error(L10n.T("读取连接列表失败：") + ex.Message);
                 ApplyFilter();
                 return;
             }

@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading;
 using Gdterm.Core.Models;
 using Gdterm.Terminal.Models;
+using Gdterm.Core;
 
 namespace Gdterm.Terminal
 {
@@ -51,7 +52,7 @@ namespace Gdterm.Terminal
         {
             if (config == null) throw new ArgumentNullException(nameof(config));
             var host = (config.Host ?? "").Trim();
-            if (host.Length == 0) throw new ArgumentException("Telnet 主机地址不能为空");
+            if (host.Length == 0) throw new ArgumentException(L10n.T("Telnet 主机地址不能为空"));
             int port = config.Port > 0 ? config.Port : 23;
 
             ConnectionId = config.Id;
@@ -62,9 +63,9 @@ namespace Gdterm.Terminal
             if (!ar.AsyncWaitHandle.WaitOne(TimeSpan.FromSeconds(15)))
             {
                 try { _tcp.Close(); } catch { }
-                throw new TimeoutException("Telnet 连接超时: " + host + ":" + port);
+                throw new TimeoutException(L10n.T("Telnet 连接超时: ") + host + ":" + port);
             }
-            try { _tcp.EndConnect(ar); } catch (Exception ex) { throw new InvalidOperationException("Telnet 连接失败: " + ex.Message, ex); }
+            try { _tcp.EndConnect(ar); } catch (Exception ex) { throw new InvalidOperationException(L10n.T("Telnet 连接失败: ") + ex.Message, ex); }
             _tcp.ReceiveTimeout = 500;
             _stream = _tcp.GetStream();
 
@@ -88,7 +89,7 @@ namespace Gdterm.Terminal
 
         public void SendInput(string text)
         {
-            if (!IsConnected) throw new InvalidOperationException("Telnet 未连接");
+            if (!IsConnected) throw new InvalidOperationException(L10n.T("Telnet 未连接"));
             if (string.IsNullOrEmpty(text)) return;
             var bytes = Encoding.UTF8.GetBytes(text);
             lock (_replyLock)
@@ -100,7 +101,7 @@ namespace Gdterm.Terminal
 
         public void SendBytes(byte[] data)
         {
-            if (!IsConnected) throw new InvalidOperationException("Telnet 未连接");
+            if (!IsConnected) throw new InvalidOperationException(L10n.T("Telnet 未连接"));
             if (data == null || data.Length == 0) return;
             lock (_replyLock)
             {
@@ -115,7 +116,7 @@ namespace Gdterm.Terminal
 
         public void StartZmodemReceive(string saveDirectory)
         {
-            throw new NotSupportedException("Zmodem 接收仅支持 SSH 会话（当前：Telnet）。");
+            throw new NotSupportedException(L10n.T("Zmodem 接收仅支持 SSH 会话（当前：Telnet）。"));
         }
 
         public IList<string> GetRecentOutput(int lineCount)

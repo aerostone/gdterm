@@ -5,6 +5,7 @@ using Gdterm.Security;
 using Gdterm.UI.Services;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
 using Gdterm.UI.Diagnostics;
+using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
@@ -60,7 +61,7 @@ namespace Gdterm.UI.Controls
 
             // 标题标签：盒高取行盒（11pt 字跟随 UI 字号放大时不裁字）
             var titleLabel = new AntdUI.Label {
-                Text = "应用已锁定",
+                Text = L10n.T("应用已锁定"),
                 Location = new Point(DpiScale.V(this, 20), DpiScale.V(this, 18)),
                 Size = new Size(DpiScale.V(this, 280), lockTitleH),
                 TextAlign = ContentAlignment.MiddleCenter,
@@ -71,7 +72,7 @@ namespace Gdterm.UI.Controls
 
             // 消息标签（错误提示用，初始为说明文字）：盒高取行盒，大字号不裁字
             _messageLabel = new AntdUI.Label {
-                Text = "请输入主密码解锁",
+                Text = L10n.T("请输入主密码解锁"),
                 Location = new Point(DpiScale.V(this, 20), DpiScale.V(this, 52)),
                 Size = new Size(DpiScale.V(this, 280), lockMsgBoxH),
                 TextAlign = ContentAlignment.MiddleCenter,
@@ -97,7 +98,7 @@ namespace Gdterm.UI.Controls
 
             // 解锁按钮：accent 强调色；y 跟随输入框（输入y+输入高+10），面板底留 20
             _unlockButton = new AntdUI.Button {
-                Text = "解锁",
+                Text = L10n.T("解锁"),
                 Location = new Point(DpiScale.V(this, 110), lockBtnY2),
                 Size = new Size(DpiScale.V(this, 100), DpiScale.V(this, 32)),
                 Type = AntdUI.TTypeMini.Primary,
@@ -133,7 +134,7 @@ namespace Gdterm.UI.Controls
             var password = _passwordBox.Text;
             if (string.IsNullOrEmpty(password))
             {
-                _messageLabel.Text = "请输入密码";
+                _messageLabel.Text = L10n.T("请输入密码");
                 _messageLabel.ForeColor = GdtermColorTable.Danger;
                 _passwordBox.Focus();
                 return;
@@ -142,12 +143,12 @@ namespace Gdterm.UI.Controls
             if (_securityManager.Unlock(password))
             {
                 _passwordBox.Text = "";
-                _messageLabel.Text = "请输入主密码解锁";
+                _messageLabel.Text = L10n.T("请输入主密码解锁");
                 _messageLabel.ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Muted;
             }
             else
             {
-                _messageLabel.Text = "密码错误，请重试";
+                _messageLabel.Text = L10n.T("密码错误，请重试");
                 _messageLabel.ForeColor = GdtermColorTable.Danger;
                 _passwordBox.SelectAll();
                 _passwordBox.Focus();
