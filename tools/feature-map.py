@@ -507,7 +507,8 @@ def audit(tree, contracts):
             judged.append({"cap": c, "label": CAP_LABEL.get(c, c), "state": state,
                            "evidence": hits.get(c, [])})
         done = sum(1 for j in judged if j["state"] in ("ok", "manual"))
-        bonus = [{"cap": c, "label": CAP_LABEL.get(c, c), "state": "ok" if c in hits else "todo"}
+        bonus = [{"cap": c, "label": CAP_LABEL.get(c, c),
+                  "state": "ok" if c in hits else ("manual" if c in p.get("manual_ok", []) else "todo")}
                  for c in extras]
         detail.append({
             "id": pid, "name": p.get("name", pid), "menu": p.get("menu", ""),
@@ -619,7 +620,7 @@ def render(tree, rows, unregistered, detail):
     w("|---|---|---|")
     for d in rate:
         miss = [b["label"] for b in d["bonus"] if b["state"] == "todo"]
-        have = sum(1 for b in d["bonus"] if b["state"] == "ok")
+        have = sum(1 for b in d["bonus"] if b["state"] in ("ok", "manual"))
         w("| %s `%s` | %d/%d | %s |" % (d["name"], d["id"], have, len(d["bonus"]), "、".join(miss)))
     w("")
 

@@ -33,6 +33,8 @@ namespace Gdterm.UI.Forms
         private AntdUI.Table _pluginTable;
         private AntdUI.Table _findingTable;
         private TableShell<FindingRow> _findingShell;
+        private TableMultiSelect _findingMulti;
+        private AntdUI.Button _btnFindingCopySel;
         private System.Collections.Generic.List<ScanPlugin> _pluginRows = new System.Collections.Generic.List<ScanPlugin>();
         private System.Collections.Generic.List<ScanFinding> _findingRows = new System.Collections.Generic.List<ScanFinding>();
         private AntdUI.Label _findingHeader;
@@ -250,6 +252,12 @@ namespace Gdterm.UI.Forms
                 r => string.Join(" ", new[] { r.Severity, r.Title, r.Detail }),
                 (r, i) => { switch (i) { case 0: return r.Severity; case 1: return r.Title; default: return r.Detail; } });
             _findingShell.AddAction(L10n.T("导出"), (s, e) => _findingShell.ExportCsv(FindForm(), "scan-findings")).Name = "ScannerFindingExportButton";
+            // 多选 + 批量复制（Ctrl/Shift+点击选中发现，整段贴进工单/事件单；只读表不做破坏性批量）
+            _findingMulti = _findingShell.EnableMultiSelect();
+            _btnFindingCopySel = _findingShell.AddAction(L10n.T("复制选中"), OnFindingCopySelClick);
+            _btnFindingCopySel.Name = "ScannerFindingCopySelButton";
+            _btnFindingCopySel.Enabled = false;
+            _findingMulti.Changed += () => { _btnFindingCopySel.Enabled = _findingMulti.Count > 0; };
             findingPanel.Controls.Add(_findingShell);
             var findingHeader = new AntdUI.Label {
                 Name = "ScannerFindingHeader",
@@ -723,6 +731,25 @@ namespace Gdterm.UI.Forms
             public string Severity { get; set; }
             public string Title { get; set; }
             public string Detail { get; set; }
+        }
+
+        /// <summary>批量复制选中发现（级别 | 标题 | 详情，一行一条），供贴进工单/事件单。</summary>
+        private void OnFindingCopySelClick(object sender, EventArgs e)
+        {
+            var rows = _findingShell.GetSelectedRows();
+            if (rows.Count == 0) return;
+            var sb = new System.Text.StringBuilder();
+            foreach (var r in rows)
+                sb.AppendLine(SeverityLabel(r.Severity) + " | " + (r.Title ?? "") + " | " + (r.Detail ?? ""));
+            try
+            {
+                Clipboard.SetText(sb.ToString().TrimEnd());
+                ToastNotifier.Warning(L10n.Tf("已复制 {0} 条发现", rows.Count));
+            }
+            catch (Exception ex)
+            {
+                AntdUI.Message.error(this, L10n.Tf("复制失败：{0}", ex.Message));
+            }
         }
 
         private static string SeverityLabel(string s)

@@ -24,6 +24,7 @@ namespace Gdterm.UI.Controls
         private ListShell _shell;
         private readonly AntdUI.Button _btnScan;
         private readonly AntdUI.Button _btnStop;
+        private readonly AntdUI.Button _btnCopySel;
         private readonly ProgressBar _progress;
         private readonly AntdUI.Label _lblStatus;
 
@@ -42,10 +43,11 @@ namespace Gdterm.UI.Controls
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(DpiScale.V(this, 15)),
-                ColumnCount = 3,
+                ColumnCount = 4,
                 RowCount = 2
             };
             topPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            topPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             topPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             topPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             topPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -89,12 +91,28 @@ namespace Gdterm.UI.Controls
             };
             _btnStop.Click += (s, e) => StopScan();
 
+            // 批量：ListView 原生多选（Ctrl/Shift+点击），复制选中结果供贴进整改清单
+            _btnCopySel = new AntdUI.Button {
+                Text = L10n.T("复制选中"),
+                AutoSize = true,
+                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 5), DpiScale.V(this, 10), DpiScale.V(this, 5)),
+                Margin = new Padding(DpiScale.V(this, 8), 0, 0, 0),
+                Type = AntdUI.TTypeMini.Default,
+                Font = Services.FormFontPolicy.UiFont(),
+                Enabled = false,
+                Cursor = Cursors.Hand
+            };
+            _btnCopySel.Name = "SecretScanCopySelButton";
+            _btnCopySel.Click += (s, e) => OnCopySelectedClick();
+
             topPanel.Controls.Add(_lblScore, 0, 0);
             topPanel.Controls.Add(_lblStats, 0, 1);
             topPanel.Controls.Add(_btnScan, 1, 0);
             topPanel.SetRowSpan(_btnScan, 2);
             topPanel.Controls.Add(_btnStop, 2, 0);
             topPanel.SetRowSpan(_btnStop, 2);
+            topPanel.Controls.Add(_btnCopySel, 3, 0);
+            topPanel.SetRowSpan(_btnCopySel, 2);
 
             // ── 进度条 ──
             _progress = new ProgressBar { Dock = DockStyle.Top, Height = 3, Style = ProgressBarStyle.Continuous };
@@ -110,8 +128,9 @@ namespace Gdterm.UI.Controls
                 View = View.Details,
                 FullRowSelect = true,
                 GridLines = false,
-                MultiSelect = false
+                MultiSelect = true
             };
+            _lvFindings.SelectedIndexChanged += (s, e) => { _btnCopySel.Enabled = _lvFindings.SelectedItems.Count > 0; };
             _lvFindings.Columns.Add(L10n.T("严重程度"), 80);
             _lvFindings.Columns.Add(L10n.T("类别"), 100);
             _lvFindings.Columns.Add(L10n.T("规则"), 120);
@@ -268,6 +287,31 @@ namespace Gdterm.UI.Controls
             var owner = FindForm();
             if (owner != null) AntdUI.Message.error(owner, L10n.T("扫描失败：") + error);
             else ToastNotifier.Error(L10n.T("扫描失败：") + error);
+        }
+
+        /// <summary>批量复制选中结果（各列制表符分隔，一行一条），供贴进整改清单。</summary>
+        private void OnCopySelectedClick()
+        {
+            if (_lvFindings.SelectedItems.Count == 0) return;
+            var sb = new System.Text.StringBuilder();
+            foreach (ListViewItem it in _lvFindings.SelectedItems)
+            {
+                for (int i = 0; i < it.SubItems.Count; i++)
+                {
+                    if (i > 0) sb.Append('\t');
+                    sb.Append(it.SubItems[i].Text);
+                }
+                sb.AppendLine();
+            }
+            try
+            {
+                Clipboard.SetText(sb.ToString().TrimEnd());
+                _lblStatus.Text = L10n.Tf("已复制 {0} 条结果", _lvFindings.SelectedItems.Count);
+            }
+            catch (Exception ex)
+            {
+                _lblStatus.Text = L10n.Tf("复制失败：{0}", ex.Message);
+            }
         }
 
         private void OnFindingDoubleClick(object sender, EventArgs e)

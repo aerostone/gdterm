@@ -34,6 +34,7 @@ namespace Gdterm.UI.Forms
         private TableShell<EntryRow> _shell;
         private AntdUI.Label _statusLabel;
         private AntdUI.Button _btnNewConnection;
+        private AntdUI.Button _btnDeleteSel;
         /// <summary>空库引导层：覆盖表区，仅在“加载成功且 0 条目”时可见（UX change 2026-09-25）。</summary>
         private EmptyStateView _emptyGuide;
         private System.Collections.Generic.List<KeePassEntrySummary> _entries = new System.Collections.Generic.List<KeePassEntrySummary>();
@@ -101,6 +102,11 @@ namespace Gdterm.UI.Forms
             toolbar.Controls.Add(MakeToolBtn(L10n.T("添加"), OnAddClick, btnPadding, btnMarginR));
             toolbar.Controls.Add(MakeToolBtn(L10n.T("编辑"), OnEditClick, btnPadding, btnMarginR));
             toolbar.Controls.Add(MakeToolBtn(L10n.T("删除"), OnDeleteClick, btnPadding, btnMarginR));
+            // 批量：AntdUI.Table 本身单选，多选层见 TableShell.EnableMultiSelect（Ctrl/Shift+点击）
+            _btnDeleteSel = MakeToolBtn(L10n.T("删除选中"), OnDeleteSelectedClick, btnPadding, btnMarginR);
+            _btnDeleteSel.Enabled = false;
+            _btnDeleteSel.Name = "KeePassDeleteSelButton";
+            toolbar.Controls.Add(_btnDeleteSel);
             toolbar.Controls.Add(new AntdUI.Divider { Orientation = AntdUI.TOrientation.Left, Thickness = 1f, Margin = new Padding(btnMargin) });
             toolbar.Controls.Add(MakeToolBtn(L10n.T("复制密码"), OnCopyPasswordClick, btnPadding, btnMarginR));
             toolbar.Controls.Add(MakeToolBtn(L10n.T("复制用户名"), OnCopyUsernameClick, btnPadding, btnMarginR));
@@ -192,6 +198,15 @@ namespace Gdterm.UI.Forms
                 var v = new List<KeePassEntrySummary>();
                 foreach (var r in list) if (r.Source != null) v.Add(r.Source);
                 _view = v;
+            };
+            // 多选 + Del 键批量删（被连接引用的凭据删除前提醒，单项失败跳过不中断）
+            var multi = _shell.EnableMultiSelect();
+            multi.Changed += () => { _btnDeleteSel.Enabled = multi.Count > 0; };
+            _entryTable.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode != Keys.Delete) return;
+                if (multi.Count > 0) OnDeleteSelectedClick(s, e); else OnDeleteClick(s, e);
+                e.Handled = true;
             };
 
             // 状态栏（等宽字体行高，底部左对齐内边距）
@@ -507,6 +522,45 @@ namespace Gdterm.UI.Forms
                     AntdUI.Message.error(this, L10n.Tf("删除失败：{0}", ex.Message));
                 }
             }
+        }
+
+        /// <summary>批量删除选中条目（TableMultiSelect 选中集）：一次确认整体执行，
+        /// 所选条目被连接引用时先提示受影响连接数；单项失败跳过不中断。</summary>
+        private void OnDeleteSelectedClick(object sender, EventArgs e)
+        {
+            var ids = new List<string>();
+            var seen = new HashSet<string>();
+            foreach (var r in _shell.GetSelectedRows())
+            {
+                if (r == null || string.IsNullOrEmpty(r.Id)) continue;
+                if (seen.Add(r.Id)) ids.Add(r.Id);
+            }
+            if (ids.Count == 0) return;
+
+            int usedTotal = 0;
+            foreach (var id in ids)
+            {
+                List<string> users;
+                if (_usageByEntry.TryGetValue(id, out users)) usedTotal += users.Count;
+            }
+            var msg = L10n.Tf("确定要删除选中的 {0} 个条目吗？\n此操作不可撤销。", ids.Count);
+            if (usedTotal > 0)
+                msg += L10n.Tf("\n\n⚠ 有 {0} 个连接正在引用所选凭据，删除后这些连接将回退为自动匹配。", usedTotal);
+            if (MessageBox.Show(this, msg, L10n.T("确认删除"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+                return;
+
+            int ok = 0, failed = 0;
+            foreach (var id in ids)
+            {
+                try { _keepassService.DeleteEntry(id); ok++; }
+                catch (Exception ex) { failed++; try { DiagLog.Swallowed("KeePassManagerForm", ex); } catch { } }
+            }
+            LoadEntries();
+            _statusLabel.Text = failed == 0
+                ? L10n.Tf("已删除 {0} 个条目", ok)
+                : L10n.Tf("已删除 {0} 个，失败 {1} 个", ok, failed);
+            try { ToastNotifier.Warning(L10n.T("已删除选中的条目：") + ok + (failed > 0 ? L10n.Tf("（{0} 个失败）", failed) : string.Empty)); }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("KeePassManagerForm", exSwallowed); } catch { } }
         }
 
         private void OnCopyPasswordClick(object sender, EventArgs e)
