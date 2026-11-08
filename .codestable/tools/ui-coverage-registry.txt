@@ -73,3 +73,4 @@ Forms/ImportPreviewForm.cs | dump:import-preview | 导入连接预览裁定框�
 Controls/ListShell.cs | dump:随宿主 | 列表壳（过滤/排序/批量/导出），随 command-history 等宿主 dump
 Controls/TableShell.cs | dump:随宿主 | 表格壳（过滤/排序/导出），随 key-binding 等宿主 dump
 Controls/TableMultiSelect.cs | dump:随宿主 | 表格多选层（控件单选，CellClick+Ctrl/Shift 自持选中集），随 key-binding/dangerous-cmd/password-health 宿主 dump
+Controls/ListPager.cs | dump:随宿主 | 分页条（AntdUI.Pagination 包装，ListShell/TableShell 共用），随宿主 dump

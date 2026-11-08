@@ -171,31 +171,28 @@
 
 | 页面 | 已有/总数 | 缺口 |
 |---|---|---|
-| OTP 动态码管理 `page.OtpManagerForm` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
-| SFTP 双栏 `page.SftpDualPanePanel` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
-| 传输中心 `page.TransferCenterPanel` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
-| 危险命令规则 `page.DangerousCommandConfigForm` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
-| 命令模板库 `page.CommandTemplatePanel` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
-| 多通道广播 `page.MultiChannelPanel` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
-| 宏录制 `page.MacroPanel` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
-| 密码健康报告 `page.PasswordHealthForm` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
-| 快捷键绑定 `page.KeyBindingPanel` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
-| 扫描中心 `page.ScannerCenterForm` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
-| 敏感信息扫描 `page.SecretScanPanel` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
-| 文件面板（单栏） `page.FilePaneControl` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
-| 端口转发 `page.PortForwardPanel` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
-| 通知中心 `page.NotificationCenterPanel` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
+| OTP 动态码管理 `page.OtpManagerForm` | 8/9 | 撤销/回收站 |
+| SFTP 双栏 `page.SftpDualPanePanel` | 8/9 | 撤销/回收站 |
 | SFTP 权限修改 `page.SftpPermissionForm` | 2/3 | 撤销/回收站 |
 | 书签 / 最近连接 `page.SessionBookmarksPanel` | 7/8 | 撤销/回收站 |
+| 传输中心 `page.TransferCenterPanel` | 8/9 | 撤销/回收站 |
 | 修改主密码 `page.ChangeMasterPasswordForm` | 2/3 | 撤销/回收站 |
-| 命令历史 `page.CommandHistoryPanel` | 8/9 | 分页/虚拟滚动 |
-| 密码库管理 `page.KeePassManagerForm` | 8/9 | 分页/虚拟滚动 |
+| 危险命令规则 `page.DangerousCommandConfigForm` | 8/9 | 撤销/回收站 |
+| 命令模板库 `page.CommandTemplatePanel` | 8/9 | 撤销/回收站 |
+| 多通道广播 `page.MultiChannelPanel` | 8/9 | 撤销/回收站 |
+| 宏录制 `page.MacroPanel` | 8/9 | 撤销/回收站 |
+| 密码健康报告 `page.PasswordHealthForm` | 8/9 | 撤销/回收站 |
 | 密码库解锁 `page.KeePassUnlockForm` | 2/3 | 撤销/回收站 |
 | 密码生成器 `page.PasswordGeneratorForm` | 3/4 | 撤销/回收站 |
 | 快捷命令编辑 `page.QuickCommandEditorForm` | 3/4 | 撤销/回收站 |
+| 快捷键绑定 `page.KeyBindingPanel` | 8/9 | 撤销/回收站 |
+| 扫描中心 `page.ScannerCenterForm` | 8/9 | 撤销/回收站 |
 | 批量命令 `page.BatchCommandPanel` | 3/4 | 撤销/回收站 |
+| 敏感信息扫描 `page.SecretScanPanel` | 8/9 | 撤销/回收站 |
+| 文件面板（单栏） `page.FilePaneControl` | 8/9 | 撤销/回收站 |
 | 添加 OTP `page.AddOtpForm` | 3/4 | 撤销/回收站 |
 | 登录脚本 `page.LogonScriptPanel` | 3/4 | 撤销/回收站 |
+| 端口转发 `page.PortForwardPanel` | 8/9 | 撤销/回收站 |
 | 连接导入/导出 `page.ConnectionImportExport` | 4/5 | 撤销/回收站 |
-| 高亮规则 `page.HighlightRulePanel` | 8/9 | 分页/虚拟滚动 |
+| 通知中心 `page.NotificationCenterPanel` | 8/9 | 撤销/回收站 |
 

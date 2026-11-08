@@ -12,12 +12,12 @@ using Gdterm.Core;
 namespace Gdterm.UI.Controls
 {
     /// <summary>
-    /// AntdUI.Table 版列表壳：过滤 + 排序 + 导出。
+    /// AntdUI.Table 版列表壳：过滤 + 排序 + 导出 + 分页。
     ///
     /// 为什么和 <see cref="ListShell"/> 分开：ListView 是「子项集合」，表是「DataSource + 行号映射」。
-    /// 表页（快捷键绑定/传输中心/危险命令规则）都靠 SelectedIndex-1 反查自己的行数组，
-    /// 一旦过滤/排序改了行的顺序，映射必须同步——所以壳在每次换视图后回调 ViewChanged，
-    /// 由页面把「可见顺序」写回自己的映射数组（壳不碰页面的业务集合）。
+    /// 表页（快捷键绑定/密码库/危险命令规则/传输中心）都靠 SelectedIndex-1 反查自己的行数组，
+    /// 一旦过滤/排序/翻页改了行的顺序，映射必须同步——所以壳在每次换视图后回调 ViewChanged，
+    /// 由页面把「可见顺序」（= 当前页切片，与表实际行一一对应）写回自己的映射数组。
     /// </summary>
     public sealed class TableShell<T> : Panel where T : class
     {
@@ -26,6 +26,9 @@ namespace Gdterm.UI.Controls
         private readonly AntdUI.Table _table;
         private readonly List<T> _all = new List<T>();
         private readonly List<T> _shown = new List<T>();
+        private readonly List<T> _pageSlice = new List<T>();
+        private readonly ListPager _pager;
+        private int _pageOffset;   // 当前页切片在 _shown 里的起点（GetSelectedRows 偏移映射用）
         private readonly Func<T, string> _filterText;
         private readonly Func<T, int, string> _cellText;
         private readonly string[] _columns;
@@ -76,7 +79,11 @@ namespace Gdterm.UI.Controls
                 Width = DpiScale.V(this, 168),
                 Margin = new Padding(0, 0, DpiScale.V(this, 6), 0)
             };
-            FilterBox.TextChanged += (s, e) => Apply();
+            FilterBox.TextChanged += (s, e) => {
+                // 过滤条件变化 → 结果集变了，从第 1 页看起（不会停在"空页"）
+                _pager.Reset();
+                Apply();
+            };
             FilterBox.KeyDown += (s, e) =>
             {
                 if (e.KeyCode != Keys.Escape) return;
@@ -121,9 +128,14 @@ namespace Gdterm.UI.Controls
             };
             _bar.Controls.Add(_countLabel);
 
+            // 分页条：默认 50 条/页，单页时整条隐藏（AntdUI.Pagination 只出页码 UI，切数据靠 Apply）
+            _pager = new ListPager();
+            _pager.PageChanged += page => Apply();
+
             _table.Dock = DockStyle.Fill;
             Controls.Add(_table);
             Controls.Add(_bar);
+            Controls.Add(_pager);
         }
 
         protected override void OnClientSizeChanged(EventArgs e)
@@ -134,6 +146,7 @@ namespace Gdterm.UI.Controls
             // 规则正是抓到了这个真实渲染泄漏。零面积时隐藏工具条，页面激活获得真实尺寸后恢复。
             bool hasArea = ClientSize.Width > 0 && ClientSize.Height > 0;
             if (_bar.Visible != hasArea) _bar.Visible = hasArea;
+            _pager.SyncArea(hasArea);
             base.OnClientSizeChanged(e);
         }
 
@@ -157,7 +170,8 @@ namespace Gdterm.UI.Controls
         }
 
         public IList<T> AllItems { get { return _all; } }
-        public IList<T> VisibleItems { get { return _shown; } }
+        /// <summary>当前页实际渲染的行（= 表 DataSource；SelectedIndex-1 反查以此为准）。</summary>
+        public IList<T> VisibleItems { get { return _pageSlice; } }
 
         /// <summary>
         /// 启用多选（AntdUI.Table 本身单选，见 <see cref="TableMultiSelect"/>）。
@@ -186,14 +200,16 @@ namespace Gdterm.UI.Controls
                     + L10n.Tf("已选中 {0}", _multi.Count);
         }
 
-        /// <summary>当前选中的行（可见顺序，未选中返回空）。过滤生效时即选中的可见子集。</summary>
+        /// <summary>当前选中的行（可见顺序，未选中返回空）。过滤生效时即选中的可见子集。
+        /// 多选索引是表内行号（当前页切片内），加页偏移映射回 _shown。</summary>
         public IList<T> GetSelectedRows()
         {
             var result = new List<T>();
             if (_multi == null) return result;
             foreach (int i in _multi.SelectedIndices)
             {
-                if (i >= 0 && i < _shown.Count) result.Add(_shown[i]);
+                int g = _pageOffset + i;
+                if (g >= 0 && g < _shown.Count) result.Add(_shown[g]);
             }
             return result;
         }
@@ -235,15 +251,23 @@ namespace Gdterm.UI.Controls
                 });
             }
 
-            _table.DataSource = _shown.ToArray();
+            // 分页切片：表只渲染当前页（AntdUI.Pagination 不自动切数据，宿主自己切）
+            int pages = _pager.SetTotal(_shown.Count);
+            _pageOffset = (Math.Min(_pager.CurrentPage, pages) - 1) * _pager.PageSize;
+            if (_pageOffset < 0) _pageOffset = 0;
+            if (_pageOffset > _shown.Count) _pageOffset = _shown.Count;
+            _pageSlice.Clear();
+            for (int i = _pageOffset; i < _shown.Count; i++) _pageSlice.Add(_shown[i]);
+
+            _table.DataSource = _pageSlice.ToArray();
             SortDirection.Visible = col >= 0;
 
-            // 过滤/排序重排行序，多选的索引引用失效——清空优于错指
+            // 过滤/排序/翻页重排行序，多选的索引引用失效——清空优于错指
             if (_multi != null) _multi.Reset();
             UpdateCountLabel();
 
             var h = ViewChanged;
-            if (h != null) h(_shown);
+            if (h != null) h(_pageSlice);
         }
 
         private bool Matches(T item, string q)
@@ -259,10 +283,10 @@ namespace Gdterm.UI.Controls
             return false;
         }
 
-        /// <summary>导出可见行（表没有勾选模型，导出即"当前这屏"）。</summary>
+        /// <summary>导出当前页（表没有勾选模型，导出即"看得见的这屏"；跨页数据可过滤后分屏导出）。</summary>
         public void ExportCsv(IWin32Window owner, string baseName)
         {
-            if (_shown.Count == 0)
+            if (_pageSlice.Count == 0)
             {
                 ToastNotifier.Warning(L10n.T("没有可导出的行"));
                 return;
@@ -281,7 +305,7 @@ namespace Gdterm.UI.Controls
                     var sb = new StringBuilder();
                     sb.Append(string.Join(",", _columns));
                     sb.Append("\r\n");
-                    foreach (var row in _shown)
+                    foreach (var row in _pageSlice)
                     {
                         var cells = new string[_columns.Length];
                         for (int i = 0; i < _columns.Length; i++)
@@ -291,7 +315,7 @@ namespace Gdterm.UI.Controls
                     }
                     using (var sw = new StreamWriter(dlg.FileName, false, new UTF8Encoding(true)))
                         sw.Write(sb.ToString());
-                    ToastNotifier.Success(L10n.T("已导出 ") + _shown.Count + L10n.T(" 行到 ") + Path.GetFileName(dlg.FileName));
+                    ToastNotifier.Success(L10n.T("已导出 ") + _pageSlice.Count + L10n.T(" 行到 ") + Path.GetFileName(dlg.FileName));
                 }
                 catch (Exception ex)
                 {

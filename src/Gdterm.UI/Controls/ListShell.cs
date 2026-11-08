@@ -12,7 +12,7 @@ using Gdterm.Core;
 namespace Gdterm.UI.Controls
 {
     /// <summary>
-    /// 列表页共用壳：过滤 + 排序 + 导出（FEATURE-MAP §4「加分项」的收口点）。批量动作由宿主
+    /// 列表页共用壳：过滤 + 排序 + 导出 + 分页（FEATURE-MAP §4「加分项」的收口点）。批量动作由宿主
     /// 用 <see cref="AddAction"/> 挂自己的按钮，壳只负责给它 "当前选中/勾选/可见" 三档取数口。
     ///
     /// 背景：7 个 ListView 列表页（宏录制/命令历史/命令模板/端口转发/敏感扫描/书签/OTP）
@@ -34,6 +34,7 @@ namespace Gdterm.UI.Controls
         private static string DefaultOrder => L10n.T("默认顺序");
 
         private readonly List<ListViewItem> _all = new List<ListViewItem>();
+        private readonly ListPager _pager;
         private readonly FlowLayoutPanel _bar;
         private readonly Func<ListViewItem, string> _textOf;
         private readonly string _filterHint;
@@ -93,7 +94,11 @@ namespace Gdterm.UI.Controls
                 Width = DpiScale.V(this, 168),
                 Margin = new Padding(0, 0, DpiScale.V(this, 6), 0)
             };
-            FilterBox.TextChanged += (s, e) => Apply();
+            FilterBox.TextChanged += (s, e) => {
+                // 过滤条件变化 → 结果集变了，从第 1 页看起（不会停在"空页"）
+                _pager.Reset();
+                Apply();
+            };
             FilterBox.KeyDown += (s, e) =>
             {
                 if (e.KeyCode != Keys.Escape) return;
@@ -138,6 +143,10 @@ namespace Gdterm.UI.Controls
             };
             _bar.Controls.Add(_countLabel);
 
+            // 分页条：默认 50 条/页，单页时整条隐藏；翻页 → 重切片（AntdUI.Pagination 只出页码 UI）
+            _pager = new ListPager();
+            _pager.PageChanged += page => Apply();
+
             List.Dock = DockStyle.Fill;
 
             // 过滤后为空：与宿主自己的空态是两件事（"库里没有" vs "这一屏没有"）
@@ -147,6 +156,7 @@ namespace Gdterm.UI.Controls
 
             Controls.Add(List);
             Controls.Add(_bar);
+            Controls.Add(_pager);
             try { FilterEmpty.BringToFront(); } catch (Exception) { }
 
             // 表头点击排序（ListView 默认 HeaderStyle=Clickable 但没人实现 ColumnClick，
@@ -175,6 +185,7 @@ namespace Gdterm.UI.Controls
             // 会画到宿主左上角（WinForms 子窗不裁剪父边界）。零面积隐藏，有尺寸恢复。
             bool hasArea = ClientSize.Width > 0 && ClientSize.Height > 0;
             if (_bar.Visible != hasArea) _bar.Visible = hasArea;
+            _pager.SyncArea(hasArea);
             base.OnClientSizeChanged(e);
         }
 
@@ -212,11 +223,12 @@ namespace Gdterm.UI.Controls
             }
         }
 
-        /// <summary>选中或勾选的条目；都没有则返回当前可见条目（导出/批量默认作用于"看得见的"）。</summary>
+        /// <summary>选中或勾选的条目；都没有则返回当前可见条目（导出/批量默认作用于"看得见的"）。
+        /// 复选状态跨页保留（批量操作可勾多页）；Selected 只存在于当前页渲染项上。</summary>
         public IList<ListViewItem> SelectedOrChecked()
         {
             var picked = new List<ListViewItem>();
-            foreach (ListViewItem it in List.Items)
+            foreach (var it in _all)
             {
                 if (it.Selected || it.Checked) picked.Add(it);
             }
@@ -243,10 +255,13 @@ namespace Gdterm.UI.Controls
         {
             if (item == null) return;
             _all.Add(item);
-            if (SortSelect.SelectedIndex <= 0 && (FilterBox.Text ?? string.Empty).Trim().Length == 0)
+            if (SortSelect.SelectedIndex <= 0 && (FilterBox.Text ?? string.Empty).Trim().Length == 0
+                && _pager.CurrentPage == 1 && _all.Count <= _pager.PageSize)
             {
+                // 新条目仍在第 1 页内：直接尾插（ListView 只渲染当前页切片，保持切片一致）
                 List.Items.Add(item);
-                UpdateCount();
+                UpdateCount(_all.Count);
+                _pager.SetTotal(_all.Count);
             }
             else
             {
@@ -309,6 +324,14 @@ namespace Gdterm.UI.Controls
                 });
             }
 
+            // 分页切片：ListView 只渲染当前页（AntdUI.Pagination 不自动切数据，宿主自己切）
+            int pages = _pager.SetTotal(shown.Count);
+            int off = (Math.Min(_pager.CurrentPage, pages) - 1) * _pager.PageSize;
+            if (off < 0) off = 0;
+            if (off > shown.Count) off = shown.Count;
+            var page = new List<ListViewItem>(Math.Min(_pager.PageSize, shown.Count - off));
+            for (int i = off; i < shown.Count; i++) page.Add(shown[i]);
+
             // 重排同一批条目对象：勾选/子项/图标都跟着走，只换顺序
             var selected = new HashSet<ListViewItem>();
             foreach (ListViewItem it in List.Items) if (it.Selected) selected.Add(it);
@@ -318,7 +341,7 @@ namespace Gdterm.UI.Controls
             try
             {
                 List.Items.Clear();
-                List.Items.AddRange(shown.ToArray());
+                List.Items.AddRange(page.ToArray());
                 foreach (ListViewItem it in List.Items) if (selected.Contains(it)) it.Selected = true;
                 if (focused != null) { try { focused.Focused = true; focused.EnsureVisible(); } catch (Exception) { } }
             }
@@ -330,17 +353,17 @@ namespace Gdterm.UI.Controls
             if (SortDirection != null) SortDirection.Visible = col >= 0;
             bool filteredOut = q.Length > 0 && shown.Count == 0 && _all.Count > 0;
             if (FilterEmpty != null) FilterEmpty.SetEmpty(filteredOut);
-            UpdateCount();
+            UpdateCount(shown.Count);
         }
 
-        private void UpdateCount()
+        private void UpdateCount(int shownCount)
         {
             if (_countLabel == null) return;
-            int shown = List.Items.Count;
             bool filtered = (FilterBox.Text ?? string.Empty).Trim().Length > 0;
-            _countLabel.Text = !filtered && shown == _all.Count
+            // 计数用过滤后的总量（非当前页条数）：跨页时用户要的是"总共多少"
+            _countLabel.Text = !filtered && shownCount == _all.Count
                 ? (_all.Count == 0 ? string.Empty : L10n.T("共 ") + _all.Count + L10n.T(" 条"))
-                : shown + " / " + _all.Count + L10n.T(" 条");
+                : shownCount + " / " + _all.Count + L10n.T(" 条");
         }
 
         private bool Matches(ListViewItem item, string q)

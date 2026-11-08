@@ -396,16 +396,41 @@ DETECT = {
     "bulk": [r'SelectAllRows|全选|CheckedItems|CheckedListBox|CheckBoxes|MultiSelect\s*=\s*true|TableMultiSelect|GetSelectedRows'],
     "export": [r'导出|Export\('],
     "import": [r'导入|Import\('],
-    "undo": [r'撤销|Undo|回收站|Restore\('],
+    "undo": [r'撤销|Undo|回收站|Restore\(|TrashStore'],
     "keyboard": [r'Keys\.|ShortcutKeys|TabStop|AcceptButton|CancelButton|KeyDown'],
     "a11y": [r'UiA11y'],
     "validation": [r'Message\.warn|Message\.Warn|MessageBox\.Show|不能为空|请先|Validate|校验'],
+}
+
+# 共享组件证据：页面源码引用了壳类名时，该组件文件里实现的能力也算页面的证据
+# （过滤/排序/导出/分页/多选收口在 ListShell/TableShell 一个壳里，用壳的页面不必
+# 在自己的文件里重复实现一遍；FilePaneControl→ListShell 是传递链，做不动点展开）。
+# 类名边界匹配（\b），注释里提到"ListShell"也算引用——引用即受壳能力约束。
+SHARED_EVIDENCE = {
+    "ListShell": ["src/Gdterm.UI/Controls/ListShell.cs", "src/Gdterm.UI/Controls/ListPager.cs"],
+    "TableShell": ["src/Gdterm.UI/Controls/TableShell.cs", "src/Gdterm.UI/Controls/TableMultiSelect.cs", "src/Gdterm.UI/Controls/ListPager.cs"],
+    "TableMultiSelect": ["src/Gdterm.UI/Controls/TableMultiSelect.cs"],
+    "FilePaneControl": ["src/Gdterm.UI/Controls/FilePaneControl.cs"],
+    "TrashStore": ["src/Gdterm.UI/Services/TrashStore.cs"],
 }
 
 
 def detect_caps(files):
     """对页面源文件跑证据正则；返回 {cap: 命中的文件列表}。"""
     texts = {f: read(os.path.join(ROOT, f)) for f in files}
+    # 共享组件证据展开（不动点：FilePaneControl 引用 ListShell → 继续展开）
+    changed = True
+    while changed:
+        changed = False
+        for f, t in list(texts.items()):
+            if not t:
+                continue
+            for cls, paths in SHARED_EVIDENCE.items():
+                if re.search(r'\b' + cls + r'\b', t):
+                    for p in paths:
+                        if p not in texts:
+                            texts[p] = read(os.path.join(ROOT, p))
+                            changed = True
     hits = {}
     for cap, pats in DETECT.items():
         where = []
