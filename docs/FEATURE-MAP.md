@@ -171,11 +171,6 @@
 
 | 页面 | 已有/总数 | 缺口 |
 |---|---|---|
-| 命令面板 `page.CommandPaletteForm` | 3/9 | 排序、分页/虚拟滚动、多选/批量、导出、撤销/回收站、加载中/忙碌 |
-| 密码库条目选择 `page.KeePassEntryPicker` | 3/9 | 排序、分页/虚拟滚动、多选/批量、导出、撤销/回收站、加载中/忙碌 |
-| 外观设置 `page.AppearanceSettingsForm` | 2/7 | 危险操作确认、撤销/回收站、搜索/过滤、导入、导出 |
-| 快速跳转 `page.ConnectionQuickJumpForm` | 4/9 | 分页/虚拟滚动、多选/批量、导出、撤销/回收站、加载中/忙碌 |
-| 欢迎页 `page.WelcomePanel` | 3/8 | 列表/数据展示、回车/双击激活、搜索/过滤、加载中/忙碌、键盘/快捷键 |
 | AI 助手设置 `page.AiSettingsForm` | 2/6 | 撤销/回收站、搜索/过滤、导入、导出 |
 | 连接属性 `page.ConnectionDialog` | 2/6 | 撤销/回收站、搜索/过滤、导入、导出 |
 | AI 助手 `page.AiChatPanel` | 5/8 | 列表/数据展示、加载中/忙碌、配置持久化 |

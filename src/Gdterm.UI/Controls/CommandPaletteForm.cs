@@ -29,6 +29,7 @@ namespace Gdterm.UI.Controls
         private readonly AntdUI.Input _filter;
         private readonly ListBox _list;
         private readonly List<PaletteCommand> _all;
+        private readonly PaletteUsageStore _usage;
         private EmptyStateView _empty;
 
         public PaletteCommand Selected { get; private set; }
@@ -36,6 +37,7 @@ namespace Gdterm.UI.Controls
         public CommandPaletteForm(IList<PaletteCommand> commands)
         {
             _all = commands != null ? new List<PaletteCommand>(commands) : new List<PaletteCommand>();
+            _usage = new PaletteUsageStore();
             Text = L10n.T("命令面板 (Ctrl+Shift+O)");
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
             Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
@@ -92,8 +94,7 @@ namespace Gdterm.UI.Controls
         private void ApplyFilter()
         {
             var q = (_filter.Text ?? "").Trim().ToLowerInvariant();
-            _list.BeginUpdate();
-            _list.Items.Clear();
+            var matched = new List<Item>();
             foreach (var c in _all)
             {
                 if (c == null || c.Action == null) continue;
@@ -104,9 +105,14 @@ namespace Gdterm.UI.Controls
                     || (c.Category ?? "").ToLowerInvariant().Contains(q)
                     || (c.Keywords ?? "").ToLowerInvariant().Contains(q))
                 {
-                    _list.Items.Add(new Item { Command = c, Text = line });
+                    matched.Add(new Item { Command = c, Text = line });
                 }
             }
+            // F10 使用频率排序：常用命令置顶（次数多 → 最近用 → 名称），无统计退回名称序。
+            matched.Sort(CompareByUsage);
+            _list.BeginUpdate();
+            _list.Items.Clear();
+            foreach (var it in matched) _list.Items.Add(it);
             _list.EndUpdate();
             if (_empty != null) _empty.SetEmpty(_list.Items.Count == 0);
             if (_list.Items.Count == 0) return;
@@ -156,12 +162,31 @@ namespace Gdterm.UI.Controls
             }
         }
 
+        /// <summary>频率统计的 key：Label + \u001f + Category（命令身份稳定，与展示文本改动无关）。</summary>
+        private static string UsageKey(PaletteCommand c)
+        {
+            return (c.Label ?? "") + "\u001f" + (c.Category ?? "");
+        }
+
+        private int CompareByUsage(Item a, Item b)
+        {
+            int na, nb;
+            long ta, tb;
+            _usage.Score(UsageKey(a.Command), out na, out ta);
+            _usage.Score(UsageKey(b.Command), out nb, out tb);
+            if (nb != na) return nb.CompareTo(na);
+            if (tb != ta) return tb.CompareTo(ta);
+            return string.Compare(a.Text, b.Text, StringComparison.Ordinal);
+        }
+
         private void AcceptSelection()
         {
             var item = _list.SelectedValue as Item;
             if (item == null && _list.Items.Count > 0) item = _list.Items[0] as Item;
             if (item == null || item.Command == null) return;
             Selected = item.Command;
+            // 记录频率（Record 内部已吞异常；此处再兜一层——关面板路径绝不因统计失败）
+            try { _usage.Record(UsageKey(item.Command)); } catch (Exception) { }
             DialogResult = DialogResult.OK;
             Close();
         }

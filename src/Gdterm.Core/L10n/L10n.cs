@@ -2125,6 +2125,19 @@ namespace Gdterm.Core
             ["将恢复以下默认值：\n  终端字体 Consolas 12pt / 配色 Classic\n  界面字体 {0} 9pt / 界面主题 Dark\n  不透明度 100% / DPI 感知 开启\n\n确定恢复？"]
                 = "The following defaults will be restored:\n  Terminal font Consolas 12pt / scheme Classic\n  UI font {0} 9pt / theme Dark\n  Opacity 100% / DPI awareness on\n\nConfirm?",
             ["恢复默认外观失败: {0}"] = "Failed to reset appearance: {0}",
+            // —— 外观设置导入/导出（F10）——
+            ["导出…"] = "Export…",
+            ["导入…"] = "Import…",
+            ["导出外观设置"] = "Export Appearance Settings",
+            ["导入外观设置"] = "Import Appearance Settings",
+            ["外观设置 (*.ini)"] = "Appearance settings (*.ini)",
+            ["外观设置已导出"] = "Appearance settings exported",
+            ["已导入外观设置（保存后生效）"] = "Appearance settings imported (applied on save)",
+            ["导出失败: {0}"] = "Failed to export: {0}",
+            // —— 欢迎页搜索/键盘导航（F10）——
+            ["过滤最近连接 / 收藏…"] = "Filter recent connections / favorites…",
+            ["没有匹配的最近连接"] = "No matching recent connections",
+            ["没有匹配的收藏"] = "No matching favorites",
             ["界面语言"] = "Interface Language",
             ["中文"] = "Chinese",
             ["English"] = "English",

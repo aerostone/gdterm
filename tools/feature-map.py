@@ -368,8 +368,10 @@ TYPE_CAPS = {
 # 能力 -> 源码证据（任一命中即算有证据）
 DETECT = {
     # AntdUI.Table/DataSource 也是列表（KeePass 系页面用自绘表格而不是 ListView）；
-    # DrawString = 自绘图表/指标展示（监控面板用 GDI 画曲线/进度条，不是列表控件但确实在展示数据）
-    "list": [r'ListView|DataGridView|TreeView|ListViewEx|Items\.Add|AntdUI\.Table|DataSource\s*=|DrawString'],
+    # DrawString = 自绘图表/指标展示（监控面板用 GDI 画曲线/进度条，不是列表控件但确实在展示数据）；
+    # AddRow(FlowLayoutPanel host = 行构造器（欢迎页把最近连接/收藏渲染成交互行；
+    # 连接对话框的 AddRow<T>(TableLayoutPanel) 是表单字段行构造，不匹配）
+    "list": [r'ListView|DataGridView|TreeView|ListViewEx|Items\.Add|AntdUI\.Table|DataSource\s*=|DrawString|AddRow\(\s*FlowLayoutPanel'],
     "activation": [r'DoubleClick|KeyDown|ItemActivate|SelectedIndexChanged|Keys\.Enter'],
     "empty": [r'EmptyStateView'],
     # 加载态证据三类：① BusyScope 作用域（用户触发的长任务）② 显式加载标志位
@@ -377,7 +379,11 @@ DETECT = {
     # 每次都切 WaitCursor）③ 跑马灯进度条（总大小未知时表示"在动"）。
     "loading": [r'BusyScope|_loading|_busy|Loading|IsBusy|SetBusy|ProgressBarStyle\.Marquee|MarqueeAnimationSpeed'],
     "error": [r'Message\.error|Message\.Error|MessageBox\.Show|DiagLog\.Error|Message\.warn|Message\.Warn|ToastNotifier\.Error|(保存|修改|导入|操作|加载|写入|读取|清空|恢复)失败'],
-    "confirm": [r'ConfirmDanger|MessageModal|Modal\\.open|确认'],
+    # 确认证据：Modal.open 是 AntdUI 确认弹窗（修 2026-11 双反斜杠转义 bug——
+    # r'Modal\\.open' 实际匹配带字面反斜杠的文本，永远不中）；
+    # MessageBoxButtons.YesNo 是 WinForms 原生确认框的标准写法（代码库统一口径）。
+    # 不收裸「确定」——「DPI 下确定」「不加确定按钮」这类布局注释会造成误报。
+    "confirm": [r'ConfirmDanger|MessageModal|Modal\.open|确认|MessageBoxButtons\.YesNo'],
     "persist": [r'Store\b|\.Save\(|SaveConfig|WriteAllText|WriteAllLines|FormSettings\.(Set|Get)'],
     "search": [r'PlaceholderText\s*=\s*"[^"]*(?:搜索|过滤|查找)|Filter\(|\.Search\(|搜索|过滤|筛选'],
     "sort": [r'SortOrder|Sorting\s*=|CompareFunc|排序'],

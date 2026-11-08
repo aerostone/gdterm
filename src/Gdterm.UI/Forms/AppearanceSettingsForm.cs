@@ -28,6 +28,8 @@ namespace Gdterm.UI.Forms
         private AntdUI.Button _btnOk;
         private AntdUI.Button _btnCancel;
         private AntdUI.Button _btnReset;
+        private AntdUI.Button _btnImport;
+        private AntdUI.Button _btnExport;
         // 界面字体（菜单/树/状态栏）
         private AntdUI.Select _uiFontCombo;
         private AntdUI.InputNumber _uiSizeNum;
@@ -212,7 +214,7 @@ namespace Gdterm.UI.Forms
             Controls.Add(resetHint);
             y += rowH;
 
-            // ── 底部按钮条：主(保存) + 恢复默认 + 取消 ──
+            // ── 底部按钮条：导出/导入 + 主(保存) + 恢复默认 + 取消 ──
             // Type 自绘：手写 BackColor/ForeColor 会被 AntdUI 绘制管线忽略，只留 Type
             _btnOk = new AntdUI.Button { Text = L10n.T("保存"), Type = AntdUI.TTypeMini.Primary, Size = new Size(DpiScale.V(this, 88), _fieldHeight) };
             _btnOk.Click += (s, e) => SaveResult();
@@ -223,11 +225,23 @@ namespace Gdterm.UI.Forms
             _btnCancel = new AntdUI.Button { Text = L10n.T("取消"), Type = AntdUI.TTypeMini.Default, Size = new Size(DpiScale.V(this, 88), _fieldHeight) };
             _btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
 
-            int btnTotal = DpiScale.V(this, 88 + 8 + 96 + 8 + 88);
+            // F10 导入/导出：设置迁移到另一台机器/备份（外观.ini 是纯文本，无凭据）
+            _btnExport = new AntdUI.Button { Text = L10n.T("导出…"), Type = AntdUI.TTypeMini.Default, Size = new Size(DpiScale.V(this, 88), _fieldHeight) };
+            _btnExport.Click += (s, e) => ExportSettings();
+
+            _btnImport = new AntdUI.Button { Text = L10n.T("导入…"), Type = AntdUI.TTypeMini.Default, Size = new Size(DpiScale.V(this, 88), _fieldHeight) };
+            _btnImport.Click += (s, e) => ImportSettings();
+
+            int w88 = DpiScale.V(this, 88), w96 = DpiScale.V(this, 96), gap = DpiScale.V(this, 8);
+            int btnTotal = w88 * 4 + w96 + gap * 4;
             int bx = clientW - pad - btnTotal;
-            _btnOk.Location = new Point(bx, y);
-            _btnReset.Location = new Point(bx + DpiScale.V(this, 96), y);
-            _btnCancel.Location = new Point(bx + DpiScale.V(this, 96 + 104), y);
+            _btnExport.Location = new Point(bx, y);
+            _btnImport.Location = new Point(bx + w88 + gap, y);
+            _btnOk.Location = new Point(bx + (w88 + gap) * 2, y);
+            _btnReset.Location = new Point(bx + (w88 + gap) * 2 + w88 + gap, y);
+            _btnCancel.Location = new Point(bx + btnTotal - w88, y);
+            Controls.Add(_btnExport);
+            Controls.Add(_btnImport);
             Controls.Add(_btnOk);
             Controls.Add(_btnReset);
             Controls.Add(_btnCancel);
@@ -466,7 +480,12 @@ namespace Gdterm.UI.Forms
 
         private void LoadCurrent()
         {
-            var s = AppearanceSettings.Load(_iniPath);
+            ApplySettings(AppearanceSettings.Load(_iniPath));
+        }
+
+        /// <summary>把设置模型回显到各控件（LoadCurrent/导入共用；缺字段时 Load 已回填默认值）。</summary>
+        private void ApplySettings(AppearanceSettings s)
+        {
             SelectCombo(_fontCombo, s.FontName);
             _sizeNum.Value = ClampNum(_sizeNum, s.FontSize);
             SelectCombo(_schemeCombo, s.ColorScheme);
@@ -479,6 +498,46 @@ namespace Gdterm.UI.Forms
             // 界面语言回显（索引 0=中文 1=English；与选项添加顺序对应）
             if (_langCombo != null) _langCombo.SelectedIndex = L10n.IsEnglish ? 1 : 0;
             UpdatePreview();
+        }
+
+        /// <summary>导出当前已落盘的外观设置（不含表单未保存的编辑）——跨机迁移/备份。</summary>
+        private void ExportSettings()
+        {
+            using (var dlg = new SaveFileDialog
+            {
+                Title = L10n.T("导出外观设置"),
+                Filter = L10n.T("外观设置 (*.ini)|*.ini"),
+                FileName = "appearance.ini"
+            })
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    File.Copy(_iniPath, dlg.FileName, true);
+                    DiagLog.Info("Appearance.Export", dlg.FileName);
+                    ToastNotifier.Success(L10n.T("外观设置已导出"));
+                }
+                catch (Exception ex)
+                {
+                    AntdUI.Message.error(this, L10n.Tf("导出失败: {0}", ex.Message));
+                }
+            }
+        }
+
+        /// <summary>导入外观设置文件到表单（点「保存」后生效）——Load 对损坏/缺字段回填默认值，不会导出一半状态。</summary>
+        private void ImportSettings()
+        {
+            using (var dlg = new OpenFileDialog
+            {
+                Title = L10n.T("导入外观设置"),
+                Filter = L10n.T("外观设置 (*.ini)|*.ini")
+            })
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                ApplySettings(AppearanceSettings.Load(dlg.FileName));
+                DiagLog.Info("Appearance.Import", dlg.FileName);
+                ToastNotifier.Success(L10n.T("已导入外观设置（保存后生效）"));
+            }
         }
 
         private static void SelectCombo(AntdUI.Select box, string value)

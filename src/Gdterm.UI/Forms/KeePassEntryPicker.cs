@@ -24,6 +24,7 @@ namespace Gdterm.UI.Forms
     {
         private readonly IKeePassService _keepass;
         private AntdUI.Input _searchBox;
+        private AntdUI.Select _sortCombo;
         private AntdUI.Table _table;
         private EmptyStateView _emptyState;
         private AntdUI.Button _selectButton;
@@ -58,21 +59,33 @@ namespace Gdterm.UI.Forms
             BackColor = GdtermColorTable.Background;
             Font = Services.FormFontPolicy.UiFont();
 
-            // 搜索框（Dock 布局，随字体/DPI 自适应高度）
-            var searchPanel = new Panel
+            // 搜索框 + F10 排序列（Dock 布局，随字体/DPI 自适应高度）
+            var searchPanel = new TableLayoutPanel
             {
                 Dock = DockStyle.Top,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Padding = new Padding(12, 10, 12, 6),
-                BackColor = GdtermColorTable.Background
+                BackColor = GdtermColorTable.Background,
+                ColumnCount = 2,
+                RowCount = 1
             };
+            searchPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 60));
+            searchPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40));
             _searchBox = new AntdUI.Input {
                 Dock = DockStyle.Fill,
                 PlaceholderText = L10n.T("搜索...")
             };
             _searchBox.TextChanged += (s, e) => ApplyFilter();
-            searchPanel.Controls.Add(_searchBox);
+            // F10 排序列：标题/用户名/分组（会话级选择，不落盘——选择器是瞬态窗）
+            _sortCombo = new AntdUI.Select { Dock = DockStyle.Fill };
+            _sortCombo.Items.Add(L10n.T("标题"));
+            _sortCombo.Items.Add(L10n.T("用户名"));
+            _sortCombo.Items.Add(L10n.T("分组"));
+            _sortCombo.SelectedIndex = 0;
+            _sortCombo.SelectedIndexChanged += (s, e) => ApplyFilter();
+            searchPanel.Controls.Add(_searchBox, 0, 0);
+            searchPanel.Controls.Add(_sortCombo, 1, 0);
 
             // 列表
             _table = new AntdUI.Table
@@ -223,13 +236,32 @@ namespace Gdterm.UI.Forms
         {
             var filter = _searchBox.Text?.Trim() ?? "";
             var filtered = string.IsNullOrEmpty(filter)
-                ? _entries
+                ? new List<KeePassEntrySummary>(_entries)
                 : _entries.Where(e =>
                     (e.Title ?? "").IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0 ||
                     (e.Username ?? "").IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0 ||
                     (e.GroupPath ?? "").IndexOf(filter, StringComparison.OrdinalIgnoreCase) >= 0
                 ).ToList();
-            PopulateList(filtered);
+            // F10 排序：按所选字段（不区分大小写），同键保持原序（装饰原下标保证稳定）
+            int mode = _sortCombo != null ? _sortCombo.SelectedIndex : 0;
+            System.Func<KeePassEntrySummary, string> key;
+            switch (mode)
+            {
+                case 1: key = e => e.Username ?? ""; break;
+                case 2: key = e => e.GroupPath ?? ""; break;
+                default: key = e => e.Title ?? ""; break;
+            }
+            var indexed = new List<KeyValuePair<int, KeePassEntrySummary>>(filtered.Count);
+            for (int i = 0; i < filtered.Count; i++)
+                indexed.Add(new KeyValuePair<int, KeePassEntrySummary>(i, filtered[i]));
+            indexed.Sort((a, b) =>
+            {
+                int c = string.Compare(key(a.Value), key(b.Value), StringComparison.OrdinalIgnoreCase);
+                return c != 0 ? c : a.Key.CompareTo(b.Key);
+            });
+            var sorted = new List<KeePassEntrySummary>(indexed.Count);
+            foreach (var kv in indexed) sorted.Add(kv.Value);
+            PopulateList(sorted);
         }
 
         private void SelectEntry()

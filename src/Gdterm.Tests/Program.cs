@@ -53,6 +53,7 @@ namespace Gdterm.Tests
             ZmodemReceiverTests.Run();
             MacroRecorderTests.Run();
             ScanPluginTests.Run();
+            PaletteUsageStoreTests.Run();
 
             // 可观测性失败信号（A4/A5/A8/A9）——依赖 CrashLog.Initialize 改写全局路径，必须最后跑
             ObservabilityTests.Run();

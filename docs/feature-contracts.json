@@ -13,7 +13,15 @@
         "src/Gdterm.UI/Controls/CommandPaletteForm.cs"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [],
+      "drop_caps": [
+        "paging",
+        "bulk",
+        "export",
+        "undo",
+        "loading"
+      ],
+      "note": "命令面板=同步内存单命令执行入口：分页(命令集有界)、多选(单次执行)、导出(命令由代码定义)、撤销(无数据修改)、加载态(无IO)均 N/A；排序=使用频率(F10 PaletteUsageStore)"
     },
     {
       "id": "page.AddOtpForm",
@@ -85,9 +93,10 @@
       "known_gaps": [],
       "manual_ok": [],
       "drop_caps": [
-        "empty"
+        "empty",
+        "loading"
       ],
-      "note": "欢迎页本身承担空态职责"
+      "note": "欢迎页本身承担空态职责；本地文件同步加载无加载态；搜索/键盘导航/行列表/回车激活已实现(F10)"
     },
     {
       "id": "page.ConnectionTreeControl",
@@ -129,7 +138,15 @@
         "src/Gdterm.UI/Forms/KeePassEntryPicker.cs"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [],
+      "drop_caps": [
+        "paging",
+        "bulk",
+        "export",
+        "undo",
+        "loading"
+      ],
+      "note": "单选凭据选择器：多选 N/A(选中一条即确认)、导出 N/A(凭据导出=安全红线)、撤销 N/A、分页 N/A(表格滚动)、加载态 N/A(库已解锁,ListEntries 为内存枚举)；排序=标题/用户名/分组(F10)"
     },
     {
       "id": "page.AiSettingsForm",
@@ -219,7 +236,12 @@
         "src/Gdterm.UI/Forms/AppearanceSettingsForm.cs"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [],
+      "drop_caps": [
+        "undo",
+        "search"
+      ],
+      "note": "草稿式设置窗：取消=丢弃全部修改，无撤销；固定 10 字段布局无可过滤字段清单；导入/导出/恢复默认确认已实现(F10)"
     },
     {
       "id": "page.PasswordHealthForm",
@@ -377,7 +399,15 @@
         "src/Gdterm.UI/Controls/ConnectionQuickJumpForm.cs"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [],
+      "drop_caps": [
+        "paging",
+        "bulk",
+        "export",
+        "undo",
+        "loading"
+      ],
+      "note": "跳单条连接：分页 N/A(连接集有界+滚动)、多选 N/A(跳一条)、导出归连接导入/导出页、撤销 N/A、加载态 N/A(内存查询)；最近优先排序(F5)/搜索/键盘已有"
     },
     {
       "id": "page.ConnectionDialog",
@@ -417,8 +447,10 @@
       "src": [
         "src/Gdterm.UI/Controls/RemoteMonitorPanel.cs"
       ],
-      "drop_caps": ["paging"],
-    "known_gaps": [],
+      "drop_caps": [
+        "paging"
+      ],
+      "known_gaps": [],
       "manual_ok": []
     },
     {
@@ -429,8 +461,10 @@
       "src": [
         "src/Gdterm.UI/Controls/HealthMonitorPanel.cs"
       ],
-      "drop_caps": ["paging"],
-    "known_gaps": [],
+      "drop_caps": [
+        "paging"
+      ],
+      "known_gaps": [],
       "manual_ok": []
     },
     {
