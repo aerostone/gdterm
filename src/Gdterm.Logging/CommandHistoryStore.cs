@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Globalization;
 using System.Text;
-using System.Web.Script.Serialization;
 using Gdterm.Core.Models;
 
 using Gdterm.Core;
@@ -302,13 +302,90 @@ namespace Gdterm.Logging
             return true;
         }
 
-        // ===== JSON 序列化 =====
+        // ===== JSON 序列化（手写，2026-11-08 替换 JavaScriptSerializer）=====
+        // 背景：JSon 往返在 CI 上 Record 后 Query 恒空（0.1.452 实证）且失败被静默吞掉，
+        // 本地无 .NET Framework 运行时无法复现。本代码库 store 的标准做法就是手写 JSON
+        // （ConnectionStoreJson / ChatHistoryStore 同模式），JSon 是异类——移除之。
+        // 读取器是完整的小型 JSON 解析器，同时兼容旧 JSon 文件格式（其输出是标准 JSON，
+        // 唯一特例是 DateTime 写成毫秒裸数字——MiniGetDateTime 两路都认）。
 
-        private static readonly JavaScriptSerializer _json = new JavaScriptSerializer();
-
-        private static string SerializeEntry(CommandHistoryEntry entry)
+        private static string SerializeEntry(CommandHistoryEntry e)
         {
-            return _json.Serialize(entry);
+            var sb = new StringBuilder();
+            sb.Append('{');
+            AppendJsonString(sb, "Id", e.Id);
+            sb.Append(',');
+            AppendJsonString(sb, "ConnectionId", e.ConnectionId);
+            sb.Append(',');
+            AppendJsonString(sb, "Hostname", e.Hostname);
+            sb.Append(',');
+            AppendJsonString(sb, "Protocol", e.Protocol);
+            sb.Append(',');
+            AppendJsonString(sb, "Command", e.Command);
+            sb.Append(',');
+            AppendJsonString(sb, "Output", e.Output);
+            sb.Append(",\"ExitCode\":");
+            if (e.ExitCode.HasValue) sb.Append(e.ExitCode.Value.ToString(CultureInfo.InvariantCulture));
+            else sb.Append("null");
+            sb.Append(",\"ExecutedAt\":\"");
+            sb.Append(e.ExecutedAt.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture));
+            sb.Append("\",\"DurationMs\":");
+            sb.Append(e.DurationMs.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"IsBroadcast\":");
+            sb.Append(e.IsBroadcast ? "true" : "false");
+            sb.Append(",\"BroadcastTargets\":");
+            if (e.BroadcastTargets == null) sb.Append("null");
+            else
+            {
+                sb.Append('[');
+                for (int i = 0; i < e.BroadcastTargets.Count; i++)
+                {
+                    if (i > 0) sb.Append(',');
+                    AppendJsonString(sb, null, e.BroadcastTargets[i]);
+                }
+                sb.Append(']');
+            }
+            sb.Append(',');
+            AppendJsonString(sb, "Tags", e.Tags);
+            sb.Append('}');
+            return sb.ToString();
+        }
+
+        private static void AppendJsonString(StringBuilder sb, string key, string value)
+        {
+            if (key != null)
+            {
+                // 逗号由调用方管理；key==null 表示数组元素（只写值）
+                sb.Append('"').Append(key).Append("\":");
+            }
+            if (value == null) sb.Append("null");
+            else
+            {
+                sb.Append('"');
+                AppendJsonEscaped(sb, value);
+                sb.Append('"');
+            }
+        }
+
+        private static void AppendJsonEscaped(StringBuilder sb, string v)
+        {
+            foreach (var ch in v)
+            {
+                switch (ch)
+                {
+                    case '"': sb.Append("\\\""); break;
+                    case '\\': sb.Append("\\\\"); break;
+                    case '\n': sb.Append("\\n"); break;
+                    case '\r': sb.Append("\\r"); break;
+                    case '\t': sb.Append("\\t"); break;
+                    case '\b': sb.Append("\\b"); break;
+                    case '\f': sb.Append("\\f"); break;
+                    default:
+                        if (ch < ' ') sb.Append("\\u").Append(((int)ch).ToString("x4"));
+                        else sb.Append(ch);
+                        break;
+                }
+            }
         }
 
         /// <summary>最近一次反序列化失败（null=正常）。静默吞异常曾让数据损坏隐身——
@@ -319,7 +396,28 @@ namespace Gdterm.Logging
         {
             try
             {
-                return _json.Deserialize<CommandHistoryEntry>(json);
+                int pos = 0;
+                var obj = MiniParseObject(json, ref pos);
+                if (obj == null) return null;
+
+                var e = new CommandHistoryEntry
+                {
+                    Id = MiniGetString(obj, "Id"),
+                    ConnectionId = MiniGetString(obj, "ConnectionId"),
+                    Hostname = MiniGetString(obj, "Hostname"),
+                    Protocol = MiniGetString(obj, "Protocol"),
+                    Command = MiniGetString(obj, "Command"),
+                    Output = MiniGetString(obj, "Output"),
+                    ExitCode = MiniGetInt(obj, "ExitCode"),
+                    ExecutedAt = MiniGetDateTime(obj, "ExecutedAt"),
+                    DurationMs = MiniGetLong(obj, "DurationMs"),
+                    IsBroadcast = MiniGetBool(obj, "IsBroadcast"),
+                    BroadcastTargets = MiniGetList(obj, "BroadcastTargets"),
+                    Tags = MiniGetString(obj, "Tags")
+                };
+                if (string.IsNullOrEmpty(e.Id))
+                    e.Id = Guid.NewGuid().ToString("N"); // 与 RecordCommand 的兜底一致
+                return e;
             }
             catch (Exception ex)
             {
@@ -327,6 +425,197 @@ namespace Gdterm.Logging
                 System.Diagnostics.Debug.WriteLine("CommandHistoryStore.Deserialize: " + LastDeserializationError);
                 return null;
             }
+        }
+
+        // ===== 迷你 JSON 解析（值：object/array/string/number/true/false/null）=====
+        // 够用即可：历史行主要是我们自己写的；对旧 JSon 文件保读取兼容。
+
+        private static Dictionary<string, object> MiniParseObject(string s, ref int pos)
+        {
+            MiniSkipWs(s, ref pos);
+            if (pos >= s.Length || s[pos] != '{') return null;
+            pos++;
+            var dict = new Dictionary<string, object>(StringComparer.OrdinalIgnoreCase);
+            MiniSkipWs(s, ref pos);
+            if (pos < s.Length && s[pos] == '}') { pos++; return dict; }
+            while (pos < s.Length)
+            {
+                MiniSkipWs(s, ref pos);
+                if (pos >= s.Length || s[pos] != '"') return null;
+                var key = MiniParseString(s, ref pos);
+                MiniSkipWs(s, ref pos);
+                if (pos >= s.Length || s[pos] != ':') return null;
+                pos++;
+                var val = MiniParseValue(s, ref pos);
+                dict[key] = val;
+                MiniSkipWs(s, ref pos);
+                if (pos >= s.Length) return null;
+                if (s[pos] == ',') { pos++; continue; }
+                if (s[pos] == '}') { pos++; return dict; }
+                return null;
+            }
+            return null;
+        }
+
+        private static object MiniParseValue(string s, ref int pos)
+        {
+            MiniSkipWs(s, ref pos);
+            if (pos >= s.Length) return null;
+            var ch = s[pos];
+            if (ch == '{')
+            {
+                return MiniParseObject(s, ref pos);
+            }
+            if (ch == '[')
+            {
+                pos++;
+                var list = new List<object>();
+                MiniSkipWs(s, ref pos);
+                if (pos < s.Length && s[pos] == ']') { pos++; return list; }
+                while (pos < s.Length)
+                {
+                    list.Add(MiniParseValue(s, ref pos));
+                    MiniSkipWs(s, ref pos);
+                    if (pos >= s.Length) break;
+                    if (s[pos] == ',') { pos++; continue; }
+                    if (s[pos] == ']') { pos++; break; }
+                    break;
+                }
+                return list;
+            }
+            if (ch == '"') return MiniParseString(s, ref pos);
+            if (ch == 't' && s.Substring(pos, Math.Min(4, s.Length - pos)) == "true") { pos += 4; return true; }
+            if (ch == 'f' && s.Substring(pos, Math.Min(5, s.Length - pos)) == "false") { pos += 5; return false; }
+            if (ch == 'n' && s.Substring(pos, Math.Min(4, s.Length - pos)) == "null") { pos += 4; return null; }
+            // 数字（含旧 JSon 的 DateTime 毫秒裸数字与小数/指数形式）
+            int start = pos;
+            if (ch == '-' || ch == '+') pos++;
+            while (pos < s.Length && (char.IsDigit(s[pos]) || s[pos] == '.' || s[pos] == 'e' || s[pos] == 'E' || s[pos] == '+' || s[pos] == '-')) pos++;
+            if (pos == start) return null;
+            var num = s.Substring(start, pos - start);
+            double dv;
+            if (double.TryParse(num, NumberStyles.Float, CultureInfo.InvariantCulture, out dv))
+                return dv;
+            return null;
+        }
+
+        private static string MiniParseString(string s, ref int pos)
+        {
+            // 进入时 s[pos] 应为 '"'
+            pos++;
+            var sb = new StringBuilder();
+            while (pos < s.Length)
+            {
+                var ch = s[pos];
+                if (ch == '\\' && pos + 1 < s.Length)
+                {
+                    var next = s[pos + 1];
+                    switch (next)
+                    {
+                        case '"': sb.Append('"'); break;
+                        case '\\': sb.Append('\\'); break;
+                        case '/': sb.Append('/'); break;
+                        case 'n': sb.Append('\n'); break;
+                        case 'r': sb.Append('\r'); break;
+                        case 't': sb.Append('\t'); break;
+                        case 'b': sb.Append('\b'); break;
+                        case 'f': sb.Append('\f'); break;
+                        case 'u':
+                            if (pos + 5 < s.Length)
+                            {
+                                int code;
+                                if (int.TryParse(s.Substring(pos + 2, 4), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out code))
+                                {
+                                    sb.Append((char)code);
+                                    pos += 6;
+                                    continue;
+                                }
+                            }
+                            sb.Append(next);
+                            pos += 2;
+                            break;
+                        default:
+                            sb.Append(next);
+                            pos += 2;
+                            break;
+                    }
+                    pos += 2;
+                    continue;
+                }
+                if (ch == '"') { pos++; break; }
+                sb.Append(ch);
+                pos++;
+            }
+            return sb.ToString();
+        }
+
+        private static void MiniSkipWs(string s, ref int pos)
+        {
+            while (pos < s.Length && char.IsWhiteSpace(s[pos])) pos++;
+        }
+
+        private static string MiniGetString(Dictionary<string, object> obj, string key)
+        {
+            object v;
+            return obj.TryGetValue(key, out v) && v is string ? (string)v : null;
+        }
+
+        private static long MiniGetLong(Dictionary<string, object> obj, string key)
+        {
+            object v;
+            if (obj.TryGetValue(key, out v) && v is double) return (long)(double)v;
+            return 0;
+        }
+
+        private static int? MiniGetInt(Dictionary<string, object> obj, string key)
+        {
+            object v;
+            if (obj.TryGetValue(key, out v) && v is double) return (int)(double)v;
+            return null;
+        }
+
+        private static bool MiniGetBool(Dictionary<string, object> obj, string key)
+        {
+            object v;
+            return obj.TryGetValue(key, out v) && v is bool && (bool)v;
+        }
+
+        private static DateTime MiniGetDateTime(Dictionary<string, object> obj, string key)
+        {
+            object v;
+            if (!obj.TryGetValue(key, out v)) return DateTime.UtcNow;
+            // 新格式：ISO 8601 字符串
+            if (v is string)
+            {
+                DateTime dt;
+                if (DateTime.TryParse((string)v, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out dt))
+                    return dt.ToUniversalTime();
+                return DateTime.UtcNow;
+            }
+            // 旧 JSon 格式：毫秒裸数字
+            if (v is double)
+            {
+                try
+                {
+                    return new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddMilliseconds((double)v);
+                }
+                catch { return DateTime.UtcNow; }
+            }
+            return DateTime.UtcNow;
+        }
+
+        private static List<string> MiniGetList(Dictionary<string, object> obj, string key)
+        {
+            object v;
+            if (!obj.TryGetValue(key, out v) || !(v is List<object>)) return null;
+            var list = (List<object>)v;
+            var result = new List<string>();
+            foreach (var item in list)
+            {
+                var str = item as string;
+                if (str != null) result.Add(str);
+            }
+            return result;
         }
 
     }
