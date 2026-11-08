@@ -37,6 +37,7 @@ namespace Gdterm.Tests
             LogSanitizerTests.Run();
             ConnectionStoreJsonTests.Run();
             ChatHistoryStoreTests.Run();
+            CommandHistoryStoreTests.Run();
             ExternalFormatImporterTests.Run();
             OnlineLinksTests.Run();
             OtpTests.Run();

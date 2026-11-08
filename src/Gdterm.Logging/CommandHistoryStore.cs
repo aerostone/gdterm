@@ -150,7 +150,45 @@ namespace Gdterm.Logging
             return all.Select(e => e.Command).Distinct().Take(limit).ToList();
         }
 
-        public void Dispose()
+        /// <summary>
+    /// 按 Id 删除指定条目（面板多选批量删除）。返回实际删除的条数。
+    /// JSON Lines 无随机删——逐文件重写，跳过无命中的文件。
+    /// </summary>
+    public int DeleteByIds(System.Collections.Generic.IEnumerable<string> ids)
+    {
+        if (ids == null) return 0;
+        var idSet = new HashSet<string>(ids.Where(x => !string.IsNullOrEmpty(x)));
+        if (idSet.Count == 0) return 0;
+        int removed = 0;
+
+        lock (_lock)
+        {
+            try { _writer?.Flush(); } catch (Exception) { }
+            foreach (var file in GetLogFilesSorted())
+            {
+                try
+                {
+                    var lines = File.ReadAllLines(file, Encoding.UTF8);
+                    var keep = new List<string>(lines.Length);
+                    int hit = 0;
+                    foreach (var line in lines)
+                    {
+                        if (string.IsNullOrWhiteSpace(line)) continue;
+                        var entry = DeserializeEntry(line);
+                        if (entry != null && idSet.Contains(entry.Id)) { hit++; continue; }
+                        keep.Add(line);
+                    }
+                    if (hit == 0) continue;
+                    File.WriteAllLines(file, keep, Encoding.UTF8);
+                    removed += hit;
+                }
+                catch { }
+            }
+        }
+        return removed;
+    }
+
+    public void Dispose()
         {
             if (_disposed) return;
             _disposed = true;

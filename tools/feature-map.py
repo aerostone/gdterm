@@ -381,9 +381,10 @@ DETECT = {
     "search": [r'PlaceholderText\s*=\s*"[^"]*(?:搜索|过滤|查找)|Filter\(|\.Search\(|搜索|过滤|筛选'],
     "sort": [r'SortOrder|Sorting\s*=|CompareFunc|排序'],
     "paging": [r'PageSize|分页|VirtualMode|VirtualListSize|ScrollTo'],
-    # 批量能力的证据：全选入口、勾选列（CheckBoxes）、或显式的批处理调用。
+    # 批量能力的证据：全选入口、勾选列（CheckBoxes）、多选列表（MultiSelect=true，
+    # 搭配 SelectedItems 批处理——如 SFTP 文件栏多选批量删/传、命令历史多选批量删）。
     # 注意别把"多选"三个字当证据——注释里写"多选批量"不算实现过。
-    "bulk": [r'SelectAllRows|全选|CheckedItems|CheckedListBox|CheckBoxes'],
+    "bulk": [r'SelectAllRows|全选|CheckedItems|CheckedListBox|CheckBoxes|MultiSelect\s*=\s*true'],
     "export": [r'导出|Export\('],
     "import": [r'导入|Import\('],
     "undo": [r'撤销|Undo|回收站|Restore\('],

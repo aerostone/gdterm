@@ -184,9 +184,7 @@
 | 通知中心 `page.NotificationCenterPanel` | 5/9 | 分页/虚拟滚动、多选/批量、撤销/回收站、加载中/忙碌 |
 | 高亮规则 `page.HighlightRulePanel` | 5/9 | 分页/虚拟滚动、多选/批量、撤销/回收站、加载中/忙碌 |
 | AI 助手 `page.AiChatPanel` | 5/8 | 列表/数据展示、加载中/忙碌、配置持久化 |
-| SFTP 双栏 `page.SftpDualPanePanel` | 6/9 | 分页/虚拟滚动、多选/批量、撤销/回收站 |
 | 危险命令规则 `page.DangerousCommandConfigForm` | 6/9 | 分页/虚拟滚动、多选/批量、撤销/回收站 |
-| 命令历史 `page.CommandHistoryPanel` | 6/9 | 分页/虚拟滚动、多选/批量、加载中/忙碌 |
 | 命令模板库 `page.CommandTemplatePanel` | 6/9 | 分页/虚拟滚动、撤销/回收站、加载中/忙碌 |
 | 多通道广播 `page.MultiChannelPanel` | 6/9 | 分页/虚拟滚动、撤销/回收站、加载中/忙碌 |
 | 密码健康报告 `page.PasswordHealthForm` | 6/9 | 分页/虚拟滚动、多选/批量、撤销/回收站 |
@@ -194,14 +192,16 @@
 | 快捷键绑定 `page.KeyBindingPanel` | 6/9 | 分页/虚拟滚动、多选/批量、撤销/回收站 |
 | 扫描中心 `page.ScannerCenterForm` | 6/9 | 分页/虚拟滚动、多选/批量、撤销/回收站 |
 | 敏感信息扫描 `page.SecretScanPanel` | 6/9 | 分页/虚拟滚动、多选/批量、撤销/回收站 |
-| 文件面板（单栏） `page.FilePaneControl` | 6/9 | 分页/虚拟滚动、多选/批量、撤销/回收站 |
 | 端口转发 `page.PortForwardPanel` | 6/9 | 分页/虚拟滚动、撤销/回收站、加载中/忙碌 |
 | OTP 动态码管理 `page.OtpManagerForm` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
+| SFTP 双栏 `page.SftpDualPanePanel` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
 | SSH 密钥管理 `page.SshKeyManagerForm` | 3/5 | 危险操作确认、撤销/回收站 |
 | 书签 / 最近连接 `page.SessionBookmarksPanel` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
 | 传输进度 `page.TransferProgressDialog` | 0/2 | 键盘/快捷键、撤销/回收站 |
+| 命令历史 `page.CommandHistoryPanel` | 7/9 | 分页/虚拟滚动、加载中/忙碌 |
 | 宏录制 `page.MacroPanel` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
 | 密码生成器 `page.PasswordGeneratorForm` | 2/4 | 失败提示、撤销/回收站 |
+| 文件面板（单栏） `page.FilePaneControl` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
 | 连接树 `page.ConnectionTreeControl` | 6/8 | 加载中/忙碌、键盘/快捷键 |
 | SFTP 权限修改 `page.SftpPermissionForm` | 2/3 | 撤销/回收站 |
 | 修改主密码 `page.ChangeMasterPasswordForm` | 2/3 | 撤销/回收站 |

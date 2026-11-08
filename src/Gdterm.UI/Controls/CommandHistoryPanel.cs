@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Linq;
 using System.Windows.Forms;
 using Gdterm.UI.Diagnostics;
 using Gdterm.Core.Models;
@@ -67,16 +68,18 @@ namespace Gdterm.UI.Controls
             _hostFilter.SelectedIndex = 0;
 
             var btnRefresh = new AntdUI.Button { Text = L10n.T("刷新"), AutoSize = true, Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3))};
+            var btnDeleteSel = new AntdUI.Button { Text = L10n.T("删选中"), AutoSize = true, Enabled = false, Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3))};
             var btnClear = new AntdUI.Button { Text = L10n.T("清空"), AutoSize = true, Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3))};
 
-            searchPanel.Controls.AddRange(new Control[] { _searchBox, _hostFilter, btnRefresh, btnClear });
+            searchPanel.Controls.AddRange(new Control[] { _searchBox, _hostFilter, btnRefresh, btnDeleteSel, btnClear });
 
-            // 命令列表
+            // 命令列表（F6：多选——Ctrl/Shift 选多条后「删选中」批量删）
             _historyList = new ListView
             {
                 Dock = DockStyle.Fill,
                 View = View.Details,
                 FullRowSelect = true,
+                MultiSelect = true,
                 GridLines = true,
                 HeaderStyle = ColumnHeaderStyle.Clickable
             };
@@ -126,6 +129,8 @@ namespace Gdterm.UI.Controls
             _hostFilter.SelectedIndexChanged += (s, e) => RefreshHistory();
             btnRefresh.Click += (s, e) => RefreshHistory();
             btnClear.Click += (s, e) => ClearHistory();
+            btnDeleteSel.Click += (s, e) => DeleteSelected();
+            _historyList.ItemSelectionChanged += (s, e) => { btnDeleteSel.Enabled = _historyList.SelectedItems.Count > 0; };
             _historyList.DoubleClick += OnItemDoubleClick;   // 旧路径保留（外部订阅者可能依赖）
 
             // 审计 C1 收尾（CI 0.1.348 实证）：构造后首刷一次。此前首次打开面板时
@@ -240,6 +245,37 @@ namespace Gdterm.UI.Controls
             {
                 try { DiagLog.Error("CommandHistory.Clear", ex); } catch (Exception) { }
                 ToastNotifier.Error(L10n.T("清空失败：") + ex.Message);
+            }
+        }
+
+        /// <summary>多选批量删除选中记录（F6；与「清空」不同——只删选中的，确认框带数量）。</summary>
+        private void DeleteSelected()
+        {
+            var entries = new System.Collections.Generic.List<CommandHistoryEntry>();
+            foreach (ListViewItem it in _historyList.SelectedItems)
+            {
+                var en = it.Tag as CommandHistoryEntry;
+                if (en != null) entries.Add(en);
+            }
+            if (entries.Count == 0) return;
+
+            var n = entries.Count;
+            if (MessageBox.Show(
+                    L10n.Tf("确定删除选中的 {0} 条命令记录吗？此操作不可撤销。", n),
+                    L10n.T("确认删除"),
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+
+            try
+            {
+                var removed = _store.DeleteByIds(entries.Select(e => e.Id));
+                RefreshHistory();
+                _statusLabel.Text = L10n.Tf("已删除 {0} 条记录", removed);
+                ToastNotifier.Success(L10n.Tf("已删除 {0} 条命令记录", removed));
+            }
+            catch (Exception ex)
+            {
+                try { DiagLog.Error("CommandHistory.DeleteSelected", ex); } catch (Exception) { }
+                ToastNotifier.Error(L10n.T("删除失败：") + ex.Message);
             }
         }
 
