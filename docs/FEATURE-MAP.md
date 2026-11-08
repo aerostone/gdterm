@@ -173,10 +173,10 @@
 |---|---|---|
 | 命令面板 `page.CommandPaletteForm` | 3/9 | 排序、分页/虚拟滚动、多选/批量、导出、撤销/回收站、加载中/忙碌 |
 | 密码库条目选择 `page.KeePassEntryPicker` | 3/9 | 排序、分页/虚拟滚动、多选/批量、导出、撤销/回收站、加载中/忙碌 |
-| 快速跳转 `page.ConnectionQuickJumpForm` | 3/9 | 排序、分页/虚拟滚动、多选/批量、导出、撤销/回收站、加载中/忙碌 |
 | 主机资源监控 `page.RemoteMonitorPanel` | 0/5 | 列表/数据展示、分页/虚拟滚动、键盘/快捷键、导出、空态引导 |
 | 健康监控 `page.HealthMonitorPanel` | 0/5 | 列表/数据展示、分页/虚拟滚动、键盘/快捷键、导出、空态引导 |
 | 外观设置 `page.AppearanceSettingsForm` | 2/7 | 危险操作确认、撤销/回收站、搜索/过滤、导入、导出 |
+| 快速跳转 `page.ConnectionQuickJumpForm` | 4/9 | 分页/虚拟滚动、多选/批量、导出、撤销/回收站、加载中/忙碌 |
 | 欢迎页 `page.WelcomePanel` | 3/8 | 列表/数据展示、回车/双击激活、搜索/过滤、加载中/忙碌、键盘/快捷键 |
 | AI 助手设置 `page.AiSettingsForm` | 2/6 | 撤销/回收站、搜索/过滤、导入、导出 |
 | 传输中心 `page.TransferCenterPanel` | 5/9 | 分页/虚拟滚动、多选/批量、撤销/回收站、加载中/忙碌 |
@@ -202,7 +202,6 @@
 | 传输进度 `page.TransferProgressDialog` | 0/2 | 键盘/快捷键、撤销/回收站 |
 | 宏录制 `page.MacroPanel` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
 | 密码生成器 `page.PasswordGeneratorForm` | 2/4 | 失败提示、撤销/回收站 |
-| 运维工具箱 `page.ToolboxPanel` | 4/6 | 搜索/过滤、加载中/忙碌 |
 | 连接树 `page.ConnectionTreeControl` | 6/8 | 加载中/忙碌、键盘/快捷键 |
 | SFTP 权限修改 `page.SftpPermissionForm` | 2/3 | 撤销/回收站 |
 | 修改主密码 `page.ChangeMasterPasswordForm` | 2/3 | 撤销/回收站 |
@@ -211,5 +210,6 @@
 | 批量命令 `page.BatchCommandPanel` | 3/4 | 撤销/回收站 |
 | 添加 OTP `page.AddOtpForm` | 3/4 | 撤销/回收站 |
 | 登录脚本 `page.LogonScriptPanel` | 3/4 | 撤销/回收站 |
+| 运维工具箱 `page.ToolboxPanel` | 5/6 | 加载中/忙碌 |
 | 连接导入/导出 `page.ConnectionImportExport` | 4/5 | 撤销/回收站 |
 

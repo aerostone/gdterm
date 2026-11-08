@@ -1024,7 +1024,7 @@ namespace Gdterm.UI.Forms
         {
             try
             {
-                using (var dlg = new ConnectionQuickJumpForm(_connectionStore))
+                using (var dlg = new ConnectionQuickJumpForm(_connectionStore, _bookmarkStore))
                 {
                     if (dlg.ShowDialog(this) == DialogResult.OK && dlg.Selected != null)
                         _openCoord?.OpenConnection(dlg.Selected);

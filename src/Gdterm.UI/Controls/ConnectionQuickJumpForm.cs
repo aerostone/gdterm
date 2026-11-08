@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using Gdterm.Connections;
+using Gdterm.Core;
 using Gdterm.Core.Models;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Services;
@@ -20,13 +21,38 @@ namespace Gdterm.UI.Controls
         private readonly AntdUI.Input _filter;
         private readonly ListBox _list;
         private List<ConnectionConfig> _all = new List<ConnectionConfig>();
+        private Dictionary<string, int> _recencyRank = new Dictionary<string, int>();
         private EmptyStateView _empty;
 
         public ConnectionConfig Selected { get; private set; }
 
         public ConnectionQuickJumpForm(IConnectionStore store)
+            : this(store, null)
+        {
+        }
+
+        /// <param name="bookmarkStore">提供「最近使用」排序（null 时按名称排）。</param>
+        public ConnectionQuickJumpForm(IConnectionStore store, IBookmarkStore bookmarkStore)
         {
             _store = store;
+            if (bookmarkStore != null)
+            {
+                try
+                {
+                    var recent = bookmarkStore.GetRecentConnections(50) ?? new List<RecentConnection>();
+                    int rank = 0;
+                    foreach (var r in recent)
+                    {
+                        if (r == null || string.IsNullOrEmpty(r.ConnectionId) || _recencyRank.ContainsKey(r.ConnectionId)) continue;
+                        _recencyRank[r.ConnectionId] = rank++;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    try { DiagLog.Swallowed("QuickJump.Recent", ex); } catch { }
+                    // 最近列表读失败 → 退回名称排序
+                }
+            }
             Text = L10n.T("快速跳转连接 (Ctrl+Shift+K)");
             FormBorderStyle = FormBorderStyle.FixedToolWindow;
             Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
@@ -97,8 +123,7 @@ namespace Gdterm.UI.Controls
         private void ApplyFilter()
         {
             var q = (_filter.Text ?? "").Trim().ToLowerInvariant();
-            _list.BeginUpdate();
-            _list.Items.Clear();
+            var matched = new List<ConnectionConfig>();
             foreach (var c in _all)
             {
                 if (c == null) continue;
@@ -114,8 +139,33 @@ namespace Gdterm.UI.Controls
                     || (c.Host ?? "").ToLowerInvariant().Contains(q)
                     || (c.GroupPath ?? "").ToLowerInvariant().Contains(q))
                 {
-                    _list.Items.Add(new Item { Config = c, Text = line });
+                    matched.Add(c);
                 }
+            }
+            // 排序（F5）：最近使用优先（rank 越小越近），未记录过的按名称
+            matched.Sort((a, b) =>
+            {
+                int ra, rb;
+                _recencyRank.TryGetValue(a.Id ?? "", out ra);
+                _recencyRank.TryGetValue(b.Id ?? "", out rb);
+                bool ha = _recencyRank.ContainsKey(a.Id ?? "");
+                bool hb = _recencyRank.ContainsKey(b.Id ?? "");
+                if (ha != hb) return ha ? -1 : 1;
+                if (ha && rb != ra) return ra.CompareTo(rb);
+                return string.Compare((a.Name ?? ""), (b.Name ?? ""),
+                    StringComparison.InvariantCulture);
+            });
+            _list.BeginUpdate();
+            _list.Items.Clear();
+            foreach (var c in matched)
+            {
+                var line = string.Format("{0}  [{1}]  {2}:{3}  {4}",
+                    c.Name ?? "",
+                    c.Protocol,
+                    c.Host ?? "",
+                    c.Port,
+                    c.GroupPath ?? "");
+                _list.Items.Add(new Item { Config = c, Text = line });
             }
             _list.EndUpdate();
             if (_empty != null) _empty.SetEmpty(_list.Items.Count == 0);

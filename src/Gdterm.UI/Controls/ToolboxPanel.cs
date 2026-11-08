@@ -16,6 +16,7 @@ namespace Gdterm.UI.Controls
     {
         private readonly ToolRegistry _registry;
         private readonly ListView _lvTools;
+        private readonly AntdUI.Input _filterTools;
         private readonly Panel _pnlDetail;
         private readonly AntdUI.Label _lblTitle;
         private readonly AntdUI.Label _lblDescription;
@@ -28,13 +29,32 @@ namespace Gdterm.UI.Controls
             Dock = DockStyle.Fill;
             BackColor = GdtermColorTable.Background;
 
-            // 左侧工具列表
+            // 左侧工具列表（F5：上方加过滤框）
             var split = new Splitter { Dock = DockStyle.Left, Width = 3, BackColor = GdtermColorTable.Surface };
 
-            _lvTools = new ListView
+            var pnlToolList = new Panel
             {
                 Dock = DockStyle.Left,
                 Width = 220,
+                BackColor = GdtermColorTable.Surface
+            };
+
+            _filterTools = new AntdUI.Input
+            {
+                Dock = DockStyle.Top,
+                MinimumSize = new Size(0, Services.FormFontPolicy.FieldHeight(this)),
+                Margin = new Padding(4, 4, 4, 2),
+                PlaceholderText = L10n.T("过滤工具…"),
+                AllowClear = true,
+                BackColor = GdtermColorTable.Background,
+                ForeColor = GdtermColorTable.Foreground,
+                Font = Services.FormFontPolicy.UiFont()
+            };
+            _filterTools.TextChanged += (s, e) => ApplyToolFilter();
+
+            _lvTools = new ListView
+            {
+                Dock = DockStyle.Fill,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = Services.FormFontPolicy.UiFont(),
@@ -44,6 +64,9 @@ namespace Gdterm.UI.Controls
             };
             _lvTools.Columns.Add("", 210);
             _lvTools.SelectedIndexChanged += OnToolSelected;
+
+            pnlToolList.Controls.Add(_lvTools);
+            pnlToolList.Controls.Add(_filterTools);
 
             // 右侧详情面板
             _pnlDetail = new Panel
@@ -104,7 +127,7 @@ namespace Gdterm.UI.Controls
 
             Controls.Add(_pnlDetail);
             Controls.Add(split);
-            Controls.Add(_lvTools);
+            Controls.Add(pnlToolList);
 
             LoadTools();
             RestoreLastTool();
@@ -133,6 +156,59 @@ namespace Gdterm.UI.Controls
                     item.Tag = tool;
                     item.ForeColor = GdtermColorTable.Foreground;
                     _lvTools.Items.Add(item);
+                }
+            }
+        }
+
+        /// <summary>按关键词过滤工具列表（F5；分类头仅在其下有可见工具时保留）。</summary>
+        private void ApplyToolFilter()
+        {
+            if (_registry == null) return;
+            var q = (_filterTools.Text ?? "").Trim().ToLowerInvariant();
+            string currentToolId = null;
+            foreach (ListViewItem it in _lvTools.SelectedItems)
+            {
+                var t = it.Tag as IToolModule;
+                if (t != null) { currentToolId = t.ToolId; break; }
+            }
+
+            _lvTools.BeginUpdate();
+            _lvTools.Items.Clear();
+            var visibleToolId = "";
+            foreach (var cat in _registry.GetCategories())
+            {
+                var catVisible = false;
+                foreach (var tool in _registry.GetByCategory(cat))
+                {
+                    if (q.Length > 0)
+                    {
+                        var hay = ((tool.DisplayName ?? "") + " " + (tool.ToolId ?? "") + " " + (tool.Description ?? "")).ToLowerInvariant();
+                        if (!hay.Contains(q)) continue;
+                    }
+                    if (!catVisible)
+                    {
+                        var groupItem = new ListViewItem("▸ " + cat);
+                        groupItem.ForeColor = GdtermColorTable.Info;
+                        groupItem.Font = Services.FormFontPolicy.UiFont(0f, FontStyle.Bold);
+                        _lvTools.Items.Add(groupItem);
+                        catVisible = true;
+                    }
+                    var item = new ListViewItem("    " + tool.DisplayName);
+                    item.Tag = tool;
+                    item.ForeColor = GdtermColorTable.Foreground;
+                    _lvTools.Items.Add(item);
+                    if (tool.ToolId == currentToolId) visibleToolId = tool.ToolId;
+                }
+            }
+            _lvTools.EndUpdate();
+
+            // 过滤后保持选中（当前工具仍可见时）
+            if (visibleToolId.Length > 0)
+            {
+                foreach (ListViewItem it in _lvTools.Items)
+                {
+                    var t = it.Tag as IToolModule;
+                    if (t != null && t.ToolId == visibleToolId) { it.Selected = true; break; }
                 }
             }
         }

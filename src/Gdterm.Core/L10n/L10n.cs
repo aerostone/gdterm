@@ -2217,6 +2217,7 @@ namespace Gdterm.Core
             // —— 权限对话框（SftpPermissionForm：其他可写确认） ——
             ["开放其他用户写权限"] = "Allow write access for other users",
             ["该权限允许机器上的其他用户修改此文件。\n确定应用？"] = "This permission lets other users on this machine modify this file.\nApply anyway?",
+            ["过滤工具…"] = "Filter tools…",
         };
     }
 }
