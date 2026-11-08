@@ -144,9 +144,26 @@ namespace Gdterm.UI.Forms
             Controls.Add(_statusLabel);
             y += Math.Max(DpiScale.V(this, 40), FormFontPolicy.RowStep(this));
 
-            int btnW = DpiScale.V(this, 90);
+            int btnW = DpiScale.V(this, 80);
             int btnGap = DpiScale.V(this, 8);
-            // 按钮：Windows 惯例主按钮最右，取消在其左（修复：原先主按钮在左侧）
+            // F11 导入/导出（API Key 由确认框决定是否含明文）+ 保存/取消；
+            // 左组[导入 导出]右组[取消 保存]（Windows 惯例主按钮最右）
+            var importButton = new AntdUI.Button {
+                Text = L10n.T("导入…"),
+                Size = new Size(btnW, fieldH),
+                Location = new Point(boxX, y)
+            };
+            importButton.Click += OnImportClick;
+            Controls.Add(importButton);
+
+            var exportButton = new AntdUI.Button {
+                Text = L10n.T("导出…"),
+                Size = new Size(btnW, fieldH),
+                Location = new Point(boxX + (btnW + btnGap), y)
+            };
+            exportButton.Click += OnExportClick;
+            Controls.Add(exportButton);
+
             var cancelButton = new AntdUI.Button {
                 Text = L10n.T("取消"),
                 Size = new Size(btnW, fieldH),
@@ -217,6 +234,88 @@ namespace Gdterm.UI.Forms
             {
                 _statusLabel.Text = L10n.T("加载配置失败：") + ex.Message;
                 _statusLabel.ForeColor = GdtermColorTable.Danger;
+            }
+        }
+
+        /// <summary>F11 导出——YesNo 决定是否含明文 API Key；掩码导出时文件可安全分享，导入端保留本机 Key。</summary>
+        private void OnExportClick(object sender, EventArgs e)
+        {
+            if (string.IsNullOrWhiteSpace(_endpointBox.Text) || string.IsNullOrWhiteSpace(_modelBox.Text))
+            {
+                _statusLabel.Text = L10n.T("端点 URL 和模型名称未填写完整，无法导出");
+                _statusLabel.ForeColor = GdtermColorTable.Danger;
+                return;
+            }
+
+            // 确认框语义：确认=含明文 Key，取消=掩码导出（AntdUI.Modal 无自定义按钮文本的重载）
+            var include = AntdUI.Modal.open(this,
+                L10n.T("导出 AI 设置"),
+                L10n.T("是否将明文 API Key 写入导出文件？\n\n· 点「确认」：文件含明文密钥，请妥善保管、勿外传\n· 点「取消」：掩码导出（Key 留空），导入到别处时保留该机器现有 Key"),
+                AntdUI.TType.Warn);
+            bool includeKey = include == DialogResult.Yes || include == DialogResult.OK;
+            if (include == DialogResult.Cancel) return; // 对话框被关闭（非按钮）= 放弃导出
+
+            using (var ofd = new System.Windows.Forms.SaveFileDialog
+            {
+                Title = L10n.T("导出 AI 设置"),
+                Filter = "AI 设置 (*.json)|*.json",
+                FileName = "gdterm-ai-settings.json"
+            })
+            {
+                if (ofd.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    AiSettingsFile.ExportTo(
+                        ofd.FileName,
+                        _nameBox.Text.Trim(),
+                        _endpointBox.Text.Trim(),
+                        _modelBox.Text.Trim(),
+                        (int)_maxTokensSpinner.Value,
+                        (double)_temperatureSpinner.Value,
+                        _apiKeyBox.Text,
+                        includeKey);
+                    _statusLabel.Text = L10n.T("已导出") + (includeKey ? "" : L10n.T("（掩码，不含 Key）"));
+                    _statusLabel.ForeColor = GdtermColorTable.Success;
+                }
+                catch (System.Exception ex)
+                {
+                    _statusLabel.Text = L10n.Tf("导出失败: {0}", ex.Message);
+                    _statusLabel.ForeColor = GdtermColorTable.Danger;
+                }
+            }
+        }
+
+        /// <summary>F11 导入——读文件回显到表单（不直接保存，用户确认后再点保存生效）；
+        /// 文件 Key 为空时保留当前表单里的 Key。</summary>
+        private void OnImportClick(object sender, EventArgs e)
+        {
+            using (var ofd = new System.Windows.Forms.OpenFileDialog
+            {
+                Title = L10n.T("导入 AI 设置"),
+                Filter = "AI 设置 (*.json)|*.json"
+            })
+            {
+                if (ofd.ShowDialog(this) != DialogResult.OK) return;
+                AiSettingsFile.ImportResult r;
+                try { r = AiSettingsFile.ImportFrom(ofd.FileName); }
+                catch (System.Exception ex)
+                {
+                    _statusLabel.Text = L10n.Tf("导入失败: {0}", ex.Message);
+                    _statusLabel.ForeColor = GdtermColorTable.Danger;
+                    return;
+                }
+                if (!string.IsNullOrEmpty(r.Name)) _nameBox.Text = r.Name;
+                _endpointBox.Text = r.Endpoint;
+                _modelBox.Text = r.Model;
+                if (!r.KeyPresent) _statusLabel.Text = L10n.T("已导入（掩码文件，API Key 保留本机现有值）");
+                else
+                {
+                    _apiKeyBox.Text = r.ApiKey;
+                    _statusLabel.Text = L10n.T("已导入（含明文 Key）");
+                }
+                if (r.MaxTokens.HasValue) _maxTokensSpinner.Value = r.MaxTokens.Value;
+                if (r.Temperature.HasValue) _temperatureSpinner.Value = (decimal)r.Temperature.Value;
+                _statusLabel.ForeColor = GdtermColorTable.Success;
             }
         }
 

@@ -51,9 +51,10 @@
       "known_gaps": [],
       "manual_ok": [],
       "drop_caps": [
-        "empty"
+        "empty",
+        "undo"
       ],
-      "note": "进度对话框：只该有「进行中/失败」两态"
+      "note": "进度展示窗：无破坏性操作（undo N/A）；取消/关闭支持鼠标+ESC（F11 CancelButton）"
     },
     {
       "id": "page.FilePaneControl",
@@ -159,9 +160,11 @@
       "known_gaps": [],
       "manual_ok": [],
       "drop_caps": [
-        "confirm"
+        "confirm",
+        "undo",
+        "search"
       ],
-      "note": "保存模型配置非破坏性（可再改/删除）；失败已有内联红字提示。"
+      "note": "草稿式设置窗：取消=丢弃修改（无撤销）；固定 7 字段无可过滤清单；导入/导出已实现（F11，掩码策略+YesNo 含 Key 确认）"
     },
     {
       "id": "page.OtpManagerForm",
@@ -185,7 +188,11 @@
       ],
       "known_gaps": [],
       "manual_ok": [],
-      "note": "导入表单（无列表）：校验 + 键盘；列表能力不适用，原判为 list 属误分类"
+      "note": "导入即新增带时间戳条目（无覆盖/删除类危险操作，confirm/undo N/A）；弱口令确认已有（KeePassPasswordWarning）",
+      "drop_caps": [
+        "confirm",
+        "undo"
+      ]
     },
     {
       "id": "page.TransferCenterPanel",
@@ -421,9 +428,13 @@
       "manual_ok": [
         "persist"
       ],
-      "note": "对话框本身不落盘：ConnectionOpenCoordinator.NewConnection 里 `_store?.Add(dlg.Result)`（ConnectionOpenCoordinator.cs:81） 连接以 GUID 为主键（ConnectionStoreJson.Add），同名新建并存不互相覆盖，无覆盖确认场景。",
+      "note": "草稿式属性窗：取消=丢弃（undo N/A）；固定字段表单无过滤清单（search N/A）；单连接导入/导出统一在「连接导入/导出」页",
       "drop_caps": [
-        "confirm"
+        "confirm",
+        "undo",
+        "search",
+        "import",
+        "export"
       ]
     },
     {
@@ -432,12 +443,17 @@
       "menu": "终端 > AI 助手",
       "type": "panel",
       "src": [
-        "src/Gdterm.UI/Controls/AiChatPanel.cs"
+        "src/Gdterm.UI/Controls/AiChatPanel.cs",
+        "src/Gdterm.AI/ChatHistoryStore.cs"
       ],
       "known_gaps": [
         "对话历史按连接键控：当前全局单历史（data/ai-chat-history.json，跨重启保留），按连接隔离为后续增强"
       ],
-      "manual_ok": []
+      "manual_ok": [],
+      "drop_caps": [
+        "list"
+      ],
+      "note": "聊天=RichTextBox 连续文本流（非列表控件，list N/A）；persist 证据在 ChatHistoryStore（F4，跨重启回显）；loading=SetBusy 忙碌态（F11：禁发送+placeholder）"
     },
     {
       "id": "page.RemoteMonitorPanel",
@@ -448,10 +464,14 @@
         "src/Gdterm.UI/Controls/RemoteMonitorPanel.cs"
       ],
       "drop_caps": [
-        "paging"
+        "paging",
+        "keyboard"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [
+        "empty"
+      ],
+      "note": "空态=行内状态行（无活动 SSH 会话（连上后自动开始））+首帧 Marquee 加载条（实时指标面板用行内引导，overlay 会遮住指标骨架）；只读面板无行操作（keyboard N/A）"
     },
     {
       "id": "page.HealthMonitorPanel",
@@ -462,10 +482,14 @@
         "src/Gdterm.UI/Controls/HealthMonitorPanel.cs"
       ],
       "drop_caps": [
-        "paging"
+        "paging",
+        "keyboard"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [
+        "empty"
+      ],
+      "note": "空态=行内 hint（正在等待首个采样…/连接已断开，正在等待重连…）+状态点（○ 断开）；只读面板无行操作（keyboard N/A）"
     },
     {
       "id": "page.DangerousCommandDialog",
@@ -587,7 +611,11 @@
         "src/Gdterm.UI/Controls/ListShell.cs"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [],
+      "drop_caps": [
+        "paging"
+      ],
+      "note": "用户自维护收藏集有界（滚动足够，虚拟化 N/A）；分页归全局虚拟滚动决策"
     },
     {
       "id": "page.SetupWizardForm",

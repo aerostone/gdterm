@@ -171,9 +171,6 @@
 
 | 页面 | 已有/总数 | 缺口 |
 |---|---|---|
-| AI 助手设置 `page.AiSettingsForm` | 2/6 | 撤销/回收站、搜索/过滤、导入、导出 |
-| 连接属性 `page.ConnectionDialog` | 2/6 | 撤销/回收站、搜索/过滤、导入、导出 |
-| AI 助手 `page.AiChatPanel` | 5/8 | 列表/数据展示、加载中/忙碌、配置持久化 |
 | 传输中心 `page.TransferCenterPanel` | 6/9 | 分页/虚拟滚动、撤销/回收站、加载中/忙碌 |
 | 危险命令规则 `page.DangerousCommandConfigForm` | 6/9 | 分页/虚拟滚动、多选/批量、撤销/回收站 |
 | 命令模板库 `page.CommandTemplatePanel` | 6/9 | 分页/虚拟滚动、撤销/回收站、加载中/忙碌 |
@@ -187,11 +184,6 @@
 | 通知中心 `page.NotificationCenterPanel` | 6/9 | 分页/虚拟滚动、撤销/回收站、加载中/忙碌 |
 | OTP 动态码管理 `page.OtpManagerForm` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
 | SFTP 双栏 `page.SftpDualPanePanel` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
-| SSH 密钥管理 `page.SshKeyManagerForm` | 3/5 | 危险操作确认、撤销/回收站 |
-| 主机资源监控 `page.RemoteMonitorPanel` | 2/4 | 键盘/快捷键、空态引导 |
-| 书签 / 最近连接 `page.SessionBookmarksPanel` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
-| 传输进度 `page.TransferProgressDialog` | 0/2 | 键盘/快捷键、撤销/回收站 |
-| 健康监控 `page.HealthMonitorPanel` | 2/4 | 键盘/快捷键、空态引导 |
 | 命令历史 `page.CommandHistoryPanel` | 7/9 | 分页/虚拟滚动、加载中/忙碌 |
 | 宏录制 `page.MacroPanel` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
 | 密码生成器 `page.PasswordGeneratorForm` | 2/4 | 失败提示、撤销/回收站 |
@@ -199,7 +191,10 @@
 | 连接树 `page.ConnectionTreeControl` | 6/8 | 加载中/忙碌、键盘/快捷键 |
 | 高亮规则 `page.HighlightRulePanel` | 7/9 | 分页/虚拟滚动、加载中/忙碌 |
 | SFTP 权限修改 `page.SftpPermissionForm` | 2/3 | 撤销/回收站 |
+| 主机资源监控 `page.RemoteMonitorPanel` | 2/3 | 空态引导 |
+| 书签 / 最近连接 `page.SessionBookmarksPanel` | 7/8 | 撤销/回收站 |
 | 修改主密码 `page.ChangeMasterPasswordForm` | 2/3 | 撤销/回收站 |
+| 健康监控 `page.HealthMonitorPanel` | 2/3 | 空态引导 |
 | 密码库解锁 `page.KeePassUnlockForm` | 2/3 | 撤销/回收站 |
 | 快捷命令编辑 `page.QuickCommandEditorForm` | 3/4 | 撤销/回收站 |
 | 批量命令 `page.BatchCommandPanel` | 3/4 | 撤销/回收站 |

@@ -34,6 +34,16 @@ namespace Gdterm.UI.Controls
         private bool _sending;
         private EmptyStateView _empty;
 
+        /// <summary>F11 忙碌态切换用的空闲 placeholder（避免魔法字符串散落）。</summary>
+        private static string PlaceholderIdle { get { return L10n.T("问 AI：如 这台机器 CPU 为什么这么高？"); } }
+
+        /// <summary>F11 忙碌态：发送按钮 + placeholder 联动切换（开始发送/完成/失败都走这里）。</summary>
+        private void SetBusy(bool busy)
+        {
+            _btnSend.Enabled = !busy;
+            _inputBox.PlaceholderText = busy ? L10n.T("AI 生成中，请稍候…") : PlaceholderIdle;
+        }
+
         public AiChatPanel(IAiAssistantService aiService, Func<TerminalControl> getActiveTerminal)
         {
             _aiService = aiService ?? throw new ArgumentNullException("aiService");
@@ -121,7 +131,7 @@ namespace Gdterm.UI.Controls
                 MinimumSize = new Size(0, fieldH),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
-                PlaceholderText = L10n.T("问 AI：如 这台机器 CPU 为什么这么高？")
+                PlaceholderText = PlaceholderIdle
             };
             _inputBox.KeyDown += OnInputKeyDown;
             bottomRow.Controls.Add(_inputBox, 0, 0);
@@ -196,6 +206,7 @@ namespace Gdterm.UI.Controls
             _inputBox.Text = "";
             _sending = true;
             _statusLabel.Text = L10n.T("AI 思考中…");
+            SetBusy(true);   // F11 忙碌态：禁发送防重复提交 + placeholder 提示等待
             _cmdBar.Controls.Clear();
             _cmdBar.Visible = false;
             AppendUser(text);
@@ -240,6 +251,7 @@ namespace Gdterm.UI.Controls
                     BeginInvoke(new Action(() =>
                     {
                         _sending = false;
+                        SetBusy(false);
                         _statusLabel.Text = L10n.T("发送失败");
                         AppendSys(L10n.T("AI 调用失败：") + ex.Message);
                     }));
@@ -250,6 +262,7 @@ namespace Gdterm.UI.Controls
         private void OnSendDone(Gdterm.AI.Models.AiResponse resp)
         {
             _sending = false;
+            SetBusy(false);
             try { if (_cts != null) { _cts.Dispose(); _cts = null; } } catch { }
             if (resp == null || !resp.IsSuccess)
             {

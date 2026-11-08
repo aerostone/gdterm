@@ -97,6 +97,8 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 4), DpiScale.V(this, 12), DpiScale.V(this, 4))
             };
             _cancelButton.Click += OnCancelClick;
+            // F11 键盘：ESC 走取消按钮（完成态=关闭，进行中=取消传输——与鼠标点击同分支）
+            CancelButton = _cancelButton;
 
             // 底部行：RightToLeft 流序使先加入的靠右 —— 取消按钮在右、百分比在其左
             bottomFlow.Controls.Add(_percentLabel);

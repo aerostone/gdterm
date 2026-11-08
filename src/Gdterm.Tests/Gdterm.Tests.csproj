@@ -103,6 +103,7 @@
     <Compile Include="Core\CredentialPayloadTests.cs" />
     <Compile Include="Logging\LogSanitizerTests.cs" />
     <Compile Include="Ai\ChatHistoryStoreTests.cs" />
+    <Compile Include="Ai\AiSettingsFileTests.cs" />
     <Compile Include="Logging\CommandHistoryStoreTests.cs" />
     <Compile Include="Connections\ConnectionStoreJsonTests.cs" />
     <Compile Include="Connections\ExternalFormatImporterTests.cs" />

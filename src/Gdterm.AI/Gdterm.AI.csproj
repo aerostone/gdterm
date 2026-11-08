@@ -53,6 +53,7 @@
     <Compile Include="AiAssistantService.cs" />
     <Compile Include="ChatHistoryStore.cs" />
     <Compile Include="AiModelStore.cs" />
+    <Compile Include="AiSettingsFile.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
