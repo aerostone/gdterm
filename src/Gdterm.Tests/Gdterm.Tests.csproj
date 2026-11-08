@@ -102,6 +102,7 @@
     <Compile Include="Core\DefaultPortsTests.cs" />
     <Compile Include="Core\CredentialPayloadTests.cs" />
     <Compile Include="Logging\LogSanitizerTests.cs" />
+    <Compile Include="Ai\ChatHistoryStoreTests.cs" />
     <Compile Include="Connections\ConnectionStoreJsonTests.cs" />
     <Compile Include="Connections\ExternalFormatImporterTests.cs" />
     <Compile Include="Core\OnlineLinksTests.cs" />

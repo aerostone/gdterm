@@ -41,6 +41,26 @@ namespace Gdterm.UI.Controls
             Dock = DockStyle.Fill;
             BackColor = GdtermColorTable.Background;
             BuildUI();
+            RenderPersistedHistory();
+        }
+
+        /// <summary>回显跨重启保留的对话历史（F4；空历史时保持空态引导）。</summary>
+        private void RenderPersistedHistory()
+        {
+            IList<Gdterm.AI.Models.ChatMessage> hist;
+            try { hist = _aiService.GetHistory(); }
+            catch (Exception ex) { DiagLog.Swallowed("AiChatPanel.RenderHistory", ex); return; }
+            if (hist == null || hist.Count == 0) return;
+            foreach (var m in hist)
+            {
+                if (m == null) continue;
+                if (m.Role == "user")
+                    AppendUser(m.Content ?? "");
+                else if (m.Role == "assistant")
+                    AppendLine("AI： " + (m.Content ?? ""), GdtermColorTable.Foreground, false);
+                // system 消息不落历史（_history 只存 user/assistant），其余角色跳过
+            }
+            if (_empty != null) _empty.SetEmpty(false);
         }
 
         private void BuildUI()

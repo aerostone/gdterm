@@ -405,7 +405,7 @@
         "src/Gdterm.UI/Controls/AiChatPanel.cs"
       ],
       "known_gaps": [
-        "对话历史持久化：历史存于 IAiAssistantService 内存，跨重启保留为独立功能（需按连接键控存储）"
+        "对话历史按连接键控：当前全局单历史（data/ai-chat-history.json，跨重启保留），按连接隔离为后续增强"
       ],
       "manual_ok": []
     },

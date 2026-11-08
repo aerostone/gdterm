@@ -36,6 +36,11 @@ namespace Gdterm.AI
         void ClearHistory();
 
         /// <summary>
+        /// 当前对话历史快照（只读副本）
+        /// </summary>
+        IList<ChatMessage> GetHistory();
+
+        /// <summary>
         /// AI 服务配置
         /// </summary>
         AiConfiguration Configuration { get; set; }

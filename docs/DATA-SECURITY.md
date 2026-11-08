@@ -3,6 +3,7 @@
 ## 已保护
 - 密码 / SSH 私钥：仅存 KeePass `data/gdterm.kdbx`（主密码）
 - AI ApiKey：`gdk2:` 主密码 AES（`data/config/ai-models.json`）
+- AI 对话历史：明文 JSON（`data/ai-chat-history.json`），只存用户消息与 AI 回复，不含连接上下文注入/凭据；AI 面板「清空」即时落盘清空
 - 主密码哈希：PBKDF2-HMAC-SHA256 100k（`data/master-password.json`）
 - 连接主机/用户名：有主密码时写 `gdh2:` 保护字段（`data/connections.json`）；旧明文仍可读
 

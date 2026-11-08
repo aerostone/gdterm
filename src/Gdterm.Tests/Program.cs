@@ -1,4 +1,5 @@
 using System;
+using Gdterm.Tests.Ai;
 using Gdterm.Tests.Connections;
 using Gdterm.Tests.Core;
 using Gdterm.Tests.Logging;
@@ -35,6 +36,7 @@ namespace Gdterm.Tests
             DefaultPortsTests.Run();
             LogSanitizerTests.Run();
             ConnectionStoreJsonTests.Run();
+            ChatHistoryStoreTests.Run();
             ExternalFormatImporterTests.Run();
             OnlineLinksTests.Run();
             OtpTests.Run();

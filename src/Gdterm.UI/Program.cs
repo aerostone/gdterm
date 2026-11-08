@@ -265,7 +265,9 @@ namespace Gdterm.UI
                 MaxTokens = 2048,
                 Temperature = 0.7
             };
-            var aiService = new AiAssistantService(aiConfig);
+            // AI 对话历史持久化（F4：data/ai-chat-history.json，跨重启保留；清空按钮仍即时生效）
+            var aiService = new AiAssistantService(aiConfig,
+                new Gdterm.AI.ChatHistoryStore(Path.Combine(dataDir, "ai-chat-history.json")));
             var dangerousCmdDetector = new DangerousCommandDetector(dangerousCmdPath);
             var folderCredStore = new FolderCredentialStoreJson(folderCredPath);
             var sessionStateStore = new SessionStateStore(sessionStatePath);

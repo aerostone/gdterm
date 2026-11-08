@@ -51,6 +51,7 @@
     <Compile Include="Models\ChatMessage.cs" />
     <Compile Include="Models\AiModelConfig.cs" />
     <Compile Include="AiAssistantService.cs" />
+    <Compile Include="ChatHistoryStore.cs" />
     <Compile Include="AiModelStore.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

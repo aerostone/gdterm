@@ -19,6 +19,7 @@ namespace Gdterm.AI
     public class AiAssistantService : IAiAssistantService, IDisposable
     {
         private readonly List<ChatMessage> _history = new List<ChatMessage>();
+        private readonly ChatHistoryStore _historyStore;
         /// <summary>对话历史硬顶（user+assistant 合计条数），防长会话内存/token 膨胀</summary>
         public int MaxHistoryMessages { get; set; } = 40;
         private static readonly HttpClient _httpClient = new HttpClient
@@ -32,8 +33,46 @@ namespace Gdterm.AI
         public AiConfiguration Configuration { get; set; }
 
         public AiAssistantService(AiConfiguration configuration)
+            : this(configuration, null)
+        {
+        }
+
+        /// <summary>
+        /// 带历史持久化的构造（data/ai-chat-history.json；historyStore 为 null 时纯内存）。
+        /// </summary>
+        public AiAssistantService(AiConfiguration configuration, ChatHistoryStore historyStore)
         {
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+            _historyStore = historyStore;
+            if (_historyStore != null)
+            {
+                try
+                {
+                    var loaded = _historyStore.Load();
+                    if (loaded != null && loaded.Count > 0)
+                    {
+                        var list = new List<ChatMessage>(loaded);
+                        var cap = MaxHistoryMessages > 0 ? MaxHistoryMessages : 40;
+                        if (list.Count > cap)
+                            _history.AddRange(list.GetRange(list.Count - cap, cap));
+                        else
+                            _history.AddRange(list);
+                    }
+                }
+                catch
+                {
+                    // 历史加载失败不阻断 AI 功能（store.Load 本身已吞异常，此处双保险）
+                }
+            }
+        }
+
+        /// <summary>当前对话历史快照（只读副本）——供 UI 回显。</summary>
+        public IList<ChatMessage> GetHistory()
+        {
+            lock (_history)
+            {
+                return new List<ChatMessage>(_history);
+            }
         }
 
         public async Task<AiResponse> SendMessageAsync(string message, ITerminalSession session, CancellationToken ct)
@@ -136,6 +175,7 @@ namespace Gdterm.AI
         public void ClearHistory()
         {
             _history.Clear();
+            PersistHistory();
         }
 
         private void AppendHistory(ChatMessage msg)
@@ -146,6 +186,17 @@ namespace Gdterm.AI
             // 成对裁剪，尽量保留完整 user/assistant 轮次
             while (_history.Count > cap)
                 _history.RemoveAt(0);
+            PersistHistory();
+        }
+
+        private void PersistHistory()
+        {
+            if (_historyStore == null) return;
+            try { _historyStore.Save(_history); }
+            catch
+            {
+                // 历史落盘失败不阻断对话（下次 Append/Clear 会再试）
+            }
         }
 
         private string BuildSystemPrompt(ITerminalSession session)
