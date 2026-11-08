@@ -17,7 +17,6 @@ namespace Gdterm.Logging
     {
         private readonly string _logDirectory;
         private readonly object _lock = new object();
-        private StreamWriter _writer;
         private string _currentFilePath;
         private long _currentFileSize;
         private bool _disposed;
@@ -72,8 +71,12 @@ namespace Gdterm.Logging
                 }
 
                 var json = SerializeEntry(entry);
-                _writer.WriteLine(json);
-                _writer.Flush();
+                // 逐写 open/flush/close，不持长驻写句柄。
+                // 0.1.452 红线 + GHA 两次实跑（db54bdd 后 FileShare.Read 仍在）：
+                // 长驻 _writer 让自己的 Query 读回当前文件共享违例被吞→历史页静默返空。
+                // FileShare.Read 按 Windows 语义本应放行读，但双平台（AppVeyor/GHA）
+                // 确定性复现，机制存疑不如设计定音：写时短开短关，读时无己方句柄。
+                File.AppendAllText(_currentFilePath, json + Environment.NewLine, Encoding.UTF8);
                 _currentFileSize += json.Length + Environment.NewLine.Length;
             }
         }
@@ -87,14 +90,12 @@ namespace Gdterm.Logging
 
             lock (_lock)
             {
-                _writer?.Flush();
-
                 var files = GetLogFilesSorted();
                 foreach (var file in files)
                 {
                     try
                     {
-                        var lines = File.ReadAllLines(file, Encoding.UTF8);
+                        var lines = ReadLinesRetrying(file);
                         foreach (var line in lines)
                         {
                             if (string.IsNullOrWhiteSpace(line)) continue;
@@ -167,12 +168,11 @@ namespace Gdterm.Logging
 
         lock (_lock)
         {
-            try { _writer?.Flush(); } catch (Exception) { }
             foreach (var file in GetLogFilesSorted())
             {
                 try
                 {
-                    var lines = File.ReadAllLines(file, Encoding.UTF8);
+                    var lines = ReadLinesRetrying(file);
                     var keep = new List<string>(lines.Length);
                     int hit = 0;
                     foreach (var line in lines)
@@ -194,15 +194,8 @@ namespace Gdterm.Logging
 
     public void Dispose()
         {
-            if (_disposed) return;
+            // 无长驻句柄后 Dispose 幂等空操作（保留接口：Program/FormClosed 与 smoke 仍在调）
             _disposed = true;
-
-            lock (_lock)
-            {
-                _writer?.Flush();
-                _writer?.Dispose();
-                _writer = null;
-            }
         }
 
         /// <summary>
@@ -214,21 +207,13 @@ namespace Gdterm.Logging
             int removed = 0;
             lock (_lock)
             {
-                try
-                {
-                    _writer?.Flush();
-                    _writer?.Dispose();
-                }
-                catch (Exception) { }
-                _writer = null;
-
                 foreach (var f in GetLogFilesSorted())
                 {
                     try { File.Delete(f); removed++; }
                     catch (Exception ex) { try { System.Diagnostics.Debug.WriteLine("ClearAll: " + ex.Message); } catch (Exception) { } }
                 }
-                // 重新开一个空文件，后续 RecordCommand 继续可用
-                InitializeCurrentFile();
+                // 重置当前文件指针，后续 RecordCommand 继续可用
+                _currentFileSize = 0;
             }
             return removed;
         }
@@ -236,23 +221,15 @@ namespace Gdterm.Logging
         private void InitializeCurrentFile()
         {
             _currentFilePath = Path.Combine(_logDirectory, $"commands-{DateTime.UtcNow:yyyyMMdd-HHmmss}.jsonl");
-            // FileShare.Read：store 生命期内 _writer 一直开着（滚动/Dispose 才关），
-            // 默认 FileShare.None 会让自己的 Query/DeleteByIds 读当前文件时
-            // 共享违例（GHA 实证 = 0.1.452 红线根因）→ 命令历史页静默返空
-            _writer = new StreamWriter(
-                new FileStream(_currentFilePath, FileMode.Append, FileAccess.Write, FileShare.Read),
-                Encoding.UTF8);
-            _currentFileSize = new FileInfo(_currentFilePath).Length;
+            var fi = new FileInfo(_currentFilePath);
+            _currentFileSize = fi.Exists ? fi.Length : 0;
         }
 
         private void RotateFile()
         {
-            _writer?.Flush();
-            _writer?.Dispose();
-            _writer = null;
-
             CleanupOldFiles();
-            InitializeCurrentFile();
+            _currentFilePath = Path.Combine(_logDirectory, $"commands-{DateTime.UtcNow:yyyyMMdd-HHmmss}.jsonl");
+            _currentFileSize = 0;
         }
 
         private void CleanupOldFiles()
@@ -270,6 +247,35 @@ namespace Gdterm.Logging
             return Directory.GetFiles(_logDirectory, "commands-*.jsonl")
                 .OrderByDescending(f => f)
                 .ToList();
+        }
+
+        /// <summary>
+        /// 读当前/历史 jsonl：FileShare.ReadWrite 放宽共享 + IOException 重试 3×150ms。
+        /// 重试不是为了遮丑——写端已短开短关、无己方长驻句柄，剩下能撞上的只有
+        /// 外部瞬时句柄（CI 镜像 AV 扫描窗口等），短等重试是成本最低的容错。
+        /// 重试耗尽仍失败→原样招出（由调用方的 catch 记 LastDeserializationError）。
+        /// </summary>
+        private static string[] ReadLinesRetrying(string file)
+        {
+            for (int attempt = 0; ; attempt++)
+            {
+                try
+                {
+                    using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    using (var sr = new StreamReader(fs, Encoding.UTF8))
+                    {
+                        var list = new List<string>();
+                        string line;
+                        while ((line = sr.ReadLine()) != null)
+                            list.Add(line);
+                        return list.ToArray();
+                    }
+                }
+                catch (IOException) when (attempt < 2)
+                {
+                    System.Threading.Thread.Sleep(150);
+                }
+            }
         }
 
         private bool MatchesQuery(CommandHistoryEntry entry, CommandHistoryQuery query)

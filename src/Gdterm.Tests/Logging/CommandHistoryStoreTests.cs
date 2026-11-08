@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Gdterm.Core.Models;
 using Gdterm.Logging;
 
@@ -41,10 +42,33 @@ namespace Gdterm.Tests.Logging
                         Console.WriteLine("[diag] files=" + files.Length);
                         foreach (var f in files)
                         {
-                            var lines = File.ReadAllLines(f, System.Text.Encoding.UTF8);
-                            Console.WriteLine("[diag] " + Path.GetFileName(f) + " lines=" + lines.Length);
-                            foreach (var l in lines)
-                                Console.WriteLine("[diag] raw: " + (l.Length > 400 ? l.Substring(0, 400) : l));
+                            // 探针 1：File.ReadAllLines（FileShare.Read）
+                            try
+                            {
+                                var l1 = File.ReadAllLines(f, Encoding.UTF8);
+                                Console.WriteLine("[probe] ReadAllLines OK lines=" + l1.Length);
+                            }
+                            catch (Exception e1) { Console.WriteLine("[probe] ReadAllLines FAIL: " + e1.Message); }
+                            // 探针 2：显式 Read + FileShare.ReadWrite
+                            try
+                            {
+                                using (var fs = new FileStream(f, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                                using (var sr = new StreamReader(fs, Encoding.UTF8))
+                                {
+                                    int n = 0;
+                                    while (sr.ReadLine() != null) n++;
+                                    Console.WriteLine("[probe] explicit Read(ReadWrite share) OK lines=" + n);
+                                }
+                            }
+                            catch (Exception e2) { Console.WriteLine("[probe] explicit Read FAIL: " + e2.Message); }
+                            // 探针 3：等 500ms 再读——区分「瞬时外部句柄（AV 扫描窗）」vs「结构性锁」
+                            System.Threading.Thread.Sleep(500);
+                            try
+                            {
+                                var l3 = File.ReadAllLines(f, Encoding.UTF8);
+                                Console.WriteLine("[probe] after-500ms ReadAllLines OK lines=" + l3.Length);
+                            }
+                            catch (Exception e3) { Console.WriteLine("[probe] after-500ms ReadAllLines FAIL: " + e3.Message); }
                         }
                     }
                     catch (Exception dex) { Console.WriteLine("[diag] diag failed: " + dex.Message); }
