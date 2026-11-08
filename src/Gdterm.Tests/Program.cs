@@ -33,32 +33,44 @@ namespace Gdterm.Tests
             Console.WriteLine("=== gdterm unit tests (zero-NuGet runner) ===");
             Assert.Reset();
 
-            DefaultPortsTests.Run();
-            LogSanitizerTests.Run();
-            ConnectionStoreJsonTests.Run();
-            ChatHistoryStoreTests.Run();
-            AiAssistantServiceTests.Run();
-            CommandHistoryStoreTests.Run();
-            ExternalFormatImporterTests.Run();
-            OnlineLinksTests.Run();
-            OtpTests.Run();
-            CredentialPayloadTests.Run();
-            SecretFindingTests.Run();
-            SecurityManagerHashTests.Run();
-            SftpSyncPlannerTests.Run();
-            SftpPermissionTests.Run();
-            TerminalProfileTests.Run();
-            VtTerminalEngineTests.Run();
-            TerminalNotificationTests.Run();
-            TriggerAndLimitsTests.Run();
-            ZmodemReceiverTests.Run();
-            MacroRecorderTests.Run();
-            ScanPluginTests.Run();
-            AiSettingsFileTests.Run();
-            PaletteUsageStoreTests.Run();
+            // 单测抛异常不允许拖死整个进程——GHA 实证（0.1.4xx）：一个测试的
+            // IndexOutOfRange 未捕获，后续全部测试未跑、证据只剩第一个失败。
+            void RunTest(string name, Action run)
+            {
+                try { run(); }
+                catch (Exception ex)
+                {
+                    Assert.True(false, name + " threw: " + ex.GetType().Name + ": " + ex.Message);
+                    Console.WriteLine(ex.StackTrace);
+                }
+            }
+
+            RunTest("DefaultPorts", DefaultPortsTests.Run);
+            RunTest("LogSanitizer", LogSanitizerTests.Run);
+            RunTest("ConnectionStoreJson", ConnectionStoreJsonTests.Run);
+            RunTest("ChatHistoryStore", ChatHistoryStoreTests.Run);
+            RunTest("AiAssistantService", AiAssistantServiceTests.Run);
+            RunTest("CommandHistoryStore", CommandHistoryStoreTests.Run);
+            RunTest("ExternalFormatImporter", ExternalFormatImporterTests.Run);
+            RunTest("OnlineLinks", OnlineLinksTests.Run);
+            RunTest("Otp", OtpTests.Run);
+            RunTest("CredentialPayload", CredentialPayloadTests.Run);
+            RunTest("SecretFinding", SecretFindingTests.Run);
+            RunTest("SecurityManagerHash", SecurityManagerHashTests.Run);
+            RunTest("SftpSyncPlanner", SftpSyncPlannerTests.Run);
+            RunTest("SftpPermission", SftpPermissionTests.Run);
+            RunTest("TerminalProfile", TerminalProfileTests.Run);
+            RunTest("VtTerminalEngine", VtTerminalEngineTests.Run);
+            RunTest("TerminalNotification", TerminalNotificationTests.Run);
+            RunTest("TriggerAndLimits", TriggerAndLimitsTests.Run);
+            RunTest("ZmodemReceiver", ZmodemReceiverTests.Run);
+            RunTest("MacroRecorder", MacroRecorderTests.Run);
+            RunTest("ScanPlugin", ScanPluginTests.Run);
+            RunTest("AiSettingsFile", AiSettingsFileTests.Run);
+            RunTest("PaletteUsageStore", PaletteUsageStoreTests.Run);
 
             // 可观测性失败信号（A4/A5/A8/A9）——依赖 CrashLog.Initialize 改写全局路径，必须最后跑
-            ObservabilityTests.Run();
+            RunTest("Observability", ObservabilityTests.Run);
 
             // UI 冒烟：--ui-smoke [outDir] 才跑（要桌面会话，默认单元测试不跑）
             int uiIdx = Array.IndexOf(args, "--ui-smoke");

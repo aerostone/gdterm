@@ -258,7 +258,8 @@ namespace Gdterm.AI
             int n = objContent.Length;
             while (i < n)
             {
-                while (i < n && char.IsWhiteSpace(objContent[i]) && objContent[i] != '{') i++;
+                // 跳过空白与顶层分隔逗号（漏逗号→第 2 个及以后的键全部丢失，多连接历史随重启蒸发——GHA 实证）
+                while (i < n && (char.IsWhiteSpace(objContent[i]) || objContent[i] == ',')) i++;
                 if (i >= n || objContent[i] != '"') break;
                 // 读 key 字符串（尊重转义）
                 int keyStart = i + 1;

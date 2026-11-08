@@ -236,7 +236,12 @@ namespace Gdterm.Logging
         private void InitializeCurrentFile()
         {
             _currentFilePath = Path.Combine(_logDirectory, $"commands-{DateTime.UtcNow:yyyyMMdd-HHmmss}.jsonl");
-            _writer = new StreamWriter(_currentFilePath, true, Encoding.UTF8);
+            // FileShare.Read：store 生命期内 _writer 一直开着（滚动/Dispose 才关），
+            // 默认 FileShare.None 会让自己的 Query/DeleteByIds 读当前文件时
+            // 共享违例（GHA 实证 = 0.1.452 红线根因）→ 命令历史页静默返空
+            _writer = new StreamWriter(
+                new FileStream(_currentFilePath, FileMode.Append, FileAccess.Write, FileShare.Read),
+                Encoding.UTF8);
             _currentFileSize = new FileInfo(_currentFilePath).Length;
         }
 

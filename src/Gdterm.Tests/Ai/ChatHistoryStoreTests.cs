@@ -39,6 +39,11 @@ namespace Gdterm.Tests.Ai
                     "conn-b content not crossed");
                 Assert.Equal(0, store.Load("conn-c").Count, "unknown key → empty");
 
+                // 多键必须从磁盘读回（同实例只走内存路径，曾让顶层逗号丢键 bug 溜过 GHA 才发现）
+                var diskReload = new ChatHistoryStore(path);
+                Assert.Equal(1, diskReload.Load("conn-a").Count, "conn-a survives disk reload");
+                Assert.Equal(1, diskReload.Load("conn-b").Count, "conn-b survives disk reload");
+
                 // 空历史保存 = 删除该键（不残留空数组）
                 store.Save("conn-a", new List<ChatMessage>());
                 Assert.Equal(0, store.Load("conn-a").Count, "Save empty removes key");
@@ -66,6 +71,10 @@ namespace Gdterm.Tests.Ai
                 // 键本身含特殊字符（引号/反斜杠/中文）往返
                 store.Save("wei\"rd\\conn-名", new List<ChatMessage> { new ChatMessage("user", "x") });
                 Assert.Equal(1, store.Load("wei\"rd\\conn-名").Count, "tricky key round-trip");
+                // 三键同时在盘 → 新实例读回（逗号/转义在磁盘边界再验一次）
+                var threeKey = new ChatHistoryStore(path);
+                Assert.Equal(2, threeKey.Load("conn-b").Count, "conn-b (tricky) survives disk reload");
+                Assert.Equal(1, threeKey.Load("wei\"rd\\conn-名").Count, "tricky key survives disk reload");
 
                 // 损坏文件 → 空（不抛异常）
                 File.WriteAllText(path, "{ 这不是 JSON [[", new UTF8Encoding(false));
