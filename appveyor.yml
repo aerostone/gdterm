@@ -19,21 +19,31 @@ install:
       # Windows 事件日志 32766 字符上限 =====
       # 脚本内部使用 $ErrorActionPreference='Stop'，任一步失败会直接 throw
       # （与旧内联块相同的执行模型），故无需额外检查退出码
-      & "$env:APPVEYOR_BUILD_FOLDER\tools\build-freerdp.ps1"
+      # 0.1.453-455：匿名日志 API 已 404，install 阶段失败无处诊断——失败时落证据文件并直接推产物
+      try {
+        & "$env:APPVEYOR_BUILD_FOLDER\tools\build-freerdp.ps1"
+      } catch {
+        Set-Content -Path "$env:APPVEYOR_BUILD_FOLDER\install-failure.txt" -Value ("FreeRDP install failed: " + $_.Exception.Message + "`n`n" + $_.ScriptStackTrace + "`n`nTime: " + (Get-Date).ToString("o")) -Encoding UTF8
+        try { Push-AppveyorArtifact "$env:APPVEYOR_BUILD_FOLDER\install-failure.txt" -FileName "install-failure.txt" } catch { Write-Host "WARN: could not push install-failure.txt" }
+        throw
+      }
 before_build:
   - ps: |
       Write-Host "Restoring NuGet packages..."
-      nuget restore gdterm.sln -NonInteractive
+      nuget restore gdterm.sln -NonInteractive *>&1 | Tee-Object -FilePath restore.log
       if (-not $?) {
         Write-Host "nuget restore soft-fail; trying msbuild /t:Restore"
       }
-      msbuild gdterm.sln /t:Restore /p:Configuration=$env:CONFIGURATION /p:Platform="Any CPU" /v:m
-      if (-not $?) { throw "Package restore failed" }
+      msbuild gdterm.sln /t:Restore /p:Configuration=$env:CONFIGURATION /p:Platform="Any CPU" /v:m *>&1 | Tee-Object -FilePath restore.log -Append
+      if (-not $?) { Push-AppveyorArtifact (Join-Path $PWD 'restore.log') -FileName 'restore.log' 2>$null; throw "Package restore failed (restore.log uploaded)" }
 
+# build 阶段转 ps+Tee：原生 build 步骤的失败输出只进（已 404 的）控制台日志，
+# 转成脚本后 build.log 落盘、on_failure 推产物——证据先于宣判（与 smoke 同哲学）。
+# 单配置单平台，原 parallel:true 无实际收益，放弃无损失。
 build:
-  project: gdterm.sln
-  verbosity: minimal
-  parallel: true
+  - ps: |
+      msbuild gdterm.sln /p:Configuration=$env:CONFIGURATION /p:Platform="Any CPU" /v:m *>&1 | Tee-Object -FilePath build.log
+      if ($LASTEXITCODE -ne 0) { Push-AppveyorArtifact (Join-Path $PWD 'build.log') -FileName 'build.log' 2>$null; throw "Build failed exit=$LASTEXITCODE (build.log uploaded)" }
 
 test_script:
   - ps: |
@@ -44,8 +54,11 @@ test_script:
       }
       if (-not (Test-Path $testExe)) { throw "Gdterm.Tests.exe not found" }
       Write-Host "Running $testExe"
-      & $testExe
-      if ($LASTEXITCODE -ne 0) { throw "Tests failed exit=$LASTEXITCODE" }
+      & $testExe *>&1 | Tee-Object -FilePath test-run.log
+      $testExit = $LASTEXITCODE
+      # 0.1.452+：测试输出必须留档——无论成败先推 test-run.log 再宣判（匿名日志 API 已 404）
+      if (Test-Path $PWD\test-run.log) { Push-AppveyorArtifact $PWD\test-run.log -FileName "test-run.log" }
+      if ($testExit -ne 0) { throw "Tests failed exit=$testExit (test-run.log uploaded before this)" }
       # ===== UI 冒烟：起窗体截图 + 断言（要桌面会话，AppVeyor VS2022 默认有）=====
       $smokeDir = "$env:APPVEYOR_BUILD_FOLDER\ui-smoke"
       Write-Host "Running UI smoke -> $smokeDir"
@@ -320,6 +333,19 @@ artifacts:
   - path: dist\gdterm
     name: gdterm-portable
     type: zip
+
+on_failure:
+  - ps: |
+      # 0.1.453-455：匿名日志 API 全面 404，红构建无从诊断。
+      # 失败时把已存在的任何证据文件推成产物（产物下载 API 正常）。
+      $files = @('test-run.log','build.log','restore.log','install-failure.txt','ui-tree-check-report.txt','perf-seh.txt','perf-progress.txt')
+      $uploaded = @()
+      foreach ($f in $files) {
+        $p = Join-Path $PWD $f
+        if (Test-Path $p) { Push-AppveyorArtifact $p -FileName $f; $uploaded += $f }
+      }
+      Set-Content -Path "$PWD\ci-failure-context.txt" -Value ("build=" + $env:APPVEYOR_BUILD_VERSION + "`ncommit=" + $env:APPVEYOR_REPO_COMMIT + "`ntime=" + (Get-Date).ToString("o") + "`nevidence=" + (($uploaded -join ',') -replace '^', 'none')) -Encoding UTF8
+      Push-AppveyorArtifact "$PWD\ci-failure-context.txt" -FileName "ci-failure-context.txt"
 
 branches:
   only:
