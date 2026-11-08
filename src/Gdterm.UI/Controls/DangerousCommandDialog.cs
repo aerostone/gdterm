@@ -65,11 +65,11 @@ namespace Gdterm.UI.Controls
 
             BackColor = bgColor;
             Size = new Size(DpiScale.V(this, 520), DpiScale.V(this, 380));
-            Text = $"⚠️ 危险命令确认 - {levelText}";
+            Text = L10n.Tf("⚠️ 危险命令确认 - {0}", levelText);
 
             // 标题
             _titleLabel = new AntdUI.Label {
-                Text = $"{levelEmoji} {levelText} - 第 1/{_checkResult.ConfirmCount} 次确认",
+                Text = L10n.Tf("{0} {1} - 第 1/{2} 次确认", levelEmoji, levelText, _checkResult.ConfirmCount),
                 Font = new Font(Font.FontFamily, Font.Size + 3f, FontStyle.Bold),
                 ForeColor = textColor,
                 Dock = DockStyle.Top,
@@ -97,7 +97,7 @@ namespace Gdterm.UI.Controls
             };
 
             var ruleNameLabel = new AntdUI.Label {
-                Text = $"规则: {_checkResult.RuleName}  |  分类: {_checkResult.Category}",
+                Text = L10n.Tf("规则: {0}  |  分类: {1}", _checkResult.RuleName, _checkResult.Category),
                 ForeColor = textColor,
                 Dock = DockStyle.Top,
                 AutoSize = true
@@ -203,7 +203,7 @@ namespace Gdterm.UI.Controls
             else
             {
                 // 还需要继续确认
-                _titleLabel.Text = $"⚠️ {_checkResult.Level} - 第 {_currentConfirm + 1}/{_checkResult.ConfirmCount} 次确认";
+                _titleLabel.Text = L10n.Tf("⚠️ {0} - 第 {1}/{2} 次确认", _checkResult.Level, _currentConfirm + 1, _checkResult.ConfirmCount);
                 _confirmLabel.Text = GetConfirmText();
                 _confirmButton.Text = GetConfirmButtonText();
 
@@ -220,15 +220,15 @@ namespace Gdterm.UI.Controls
         {
             var remaining = _checkResult.ConfirmCount - _currentConfirm;
             if (remaining == _checkResult.ConfirmCount)
-                return $"此命令有 {_checkResult.Level} 风险，请确认 {remaining} 次才能执行";
-            return $"已确认 {_currentConfirm}/{_checkResult.ConfirmCount}，还需确认 {remaining} 次";
+                return L10n.Tf("此命令有 {0} 风险，请确认 {1} 次才能执行", _checkResult.Level, remaining);
+            return L10n.Tf("已确认 {0}/{1}，还需确认 {2} 次", _currentConfirm, _checkResult.ConfirmCount, remaining);
         }
 
         private string GetConfirmButtonText()
         {
             var remaining = _checkResult.ConfirmCount - _currentConfirm;
             if (remaining == 1) return L10n.T("⚠ 最终确认 ⚠");
-            return $"确认 ({_currentConfirm + 1}/{_checkResult.ConfirmCount})";
+            return L10n.Tf("确认 ({0}/{1})", _currentConfirm + 1, _checkResult.ConfirmCount);
         }
 
         /// <summary>危险等级主色 → AntdUI 按钮语义类型（Critical红/High橙→Warn/Medium黄→Warn）。</summary>

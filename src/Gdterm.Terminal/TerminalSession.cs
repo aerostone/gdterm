@@ -430,7 +430,7 @@ namespace Gdterm.Terminal
                 {
                     OutputReceived?.Invoke(this, new TerminalOutputEventArgs
                     {
-                        Text = $"\r\n[终端错误: {e.Exception?.Message}]\r\n",
+                        Text = "\r\n" + L10n.Tf("[终端错误: {0}]", e.Exception?.Message) + "\r\n",
                         Timestamp = DateTime.UtcNow
                     });
                 }

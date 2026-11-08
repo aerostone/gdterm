@@ -165,7 +165,7 @@ namespace Gdterm.UI.Forms
             }
             catch (Exception ex)
             {
-                AntdUI.Message.error(this, $"解锁失败：{ex.Message}");
+                AntdUI.Message.error(this, L10n.T("解锁失败：") + ex.Message);
             }
             finally
             {

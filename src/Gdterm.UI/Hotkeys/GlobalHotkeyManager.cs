@@ -2,6 +2,7 @@ using System;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
+using Gdterm.Core;
 namespace Gdterm.UI.Hotkeys
 {
     /// <summary>
@@ -57,7 +58,7 @@ namespace Gdterm.UI.Hotkeys
             if (!RegisterHotKey(_hWnd, id, mod, (uint)key))
             {
                 throw new InvalidOperationException(
-                    $"注册热键失败: {modifiers}+{key}，可能已被其他程序占用");
+                    L10n.Tf("注册热键失败: {0}+{1}，可能已被其他程序占用", modifiers, key));
             }
 
             return id;

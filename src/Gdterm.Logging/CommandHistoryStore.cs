@@ -6,6 +6,7 @@ using System.Text;
 using System.Web.Script.Serialization;
 using Gdterm.Core.Models;
 
+using Gdterm.Core;
 namespace Gdterm.Logging
 {
     /// <summary>
@@ -59,7 +60,7 @@ namespace Gdterm.Logging
                 if (lines.Length > MaxOutputLines)
                 {
                     entry.Output = string.Join("\n", lines.Take(MaxOutputLines)) +
-                                   $"\n... (共 {lines.Length} 行，已截断)";
+                                   L10n.Tf("\n... (共 {0} 行，已截断)", lines.Length);
                 }
             }
 

@@ -109,7 +109,7 @@ gdterm 的功能密度已经**高于 Xshell/Tabby 的一般水平**，安全域�
 | 便携版 / 免安装 | ✅ | CI 产出 `gdterm-portable.zip` |
 | 主题/字体/透明度/DPI | ✅ | `AppearanceSettingsForm` + 缩放约定文档 |
 | 快捷键自定义 | ✅ | `KeyBindingPanel` |
-| **多语言 i18n** | 🔄 进行中 | `L10n` 词典（zh→en，800+ 项）+ `L10n.T/Tf`；批次 1–3 已接入 16 文件（主菜单/主窗体/托盘/快捷键/全部设置对话框），feature-map 门防漂移；剩余文件逐批推进 |
+| **多语言 i18n** | ✅ 完成 | `L10n` 词典（zh→en，900+ 项）+ `L10n.T/Tf`；批次 1–5f 全量接入（含插值字符串补扫 17 文件），用户可见中文残留清零，feature-map 门防漂移；仅保留功能原文（测试消息/远程脚本/程序集描述/AI 模型提示词） |
 | **更新检查** | ❌ | 无 `/releases` 查询 |
 | 渲染性能 | 🟡 整屏重绘 | 已有 16ms 合并定时器（`CellGdiRenderer.ScheduleRedraw`），但每帧 `SnapshotVisible()` 全页复制 + 整窗 `Invalidate`，无脏格差分/快照池 |
 
@@ -136,7 +136,7 @@ gdterm 的功能密度已经**高于 Xshell/Tabby 的一般水平**，安全域�
 
 8. **渲染脏格差分**：`SnapshotVisible` 全页复制 → dirty row 位图 + 快照池；大 `cat` 场景 CPU 大幅下降（可对齐 WindTerm 那 20-30%）。
 9. **更新检查**（GitHub releases，Win7 友好，静默失败）。
-10. **i18n**（中/英）：进行中——`L10n` 词典 + `L10n.T/Tf` 逐批接入全部 UI（进度见 `src/Gdterm.UI/L10n/L10n.cs` 批次注释），英文界面批次 1 起即可用。
+10. **i18n**（中/英）：完成——`L10n` 词典 + `L10n.T/Tf` 全量接入（批次 1–5f，进度见 `src/Gdterm.Core/L10n/L10n.cs` 批次注释）；用户可见中文清零，feature-map 门防漂移。
 
 ### 明确不做（写进文档，避免反复讨论）
 
@@ -160,4 +160,4 @@ X11 转发、SSH agent 转发、GSSAPI、VNC/XDMCP/FTP/Rlogin、移动端/跨平
 | P1-7 | 触发器（发命令/通知/切标签） | ✅ | `HighlightRule.Action|ActionArgument|ActionCooldownSeconds` + `HighlightEngine.MatchTriggers` + `TerminalControl.Triggers.cs`（按行扫流，暂停标签也生效）+ 高亮规则编辑框三行新控件 + 持久化 |
 | P2-8 | 渲染脏格差分 | ⏸ 未做 | 需 GPU/逐格 diff 基线，风险收益比留待有性能实测后再评估 |
 | P2-9 | 更新检查 | ✅ | `UpdateChecker`（GitHub releases，TLS1.2 显式开，静默失败）→ 帮助菜单「检查更新…」 |
-| P2-10 | i18n | 🔄 进行中 | L10n 词典 + 批次接入（16/55 文件：主窗体/菜单/设置/对话框完成）；剩余逐批，feature-map 门兜底 |
+| P2-10 | i18n | ✅ 完成 | 批次 1–5f 全量接入（含插值字符串补扫 17 文件 ~43 处，词典 900+ 项）；用户可见中文残留清零，功能原文（测试/远程脚本/AI 提示词）有意保留，feature-map 门兜底 |

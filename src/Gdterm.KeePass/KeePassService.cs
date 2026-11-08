@@ -148,7 +148,7 @@ namespace Gdterm.KeePass
 
             var entry = FindEntryByUuid(credentialRefId);
             if (entry == null)
-                throw new KeyNotFoundException($"未找到 ID 为 {credentialRefId} 的密码条目");
+                throw new KeyNotFoundException(L10n.Tf("未找到 ID 为 {0} 的密码条目", credentialRefId));
 
             return new CredentialPayload
             {
@@ -213,7 +213,7 @@ namespace Gdterm.KeePass
 
             var pwEntry = FindEntryByUuid(entry.Id);
             if (pwEntry == null)
-                throw new KeyNotFoundException($"未找到 ID 为 {entry.Id} 的密码条目");
+                throw new KeyNotFoundException(L10n.Tf("未找到 ID 为 {0} 的密码条目", entry.Id));
 
             // 更新基本字段
             if (entry.Title != null) pwEntry.Strings.Set(PwDefs.TitleField, new ProtectedString(false, entry.Title));
@@ -271,7 +271,7 @@ namespace Gdterm.KeePass
 
             var pwEntry = FindEntryByUuid(entryId);
             if (pwEntry == null)
-                throw new KeyNotFoundException($"未找到 ID 为 {entryId} 的密码条目");
+                throw new KeyNotFoundException(L10n.Tf("未找到 ID 为 {0} 的密码条目", entryId));
 
             var parentGroup = pwEntry.ParentGroup;
             if (parentGroup != null)
@@ -407,7 +407,7 @@ namespace Gdterm.KeePass
             EnsureUnlocked();
             var pwEntry = FindEntryByUuid(entryId);
             if (pwEntry == null)
-                throw new KeyNotFoundException($"未找到 ID 为 {entryId} 的密码条目");
+                throw new KeyNotFoundException(L10n.Tf("未找到 ID 为 {0} 的密码条目", entryId));
 
             var username = pwEntry.Strings.ReadSafe(PwDefs.UserNameField);
             var password = pwEntry.Strings.ReadSafe(PwDefs.PasswordField);
@@ -625,7 +625,7 @@ namespace Gdterm.KeePass
                         Title = title,
                         Username = username,
                         GroupPath = groupPath,
-                        Issue = $"密码已 {(int)(now - lastMod).TotalDays} 天未更新",
+                        Issue = L10n.Tf("密码已 {0} 天未更新", (int)(now - lastMod).TotalDays),
                         StrengthScore = score
                     };
                     report.ExpiredPasswords.Add(expiredIssue);
@@ -656,7 +656,7 @@ namespace Gdterm.KeePass
                             Title = entry.Strings.ReadSafe(PwDefs.TitleField),
                             Username = entry.Strings.ReadSafe(PwDefs.UserNameField),
                             GroupPath = GetGroupPath(entry.ParentGroup),
-                            Issue = $"与其他 {group.Value.Count - 1} 个条目共用密码"
+                            Issue = L10n.Tf("与其他 {0} 个条目共用密码", group.Value.Count - 1)
                         });
                     }
 

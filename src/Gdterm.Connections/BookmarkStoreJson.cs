@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using Gdterm.Core.Models;
 
+using Gdterm.Core;
 namespace Gdterm.Connections
 {
     /// <summary>
@@ -81,7 +82,7 @@ namespace Gdterm.Connections
             var bookmarks = LoadAll().ToList();
             var index = bookmarks.FindIndex(b => b.Id == bookmarkId);
             if (index < 0)
-                throw new KeyNotFoundException($"未找到 ID 为 {bookmarkId} 的书签");
+                throw new KeyNotFoundException(L10n.Tf("未找到 ID 为 {0} 的书签", bookmarkId));
 
             bookmarks.RemoveAt(index);
             SaveAll(bookmarks);
@@ -94,7 +95,7 @@ namespace Gdterm.Connections
             var bookmarks = LoadAll().ToList();
             var index = bookmarks.FindIndex(b => b.Id == bookmark.Id);
             if (index < 0)
-                throw new KeyNotFoundException($"未找到 ID 为 {bookmark.Id} 的书签");
+                throw new KeyNotFoundException(L10n.Tf("未找到 ID 为 {0} 的书签", bookmark.Id));
 
             bookmarks[index] = bookmark;
             SaveAll(bookmarks);

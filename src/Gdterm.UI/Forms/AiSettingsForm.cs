@@ -199,7 +199,7 @@ namespace Gdterm.UI.Forms
                     _modelBox.Text = _currentConfig.Model ?? "";
                     _maxTokensSpinner.Value = _currentConfig.MaxTokens ?? 2048;
                     _temperatureSpinner.Value = (decimal)(_currentConfig.Temperature ?? 0.7);
-                    _statusLabel.Text = $"当前模型：{_currentConfig.Model}（已使用 {_currentConfig.TotalTokensUsed:N0} tokens）";
+                    _statusLabel.Text = L10n.Tf("当前模型：{0}（已使用 {1} tokens）", _currentConfig.Model, _currentConfig.TotalTokensUsed.ToString("N0"));
                 }
                 else
                 {
@@ -213,7 +213,7 @@ namespace Gdterm.UI.Forms
             }
             catch (Exception ex)
             {
-                _statusLabel.Text = $"加载配置失败：{ex.Message}";
+                _statusLabel.Text = L10n.T("加载配置失败：") + ex.Message;
                 _statusLabel.ForeColor = GdtermColorTable.Danger;
             }
         }
@@ -271,7 +271,7 @@ namespace Gdterm.UI.Forms
             }
             catch (Exception ex)
             {
-                _statusLabel.Text = $"保存失败：{ex.Message}";
+                _statusLabel.Text = L10n.T("保存失败：") + ex.Message;
                 _statusLabel.ForeColor = GdtermColorTable.Danger;
             }
         }

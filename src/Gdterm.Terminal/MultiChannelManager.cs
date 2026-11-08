@@ -206,7 +206,7 @@ namespace Gdterm.Terminal
 
                     if (!kvp.Value.Session.IsConnected)
                     {
-                        results.Add(new SelectResult(false, $"{kvp.Value.DisplayName}: 未连接"));
+                        results.Add(new SelectResult(false, kvp.Value.DisplayName + L10n.T(": 未连接")));
                         continue;
                     }
 
@@ -222,7 +222,7 @@ namespace Gdterm.Terminal
                     kvp.Value.IsSelected = true;
                     if (!_activeGroupIds.Contains(kvp.Key))
                         _activeGroupIds.Add(kvp.Key);
-                    results.Add(new SelectResult(true, $"{kvp.Value.DisplayName}: 已加入"));
+                    results.Add(new SelectResult(true, kvp.Value.DisplayName + L10n.T(": 已加入")));
                 }
                 IsBroadcastMode = _activeGroupIds.Count > 1;
             }
@@ -241,7 +241,7 @@ namespace Gdterm.Terminal
                 {
                     if (!kvp.Value.Session.IsConnected)
                     {
-                        results.Add(new SelectResult(false, $"{kvp.Value.DisplayName}: 未连接"));
+                        results.Add(new SelectResult(false, kvp.Value.DisplayName + L10n.T(": 未连接")));
                         continue;
                     }
 
@@ -257,7 +257,7 @@ namespace Gdterm.Terminal
                     kvp.Value.IsSelected = true;
                     if (!_activeGroupIds.Contains(kvp.Key))
                         _activeGroupIds.Add(kvp.Key);
-                    results.Add(new SelectResult(true, $"{kvp.Value.DisplayName}: 已加入"));
+                    results.Add(new SelectResult(true, kvp.Value.DisplayName + L10n.T(": 已加入")));
                 }
                 IsBroadcastMode = _activeGroupIds.Count > 1;
             }

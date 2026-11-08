@@ -76,7 +76,7 @@ namespace Gdterm.AI
             }
             catch (Exception ex)
             {
-                return new AiResponse { IsSuccess = false, ErrorMessage = $"AI 服务调用失败: {ex.Message}" };
+                return new AiResponse { IsSuccess = false, ErrorMessage = L10n.T("AI 服务调用失败: ") + ex.Message };
             }
         }
 
@@ -226,7 +226,7 @@ namespace Gdterm.AI
                 return new AiResponse
                 {
                     IsSuccess = false,
-                    ErrorMessage = $"API 返回错误 ({(int)httpResponse.StatusCode}): {responseJson}"
+                    ErrorMessage = L10n.Tf("API 返回错误 ({0}): {1}", (int)httpResponse.StatusCode, responseJson)
                 };
             }
 
@@ -276,7 +276,7 @@ namespace Gdterm.AI
                 return new AiResponse
                 {
                     IsSuccess = false,
-                    ErrorMessage = $"解析响应失败: {ex.Message}"
+                    ErrorMessage = L10n.T("解析响应失败: ") + ex.Message
                 };
             }
         }
@@ -388,7 +388,7 @@ namespace Gdterm.AI
                 if (!httpResponse.IsSuccessStatusCode)
                 {
                     var err = await httpResponse.Content.ReadAsStringAsync();
-                    return new AiResponse { IsSuccess = false, ErrorMessage = $"API 错误 ({(int)httpResponse.StatusCode}): {err}" };
+                    return new AiResponse { IsSuccess = false, ErrorMessage = L10n.Tf("API 错误 ({0}): {1}", (int)httpResponse.StatusCode, err) };
                 }
 
                 var fullContent = new StringBuilder();
@@ -432,7 +432,7 @@ namespace Gdterm.AI
             }
             catch (Exception ex)
             {
-                return new AiResponse { IsSuccess = false, ErrorMessage = $"流式调用失败: {ex.Message}" };
+                return new AiResponse { IsSuccess = false, ErrorMessage = L10n.T("流式调用失败: ") + ex.Message };
             }
         }
 

@@ -112,7 +112,7 @@ namespace Gdterm.Connections
             var list = LoadAll();
             var index = list.ToList().FindIndex(c => c.Id == connection.Id);
             if (index < 0)
-                throw new KeyNotFoundException($"未找到 Id 为 {connection.Id} 的连接");
+                throw new KeyNotFoundException(L10n.Tf("未找到 Id 为 {0} 的连接", connection.Id));
 
             list[index] = connection;
             SaveAll(list);
@@ -127,7 +127,7 @@ namespace Gdterm.Connections
             var list = LoadAll();
             var index = list.ToList().FindIndex(c => c.Id == connectionId);
             if (index < 0)
-                throw new KeyNotFoundException($"未找到 Id 为 {connectionId} 的连接");
+                throw new KeyNotFoundException(L10n.Tf("未找到 Id 为 {0} 的连接", connectionId));
 
             list.RemoveAt(index);
             SaveAll(list);

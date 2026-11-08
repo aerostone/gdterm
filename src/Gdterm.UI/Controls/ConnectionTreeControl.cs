@@ -595,7 +595,7 @@ namespace Gdterm.UI.Controls
                 // 连接节点：编辑/删除/连接 为主，新建也保留（建到该连接所在分组）
                 var cfg = (ConnectionConfig)node.Tag;
                 var grp = cfg.GroupPath ?? "";
-                itemNew.Text = string.IsNullOrEmpty(grp) ? "新建连接(&N)" : $"新建连接到本分组(&N)";
+                itemNew.Text = string.IsNullOrEmpty(grp) ? L10n.T("新建连接(&N)") : L10n.T("新建连接到本分组(&N)");
                 itemEdit.Enabled = true;
                 itemDel.Enabled = true;
                 itemConn.Enabled = true;
@@ -606,7 +606,7 @@ namespace Gdterm.UI.Controls
             {
                 // 分组节点：新建连接到本分组；编辑/删除分组在本意上可提（本版本暂禁到提）
                 var grp = (string)node.Tag;
-                itemNew.Text = $"新建连接到本分组(&N)";
+                itemNew.Text = L10n.T("新建连接到本分组(&N)");
                 itemEdit.Enabled = false; // 未支持编辑分组（实现重构后可动）
                 itemDel.Enabled = false;  // 未支持删分组（避免误删连接）
                 itemConn.Enabled = false;
@@ -807,7 +807,7 @@ namespace Gdterm.UI.Controls
             if (node?.Tag is ConnectionConfig config)
             {
                 var result = MessageBox.Show(
-                    $"确定删除连接 '{config.Name}'？\n\n此操作不可撤销。",
+                    L10n.Tf("确定删除连接 '{0}'？\n\n此操作不可撤销。", config.Name),
                     L10n.T("确认删除"),
                     MessageBoxButtons.YesNo,
                     MessageBoxIcon.Warning);

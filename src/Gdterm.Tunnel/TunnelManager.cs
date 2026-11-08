@@ -122,7 +122,7 @@ namespace Gdterm.Tunnel
             {
                 session.Dispose();
                 throw new TunnelException(
-                    $"隧道建立失败: {ex.Message}",
+                    L10n.T("隧道建立失败: ") + ex.Message,
                     hopIndex: -1,
                     host: config.Host,
                     port: config.Port,
@@ -180,7 +180,7 @@ namespace Gdterm.Tunnel
             catch (Exception ex)
             {
                 throw new TunnelException(
-                    $"直连 {config.Host}:{config.Port} 失败: {ex.Message}",
+                    L10n.Tf("直连 {0}:{1} 失败: {2}", config.Host, config.Port, ex.Message),
                     hopIndex: -1,
                     host: config.Host,
                     port: config.Port,
@@ -196,7 +196,7 @@ namespace Gdterm.Tunnel
             catch (Exception ex)
             {
                 throw new TunnelException(
-                    $"端口转发失败: {ex.Message}",
+                    L10n.T("端口转发失败: ") + ex.Message,
                     hopIndex: -1,
                     host: config.Host,
                     port: config.Tunnel?.RemotePort ?? config.Port,
@@ -222,7 +222,7 @@ namespace Gdterm.Tunnel
                 catch (Exception ex)
                 {
                     throw new TunnelException(
-                        $"跳板 Hop[{i}] {hop.Host}:{hop.Port} 连接失败: {ex.Message}",
+                        L10n.Tf("跳板 Hop[{0}] {1}:{2} 连接失败: {3}", i, hop.Host, hop.Port, ex.Message),
                         hopIndex: i,
                         host: hop.Host,
                         port: hop.Port,
@@ -242,7 +242,7 @@ namespace Gdterm.Tunnel
             {
                 var lastHop = hops[hops.Count - 1];
                 throw new TunnelException(
-                    $"端口转发失败: {ex.Message}",
+                    L10n.T("端口转发失败: ") + ex.Message,
                     hopIndex: hops.Count - 1,
                     host: lastHop.Host,
                     port: lastHop.Port,

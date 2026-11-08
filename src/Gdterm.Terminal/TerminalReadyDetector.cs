@@ -112,7 +112,7 @@ namespace Gdterm.Terminal
             {
                 if (lastLineLower.Contains(indicator.ToLowerInvariant()))
                 {
-                    return new ReadyState(false, $"终端忙: 检测到 '{indicator}'", ReadyReason.BusyProgram);
+                    return new ReadyState(false, L10n.Tf("终端忙: 检测到 '{0}'", indicator), ReadyReason.BusyProgram);
                 }
             }
 
@@ -130,7 +130,7 @@ namespace Gdterm.Terminal
                     bool isPrompt = PromptPatterns.Any(p => p.IsMatch(lastLine));
                     if (!isPrompt)
                     {
-                        return new ReadyState(false, $"可能在执行: '{indicator}'", ReadyReason.LongRunning);
+                        return new ReadyState(false, L10n.Tf("可能在执行: '{0}'", indicator), ReadyReason.LongRunning);
                     }
                 }
             }

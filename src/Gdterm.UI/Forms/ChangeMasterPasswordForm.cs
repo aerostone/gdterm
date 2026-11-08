@@ -213,7 +213,7 @@ namespace Gdterm.UI.Forms
             else if (score <= 4) { strength = L10n.T("中"); color = GdtermColorTable.Warning; }
             else { strength = L10n.T("强"); color = GdtermColorTable.Success; }
 
-            _strengthLabel.Text = $"密码强度：{strength}（{pwd.Length} 字符）";
+            _strengthLabel.Text = L10n.Tf("密码强度：{0}（{1} 字符）", strength, pwd.Length);
             _strengthLabel.ForeColor = color;
         }
 

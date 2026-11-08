@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 
+using Gdterm.Core;
 namespace Gdterm.KeePass.Models
 {
     /// <summary>
@@ -14,7 +15,7 @@ namespace Gdterm.KeePass.Models
         public IList<string> Violations { get; set; }
 
         public WeakPasswordException(IList<string> violations)
-            : base($"密码强度不足，违反 {violations.Count} 条规则")
+            : base(L10n.Tf("密码强度不足，违反 {0} 条规则", violations.Count))
         {
             Violations = violations;
         }
