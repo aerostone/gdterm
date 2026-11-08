@@ -43,7 +43,7 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Top,
                 MinimumSize = new Size(0, Services.FormFontPolicy.FieldHeight(this)),
-                Margin = new Padding(4, 4, 4, 2),
+                Margin = Services.DpiScale.Pad(this, 4, 4, 4, 2),
                 PlaceholderText = L10n.T("过滤工具…"),
                 AllowClear = true,
                 BackColor = GdtermColorTable.Background,

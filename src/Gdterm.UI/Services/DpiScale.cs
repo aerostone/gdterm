@@ -47,5 +47,14 @@ namespace Gdterm.UI.Services
             var f = Factor(c);
             return new Size((int)Math.Round(w * f), (int)Math.Round(h * f));
         }
+
+        /// <summary>按控件 DPI 缩放四边 Padding/Margin（缩放规则 4d：禁止裸像素 Padding）。</summary>
+        public static Padding Pad(Control c, int left, int top, int right, int bottom)
+        {
+            var f = Factor(c);
+            return new Padding(
+                (int)Math.Round(left * f), (int)Math.Round(top * f),
+                (int)Math.Round(right * f), (int)Math.Round(bottom * f));
+        }
     }
 }
