@@ -112,7 +112,11 @@ namespace Gdterm.Logging
                             }
                         }
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        LastDeserializationError = "ReadFile: " + ex.GetType().Name + ": " + ex.Message;
+                        System.Diagnostics.Debug.WriteLine("CommandHistoryStore.Query: " + LastDeserializationError);
+                    }
                 }
             }
 
@@ -307,13 +311,22 @@ namespace Gdterm.Logging
             return _json.Serialize(entry);
         }
 
+        /// <summary>最近一次反序列化失败（null=正常）。静默吞异常曾让数据损坏隐身——
+        /// 0.1.452 CI 实证：Record 后 Query 恒空且无任何日志，定位靠它。</summary>
+        public static string LastDeserializationError { get; private set; }
+
         private static CommandHistoryEntry DeserializeEntry(string json)
         {
             try
             {
                 return _json.Deserialize<CommandHistoryEntry>(json);
             }
-            catch { return null; }
+            catch (Exception ex)
+            {
+                LastDeserializationError = ex.GetType().Name + ": " + ex.Message;
+                System.Diagnostics.Debug.WriteLine("CommandHistoryStore.Deserialize: " + LastDeserializationError);
+                return null;
+            }
         }
 
     }

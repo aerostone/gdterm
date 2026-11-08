@@ -31,6 +31,24 @@ namespace Gdterm.Tests.Logging
                 }
 
                 var all = store.Query(new CommandHistoryQuery { Limit = 100 });
+                if (all.Count != 3)
+                {
+                    // 失败诊断：静默吞异常是 0.1.452 的红线根因——把被吞的信息打到 CI 日志
+                    try
+                    {
+                        Console.WriteLine("[diag] LastDeserializationError=" + CommandHistoryStore.LastDeserializationError);
+                        var files = Directory.GetFiles(dir, "commands-*.jsonl");
+                        Console.WriteLine("[diag] files=" + files.Length);
+                        foreach (var f in files)
+                        {
+                            var lines = File.ReadAllLines(f, System.Text.Encoding.UTF8);
+                            Console.WriteLine("[diag] " + Path.GetFileName(f) + " lines=" + lines.Length);
+                            foreach (var l in lines)
+                                Console.WriteLine("[diag] raw: " + (l.Length > 400 ? l.Substring(0, 400) : l));
+                        }
+                    }
+                    catch (Exception dex) { Console.WriteLine("[diag] diag failed: " + dex.Message); }
+                }
                 Assert.Equal(3, all.Count, "initial 3 entries");
 
                 // 删除其中 2 条
