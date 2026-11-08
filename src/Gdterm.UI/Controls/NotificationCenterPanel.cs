@@ -52,16 +52,6 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground
             };
-            var deleteSel = new AntdUI.Button {
-                Text = L10n.T("删选中"),
-                Dock = DockStyle.Bottom,
-                Height = Math.Max(28, FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this)),
-                Enabled = false,
-                BackColor = GdtermColorTable.Surface,
-                ForeColor = GdtermColorTable.Foreground
-            };
-            _list.ItemSelectionChanged += (s, e) => { deleteSel.Enabled = _list.SelectedItems.Count > 0; };
-            deleteSel.Click += (s, e) => RemoveSelected();
             _clear.Click += (s, e) =>
             {
                 int n;
@@ -123,6 +113,18 @@ namespace Gdterm.UI.Controls
                 if (e.KeyCode == Keys.Enter) { CopySelected(); e.Handled = true; }
                 if (e.KeyCode == Keys.Delete) { RemoveSelected(); e.Handled = true; }
             };
+
+            // 删选中：挂在 _list 创建之后（readonly 字段未赋值前挂事件 = 冒烟 CTOR_FAIL 实证）
+            var deleteSel = new AntdUI.Button {
+                Text = L10n.T("删选中"),
+                Dock = DockStyle.Bottom,
+                Height = Math.Max(28, FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this)),
+                Enabled = false,
+                BackColor = GdtermColorTable.Surface,
+                ForeColor = GdtermColorTable.Foreground
+            };
+            _list.ItemSelectionChanged += (s, e) => { deleteSel.Enabled = _list.SelectedItems.Count > 0; };
+            deleteSel.Click += (s, e) => RemoveSelected();
 
             Controls.Add(_shell);
             Controls.Add(deleteSel);
