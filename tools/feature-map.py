@@ -367,8 +367,9 @@ TYPE_CAPS = {
 
 # 能力 -> 源码证据（任一命中即算有证据）
 DETECT = {
-    # AntdUI.Table/DataSource 也是列表（KeePass 系页面用自绘表格而不是 ListView）
-    "list": [r'ListView|DataGridView|TreeView|ListViewEx|Items\.Add|AntdUI\.Table|DataSource\s*='],
+    # AntdUI.Table/DataSource 也是列表（KeePass 系页面用自绘表格而不是 ListView）；
+    # DrawString = 自绘图表/指标展示（监控面板用 GDI 画曲线/进度条，不是列表控件但确实在展示数据）
+    "list": [r'ListView|DataGridView|TreeView|ListViewEx|Items\.Add|AntdUI\.Table|DataSource\s*=|DrawString'],
     "activation": [r'DoubleClick|KeyDown|ItemActivate|SelectedIndexChanged|Keys\.Enter'],
     "empty": [r'EmptyStateView'],
     # 加载态证据三类：① BusyScope 作用域（用户触发的长任务）② 显式加载标志位

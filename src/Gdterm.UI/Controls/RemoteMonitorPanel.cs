@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
+using System.IO;
+using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using Gdterm.Core;
@@ -36,6 +39,9 @@ namespace Gdterm.UI.Controls
         private bool _loading = true;          // 首帧未到 → 顶部显示跑马灯 + “正在连接采样”
         private bool _failing;                 // 连续失败中（只在跃迁那一次提示，避免每 5 秒刷屏）
         private ProgressBar _firstLoadBar;
+        private AntdUI.Button _btnExport;
+        // F9：采样历史（与 HealthMonitorPanel 同容量策略：120 截到 60），供导出 CSV
+        private readonly List<RemoteStatsSnapshot> _history = new List<RemoteStatsSnapshot>();
 
         /// <summary>采样间隔（毫秒）。远端 5 秒一轮，成本可忽略。</summary>
         public int IntervalMs { get; set; } = 5000;
@@ -116,13 +122,35 @@ namespace Gdterm.UI.Controls
             var hint = new AntdUI.Label
             {
                 Text = L10n.T("每 5 秒在独立 SSH 连接上只读采集 /proc，不干扰终端。"),
-                AutoSize = false,
-                Dock = DockStyle.Fill,
-                Height = DpiScale.V(this, 34),
+                AutoSize = true,
+                MaximumSize = new Size(0, DpiScale.V(this, 34)),   // R03：裸像素高度要过 DpiScale
                 ForeColor = GdtermColorTable.Muted,
-                Margin = new Padding(0, DpiScale.V(this, 8), 0, 0)
+                Margin = DpiScale.Pad(this, 0, 6, 0, 2)
             };
-            root.Controls.Add(hint, 0, 8);
+            // F9：采样历史导出 CSV（与 ListShell 导出同惯例：BOM/转义/Toast）
+            _btnExport = new AntdUI.Button
+            {
+                Text = L10n.T("导出 CSV"),
+                AutoSize = true,
+                Enabled = false,   // 有采样点后才可用
+                Height = Math.Max(DpiScale.V(this, 26), Services.FormFontPolicy.LineBox(Services.FormFontPolicy.UiFont(), this)),
+                Margin = DpiScale.Pad(this, 8, 4, 0, 0),
+                BackColor = GdtermColorTable.Surface,
+                ForeColor = GdtermColorTable.Foreground
+            };
+            _btnExport.Click += (s, e) => ExportCsv();
+            var bottom = new FlowLayoutPanel
+            {
+                Dock = DockStyle.Fill,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = true,
+                BackColor = Color.Transparent
+            };
+            bottom.Controls.Add(hint);
+            bottom.Controls.Add(_btnExport);
+            root.Controls.Add(bottom, 0, 8);
 
             Controls.Add(root);
 
@@ -236,6 +264,10 @@ namespace Gdterm.UI.Controls
             }
             _failing = false;
             SetLoading(false);
+            // F9：记录采样历史（Render 在 UI 线程 BeginInvoke 里跑，无需锁）
+            _history.Add(s);
+            if (_history.Count > 120) _history.RemoveRange(0, _history.Count - 60);
+            if (!_btnExport.Enabled) _btnExport.Enabled = true;
             _cpuBar.Value = s.CpuPercent;
             _memBar.Value = s.MemPercent;
             _swapBar.Value = s.SwapPercent;
@@ -291,6 +323,54 @@ namespace Gdterm.UI.Controls
                 return t != null ? t.Credentials : null;
             }
             catch (Exception) { return null; }
+        }
+
+        /// <summary>F9：采样历史导出 CSV。列：时间/CPU/内存/Swap/磁盘/负载1/收/发/内存总量/磁盘总量（KiB）。</summary>
+        private void ExportCsv()
+        {
+            var rows = new List<RemoteStatsSnapshot>(_history);   // Render 只在 UI 线程跑，无需锁
+            if (rows.Count == 0)
+            {
+                ToastNotifier.Warning(L10n.T("没有可导出的条目"));
+                return;
+            }
+            using (var dlg = new SaveFileDialog
+            {
+                Title = L10n.T("导出为 CSV"),
+                Filter = "CSV (*.csv)|*.csv",
+                FileName = "gdterm-remote-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture),
+                DefaultExt = "csv"
+            })
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    var sb = new StringBuilder();
+                    sb.Append("Timestamp,CpuPercent,MemPercent,SwapPercent,DiskPercent,Load1,NetDownKbps,NetUpKbps,MemTotalKb,DiskTotalKb\r\n");
+                    foreach (var s in rows)
+                    {
+                        sb.Append(s.SampledAt.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)).Append(',')
+                          .Append(s.CpuPercent.ToString("F1", CultureInfo.InvariantCulture)).Append(',')
+                          .Append(s.MemPercent.ToString("F1", CultureInfo.InvariantCulture)).Append(',')
+                          .Append(s.SwapPercent.ToString("F1", CultureInfo.InvariantCulture)).Append(',')
+                          .Append(s.DiskPercent.ToString("F1", CultureInfo.InvariantCulture)).Append(',')
+                          .Append(s.Load1.ToString("F2", CultureInfo.InvariantCulture)).Append(',')
+                          .Append(s.NetRxKbps.ToString("F0", CultureInfo.InvariantCulture)).Append(',')
+                          .Append(s.NetTxKbps.ToString("F0", CultureInfo.InvariantCulture)).Append(',')
+                          .Append(s.MemTotalKb.ToString(CultureInfo.InvariantCulture)).Append(',')
+                          .Append(s.DiskTotalKb.ToString(CultureInfo.InvariantCulture))
+                          .Append("\r\n");
+                    }
+                    using (var sw = new StreamWriter(dlg.FileName, false, new UTF8Encoding(true)))
+                        sw.Write(sb.ToString());
+                    ToastNotifier.Success(L10n.T("已导出 ") + rows.Count + L10n.T(" 条到 ") + Path.GetFileName(dlg.FileName));
+                }
+                catch (Exception ex)
+                {
+                    try { DiagLog.Error("RemoteMonitorPanel.ExportCsv", ex); } catch (Exception) { }
+                    ToastNotifier.Error(L10n.T("导出失败：") + ex.Message);
+                }
+            }
         }
 
         private static string Key(ConnectionConfig cfg, CredentialPayload cred)

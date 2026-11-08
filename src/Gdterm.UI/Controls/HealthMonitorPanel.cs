@@ -1,6 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
+using System.Globalization;
+using System.IO;
+using System.Text;
 using System.Windows.Forms;
 using Gdterm.Terminal;
 using Gdterm.UI.Services;
@@ -17,6 +20,7 @@ namespace Gdterm.UI.Controls
     {
         private ConnectionHealthMonitor _monitor;
         private AntdUI.Label _lblStatus, _lblUptime, _lblLatency, _lblReconnects;
+        private AntdUI.Button _btnExport;
         private Panel _graphPanel;
         private readonly List<HealthSnapshot> _recent = new List<HealthSnapshot>();
         private System.Windows.Forms.Timer _refreshTimer;
@@ -102,6 +106,20 @@ namespace Gdterm.UI.Controls
 
             cards.Controls.AddRange(new Control[] { _lblStatus, _lblUptime, _lblLatency, _lblReconnects, _lblHint });
 
+            // F9：采样历史导出 CSV——监控面板的数据带出口（与 ListShell 导出同惯例：BOM/转义/Toast）
+            _btnExport = new AntdUI.Button
+            {
+                Text = L10n.T("导出 CSV"),
+                AutoSize = true,
+                Enabled = false,   // 有采样点后才可用
+                Height = Math.Max(DpiScale.V(this, 28), Services.FormFontPolicy.LineBox(Services.FormFontPolicy.UiFont(), this)),
+                Margin = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 6), 0, 0),
+                BackColor = GdtermColorTable.Surface,
+                ForeColor = GdtermColorTable.Foreground
+            };
+            _btnExport.Click += (s, e) => ExportCsv();
+            cards.Controls.Add(_btnExport);
+
             // ── 图表区 ──
             _graphPanel = new Panel
             {
@@ -168,6 +186,7 @@ namespace Gdterm.UI.Controls
                     }
                     else if (snapshot.IsConnected)
                         SetHint(L10n.T("采样于 ") + snapshot.Timestamp.ToString("HH:mm:ss"), false);
+                    if (!_btnExport.Enabled) _btnExport.Enabled = true;   // F9：首个采样点后开放导出
                 }));
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("HealthMonitorPanel", exSwallowed); } catch { } }
@@ -225,6 +244,60 @@ namespace Gdterm.UI.Controls
             // 左侧标签
             g.DrawString(L10n.T("在线"), _labelFont, Brushes.Gray, 8, chartRect.Top + chartRect.Height * 0.15f);
             g.DrawString(L10n.T("离线"), _labelFont, Brushes.Gray, 8, chartRect.Top + chartRect.Height * 0.75f);
+        }
+
+        /// <summary>F9：采样历史导出 CSV。列：时间/连接/延迟/运行时间/重连/状态。
+        /// BOM 不能省（Excel 读中文）；转义与 Toast 文案与 ListShell 导出同口径。</summary>
+        private void ExportCsv()
+        {
+            List<HealthSnapshot> rows;
+            lock (_recent) { rows = new List<HealthSnapshot>(_recent); }
+            if (rows.Count == 0)
+            {
+                ToastNotifier.Warning(L10n.T("没有可导出的条目"));
+                return;
+            }
+            using (var dlg = new SaveFileDialog
+            {
+                Title = L10n.T("导出为 CSV"),
+                Filter = "CSV (*.csv)|*.csv",
+                FileName = "gdterm-health-" + DateTime.Now.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture),
+                DefaultExt = "csv"
+            })
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    var sb = new StringBuilder();
+                    sb.Append("Timestamp,Connected,LatencyMs,Uptime,ReconnectCount,Status\r\n");
+                    foreach (var s in rows)
+                    {
+                        sb.Append(s.Timestamp.ToString("yyyy-MM-dd HH:mm:ss", CultureInfo.InvariantCulture)).Append(',')
+                          .Append(s.IsConnected ? "true" : "false").Append(',')
+                          .Append(s.LatencyMs.ToString(CultureInfo.InvariantCulture)).Append(',')
+                          .Append(FormatTimeSpan(s.Uptime)).Append(',')
+                          .Append(s.ReconnectCount.ToString(CultureInfo.InvariantCulture)).Append(',')
+                          .Append(EscapeCsv(s.StatusText))
+                          .Append("\r\n");
+                    }
+                    using (var sw = new StreamWriter(dlg.FileName, false, new UTF8Encoding(true)))
+                        sw.Write(sb.ToString());
+                    ToastNotifier.Success(L10n.T("已导出 ") + rows.Count + L10n.T(" 条到 ") + Path.GetFileName(dlg.FileName));
+                }
+                catch (Exception ex)
+                {
+                    try { DiagLog.Error("HealthMonitorPanel.ExportCsv", ex); } catch (Exception) { }
+                    ToastNotifier.Error(L10n.T("导出失败：") + ex.Message);
+                }
+            }
+        }
+
+        private static string EscapeCsv(string s)
+        {
+            s = s ?? string.Empty;
+            bool need = s.IndexOfAny(new[] { ',', '"', '\r', '\n' }) >= 0;
+            if (!need) return s;
+            return "\"" + s.Replace("\"", "\"\"") + "\"";
         }
 
         private static string FormatTimeSpan(TimeSpan ts)

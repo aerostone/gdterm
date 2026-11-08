@@ -417,7 +417,8 @@
       "src": [
         "src/Gdterm.UI/Controls/RemoteMonitorPanel.cs"
       ],
-      "known_gaps": [],
+      "drop_caps": ["paging"],
+    "known_gaps": [],
       "manual_ok": []
     },
     {
@@ -428,7 +429,8 @@
       "src": [
         "src/Gdterm.UI/Controls/HealthMonitorPanel.cs"
       ],
-      "known_gaps": [],
+      "drop_caps": ["paging"],
+    "known_gaps": [],
       "manual_ok": []
     },
     {

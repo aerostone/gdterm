@@ -587,7 +587,7 @@ namespace Gdterm.Core
             ["导入成功"] = "Import successful",
             ["导入连接"] = "Import connections",
             ["导出失败："] = "Export failed: ",
-            ["导出成功"] = "Export successful",
+            ["导出 CSV"] = "Export CSV",   // F9 监控面板导出按钮
             ["所有支持格式 (*.xsh;*.ini;*.json;user.sessions)|*.xsh;*.ini;*.json;user.sessions|"] = "All supported formats (*.xsh;*.ini;*.json;user.sessions)|*.xsh;*.ini;*.json;user.sessions|",
             ["未找到可导入的连接"] = "No importable connections found",
             ["没有可导出的连接"] = "No connections to export",
