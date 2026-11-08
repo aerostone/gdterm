@@ -62,6 +62,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 View = View.Details,
                 FullRowSelect = true,
+                MultiSelect = true, // F7：Ctrl/Shift 多选后「删除」批量删
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = Services.FormFontPolicy.UiFont(),
@@ -159,14 +160,22 @@ namespace Gdterm.UI.Controls
         private void DeleteRule()
         {
             if (_lvRules.SelectedItems.Count == 0) return;
-            var rule = _lvRules.SelectedItems[0].Tag as HighlightRule;
-            if (rule != null && MessageBox.Show(L10n.Tf("删除规则 \"{0}\"?", rule.Name), "gdterm", MessageBoxButtons.YesNo) == DialogResult.Yes)
+            var rules = new List<HighlightRule>();
+            foreach (ListViewItem it in _lvRules.SelectedItems)
             {
-                _config.Rules.Remove(rule);
-                _store.Save(_config);
-                RefreshList();
-                RulesChanged?.Invoke();
+                var r = it.Tag as HighlightRule;
+                if (r != null) rules.Add(r);
             }
+            if (rules.Count == 0) return;
+
+            var msg = rules.Count == 1
+                ? L10n.Tf("删除规则 \"{0}\"?", rules[0].Name)
+                : L10n.Tf("删除选中的 {0} 条高亮规则（含 \"{1}\" 等）？此操作不可撤销。", rules.Count, rules[0].Name);
+            if (MessageBox.Show(this, msg, L10n.T("确认删除"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+            foreach (var r in rules) _config.Rules.Remove(r);
+            _store.Save(_config);
+            RefreshList();
+            RulesChanged?.Invoke();
         }
 
         private void ToggleRule()

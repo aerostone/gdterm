@@ -48,6 +48,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 View = View.Details,
                 FullRowSelect = true,
+                MultiSelect = true, // F7：Ctrl/Shift 多选后「删选中」批量删记录
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = Services.FormFontPolicy.MonoFont()
@@ -62,13 +63,46 @@ namespace Gdterm.UI.Controls
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(DpiScale.V(this, 8), 0, 0, 0)
             };
-            // 清空按钮（此前只有 Record/Reload，无清空入口，用户报 Record-only）
+            // 清空按钮（此前只有 Record/Reload，无清空入口，用户报 Record-only）+ F7 删选中
             var clear = new AntdUI.Button {
                 Text = L10n.T("清空"),
                 Dock = DockStyle.Bottom,
                 Height = Math.Max(DpiScale.V(this, 28), FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this)),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground
+            };
+            var deleteSel = new AntdUI.Button {
+                Text = L10n.T("删选中"),
+                Dock = DockStyle.Bottom,
+                Height = Math.Max(DpiScale.V(this, 28), FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this)),
+                Enabled = false,
+                BackColor = GdtermColorTable.Surface,
+                ForeColor = GdtermColorTable.Foreground
+            };
+            _list.ItemSelectionChanged += (s, e) => { deleteSel.Enabled = _list.SelectedItems.Count > 0; };
+            deleteSel.Click += (s, e) =>
+            {
+                var jobs = new System.Collections.Generic.List<Job>();
+                foreach (ListViewItem it in _list.SelectedItems)
+                {
+                    var j = it.Tag as Job;
+                    if (j != null) jobs.Add(j);
+                }
+                if (jobs.Count == 0) return;
+                var n = jobs.Count;
+                if (MessageBox.Show(FindForm(), L10n.Tf("删除选中的 {0} 条传输记录？", n), L10n.T("传输中心"),
+                        MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+                try
+                {
+                    lock (Sync) foreach (var j in jobs) Jobs.Remove(j);
+                    Reload();
+                    ToastNotifier.Success(L10n.Tf("已删除 {0} 条传输记录", n), 2000);
+                }
+                catch (Exception ex)
+                {
+                    try { DiagLog.Error("TransferCenter.DeleteSelected", ex); } catch (Exception) { }
+                    ToastNotifier.Error(L10n.T("删除失败：") + ex.Message);
+                }
             };
             clear.Click += (s, e) =>
             {
@@ -105,6 +139,7 @@ namespace Gdterm.UI.Controls
 
             Controls.Add(_shell);
             Controls.Add(tip);
+            Controls.Add(deleteSel);
             Controls.Add(clear);
             Controls.Add(title);
             _empty = EmptyStateView.Attach(this, L10n.T("还没有传输记录"),

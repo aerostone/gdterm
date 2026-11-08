@@ -33,10 +33,20 @@ namespace Gdterm.UI.Controls
             _clear = new AntdUI.Button {
                 Text = L10n.T("清空"),
                 Dock = DockStyle.Bottom,
-                Height = 28,
+                Height = Math.Max(28, FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this)),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground
             };
+            var deleteSel = new AntdUI.Button {
+                Text = L10n.T("删选中"),
+                Dock = DockStyle.Bottom,
+                Height = Math.Max(28, FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this)),
+                Enabled = false,
+                BackColor = GdtermColorTable.Surface,
+                ForeColor = GdtermColorTable.Foreground
+            };
+            _list.ItemSelectionChanged += (s, e) => { deleteSel.Enabled = _list.SelectedItems.Count > 0; };
+            deleteSel.Click += (s, e) => RemoveSelected();
             _clear.Click += (s, e) =>
             {
                 int n;
@@ -68,6 +78,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 View = View.Details,
                 FullRowSelect = true,
+                MultiSelect = true, // F7：Ctrl/Shift 多选后 Del/「删选中」批量删
                 HideSelection = false,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
@@ -99,6 +110,7 @@ namespace Gdterm.UI.Controls
             };
 
             Controls.Add(_shell);
+            Controls.Add(deleteSel);
             Controls.Add(_clear);
             Controls.Add(title);
 
@@ -165,11 +177,15 @@ namespace Gdterm.UI.Controls
 
         private void RemoveSelected()
         {
-            if (_list.SelectedItems.Count == 0) return;
-            var text = _list.SelectedItems[0].Text;
+            var texts = new List<string>();
+            foreach (ListViewItem it in _list.SelectedItems) texts.Add(it.Text);
+            if (texts.Count == 0) return;
+            var n = texts.Count;
+            if (n > 1 && MessageBox.Show(this.FindForm(), L10n.Tf("删除选中的 {0} 条通知？", n), L10n.T("通知中心"),
+                    MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
             try
             {
-                lock (Sync) Buffer.Remove(text);
+                lock (Sync) { foreach (var t in texts) Buffer.Remove(t); }
                 Reload();
             }
             catch (Exception ex)
