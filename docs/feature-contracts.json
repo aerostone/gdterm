@@ -108,11 +108,14 @@
         "src/Gdterm.UI/Controls/ConnectionTreeControl.cs"
       ],
       "known_gaps": [],
-      "manual_ok": [],
+      "manual_ok": [
+        "keyboard",
+        "loading"
+      ],
       "drop_caps": [
         "empty"
       ],
-      "note": "连接树承载在左侧栏，空态由向导/新建连接引导"
+      "note": "连接树承载在左侧栏，空态由向导/新建连接引导；键盘：WinForms TreeView 内建 ↑↓←→ 方向键导航/展开；加载中：内存树同步构建，无异步加载"
     },
     {
       "id": "page.KeePassUnlockForm",
@@ -204,7 +207,10 @@
         "src/Gdterm.UI/Controls/ListShell.cs"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [
+        "loading"
+      ],
+      "note": "加载中：纯内存完成记录（static Jobs），无磁盘/DB 读取，无异步长任务"
     },
     {
       "id": "page.ChangeMasterPasswordForm",
@@ -270,7 +276,10 @@
         "src/Gdterm.UI/Forms/KeePassManagerForm.cs"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [
+        "loading"
+      ],
+      "note": "加载中：条目表 DB 同步读取、数据量有界；解锁长任务走对话框流程（KeePassUnlockForm）"
     },
     {
       "id": "page.PasswordGeneratorForm",
@@ -337,13 +346,15 @@
         "src/Gdterm.UI/Controls/ToolboxPanel.cs"
       ],
       "known_gaps": [],
-      "manual_ok": [],
+      "manual_ok": [
+        "loading"
+      ],
       "drop_caps": [
         "empty",
         "error",
         "keyboard"
       ],
-      "note": "静态工具清单，没有数据源，空态无意义 工具执行错误在输出区原文展示（各工具自管）；ListView 内置方向键导航。"
+      "note": "静态工具清单，没有数据源，空态无意义 工具执行错误在输出区原文展示（各工具自管）；ListView 内置方向键导航。；加载中：静态工具清单内存渲染，工具执行反馈在输出区（各工具自管）"
     },
     {
       "id": "page.NotificationCenterPanel",
@@ -354,7 +365,10 @@
         "src/Gdterm.UI/Controls/NotificationCenterPanel.cs"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [
+        "loading"
+      ],
+      "note": "加载中：内存通知列表，无异步加载"
     },
     {
       "id": "page.QuickCommandEditorForm",
@@ -517,7 +531,10 @@
         "src/Gdterm.Logging/CommandHistoryStore.cs"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [
+        "loading"
+      ],
+      "note": "加载中：SQLite 同步查询、数据量有界（同口径裁决分页为 v0.2），无需全局忙碌态"
     },
     {
       "id": "page.CommandTemplatePanel",
@@ -529,7 +546,10 @@
         "src/Gdterm.UI/Controls/ListShell.cs"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [
+        "loading"
+      ],
+      "note": "加载中：模板库磁盘同步读取（毫秒级），无异步长任务"
     },
     {
       "id": "page.MultiChannelPanel",
@@ -586,7 +606,10 @@
         "src/Gdterm.UI/Controls/ListShell.cs"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [
+        "loading"
+      ],
+      "note": "加载中：转发规则磁盘同步读取（毫秒级），无异步长任务"
     },
     {
       "id": "page.HighlightRulePanel",
@@ -597,7 +620,10 @@
         "src/Gdterm.UI/Controls/HighlightRulePanel.cs"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [
+        "loading"
+      ],
+      "note": "加载中：规则磁盘同步读取（毫秒级），无异步长任务"
     },
     {
       "id": "page.SessionBookmarksPanel",
