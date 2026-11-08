@@ -10,6 +10,7 @@ using Gdterm.Core.Models;
 using Gdterm.Security;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Forms;
+using Gdterm.UI.Services;
 
 namespace Gdterm.Tests.Ui
 {
@@ -44,6 +45,10 @@ namespace Gdterm.Tests.Ui
             Show("setup-wizard", () => (Form)new SetupWizardForm(security), outDir, log, check);
             Show("sshkey-manager", () => (Form)new SshKeyManagerForm(keepass), outDir, log, check);
             Show("transfer-progress", () => (Form)new TransferProgressDialog("smoke"), outDir, log, check);
+            // 回收站：先灌 2 条锁三列/按钮启用态，再开空态外的有数据态
+            TrashStore.Default.Add("smoke", "烟测", "烟测条目一", new object());
+            TrashStore.Default.Add("smoke", "烟测", "烟测条目二", new object());
+            Show("trash", () => (Form)new TrashForm(), outDir, log, check);
             // 连接导入预览：裁决入口不渲染过就没人知道「导入前能不能看清、确定键是否置灰」
             Show("import-preview", () => (Form)new ImportPreviewForm(
                 new List<ConnectionConfig>

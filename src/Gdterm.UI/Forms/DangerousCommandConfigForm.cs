@@ -41,6 +41,12 @@ namespace Gdterm.UI.Forms
             BackColor = GdtermColorTable.Background;
             ForeColor = GdtermColorTable.Foreground;
             InitializeComponent();
+            // F16 回收站：删除的危险命令规则可经「工具 → 回收站」恢复
+            TrashStore.Default.RegisterRestorer("dangerouscmd", entry =>
+            {
+                var rule = entry.Payload as DangerousCommandRule;
+                if (rule != null) _detector.AddRule(rule);
+            });
             // 高/低 DPI 自适应：声明设计基准 96 DPI，让 .NET 自动按当前 DPI 缩放控件。
             Gdterm.UI.Services.FormFontPolicy.Apply(this);
             // 无障碍名称回填：ListView/Table 本身没有 Text，AutoName 只补有文本的控件
@@ -396,7 +402,7 @@ namespace Gdterm.UI.Forms
                 int deleted = 0, skipped = 0;
                 foreach (var rule in rules)
                 {
-                    if (_detector.RemoveRule(rule.Id)) deleted++;
+                    if (_detector.RemoveRule(rule.Id)) { deleted++; TrashStore.Default.Add("dangerouscmd", L10n.T("危险命令规则"), rule.Name, rule); }
                     else skipped++;
                 }
                 LoadRules();
@@ -434,6 +440,7 @@ namespace Gdterm.UI.Forms
                 }
                 else
                 {
+                    TrashStore.Default.Add("dangerouscmd", L10n.T("危险命令规则"), rule.Name, rule);
                     _statusLabel.Text = L10n.Tf("已删除规则：{0}", rule.Name);
                     if (_detector.LastSaveError != null)
                         AntdUI.Message.error(this, L10n.T("配置文件写入失败：") + _detector.LastSaveError);

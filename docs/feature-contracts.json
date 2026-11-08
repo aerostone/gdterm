@@ -33,9 +33,10 @@
       ],
       "known_gaps": [],
       "manual_ok": [
-        "persist"
+        "persist",
+        "undo"
       ],
-      "note": "对话框返回 Result：OtpManagerForm 侧 `_store.Add(...)` 新增条目非破坏性；失败提示已有 MessageBox。",
+      "note": "对话框返回 Result：OtpManagerForm 侧 `_store.Add(...)` 新增条目非破坏性；失败提示已有 MessageBox。；撤销/回收站：单项添加对话框，无删除入口（删除在 OTP 管理页）",
       "drop_caps": [
         "confirm"
       ]
@@ -65,7 +66,10 @@
         "src/Gdterm.UI/Controls/FilePaneControl.cs"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [
+        "undo"
+      ],
+      "note": "撤销/回收站：文件删除属远端/本地文件系统操作无回滚通道（本地文件走 OS 回收站属 v0.2 shell API）"
     },
     {
       "id": "page.SftpPermissionForm",
@@ -76,12 +80,14 @@
         "src/Gdterm.UI/Forms/SftpPermissionForm.cs"
       ],
       "known_gaps": [],
-      "manual_ok": [],
+      "manual_ok": [
+        "undo"
+      ],
       "drop_caps": [
         "persist",
         "error"
       ],
-      "note": "persist 豁免：权限初值来自目标文件自身 rwx，按文件语义，无用户级偏好可存（强记上次的 mask 会误导套用到新文件）。 纯 UI 对话框无 I/O，无失败路径（chmod 失败的提示在调用方 SFTP 面板）。"
+      "note": "persist 豁免：权限初值来自目标文件自身 rwx，按文件语义，无用户级偏好可存（强记上次的 mask 会误导套用到新文件）。 纯 UI 对话框无 I/O，无失败路径（chmod 失败的提示在调用方 SFTP 面板）。；撤销/回收站：权限变更不留原权限记录（批量 chmod 无法逐条回滚）；回滚=用户重选旧权限"
     },
     {
       "id": "page.WelcomePanel",
@@ -126,12 +132,14 @@
         "src/Gdterm.UI/Forms/KeePassUnlockForm.cs"
       ],
       "known_gaps": [],
-      "manual_ok": [],
+      "manual_ok": [
+        "undo"
+      ],
       "drop_caps": [
         "persist",
         "confirm"
       ],
-      "note": "persist 豁免：密码库路径由应用固定（data/gdterm.kdbx），口令属敏感凭据不可落盘。 解锁非破坏性操作。"
+      "note": "persist 豁免：密码库路径由应用固定（data/gdterm.kdbx），口令属敏感凭据不可落盘。 解锁非破坏性操作。；撤销/回收站：解锁入口，无可删数据"
     },
     {
       "id": "page.KeePassEntryPicker",
@@ -221,12 +229,14 @@
         "src/Gdterm.UI/Forms/ChangeMasterPasswordForm.cs"
       ],
       "known_gaps": [],
-      "manual_ok": [],
+      "manual_ok": [
+        "undo"
+      ],
       "drop_caps": [
         "persist",
         "confirm"
       ],
-      "note": "persist 豁免：改密表单存任何输入都是安全反模式，无偏好可持久化。 双栏输入+强度校验+影响范围警告横幅即确认机制。"
+      "note": "persist 豁免：改密表单存任何输入都是安全反模式，无偏好可持久化。 双栏输入+强度校验+影响范围警告横幅即确认机制。；撤销/回收站：旧主密码改后刻意销毁（安全属性），留存供回滚等于后门"
     },
     {
       "id": "page.DangerousCommandConfigForm",
@@ -265,7 +275,10 @@
         "src/Gdterm.UI/Forms/PasswordHealthForm.cs"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [
+        "undo"
+      ],
+      "note": "撤销/回收站：只读报告页，无可删数据"
     },
     {
       "id": "page.KeePassManagerForm",
@@ -291,9 +304,10 @@
       ],
       "known_gaps": [],
       "manual_ok": [
-        "validation"
+        "validation",
+        "undo"
       ],
-      "note": "生成器没有非法输入面：长度由 Slider 夹取，字符集至少勾一项（UI 层禁用） 无破坏性操作（纯本地计算）；失败提示 N/A：唯一异常路径（未选字符集）为内联提示，无 I/O 失败。",
+      "note": "生成器没有非法输入面：长度由 Slider 夹取，字符集至少勾一项（UI 层禁用） 无破坏性操作（纯本地计算）；失败提示 N/A：唯一异常路径（未选字符集）为内联提示，无 I/O 失败。；撤销/回收站：纯生成页，结果不落盘",
       "drop_caps": [
         "confirm"
       ]
@@ -323,7 +337,10 @@
         "src/Gdterm.UI/Forms/ScannerCenterForm.cs"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [
+        "undo"
+      ],
+      "note": "撤销/回收站：扫描任务为运行态，无删除类数据操作"
     },
     {
       "id": "page.SecretScanPanel",
@@ -335,7 +352,10 @@
         "src/Gdterm.UI/Controls/ListShell.cs"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [
+        "undo"
+      ],
+      "note": "撤销/回收站：扫描结果重扫即再生，无独立删除"
     },
     {
       "id": "page.ToolboxPanel",
@@ -379,11 +399,13 @@
         "src/Gdterm.UI/Forms/QuickCommandEditorForm.cs"
       ],
       "known_gaps": [],
-      "manual_ok": [],
+      "manual_ok": [
+        "undo"
+      ],
       "drop_caps": [
         "confirm"
       ],
-      "note": "编辑器无删除/覆盖操作（删除走列表页且已有确认）；校验已有 Message.warn 内联提示。"
+      "note": "编辑器无删除/覆盖操作（删除走列表页且已有确认）；校验已有 Message.warn 内联提示。；撤销/回收站：本页只增改无删除入口（快捷命令删除在侧栏快捷命令列表）"
     },
     {
       "id": "page.SftpDualPanePanel",
@@ -395,8 +417,10 @@
         "src/Gdterm.UI/Controls/FilePaneControl.cs"
       ],
       "known_gaps": [],
-      "manual_ok": [],
-      "note": "双栏宿主：单栏能力见 FilePaneControl"
+      "manual_ok": [
+        "undo"
+      ],
+      "note": "双栏宿主：单栏能力见 FilePaneControl；撤销/回收站：远端文件删除无回滚通道（服务端无回收站、无法备份任意大小文件）"
     },
     {
       "id": "page.ConnectionImportExport",
@@ -408,8 +432,10 @@
         "src/Gdterm.UI/Forms/ImportPreviewForm.cs"
       ],
       "known_gaps": [],
-      "manual_ok": [],
-      "note": "文件框 + 预览裁定对话框（ImportPreviewForm，回车导入/Esc 取消/可过滤）"
+      "manual_ok": [
+        "undo"
+      ],
+      "note": "文件框 + 预览裁定对话框（ImportPreviewForm，回车导入/Esc 取消/可过滤）；撤销/回收站：只导入/导出，无删除类操作"
     },
     {
       "id": "page.ConnectionQuickJumpForm",
@@ -560,7 +586,10 @@
         "src/Gdterm.UI/Controls/MultiChannelPanel.cs"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [
+        "undo"
+      ],
+      "note": "撤销/回收站：通道为运行态（不落盘），删除=结束运行态会话，无数据损失"
     },
     {
       "id": "page.MacroPanel",
@@ -583,7 +612,10 @@
         "src/Gdterm.UI/Controls/BatchCommandPanel.cs"
       ],
       "known_gaps": [],
-      "manual_ok": []
+      "manual_ok": [
+        "undo"
+      ],
+      "note": "撤销/回收站：批量任务为运行态（不落盘），无数据删除"
     },
     {
       "id": "page.LogonScriptPanel",
@@ -861,6 +893,21 @@
       "kind": "action",
       "menu_leaf": "重连当前标签",
       "src": []
+    },
+    {
+      "id": "page.TrashForm",
+      "name": "回收站",
+      "menu": "工具 > 回收站",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Forms/TrashForm.cs",
+        "src/Gdterm.UI/Services/TrashStore.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": [
+        "loading"
+      ],
+      "note": "加载态：纯内存回收站（TrashStore 会话级，重启清空——页面文案已如实标注）；恢复/删除/清空三操作 + 多选批量 + ListShell（过滤/排序/分页/导出免费）"
     }
   ]
 }

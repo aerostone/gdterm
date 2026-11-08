@@ -155,6 +155,13 @@ namespace Gdterm.UI.Services
                 form.ShowDialog(_owner);
         }
 
+        /// <summary>回收站（F16 加分项「撤销/回收站」）：会话级，重启后清空。</summary>
+        public void OpenTrash()
+        {
+            using (var form = new TrashForm())
+                form.ShowDialog(_owner);
+        }
+
         public void OpenSshKeyManager()
         {
             if (!ReAuthenticate(L10n.T("管理 SSH 密钥"))) return;

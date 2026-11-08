@@ -123,6 +123,7 @@
     <Compile Include="Forms\ScannerCenterForm.cs" />
     <Compile Include="Forms\AddOtpForm.cs" />
     <Compile Include="Forms\OtpManagerForm.cs" />
+    <Compile Include="Forms\TrashForm.cs" />
     <Compile Include="Forms\MainForm.Designer.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
@@ -225,6 +226,7 @@
     <Compile Include="Services\TabActiveSessionQuery.cs" />
     <Compile Include="Services\GlobalHotkeyController.cs" />
     <Compile Include="Services\ToolsDialogsLauncher.cs" />
+    <Compile Include="Services\TrashStore.cs" />
     <Compile Include="Services\UpdateChecker.cs" />
     <Compile Include="Services\SidePanelHost.cs" />
     <Compile Include="Services\ViewModeController.cs" />

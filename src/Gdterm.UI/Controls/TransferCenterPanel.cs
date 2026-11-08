@@ -35,6 +35,17 @@ namespace Gdterm.UI.Controls
             BackColor = GdtermColorTable.Background;
             ForeColor = GdtermColorTable.Foreground;
 
+            // F16 回收站：删除/清空的传输记录可经「工具 → 回收站」恢复
+            TrashStore.Default.RegisterRestorer("transfer", entry =>
+            {
+                var j = entry.Payload as Job;
+                if (j != null)
+                {
+                    lock (Sync) Jobs.Insert(0, j);
+                    if (!IsDisposed) Reload();
+                }
+            });
+
             var title = new AntdUI.Label {
                 Text = L10n.T("传输中心"),
                 Dock = DockStyle.Top,
@@ -94,7 +105,7 @@ namespace Gdterm.UI.Controls
                         MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
                 try
                 {
-                    lock (Sync) foreach (var j in jobs) Jobs.Remove(j);
+                    lock (Sync) foreach (var j in jobs) { Jobs.Remove(j); TrashStore.Default.Add("transfer", L10n.T("传输记录"), j.Message, j); }
                     Reload();
                     ToastNotifier.Success(L10n.Tf("已删除 {0} 条传输记录", n), 2000);
                 }

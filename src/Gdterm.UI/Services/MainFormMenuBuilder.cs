@@ -75,6 +75,7 @@ namespace Gdterm.UI.Services
             public EventHandler SshKeyManager { get; set; }
             public EventHandler ShowTransferCenter { get; set; }
             public EventHandler ShowNotificationCenter { get; set; }
+            public EventHandler ShowTrash { get; set; }
             public EventHandler QuickJump { get; set; }
             public EventHandler ShowLogsFolder { get; set; }
             public EventHandler ToggleDebugMode { get; set; }
@@ -201,6 +202,7 @@ namespace Gdterm.UI.Services
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
             toolsMenu.DropDownItems.Add(Mk(L10n.T("传输中心"), cb.ShowTransferCenter, "transfer"));
             toolsMenu.DropDownItems.Add(Mk(L10n.T("通知中心"), cb.ShowNotificationCenter, "notify"));
+            toolsMenu.DropDownItems.Add(Mk(L10n.T("回收站"), cb.ShowTrash, "trash"));
             toolsMenu.DropDownItems.Add(new ToolStripSeparator());
             toolsMenu.DropDownItems.Add(Mk(L10n.T("密码库管理(&K)"), cb.KeePassManager, "lock"));
             toolsMenu.DropDownItems.Add(Mk(L10n.T("密码健康报告(&H)"), cb.PasswordHealth, "shield"));

@@ -8,7 +8,7 @@
 #   none           当前零验证 —— 技术债，见 docs/UI-UX-VERIFICATION.md §5 收敛计划
 #
 # floor：dump 条目数下限。删/降级任何 dump 覆盖都会让门变红（棘轮）。
-# floor: 39
+# floor: 42
 #
 Forms/MainForm.cs | dump:mainform | 主壳：菜单/树/Tab/底栏/状态
 Forms/AiSettingsForm.cs | dump:ai-settings |
@@ -26,6 +26,7 @@ Forms/ScannerCenterForm.cs | dump:scanner-center |
 Forms/SetupWizardForm.cs | dump:setup-wizard |
 Forms/SshKeyManagerForm.cs | dump:sshkey-manager |
 Forms/SftpPermissionForm.cs | dump:sftp-permission | 唯一未进 dump 的窗体；建议补 Show 用例
+Forms/TrashForm.cs | dump:trash | 回收站（F16 加分项撤销/回收站）；smoke 灌 2 条锁三列/按钮启用态
 Controls/TransferProgressDialog.cs | dump:transfer-progress |
 Controls/CommandPaletteForm.cs | manual:transient modal (hotkey-triggered, input-driven filtering) | A1 command palette; structure consistent with QuickJump
 Controls/AiChatPanel.cs | none | 侧栏常驻

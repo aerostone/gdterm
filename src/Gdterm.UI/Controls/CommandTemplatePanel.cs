@@ -38,6 +38,16 @@ namespace Gdterm.UI.Controls
             Dock = DockStyle.Fill;
             BackColor = GdtermColorTable.Background;
             BuildUI();
+            // F16 回收站：删除的模板可经「工具 → 回收站」恢复
+            TrashStore.Default.RegisterRestorer("commandtemplate", entry =>
+            {
+                var t = entry.Payload as CommandTemplate;
+                if (t != null)
+                {
+                    try { _store.Add(t); } catch (System.Exception ex) { throw new InvalidOperationException(L10n.T("恢复模板失败：") + ex.Message, ex); }
+                    if (!IsDisposed) { FilterResults(); RefreshCategories(); }
+                }
+            });
             RefreshCategories();
             FilterResults();
         }
@@ -337,7 +347,7 @@ namespace Gdterm.UI.Controls
             int ok = 0, fail = 0;
             foreach (var t in targets)
             {
-                try { _store.Delete(t.Id); ok++; }
+                try { _store.Delete(t.Id); TrashStore.Default.Add("commandtemplate", L10n.T("命令模板"), t.Name, t); ok++; }
                 catch (System.Exception ex)
                 {
                     fail++;

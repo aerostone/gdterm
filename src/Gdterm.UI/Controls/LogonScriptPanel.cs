@@ -30,6 +30,17 @@ namespace Gdterm.UI.Controls
             Dock = DockStyle.Fill;
             BackColor = GdtermColorTable.Background;
             BuildUI();
+            // F16 回收站：删除的登录脚本可经「工具 → 回收站」恢复
+            TrashStore.Default.RegisterRestorer("logonscript", entry =>
+            {
+                var s = entry.Payload as LogonScript;
+                if (s != null)
+                {
+                    _scripts.Add(s);
+                    _store.Save(_scripts);
+                    if (!IsDisposed) RefreshList();
+                }
+            });
             RefreshList();
         }
 
@@ -146,6 +157,7 @@ namespace Gdterm.UI.Controls
             if (script != null && MessageBox.Show(L10n.Tf("删除 \"{0}\"?", script.Name), "gdterm", MessageBoxButtons.YesNo) == DialogResult.Yes)
             {
                 _scripts.Remove(script);
+                TrashStore.Default.Add("logonscript", L10n.T("登录脚本"), script.Name, script);
                 _store.Save(_scripts);
                 RefreshList();
             }

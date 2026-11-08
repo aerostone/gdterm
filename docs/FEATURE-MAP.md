@@ -26,7 +26,7 @@
 
 ## 1. 入口大纲（L1 → L2）
 
-共 6 个一级菜单 / 53 个二级入口。
+共 6 个一级菜单 / 54 个二级入口。
 
 ### 文件(&F)
 
@@ -89,6 +89,7 @@
 | 扫描中心（插件） | ScannerCenterForm | `src/Gdterm.UI/Forms/ScannerCenterForm.cs` | ✅ `page.ScannerCenterForm` |
 | 传输中心 | TransferCenterPanel | `src/Gdterm.UI/Controls/TransferCenterPanel.cs` | ✅ `page.TransferCenterPanel` |
 | 通知中心 | NotificationCenterPanel | `src/Gdterm.UI/Controls/NotificationCenterPanel.cs` | ✅ `page.NotificationCenterPanel` |
+| 回收站 | TrashForm | `src/Gdterm.UI/Forms/TrashForm.cs` | ✅ `page.TrashForm` |
 | 密码库管理(&K) | KeePassManagerForm | `src/Gdterm.UI/Forms/KeePassManagerForm.cs` | ✅ `page.KeePassManagerForm` |
 | 密码健康报告(&H) | PasswordHealthForm | `src/Gdterm.UI/Forms/PasswordHealthForm.cs` | ✅ `page.PasswordHealthForm` |
 | 密码生成器(&G) | PasswordGeneratorForm | `src/Gdterm.UI/Forms/PasswordGeneratorForm.cs` | ✅ `page.PasswordGeneratorForm` |
@@ -113,7 +114,7 @@
 
 ## 2. 完备性矩阵（按缺口排序，最烂的在最上面）
 
-43 个页面，其中 0 个存在未登记缺口。
+44 个页面，其中 0 个存在未登记缺口。
 
 | 页面 | 一级菜单 | 类型 | 完备度 | 缺口 | dump |
 |---|---|---|---|---|---|
@@ -159,6 +160,7 @@
 | 运维工具箱 `page.ToolboxPanel` | 工具 > 运维工具箱 | panel | 100% (0/0) | — | toolbox | 侧栏常驻（审计 C7-2 入 dump） |
 | 传输中心 `page.TransferCenterPanel` | 工具 > 传输中心 | list | 100% (4/4) | — | transfer-center | 侧栏常驻 |
 | 传输进度 `page.TransferProgressDialog` | SFTP > 上传/下载 | progress | 100% (2/2) | — | transfer-progress | |
+| 回收站 `page.TrashForm` | 工具 > 回收站 | list | 100% (4/4) | — | trash | 回收站（F16 加分项撤销/回收站）；smoke 灌 2 条锁三列/按钮启用态 |
 | 欢迎页 `page.WelcomePanel` | mainform > 空标签页 | panel | 100% (0/0) | — | — |
 
 ## 3. 待补清单（按页面展开）
@@ -171,28 +173,4 @@
 
 | 页面 | 已有/总数 | 缺口 |
 |---|---|---|
-| OTP 动态码管理 `page.OtpManagerForm` | 8/9 | 撤销/回收站 |
-| SFTP 双栏 `page.SftpDualPanePanel` | 8/9 | 撤销/回收站 |
-| SFTP 权限修改 `page.SftpPermissionForm` | 2/3 | 撤销/回收站 |
-| 书签 / 最近连接 `page.SessionBookmarksPanel` | 7/8 | 撤销/回收站 |
-| 传输中心 `page.TransferCenterPanel` | 8/9 | 撤销/回收站 |
-| 修改主密码 `page.ChangeMasterPasswordForm` | 2/3 | 撤销/回收站 |
-| 危险命令规则 `page.DangerousCommandConfigForm` | 8/9 | 撤销/回收站 |
-| 命令模板库 `page.CommandTemplatePanel` | 8/9 | 撤销/回收站 |
-| 多通道广播 `page.MultiChannelPanel` | 8/9 | 撤销/回收站 |
-| 宏录制 `page.MacroPanel` | 8/9 | 撤销/回收站 |
-| 密码健康报告 `page.PasswordHealthForm` | 8/9 | 撤销/回收站 |
-| 密码库解锁 `page.KeePassUnlockForm` | 2/3 | 撤销/回收站 |
-| 密码生成器 `page.PasswordGeneratorForm` | 3/4 | 撤销/回收站 |
-| 快捷命令编辑 `page.QuickCommandEditorForm` | 3/4 | 撤销/回收站 |
-| 快捷键绑定 `page.KeyBindingPanel` | 8/9 | 撤销/回收站 |
-| 扫描中心 `page.ScannerCenterForm` | 8/9 | 撤销/回收站 |
-| 批量命令 `page.BatchCommandPanel` | 3/4 | 撤销/回收站 |
-| 敏感信息扫描 `page.SecretScanPanel` | 8/9 | 撤销/回收站 |
-| 文件面板（单栏） `page.FilePaneControl` | 8/9 | 撤销/回收站 |
-| 添加 OTP `page.AddOtpForm` | 3/4 | 撤销/回收站 |
-| 登录脚本 `page.LogonScriptPanel` | 3/4 | 撤销/回收站 |
-| 端口转发 `page.PortForwardPanel` | 8/9 | 撤销/回收站 |
-| 连接导入/导出 `page.ConnectionImportExport` | 4/5 | 撤销/回收站 |
-| 通知中心 `page.NotificationCenterPanel` | 8/9 | 撤销/回收站 |
 

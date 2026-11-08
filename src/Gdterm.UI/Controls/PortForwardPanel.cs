@@ -35,6 +35,17 @@ namespace Gdterm.UI.Controls
             // RefreshList 无人调用，EmptyStateView 初值 Visible=false 永不翻亮。
             try { RefreshList(); }
             catch (Exception exSwallowed) { try { DiagLog.Swallowed("PortForwardPanel.Ctor.Refresh", exSwallowed); } catch { } }
+
+            // F16 回收站：删除的转发规则可经「工具 → 回收站」恢复（规则本为会话内内存态）
+            TrashStore.Default.RegisterRestorer("portforward", entry =>
+            {
+                var rule = entry.Payload as PortForwardRule;
+                if (rule != null)
+                {
+                    _rules.Add(rule);
+                    if (!IsDisposed) RefreshList();
+                }
+            });
         }
 
         /// <summary>绑定端口转发宿主（由 Terminal 层适配，UI 不碰 SshClient）</summary>
@@ -261,6 +272,7 @@ namespace Gdterm.UI.Controls
             {
                 try { _manager.Stop(rule.Id); } catch (Exception) { }   // 运行中的先停，否则端口句柄留在后台
                 _rules.Remove(rule);
+                TrashStore.Default.Add("portforward", L10n.T("端口转发"), rule.Name ?? rule.Id, rule);
                 n++;
             }
             RefreshList();

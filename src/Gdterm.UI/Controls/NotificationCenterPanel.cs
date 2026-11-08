@@ -30,6 +30,21 @@ namespace Gdterm.UI.Controls
             BackColor = GdtermColorTable.Background;
             ForeColor = GdtermColorTable.Foreground;
 
+            // F16 回收站：删除的通知可经「工具 → 回收站」恢复（文本缓冲，payload = 原文）
+            TrashStore.Default.RegisterRestorer("notification", entry =>
+            {
+                var t = entry.Payload as string;
+                if (!string.IsNullOrEmpty(t))
+                {
+                    lock (Sync)
+                    {
+                        Buffer.Insert(0, t);
+                        while (Buffer.Count > Max) Buffer.RemoveAt(Buffer.Count - 1);
+                    }
+                    if (!IsDisposed) Reload();
+                }
+            });
+
             _clear = new AntdUI.Button {
                 Text = L10n.T("清空"),
                 Dock = DockStyle.Bottom,
@@ -185,7 +200,14 @@ namespace Gdterm.UI.Controls
                     MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
             try
             {
-                lock (Sync) { foreach (var t in texts) Buffer.Remove(t); }
+                lock (Sync)
+                {
+                    foreach (var t in texts)
+                    {
+                        Buffer.Remove(t);
+                        TrashStore.Default.Add("notification", L10n.T("通知"), t, t);
+                    }
+                }
                 Reload();
             }
             catch (Exception ex)

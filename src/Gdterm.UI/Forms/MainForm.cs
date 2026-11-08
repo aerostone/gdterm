@@ -569,6 +569,7 @@ namespace Gdterm.UI.Forms
                 SshKeyManager = (s, e) => { try { _toolsDialogs?.OpenSshKeyManager(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.SshKey", ex); } },
                 ShowTransferCenter = (s, e) => { try { _sidePanelHost?.Show(_sidePanels?.CreateTransferCenterPanel()); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } } },
                 ShowNotificationCenter = (s, e) => { try { _sidePanelHost?.Show(_sidePanels?.CreateNotificationCenterPanel()); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } } },
+                ShowTrash = (s, e) => { try { _toolsDialogs?.OpenTrash(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } } },
                 QuickJump = (s, e) => OpenQuickJump()
             });
             _menuStrip = menuBuilt.Menu;

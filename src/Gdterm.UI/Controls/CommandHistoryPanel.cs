@@ -33,6 +33,12 @@ namespace Gdterm.UI.Controls
         {
             _store = store ?? throw new ArgumentNullException(nameof(store));
             InitializeComponent();
+            // F16 回收站：删除的命令记录可经「工具 → 回收站」恢复
+            TrashStore.Default.RegisterRestorer("commandhistory", entry =>
+            {
+                var en = entry.Payload as CommandHistoryEntry;
+                if (en != null) _store.RecordCommand(en);
+            });
         }
 
         private void InitializeComponent()
@@ -268,6 +274,7 @@ namespace Gdterm.UI.Controls
             try
             {
                 var removed = _store.DeleteByIds(entries.Select(e => e.Id));
+                foreach (var en in entries) TrashStore.Default.Add("commandhistory", L10n.T("命令历史"), en.Command, en);
                 RefreshHistory();
                 _statusLabel.Text = L10n.Tf("已删除 {0} 条记录", removed);
                 ToastNotifier.Success(L10n.Tf("已删除 {0} 条命令记录", removed));

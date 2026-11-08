@@ -43,6 +43,17 @@ namespace Gdterm.UI.Controls
             BackColor = GdtermColorTable.Background;
             _config = _store.Load();
             BuildUI();
+            // F16 回收站：删除的自定义快捷键可经「工具 → 回收站」恢复
+            TrashStore.Default.RegisterRestorer("keybinding", entry =>
+            {
+                var b = entry.Payload as TerminalKeyBinding;
+                if (b != null)
+                {
+                    _config.CustomBindings.Add(b);
+                    _store.Save();
+                    if (!IsDisposed) { RefreshList(); BindingsChanged?.Invoke(); }
+                }
+            });
             RefreshList();
         }
 
@@ -351,6 +362,7 @@ namespace Gdterm.UI.Controls
             var combos = new System.Collections.Generic.HashSet<string>();
             foreach (var b in custom) combos.Add(b.GetKeyCombo());
             _config.CustomBindings.RemoveAll(b => combos.Contains(b.GetKeyCombo()));
+            foreach (var b in custom) TrashStore.Default.Add("keybinding", L10n.T("快捷键"), b.Name ?? b.GetKeyCombo(), b);
             _store.Save();
             RefreshList();
             BindingsChanged?.Invoke();
@@ -371,6 +383,7 @@ namespace Gdterm.UI.Controls
             }
 
             _config.CustomBindings.RemoveAll(b => b.GetKeyCombo() == binding.GetKeyCombo());
+            TrashStore.Default.Add("keybinding", L10n.T("快捷键"), binding.Name ?? binding.GetKeyCombo(), binding);
             _store.Save();
             RefreshList();
             BindingsChanged?.Invoke();

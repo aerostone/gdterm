@@ -36,6 +36,16 @@ namespace Gdterm.UI.Controls
             _bookmarkStore = bookmarkStore ?? throw new ArgumentNullException(nameof(bookmarkStore));
             _connectionStore = connectionStore;
             InitializeComponent();
+            // F16 回收站：删除的书签可经「工具 → 回收站」恢复
+            TrashStore.Default.RegisterRestorer("bookmark", entry =>
+            {
+                var bm = entry.Payload as SessionBookmark;
+                if (bm != null)
+                {
+                    try { _bookmarkStore.Add(bm); } catch (Exception ex) { throw new InvalidOperationException(L10n.T("恢复书签失败：") + ex.Message, ex); }
+                    if (!IsDisposed) Reload();
+                }
+            });
             Reload();
         }
 
@@ -425,7 +435,7 @@ namespace Gdterm.UI.Controls
                 int ok = 0, fail = 0;
                 foreach (var bm1 in targets)
                 {
-                    try { _bookmarkStore.Delete(bm1.Id); ok++; }
+                    try { _bookmarkStore.Delete(bm1.Id); TrashStore.Default.Add("bookmark", L10n.T("书签"), bm1.Name, bm1); ok++; }
                     catch (Exception) { fail++; }
                 }
                 Reload();

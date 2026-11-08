@@ -31,6 +31,17 @@ namespace Gdterm.UI.Controls
             BackColor = GdtermColorTable.Background;
             _config = _store.Load();
             BuildUI();
+            // F16 回收站：删除的高亮规则可经「工具 → 回收站」恢复
+            TrashStore.Default.RegisterRestorer("highlightrule", entry =>
+            {
+                var r = entry.Payload as HighlightRule;
+                if (r != null)
+                {
+                    _config.Rules.Add(r);
+                    _store.Save(_config);
+                    if (!IsDisposed) { RefreshList(); RulesChanged?.Invoke(); }
+                }
+            });
             RefreshList();
         }
 
@@ -172,7 +183,7 @@ namespace Gdterm.UI.Controls
                 ? L10n.Tf("删除规则 \"{0}\"?", rules[0].Name)
                 : L10n.Tf("删除选中的 {0} 条高亮规则（含 \"{1}\" 等）？此操作不可撤销。", rules.Count, rules[0].Name);
             if (MessageBox.Show(this, msg, L10n.T("确认删除"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
-            foreach (var r in rules) _config.Rules.Remove(r);
+            foreach (var r in rules) { _config.Rules.Remove(r); TrashStore.Default.Add("highlightrule", L10n.T("高亮规则"), r.Name, r); }
             _store.Save(_config);
             RefreshList();
             RulesChanged?.Invoke();

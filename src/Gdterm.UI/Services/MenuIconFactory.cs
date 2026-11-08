@@ -238,6 +238,13 @@ namespace Gdterm.UI.Services
                     L(g, p, 4, 11, 12, 11); L(g, p, 6.5, 12.5, 9.5, 12.5);
                     break;
 
+                case "trash": // 回收站：桶盖 + 提手 + 桶身 + 竖纹
+                    g.DrawArc(p, 6f, 1.5f, 4f, 3f, 180f, 180f);
+                    L(g, p, 2, 4, 14, 4);
+                    g.DrawLines(p, new[] { new PointF(3.5f, 6f), new PointF(4f, 14f), new PointF(12f, 14f), new PointF(12.5f, 6f) });
+                    L(g, p, 6.5, 7.5, 6.8f, 12.5f); L(g, p, 9.5, 7.5, 9.2f, 12.5f);
+                    break;
+
                 case "lock": // 密码库管理：锁
                     Rect(g, p, 4, 7.5, 8, 6);
                     g.DrawArc(p, 5.5f, 3f, 5f, 6f, 180f, 180f);

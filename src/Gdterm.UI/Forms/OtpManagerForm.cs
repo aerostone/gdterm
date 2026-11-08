@@ -155,6 +155,13 @@ namespace Gdterm.UI.Forms
             // 列表名单独设（读屏软件念"宏列表"而不是"列表"）
             try { UiA11y.AutoName(this); } catch (Exception) { }
 
+            // F16 回收站：删除的 OTP 条目可经「工具 → 回收站」恢复（恢复写 store，表单关闭后仍有效）
+            TrashStore.Default.RegisterRestorer("otp", entry =>
+            {
+                var en = entry.Payload as OtpEntry;
+                if (en != null) _store.Add(en);
+            });
+
 
             // 空态引导（UX 审计 C1）：改用全仓统一的 EmptyStateView，和另外 15 个列表面板长得一致，
             // 并带上「添加」主操作（此前只有一段居中文字，用户还得自己去底下找按钮）
@@ -315,8 +322,8 @@ namespace Gdterm.UI.Forms
                 ? (all.FirstOrDefault(e => Equals(e.Id, ids[0]))?.Title ?? ids[0])
                 : null;
             var res = MessageBox.Show(this, ids.Count == 1
-                    ? L10n.T("删除 OTP 条目「") + first + L10n.T("」？\n删除后无法恢复。")
-                    : L10n.T("删除选中的 ") + ids.Count + L10n.T(" 个 OTP 条目？\n删除后无法恢复。"),
+                    ? L10n.T("删除 OTP 条目「") + first + L10n.T("」？\n删除后可在「工具 → 回收站」恢复（应用重启后清空）。")
+                    : L10n.T("删除选中的 ") + ids.Count + L10n.T(" 个 OTP 条目？\n删除后可在「工具 → 回收站」恢复（应用重启后清空）。"),
                 L10n.T("删除确认"), MessageBoxButtons.OKCancel, MessageBoxIcon.Warning);
             if (res != DialogResult.OK) return;
             int ok = 0;
@@ -324,7 +331,12 @@ namespace Gdterm.UI.Forms
             {
                 foreach (var id in ids)
                 {
-                    try { _store.Delete(id); ok++; }
+                    try
+                    {
+                        _store.Delete(id); ok++;
+                        var del = all.FirstOrDefault(e => Equals(e.Id, id));
+                        if (del != null) TrashStore.Default.Add("otp", L10n.T("OTP 条目"), del.Title, del);
+                    }
                     catch (Exception ex) { try { DiagLog.Swallowed("OtpManager.Delete", ex); } catch { } }
                 }
                 RefreshList();

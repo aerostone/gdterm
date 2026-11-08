@@ -45,7 +45,26 @@ namespace Gdterm.UI.Controls
             _getActiveTerminal = getActiveTerminal;
             try { Directory.CreateDirectory(_macroDir); } catch { }
             InitializeComponent();
+            // F16 回收站：删除的宏（文件）可经「工具 → 回收站」恢复
+            TrashStore.Default.RegisterRestorer("macro", entry =>
+            {
+                var mp = entry.Payload as MacroTrashPayload;
+                if (mp != null)
+                {
+                    if (File.Exists(mp.Path))
+                        throw new System.IO.IOException(L10n.T("同名文件已存在：") + mp.Path);
+                    File.WriteAllText(mp.Path, mp.Content);
+                    if (!IsDisposed) RefreshMacroList();
+                }
+            });
             RefreshMacroList();
+        }
+
+        /// <summary>回收站 payload：宏文件原件（路径 + 内容）。</summary>
+        private sealed class MacroTrashPayload
+        {
+            public string Path { get; set; }
+            public string Content { get; set; }
         }
 
         private static AntdUI.Button MkBtn(MacroPanel self, string text, string tip)
@@ -457,7 +476,13 @@ namespace Gdterm.UI.Controls
                 {
                     var p = it.Tag as string;
                     if (string.IsNullOrEmpty(p)) continue;
-                    try { File.Delete(p); ok++; }
+                    try
+                    {
+                        var name = Path.GetFileNameWithoutExtension(p);
+                        var content = File.ReadAllText(p);
+                        File.Delete(p); ok++;
+                        TrashStore.Default.Add("macro", L10n.T("宏"), name, new MacroTrashPayload { Path = p, Content = content });
+                    }
                     catch (Exception) { fail++; }
                 }
                 RefreshMacroList();
