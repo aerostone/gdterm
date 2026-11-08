@@ -113,6 +113,7 @@ namespace Gdterm.UI.Controls
                 AutoSize = true,
                 Enabled = false,   // 有采样点后才可用
                 Height = Math.Max(DpiScale.V(this, 28), Services.FormFontPolicy.LineBox(Services.FormFontPolicy.UiFont(), this)),
+                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 5), DpiScale.V(this, 10), DpiScale.V(this, 5)), // AutoSize 钮零 padding = 文字贴边（ui-tree-check 门）
                 Margin = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 6), 0, 0),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground

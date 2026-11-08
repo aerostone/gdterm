@@ -43,10 +43,12 @@ namespace Gdterm.UI.Controls
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(DpiScale.V(this, 15)),
-                ColumnCount = 4,
+                ColumnCount = 3,
                 RowCount = 2
             };
-            topPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            // 标签行 + 按钮行各自独立单元格（全 AutoSize 列）：
+            // 旧 4 列 Percent(100) 布局在 360 侧栏实测——分数 Label 自然宽 146 > 列实宽 116，
+            // 溢出压进「开始扫描」按钮 30px（CI ui-tree-check 1020px² 交叠实证）。
             topPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             topPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             topPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -106,13 +108,10 @@ namespace Gdterm.UI.Controls
             _btnCopySel.Click += (s, e) => OnCopySelectedClick();
 
             topPanel.Controls.Add(_lblScore, 0, 0);
-            topPanel.Controls.Add(_lblStats, 0, 1);
-            topPanel.Controls.Add(_btnScan, 1, 0);
-            topPanel.SetRowSpan(_btnScan, 2);
-            topPanel.Controls.Add(_btnStop, 2, 0);
-            topPanel.SetRowSpan(_btnStop, 2);
-            topPanel.Controls.Add(_btnCopySel, 3, 0);
-            topPanel.SetRowSpan(_btnCopySel, 2);
+            topPanel.Controls.Add(_lblStats, 1, 0);
+            topPanel.Controls.Add(_btnScan, 0, 1);
+            topPanel.Controls.Add(_btnStop, 1, 1);
+            topPanel.Controls.Add(_btnCopySel, 2, 1);
 
             // ── 进度条 ──
             _progress = new ProgressBar { Dock = DockStyle.Top, Height = 3, Style = ProgressBarStyle.Continuous };
