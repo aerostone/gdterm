@@ -1,0 +1,131 @@
+# gdterm — GitHub Actions CI（.NET Framework 4.6.2，Windows 权威构建）
+#
+# 背景（2026-11-03 沉淀）：AppVeyor 平台自 0.1.456 起 3 天+ 不接单（GitHub status 恒 0 条，
+# 匿名日志/历史 API 均 404，平台侧无法自证），迁移验证门到 GitHub Actions（仓库内纯内容，
+# 公开仓库免费分钟数无限，不依赖 AppVeyor webhook/平台存活）。
+# 口径与 appveyor.yml 逐门对齐：restore → build → 单测 → UI 冒烟 → ui-tree-check →
+# perf-bench → 编码守卫 → ui-ux-lint → gen-tokens → feature-map。
+# 哲学不变：证据先于宣判——无论成败都上传 test-run.log/冒烟 dump/门报告。
+# 绿色版打包（ILRepack + FreeRDP）暂留 appveyor.yml；验证门绿稳后另批移植。
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+# fast_finish 等价：同 ref 新推送取消旧 run
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: windows-latest   # VS2022（msbuild 17）+ Python 3 + NuGet CLI，均有
+    timeout-minutes: 60
+    env:
+      CONFIGURATION: Release
+    steps:
+      - uses: actions/checkout@v4
+
+      # net462 引用程序集：与本机 csc-check 同款 NuGet 包（1.0.3，全仓 320 文件编译已验证），
+      # 用 FrameworkPathOverride 注入——不赌 runner 镜像是否预装 4.6.2 targeting pack。
+      - name: Fetch net462 reference assemblies
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          nuget install Microsoft.NETFramework.ReferenceAssemblies.net462 -Version 1.0.3 -OutputDirectory packs -NonInteractive
+          $ref = (Get-ChildItem packs -Recurse -Directory -Filter 'v4.6.2' | Select-Object -First 1).FullName
+          if (-not $ref) { throw 'net462 reference assemblies not found under packs/' }
+          Add-Content -Path $env:GITHUB_ENV -Value "REF_PATH=$ref"
+
+      - name: Restore
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          msbuild gdterm.sln /t:Restore /p:Configuration=$env:CONFIGURATION /p:Platform="Any CPU" /v:m 2>&1 | Tee-Object -FilePath restore.log
+          if ($LASTEXITCODE -ne 0) { throw "Package restore failed (restore.log in evidence)" }
+
+      - name: Build
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          msbuild gdterm.sln /p:Configuration=$env:CONFIGURATION /p:Platform="Any CPU" /p:FrameworkPathOverride="$env:REF_PATH" /v:m 2>&1 | Tee-Object -FilePath build.log
+          if ($LASTEXITCODE -ne 0) { throw "Build failed exit=$LASTEXITCODE (build.log in evidence)" }
+
+      - name: Unit tests
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $testExe = "src\Gdterm.Tests\bin\$env:CONFIGURATION\Gdterm.Tests.exe"
+          if (-not (Test-Path $testExe)) {
+            $alt = Get-ChildItem -Path src\Gdterm.Tests -Recurse -Filter Gdterm.Tests.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($alt) { $testExe = $alt.FullName }
+          }
+          if (-not (Test-Path $testExe)) { throw "Gdterm.Tests.exe not found" }
+          Write-Host "Running $testExe"
+          & $testExe 2>&1 | Tee-Object -FilePath test-run.log
+          if ($LASTEXITCODE -ne 0) { throw "Tests failed exit=$LASTEXITCODE (test-run.log in evidence)" }
+
+      # UI 冒烟：起窗体截图 + 断言（要桌面会话，GHA windows-latest 有）
+      - name: UI smoke
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $testExe = "src\Gdterm.Tests\bin\$env:CONFIGURATION\Gdterm.Tests.exe"
+          & $testExe --ui-smoke "ui-smoke"
+          exit $LASTEXITCODE
+
+      # 全控件树校验门（R1-R6 + 自绘命中区）；零第三方依赖（仅 stdlib）
+      - name: ui-tree-check gate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $env:PYTHONIOENCODING = "utf-8"
+          $env:PYTHONUTF8 = "1"
+          python tools\ui-tree-check.py ui-smoke 2>&1 | Tee-Object -FilePath ui-tree-check-report.txt
+          exit $LASTEXITCODE
+
+      # 渲染性能基准（P2-8）：崩溃（非零退出）才红
+      - name: Render perf bench
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $testExe = "src\Gdterm.Tests\bin\$env:CONFIGURATION\Gdterm.Tests.exe"
+          & $testExe --perf-bench perf-bench.json
+          exit $LASTEXITCODE
+
+      # 静态门四连：编码守卫 → L0 设计语言 → token SSOT → 功能完备性（棘轮）
+      - name: Static gates (encoding / ui-ux-lint / gen-tokens / feature-map)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $env:PYTHONIOENCODING = "utf-8"
+          $env:PYTHONUTF8 = "1"
+          python tools\check-encoding.py
+          if ($LASTEXITCODE -ne 0) { throw "encoding guard failed exit=$LASTEXITCODE" }
+          python tools\ui-ux-lint.py
+          if ($LASTEXITCODE -ne 0) { throw "ui-ux-lint gate failed exit=$LASTEXITCODE" }
+          python tools\gen-tokens.py --check
+          if ($LASTEXITCODE -ne 0) { throw "gen-tokens check failed exit=$LASTEXITCODE" }
+          python tools\feature-map.py --check --ascii
+          if ($LASTEXITCODE -ne 0) { throw "feature-map check failed exit=$LASTEXITCODE" }
+
+      # 证据先于宣判：无论成败上传全部日志/dump/门报告
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-evidence
+          if-no-files-found: ignore
+          path: |
+            restore.log
+            build.log
+            test-run.log
+            ui-smoke/
+            ui-tree-check-report.txt
+            perf-bench.json
+            perf-bench-crash.txt
+            perf-seh.txt
+            perf-progress.txt
