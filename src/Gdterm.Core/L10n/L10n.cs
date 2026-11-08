@@ -2213,6 +2213,10 @@ namespace Gdterm.Core
             ["解锁失败："] = "Unlock failed: ",
             ["跳板 Hop[{0}] {1}:{2} 连接失败: {3}"] = "Jump host Hop[{0}] {1}:{2} connection failed: {3}",
             ["隧道建立失败: "] = "Failed to establish tunnel: ",
+
+            // —— 权限对话框（SftpPermissionForm：其他可写确认） ——
+            ["开放其他用户写权限"] = "Allow write access for other users",
+            ["该权限允许机器上的其他用户修改此文件。\n确定应用？"] = "This permission lets other users on this machine modify this file.\nApply anyway?",
         };
     }
 }

@@ -375,9 +375,9 @@ DETECT = {
     # （_loading / isLoading / SetLoading——被动采样类面板用它，不能为 5 秒一轮的采样
     # 每次都切 WaitCursor）③ 跑马灯进度条（总大小未知时表示"在动"）。
     "loading": [r'BusyScope|_loading|_busy|Loading|IsBusy|SetBusy|ProgressBarStyle\.Marquee|MarqueeAnimationSpeed'],
-    "error": [r'Message\.error|Message\.Error|MessageBox\.Show|DiagLog\.Error'],
-    "confirm": [r'ConfirmDanger|MessageModal|确认'],
-    "persist": [r'Store\b|\.Save\(|SaveConfig|WriteAllText|WriteAllLines'],
+    "error": [r'Message\.error|Message\.Error|MessageBox\.Show|DiagLog\.Error|Message\.warn|Message\.Warn|ToastNotifier\.Error|(保存|修改|导入|操作|加载|写入|读取|清空|恢复)失败'],
+    "confirm": [r'ConfirmDanger|MessageModal|Modal\\.open|确认'],
+    "persist": [r'Store\b|\.Save\(|SaveConfig|WriteAllText|WriteAllLines|FormSettings\.(Set|Get)'],
     "search": [r'PlaceholderText\s*=\s*"[^"]*(?:搜索|过滤|查找)|Filter\(|\.Search\(|搜索|过滤|筛选'],
     "sort": [r'SortOrder|Sorting\s*=|CompareFunc|排序'],
     "paging": [r'PageSize|分页|VirtualMode|VirtualListSize|ScrollTo'],

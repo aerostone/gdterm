@@ -138,6 +138,10 @@ namespace Gdterm.UI.Forms
             Controls.Add(_uri);
             Controls.Add(lblUri);
             Controls.Add(bottom);
+            // 表单偏好：上次使用的位数/周期/发行方预填（URI 粘贴预填在输入时后发生，仍优先）
+            _digits.Text = FormSettings.GetInt("add-otp", "digits", 6, 6, 8).ToString();
+            _period.Text = FormSettings.GetInt("add-otp", "period", 30, 1, 300).ToString();
+            _issuer.Text = FormSettings.Get("add-otp", "issuer", "");
             FormFontPolicy.Apply(this);
             // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
             UiA11y.AutoName(this);
@@ -266,6 +270,11 @@ namespace Gdterm.UI.Forms
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
+
+            // 表单偏好：记住位数/周期/发行方（不存密钥/账户）
+            FormSettings.Set("add-otp", "digits", digits.ToString());
+            FormSettings.Set("add-otp", "period", period.ToString());
+            FormSettings.Set("add-otp", "issuer", (_issuer.Text ?? "").Trim());
 
             DialogResult = DialogResult.OK;
             Close();

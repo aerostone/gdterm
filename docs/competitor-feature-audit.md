@@ -147,7 +147,7 @@ X11 转发、SSH agent 转发、GSSAPI、VNC/XDMCP/FTP/Rlogin、移动端/跨平
 - **跳板机**：已实现（`TunnelManager.EstablishWithJumpChain`），别再当缺口排期。
 - **启动恢复标签**：已实现（`SessionStateCoordinator.OpenTabs`）。
 
-## 4. 落地状态（0.1.367）
+## 4. 落地状态（0.1.367 → 当前）
 
 | # | 项 | 状态 | 落点 |
 |---|---|---|---|
@@ -161,3 +161,5 @@ X11 转发、SSH agent 转发、GSSAPI、VNC/XDMCP/FTP/Rlogin、移动端/跨平
 | P2-8 | 渲染脏格差分 | ⏸ 未做 | 需 GPU/逐格 diff 基线，风险收益比留待有性能实测后再评估 |
 | P2-9 | 更新检查 | ✅ | `UpdateChecker`（GitHub releases，TLS1.2 显式开，静默失败）→ 帮助菜单「检查更新…」 |
 | P2-10 | i18n | ✅ 完成 | 批次 1–5f 全量接入（含插值字符串补扫 17 文件 ~43 处，词典 900+ 项）；用户可见中文残留清零，功能原文（测试/远程脚本/AI 提示词）有意保留，feature-map 门兜底 |
+| F2 | 表单设置持久化（横切） | ✅ | `FormSettings` 助手（data/config/form-settings.ini，与 appearance.ini 同构）；5 窗体接入：密码生成器（长度+5 字符集）、AddOtp（位数/周期/发行方）、工具箱（lastTool）、快捷命令（分组）、SSH 密钥（主机/用户）；敏感信息（口令/密钥/账户）一律不落盘 |
+| F3 | 失败提示 + 危险操作确认（横切） | ✅ | SFTP 权限「其他可写」Modal 确认（真实安全风险，词典 +2）；feature-map 检测证据扩展（Modal.open / Message.warn / ToastNotifier.Error /「…失败」字面）；10 个语义不适用页面 drop_caps+note 豁免；persist/a11y 缺口清零；剩余 §4 长尾（撤销/分页/多选/导出/聊天历史持久化）记入 contracts known_gaps 技术债 |

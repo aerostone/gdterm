@@ -55,6 +55,12 @@ namespace Gdterm.UI.Forms
             _passphrase = Labeled(ref y, L10n.T("密钥口令"), "", boxX, boxW, fieldH, rowH);
             _passphrase.UseSystemPasswordChar = true;
 
+            // 预填上次导入的主机/用户（口令不持久化）
+            var lastHost = FormSettings.Get("ssh-key", "host", "");
+            if (!string.IsNullOrEmpty(lastHost)) _host.Text = lastHost;
+            var lastUser = FormSettings.Get("ssh-key", "user", "");
+            if (!string.IsNullOrEmpty(lastUser)) _user.Text = lastUser;
+
             Controls.Add(MakeLabel(L10n.T("私钥文件"), pad, y, fieldH));
             _keyPath = new AntdUI.Input {
                 Location = new Point(boxX, y),
@@ -167,6 +173,9 @@ namespace Gdterm.UI.Forms
                 if (!KeePassPasswordWarning.ConfirmSaveIfWeak(this, _keepass, entry.SshPrivateKeyPassphrase))
                     return; // 用户取消密钥短语强度警告
                 var created = _keepass.CreateEntry(entry);
+                // 表单偏好：记住主机/用户（口令不持久化）
+                FormSettings.Set("ssh-key", "host", entry.Hostname ?? "");
+                FormSettings.Set("ssh-key", "user", entry.Username ?? "");
                 // A4：通知中心留痕已由 ToastNotifier.Show 统一承接，删除此处直连（否则重复入中心）
                 ToastNotifier.Success(L10n.T("密钥已导入: ") + entry.Title + " (" + (created != null ? created.Id : "") + ")");
                 DialogResult = DialogResult.OK;

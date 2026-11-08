@@ -82,7 +82,10 @@ namespace Gdterm.UI.Forms
             };
             foreach (var g in new[] { L10n.T("网络"), L10n.T("磁盘"), L10n.T("进程"), L10n.T("系统"), L10n.T("安全"), "Docker", L10n.T("自定义") })
                 _cmbGroup.Items.Add(g);
-            _cmbGroup.Text = !string.IsNullOrEmpty(defaultGroup) ? defaultGroup : L10n.T("自定义");
+            // 新增时预填上次使用的分组（编辑既有命令时 defaultGroup/existing 优先）
+            _cmbGroup.Text = !string.IsNullOrEmpty(defaultGroup) ? defaultGroup
+                : (GroupExists(FormSettings.Get("quick-command", "group", ""))
+                    ? FormSettings.Get("quick-command", "group", "") : L10n.T("自定义"));
             Controls.Add(_cmbGroup);
             y += rowH;
 
@@ -187,6 +190,14 @@ namespace Gdterm.UI.Forms
             _numSortOrder.Value = cmd.SortOrder;
         }
 
+        private bool GroupExists(string g)
+        {
+            if (string.IsNullOrEmpty(g)) return false;
+            foreach (var i in _cmbGroup.Items)
+                if (string.Equals((i != null ? i.ToString() : null), g, StringComparison.Ordinal)) return true;
+            return false;
+        }
+
         private void TryCloseOk()
         {
             if (string.IsNullOrWhiteSpace(_txtName.Text) || string.IsNullOrWhiteSpace(_txtCommand.Text))
@@ -208,6 +219,9 @@ namespace Gdterm.UI.Forms
                 Shortcut = string.IsNullOrWhiteSpace(_txtShortcut.Text) ? null : _txtShortcut.Text.Trim(),
                 SortOrder = (int)_numSortOrder.Value
             };
+            // 表单偏好：记住分组
+            FormSettings.Set("quick-command", "group", Result.Group ?? "");
+
             DialogResult = DialogResult.OK;
             Close();
         }

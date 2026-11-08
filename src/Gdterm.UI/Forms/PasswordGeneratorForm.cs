@@ -41,6 +41,8 @@ namespace Gdterm.UI.Forms
         public PasswordGeneratorForm()
         {
             InitializeComponent();
+            LoadSettings();
+            FormClosing += (s, e) => SaveSettings();
             GeneratePassword();
             Services.FormFontPolicy.Apply(this); // AntdUI 控件继承 Form.Font，恢复用户配置 UI 字号传导
             // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
@@ -223,6 +225,27 @@ namespace Gdterm.UI.Forms
             };
             cb.CheckedChanged += (s, e) => GeneratePassword();
             return cb;
+        }
+
+        // —— 表单偏好持久化（feature-map §4「配置持久化」：data/config/form-settings.ini [password-generator]）——
+        private void LoadSettings()
+        {
+            _lengthSpinner.Value = FormSettings.GetInt("password-generator", "length", 16, 8, 128);
+            _upperCheck.Checked = FormSettings.GetBool("password-generator", "upper", true);
+            _lowerCheck.Checked = FormSettings.GetBool("password-generator", "lower", true);
+            _digitCheck.Checked = FormSettings.GetBool("password-generator", "digit", true);
+            _specialCheck.Checked = FormSettings.GetBool("password-generator", "special", true);
+            _ambiguousCheck.Checked = FormSettings.GetBool("password-generator", "ambiguous", true);
+        }
+
+        private void SaveSettings()
+        {
+            FormSettings.Set("password-generator", "length", ((int)_lengthSpinner.Value).ToString());
+            FormSettings.Set("password-generator", "upper", _upperCheck.Checked ? "1" : "0");
+            FormSettings.Set("password-generator", "lower", _lowerCheck.Checked ? "1" : "0");
+            FormSettings.Set("password-generator", "digit", _digitCheck.Checked ? "1" : "0");
+            FormSettings.Set("password-generator", "special", _specialCheck.Checked ? "1" : "0");
+            FormSettings.Set("password-generator", "ambiguous", _ambiguousCheck.Checked ? "1" : "0");
         }
 
         private void GeneratePassword()

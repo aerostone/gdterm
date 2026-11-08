@@ -107,6 +107,7 @@ namespace Gdterm.UI.Controls
             Controls.Add(_lvTools);
 
             LoadTools();
+            RestoreLastTool();
             // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
             UiA11y.AutoName(this);
         }
@@ -134,6 +135,26 @@ namespace Gdterm.UI.Controls
                     _lvTools.Items.Add(item);
                 }
             }
+        }
+
+        /// <summary>恢复上次使用的工具（form-settings.ini [toolbox] lastTool；缺失/已移除则不动）。</summary>
+        private void RestoreLastTool()
+        {
+            try
+            {
+                var last = FormSettings.Get("toolbox", "lastTool", "");
+                if (string.IsNullOrEmpty(last)) return;
+                foreach (ListViewItem it in _lvTools.Items)
+                {
+                    var t = it.Tag as IToolModule;
+                    if (t != null && t.ToolId == last)
+                    {
+                        it.Selected = true;
+                        break;
+                    }
+                }
+            }
+            catch (Exception ex) { Gdterm.UI.Diagnostics.DiagLog.Swallowed("Toolbox.RestoreLastTool", ex); }
         }
 
         /// <summary>
@@ -168,6 +189,9 @@ namespace Gdterm.UI.Controls
             var item = _lvTools.SelectedItems[0];
             var tool = item.Tag as IToolModule;
             if (tool == null) return;
+
+            // 记住上次使用的工具（form-settings.ini [toolbox] lastTool）
+            try { FormSettings.Set("toolbox", "lastTool", tool.ToolId); } catch { }
 
             // 每次切换工具时刷新远程会话绑定
             var remote = tool as IRemoteToolModule;

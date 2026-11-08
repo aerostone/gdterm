@@ -110,11 +110,25 @@ namespace Gdterm.UI.Forms
             var btnOk = new AntdUI.Button
             {
                 Text = L10n.T("应用"),
-                DialogResult = DialogResult.OK,
+                DialogResult = DialogResult.None,
                 Size = new Size(btnW, btnH),
                 Location = new Point(btnCancel.Right + DpiScale.V(this, 8), y),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground
+            };
+            btnOk.Click += (s, e) =>
+            {
+                // 危险操作确认（F3）：「其他」带写位 = 任何本机用户可写，真实安全风险，先警告
+                if (_chk[2, 1].Checked)
+                {
+                    var dr = AntdUI.Modal.open(this, L10n.T("开放其他用户写权限"),
+                        L10n.T("该权限允许机器上的其他用户修改此文件。\n确定应用？"),
+                        AntdUI.TType.Warn);
+                    if (dr != DialogResult.Yes && dr != DialogResult.OK)
+                        return;
+                }
+                DialogResult = DialogResult.OK;
+                Close();
             };
             Controls.Add(btnCancel);
             Controls.Add(btnOk);
