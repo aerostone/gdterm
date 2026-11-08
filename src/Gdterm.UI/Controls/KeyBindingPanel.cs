@@ -27,6 +27,7 @@ namespace Gdterm.UI.Controls
         private AntdUI.Button _btnAdd;
         private AntdUI.Button _btnEdit;
         private AntdUI.Button _btnDelete;
+        private AntdUI.Button _btnDeleteSel;
         private AntdUI.Button _btnReset;
         private AntdUI.Checkbox _chkIntercept;
         private TableShell<BindingRow> _shell;
@@ -94,7 +95,9 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Bottom,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                WrapContents = false,
+                // 换行而非溢出：窄侧栏（360px）里 5 个按钮排不下时宁可变两行，
+                // 不能把「重置预设」裁出父边界（与 TableShell 工具条同口径）
+                WrapContents = true,
                 BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 5), DpiScale.V(this, 10), DpiScale.V(this, 5))
             };
@@ -102,14 +105,18 @@ namespace Gdterm.UI.Controls
             _btnAdd = CreateButton(L10n.T("添加"));
             _btnEdit = CreateButton(L10n.T("编辑"));
             _btnDelete = CreateButton(L10n.T("删除"));
+            _btnDeleteSel = CreateButton(L10n.T("删除选中"));
+            _btnDeleteSel.Enabled = false;
+            _btnDeleteSel.Name = "KeyBindingDeleteSelButton";
             _btnReset = CreateButton(L10n.T("重置预设"));
 
             _btnAdd.Click += OnAdd;
             _btnEdit.Click += OnEdit;
             _btnDelete.Click += OnDelete;
+            _btnDeleteSel.Click += OnDeleteSelected;
             _btnReset.Click += OnReset;
 
-            bottomPanel.Controls.AddRange(new Control[] { _btnAdd, _btnEdit, _btnDelete, _btnReset });
+            bottomPanel.Controls.AddRange(new Control[] { _btnAdd, _btnEdit, _btnDelete, _btnDeleteSel, _btnReset });
 
             // ── 中间：绑定列表 ──
             // P1-7：RowHeight 跟字（28 硬编码→ Max(28, fieldH 地板）），Consolas 字号跟随全局 UI 字号
@@ -148,6 +155,15 @@ namespace Gdterm.UI.Controls
                     }
                 });
             _shell.AddAction(L10n.T("导出"), (s2, e2) => _shell.ExportCsv(FindForm(), "key-bindings")).Name = "KeyBindingExportButton";
+            // 多选 + Del 键批量删（预设绑定不可删，计数入跳过数）
+            var multi = _shell.EnableMultiSelect();
+            multi.Changed += () => { _btnDeleteSel.Enabled = multi.Count > 0; };
+            _table.KeyDown += (s2, e2) =>
+            {
+                if (e2.KeyCode != Keys.Delete) return;
+                if (multi.Count > 0) OnDeleteSelected(s2, e2); else OnDelete(s2, e2);
+                e2.Handled = true;
+            };
             // 过滤/排序改了可见顺序后，SelectedIndex → 绑定对象的映射要跟着换
             _shell.ViewChanged += list =>
             {
@@ -310,6 +326,36 @@ namespace Gdterm.UI.Controls
                 RefreshList();
                 BindingsChanged?.Invoke();
             }
+        }
+
+        private void OnDeleteSelected(object sender, EventArgs e)
+        {
+            var bindings = new System.Collections.Generic.List<TerminalKeyBinding>();
+            foreach (var r in _shell.GetSelectedRows())
+                if (r.Source != null) bindings.Add(r.Source);
+            if (bindings.Count == 0) return;
+
+            var custom = new System.Collections.Generic.List<TerminalKeyBinding>();
+            foreach (var b in bindings) if (b.Group == "custom") custom.Add(b);
+            int skipped = bindings.Count - custom.Count;
+            if (custom.Count == 0)
+            {
+                MessageBox.Show(L10n.T("只能删除自定义绑定"), "gdterm", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            string confirm = L10n.Tf("删除选中的 {0} 条自定义绑定？", custom.Count);
+            if (skipped > 0) confirm += L10n.Tf("（另有 {0} 条预设绑定不可删除，将跳过）", skipped);
+            if (MessageBox.Show(confirm, "gdterm", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+
+            var combos = new System.Collections.Generic.HashSet<string>();
+            foreach (var b in custom) combos.Add(b.GetKeyCombo());
+            _config.CustomBindings.RemoveAll(b => combos.Contains(b.GetKeyCombo()));
+            _store.Save();
+            RefreshList();
+            BindingsChanged?.Invoke();
+            if (skipped > 0) _lblDescription.Text = L10n.Tf("已删除 {0} 条自定义绑定，{1} 条预设绑定已跳过", custom.Count, skipped);
+            else _lblDescription.Text = L10n.Tf("已删除 {0} 条自定义绑定", custom.Count);
         }
 
         private void OnDelete(object sender, EventArgs e)

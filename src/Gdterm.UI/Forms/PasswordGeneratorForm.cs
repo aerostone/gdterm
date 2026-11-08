@@ -332,7 +332,12 @@ namespace Gdterm.UI.Forms
                     timer.Tick += (s, ev) => { btn.Text = originalText; timer.Stop(); timer.Dispose(); };
                     timer.Start();
                 }
-                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("PasswordGeneratorForm", exSwallowed); } catch { } }
+                catch (System.Exception exSwallowed)
+                {
+                    try { DiagLog.Swallowed("PasswordGeneratorForm", exSwallowed); } catch { }
+                    // 剪贴板被占用/受限时原本静默吞掉——用户点了复制却无任何反馈
+                    try { ToastNotifier.Error(L10n.T("复制失败：") + exSwallowed.Message); } catch { }
+                }
             }
         }
 
@@ -369,7 +374,11 @@ namespace Gdterm.UI.Forms
                 if (line.Length > 0)
                     ClipboardProtector.SetTextWithTtl(line);
             }
-            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("PasswordGeneratorForm", exSwallowed); } catch { } }
+            catch (System.Exception exSwallowed)
+            {
+                try { DiagLog.Swallowed("PasswordGeneratorForm", exSwallowed); } catch { }
+                try { ToastNotifier.Error(L10n.T("复制失败：") + exSwallowed.Message); } catch { }
+            }
         }
 
         private void AddToHistory(string password)

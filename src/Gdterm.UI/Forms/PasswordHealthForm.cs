@@ -254,6 +254,30 @@ namespace Gdterm.UI.Forms
             return rows[i];
         }
 
+        /// <summary>批量复制选中行（仅元数据，不带密码本体）。</summary>
+        private static void CopySelected<T>(TableShell<T> shell, Func<T, string> describe) where T : class
+        {
+            var rows = shell.GetSelectedRows();
+            if (rows.Count == 0) return;
+            var lines = new List<string>();
+            foreach (var r in rows)
+            {
+                string t = describe(r);
+                if (!string.IsNullOrEmpty(t)) lines.Add(t);
+            }
+            if (lines.Count == 0) return;
+            try
+            {
+                Clipboard.SetText(string.Join(Environment.NewLine, lines));
+                ToastNotifier.Success(L10n.Tf("已复制 {0} 行", lines.Count), 2000);
+            }
+            catch (Exception ex)
+            {
+                try { DiagLog.Error("PasswordHealth.CopySelected", ex); } catch (Exception) { }
+                ToastNotifier.Error(L10n.T("复制失败：") + ex.Message);
+            }
+        }
+
         private static string DescribeIssue(object row)
         {
             var r = row as IssueRow;
@@ -315,6 +339,12 @@ namespace Gdterm.UI.Forms
                 r => string.Join(" ", new[] { r.Title, r.Username, r.GroupPath, r.Issue, r.Strength }),
                 (r, i) => { switch (i) { case 0: return r.Title; case 1: return r.Username; case 2: return r.GroupPath; case 3: return r.Issue; default: return r.Strength; } });
             shell.AddAction(L10n.T("导出"), (s, e) => shell.ExportCsv(this, "password-" + name)).Name = "PwdHealthIssueExportButton";
+            // 多选 + 批量复制：只复制元数据（标题/用户/分组/问题），不带密码本体
+            var multi = shell.EnableMultiSelect();
+            var copySel = shell.AddAction(L10n.T("复制选中"), (s, e) => CopySelected(shell, r => DescribeIssue(r)));
+            copySel.Enabled = false;
+            copySel.Name = "PwdHealthIssueCopySelButton";
+            multi.Changed += () => { copySel.Enabled = multi.Count > 0; };
             shell.SetItems(rows);
             WireRowActivation(table, DescribeIssue);
 
@@ -376,6 +406,12 @@ namespace Gdterm.UI.Forms
                 r => string.Join(" ", new[] { r.Hash, r.Title, r.Username, r.GroupPath }),
                 (r, i) => { switch (i) { case 0: return r.Hash; case 1: return r.Title; case 2: return r.Username; default: return r.GroupPath; } });
             shell.AddAction(L10n.T("导出"), (s, e) => shell.ExportCsv(this, "password-" + name)).Name = "PwdHealthDupExportButton";
+            // 多选 + 批量复制（仅标题/用户/分组，哈希也不入剪贴板——只给改密码任务清单用）
+            var multi = shell.EnableMultiSelect();
+            var copySel = shell.AddAction(L10n.T("复制选中"), (s, e) => CopySelected(shell, r => DescribeDup(r)));
+            copySel.Enabled = false;
+            copySel.Name = "PwdHealthDupCopySelButton";
+            multi.Changed += () => { copySel.Enabled = multi.Count > 0; };
             shell.SetItems(rows);
             WireRowActivation(listView, DescribeDup);
 

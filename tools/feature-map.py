@@ -390,8 +390,10 @@ DETECT = {
     "paging": [r'PageSize|分页|VirtualMode|VirtualListSize|ScrollTo'],
     # 批量能力的证据：全选入口、勾选列（CheckBoxes）、多选列表（MultiSelect=true，
     # 搭配 SelectedItems 批处理——如 SFTP 文件栏多选批量删/传、命令历史多选批量删）。
-    # 注意别把"多选"三个字当证据——注释里写"多选批量"不算实现过。
-    "bulk": [r'SelectAllRows|全选|CheckedItems|CheckedListBox|CheckBoxes|MultiSelect\s*=\s*true'],
+    # TableMultiSelect：AntdUI.Table 多选层（控件本身单选，CellClick+Ctrl/Shift 自持选中集，
+    # 搭配 GetSelectedRows 批处理——危险命令规则/快捷键绑定/密码健康报告）。
+    # 注意别把“多选”三个字当证据——注释里写“多选批量”不算实现过。
+    "bulk": [r'SelectAllRows|全选|CheckedItems|CheckedListBox|CheckBoxes|MultiSelect\s*=\s*true|TableMultiSelect|GetSelectedRows'],
     "export": [r'导出|Export\('],
     "import": [r'导入|Import\('],
     "undo": [r'撤销|Undo|回收站|Restore\('],

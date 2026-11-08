@@ -172,21 +172,20 @@
 | 页面 | 已有/总数 | 缺口 |
 |---|---|---|
 | 传输中心 `page.TransferCenterPanel` | 6/9 | 分页/虚拟滚动、撤销/回收站、加载中/忙碌 |
-| 危险命令规则 `page.DangerousCommandConfigForm` | 6/9 | 分页/虚拟滚动、多选/批量、撤销/回收站 |
 | 命令模板库 `page.CommandTemplatePanel` | 6/9 | 分页/虚拟滚动、撤销/回收站、加载中/忙碌 |
-| 多通道广播 `page.MultiChannelPanel` | 6/9 | 分页/虚拟滚动、撤销/回收站、加载中/忙碌 |
-| 密码健康报告 `page.PasswordHealthForm` | 6/9 | 分页/虚拟滚动、多选/批量、撤销/回收站 |
 | 密码库管理 `page.KeePassManagerForm` | 6/9 | 分页/虚拟滚动、多选/批量、加载中/忙碌 |
-| 快捷键绑定 `page.KeyBindingPanel` | 6/9 | 分页/虚拟滚动、多选/批量、撤销/回收站 |
 | 扫描中心 `page.ScannerCenterForm` | 6/9 | 分页/虚拟滚动、多选/批量、撤销/回收站 |
 | 敏感信息扫描 `page.SecretScanPanel` | 6/9 | 分页/虚拟滚动、多选/批量、撤销/回收站 |
 | 端口转发 `page.PortForwardPanel` | 6/9 | 分页/虚拟滚动、撤销/回收站、加载中/忙碌 |
 | 通知中心 `page.NotificationCenterPanel` | 6/9 | 分页/虚拟滚动、撤销/回收站、加载中/忙碌 |
 | OTP 动态码管理 `page.OtpManagerForm` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
 | SFTP 双栏 `page.SftpDualPanePanel` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
+| 危险命令规则 `page.DangerousCommandConfigForm` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
 | 命令历史 `page.CommandHistoryPanel` | 7/9 | 分页/虚拟滚动、加载中/忙碌 |
+| 多通道广播 `page.MultiChannelPanel` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
 | 宏录制 `page.MacroPanel` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
-| 密码生成器 `page.PasswordGeneratorForm` | 2/4 | 失败提示、撤销/回收站 |
+| 密码健康报告 `page.PasswordHealthForm` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
+| 快捷键绑定 `page.KeyBindingPanel` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
 | 文件面板（单栏） `page.FilePaneControl` | 7/9 | 分页/虚拟滚动、撤销/回收站 |
 | 连接树 `page.ConnectionTreeControl` | 6/8 | 加载中/忙碌、键盘/快捷键 |
 | 高亮规则 `page.HighlightRulePanel` | 7/9 | 分页/虚拟滚动、加载中/忙碌 |
@@ -196,6 +195,7 @@
 | 修改主密码 `page.ChangeMasterPasswordForm` | 2/3 | 撤销/回收站 |
 | 健康监控 `page.HealthMonitorPanel` | 2/3 | 空态引导 |
 | 密码库解锁 `page.KeePassUnlockForm` | 2/3 | 撤销/回收站 |
+| 密码生成器 `page.PasswordGeneratorForm` | 3/4 | 撤销/回收站 |
 | 快捷命令编辑 `page.QuickCommandEditorForm` | 3/4 | 撤销/回收站 |
 | 批量命令 `page.BatchCommandPanel` | 3/4 | 撤销/回收站 |
 | 添加 OTP `page.AddOtpForm` | 3/4 | 撤销/回收站 |

@@ -29,6 +29,7 @@ namespace Gdterm.UI.Controls
         private AntdUI.Button _btnBroadcast;
         private AntdUI.Button _btnRecord;
         private AntdUI.Button _btnReplay;
+        private bool _busy; // 回放忙碌态：长时操作期间禁按钮防重复触发
         private AntdUI.Button _btnExport;
         private AntdUI.Label _statusLabel;
         private AntdUI.Input _commandInput;
@@ -313,13 +314,16 @@ namespace Gdterm.UI.Controls
         /// <summary>回放：输入事件按原时间线重发到同名会话（1x）。输出事件仅记时间线不回显——远端状态已变，重放输出无意义。</summary>
         private void ReplayRecording()
         {
-            if (_recorder == null || _recorder.IsRecording) return;
+            if (_recorder == null || _recorder.IsRecording || _busy) return;
             if (_recorder.EntryCount == 0) { _statusLabel.Text = L10n.T("无录制内容"); return; }
             try
             {
                 if (_replayCts != null) { try { _replayCts.Cancel(); } catch { } }
                 _replayCts = new CancellationTokenSource();
                 var token = _replayCts.Token;
+                // 忙碌态：回放期间禁按钮防重复触发（重放是长时操作，双击=取消旧的重启新的）
+                _busy = true;
+                _btnReplay.Enabled = false;
                 _statusLabel.Text = L10n.T("回放中…");
                 Task.Run(async () =>
                 {
@@ -337,13 +341,26 @@ namespace Gdterm.UI.Controls
                             catch { }
                         }
                         await _recorder.ReplayAsync(map, 1.0, null, token);
-                        BeginInvoke(new Action(() => { _statusLabel.Text = L10n.T("回放完成"); }));
+                        BeginInvoke(new Action(() => FinishReplay(L10n.T("回放完成"))));
                     }
-                    catch (OperationCanceledException) { BeginInvoke(new Action(() => { _statusLabel.Text = L10n.T("回放已取消"); })); }
-                    catch (System.Exception ex) { BeginInvoke(new Action(() => { _statusLabel.Text = L10n.T("回放失败: ") + ex.Message; })); }
+                    catch (OperationCanceledException) { BeginInvoke(new Action(() => FinishReplay(L10n.T("回放已取消")))); }
+                    catch (System.Exception ex) { BeginInvoke(new Action(() => FinishReplay(L10n.T("回放失败: ") + ex.Message))); }
                 }, token);
             }
-            catch (System.Exception ex) { _statusLabel.Text = L10n.T("回放失败: ") + ex.Message; }
+            catch (System.Exception ex)
+            {
+                _busy = false;
+                _btnReplay.Enabled = true;
+                _statusLabel.Text = L10n.T("回放失败: ") + ex.Message;
+            }
+        }
+
+        /// <summary>回放收尾（UI 线程）：恢复按钮 + 状态行。</summary>
+        private void FinishReplay(string status)
+        {
+            _statusLabel.Text = status;
+            _busy = false;
+            _btnReplay.Enabled = true;
         }
 
         /// <summary>导出：落盘 JSON 录制 + 同名 HTML 时间线报告（与宏录制 data/macros 分目录）。</summary>

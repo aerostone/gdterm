@@ -24,6 +24,7 @@ namespace Gdterm.UI.Forms
         private System.Collections.Generic.List<DangerousCommandRule> _ruleRows = new System.Collections.Generic.List<DangerousCommandRule>();
         private AntdUI.Table _ruleTable;
         private TableShell<RuleRow> _shell;
+        private AntdUI.Button _btnDeleteSel;
         private AntdUI.Label _statusLabel;
         private EmptyStateView _empty;
 
@@ -85,6 +86,11 @@ namespace Gdterm.UI.Forms
             toolbar.Controls.Add(MakeBtn(L10n.T("添加自定义规则"), OnAddRuleClick, AntdUI.TTypeMini.Primary, btnPadding, btnMargin));
             toolbar.Controls.Add(MakeBtn(L10n.T("编辑"), OnEditRuleClick, AntdUI.TTypeMini.Default, btnPadding, btnMargin));
             toolbar.Controls.Add(MakeBtn(L10n.T("删除"), OnDeleteRuleClick, AntdUI.TTypeMini.Default, btnPadding, btnMargin));
+            // 批量：AntdUI.Table 本身单选，多选层见 TableShell.EnableMultiSelect（Ctrl/Shift+点击）
+            _btnDeleteSel = MakeBtn(L10n.T("删除选中"), OnDeleteSelectedClick, AntdUI.TTypeMini.Default, btnPadding, btnMargin);
+            _btnDeleteSel.Enabled = false;
+            _btnDeleteSel.Name = "DangerRuleDeleteSelButton";
+            toolbar.Controls.Add(_btnDeleteSel);
             toolbar.Controls.Add(MakeBtn(L10n.T("启用/禁用"), OnToggleRuleClick, AntdUI.TTypeMini.Default, btnPadding, btnMargin));
             toolbar.Controls.Add(MakeBtn(L10n.T("刷新"), (s, e) => { LoadRules(); LoadWhitelist(); }, AntdUI.TTypeMini.Default, btnPadding, btnMargin));
 
@@ -122,6 +128,15 @@ namespace Gdterm.UI.Forms
                     }
                 });
             _shell.AddAction(L10n.T("导出"), (s2, e2) => _shell.ExportCsv(FindForm(), "dangerous-command-rules")).Name = "DangerRuleExportButton";
+            // 多选 + Del 键批量删（内置规则由 RemoveRule 拒绝并计入跳过数）
+            var multi = _shell.EnableMultiSelect();
+            multi.Changed += () => { _btnDeleteSel.Enabled = multi.Count > 0; };
+            _ruleTable.KeyDown += (s2, e2) =>
+            {
+                if (e2.KeyCode != Keys.Delete) return;
+                if (multi.Count > 0) OnDeleteSelectedClick(s2, e2); else OnDeleteRuleClick(s2, e2);
+                e2.Handled = true;
+            };
             _shell.ViewChanged += list =>
             {
                 _ruleRows.Clear();
@@ -361,6 +376,41 @@ namespace Gdterm.UI.Forms
                     try { Diagnostics.DiagLog.Error("DangerousCommandConfigForm.EditRule", ex); } catch (Exception) { }
                     AntdUI.Message.error(this, L10n.T("保存规则失败：") + ex.Message);
                 }
+            }
+        }
+
+        private void OnDeleteSelectedClick(object sender, EventArgs e)
+        {
+            var rules = new System.Collections.Generic.List<DangerousCommandRule>();
+            foreach (var r in _shell.GetSelectedRows())
+                if (r.Source != null) rules.Add(r.Source);
+            if (rules.Count == 0) return;
+            var confirm = MessageBox.Show(this,
+                L10n.Tf("删除选中的 {0} 条规则？内置默认规则不可删除，将被跳过。", rules.Count),
+                L10n.T("确认删除"),
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+            if (confirm != DialogResult.Yes) return;
+            try
+            {
+                int deleted = 0, skipped = 0;
+                foreach (var rule in rules)
+                {
+                    if (_detector.RemoveRule(rule.Id)) deleted++;
+                    else skipped++;
+                }
+                LoadRules();
+                string msg = L10n.Tf("已删除 {0} 条规则", deleted);
+                if (skipped > 0) msg += L10n.Tf("，{0} 条内置规则不可删除已跳过", skipped);
+                _statusLabel.Text = msg;
+                if (_detector.LastSaveError != null)
+                    AntdUI.Message.error(this, L10n.T("配置文件写入失败：") + _detector.LastSaveError);
+                ToastNotifier.Success(msg, 2500);
+            }
+            catch (Exception ex)
+            {
+                try { Diagnostics.DiagLog.Error("DangerousCommandConfigForm.RemoveRules", ex); } catch (Exception) { }
+                AntdUI.Message.error(this, L10n.T("删除规则失败：") + ex.Message);
             }
         }
 

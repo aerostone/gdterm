@@ -31,6 +31,7 @@ namespace Gdterm.UI.Controls
         private readonly string[] _columns;
         private readonly FlowLayoutPanel _bar;
         private readonly AntdUI.Label _countLabel;
+        private TableMultiSelect _multi;
 
         public AntdUI.Input FilterBox { get; private set; }
         public AntdUI.Select SortSelect { get; private set; }
@@ -158,6 +159,45 @@ namespace Gdterm.UI.Controls
         public IList<T> AllItems { get { return _all; } }
         public IList<T> VisibleItems { get { return _shown; } }
 
+        /// <summary>
+        /// 启用多选（AntdUI.Table 本身单选，见 <see cref="TableMultiSelect"/>）。
+        /// 选中计数并入计数行；过滤/排序自动清空选中；批量操作用 <see cref="GetSelectedRows"/>。
+        /// 返回实例以便页面挂 <see cref="TableMultiSelect.Changed"/>（如批量按钮可用性）。
+        /// </summary>
+        public TableMultiSelect EnableMultiSelect()
+        {
+            if (_multi != null) return _multi;
+            _multi = new TableMultiSelect(_table);
+            _multi.Changed += OnMultiChanged;
+            return _multi;
+        }
+
+        private void OnMultiChanged() { if (_countLabel != null) UpdateCountLabel(); }
+
+        private void UpdateCountLabel()
+        {
+            if (_countLabel == null) return;
+            bool filtered = (FilterBox != null && (FilterBox.Text ?? string.Empty).Trim().Length > 0);
+            _countLabel.Text = !filtered && _shown.Count == _all.Count
+                ? (_all.Count == 0 ? string.Empty : L10n.T("共 ") + _all.Count + L10n.T(" 条"))
+                : _shown.Count + " / " + _all.Count + L10n.T(" 条");
+            if (_multi != null && _multi.Count > 0)
+                _countLabel.Text = (string.IsNullOrEmpty(_countLabel.Text) ? string.Empty : _countLabel.Text + "  ")
+                    + L10n.Tf("已选中 {0}", _multi.Count);
+        }
+
+        /// <summary>当前选中的行（可见顺序，未选中返回空）。过滤生效时即选中的可见子集。</summary>
+        public IList<T> GetSelectedRows()
+        {
+            var result = new List<T>();
+            if (_multi == null) return result;
+            foreach (int i in _multi.SelectedIndices)
+            {
+                if (i >= 0 && i < _shown.Count) result.Add(_shown[i]);
+            }
+            return result;
+        }
+
         public void SetItems(IEnumerable<T> items)
         {
             _all.Clear();
@@ -198,10 +238,9 @@ namespace Gdterm.UI.Controls
             _table.DataSource = _shown.ToArray();
             SortDirection.Visible = col >= 0;
 
-            bool filtered = q.Length > 0;
-            _countLabel.Text = !filtered && _shown.Count == _all.Count
-                ? (_all.Count == 0 ? string.Empty : L10n.T("共 ") + _all.Count + L10n.T(" 条"))
-                : _shown.Count + " / " + _all.Count + L10n.T(" 条");
+            // 过滤/排序重排行序，多选的索引引用失效——清空优于错指
+            if (_multi != null) _multi.Reset();
+            UpdateCountLabel();
 
             var h = ViewChanged;
             if (h != null) h(_shown);

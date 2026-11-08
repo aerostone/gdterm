@@ -170,6 +170,7 @@
     <Compile Include="Controls\CommandHistoryPanel.cs" />
     <Compile Include="Controls\ListShell.cs" />
     <Compile Include="Controls\TableShell.cs" />
+    <Compile Include="Controls\TableMultiSelect.cs" />
     <Compile Include="Controls\SftpDualPanePanel.cs" />
     <Compile Include="Controls\FilePaneModel.cs" />
     <Compile Include="Controls\FilePaneControl.cs" />
