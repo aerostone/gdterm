@@ -128,6 +128,8 @@ namespace Gdterm.UI.Forms
             ClientSize = new Size(clientW, y + fieldH + DpiScale.V(this, 16));
             AcceptButton = ok;   // 回车=导入，Esc=关闭（此前只能用鼠标点）
             CancelButton = cancel;
+            // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
+            UiA11y.AutoName(this);
         }
 
         private static AntdUI.Label MakeLabel(string text, int x, int y, int fieldH)

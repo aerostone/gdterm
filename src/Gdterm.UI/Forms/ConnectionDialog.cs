@@ -113,6 +113,8 @@ namespace Gdterm.UI.Forms
                 + " font=" + Font.Name + "/" + Font.Size.ToString("0.#") + "pt"
                 + " screen=" + Screen.FromControl(this).Bounds.Width + "x" + Screen.FromControl(this).Bounds.Height
                 + " expanded=" + _expanded);
+            // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
+            UiA11y.AutoName(this);
         }
 
         /// <summary>

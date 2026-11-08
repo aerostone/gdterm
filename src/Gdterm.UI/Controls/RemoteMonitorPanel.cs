@@ -131,6 +131,8 @@ namespace Gdterm.UI.Controls
             _timer.Tick += (s, e) => Tick();
             HandleCreated += (s, e) => { _timer.Start(); Tick(); };
             HandleDestroyed += (s, e) => _timer.Stop();
+            // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
+            UiA11y.AutoName(this);
         }
 
         /// <summary>首帧加载态开关（跑马灯 + 状态行）。</summary>

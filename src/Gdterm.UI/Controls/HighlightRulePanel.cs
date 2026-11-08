@@ -87,6 +87,8 @@ namespace Gdterm.UI.Controls
             _empty = EmptyStateView.Attach(this, L10n.T("还没有高亮规则"),
                 L10n.T("规则命中的行会按设定前景/背景色着色，可区分生产库报错、告警关键字等"),
                 L10n.T("添加规则"), (s2, e2) => AddRule());
+            // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
+            UiA11y.AutoName(this);
         }
 
         private AntdUI.Button CreateBtn(string text)

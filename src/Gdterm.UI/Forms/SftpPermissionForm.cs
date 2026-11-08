@@ -126,6 +126,8 @@ namespace Gdterm.UI.Forms
 
             // 初值：rwx → 勾选 → octal 联动（initialOctal 是位值如 493，转十进制位 755 再存 OctalMode）
             FormFontPolicy.Apply(this);
+            // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
+            UiA11y.AutoName(this);
         }
 
         private void ApplyRwx(string rwx, int octalBits)

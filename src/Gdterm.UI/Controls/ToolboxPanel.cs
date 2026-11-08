@@ -5,6 +5,7 @@ using System.Windows.Forms;
 using Gdterm.Tools;
 using Gdterm.UI.Diagnostics;
 using Gdterm.Core;
+using Gdterm.UI.Services;
 
 namespace Gdterm.UI.Controls
 {
@@ -106,6 +107,8 @@ namespace Gdterm.UI.Controls
             Controls.Add(_lvTools);
 
             LoadTools();
+            // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
+            UiA11y.AutoName(this);
         }
 
         private void LoadTools()

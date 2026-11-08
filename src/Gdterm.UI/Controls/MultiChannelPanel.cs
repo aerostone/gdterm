@@ -56,6 +56,8 @@ namespace Gdterm.UI.Controls
             WireEvents();
             // 首帧刷新：已有会话/空列表都要立刻可见（否则打开侧栏 = 空白列表 + 隐藏空态）
             RefreshList();
+            // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
+            UiA11y.AutoName(this);
         }
 
         private void InitializeComponent()

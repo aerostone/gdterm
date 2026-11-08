@@ -136,6 +136,8 @@ namespace Gdterm.UI.Forms
             FormFontPolicy.Apply(this);
             ApplyFilter();
             Shown += (s, e) => { try { _filter.Focus(); } catch (Exception) { } };
+            // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
+            UiA11y.AutoName(this);
         }
 
         private static string Format(ConnectionConfig c, string prefix)

@@ -40,6 +40,8 @@ namespace Gdterm.UI.Forms
             // 审计 C2：KDBX 全量分析是几百毫秒到数秒的同步 I/O，原先在构造里跑 →
             // 窗体现在 Shown 之后才分析，期间光标 Wait + 状态行给出「正在分析」。
             Shown += (s, e) => LoadReportAsync();
+            // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
+            UiA11y.AutoName(this);
         }
 
         private void InitializeComponent()

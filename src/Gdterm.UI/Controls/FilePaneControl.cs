@@ -168,6 +168,8 @@ namespace Gdterm.UI.Controls
             // 审计 C1：空目录/读取失败此前都只是一片空列表（状态栏那行字容易被忽略）
             _empty = EmptyStateView.Attach(this, L10n.T("这个目录是空的"),
                 L10n.T("拖文件到这里可直接上传；点「刷新」重新读取"), L10n.T("刷新"), (s2, e2) => Refresh());
+            // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
+            UiA11y.AutoName(this);
         }
 
         private ContextMenuStrip BuildContextMenu()

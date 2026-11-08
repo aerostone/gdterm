@@ -108,6 +108,8 @@ namespace Gdterm.UI.Controls
             // 首帧必须反映缓冲区现状：此前只在 Push 时刷新，侧栏一打开是空白表 + 隐藏空态，
             // 看着像"通知全丢了"（CI 0.1.381 侧栏 dump 实证空态未显示）。
             Reload();
+            // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
+            UiA11y.AutoName(this);
         }
 
         private void FitColumn()

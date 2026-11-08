@@ -78,6 +78,8 @@ namespace Gdterm.UI.Controls
             _empty = EmptyStateView.Attach(this, L10n.T("还没有登录脚本"),
                 L10n.T("登录后按顺序自动执行命令，可绑定到单个连接或应用到全部连接"),
                 L10n.T("新建脚本"), (s2, e2) => AddScript());
+            // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
+            UiA11y.AutoName(this);
         }
 
         private AntdUI.Button CreateBtn(string text)

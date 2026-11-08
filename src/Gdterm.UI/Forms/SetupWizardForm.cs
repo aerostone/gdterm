@@ -61,6 +61,8 @@ namespace Gdterm.UI.Forms
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SetupWizardForm", exSwallowed); } catch { } }
 
             ShowStep(0);
+            // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
+            UiA11y.AutoName(this);
         }
 
         private void InitializeComponent()

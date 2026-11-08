@@ -150,6 +150,8 @@ namespace Gdterm.UI.Controls
             {
                 try { _split.SplitterDistance = Math.Max(100, _split.Width / 2); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SftpDualPanePanel", exSwallowed); } catch { } }
             };
+            // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
+            UiA11y.AutoName(this);
         }
 
         private static void AddPane(SplitterPanel host, FilePaneControl pane, string title, Color titleColor, Control extraTop = null)

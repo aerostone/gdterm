@@ -139,6 +139,8 @@ namespace Gdterm.UI.Forms
             Controls.Add(lblUri);
             Controls.Add(bottom);
             FormFontPolicy.Apply(this);
+            // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
+            UiA11y.AutoName(this);
         }
 
         /// <summary>表内单元格标签：Fill + 垂直居中（固定盒高下 Dock=Top 会贴顶）。</summary>

@@ -112,6 +112,8 @@ namespace Gdterm.UI.Controls
                 _titleLabel.PreferredSize.Height + _detailLabel.PreferredSize.Height
                 + barHost.Height + bottomFlow.Height + DpiScale.V(this, 4));
             Gdterm.UI.Services.FormFontPolicy.Apply(this);
+            // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
+            UiA11y.AutoName(this);
         }
 
         /// <summary>更新进度（可从任意线程调用）。</summary>

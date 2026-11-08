@@ -313,6 +313,8 @@ namespace Gdterm.UI.Forms
             // 布局在句柄创建后才完成，故延到 OnShown
 
             AcceptButton = _runButton;
+            // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
+            UiA11y.AutoName(this);
         }
 
         protected override void OnShown(EventArgs e)
