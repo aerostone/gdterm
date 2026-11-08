@@ -288,3 +288,30 @@ sub_features:
     scope: "工具箱分类菜单、独立tab、配置对话框、结果复制"
     excludes: ""
     feature_dir: ""
+
+  # ─── 横切增强（v0.2 候选，功能完整性扫描甄别后的公共根因项）───
+  - id: undo-trash
+    layer: 4
+    priority: P2
+    status: planned
+    title: "全局撤销/回收站"
+    feature_dir: ""
+    description: "删除类操作统一支持撤销或回收站恢复（当前各页删除直接物理删）"
+    depends_on: []
+    scope: "store 层软删/回收站公共机制 + 约 15 个删除入口页接线（连接/规则/宏/模板/书签/健康报告等）；统一「删除→提示含撤销」交互"
+    excludes: "跨机同步回收站、恢复历史版本（仅最近一次删除的恢复）"
+    feature_dir: ""
+    notes: "v0.1 不做理由：store 层软删+数据迁移风险收益比差；目标用户数据量为有界集（几百~几千条）"
+
+  - id: pagination-virtual-scroll
+    layer: 4
+    priority: P2
+    status: planned
+    title: "分页/虚拟滚动"
+    feature_dir: ""
+    description: "大列表页统一分页或虚拟滚动（当前全量绑 AntdUI.Table，大数据量卡顿）"
+    depends_on: []
+    scope: "约 16 个大列表页（连接/命令历史/日志/扫描结果等）接入统一分页或虚拟滚动层"
+    excludes: "服务端分页（纯本地数据）"
+    feature_dir: ""
+    notes: "v0.1 不做理由：AntdUI 无现成分页/虚拟化 API（F12 已实证需自绘层，见 TableMultiSelect 先例）；目标用户数据量有界，卡顿风险低"

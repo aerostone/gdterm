@@ -446,14 +446,12 @@
         "src/Gdterm.UI/Controls/AiChatPanel.cs",
         "src/Gdterm.AI/ChatHistoryStore.cs"
       ],
-      "known_gaps": [
-        "对话历史按连接键控：当前全局单历史（data/ai-chat-history.json，跨重启保留），按连接隔离为后续增强"
-      ],
+      "known_gaps": [],
       "manual_ok": [],
       "drop_caps": [
         "list"
       ],
-      "note": "聊天=RichTextBox 连续文本流（非列表控件，list N/A）；persist 证据在 ChatHistoryStore（F4，跨重启回显）；loading=SetBusy 忙碌态（F11：禁发送+placeholder）"
+      "note": "聊天=RichTextBox 连续文本流（非列表控件，list N/A）；persist 证据在 ChatHistoryStore（F4，跨重启回显）；loading=SetBusy 忙碌态（F11：禁发送+placeholder）；对话历史按连接键控（F13：ChatHistoryStore v2 conversations 表 + SetActiveConversation 切换，v1 文件自动迁入 global 键，多键隔离单测覆盖）"
     },
     {
       "id": "page.RemoteMonitorPanel",

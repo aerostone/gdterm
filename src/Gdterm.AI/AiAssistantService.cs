@@ -18,7 +18,10 @@ namespace Gdterm.AI
     /// </summary>
     public class AiAssistantService : IAiAssistantService, IDisposable
     {
-        private readonly List<ChatMessage> _history = new List<ChatMessage>();
+        // F13：历史按连接键控（键 = ConnectionId；本地/无连接 = DefaultKey「global」）。
+        // 活跃键由面板切标签时 SetActiveConversation 切换；发送链路再按会话键兜底对齐。
+        private readonly Dictionary<string, List<ChatMessage>> _histories = new Dictionary<string, List<ChatMessage>>();
+        private string _activeKey = ChatHistoryStore.DefaultKey;
         private readonly ChatHistoryStore _historyStore;
         /// <summary>对话历史硬顶（user+assistant 合计条数），防长会话内存/token 膨胀</summary>
         public int MaxHistoryMessages { get; set; } = 40;
@@ -38,41 +41,70 @@ namespace Gdterm.AI
         }
 
         /// <summary>
-        /// 带历史持久化的构造（data/ai-chat-history.json；historyStore 为 null 时纯内存）。
+        /// 带历史持久化的构造（data/ai-chat-history.json，按连接键控；historyStore 为 null 时纯内存）。
+        /// 历史首次访问某键时才读盘（懒加载）。
         /// </summary>
         public AiAssistantService(AiConfiguration configuration, ChatHistoryStore historyStore)
         {
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _historyStore = historyStore;
+        }
+
+        /// <summary>当前活动对话历史快照（只读副本）——供 UI 回显。</summary>
+        public IList<ChatMessage> GetHistory()
+        {
+            lock (_histories)
+            {
+                EnsureActiveLoadedLocked();
+                return new List<ChatMessage>(_histories[_activeKey]);
+            }
+        }
+
+        /// <summary>
+        /// F13：切换活动对话历史键（按连接隔离；空键 = global）。
+        /// 首次切到某键时从盘加载（截断至硬顶）。幂等：同键无操作。
+        /// </summary>
+        public void SetActiveConversation(string key)
+        {
+            var k = string.IsNullOrEmpty(key) ? ChatHistoryStore.DefaultKey : key;
+            lock (_histories)
+            {
+                if (k == _activeKey) return;
+                _activeKey = k;
+                EnsureActiveLoadedLocked();
+            }
+        }
+
+        /// <summary>首次访问某键时读盘（须持有 _histories 锁）。</summary>
+        private void EnsureActiveLoadedLocked()
+        {
+            List<ChatMessage> existing;
+            if (_histories.TryGetValue(_activeKey, out existing)) return;
+            var list = new List<ChatMessage>();
             if (_historyStore != null)
             {
                 try
                 {
-                    var loaded = _historyStore.Load();
-                    if (loaded != null && loaded.Count > 0)
-                    {
-                        var list = new List<ChatMessage>(loaded);
-                        var cap = MaxHistoryMessages > 0 ? MaxHistoryMessages : 40;
-                        if (list.Count > cap)
-                            _history.AddRange(list.GetRange(list.Count - cap, cap));
-                        else
-                            _history.AddRange(list);
-                    }
+                    var loaded = _historyStore.Load(_activeKey);
+                    if (loaded != null) list.AddRange(loaded);
                 }
                 catch
                 {
                     // 历史加载失败不阻断 AI 功能（store.Load 本身已吞异常，此处双保险）
                 }
+                var cap = MaxHistoryMessages > 0 ? MaxHistoryMessages : 40;
+                if (list.Count > cap)
+                    list = new List<ChatMessage>(list.GetRange(list.Count - cap, cap));
             }
+            _histories[_activeKey] = list;
         }
 
-        /// <summary>当前对话历史快照（只读副本）——供 UI 回显。</summary>
-        public IList<ChatMessage> GetHistory()
+        /// <summary>会话 → 对话键（ConnectionId；本地/未连接/取不到 = global）。</summary>
+        private static string KeyOf(ITerminalSession session)
         {
-            lock (_history)
-            {
-                return new List<ChatMessage>(_history);
-            }
+            string id = null;
+            try { id = session != null ? session.ConnectionId : null; } catch { }
+            return string.IsNullOrEmpty(id) ? ChatHistoryStore.DefaultKey : id;
         }
 
         public async Task<AiResponse> SendMessageAsync(string message, ITerminalSession session, CancellationToken ct)
@@ -88,10 +120,19 @@ namespace Gdterm.AI
                 // 构建 system prompt（注入连接上下文）
                 var systemPrompt = BuildSystemPrompt(session);
 
-                // 构建 messages 数组
+                // F13：发送前按本会话连接对齐活跃键（兜底——面板切标签时已切，此处防漏）
+                SetActiveConversation(KeyOf(session));
+
+                // 构建 messages 数组（带当前键的历史）
+                List<ChatMessage> historySnapshot;
+                lock (_histories)
+                {
+                    EnsureActiveLoadedLocked();
+                    historySnapshot = new List<ChatMessage>(_histories[_activeKey]);
+                }
                 var messages = new List<ChatMessage>();
                 messages.Add(new ChatMessage("system", systemPrompt));
-                messages.AddRange(_history);
+                messages.AddRange(historySnapshot);
                 messages.Add(new ChatMessage("user", message));
 
                 // 调用 API
@@ -172,27 +213,49 @@ namespace Gdterm.AI
             session.SendInput(line);
         }
 
+        /// <summary>清空当前活动键的历史（F13：按连接清，不动其他连接）。</summary>
         public void ClearHistory()
         {
-            _history.Clear();
+            lock (_histories)
+            {
+                EnsureActiveLoadedLocked();
+                _histories[_activeKey].Clear();
+            }
             PersistHistory();
         }
 
         private void AppendHistory(ChatMessage msg)
         {
             if (msg == null) return;
-            _history.Add(msg);
-            var cap = MaxHistoryMessages > 0 ? MaxHistoryMessages : 40;
-            // 成对裁剪，尽量保留完整 user/assistant 轮次
-            while (_history.Count > cap)
-                _history.RemoveAt(0);
+            lock (_histories)
+            {
+                EnsureActiveLoadedLocked();
+                var list = _histories[_activeKey];
+                list.Add(msg);
+                var cap = MaxHistoryMessages > 0 ? MaxHistoryMessages : 40;
+                // 成对裁剪，尽量保留完整 user/assistant 轮次
+                while (list.Count > cap)
+                    list.RemoveAt(0);
+            }
             PersistHistory();
         }
 
         private void PersistHistory()
         {
             if (_historyStore == null) return;
-            try { _historyStore.Save(_history); }
+            try
+            {
+                string key;
+                List<ChatMessage> snapshot;
+                lock (_histories)
+                {
+                    key = _activeKey;
+                    List<ChatMessage> list;
+                    if (!_histories.TryGetValue(key, out list)) list = new List<ChatMessage>();
+                    snapshot = new List<ChatMessage>(list);
+                }
+                _historyStore.Save(key, snapshot);
+            }
             catch
             {
                 // 历史落盘失败不阻断对话（下次 Append/Clear 会再试）
@@ -405,7 +468,7 @@ namespace Gdterm.AI
 
         public void Dispose()
         {
-            _history.Clear();
+            lock (_histories) { _histories.Clear(); }
             // HttpClient is static — do NOT dispose here
         }
 
@@ -419,9 +482,17 @@ namespace Gdterm.AI
             try
             {
                 var systemPrompt = BuildSystemPrompt(session);
+                // F13：发送前按本会话连接对齐活跃键（兜底——面板切标签时已切，此处防漏）
+                SetActiveConversation(KeyOf(session));
+                List<ChatMessage> historySnapshot;
+                lock (_histories)
+                {
+                    EnsureActiveLoadedLocked();
+                    historySnapshot = new List<ChatMessage>(_histories[_activeKey]);
+                }
                 var messages = new List<ChatMessage>();
                 messages.Add(new ChatMessage("system", systemPrompt));
-                messages.AddRange(_history);
+                messages.AddRange(historySnapshot);
                 messages.Add(new ChatMessage("user", message));
 
                 var endpoint = Configuration.ApiEndpoint.TrimEnd('/');

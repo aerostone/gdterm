@@ -33,6 +33,8 @@ namespace Gdterm.UI.Controls
         private CancellationTokenSource _cts;
         private bool _sending;
         private EmptyStateView _empty;
+        // F13：当前面板显示的对话键（切标签时对比，变化才重渲染）
+        private string _currentKey;
 
         /// <summary>F11 忙碌态切换用的空闲 placeholder（避免魔法字符串散落）。</summary>
         private static string PlaceholderIdle { get { return L10n.T("问 AI：如 这台机器 CPU 为什么这么高？"); } }
@@ -51,6 +53,38 @@ namespace Gdterm.UI.Controls
             Dock = DockStyle.Fill;
             BackColor = GdtermColorTable.Background;
             BuildUI();
+            // F13：初始对齐到当前活动终端的连接键（无终端 → global），再回显该键历史
+            _currentKey = ResolveConversationKey();
+            try { _aiService.SetActiveConversation(_currentKey); } catch { }
+            RenderPersistedHistory();
+        }
+
+        /// <summary>F13：当前活动终端的连接键；无终端/未连接/取不到 = global。</summary>
+        private string ResolveConversationKey()
+        {
+            try
+            {
+                var tc = _getActiveTerminal != null ? _getActiveTerminal() : null;
+                var id = tc != null && tc.Session != null ? tc.Session.ConnectionId : null;
+                if (!string.IsNullOrEmpty(id)) return id;
+            }
+            catch { }
+            return ChatHistoryStore.DefaultKey;
+        }
+
+        /// <summary>
+        /// F13：活动终端变化时由 SidePanelFactory（ActiveSessionChanged）调用。
+        /// 键变化才切服务活跃键并重渲染历史框；同键幂等无操作。
+        /// </summary>
+        public void RefreshActiveConversation()
+        {
+            var key = ResolveConversationKey();
+            if (key == _currentKey) return;
+            _currentKey = key;
+            try { _aiService.SetActiveConversation(key); } catch { }
+            if (_cmdBar != null) { _cmdBar.Controls.Clear(); _cmdBar.Visible = false; }
+            _historyBox.Clear();
+            if (_empty != null) _empty.SetEmpty(true);
             RenderPersistedHistory();
         }
 
@@ -203,6 +237,8 @@ namespace Gdterm.UI.Controls
             if (_sending) return;
             var text = (_inputBox.Text ?? "").Trim();
             if (text.Length == 0) return;
+            // F13 兜底：发送前再对一次连接键（防切标签事件漏掉导致历史/上下文错键）
+            RefreshActiveConversation();
             _inputBox.Text = "";
             _sending = true;
             _statusLabel.Text = L10n.T("AI 思考中…");

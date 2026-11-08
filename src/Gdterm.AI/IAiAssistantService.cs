@@ -36,6 +36,11 @@ namespace Gdterm.AI
         void ClearHistory();
 
         /// <summary>
+        /// F13：切换活动对话历史键（按连接隔离；空键 = global）。幂等。
+        /// </summary>
+        void SetActiveConversation(string key);
+
+        /// <summary>
         /// 当前对话历史快照（只读副本）
         /// </summary>
         IList<ChatMessage> GetHistory();

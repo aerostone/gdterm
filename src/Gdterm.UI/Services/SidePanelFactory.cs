@@ -132,7 +132,16 @@ namespace Gdterm.UI.Services
         {
             if (aiService == null)
                 return Unavailable(L10n.T("AI 服务未初始化"));
-            return new AiChatPanel(aiService, getActiveTerminal ?? (() => _tabs != null ? _tabs.GetActiveTerminalControl() : null));
+            var panel = new AiChatPanel(aiService, getActiveTerminal ?? (() => _tabs != null ? _tabs.GetActiveTerminalControl() : null));
+            // F13：切标签 → 面板按新连接键重渲染对话历史（面板被宿主 Dispose 时同步摘钩，防泄漏）
+            if (_tabs != null)
+            {
+                EventHandler handler = null;
+                handler = (s, e) => { try { panel.RefreshActiveConversation(); } catch { } };
+                _tabs.ActiveSessionChanged += handler;
+                panel.Disposed += (s2, e2) => { if (_tabs != null) _tabs.ActiveSessionChanged -= handler; };
+            }
+            return panel;
         }
 
         public Control CreateCommandTemplatePanel(Func<TerminalControl> getActiveTerminal, CommandTemplateStore store)
