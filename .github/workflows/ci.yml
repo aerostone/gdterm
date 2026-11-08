@@ -40,6 +40,33 @@ jobs:
           if (-not $ref) { throw 'net462 reference assemblies not found under packs/' }
           Add-Content -Path $env:GITHUB_ENV -Value "REF_PATH=$ref"
 
+      # GHA windows 镜像 PATH 不保证有 VS MSBuild（首次 run 实证：nuget 步骤过、msbuild 步骤挂）。
+      # 三级兜底：PATH 已有 → vswhere 定位 VS MSBuild 加目录 → dotnet msbuild 垫片（SDK 预装必在）。
+      # 注意：GITHUB_PATH 对当前步骤不生效，版本自证用解析到的绝对路径。
+      - name: Ensure msbuild on PATH
+        shell: pwsh
+        run: |
+          if (Get-Command msbuild -ErrorAction SilentlyContinue) {
+            Write-Host "msbuild already on PATH"
+            & (Get-Command msbuild).Source -version
+            exit 0
+          }
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
+          if (Test-Path $vswhere) {
+            $exe = & $vswhere -latest -products * -requires Microsoft.Component.MSBuild -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1
+            if ($exe) {
+              Add-Content -Path $env:GITHUB_PATH -Value (Split-Path $exe)
+              Write-Host "VS MSBuild found: $exe"
+              & $exe -version
+              exit 0
+            }
+          }
+          $shim = Join-Path $env:RUNNER_TEMP 'msbuild.cmd'
+          Set-Content -Path $shim -Value '@dotnet msbuild %*' -Encoding ASCII
+          Add-Content -Path $env:GITHUB_PATH -Value $env:RUNNER_TEMP
+          Write-Host "Falling back to dotnet msbuild shim: $shim"
+          dotnet msbuild -version
+
       - name: Restore
         shell: pwsh
         run: |
