@@ -183,12 +183,9 @@ namespace Gdterm.AI
             if (string.IsNullOrWhiteSpace(json)) return result;
             json = json.Trim();
             if (!json.StartsWith("[")) return result;
-            int depth = 0; int objStart = -1;
-            for (int i = 0; i < json.Length; i++)
-            {
-                if (json[i] == '{') { if (depth == 0) objStart = i; depth++; }
-                else if (json[i] == '}') { depth--; if (depth == 0 && objStart >= 0) { result.Add(ParseModel(json.Substring(objStart, i - objStart + 1))); objStart = -1; } }
-            }
+            // 审计 F1：切对象走 JsonText（ApiKey/Endpoint 里出现括号也不会切坏）
+            foreach (var obj in Gdterm.Core.JsonText.SplitObjects(json))
+                result.Add(ParseModel(obj));
             return result;
         }
 

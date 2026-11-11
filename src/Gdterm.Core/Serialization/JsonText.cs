@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 
@@ -147,6 +148,56 @@ namespace Gdterm.Core
             int end = SkipString(json, start);
             if (end <= start || end >= json.Length || json[end] != '"') return null;
             return Unescape(json.Substring(start + 1, end - start - 1));
+        }
+
+        /// <summary>
+        /// 把一个 JSON 数组的**内容**（不含首尾方括号）切成若干顶层对象文本，每个都带自己的首尾花括号。
+        ///
+        /// 存在理由（审计 F1 姊妹坑，CI 43060434586 实证）：各 store 自己写
+        /// <c>for(...){ if (c=='{') depth++; else if (c=='}') depth--; ... }</c> 切对象，
+        /// **数括号时不管字符串**。于是一个值里出现 '[' / '{' / '}' 就把整块切坏或切不到：
+        /// 终端快捷键 <c>"value":"\u001b[A"</c>（Esc+[）会让 customBindings 整段解析失败，
+        /// store 静默回落默认配置——用户自定义绑定全丢，且没有任何报错。
+        /// 现在切分统一走 <see cref="FindMatchingBracket"/>（字符串内容不计数）。
+        /// </summary>
+        public static List<string> SplitObjects(string arrayContent)
+        {
+            var items = new List<string>();
+            if (string.IsNullOrEmpty(arrayContent)) return items;
+            for (int i = 0; i < arrayContent.Length; i++)
+            {
+                if (arrayContent[i] != '{') continue;
+                int end = FindMatchingBracket(arrayContent, i);
+                if (end < 0) break;   // 截断的尾巴：不猜，已解析到的照常返回
+                items.Add(arrayContent.Substring(i, end - i + 1));
+                i = end;
+            }
+            return items;
+        }
+
+
+
+        /// <summary>
+        /// 把 JSON 字符串数组的内容切成若干元素（已反转义）。转义感知：
+        /// "\"" 不再被当成结束引号（旧的自写实现用 IndexOf('"')，含引号的元素会被截断）。
+        /// </summary>
+        public static List<string> SplitStringArray(string arrayContent)
+        {
+            var items = new List<string>();
+            if (string.IsNullOrEmpty(arrayContent)) return items;
+            int i = 0;
+            while (i < arrayContent.Length)
+            {
+                if (arrayContent[i] == '"')
+                {
+                    int end = SkipString(arrayContent, i);
+                    if (end <= i || end >= arrayContent.Length) break;
+                    items.Add(Unescape(arrayContent.Substring(i + 1, end - i - 1)));
+                    i = end + 1;
+                }
+                else i++;
+            }
+            return items;
         }
     }
 }

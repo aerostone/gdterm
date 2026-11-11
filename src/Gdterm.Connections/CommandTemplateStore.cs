@@ -231,39 +231,22 @@ namespace Gdterm.Connections
         {
             var p = "\"" + key + "\""; var idx = json.IndexOf(p); if (idx < 0) return "";
             var s = json.IndexOf('[', idx); if (s < 0) return "";
-            int depth = 0; int end = s;
-            for (int i = s; i < json.Length; i++) { if (json[i] == '[') depth++; else if (json[i] == ']') { depth--; if (depth == 0) { end = i; break; } } }
+            // 审计 F1：括号配对走 JsonText（跳过字符串），值里的 '[' 不再把数组切短
+            var end = Gdterm.Core.JsonText.FindMatchingBracket(json, s);
+            if (end < 0) return "";
             return json.Substring(s + 1, end - s - 1);
         }
 
         private static List<string> SplitJsonObjects(string content)
         {
-            var result = new List<string>();
-            int depth = 0; int start = -1;
-            for (int i = 0; i < content.Length; i++)
-            {
-                if (content[i] == '{') { if (depth == 0) start = i; depth++; }
-                else if (content[i] == '}') { depth--; if (depth == 0 && start >= 0) { result.Add(content.Substring(start, i - start + 1)); start = -1; } }
-            }
-            return result;
+            // 审计 F1：统一走 JsonText（旧实现自数括号，值里的括号会切坏对象）
+            return Gdterm.Core.JsonText.SplitObjects(content);
         }
 
         private static List<string> SplitJsonStrings(string content)
         {
-            var result = new List<string>();
-            int i = 0;
-            while (i < content.Length)
-            {
-                if (content[i] == '"')
-                {
-                    var end = content.IndexOf('"', i + 1);
-                    if (end < 0) break;
-                    result.Add(content.Substring(i + 1, end - i - 1));
-                    i = end + 1;
-                }
-                else i++;
-            }
-            return result;
+            // 审计 F1：转义感知 + 反转义，与写侧 JsonText.Escape 配对
+            return Gdterm.Core.JsonText.SplitStringArray(content);
         }
 
         public void Dispose() { _templates.Clear(); }

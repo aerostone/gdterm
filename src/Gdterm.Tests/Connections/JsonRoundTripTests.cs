@@ -27,6 +27,7 @@ namespace Gdterm.Tests.Connections
             BookmarkStoreRoundTrip();
             KeyBindingValueRoundTrip();
             DangerousRulePatternRoundTrip();
+            StoreSplittingIgnoresBracketsInsideStrings();
         }
 
         /// <summary>基座：Escape/Unescape 必须是可往返的一对。</summary>
@@ -302,6 +303,61 @@ namespace Gdterm.Tests.Connections
             var dir = Path.Combine(Path.GetTempPath(), "gdterm-jsonrt-" + Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(dir);
             return dir;
+        }
+
+        /// <summary>store 切对象必须跳过字符串内容：值里有不成对的 '[' 或 '}' 时，自写 depth
+        /// 循环会把整个数组切空 → 配置静默回落默认、没有任何报错。真实形态：
+        /// 终端快捷键 value = "\u001b[A"（Esc+[）、命令模板里的 "ls [a-z]*"。本测试锁死。</summary>
+        private static void StoreSplittingIgnoresBracketsInsideStrings()
+        {
+            // 1) 对象切分：字符串里的 '[' 不参与计数
+            var one = "{\"name\":\"x\",\"value\":\"\u001b[A\"}";
+            var objs = JsonText.SplitObjects(one);
+            Assert.Equal(1, objs.Count, "SplitObjects 无视字符串内的 '['");
+            Assert.Equal("\u001b[A", JsonText.ExtractString(objs[0], "value"), "SplitObjects 保住完整值");
+
+            // 2) 数组终点：同上，且不吞掉后一个兄弟键
+            var arr = "[{\"v\":\"\u001b[A\"},{\"v\":\"\u001b[1;5C\"}]";
+            Assert.Equal(arr.Length - 1, JsonText.FindMatchingBracket(arr, 0),
+                "FindMatchingBracket 跳过字符串内的 '['");
+
+            // 3) 字符串数组：\" 不再被当成结束引号，且读侧反转义
+            var tags = "\"a\\\"b\", \"cd\"";
+            var items = JsonText.SplitStringArray(tags);
+            Assert.Equal(2, items.Count, "SplitStringArray 切出 2 个元素");
+            Assert.Equal("a\"b", items[0], "SplitStringArray 反转义引号");
+            Assert.Equal("cd", items[1], "SplitStringArray 第二个元素");
+
+            // 4) 端到端：含括号的命令模板 + 含引号的 tag，落盘重载后必须原样
+            var dir = NewTempDir();
+            try
+            {
+                var path = Path.Combine(dir, "templates.json");
+                var store = new CommandTemplateStore(path);
+                store.Load();
+                var t = new CommandTemplate();
+                t.Id = "t-bracket";
+                t.Name = "括号模板";
+                t.Command = "ls [a-z]*";
+                t.Category = "通用";
+                t.Tags.Add("a\"b");
+                store.Add(t);
+                store.Save();
+
+                var store2 = new CommandTemplateStore(path);
+                store2.Load();
+                var back = store2.GetById("t-bracket");
+                Assert.True(back != null, "含括号的命令模板读回");
+                Assert.Equal("ls [a-z]*", back.Command, "command 中的 '[' 原样往返");
+                Assert.Equal(1, back.Tags.Count, "tags 数量往返");
+                Assert.Equal("a\"b", back.Tags[0], "tag 中的引号往返");
+                store.Dispose();
+                store2.Dispose();
+            }
+            finally
+            {
+                TryDelete(dir);
+            }
         }
 
         private static void TryDelete(string dir)

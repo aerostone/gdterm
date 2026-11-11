@@ -216,25 +216,9 @@ namespace Gdterm.Security.Otp
         private static List<string> SplitJsonObjects(string arrayContent)
         {
             var result = new List<string>();
-            int depth = 0;
-            int start = -1;
-            for (int i = 0; i < arrayContent.Length; i++)
-            {
-                if (arrayContent[i] == '{')
-                {
-                    if (depth == 0) start = i;
-                    depth++;
-                }
-                else if (arrayContent[i] == '}')
-                {
-                    depth--;
-                    if (depth == 0 && start >= 0)
-                    {
-                        result.Add(arrayContent.Substring(start + 1, i - start - 1));
-                        start = -1;
-                    }
-                }
-            }
+            // 审计 F1：切对象走 JsonText（括号计数跳过字符串）。返回值约定与前实现一致：不含首尾花括号。
+            foreach (var obj in Gdterm.Core.JsonText.SplitObjects(arrayContent))
+                result.Add(obj.Substring(1, obj.Length - 2));
             return result;
         }
 

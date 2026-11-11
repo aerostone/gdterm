@@ -151,45 +151,14 @@ namespace Gdterm.Connections
 
         private static int FindScriptEnd(string json, int start, int limit)
         {
-            // Find the end of a script object (contains nested "steps" array)
-            int depth = 0;
-            bool inStr = false;
-            for (int i = start; i < limit && i < json.Length; i++)
-            {
-                char c = json[i];
-                if (inStr)
-                {
-                    // 跳过转义对：\" 不结束字符串，\\ 也不会让后一个字符"逃逸"
-                    if (c == '\\' && i + 1 < json.Length) { i++; continue; }
-                    if (c == '"') inStr = false;
-                    continue;
-                }
-                if (c == '"') { inStr = true; continue; }
-                if (c == '{') depth++;
-                else if (c == '}') { depth--; if (depth == 0) return i; }
-            }
-            return -1;
+            // 审计 F1 去重：括号配对只留 JsonText 一份实现（limit 即数组终点，配对一定先于它返回）
+            return Gdterm.Core.JsonText.FindMatchingBracket(json, start);
         }
 
         private static int FindBracket(string json, int open, char openChar, char closeChar)
         {
-            if (open < 0) return -1;
-            int depth = 0; bool inStr = false;
-            for (int i = open; i < json.Length; i++)
-            {
-                char c = json[i];
-                if (inStr)
-                {
-                    // 跳过转义对：\" 不结束字符串，\\ 也不会让后一个字符"逃逸"
-                    if (c == '\\' && i + 1 < json.Length) { i++; continue; }
-                    if (c == '"') inStr = false;
-                    continue;
-                }
-                if (c == '"') { inStr = true; continue; }
-                if (c == openChar) depth++;
-                else if (c == closeChar) { depth--; if (depth == 0) return i; }
-            }
-            return -1;
+            // 审计 F1 去重：括号配对只留 JsonText 一份实现
+            return Gdterm.Core.JsonText.FindMatchingBracket(json, open);
         }
 
         private static string ExStr(string json, string key)

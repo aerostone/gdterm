@@ -170,13 +170,11 @@ namespace Gdterm.Connections
             if (commandsStart < 0) return result;
             var arrStart = json.IndexOf('[', commandsStart);
             if (arrStart < 0) return result;
-
-            int depth = 0; int objStart = -1;
-            for (int i = arrStart; i < json.Length; i++)
-            {
-                if (json[i] == '{') { if (depth == 0) objStart = i; depth++; }
-                else if (json[i] == '}') { depth--; if (depth == 0) result.Add(ParseQuickCommand(json.Substring(objStart, i - objStart + 1))); }
-            }
+            // 审计 F1：数组终点与对象切分都走 JsonText（命令文本里可能有任意括号）
+            var arrEnd = Gdterm.Core.JsonText.FindMatchingBracket(json, arrStart);
+            if (arrEnd < 0) return result;
+            foreach (var obj in Gdterm.Core.JsonText.SplitObjects(json.Substring(arrStart + 1, arrEnd - arrStart - 1)))
+                result.Add(ParseQuickCommand(obj));
             return result;
         }
 

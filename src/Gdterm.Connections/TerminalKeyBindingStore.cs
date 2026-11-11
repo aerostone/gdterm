@@ -355,13 +355,11 @@ namespace Gdterm.Connections
         private List<KeyBindingPreset> ParsePresets(string arrayContent)
         {
             var presets = new List<KeyBindingPreset>();
-            int depth = 0;
-            int start = -1;
-            for (int i = 0; i < arrayContent.Length; i++)
-            {
-                if (arrayContent[i] == '{') { if (depth == 0) start = i; depth++; }
-                else if (arrayContent[i] == '}') { depth--; if (depth == 0 && start >= 0) { presets.Add(ParsePreset(arrayContent.Substring(start, i - start + 1))); start = -1; } }
-            }
+            // 审计 F1 姊妹坑：切对象一律走 JsonText（字符串内的括号不计数）。
+            // 自写 depth 循环遇到 "value": "\u001b[A"（Esc+[）时整块取不到，
+            // ParseConfig 静默回落默认配置 —— 用户自定义绑定全丢且无任何报错。
+            foreach (var obj in Gdterm.Core.JsonText.SplitObjects(arrayContent))
+                presets.Add(ParsePreset(obj));
             return presets;
         }
 
@@ -378,13 +376,9 @@ namespace Gdterm.Connections
         private List<TerminalKeyBinding> ParseBindings(string arrayContent)
         {
             var bindings = new List<TerminalKeyBinding>();
-            int depth = 0;
-            int start = -1;
-            for (int i = 0; i < arrayContent.Length; i++)
-            {
-                if (arrayContent[i] == '{') { if (depth == 0) start = i; depth++; }
-                else if (arrayContent[i] == '}') { depth--; if (depth == 0 && start >= 0) { bindings.Add(ParseBinding(arrayContent.Substring(start, i - start + 1))); start = -1; } }
-            }
+            // 审计 F1 姊妹坑：同 ParsePresets，值里可能有任意字节（含括号）
+            foreach (var obj in Gdterm.Core.JsonText.SplitObjects(arrayContent))
+                bindings.Add(ParseBinding(obj));
             return bindings;
         }
 
@@ -456,14 +450,10 @@ namespace Gdterm.Connections
             idx += token.Length;
             while (idx < json.Length && (json[idx] == ' ' || json[idx] == '\t' || json[idx] == '\n' || json[idx] == '\r')) idx++;
             if (idx >= json.Length || json[idx] != '[') return null;
-            int depth = 0;
-            int start = idx;
-            for (int i = idx; i < json.Length; i++)
-            {
-                if (json[i] == '[') depth++;
-                else if (json[i] == ']') { depth--; if (depth == 0) return json.Substring(start + 1, i - start - 1); }
-            }
-            return null;
+            // 审计 F1 姊妹坑：括号配对走 JsonText（跳过字符串）
+            int end = Gdterm.Core.JsonText.FindMatchingBracket(json, idx);
+            if (end < 0) return null;
+            return json.Substring(idx + 1, end - idx - 1);
         }
     }
 }

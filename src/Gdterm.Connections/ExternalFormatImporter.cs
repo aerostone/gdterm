@@ -441,26 +441,11 @@ namespace Gdterm.Connections
         }
 
         /// <summary>从 openPos 的 '{' 找配对 '}'（跳过字符串字面量内的花括号）。</summary>
+        /// <summary>从 openPos 的 { 找配对 }（跳过字符串字面量内的花括号）。</summary>
         internal static int FindSessionObjectEnd(string json, int openPos)
         {
-            int depth = 0;
-            bool inStr = false;
-            for (int i = openPos; i < json.Length; i++)
-            {
-                char c = json[i];
-                if (inStr)
-                {
-                    if (c == '\\') i++;
-                    else if (c == '"') inStr = false;
-                }
-                else
-                {
-                    if (c == '"') inStr = true;
-                    else if (c == '{') depth++;
-                    else if (c == '}' && --depth == 0) return i;
-                }
-            }
-            return -1;
+            // 审计 F1 去重：括号配对只留 JsonText 一份实现
+            return Gdterm.Core.JsonText.FindMatchingBracket(json, openPos);
         }
     }
 }

@@ -84,7 +84,7 @@ namespace Gdterm.AI
                 var cIdx = FindKeyWithValue(json, "conversations", '{');
                 if (cIdx >= 0)
                 {
-                    var oEnd = FindMatchingBrace(json, cIdx);
+                    var oEnd = Gdterm.Core.JsonText.FindMatchingBracket(json, cIdx);
                     if (oEnd > cIdx)
                     {
                         var content = json.Substring(cIdx + 1, oEnd - cIdx - 1);
@@ -106,7 +106,7 @@ namespace Gdterm.AI
                 var mIdx = FindKeyWithValue(json, "messages", '[');
                 if (mIdx >= 0)
                 {
-                    var arrEnd = FindMatchingBracket(json, mIdx);
+                    var arrEnd = Gdterm.Core.JsonText.FindMatchingBracket(json, mIdx);
                     if (arrEnd > mIdx)
                         _conversations[DefaultKey] = ParseMessages(json.Substring(mIdx + 1, arrEnd - mIdx - 1));
                 }
@@ -184,7 +184,7 @@ namespace Gdterm.AI
         private static List<ChatMessage> ParseMessages(string arrayContent)
         {
             var result = new List<ChatMessage>();
-            foreach (var obj in SplitObjects(arrayContent))
+            foreach (var obj in Gdterm.Core.JsonText.SplitObjects(arrayContent))
             {
                 var role = ExtractString(obj, "role");
                 var text = ExtractString(obj, "content");
@@ -230,7 +230,7 @@ namespace Gdterm.AI
                     j2++;
                 }
                 if (j2 >= n || objContent[j2] != '[') break;
-                int arrEnd = FindMatchingBracket(objContent, j2);
+                int arrEnd = Gdterm.Core.JsonText.FindMatchingBracket(objContent, j2);
                 if (arrEnd <= j2) break;
                 result.Add(new KeyValuePair<string, string>(key, objContent.Substring(j2 + 1, arrEnd - j2 - 1)));
                 i = arrEnd + 1;
@@ -238,96 +238,8 @@ namespace Gdterm.AI
             return result;
         }
 
-        /// <summary>找与 pos 处 '[' 配对的 ']'（跳过字符串字面量）。</summary>
-        private static int FindMatchingBracket(string json, int arrStart)
-        {
-            if (arrStart < 0 || arrStart >= json.Length) return -1;
-            int depth = 0;
-            bool inStr = false;
-            for (int i = arrStart; i < json.Length; i++)
-            {
-                var ch = json[i];
-                if (inStr)
-                {
-                    if (ch == '\\') i++;
-                    else if (ch == '"') inStr = false;
-                }
-                else
-                {
-                    if (ch == '"') inStr = true;
-                    else if (ch == '[') depth++;
-                    else if (ch == ']')
-                    {
-                        depth--;
-                        if (depth == 0) return i;
-                    }
-                }
-            }
-            return -1;
-        }
 
-        /// <summary>找与 pos 处 '{' 配对的 '}'（跳过字符串字面量与嵌套数组）。</summary>
-        private static int FindMatchingBrace(string json, int braceStart)
-        {
-            if (braceStart < 0 || braceStart >= json.Length) return -1;
-            int depth = 0;
-            bool inStr = false;
-            for (int i = braceStart; i < json.Length; i++)
-            {
-                var ch = json[i];
-                if (inStr)
-                {
-                    if (ch == '\\') i++;
-                    else if (ch == '"') inStr = false;
-                }
-                else
-                {
-                    if (ch == '"') inStr = true;
-                    else if (ch == '{' || ch == '[') depth++;
-                    else if (ch == '}' || ch == ']')
-                    {
-                        depth--;
-                        if (depth == 0 && ch == '}') return i;
-                    }
-                }
-            }
-            return -1;
-        }
 
-        /// <summary>把对象数组内容按顶层 ',' 拆分（跳过字符串/嵌套花括号）。</summary>
-        private static List<string> SplitObjects(string arrayContent)
-        {
-            var result = new List<string>();
-            int depth = 0;
-            bool inStr = false;
-            int start = -1;
-            for (int i = 0; i < arrayContent.Length; i++)
-            {
-                var ch = arrayContent[i];
-                if (inStr)
-                {
-                    if (ch == '\\') i++;
-                    else if (ch == '"') inStr = false;
-                    continue;
-                }
-                if (ch == '"') inStr = true;
-                else if (ch == '{')
-                {
-                    if (depth == 0) start = i;
-                    depth++;
-                }
-                else if (ch == '}')
-                {
-                    depth--;
-                    if (depth == 0 && start >= 0)
-                    {
-                        result.Add(arrayContent.Substring(start, i - start + 1));
-                        start = -1;
-                    }
-                }
-            }
-            return result;
-        }
 
         /// <summary>从扁平对象 JSON 里取字符串字段（值本身不含嵌套花括号）。</summary>
         private static string ExtractString(string objJson, string key)

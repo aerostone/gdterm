@@ -150,12 +150,11 @@ namespace Gdterm.Connections
             if (start < 0) return result;
             var arr = json.IndexOf('[', start);
             if (arr < 0) return result;
-            int depth = 0; int objStart = -1;
-            for (int i = arr; i < json.Length; i++)
-            {
-                if (json[i] == '{') { if (depth == 0) objStart = i; depth++; }
-                else if (json[i] == '}') { depth--; if (depth == 0) { var obj = json.Substring(objStart, i - objStart + 1); result.Add(ParseTemplate(obj)); } }
-            }
+            // 审计 F1：数组终点与对象切分都走 JsonText（括号计数跳过字符串）
+            var arrEnd = Gdterm.Core.JsonText.FindMatchingBracket(json, arr);
+            if (arrEnd < 0) return result;
+            foreach (var obj in Gdterm.Core.JsonText.SplitObjects(json.Substring(arr + 1, arrEnd - arr - 1)))
+                result.Add(ParseTemplate(obj));
             return result;
         }
 

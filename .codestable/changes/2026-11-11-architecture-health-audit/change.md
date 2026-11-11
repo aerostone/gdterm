@@ -244,3 +244,36 @@ contract:
 
 复跑结果：dock-gate / dead-ui(green) / hotkey-ssot(green) / cancel-height / ui-fix / ux-empty 六项 `ALL OK`；
 ci-gate `SKIP`(exit 2)；utf8-norm 按标注为"提交绑定、后续提交后预期红"。
+
+### F6[P1 bug 派生] 各 store 自写的"数括号切对象"——字符串里的括号把整块配置切空 —— 已修
+
+F1 只修了转义的对称性，没管**切分**：十来个 store 各自复制了同一段
+`for(...) { if (c == '{') depth++; else if (c == '}') depth--; }`，
+数括号时**不跳字符串**。值里出现不成对的 `[` / `'{'` 就切坏或整段切空。
+
+实证（本轮用可执行宿主复现，非静态推测）：
+
+| 场景 | 旧代码 | 修复后 |
+|---|---|---|
+| 终端快捷键 `customBindings[].value = "\u001b[A"`（Esc+[，**产品默认就有这种序列**） | `FAIL 快捷键自定义绑定读回`：`ExtractArrayBlock` 找不到配对 → 返回 null → store 静默回落默认配置，用户自定义绑定全丢、零报错 | `ok` |
+| 命令模板 tag 含引号 `a"b` | `FAIL tag 中引号原样 (act=[a\])`：`SplitJsonStrings` 用 `IndexOf('"')` 找结束引号，`\"` 被当成结尾 | `ok` |
+
+复现/验证方式：net8.0 最小宿主（只编 `Gdterm.Core` + `TerminalKeyBindingStore` + `CommandTemplateStore`，
+与 WinForms 无关）跑同一份断言 —— `git stash` 旧代码 → 2 红；修完 → `ALL OK`。
+
+处置（单一实现原则）：
+
+- `JsonText` 增 `SplitStringArray`（转义感知 + 反转义，与 `Escape` 配对）。
+- 本地切分/配对全部改为调用 `JsonText.SplitObjects` / `JsonText.FindMatchingBracket`
+  （原有"返回内层内容、不含首尾花括号"的约定在包装层保留，不改调用方语义）：
+  `TerminalKeyBindingStore`(3)、`CommandTemplateStore`(3)、`TemplateStore`、`QuickCommandStore`、
+  `ConnectionStoreJson`、`OtpStoreJson`、`MacroRecorder`、`MultiChannelRecorder`、`AiModelStore`、
+  `AiSettingsFile`、`LogonScriptStore`(2)、`ExternalFormatImporter`、`ChatHistoryStore`(3)。
+- 全仓 `grep depth++` 现在只剩 2 处**非 JSON** 用途（控件树遍历、异常链遍历）。
+- 回归锁：`src/Gdterm.Tests/Connections/JsonRoundTripTests.cs` 增
+  `StoreSplittingIgnoresBracketsInsideStrings`（JsonText 原语 + 快捷键端到端 + 命令模板端到端）。
+
+验证：`tools/csc-check.sh` 全绿（13 工程 csproj 清单一致）；主门 encoding / csproj-files / ui-ux-lint /
+gen-tokens / feature-map 全绿；change 驱动 dock-gate / dead-ui(green) / hotkey-ssot(green) / cancel-height /
+ui-fix / ux-empty 全绿（utf8-norm 按标注为提交绑定、ci-gate 缺 dump 故 SKIP）。
+本机无 WinForms 运行时，UI 行为仍未验证，需 CI 那一轮 dump。

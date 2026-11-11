@@ -61,12 +61,8 @@ namespace Gdterm.AI
             // 兼容单对象与 AiModelStore 的数组格式（取第一个对象）
             int objStart = json.IndexOf('{');
             if (objStart < 0) throw new FormatException("不是有效的 AI 设置文件（找不到配置对象）");
-            int depth = 0, objEnd = -1;
-            for (int i = objStart; i < json.Length; i++)
-            {
-                if (json[i] == '{') depth++;
-                else if (json[i] == '}') { depth--; if (depth == 0) { objEnd = i; break; } }
-            }
+            // 审计 F1：括号配对走 JsonText（跳过字符串），ApiKey/Endpoint 里出现花括号也不会切错
+            int objEnd = Gdterm.Core.JsonText.FindMatchingBracket(json, objStart);
             if (objEnd < 0) throw new FormatException("JSON 括号不配对");
             var obj = json.Substring(objStart, objEnd - objStart + 1);
 

@@ -156,14 +156,8 @@ namespace Gdterm.Terminal
 
         private static List<string> SplitJsonObjects(string content)
         {
-            var result = new List<string>();
-            int depth = 0; int start = -1;
-            for (int i = 0; i < content.Length; i++)
-            {
-                if (content[i] == '{') { if (depth == 0) start = i; depth++; }
-                else if (content[i] == '}') { depth--; if (depth == 0 && start >= 0) { result.Add(content.Substring(start, i - start + 1)); start = -1; } }
-            }
-            return result;
+            // 审计 F1：统一走 JsonText（旧实现自数括号，内容里的括号会切坏对象）
+            return Gdterm.Core.JsonText.SplitObjects(content);
         }
 
         private static string ExtractString(string json, string key)
