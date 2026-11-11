@@ -65,6 +65,7 @@
     <Compile Include="TelnetSession.cs" />
     <Compile Include="TerminalEndpoint.cs" />
     <Compile Include="TerminalKeyBindingResolver.cs" />
+    <Compile Include="KeyBindingActionEventArgs.cs" />
     <Compile Include="XtermKeys.cs" />
     <Compile Include="HighlightEngine.cs" />
     <Compile Include="TerminalSearchEngine.cs" />
