@@ -282,13 +282,11 @@ namespace Gdterm.UI.ImportExport
             if (colon < 0) return null;
             int quoteStart = json.IndexOf('"', colon + 1);
             if (quoteStart < 0) return null;
-            int quoteEnd = quoteStart + 1;
-            while (quoteEnd < json.Length)
-            {
-                if (json[quoteEnd] == '"' && json[quoteEnd - 1] != '\\') break;
-                quoteEnd++;
-            }
-            return json.Substring(quoteStart + 1, quoteEnd - quoteStart - 1).Replace("\\\"", "\"");
+            // 审计 F1：结束引号必须跳过转义（原判断只看前一个字符，\\" 会被误判为结束）；
+            // 反转义统一走 JsonText（原来只还原 \" ，导出时转的 \\ 读回会变成两个反斜杠）
+            int quoteEnd = Gdterm.Core.JsonText.SkipString(json, quoteStart);
+            if (quoteEnd <= quoteStart) return null;
+            return Gdterm.Core.JsonText.Unescape(json.Substring(quoteStart + 1, quoteEnd - quoteStart - 1));
         }
 
         private static string ExtractXmlAttribute(string xml, string attrName)
@@ -302,16 +300,10 @@ namespace Gdterm.UI.ImportExport
             return xml.Substring(start, end - start);
         }
 
+        /// <summary>审计 F1：括号配对复用 JsonText（跳过字符串内的 {} 与转义引号）。</summary>
         private static int FindMatchingBrace(string json, int openPos)
         {
-            int depth = 0;
-            for (int i = openPos; i < json.Length; i++)
-            {
-                if (json[i] == '{') depth++;
-                else if (json[i] == '}') depth--;
-                if (depth == 0) return i;
-            }
-            return -1;
+            return Gdterm.Core.JsonText.FindMatchingBracket(json, openPos);
         }
 
         private static string[] ParseCsvLine(string line)
@@ -362,8 +354,8 @@ namespace Gdterm.UI.ImportExport
 
         private static string EscapeJson(string s)
         {
-            if (string.IsNullOrEmpty(s)) return "";
-            return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r");
+            // 审计 F1：统一转义契约（原来不转 \t / \b / 控制符，与读取侧集合不一致）
+            return Gdterm.Core.JsonText.Escape(s);
         }
     }
 

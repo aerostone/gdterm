@@ -48,6 +48,7 @@ namespace Gdterm.Tests
             RunTest("DefaultPorts", DefaultPortsTests.Run);
             RunTest("LogSanitizer", LogSanitizerTests.Run);
             RunTest("ConnectionStoreJson", ConnectionStoreJsonTests.Run);
+            RunTest("JsonRoundTrip", JsonRoundTripTests.Run);
             RunTest("ChatHistoryStore", ChatHistoryStoreTests.Run);
             RunTest("AiAssistantService", AiAssistantServiceTests.Run);
             RunTest("CommandHistoryStore", CommandHistoryStoreTests.Run);

@@ -149,8 +149,11 @@ ok(i_dump != -1 and i_gate != -1 and i_dump < i_gate,
    "门在 dump 写出之后（失败时仍留产物可诊断）")
 
 src = read("src/Gdterm.UI/Forms/DangerousCommandConfigForm.cs")
-order = re.findall(r"Controls\.Add\((_ruleTable|toolbar|wlPanel|_statusLabel)\)", src)
-ok(order == ["_ruleTable", "toolbar", "wlPanel", "_statusLabel"],
+# Fill 子先后被抽出 TableShell 包装（_ruleTable -> _shell），两个名字都算 Fill 子：
+# 只认旧名会让本规则恒红（永远无法再命中），属"检测器死规则"，故等价化。
+order = [("fill" if o in ("_shell", "_ruleTable") else o)
+         for o in re.findall(r"Controls\.Add\((_shell|_ruleTable|toolbar|wlPanel|_statusLabel)\)", src)]
+ok(order == ["fill", "toolbar", "wlPanel", "_statusLabel"],
    "装配顺序改为 Fill 最先（Fill 最低索引）", "顺序=" + ",".join(order))
 ok("原注释\"Fill 必须最后添加\"已被真实 dump 几何证伪" in src,
    "就地留注释说明为何不能改回（防回归）")

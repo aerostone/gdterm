@@ -22,6 +22,13 @@ UICHECK = os.path.join(ROOT, "tools", "ui-check.py")
 YML = os.path.join(ROOT, "appveyor.yml")
 DUMPS = sys.argv[1] if len(sys.argv) > 1 else "/tmp/ci327"
 
+# 适用范围（2026-11-11 补注）：本驱动是**那次改动**的证据，S2 依赖 CI 327 的真实 dump 目录，
+# S4 依赖工作区 diff 恰好只含契约内文件 —— 后续任意提交后这两条必然红，那不是回归。
+# 缺 dump 时按“不适用”退出（2），既不假装绿(0)也不假装有回归(1)。
+if not os.path.isdir(DUMPS):
+    print("CI-GATE-CHECK SKIP: 缺少 CI 327 真实 dump 目录 %s（本驱动仅对被取证的那次改动成立）" % DUMPS)
+    sys.exit(2)
+
 fails = []
 
 

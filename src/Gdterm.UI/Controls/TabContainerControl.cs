@@ -72,29 +72,30 @@ namespace Gdterm.UI.Controls
         /// <summary>双击标签栏空白处（非任何标签头）时触发——主窗体路由到新建连接（浏览器惯例）。</summary>
         public event EventHandler BlankAreaDoubleClicked;
 
-        public TabContainerControl(
-            ITunnelManager tunnelManager,
-            ITerminalSessionFactory terminalFactory,
-            ISftpServiceFactory sftpFactory,
-            IAiAssistantService aiService,
-            IAuditLogger auditLogger,
-            IKeePassService keepassService,
-            IFolderCredentialStore folderCredStore,
-            DangerousCommandDetector dangerousDetector = null,
-            AutoReconnectWatchdog reconnectWatchdog = null,
-            IConnectionStore connectionStore = null,
-            IRdpClientFactory rdpFactory = null,
-            Gdterm.Connections.HighlightStore highlightStore = null,
-            Gdterm.Logging.CommandHistoryStore historyStore = null,
-            Gdterm.Connections.QuickCommandStore quickStore = null)
+        /// <summary>
+        /// 依赖用 <see cref="Gdterm.UI.Services.TabDependencies"/> 一次传入（2026-11-11 架构审计 F4）。
+        /// 原 14 个位置参数里 AiService 是僵尸参数（进来就 <c>_ = aiService</c> 丢弃），已随之删除。
+        /// </summary>
+        public TabContainerControl(Gdterm.UI.Services.TabDependencies services)
         {
-            // aiService 保留构造参数以兼容 Program/MainForm 签名；协议侧不直接消费
-            _ = aiService;
+            if (services == null) throw new ArgumentNullException(nameof(services));
+
+            var tunnelManager = services.TunnelManager;
+            var terminalFactory = services.TerminalFactory;
+            var sftpFactory = services.SftpFactory;
+            var auditLogger = services.AuditLogger;
+            var keepassService = services.KeePassService;
+            var folderCredStore = services.FolderCredentialStore;
+            var dangerousDetector = services.DangerousCommandDetector;
+            var reconnectWatchdog = services.ReconnectWatchdog;
+            var connectionStore = services.ConnectionStore;
+            var rdpFactory = services.RdpFactory;
+
             _reconnectWatchdog = reconnectWatchdog;
             _connectionStore = connectionStore;
-            _highlightStore = highlightStore;
-            _historyStore = historyStore;
-            _quickStore = quickStore;
+            _highlightStore = services.HighlightStore;
+            _historyStore = services.CommandHistoryStore;
+            _quickStore = services.QuickCommandStore;
             _lifecycle = new TabSessionLifecycle(auditLogger, reconnectWatchdog);
             _opener = new ProtocolTabOpener(
                 tunnelManager,

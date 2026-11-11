@@ -150,8 +150,8 @@ namespace Gdterm.Terminal
         // ── JSON 辅助 ──
         private static string EscapeJson(string s)
         {
-            if (s == null) return "";
-            return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r").Replace("\t", "\\t");
+            // 审计 F1：统一转义契约（原来不转 \b/\f 与控制符，读取端还原集合不一致）
+            return Gdterm.Core.JsonText.Escape(s);
         }
 
         private static List<string> SplitJsonObjects(string content)
@@ -168,13 +168,7 @@ namespace Gdterm.Terminal
 
         private static string ExtractString(string json, string key)
         {
-            var p = "\"" + key + "\"";
-            var idx = json.IndexOf(p); if (idx < 0) return null;
-            var c = json.IndexOf(':', idx + p.Length); if (c < 0) return null;
-            var s = json.IndexOf('"', c + 1); if (s < 0) return null;
-            var e = s + 1;
-            while (e < json.Length) { if (json[e] == '\\') { e += 2; continue; } if (json[e] == '"') break; e++; }
-            return json.Substring(s + 1, e - s - 1).Replace("\\\"", "\"").Replace("\\\\", "\\").Replace("\\n", "\n");
+            return Gdterm.Core.JsonText.ExtractString(json, key); // 审计 F1：统一反转义
         }
 
         private static long ExtractLong(string json, string key)

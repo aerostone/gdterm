@@ -8,6 +8,7 @@ using Gdterm.Connections;
 using Gdterm.Core.Enums;
 using Gdterm.Core.Models;
 using Gdterm.Security;
+using Gdterm.Security.Otp;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Forms;
 using Gdterm.UI.Services;

@@ -61,29 +61,14 @@ namespace Gdterm.Tunnel.Models
                 port = hop.Port;
             }
 
-            ConnectionInfo connInfo;
-            if (privateKey != null && privateKey.Length > 0)
+            // 审计 F2：ConnectionInfo 构建统一走 SshConnectionInfoFactory（hop 无代理配置）
+            var hopCredential = new CredentialPayload
             {
-                var ms = new System.IO.MemoryStream(privateKey, writable: false);
-                PrivateKeyFile keyFile;
-                try
-                {
-                    keyFile = string.IsNullOrEmpty(passphrase)
-                        ? new PrivateKeyFile(ms)
-                        : new PrivateKeyFile(ms, passphrase);
-                }
-                finally
-                {
-                    ms.Dispose();
-                }
-                connInfo = new PrivateKeyConnectionInfo(host, port, user, keyFile);
-            }
-            else
-            {
-                connInfo = new PasswordConnectionInfo(host, port, user, password);
-            }
-
-            connInfo.Timeout = TimeSpan.FromSeconds(30);
+                Password = password,
+                SshPrivateKey = privateKey,
+                SshPrivateKeyPassphrase = passphrase
+            };
+            var connInfo = SshConnectionInfoFactory.Create(host, port, user, hopCredential);
             var client = new SshClient(connInfo);
             SshKeepAlive.Apply(client, SshKeepAlive.DefaultSeconds); // hop 无连接级配置，用默认 30s
             try
@@ -127,54 +112,9 @@ namespace Gdterm.Tunnel.Models
         public void ConnectDirect(ConnectionConfig config, CredentialPayload credential)
         {
             var user = credential?.Username ?? config.Username ?? "root";
-            ConnectionInfo connInfo;
-
-            // 代理按连接配置走（SSH.NET 2026 的 Proxy* 属性只读，必须在构造时传；
-            // 「密码认证 + 代理认证」没有公开重载，走 ConnectionInfo + AuthenticationMethod）
-            ProxyTypes proxyType;
-            bool useProxy = TryMapProxy(config.Proxy, out proxyType);
-            string proxyUser = useProxy && !string.IsNullOrEmpty(config.Proxy.Username) ? config.Proxy.Username : null;
-            string proxyPass = config.Proxy?.Password ?? string.Empty;
-
-            PrivateKeyFile keyFile = null;
-            if (credential?.SshPrivateKey != null && credential.SshPrivateKey.Length > 0)
-            {
-                var ms = new System.IO.MemoryStream(credential.SshPrivateKey, writable: false);
-                try
-                {
-                    keyFile = string.IsNullOrEmpty(credential.SshPrivateKeyPassphrase)
-                        ? new PrivateKeyFile(ms)
-                        : new PrivateKeyFile(ms, credential.SshPrivateKeyPassphrase);
-                }
-                finally
-                {
-                    ms.Dispose();
-                }
-            }
-
-            var password = credential?.Password ?? "";
-            if (!useProxy)
-            {
-                connInfo = keyFile != null
-                    ? (ConnectionInfo)new PrivateKeyConnectionInfo(config.Host, config.Port, user, keyFile)
-                    : new PasswordConnectionInfo(config.Host, config.Port, user, password);
-            }
-            else if (proxyUser != null)
-            {
-                AuthenticationMethod auth = keyFile != null
-                    ? (AuthenticationMethod)new PrivateKeyAuthenticationMethod(user, keyFile)
-                    : new PasswordAuthenticationMethod(user, password);
-                connInfo = new ConnectionInfo(config.Host, config.Port, user, proxyType,
-                    config.Proxy.Host, config.Proxy.Port, proxyUser, proxyPass, auth);
-            }
-            else
-            {
-                connInfo = keyFile != null
-                    ? (ConnectionInfo)new PrivateKeyConnectionInfo(config.Host, config.Port, user, proxyType, config.Proxy.Host, config.Proxy.Port, keyFile)
-                    : new PasswordConnectionInfo(config.Host, config.Port, user, password, proxyType, config.Proxy.Host, config.Proxy.Port);
-            }
-
-            connInfo.Timeout = TimeSpan.FromSeconds(30);
+            // 审计 F2：直连与 hop 共用同一份 ConnectionInfo 构建（代理分支也在这里，含代理认证重载）
+            var connInfo = SshConnectionInfoFactory.Create(
+                config.Host, config.Port, user, credential ?? new CredentialPayload(), 30, config.Proxy);
             var client = new SshClient(connInfo);
             SshKeepAlive.Apply(client, config);
             client.Connect();
@@ -265,20 +205,6 @@ namespace Gdterm.Tunnel.Models
             int port = ((IPEndPoint)listener.LocalEndpoint).Port;
             listener.Stop();
             return port;
-        }
-
-        /// <summary>ProxyConfig → SSH.NET ProxyTypes；未配好/类型不认识则 false（直连）。</summary>
-        private static bool TryMapProxy(Gdterm.Core.Models.ProxyConfig proxy, out ProxyTypes type)
-        {
-            type = ProxyTypes.None;
-            if (proxy == null || !proxy.IsUsable) return false;
-            switch (proxy.Kind)
-            {
-                case Gdterm.Core.Models.ProxyKind.Http: type = ProxyTypes.Http; return true;
-                case Gdterm.Core.Models.ProxyKind.Socks4: type = ProxyTypes.Socks4; return true;
-                case Gdterm.Core.Models.ProxyKind.Socks5: type = ProxyTypes.Socks5; return true;
-                default: return false;
-            }
         }
     }
 }

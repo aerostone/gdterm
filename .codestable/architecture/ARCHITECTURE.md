@@ -15,7 +15,7 @@ implements: []
 > 状态：已回填（与 2026-07-25 代码现状对齐）  
 > 创建日期：2026-07-24  
 > 回填日期：2026-07-25  
-> 依据：`src/` 12 个 csproj、`Program.cs` 组合根、近期 audit 修复
+> 依据：`src/` 13 个 csproj（12 个生产项目 + `Gdterm.Tests`）、`Program.cs` 组合根、近期 audit 修复
 
 ## 1. 项目简介
 
@@ -52,7 +52,7 @@ gdterm 是 **Windows 绿色便携** 运维客户端，目标环境含 **Win7 / S
 | DangerousCommandDetector | 可配置黑/白名单；确认次数随危险等级 |
 | Local line buffer | 有 detector 时键入先本地缓冲，Enter 确认后再整行下发 |
 | data/ | 便携数据根：connections、kdbx、config、logs 同目录可拷走 |
-| 组合根 | `Gdterm.UI/Program.cs`：创建目录、构造服务、注入 MainForm |
+| 组合根 | `Gdterm.UI/Program.cs`：创建目录、构造服务、装进 `UiDependencies` 注入 MainForm |
 | CrashLog | `data/logs/crash.jsonl`，全局未处理异常落盘 |
 
 ## 3. 子系统 / 模块索引
@@ -76,14 +76,14 @@ gdterm 是 **Windows 绿色便携** 运维客户端，目标环境含 **Win7 / S
 | 项目 | 职责 | 主要对外表面 | 依赖 |
 |------|------|--------------|------|
 | **Gdterm.Core** | 纯数据模型与枚举 | `ConnectionConfig`, `CredentialPayload`, `ProtocolType`, `TerminalProfile`, `HighlightRule`, … | 无 |
-| **Gdterm.Connections** | 连接/书签/模板/高亮/键位/登录脚本 持久化 | `IConnectionStore`, `IBookmarkStore`, `*Store` JSON 手写 | Core |
-| **Gdterm.Tunnel** | SSH 跳板与本地转发 | `TunnelManager`, `TunnelSession`, `PortForwardManager` | Core, SSH.NET |
-| **Gdterm.Terminal** | 会话、渲染、多通道、健康、重连、宏 | `ITerminalSession`, `TerminalSessionFactory`, `SshConnectionInfoFactory`, `MultiChannelManager`, `AutoReconnectWatchdog`, `LightweightRenderer` | Core, Tunnel |
+| **Gdterm.Connections** | 连接/书签/模板/高亮/键位/登录脚本 持久化 | `IConnectionStore`, `IBookmarkStore`, `*Store` JSON 手写（转义统一走 `Core.JsonText`） | Core |
+| **Gdterm.Tunnel** | SSH 跳板与本地转发；SSH.NET `ConnectionInfo` 构建 | `TunnelManager`, `TunnelSession`, `PortForwardManager`, `SshConnectionInfoFactory`（唯一实现） | Core, SSH.NET |
+| **Gdterm.Terminal** | 会话、渲染、多通道、健康、重连、宏 | `ITerminalSession`, `TerminalSessionFactory`, `MultiChannelManager`, `AutoReconnectWatchdog`, `LightweightRenderer` | Core, Tunnel（`SshConnectionInfoFactory` 在 Tunnel） |
 | **Gdterm.Sftp** | SFTP 传输与增强 | `ISftpService`, `SftpServiceFactory`, `SftpEnhancements` | Core, Tunnel |
 | **Gdterm.Rdp** | RDP ActiveX 封装 | `IRdpClient`, `RdpClient`, `RdpOptions` | Core, Tunnel |
 | **Gdterm.KeePass** | .kdbx、健康分析、RDP CredWrite | `IKeePassService`, `PasswordStrengthValidator` | Core, KeePassLib |
 | **Gdterm.Logging** | 审计 JSONL、命令历史、脱敏 | `IAuditLogger`, `AuditLogger`, `CommandHistoryStore` | Core |
-| **Gdterm.Security** | 主密码、闲锁、危险命令、密文扫描 | `ISecurityManager`, `DangerousCommandDetector`, `SecretScanner` | Core |
+| **Gdterm.Security** | 主密码、闲锁、危险命令、密文扫描；OTP 领域（生成 + 条目存储） | `ISecurityManager`, `DangerousCommandDetector`, `SecretScanner`, `Otp/*`（含 `IOtpStore`/`OtpStoreJson`） | Core |
 | **Gdterm.AI** | OpenAI 兼容对话/流式/多模型 | `IAiAssistantService`, `AiModelStore` | Core, Terminal |
 | **Gdterm.Tools** | 内置运维工具模块 | `IToolModule`, `IRemoteToolModule`, `ISshRemoteSession`, `ToolRegistry`, 5 个 Modules | Core（远程面经 `ISshRemoteSession`，不再直接暴露给 UI） |
 | **Gdterm.UI** | 壳、菜单、标签、对话框、诊断 | `Program`, `MainForm`, `TabContainerControl`, `TerminalControl`, `Services/*`, panels/forms | 全部库 |
@@ -96,10 +96,13 @@ gdterm 是 **Windows 绿色便携** 运维客户端，目标环境含 **Win7 / S
 2. `CrashLog.Initialize` + 全局异常钩子
 3. 主密码首次向导 / `SecurityManager`
 4. `new` 各 Store / Manager / Detector / `ToolRegistry.Register(...)`
-5. `MainForm(...)` 一次性注入
+5. `MainForm(new UiDependencies{ ... })` 一次性注入（`Services/UiDependencies.cs`；MainForm 只收这一个对象，
+   TabContainer 收 `TabDependencies` 子集——2026-11-11 架构审计 F4）
 6. `FormClosed` / `ProcessExit`：存配置、Dispose watchdog/scanner、清理 RDP 凭据
 
-**约定**：新服务优先在 `Program` 构造并注入；避免在控件里 `new` 长生命周期单例（`PortForwardManager` 等历史问题除外，见已知债）。
+**约定**：新服务优先在 `Program` 构造并注入；加一个服务 = 在 `UiDependencies` 加一个属性 + Program.cs 一行，
+**不要**给 MainForm/TabContainer 追加位置参数，也**不要**用 `SetXxx` 事后补注（那是 F4 之前的两种形态并存问题）。
+避免在控件里 `new` 长生命周期单例（`PortForwardManager` 等历史问题除外，见已知债）。
 
 ### 3.2 会话与标签生命周期
 
@@ -249,7 +252,7 @@ ConnectionTree 双击
 |---------|------|
 | 连接模型 / 协议枚举 | `Gdterm.Core` |
 | 存盘格式 | `Gdterm.Connections/*Store*`（手写 JSON 解析） |
-| SSH 登录方式 | `SshConnectionInfoFactory`（Terminal + Sftp 各一份，改时同步） |
+| SSH 登录方式 | `Gdterm.Tunnel/SshConnectionInfoFactory`（Terminal/Sftp 共用唯一实现，别再复制） |
 | 隧道复用 / 关闭 | `TunnelManager`, `TabContainerControl.CloseTab` |
 | 终端输入与危险命令 | `UI/Controls/TerminalControl` |
 | 菜单与侧栏 | `MainForm` + `MainFormMenuBuilder` + `SidePanelFactory` |

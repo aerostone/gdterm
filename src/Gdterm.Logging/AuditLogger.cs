@@ -317,13 +317,8 @@ namespace Gdterm.Logging
 
         private static string ExtractJsonValue(string json, string key)
         {
-            var keyPattern = $"\"{key}\":\"";
-            var startIndex = json.IndexOf(keyPattern, StringComparison.Ordinal);
-            if (startIndex < 0) return "";
-            startIndex += keyPattern.Length;
-            var endIndex = json.IndexOf('"', startIndex);
-            if (endIndex < 0) return "";
-            return json.Substring(startIndex, endIndex - startIndex);
+            // 审计 F1：原实现用裸 IndexOf('"') 找结束引号 + 完全不反转义，detail 里带引号就截断
+            return Gdterm.Core.JsonText.ExtractString(json, key) ?? "";
         }
 
         private static string ExtractJsonDetail(string json)
@@ -332,19 +327,10 @@ namespace Gdterm.Logging
             var startIndex = json.IndexOf(keyPattern, StringComparison.Ordinal);
             if (startIndex < 0) return "{}";
             startIndex += keyPattern.Length;
-            var braceCount = 0;
-            var endIndex = startIndex;
-            for (int i = startIndex; i < json.Length; i++)
-            {
-                if (json[i] == '{') braceCount++;
-                else if (json[i] == '}') braceCount--;
-                if (braceCount == 0)
-                {
-                    endIndex = i + 1;
-                    break;
-                }
-            }
-            return json.Substring(startIndex, endIndex - startIndex);
+            // 审计 F1：花括号配对必须跳字符串（detail 里含 "{" 会提前截断）
+            var endIndex = Gdterm.Core.JsonText.FindMatchingBracket(json, startIndex);
+            if (endIndex < 0) return json.Substring(startIndex);
+            return json.Substring(startIndex, endIndex - startIndex + 1);
         }
 
         private static bool MatchesQuery(AuditEntry entry, AuditQuery query)
@@ -370,12 +356,8 @@ namespace Gdterm.Logging
 
         private static string EscapeJson(string s)
         {
-            if (string.IsNullOrEmpty(s)) return "";
-            return s.Replace("\\", "\\\\")
-                    .Replace("\"", "\\\"")
-                    .Replace("\n", "\\n")
-                    .Replace("\r", "\\r")
-                    .Replace("\t", "\\t");
+            // 审计 F1：统一转义契约
+            return Gdterm.Core.JsonText.Escape(s);
         }
 
         /// <summary>

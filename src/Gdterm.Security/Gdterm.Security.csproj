@@ -55,6 +55,7 @@
     <Compile Include="Otp/OtpAuthUri.cs" />
     <Compile Include="Otp/OtpEntry.cs" />
     <Compile Include="Otp/OtpGenerator.cs" />
+    <Compile Include="Otp/OtpStoreJson.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

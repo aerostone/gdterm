@@ -209,13 +209,8 @@ namespace Gdterm.AI
 
         private static string ExtractString(string json, string key)
         {
-            var pattern = "\"" + key + "\":\"";
-            int start = json.IndexOf(pattern);
-            if (start < 0) return null;
-            start += pattern.Length;
-            int end = json.IndexOf("\"", start);
-            if (end < 0) return null;
-            return json.Substring(start, end - start).Replace("\\\"", "\"").Replace("\\\\", "\\");
+            // 审计 F1：原实现用裸 IndexOf('"') 找结束引号（遇到 \" 直接截断）+ 顺序错误的 Replace 链
+            return Gdterm.Core.JsonText.ExtractString(json, key);
         }
 
         private static string ExtractRawValue(string json, string key)
@@ -231,7 +226,7 @@ namespace Gdterm.AI
             return json.Substring(start, end - start);
         }
 
-        private static string Escape(string s) { return (s ?? "").Replace("\\", "\\\\").Replace("\"", "\\\""); }
+        private static string Escape(string s) { return Gdterm.Core.JsonText.Escape(s ?? ""); } // 审计 F1：统一转义契约
 
         private string TryGetMasterPassword()
         {

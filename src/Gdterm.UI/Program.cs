@@ -8,6 +8,7 @@ using Gdterm.KeePass;
 using Gdterm.Logging;
 using Gdterm.Security;
 using Gdterm.Security.Models;
+using Gdterm.Security.Otp;
 using Gdterm.Sftp;
 using Gdterm.Terminal;
 using Gdterm.Rdp;
@@ -16,6 +17,7 @@ using Gdterm.Tools.Modules;
 using Gdterm.Tunnel;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Forms;
+using Gdterm.UI.Services;
 using Gdterm.Logging.Models;
 using System.Threading.Tasks;
 using Gdterm.Core;
@@ -302,30 +304,33 @@ namespace Gdterm.UI
             secretConfig.EnableBackgroundScan = false;
             var secretScanner = new SecretScanner(secretConfig);
 
-            var mainForm = new MainForm(
-                connectionStore,
-                tunnelManager,
-                terminalFactory,
-                sftpFactory,
-                keepassService,
-                auditLogger,
-                aiService,
-                securityManager,
-                dangerousCmdDetector,
-                folderCredStore,
-                sessionStateStore,
-                rdpFactory,
-                bookmarkStore,
-                commandHistoryStore,
-                quickCommandStore,
-                keyBindingStore,
-                highlightStore,
-                reconnectWatchdog,
-                multiChannelManager,
-                toolRegistry,
-                secretScanner,
-                cmdTemplateStore,
-                otpStore);
+            // 组合根依赖包（审计 F4）：签名从 23 个位置参数收成一个对象
+            var mainForm = new MainForm(new UiDependencies
+            {
+                ConnectionStore = connectionStore,
+                TunnelManager = tunnelManager,
+                TerminalFactory = terminalFactory,
+                SftpFactory = sftpFactory,
+                KeePassService = keepassService,
+                AuditLogger = auditLogger,
+                AiService = aiService,
+                SecurityManager = securityManager,
+                DangerousCommandDetector = dangerousCmdDetector,
+                FolderCredentialStore = folderCredStore,
+                SessionStateStore = sessionStateStore,
+                RdpFactory = rdpFactory,
+                BookmarkStore = bookmarkStore,
+                CommandHistoryStore = commandHistoryStore,
+                QuickCommandStore = quickCommandStore,
+                KeyBindingStore = keyBindingStore,
+                HighlightStore = highlightStore,
+                ReconnectWatchdog = reconnectWatchdog,
+                MultiChannelManager = multiChannelManager,
+                ToolRegistry = toolRegistry,
+                SecretScanner = secretScanner,
+                CommandTemplateStore = cmdTemplateStore,
+                OtpStore = otpStore
+            });
 
             // finding-03：旧 SHA256 解锁升级为 PBKDF2 后立刻落盘
             securityManager.LockStateChanged += (s, e) =>

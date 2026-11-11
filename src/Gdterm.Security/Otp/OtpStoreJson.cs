@@ -3,10 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
-using Gdterm.Security.Otp;
 using Gdterm.Core;
 
-namespace Gdterm.Connections
+namespace Gdterm.Security.Otp
 {
     /// <summary>OTP 条目存储（接口，UI 依赖它做依赖注入）。</summary>
     public interface IOtpStore
@@ -160,32 +159,14 @@ namespace Gdterm.Connections
         private static string Escape(string value)
         {
             if (value == null) return "";
-            return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
-        }
-
-        private static string Unescape(string value)
-        {
-            if (value == null) return null;
-            return value.Replace("\\\"", "\"").Replace("\\\\", "\\");
+            // 审计 F1：统一转义契约（原实现不转 \n \r \t，含换行的值会写出非法 JSON）
+            return Gdterm.Core.JsonText.Escape(value);
         }
 
         private static string ExtractString(string json, string key)
         {
-            var pattern = "\"" + key + "\"";
-            var idx = json.IndexOf(pattern);
-            if (idx < 0) return null;
-            var colonIdx = json.IndexOf(':', idx + pattern.Length);
-            if (colonIdx < 0) return null;
-            var quoteStart = json.IndexOf('"', colonIdx + 1);
-            if (quoteStart < 0) return null;
-            var quoteEnd = quoteStart + 1;
-            while (quoteEnd < json.Length)
-            {
-                if (json[quoteEnd] == '"' && json[quoteEnd - 1] != '\\')
-                    break;
-                quoteEnd++;
-            }
-            return Unescape(json.Substring(quoteStart + 1, quoteEnd - quoteStart - 1));
+            // 审计 F1：结束引号必须跳过转义；反转义统一走 JsonText
+            return Gdterm.Core.JsonText.ExtractString(json, key);
         }
 
         /// <summary>
@@ -259,17 +240,8 @@ namespace Gdterm.Connections
 
         private static int FindMatchingBracket(string json, int openIndex)
         {
-            if (openIndex < 0 || openIndex >= json.Length) return -1;
-            var open = json[openIndex];
-            var close = open == '[' ? ']' : '}';
-            int depth = 0;
-            for (int i = openIndex; i < json.Length; i++)
-            {
-                if (json[i] == open) depth++;
-                else if (json[i] == close) depth--;
-                if (depth == 0) return i;
-            }
-            return -1;
+            // 审计 F1：原实现不跳过字符串，值里出现 ] 就会提前截断；统一走 JsonText
+            return Gdterm.Core.JsonText.FindMatchingBracket(json, openIndex);
         }
     }
 }

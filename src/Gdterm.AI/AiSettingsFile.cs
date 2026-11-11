@@ -117,21 +117,8 @@ namespace Gdterm.AI
 
         private static string ExtractString(string json, string key)
         {
-            var pattern = "\"" + key + "\":\"";
-            int start = json.IndexOf(pattern, StringComparison.Ordinal);
-            if (start < 0) return null;
-            start += pattern.Length;
-            int end = start;
-            while (end < json.Length)
-            {
-                if (json[end] == '\\' && end + 1 < json.Length) { end += 2; continue; }
-                if (json[end] == '"') break;
-                end++;
-            }
-            if (end >= json.Length) return null;
-            var raw = json.Substring(start, end - start);
-            return raw.Replace("\\\"", "\"").Replace("\\\\", "\\")
-                      .Replace("\\n", "\n").Replace("\\r", "\r").Replace("\\t", "\t");
+            // 审计 F1：原实现 Replace 顺序错（先把 \\ 压成 \ 再替 \n，字面反斜杠+n 会被当成换行）
+            return Gdterm.Core.JsonText.ExtractString(json, key);
         }
 
         private static string ExtractRawValue(string json, string key)

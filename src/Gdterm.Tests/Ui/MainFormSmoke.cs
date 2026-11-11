@@ -48,15 +48,40 @@ namespace Gdterm.Tests.Ui
             var multiChannelManager = new MultiChannelManager();
             var toolRegistry = new Gdterm.Tools.ToolRegistry();
             var secretScanner = new SecretScanner(SecretScanConfig.GetDefault());
+            // 补齐 UiDependencies 最后两个可选依赖：漏传时 MainForm 走的是**生产不存在的降级形态**
+            // （ToolsDialogsLauncher 对 null OtpStore 静默降级），dump 覆盖的就不是真实启动配置。
+            var commandTemplateStore = new CommandTemplateStore(Path.Combine(tmp, "cmdtemplate.json"));
+            var otpStore = new Gdterm.Security.Otp.OtpStoreJson(Path.Combine(tmp, "otp.json"));
 
             log("STEP mainform-construct");
-            using (var f = new MainForm(
-                connectionStore, tunnelManager, terminalFactory, sftpFactory,
-                keepassService, auditLogger, aiService, securityManager,
-                dangerousCmdDetector, folderCredStore, sessionStore, rdpFactory,
-                bookmarkStore, commandHistoryStore, quickCommandStore,
-                keyBindingStore, highlightStore, reconnectWatchdog,
-                multiChannelManager, toolRegistry, secretScanner))
+            // 审计 F4：组合根依赖包
+            var deps = new Gdterm.UI.Services.UiDependencies
+            {
+                ConnectionStore = connectionStore,
+                TunnelManager = tunnelManager,
+                TerminalFactory = terminalFactory,
+                SftpFactory = sftpFactory,
+                KeePassService = keepassService,
+                AuditLogger = auditLogger,
+                AiService = aiService,
+                SecurityManager = securityManager,
+                DangerousCommandDetector = dangerousCmdDetector,
+                FolderCredentialStore = folderCredStore,
+                SessionStateStore = sessionStore,
+                RdpFactory = rdpFactory,
+                BookmarkStore = bookmarkStore,
+                CommandHistoryStore = commandHistoryStore,
+                QuickCommandStore = quickCommandStore,
+                KeyBindingStore = keyBindingStore,
+                HighlightStore = highlightStore,
+                ReconnectWatchdog = reconnectWatchdog,
+                MultiChannelManager = multiChannelManager,
+                ToolRegistry = toolRegistry,
+                SecretScanner = secretScanner,
+                CommandTemplateStore = commandTemplateStore,
+                OtpStore = otpStore
+            };
+            using (var f = new MainForm(deps))
             {
                 log("STEP mainform-show");
                 f.Show();

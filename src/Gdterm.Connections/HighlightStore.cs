@@ -131,16 +131,9 @@ namespace Gdterm.Connections
 
         private static string ExtractString(string json, string key)
         {
-            var search = "\"" + key + "\"";
-            var idx = json.IndexOf(search);
-            if (idx < 0) return null;
-            var colon = json.IndexOf(":", idx + search.Length);
-            if (colon < 0) return null;
-            var start = json.IndexOf("\"", colon + 1);
-            if (start < 0) return null;
-            var end = json.IndexOf("\"", start + 1);
-            if (end < 0) return null;
-            return json.Substring(start + 1, end - start - 1).Replace("\\\"", "\"").Replace("\\n", "\n");
+            // 审计 F1：转义/反转义必须成对。统一走 Gdterm.Core.JsonText，
+            // 否则 "pattern" 里的反斜杠读回时不被还原，正则被逐次加倍转义后静默失效。
+            return Gdterm.Core.JsonText.ExtractString(json, key);
         }
 
         private static int ExtractInt(string json, string key)
@@ -160,26 +153,14 @@ namespace Gdterm.Connections
 
         private static int FindMatchingBracket(string json, int openPos)
         {
-            if (openPos < 0) return -1;
-            char open = json[openPos];
-            char close = open == '{' ? '}' : open == '[' ? ']' : ')';
-            int depth = 0;
-            bool inString = false;
-            for (int i = openPos; i < json.Length; i++)
-            {
-                char c = json[i];
-                if (c == '"' && (i == 0 || json[i - 1] != '\\')) { inString = !inString; continue; }
-                if (inString) continue;
-                if (c == open) depth++;
-                else if (c == close) { depth--; if (depth == 0) return i; }
-            }
-            return -1;
+            // 审计 F1：字符串里的 ] / } 不参与配对；统一走 JsonText
+            return Gdterm.Core.JsonText.FindMatchingBracket(json, openPos);
         }
 
         private static string Escape(string s)
         {
             if (s == null) return "";
-            return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n");
+            return Gdterm.Core.JsonText.Escape(s);
         }
     }
 }

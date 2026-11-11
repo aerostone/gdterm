@@ -6,6 +6,7 @@ using Gdterm.AI;
 using Gdterm.Connections;
 using Gdterm.KeePass;
 using Gdterm.Security;
+using Gdterm.Security.Otp;
 using Gdterm.UI.Diagnostics;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Forms;
@@ -40,7 +41,10 @@ namespace Gdterm.UI.Services
             DangerousCommandDetector dangerousCmdDetector,
             Action applyAppearanceToTerminals = null,
             Func<Gdterm.Tools.ISshRemoteSession> remoteSessionFactory = null,
-            Gdterm.Tools.Scanning.ScanPluginStore scanPluginStore = null)
+            Gdterm.Tools.Scanning.ScanPluginStore scanPluginStore = null,
+            IConnectionStore connectionStore = null,
+            Action connectionsChanged = null,
+            IOtpStore otpStore = null)
         {
             _owner = owner;
             _securityManager = securityManager;
@@ -51,6 +55,11 @@ namespace Gdterm.UI.Services
             // 组合根注入（finding-09）：不再用静态单例，生命周期由 MainForm/AppShutdownCoordinator 管理；
             // 未注入时退回实例级 store（仅影响旧调用方，当前组合根总是传入）。
             _scanPluginStore = scanPluginStore ?? new Gdterm.Tools.Scanning.ScanPluginStore();
+            // 审计 F4：连接库/OTP 存储改为构造注入（原来靠 SetConnectionIntegration/SetOtpStore 旁路，
+            // 同一份组合根出现两种注入形态）
+            _connectionStore = connectionStore;
+            _connectionsChanged = connectionsChanged;
+            _otpStore = otpStore;
         }
 
         public bool ReAuthenticate(string action)
@@ -63,19 +72,6 @@ namespace Gdterm.UI.Services
         public void SetHotkeyTableSource(Func<string> tableLines)
         {
             _hotkeyTableLines = tableLines;
-        }
-
-        /// <summary>注入连接库与变更回调（一体化 change）：密码库管理器据此显示「关联连接」并支持从凭据建连接。</summary>
-        public void SetConnectionIntegration(IConnectionStore connectionStore, Action connectionsChanged)
-        {
-            _connectionStore = connectionStore;
-            _connectionsChanged = connectionsChanged;
-        }
-
-        /// <summary>注入 OTP 条目存储（nyaterm 对比 B1）。</summary>
-        public void SetOtpStore(IOtpStore otpStore)
-        {
-            _otpStore = otpStore;
         }
 
         /// <summary>打开 OTP 动态码管理器（nyaterm 对比 B1）。</summary>

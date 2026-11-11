@@ -255,21 +255,8 @@ namespace Gdterm.Security
         private static string Quote(string value)
         {
             if (value == null) return "\"\"";
-            var sb = new StringBuilder("\"");
-            foreach (var ch in value)
-            {
-                switch (ch)
-                {
-                    case '"': sb.Append("\\\""); break;
-                    case '\\': sb.Append("\\\\"); break;
-                    case '\n': sb.Append("\\n"); break;
-                    case '\r': sb.Append("\\r"); break;
-                    case '\t': sb.Append("\\t"); break;
-                    default: sb.Append(ch); break;
-                }
-            }
-            sb.Append('"');
-            return sb.ToString();
+            // 审计 F1：转义走 JsonText，读取端 ExtractString 才还原得回来（规则里全是正则，\d \s 必须原样）
+            return "\"" + Gdterm.Core.JsonText.Escape(value) + "\"";
         }
 
         /// <summary>
@@ -477,18 +464,8 @@ namespace Gdterm.Security
 
         private static string ExtractString(string json, string key)
         {
-            var pattern = $"\"{key}\":\"";
-            int start = json.IndexOf(pattern, StringComparison.Ordinal);
-            if (start < 0) return null;
-            start += pattern.Length;
-            int end = start;
-            while (end < json.Length)
-            {
-                if (json[end] == '\\') { end += 2; continue; }
-                if (json[end] == '"') break;
-                end++;
-            }
-            return json.Substring(start, end - start);
+            // 审计 F1：原实现完全不反转义 → 存回去的 "\d\s" 读回变成 "\\d\\s"，黑名单正则静默失配
+            return Gdterm.Core.JsonText.ExtractString(json, key);
         }
 
         private static int? ExtractInt(string json, string key)
@@ -518,17 +495,8 @@ namespace Gdterm.Security
 
         private static int FindMatchingBracket(string json, int openPos)
         {
-            if (openPos < 0 || openPos >= json.Length) return -1;
-            char open = json[openPos];
-            char close = open == '[' ? ']' : open == '{' ? '}' : ')';
-            int depth = 0;
-            for (int i = openPos; i < json.Length; i++)
-            {
-                if (json[i] == open) depth++;
-                else if (json[i] == close) depth--;
-                if (depth == 0) return i;
-            }
-            return -1;
+            // 审计 F1：原实现不跳字符串，规则里出现 [ 或 { 就错位；统一走 JsonText
+            return Gdterm.Core.JsonText.FindMatchingBracket(json, openPos);
         }
 
         private class CompiledRule

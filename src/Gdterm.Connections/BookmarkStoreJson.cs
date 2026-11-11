@@ -267,51 +267,40 @@ namespace Gdterm.Connections
 
         private static string ExtractString(string json, string key)
         {
-            var pattern = $"\"{key}\":\"";
+            // 审计 F1：字符串值统一走 JsonText（结束引号跳过转义 + 反转义）
+            var s = Gdterm.Core.JsonText.ExtractString(json, key);
+            if (s != null) return s;
+            // 兼容裸值（true/false/数字）：isFavorite / success / connectCount 落盘时不带引号
+            return ExtractRawScalar(json, key);
+        }
+
+        private static string ExtractRawScalar(string json, string key)
+        {
+            var pattern = "\"" + key + "\":";
             int start = json.IndexOf(pattern, StringComparison.Ordinal);
-            if (start < 0)
-            {
-                // 尝试非字符串值
-                pattern = $"\"{key}\":";
-                start = json.IndexOf(pattern, StringComparison.Ordinal);
-                if (start < 0) return "";
-                start += pattern.Length;
-                int end = json.IndexOfAny(new[] { ',', '}' }, start);
-                return end < 0 ? json.Substring(start).Trim() : json.Substring(start, end - start).Trim();
-            }
+            if (start < 0) return "";
             start += pattern.Length;
-            int endIdx = start;
-            while (endIdx < json.Length)
-            {
-                if (json[endIdx] == '\\') { endIdx += 2; continue; }
-                if (json[endIdx] == '"') break;
-                endIdx++;
-            }
-            return Unescape(json.Substring(start, endIdx - start));
+            int end = json.IndexOfAny(new[] { ',', '}' }, start);
+            return (end < 0 ? json.Substring(start) : json.Substring(start, end - start)).Trim();
         }
 
         private static int FindMatchingBrace(string json, int start)
         {
-            int depth = 0;
-            for (int i = start; i < json.Length; i++)
-            {
-                if (json[i] == '{') depth++;
-                else if (json[i] == '}') depth--;
-                if (depth == 0) return i;
-            }
-            return -1;
+            return Gdterm.Core.JsonText.FindMatchingBracket(json, start);
         }
 
         private static string Escape(string s)
         {
             if (string.IsNullOrEmpty(s)) return "";
-            return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r");
+            // 审计 F1：统一转义契约
+            return Gdterm.Core.JsonText.Escape(s);
         }
 
         private static string Unescape(string s)
         {
             if (string.IsNullOrEmpty(s)) return "";
-            return s.Replace("\\\"", "\"").Replace("\\n", "\n").Replace("\\r", "\r").Replace("\\\\", "\\");
+            // 审计 F1：顺序无关的逐字符反转义（原实现先替 \" 再替 \\，字面 \n 会被改成换行）
+            return Gdterm.Core.JsonText.Unescape(s);
         }
     }
 }

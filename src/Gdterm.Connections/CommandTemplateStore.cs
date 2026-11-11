@@ -213,17 +213,10 @@ namespace Gdterm.Connections
             };
         }
 
-        // ── JSON 辅助（复用无外部库约束） ──
-        private static string Esc(string s) { return s?.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n") ?? ""; }
+        // ── JSON 辅助（审计 F1：统一走 Gdterm.Core.JsonText，不再各写一份转义） ──
+        private static string Esc(string s) { return Gdterm.Core.JsonText.Escape(s); }
 
-        private static string ExtractString(string json, string key)
-        {
-            var p = "\"" + key + "\""; var idx = json.IndexOf(p); if (idx < 0) return null;
-            var c = json.IndexOf(':', idx + p.Length); if (c < 0) return null;
-            var s = json.IndexOf('"', c + 1); if (s < 0) return null;
-            var e = s + 1; while (e < json.Length) { if (json[e] == '\\') { e += 2; continue; } if (json[e] == '"') break; e++; }
-            return json.Substring(s + 1, e - s - 1).Replace("\\\"", "\"").Replace("\\\\", "\\");
-        }
+        private static string ExtractString(string json, string key) { return Gdterm.Core.JsonText.ExtractString(json, key); }
 
         private static int ExtractInt(string json, string key)
         {

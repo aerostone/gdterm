@@ -43,10 +43,11 @@ check(has(r"DpiScale\.V\(this, 30\)", LOCK), "S5 锁屏 30 地板豁免保留")
 # ---- S3: 生成器 ----
 check(has(r"AcceptButton\s*=", GEN), "S3 生成器 AcceptButton")
 check(has(r"CancelButton\s*=", GEN), "S3 生成器 CancelButton")
-check(has(r"Text = " + '"' + "关闭" + '"', GEN), "S3 关闭按钮存在")
+# 文案已本地化：Text = L10n.T("关闭")；旧断言只认裸字面量，属写法漂移（语义未变）
+check(has(r'Text = (?:L10n\.T\()?"关闭"', GEN), "S3 关闭按钮存在")
 
 # ---- S4: 向导 ----
-check(has(r"Text = " + '"' + "取消" + '"', WIZ), "S4 取消按钮存在")
+check(has(r'Text = (?:L10n\.T\()?"取消"', WIZ), "S4 取消按钮存在")
 check(has(r"CancelButton\s*=", WIZ), "S4 CancelButton 绑定")
 check(has(r"_cancelButton\.Visible = !IsCompleted|IsCompleted[\s\S]{0,120}_cancelButton\.Visible", WIZ), "S4 完成后隐藏取消钮")
 check(has(r"_cancelButton\.Click[\s\S]{0,200}Close\(\)", WIZ), "S4 取消钮走 Close(触发既有确认)")

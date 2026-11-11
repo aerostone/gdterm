@@ -12,6 +12,9 @@
   S5 .editorconfig 与 appveyor.yml 接线到位
   S6 卫生与反向检查（守卫自身无 BOM/仅 stdlib；fixtures/ 无生成物残留）
 
+适用范围（2026-11-11 补注）：S3/S4 断言的是"18 个文件正文 == 编码归一那次提交的 HEAD blob[3:]"，
+即**提交绑定**的证据。之后任何提交改过这些文件都会让它红，那不是回归，不要改判定去迎合当前工作区。
+
 运行：python3 .codestable/changes/2026-09-25-utf8-encoding-normalization/fixtures/check-utf8-normalization.py
 """
 import hashlib

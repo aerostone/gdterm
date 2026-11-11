@@ -108,6 +108,7 @@
     <Compile Include="Logging\CommandHistoryStoreTests.cs" />
     <Compile Include="Connections\ConnectionStoreJsonTests.cs" />
     <Compile Include="Connections\ExternalFormatImporterTests.cs" />
+    <Compile Include="Connections\JsonRoundTripTests.cs" />
     <Compile Include="Core\OnlineLinksTests.cs" />
     <Compile Include="Security\SecretFindingTests.cs" />
     <Compile Include="Security\SecurityManagerHashTests.cs" />

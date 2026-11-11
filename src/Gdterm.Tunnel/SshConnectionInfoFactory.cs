@@ -3,12 +3,14 @@ using System.IO;
 using Gdterm.Core.Models;
 using Renci.SshNet;
 
-namespace Gdterm.Terminal
+namespace Gdterm.Tunnel
 {
     /// <summary>
-    /// 根据 CredentialPayload 构建 SSH.NET ConnectionInfo（私钥优先，否则密码）
+    /// 根据 CredentialPayload 构建 SSH.NET ConnectionInfo（私钥优先，否则密码）。
+    /// 唯一实现：Terminal 与 Sftp 原先各有一份逐字节相同的副本（2026-11-11 架构审计 F2），
+    /// 现收敛到两者共同引用的 Gdterm.Tunnel（都依赖 Core + SSH.NET，且 Tunnel 不反向依赖它们）。
     /// </summary>
-    internal static class SshConnectionInfoFactory
+    public static class SshConnectionInfoFactory
     {
         public static ConnectionInfo Create(string host, int port, string username, CredentialPayload credential, int timeoutSeconds = 30)
         {

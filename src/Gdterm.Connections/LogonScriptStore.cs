@@ -157,8 +157,14 @@ namespace Gdterm.Connections
             for (int i = start; i < limit && i < json.Length; i++)
             {
                 char c = json[i];
-                if (c == '"' && (i == 0 || json[i - 1] != '\\')) { inStr = !inStr; continue; }
-                if (inStr) continue;
+                if (inStr)
+                {
+                    // 跳过转义对：\" 不结束字符串，\\ 也不会让后一个字符"逃逸"
+                    if (c == '\\' && i + 1 < json.Length) { i++; continue; }
+                    if (c == '"') inStr = false;
+                    continue;
+                }
+                if (c == '"') { inStr = true; continue; }
                 if (c == '{') depth++;
                 else if (c == '}') { depth--; if (depth == 0) return i; }
             }
@@ -172,8 +178,14 @@ namespace Gdterm.Connections
             for (int i = open; i < json.Length; i++)
             {
                 char c = json[i];
-                if (c == '"' && (i == 0 || json[i - 1] != '\\')) { inStr = !inStr; continue; }
-                if (inStr) continue;
+                if (inStr)
+                {
+                    // 跳过转义对：\" 不结束字符串，\\ 也不会让后一个字符"逃逸"
+                    if (c == '\\' && i + 1 < json.Length) { i++; continue; }
+                    if (c == '"') inStr = false;
+                    continue;
+                }
+                if (c == '"') { inStr = true; continue; }
                 if (c == openChar) depth++;
                 else if (c == closeChar) { depth--; if (depth == 0) return i; }
             }
@@ -182,16 +194,8 @@ namespace Gdterm.Connections
 
         private static string ExStr(string json, string key)
         {
-            var s = "\"" + key + "\"";
-            var idx = json.IndexOf(s);
-            if (idx < 0) return null;
-            var colon = json.IndexOf(":", idx + s.Length);
-            if (colon < 0) return null;
-            var start = json.IndexOf("\"", colon + 1);
-            if (start < 0) return null;
-            var end = json.IndexOf("\"", start + 1);
-            if (end < 0) return null;
-            return json.Substring(start + 1, end - start - 1).Replace("\\\"", "\"");
+            // 审计 F1：结束引号必须跳过转义（原实现遇到 \" 就截断），反转义统一走 JsonText
+            return Gdterm.Core.JsonText.ExtractString(json, key);
         }
 
         private static int ExInt(string json, string key)
@@ -209,6 +213,6 @@ namespace Gdterm.Connections
             return int.TryParse(json.Substring(ns, ne - ns), out v) ? v : 0;
         }
 
-        private static string Esc(string s) { return (s ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n"); }
+        private static string Esc(string s) { return Gdterm.Core.JsonText.Escape(s); }
     }
 }

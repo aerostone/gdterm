@@ -198,25 +198,12 @@ namespace Gdterm.Connections
             };
         }
 
-        private string EscapeJson(string s) { return s?.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "") ?? ""; }
+        // 审计 F1：原实现把 \r 直接丢弃（多行命令被静默改写），统一走 JsonText
+        private string EscapeJson(string s) { return Gdterm.Core.JsonText.Escape(s); }
 
         private string ExtractJsonString(string json, string key)
         {
-            var pattern = "\"" + key + "\"";
-            var idx = json.IndexOf(pattern);
-            if (idx < 0) return null;
-            var colon = json.IndexOf(':', idx + pattern.Length);
-            if (colon < 0) return null;
-            var start = json.IndexOf('"', colon + 1);
-            if (start < 0) return null;
-            var end = start + 1;
-            while (end < json.Length)
-            {
-                if (json[end] == '\\') { end += 2; continue; }
-                if (json[end] == '"') break;
-                end++;
-            }
-            return json.Substring(start + 1, end - start - 1).Replace("\\\"", "\"").Replace("\\\\", "\\").Replace("\\n", "\n");
+            return Gdterm.Core.JsonText.ExtractString(json, key);
         }
 
         private int ExtractJsonInt(string json, string key)

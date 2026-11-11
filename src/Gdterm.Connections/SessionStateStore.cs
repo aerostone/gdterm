@@ -160,16 +160,8 @@ namespace Gdterm.Connections
 
         private static string ExtractString(string json, string key)
         {
-            var search = $"\"{key}\":";
-            int idx = json.IndexOf(search, StringComparison.Ordinal);
-            if (idx < 0) return null;
-            idx += search.Length;
-            while (idx < json.Length && json[idx] == ' ') idx++;
-            if (idx >= json.Length || json[idx] != '"') return null;
-            idx++;
-            int end = json.IndexOf('"', idx);
-            if (end < 0) return null;
-            return json.Substring(idx, end - idx);
+            // 审计 F1：原实现完全不反转义，标题/host 里的 \" 读回会带着转义符
+            return Gdterm.Core.JsonText.ExtractString(json, key);
         }
 
         private static int ExtractInt(string json, string key)
@@ -198,20 +190,13 @@ namespace Gdterm.Connections
 
         private static int FindMatchingBrace(string json, int start)
         {
-            int depth = 0;
-            for (int i = start; i < json.Length; i++)
-            {
-                if (json[i] == '{') depth++;
-                else if (json[i] == '}') { depth--; if (depth == 0) return i; }
-            }
-            return -1;
+            return Gdterm.Core.JsonText.FindMatchingBracket(json, start);
         }
 
         private static string Escape(string s)
         {
             if (s == null) return "null";
-            return "\"" + s.Replace("\\", "\\\\").Replace("\"", "\\\"")
-                .Replace("\n", "\\n").Replace("\r", "\\r") + "\"";
+            return "\"" + Gdterm.Core.JsonText.Escape(s) + "\"";
         }
     }
 }

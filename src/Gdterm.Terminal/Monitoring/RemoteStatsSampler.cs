@@ -94,7 +94,7 @@ namespace Gdterm.Terminal.Monitoring
             try { if (_client != null) _client.Dispose(); } catch (Exception) { }
             _client = null;
 
-            var info = SshConnectionInfoFactory.Create(
+            var info = Gdterm.Tunnel.SshConnectionInfoFactory.Create(
                 _config.Host,
                 _config.Port,
                 _credential.Username ?? _config.Username,

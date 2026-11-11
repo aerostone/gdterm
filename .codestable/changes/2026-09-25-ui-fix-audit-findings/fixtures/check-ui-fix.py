@@ -44,7 +44,9 @@ for w, ok in s1:
 # ---- S2: F4 主密码框修复后 ----
 check(not has(r"Size = DpiScale\.S\(dialog, 335, 28\)", M), "S2 pwdBox 不再字面 28 高")
 check(has(r"Size = DpiScale\.S\(dialog, 335, fieldH\)", M), "S2 pwdBox 高度来自 fieldH 变量")
-check(has(r"int fieldH = Math\.Max\(DpiScale\.V\(dialog, 38\), FormFontPolicy\.RowStep\(dialog\)\)", M), "S2 fieldH 为仓库标准口径")
+# fieldH 后来收敛到 FormFontPolicy.FieldHeight（SSOT，见 2026-09-25-ui-cancel-height-unify），
+# 此处按“口径来自统一 API”判，不钉具体写法
+check(has(r"int fieldH = (?:FormFontPolicy\.FieldHeight\((?:this|dialog)\)|Math\.Max\(DpiScale\.V\(dialog, 38\), FormFontPolicy\.RowStep\(dialog\)\))", M), "S2 fieldH 为仓库标准口径")
 check(has(r"dialog\.CancelButton = cancelBtn", M), "S2 CancelButton 已绑(ESC 可取消)")
 check(has(r"var cancelBtn = new AntdUI\.Button[\s\S]{0,240}DialogResult = DialogResult\.Cancel", M), "S2 取消按钮含 Cancel 语义")
 

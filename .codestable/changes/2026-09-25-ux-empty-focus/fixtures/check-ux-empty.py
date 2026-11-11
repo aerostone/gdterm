@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """UX 空状态/焦点 change 的静态契约检查（本地 RED/GREEN 驱动；动态证据交 CI 323）。"""
-import sys, pathlib
+import sys, re, pathlib
 root = pathlib.Path('.')
 FAIL = []
 
@@ -13,13 +13,19 @@ def read(p): return (root / p).read_text(encoding='utf-8-sig')
 kp = read('src/Gdterm.UI/Forms/KeePassManagerForm.cs')
 sc = read('src/Gdterm.UI/Forms/ScannerCenterForm.cs')
 ph = read('src/Gdterm.UI/Forms/PasswordHealthForm.cs')
+esv = read('src/Gdterm.UI/Controls/EmptyStateView.cs')
 smoke = read('src/Gdterm.Tests/Ui/UiSmokeRunner.cs')
 
 print('S1 KeePass 空库引导')
 check('KeePassEmptyGuide' in kp, 'K1 空引导层 Name=KeePassEmptyGuide 存在')
 check('KeePassEmptyGuideAddButton' in kp, 'K2 引导主按钮 Name=KeePassEmptyGuideAddButton 存在')
 check('还没有条目' in kp, 'K3 引导文案"还没有条目"存在')
-check('_emptyGuide.Visible' in kp, 'K4 空/有行两态显隐已接 LoadEntries')
+# K4：显隐现在由 EmptyStateView.SetEmpty 收敛（SetEmpty 内部就是 Visible = empty），
+# 不再写裸 `_emptyGuide.Visible`；旧断言守的是写法不是语义，故按语义重写：
+# ① 两态都走 SetEmpty ② SetEmpty 真的切 Visible。
+check('_emptyGuide.SetEmpty(' in kp and 'Visible = empty' in esv,
+      'K4 空/有行两态显隐已接 LoadEntries（走 SetEmpty→Visible）')
+check(kp.count('_emptyGuide.SetEmpty(') >= 2, 'K4b 空/有行两态各调一次')
 check(smoke.count('KeePassEmptyGuide') >= 1, 'K5 冒烟按 Name 断言引导（CI 侧）')
 
 print('S2 scanner 空状态 + 右列对齐')
@@ -48,12 +54,18 @@ check('mainform' in uc and 'continue' in uc, 'R4 在 mainform 分支之后(主�
 
 print()
 print("S6 停靠遮挡守卫（D5）")
-check('private static void AssertNoDockOverlap' in smoke, 'S6-1 C# 侧 AssertNoDockOverlap 已实现')
+check(re.search(r'(?:internal|private) static void AssertNoDockOverlap', smoke) is not None,
+      'S6-1 C# 侧 AssertNoDockOverlap 已实现')
 check(smoke.count('AssertNoDockOverlap(f,') == 4, 'S6-2 C# 侧 4 个用例都调用')
 check('IsEdgeDock' in smoke and 'aFill && bEdge' in smoke, 'S6-3 C# 侧只比 Fill vs 边停靠')
 check('R5 停靠遮挡' in uc and '停靠无遮挡' in uc, 'S6-4 Python 侧 R5 规则已写入')
 check('[(tree, None, "", None, "ROOT")] + walk(tree)' in uc, 'S6-5 Python 侧含窗体根级兄弟')
-check('dangerous-cmd 存量债' in uc, 'S6-6 Python 侧 dangerous-cmd 存量免判')
+# S6-6：原意是“R5 对 dangerous-cmd 存量免判”，该免判已在
+# 2026-09-25-dangerous-cmd-dock-overlap 修复后撤销。所以现在要钉的是“豁免确实没了”，
+# 而不是去找一个已删掉的注释串（那样恒红）。
+r5 = uc[uc.index('# R5 停靠遮挡'):]
+check('撤销前缀豁免' in r5 and 'fname.startswith' not in r5,
+      'S6-6 Python 侧 R5 无窗口前缀豁免（dangerous-cmd 已撤销免判）')
 check(('R1_RED' if True else '') and '还没有插件：先放入脚本文件' in sc, 'S6-7 左列空态文案已缩短(防硬裁)')
 check('ColumnStyles' in kp, 'S6-8 KeePass 引导 TLP 显式列样式(防内容偏左)')
 

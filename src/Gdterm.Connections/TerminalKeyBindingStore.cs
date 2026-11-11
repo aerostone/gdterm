@@ -323,25 +323,14 @@ namespace Gdterm.Connections
         private static string Escape(string s)
         {
             if (string.IsNullOrEmpty(s)) return "";
-            return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r").Replace("\t", "\\t");
+            return Gdterm.Core.JsonText.Escape(s); // 审计 F1：统一转义契约
         }
 
         private static string EscapeValue(string s)
         {
             if (string.IsNullOrEmpty(s)) return "";
-            var sb = new StringBuilder(s.Length);
-            foreach (char c in s)
-            {
-                if (c == '\\') sb.Append("\\\\");
-                else if (c == '"') sb.Append("\\\"");
-                else if (c == '\x1b') sb.Append("\\u001b");
-                else if (c == '\x02') sb.Append("\\u0002");
-                else if (c == '\x01') sb.Append("\\u0001");
-                else if (c == '\x03') sb.Append("\\u0003");
-                else if (c < 32) sb.AppendFormat("\\u{0:x4}", (int)c);
-                else sb.Append(c);
-            }
-            return sb.ToString();
+            // 审计 F1：JsonText.Escape 已覆盖控制字符（\uXXXX），读取端统一 Unescape，键值里的 Esc/Tab 才能往返
+            return Gdterm.Core.JsonText.Escape(s);
         }
 
         // ── 手工 JSON 解析 ──
@@ -454,22 +443,9 @@ namespace Gdterm.Connections
 
         private static string ExtractString(string json, string key)
         {
-            var token = "\"" + key + "\":";
-            int idx = json.IndexOf(token, StringComparison.Ordinal);
-            if (idx < 0) return null;
-            idx += token.Length;
-            while (idx < json.Length && (json[idx] == ' ' || json[idx] == '\t')) idx++;
-            if (idx >= json.Length || json[idx] != '"') return null;
-            idx++;
-            int end = idx;
-            while (end < json.Length)
-            {
-                if (json[end] == '\\') { end += 2; continue; }
-                if (json[end] == '"') break;
-                end++;
-            }
-            var raw = json.Substring(idx, end - idx);
-            return raw.Replace("\\\"", "\"").Replace("\\n", "\n").Replace("\\\\", "\\");
+            // 审计 F1：结束引号跳过转义 + 统一反转义（原实现手写 Replace 链，\u001b 从不还原，
+            // 键序列里的 Esc/Tab 读回后变成字面 "\u001b" 文本）
+            return Gdterm.Core.JsonText.ExtractString(json, key);
         }
 
         private static string ExtractArrayBlock(string json, string key)

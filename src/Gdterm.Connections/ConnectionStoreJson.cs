@@ -290,7 +290,8 @@ namespace Gdterm.Connections
         private string Escape(string value)
         {
             if (value == null) return "";
-            return value.Replace("\\", "\\\\").Replace("\"", "\\\"");
+            // 审计 F1：统一转义契约（含 \n \r \t 与其余控制符），不再只转 \\ 和 "
+            return Gdterm.Core.JsonText.Escape(value);
         }
 
         // ---- JSON 反序列化（简单实现，不依赖外部库） ----
@@ -448,53 +449,25 @@ namespace Gdterm.Connections
         private static string ReadQuotedString(string json, ref int index)
         {
             // 进入时 json[index] 应为 '"'
-            index++; // 跳过起始引号
-            var sb = new StringBuilder();
-            while (index < json.Length)
-            {
-                var ch = json[index];
-                if (ch == '\\' && index + 1 < json.Length)
-                {
-                    var next = json[index + 1];
-                    sb.Append(next == '"' ? "\"" : next == '\\' ? "\\" : next.ToString());
-                    index += 2;
-                    continue;
-                }
-                if (ch == '"') { index++; break; }
-                sb.Append(ch);
-                index++;
-            }
-            return sb.ToString();
+            if (json == null || index < 0 || index >= json.Length || json[index] != '"') return null;
+            // 审计 F1：反转义必须与 Escape 成对（原来只认 \" 和 \\，\n \r \t \uXXXX 会被错读成字面 n/r/t）
+            var end = Gdterm.Core.JsonText.SkipString(json, index);
+            var raw = json.Substring(index + 1, end - index - 1);
+            index = end + 1;
+            return Gdterm.Core.JsonText.Unescape(raw);
         }
 
         private string ExtractString(string json, string key)
         {
-            var pattern = $"\"{key}\"";
-            var idx = json.IndexOf(pattern);
-            if (idx < 0) return null;
-
-            var colonIdx = json.IndexOf(':', idx + pattern.Length);
-            if (colonIdx < 0) return null;
-
-            var quoteStart = json.IndexOf('"', colonIdx + 1);
-            if (quoteStart < 0) return null;
-
-            var quoteEnd = quoteStart + 1;
-            while (quoteEnd < json.Length)
-            {
-                if (json[quoteEnd] == '"' && json[quoteEnd - 1] != '\\')
-                    break;
-                quoteEnd++;
-            }
-
-            var raw = json.Substring(quoteStart + 1, quoteEnd - quoteStart - 1);
-            return Unescape(raw);
+            // 审计 F1：结束引号必须跳过转义（原实现用 json[end-1] != '\\' 判定，
+            // 在值为 …\\" 时会多扫到下一个键），反转义也统一到 JsonText。
+            return Gdterm.Core.JsonText.ExtractString(json, key);
         }
 
         private string Unescape(string value)
         {
             if (value == null) return null;
-            return value.Replace("\\\"", "\"").Replace("\\\\", "\\");
+            return Gdterm.Core.JsonText.Unescape(value);
         }
 
         private int ExtractInt(string json, string key)
@@ -579,19 +552,8 @@ namespace Gdterm.Connections
 
         private int FindMatchingBracket(string json, int openIndex)
         {
-            if (openIndex < 0 || openIndex >= json.Length) return -1;
-            var open = json[openIndex];
-            var close = open == '[' ? ']' : open == '{' ? '}' : ')';
-            int depth = 0;
-
-            for (int i = openIndex; i < json.Length; i++)
-            {
-                if (json[i] == open) depth++;
-                else if (json[i] == close) depth--;
-                if (depth == 0) return i;
-            }
-
-            return -1;
+            // 审计 F1：原实现不跳过字符串，值里出现 } / ] 就会提前截断；统一走 JsonText
+            return Gdterm.Core.JsonText.FindMatchingBracket(json, openIndex);
         }
     }
 }

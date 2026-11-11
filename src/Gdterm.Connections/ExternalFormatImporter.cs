@@ -256,10 +256,9 @@ namespace Gdterm.Connections
                 if (c == '}') break;
                 if (c != '"') { i++; continue; }
 
-                // 顶层键
-                int keyEnd = i + 1;
-                while (keyEnd < n && !(obj[keyEnd] == '"' && obj[keyEnd - 1] != '\\')) keyEnd++;
-                if (keyEnd >= n) break;
+                // 顶层键（审计 F1：结束引号用 JsonText.SkipString 判定，避免 \\" 被当成结束）
+                int keyEnd = Gdterm.Core.JsonText.SkipString(obj, i);
+                if (keyEnd <= i || keyEnd >= n || obj[keyEnd] != '"') break;
                 var key = obj.Substring(i + 1, keyEnd - i - 1);
 
                 int j = keyEnd + 1;
@@ -273,11 +272,9 @@ namespace Gdterm.Connections
                 if (obj[v] == '"')
                 {
                     // string 值
-                    int e = v + 1;
-                    while (e < n && !(obj[e] == '"' && obj[e - 1] != '\\')) e++;
-                    if (e >= n) break;
-                    fields[key] = obj.Substring(v + 1, e - v - 1)
-                        .Replace("\\\\", "\x00").Replace("\\\"", "\"").Replace("\x00", "\\");
+                    int e = Gdterm.Core.JsonText.SkipString(obj, v);
+                    if (e <= v || e >= n) break;
+                    fields[key] = Gdterm.Core.JsonText.Unescape(obj.Substring(v + 1, e - v - 1));
                     i = e + 1;
                 }
                 else if (obj[v] == '{' || obj[v] == '[')

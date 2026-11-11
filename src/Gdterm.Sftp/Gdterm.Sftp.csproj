@@ -56,7 +56,6 @@
     <Compile Include="SftpService.cs" />
     <Compile Include="SftpSyncPlanner.cs" />
     <Compile Include="SftpSyncRunner.cs" />
-    <Compile Include="SshConnectionInfoFactory.cs" />
     <Compile Include="SftpEnhancements.cs" />
     <Compile Include="ISftpServiceFactory.cs" />
     <Compile Include="SftpServiceFactory.cs" />

@@ -172,68 +172,12 @@ namespace Gdterm.AI
 
         private static string Escape(string value)
         {
-            if (string.IsNullOrEmpty(value)) return "";
-            var sb = new StringBuilder(value.Length + 8);
-            foreach (var ch in value)
-            {
-                switch (ch)
-                {
-                    case '\\': sb.Append("\\\\"); break;
-                    case '"': sb.Append("\\\""); break;
-                    case '\n': sb.Append("\\n"); break;
-                    case '\r': sb.Append("\\r"); break;
-                    case '\t': sb.Append("\\t"); break;
-                    default:
-                        if (ch < 0x20) sb.Append("\\u").Append(((int)ch).ToString("x4"));
-                        else sb.Append(ch);
-                        break;
-                }
-            }
-            return sb.ToString();
+            return Gdterm.Core.JsonText.Escape(value); // 审计 F1：统一转义契约
         }
 
         private static string Unescape(string value)
         {
-            if (value == null) return null;
-            var sb = new StringBuilder(value.Length);
-            for (int i = 0; i < value.Length; i++)
-            {
-                var ch = value[i];
-                if (ch != '\\' || i + 1 >= value.Length) { sb.Append(ch); continue; }
-                var nx = value[++i];
-                switch (nx)
-                {
-                    case 'n': sb.Append('\n'); break;
-                    case 'r': sb.Append('\r'); break;
-                    case 't': sb.Append('\t'); break;
-                    case 'u':
-                        // i 指向 'u'；后需 4 位 hex：i+1..i+4 均在界内
-                        if (i + 4 < value.Length)
-                        {
-                            var hex = value.Substring(i + 1, 4);
-                            int code;
-                            if (int.TryParse(hex, System.Globalization.NumberStyles.HexNumber,
-                                System.Globalization.CultureInfo.InvariantCulture, out code) && code > 0)
-                            {
-                                i += 4;
-                                sb.Append((char)code);
-                            }
-                            else
-                            {
-                                sb.Append('\\').Append(nx);
-                            }
-                        }
-                        else
-                        {
-                            sb.Append('\\').Append(nx);
-                        }
-                        break;
-                    default:
-                        sb.Append(nx);
-                        break;
-                }
-            }
-            return sb.ToString();
+            return Gdterm.Core.JsonText.Unescape(value); // 审计 F1：统一反转义
         }
 
         /// <summary>解析消息对象数组内容（数组 '[' 与 ']' 之间的文本）。</summary>
@@ -388,36 +332,7 @@ namespace Gdterm.AI
         /// <summary>从扁平对象 JSON 里取字符串字段（值本身不含嵌套花括号）。</summary>
         private static string ExtractString(string objJson, string key)
         {
-            var pattern = "\"" + key + "\"";
-            var idx = objJson.IndexOf(pattern, StringComparison.Ordinal);
-            if (idx < 0) return null;
-            var colon = objJson.IndexOf(':', idx + pattern.Length);
-            if (colon < 0) return null;
-            var qStart = objJson.IndexOf('"', colon + 1);
-            if (qStart < 0) return null;
-            // 从 qStart+1 起找未转义的结束引号
-            int i = qStart + 1;
-            var sb = new StringBuilder();
-            for (; i < objJson.Length; i++)
-            {
-                var ch = objJson[i];
-                if (ch == '\\')
-                {
-                    if (i + 1 < objJson.Length)
-                    {
-                        sb.Append(ch).Append(objJson[++i]);
-                    }
-                }
-                else if (ch == '"')
-                {
-                    return Unescape(sb.ToString());
-                }
-                else
-                {
-                    sb.Append(ch);
-                }
-            }
-            return Unescape(sb.ToString());
+            return Gdterm.Core.JsonText.ExtractString(objJson, key); // 审计 F1：统一取值实现
         }
     }
 }

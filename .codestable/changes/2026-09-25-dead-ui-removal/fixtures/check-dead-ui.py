@@ -11,16 +11,27 @@ def check(ok, what):
     print(("  ok: " if ok else "  FAIL: ") + what)
 
 SBP = "src/Gdterm.UI/Controls/SftpBrowserPanel.cs"
+# SharedMenuTip.cs 在包 G(2026-09-25-hotkey-ssot-unlock-guide) 里改名为 MenuTip.cs。
+# 本驱动 GREEN 模式曾因写死旧名直接 FileNotFoundError 崩掉（不是红，是跑不起来），
+# 故按存在者解析：GREEN 判据只关心 ToolTipText2 这类能力还在，不关心文件名。
 SMT = "src/Gdterm.UI/Controls/SharedMenuTip.cs"
+if not os.path.exists(SMT):
+    SMT = "src/Gdterm.UI/Controls/MenuTip.cs"
 FPC = "src/Gdterm.UI/Controls/FilePaneControl.cs"
 CSJ = "src/Gdterm.UI/Gdterm.UI.csproj"
 
 phase_green = (sys.argv[1] if len(sys.argv) > 1 else "red") == "green"
 
+def code_only(text):
+    """剔除注释行：包 F 删除后遗留的是“原 DarkMenuRenderer 死码已删”这类说明文字，
+    拿全文 substring 判等于把文档当引用（历史假红）。"""
+    return "\n".join(ln for ln in text.splitlines()
+                     if not ln.lstrip().startswith(("//", "///", "*")))
+
 # ---- RED 侧:三死码存在(green 模式下断言已删,作为反向) ----
 if phase_green:
     check(not os.path.exists(SBP), "GREEN SftpBrowserPanel.cs 已删除")
-    check("DarkMenuRenderer" not in read(SMT), "GREEN DarkMenuRenderer 已删除")
+    check("DarkMenuRenderer" not in code_only(read(SMT)), "GREEN DarkMenuRenderer 已删除")
     check("PreviewBoxShim" not in read(FPC), "GREEN PreviewBoxShim 已删除")
 else:
     check(os.path.exists(SBP), "RED SftpBrowserPanel.cs 存在")
@@ -35,7 +46,7 @@ def green():
     for f in glob.glob("src/**/*.cs", recursive=True):
         blob += io.open(f, encoding="utf-8-sig").read()
     for name in ("SftpBrowserPanel", "PreviewBoxShim", "DarkMenuRenderer"):
-        g.append((f"S1 全仓零引用 {name}", name not in blob))
+        g.append((f"S1 全仓零引用 {name}", name not in code_only(blob)))
     # S2 csproj
     cs = read(CSJ)
     g.append(("S2 csproj 无 SftpBrowserPanel", "SftpBrowserPanel" not in cs))

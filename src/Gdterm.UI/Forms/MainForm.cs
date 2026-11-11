@@ -9,6 +9,7 @@ using Gdterm.KeePass;
 using Gdterm.Logging;
 using Gdterm.Logging.Models;
 using Gdterm.Security;
+using Gdterm.Security.Otp;
 using Gdterm.Sftp;
 using Gdterm.Terminal;
 using Gdterm.Rdp;
@@ -87,55 +88,39 @@ namespace Gdterm.UI.Forms
         private NotifyIcon _trayIcon;
         private bool _confirmExitPending;
 
-        public MainForm(
-            IConnectionStore connectionStore,
-            ITunnelManager tunnelManager,
-            ITerminalSessionFactory terminalFactory,
-            ISftpServiceFactory sftpFactory,
-            IKeePassService keepassService,
-            IAuditLogger auditLogger,
-            IAiAssistantService aiService,
-            ISecurityManager securityManager,
-            DangerousCommandDetector dangerousCmdDetector,
-            IFolderCredentialStore folderCredStore,
-            SessionStateStore sessionStore,
-            IRdpClientFactory rdpFactory = null,
-            IBookmarkStore bookmarkStore = null,
-            CommandHistoryStore commandHistoryStore = null,
-            QuickCommandStore quickCommandStore = null,
-            TerminalKeyBindingStore keyBindingStore = null,
-            HighlightStore highlightStore = null,
-            AutoReconnectWatchdog reconnectWatchdog = null,
-            MultiChannelManager multiChannelManager = null,
-            ToolRegistry toolRegistry = null,
-            SecretScanner secretScanner = null,
-            CommandTemplateStore commandTemplateStore = null,
-            IOtpStore otpStore = null)
+        /// <summary>
+        /// 组合根（审计 F4）：依赖收成一个对象，不再用 23 个位置参数。
+        /// 新增服务只改 <see cref="UiDependencies"/> + Program.cs，不必再动这里的签名。
+        /// </summary>
+        public MainForm(UiDependencies services)
         {
-            _connectionStore = connectionStore;
-            _tunnelManager = tunnelManager;
-            _terminalFactory = terminalFactory;
-            _rdpFactory = rdpFactory ?? new RdpClientFactory();
-            _sftpFactory = sftpFactory;
-            _keepassService = keepassService;
-            _auditLogger = auditLogger;
-            _aiService = aiService;
-            _securityManager = securityManager;
-            _dangerousCmdDetector = dangerousCmdDetector;
-            _folderCredStore = folderCredStore;
-            _sessionStore = sessionStore;
-            _bookmarkStore = bookmarkStore;
-            _commandHistoryStore = commandHistoryStore;
-            _quickCommandStore = quickCommandStore;
-            _keyBindingStore = keyBindingStore;
-            _highlightStore = highlightStore;
-            _reconnectWatchdog = reconnectWatchdog;
-            _multiChannelManager = multiChannelManager ?? new MultiChannelManager();
+            if (services == null) throw new ArgumentNullException(nameof(services));
+            services.RequireCore();
+
+            _connectionStore = services.ConnectionStore;
+            _tunnelManager = services.TunnelManager;
+            _terminalFactory = services.TerminalFactory;
+            _rdpFactory = services.RdpFactory ?? new RdpClientFactory();
+            _sftpFactory = services.SftpFactory;
+            _keepassService = services.KeePassService;
+            _auditLogger = services.AuditLogger;
+            _aiService = services.AiService;
+            _securityManager = services.SecurityManager;
+            _dangerousCmdDetector = services.DangerousCommandDetector;
+            _folderCredStore = services.FolderCredentialStore;
+            _sessionStore = services.SessionStateStore;
+            _bookmarkStore = services.BookmarkStore;
+            _commandHistoryStore = services.CommandHistoryStore;
+            _quickCommandStore = services.QuickCommandStore;
+            _keyBindingStore = services.KeyBindingStore;
+            _highlightStore = services.HighlightStore;
+            _reconnectWatchdog = services.ReconnectWatchdog;
+            _multiChannelManager = services.MultiChannelManager ?? new MultiChannelManager();
             _syncRecorder = new MultiChannelRecorder();
-            _toolRegistry = toolRegistry;
-            _secretScanner = secretScanner;
-            _commandTemplateStore = commandTemplateStore;
-            _otpStore = otpStore;
+            _toolRegistry = services.ToolRegistry;
+            _secretScanner = services.SecretScanner;
+            _commandTemplateStore = services.CommandTemplateStore;
+            _otpStore = services.OtpStore;
 
             // 消除重绘闪烁：DoubleBuffered + 指定一致暗色背景。
             // 这是「发虚」的第二根因——重绘时 GDI 一帧帧走，看起来不稳重。,
@@ -286,21 +271,23 @@ namespace Gdterm.UI.Forms
                 BackColor = GdtermColorTable.Hover
             };
 
-            _tabContainer = new TabContainerControl(
-                _tunnelManager,
-                _terminalFactory,
-                _sftpFactory,
-                _aiService,
-                _auditLogger,
-                _keepassService,
-                _folderCredStore,
-                _dangerousCmdDetector,
-                _reconnectWatchdog,
-                _connectionStore,
-                _rdpFactory,
-                _highlightStore,
-                _commandHistoryStore,
-                _quickCommandStore);
+            // 审计 F4：容器只收自己消费的依赖（AiService 是僵尸参数，已删除）
+            _tabContainer = new TabContainerControl(new TabDependencies
+            {
+                TunnelManager = _tunnelManager,
+                TerminalFactory = _terminalFactory,
+                SftpFactory = _sftpFactory,
+                AuditLogger = _auditLogger,
+                KeePassService = _keepassService,
+                FolderCredentialStore = _folderCredStore,
+                DangerousCommandDetector = _dangerousCmdDetector,
+                ReconnectWatchdog = _reconnectWatchdog,
+                ConnectionStore = _connectionStore,
+                RdpFactory = _rdpFactory,
+                HighlightStore = _highlightStore,
+                CommandHistoryStore = _commandHistoryStore,
+                QuickCommandStore = _quickCommandStore
+            });
             _sessionBridge = new ActiveSessionBridge(_tabContainer);
             _sidePanels = new SidePanelFactory(
                 _tabContainer,
@@ -464,17 +451,18 @@ namespace Gdterm.UI.Forms
             _lockOverlay.Dock = DockStyle.Fill;
             _lockOverlay.Visible = _securityManager.IsLocked;
 
+            // 审计 F4：连接库/OTP 存储也走构造注入，不再 SetXxx 旁路
             _toolsDialogs = new ToolsDialogsLauncher(
                 this, _securityManager, _keepassService, _dangerousCmdDetector,
                 () => _tabContainer.ApplyAppearanceToAllTerminals(),
                 () => _tabContainer.GetActiveRemoteSession(),
-                _scanPluginStore);
-            // 一体化 change 2026-09-26：密码库管理器接入连接库（关联连接列 + 从凭据新建连接）
-            _toolsDialogs.SetConnectionIntegration(_connectionStore, () =>
-            {
-                try { _connectionTree?.LoadConnections(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.ConnsChanged", exSwallowed); } catch { } }
-            });
-            _toolsDialogs.SetOtpStore(_otpStore);
+                _scanPluginStore,
+                _connectionStore,
+                () =>
+                {
+                    try { _connectionTree?.LoadConnections(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.ConnsChanged", exSwallowed); } catch { } }
+                },
+                _otpStore);
 
             // 状态栏可点击：把二级菜单里的高频入口提为一击直达
             _statusBar.StatusClicked += (s, key) =>

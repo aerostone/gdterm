@@ -448,22 +448,14 @@ namespace Gdterm.AI
 
         private static string EscapeJson(string s)
         {
-            if (s == null) return "";
-            return s.Replace("\\", "\\\\")
-                     .Replace("\"", "\\\"")
-                     .Replace("\n", "\\n")
-                     .Replace("\r", "\\r")
-                     .Replace("\t", "\\t");
+            // 审计 F1：统一转义契约
+            return Gdterm.Core.JsonText.Escape(s);
         }
 
         private static string UnescapeJson(string s)
         {
-            if (s == null) return "";
-            return s.Replace("\\\"", "\"")
-                     .Replace("\\n", "\n")
-                     .Replace("\\r", "\r")
-                     .Replace("\\t", "\t")
-                     .Replace("\\\\", "\\");
+            // 审计 F1：逐字符反转义（原实现把 "\\n"（字面反斜杠+n）替换成换行）
+            return Gdterm.Core.JsonText.Unescape(s);
         }
 
         public void Dispose()

@@ -63,7 +63,7 @@ namespace Gdterm.Terminal
             Hostname = config.Host;
             ApplyTerminalProfile(config, rows, columns);
 
-            var connInfo = SshConnectionInfoFactory.Create(
+            var connInfo = Gdterm.Tunnel.SshConnectionInfoFactory.Create(
                 config.Host,
                 config.Port,
                 credential.Username ?? config.Username,
@@ -101,7 +101,7 @@ namespace Gdterm.Terminal
             ApplyTerminalProfile(config, rows, columns);
 
             // 通过隧道的本地端口连接（目标主机认证仍用 credential，含私钥）
-            var connInfo = SshConnectionInfoFactory.Create(
+            var connInfo = Gdterm.Tunnel.SshConnectionInfoFactory.Create(
                 tunnelEndpoint.LocalHost,
                 tunnelEndpoint.LocalPort,
                 credential.Username ?? config.Username,
