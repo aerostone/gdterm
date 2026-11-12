@@ -28,6 +28,9 @@ namespace Gdterm.UI.Controls
             Height = DpiScale.V(this, 36);
             BackColor = GdtermColorTable.Surface;
             Visible = false;
+            // 构造期就吃全局 UI 字号：本控件是 UserControl，Font 此时还是系统默认值，
+            // 后面所有 MeasureTextWidth/LineBox 都按 9pt 量（字号轴 1.00 实证）
+            Font = Services.FormFontPolicy.UiFont();
             Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 4), DpiScale.V(this, 8), DpiScale.V(this, 4));
             BuildUI();
             Relayout();
@@ -55,6 +58,7 @@ namespace Gdterm.UI.Controls
         /// </summary>
         private void Relayout()
         {
+            RefitControls();
             if (_flow == null) return;
             int avail = Math.Max(0, ClientSize.Width - Padding.Horizontal);
             if (avail <= 0) return;
@@ -70,6 +74,54 @@ namespace Gdterm.UI.Controls
 
             int want = prefH + Padding.Vertical;
             if (Height != want) Height = want;
+        }
+
+        /// <summary>
+        /// 按当前字号重算复选/按钮/输入框的盒（字号一变就作废）。
+        ///
+        /// 控件是构造期一次性显式定尺寸的，字号后来变大（全局 UI 字号 9→14pt）时
+        /// 位置由流式布局重排、但盒还是旧字号的：字号轴 ratio 1.00 实证。
+        /// </summary>
+        private void RefitControls()
+        {
+            if (_chkCase == null || _flow == null) return;
+            var f = Font ?? FormFontPolicy.UiFont();
+            var small = new Font(f.FontFamily, Math.Max(6f, f.Size - 0.5f));
+            foreach (var c in new Control[] { _chkCase, _chkRegex, _chkWholeWord })
+            {
+                if (c == null) continue;
+                c.Font = small;
+                SizeChk((AntdUI.Checkbox)c, small);
+            }
+            foreach (var b in new Control[] { _btnPrev, _btnNext, _btnClose })
+            {
+                if (b == null) continue;
+                SizeBtn((AntdUI.Button)b, f);
+            }
+            if (_txtSearch != null) _txtSearch.Height = FormFontPolicy.FieldHeight(this);
+        }
+
+        private void SizeChk(AntdUI.Checkbox chk, Font font)
+        {
+            if (chk == null || font == null) return;
+            int h = Math.Max(DpiScale.V(this, 24), FormFontPolicy.LineBox(font, this));
+            int w = Math.Max(DpiScale.V(this, 34),
+                FormFontPolicy.MeasureTextWidth(chk.Text, font, this) + DpiScale.V(this, 32));
+            chk.AutoSize = false;
+            chk.Size = new Size(w, h);
+            chk.Margin = new Padding(0, DpiScale.V(this, 2), DpiScale.V(this, 6), 0);
+        }
+
+        private void SizeBtn(AntdUI.Button btn, Font font)
+        {
+            if (btn == null) return;
+            var f = font ?? Font;
+            int h = Math.Max(DpiScale.V(this, 24), FormFontPolicy.LineBox(f, this));
+            int w = Math.Max(DpiScale.V(this, 34),
+                FormFontPolicy.MeasureTextWidth(btn.Text, f, this) + DpiScale.V(this, 18));
+            btn.AutoSize = false;
+            btn.Size = new Size(w, h);
+            btn.Margin = new Padding(0, DpiScale.V(this, 2), DpiScale.V(this, 4), 0);
         }
 
         private void BuildUI()
@@ -133,19 +185,16 @@ namespace Gdterm.UI.Controls
             // 显式尺寸（不用 AutoSize + MinimumSize）：MinimumSize 是在 AutoSize 量完之后
             // 才把控件撑大，而 FlowLayoutPanel 已经按撑大前的宽度排好了位置 → 相邻控件重叠
             // （矩阵门 d150 实证 3 处重叠，交叠 180–396px²）。显式尺寸一次给对，流不会错位。
-            var font = new Font(Font.FontFamily, Font.Size - 0.5f);
-            int h = Math.Max(DpiScale.V(this, 24), FormFontPolicy.LineBox(font, this));
-            int w = Math.Max(DpiScale.V(this, 34),
-                FormFontPolicy.MeasureTextWidth(text, font, this) + DpiScale.V(this, 32));
+            var font = new Font(Font.FontFamily, Math.Max(6f, Font.Size - 0.5f));
             var chk = new AntdUI.Checkbox {
                 Text = text,
                 AutoSize = false,
-                Size = new Size(w, h),
                 // 等宽语义例外：Aa/.*/W 为正则记号，字号相对当前字体缩小一号（规范规则③）,
                 Font = font,
                 ForeColor = GdtermColorTable.Muted,
                 Margin = new Padding(0, 4, DpiScale.V(this, 6), 0)
             };
+            SizeChk(chk, font);
             var t = new ToolTip();
             t.SetToolTip(chk, tip);
             return chk;
@@ -155,17 +204,14 @@ namespace Gdterm.UI.Controls
         {
             // 图标钮显式尺寸：正文只有「▲」一个字形，AutoSize 后宽 26 逻辑 px，
             // 过不了「触击目标 ≥32 逻辑 px」的门禁（d150 实证 39x36 设备 px）
-            int h = Math.Max(DpiScale.V(this, 24), FormFontPolicy.LineBox(this));
-            int w = Math.Max(DpiScale.V(this, 34),
-                FormFontPolicy.MeasureTextWidth(text, Font, this) + DpiScale.V(this, 18));
             var btn = new AntdUI.Button {
                 Text = text,
                 AutoSize = false,
-                Size = new Size(w, h),
                 Padding = new Padding(DpiScale.V(this, 1), 0, DpiScale.V(this, 1), 0),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground
             };
+            SizeBtn(btn, Font);
             var t = new ToolTip();
             t.SetToolTip(btn, tip);
             return btn;

@@ -303,6 +303,12 @@ namespace Gdterm.UI.Controls
             };
             // 状态栏紧凑键：设计高 22（不是 FieldHeight 38），否则状态栏被顶高一行
             FormFontPolicy.SizeActionButton(this, _pinBtn, 4, 2, 22);
+            // 图标钮的高度必须自己按 DPI 定：AntdUI 的优选高来自字形行盒（34 > 栏高 30，
+            // 顶出底栏；且 150% 下只从 34 涨到 36，等于不吃 DPI）
+            int pinH = DpiScale.V(this, 22);
+            _pinBtn.AutoSize = false;
+            _pinBtn.MinimumSize = new Size(0, pinH);
+            _pinBtn.Height = pinH;
             _pinBtn.Click += (s, e) => SetPin(!_tmuxPinned);
 
             // 布局：Dock 顺序 Fill 必须最先 Add（z-order 语义）

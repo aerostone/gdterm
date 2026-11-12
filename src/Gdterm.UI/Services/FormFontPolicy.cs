@@ -367,7 +367,9 @@ namespace Gdterm.UI.Services
                 foreach (var t in labels)
                 {
                     int tw = MeasureTextWidth(t, f, host);
-                    if (tw > 0) w = Math.Max(w, tw + DpiScale.V(host, 12));
+                    // 标签自己的盒宽 = 实测字宽 + 左右各 6（FitSingleLineLabel 的 padX）+ 2 余量，
+                    // 再留 8 的列间距 —— 只加 12 时标签右缘正好压进值列 2px（矩阵门 56–62px² 重叠 ×13）
+                    if (tw > 0) w = Math.Max(w, tw + DpiScale.V(host, 22));
                 }
             }
             return w;

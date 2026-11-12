@@ -200,6 +200,12 @@ namespace Gdterm.UI.Controls
             _splitApplied = true;              // 先置位：赋值本身会再触发 Layout/SizeChanged
             try
             {
+                // 两块都给最低高：底部「最近」区被压到 25px 时只剩标题行，
+                // 列表壳和收藏都看不见（矩阵门 d150-f14 实证）
+                int headerH = Math.Max(DpiScale.V(this, 20),
+                    FormFontPolicy.LineBox(Font, this, 1.25f)) + DpiScale.V(this, 60);
+                split.Panel1MinSize = DpiScale.V(this, 80);
+                split.Panel2MinSize = Math.Min(headerH, Math.Max(DpiScale.V(this, 60), split.Height / 2));
                 split.SplitterDistance = Math.Max(DpiScale.V(this, 160), (int)(split.Height * 0.45));
             }
             catch (Exception ex) { DiagLog.Swallowed("SessionBookmarksPanel.Splitter", ex); }

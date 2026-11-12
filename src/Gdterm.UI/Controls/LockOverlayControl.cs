@@ -36,6 +36,10 @@ namespace Gdterm.UI.Controls
             // 半透明黑遮罩：盖住 ClientArea 所有内容,
             BackColor = GdtermColorTable.Overlay;
             Dock = DockStyle.Fill;
+            // 字体现取全局 UI 字号：本控件是 UserControl，构造期 Font 还是系统默认值，
+            // 后面的 LineBox/RowStep 全部按 9pt 算 → 用户把 UI 调到 14pt 时遮罩里的
+            // 标题/说明/输入框一个像素都不长（矩阵门字号轴 1.00 实证）
+            Font = Services.FormFontPolicy.UiFont();
 
             // 中心面板：暗色 surface，与全局主题一致
             // 面板高跟随内容：按钮底 + 20（默认字号下约 190；大字号自动长高）
