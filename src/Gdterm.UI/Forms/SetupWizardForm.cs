@@ -208,7 +208,8 @@ namespace Gdterm.UI.Forms
             string s1 = step == 0 ? L10n.T("● 欢迎") : L10n.T("○ 欢迎");
             string s2 = step == 1 ? L10n.T("● 设置主密码") : L10n.T("○ 设置主密码");
             string s3 = step == 2 ? L10n.T("● 完成") : L10n.T("○ 完成");
-            return s1 + "    →    " + s2 + "    →    " + s3;
+            // 分隔用 2 空格：4 空格版整串宽 238px，而步骤条宿主只有 233px（R17 修正真实字宽后暴露）
+            return s1 + "  →  " + s2 + "  →  " + s3;
         }
 
         private void CreateWelcomePanel()

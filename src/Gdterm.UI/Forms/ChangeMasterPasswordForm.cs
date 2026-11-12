@@ -92,10 +92,16 @@ namespace Gdterm.UI.Forms
             Controls.Add(titleLabel);
             y += Math.Max(DpiScale.V(this, 46), FormFontPolicy.RowStep(this) + DpiScale.V(this, 10));
 
-            var tipLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
+            // 说明文字用原生 Label（AutoSize=false 才按宽换行）：AntdUI.Label 不换行，
+            // 带 \n 的长句实测被压成一行宽（需 367px 只给 344px），第二行根本不显示。
+            var tipLabel = new Label {
                 Text = L10n.T("修改后，KeePass 密码库 (gdterm.kdbx) 将用新主密码重新加密。\n请妥善保管新密码，丢失将无法找回。"),
-                Location = new Point(labelX, y)
-            });
+                AutoSize = false,
+                Location = new Point(labelX, y),
+                Size = new Size(clientW - labelX * 2, FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this, 1.7f) * 2),
+                ForeColor = GdtermColorTable.Muted,
+                Font = FormFontPolicy.UiFont()
+            };
             Controls.Add(tipLabel);
             y += Math.Max(DpiScale.V(this, 58), FormFontPolicy.RowStep(this) * 2);
 

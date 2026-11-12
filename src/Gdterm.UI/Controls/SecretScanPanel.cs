@@ -36,24 +36,20 @@ namespace Gdterm.UI.Controls
             BackColor = GdtermColorTable.Background;
 
             // ── 顶部：安全评分 + 控制按钮 ──
-            var topPanel = new TableLayoutPanel
+            // 换行流式而不是 TableLayoutPanel：R17 修正标签真实字宽后（分数 177px、状态 79px），
+            // 三列 AutoSize 的最小宽 = 177+91+86+30padding = 384 > 360 侧栏，
+            // 「复制选中」被顶出父面板 29px（CI ui-tree-check 越界实证）。
+            // 换行流的降级是换行而不是溢出：360 宽下标签一行、三个按钮一行。
+            var topPanel = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                WrapContents = true,
+                FlowDirection = FlowDirection.LeftToRight,
                 BackColor = GdtermColorTable.Surface,
-                Padding = new Padding(DpiScale.V(this, 15)),
-                ColumnCount = 3,
-                RowCount = 2
+                Padding = new Padding(DpiScale.V(this, 15))
             };
-            // 标签行 + 按钮行各自独立单元格（全 AutoSize 列）：
-            // 旧 4 列 Percent(100) 布局在 360 侧栏实测——分数 Label 自然宽 146 > 列实宽 116，
-            // 溢出压进「开始扫描」按钮 30px（CI ui-tree-check 1020px² 交叠实证）。
-            topPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            topPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            topPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            topPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            topPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             _lblScore = new AntdUI.Label {
                 Text = L10n.T("安全评分: --"),
@@ -104,11 +100,11 @@ namespace Gdterm.UI.Controls
             _btnCopySel.Name = "SecretScanCopySelButton";
             _btnCopySel.Click += (s, e) => OnCopySelectedClick();
 
-            topPanel.Controls.Add(_lblScore, 0, 0);
-            topPanel.Controls.Add(_lblStats, 1, 0);
-            topPanel.Controls.Add(_btnScan, 0, 1);
-            topPanel.Controls.Add(_btnStop, 1, 1);
-            topPanel.Controls.Add(_btnCopySel, 2, 1);
+            topPanel.Controls.Add(_lblScore);
+            topPanel.Controls.Add(_lblStats);
+            topPanel.Controls.Add(_btnScan);
+            topPanel.Controls.Add(_btnStop);
+            topPanel.Controls.Add(_btnCopySel);
 
             // ── 进度条 ──
             _progress = new ProgressBar { Dock = DockStyle.Top, Height = 3, Style = ProgressBarStyle.Continuous };
