@@ -98,6 +98,8 @@ namespace Gdterm.Tests.Ui
                 AppDomain.CurrentDomain.BaseDirectory, "ui-smoke");
             Directory.CreateDirectory(outDir);
             _smokeOutDir = outDir;
+            Environment.SetEnvironmentVariable("GDTERM_TRACE_FILE", Path.Combine(outDir, "ctor-trace.log"));
+            if (Environment.GetEnvironmentVariable("GDTERM_SMOKE_PROBE") == "1") NativeProbe(outDir);
             StartWatchdog(outDir);
             Progress("start");
             Console.WriteLine("=== gdterm UI smoke (screenshots to " + outDir + ") ===");
@@ -382,6 +384,37 @@ namespace Gdterm.Tests.Ui
             for (var p = t.Parent; p != null && (p is Panel || p is UserControl); p = p.Parent)
                 x += p.Left;
             return x;
+        }
+
+        /// <summary>
+        /// 临时探针（GDTERM_SMOKE_PROBE=1）：把"原生 TreeView 挂到父容器"拆成最小步骤逐步落盘。
+        /// 用来回答"是 WinForms 原生控件在建句柄时挂，还是我们自己的代码挂"。
+        /// </summary>
+        private static void NativeProbe(string outDir)
+        {
+            string f = Path.Combine(outDir, "ctor-trace.log");
+            Action<string> P = st =>
+            {
+                try { File.AppendAllText(f, DateTime.Now.ToString("HH:mm:ss.fff") + " probe:" + st + "\n"); } catch { }
+            };
+            P("start");
+            var host = new UserControl();
+            P("host");
+            var tv = new TreeView();
+            P("tv-new");
+            host.Controls.Add(tv);
+            P("tv-added-noimagelist");
+            var il = new ImageList { ImageSize = new Size(16, 16), ColorDepth = ColorDepth.Depth32Bit };
+            il.Images.Add("folder", new Bitmap(16, 16));
+            P("il-built");
+            tv.ImageList = il;
+            P("il-assigned");
+            tv.Nodes.Add(new TreeNode("x"));
+            P("nodes-added");
+            tv.ExpandAll();
+            P("expanded");
+            tv.Dispose(); host.Dispose();
+            P("done");
         }
 
         internal static void AssertNoDockOverlap(Control root, string where)

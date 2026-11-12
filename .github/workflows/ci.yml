@@ -105,6 +105,7 @@ jobs:
           $ErrorActionPreference = 'Continue'
           $testExe = "src\Gdterm.Tests\bin\$env:CONFIGURATION\Gdterm.Tests.exe"
           # 输出必须落盘：冒烟红过而"只报一行 FAIL、dump 一张没有"时，没有 stdout 就无法定位
+          $env:GDTERM_SMOKE_PROBE = "1"   # 临时：原生控件探针（定位 connection-tree 构造挂死）
           & $testExe --ui-smoke "ui-smoke" 2>&1 | Tee-Object -FilePath ui-smoke.log
           exit $LASTEXITCODE
 
