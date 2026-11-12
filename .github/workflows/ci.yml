@@ -115,6 +115,19 @@ jobs:
           python tools\ui-tree-check.py ui-smoke 2>&1 | Tee-Object -FilePath ui-tree-check-report.txt
           exit $LASTEXITCODE
 
+      # L3 像素指纹门（docs/UI-UX-VERIFICATION.md §4.3）：把"画面长什么样"压成
+      # 平均亮度 / 近白近黑占比 / 主导色占比三组数，与 tools/ui-baseline/ 比对。
+      # 阈值是按噪声实测定的（同镜像两次运行噪声 ≤0.002，真实外观变更 ≥0.13）。
+      # 改了外观就跑 --write 更新基线并在 PR 里 review 那份 diff。
+      - name: L3 pixel fingerprint gate
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $env:PYTHONIOENCODING = "utf-8"
+          $env:PYTHONUTF8 = "1"
+          python tools\ui-pixel-fingerprint.py ui-smoke 2>&1 | Tee-Object -FilePath ui-pixel-report.txt
+          exit $LASTEXITCODE
+
       # L2 矩阵门（docs/UI-UX-VERIFICATION.md §4.2）：同一批窗/面板在
       # DPI 100/150% × UI 字号 9/14pt × 主题 Dark/OLED 共 8 格下重跑，复用 ui-tree-check 的 R1-R6
       # （--dpi-factor 让逻辑阈值随该格系数走），再由 ui-matrix-check 做反空转比对：
@@ -179,6 +192,7 @@ jobs:
             ui-matrix-run.log
             ui-matrix-report.txt
             ui-tree-check-report.txt
+            ui-pixel-report.txt
             perf-bench.json
             perf-bench-crash.txt
             perf-seh.txt
