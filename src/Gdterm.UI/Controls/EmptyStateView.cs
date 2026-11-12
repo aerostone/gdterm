@@ -64,15 +64,19 @@ namespace Gdterm.UI.Controls
                 Padding = Padding.Empty
             };
 
+            // 标题宽自量而不是 AutoSize：AntdUI.Label 的 AutoSize 用库内 sps 量，
+            // 比 GDI 实测窄约 10%（CI dump 实证：「还没有命令历史」需 100px，AutoSize 只给 89px，
+            // 「没有匹配的条目」需 100px 同样只给 89px）——超出的字符直接被裁掉。
             _title = new AntdUI.Label
             {
                 Text = title ?? string.Empty,
-                AutoSize = true,
+                AutoSize = false,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = FormFontPolicy.UiFont(0.5f, FontStyle.Bold),
                 Margin = new Padding(0, 0, 0, DpiScale.V(null, 6)),
                 TextAlign = ContentAlignment.MiddleCenter
             };
+            FitTitleWidth();
             flow.Controls.Add(_title);
             AccessibleName = title;
 
@@ -149,6 +153,7 @@ namespace Gdterm.UI.Controls
             {
                 _title.Text = title;
                 AccessibleName = title;
+                FitTitleWidth();
             }
             if (description != null && _desc != null && _desc.Text != description)
                 _desc.Text = description;
@@ -156,6 +161,28 @@ namespace Gdterm.UI.Controls
             if (empty) CenterBox();
         }
 
+
+        /// <summary>
+        /// 按真实 GDI 度量定标题宽（AutoSize 给不准，见构造函数注释）。
+        /// 高度用字体行盒，避免 10pt 中文被 17px 的默认高裁掉下缘。
+        /// </summary>
+        private void FitTitleWidth()
+        {
+            try
+            {
+                string text = _title.Text ?? string.Empty;
+                int w = 0;
+                foreach (var line in text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+                {
+                    int m = TextRenderer.MeasureText(line, _title.Font, new Size(int.MaxValue, int.MaxValue),
+                        TextFormatFlags.NoPadding | TextFormatFlags.SingleLine).Width;
+                    if (m > w) w = m;
+                }
+                int h = FormFontPolicy.LineBox(_title.Font, null, 1.45f);
+                _title.Size = new Size(Math.Max(DpiScale.V(null, 20), w + DpiScale.V(null, 4)), h);
+            }
+            catch (Exception) { }
+        }
 
         /// <summary>空间不足时舍掉主操作按钮；空间恢复再挂回来（不抖动：放不下就继续收着）。</summary>
         private void EnsureActionFits()
