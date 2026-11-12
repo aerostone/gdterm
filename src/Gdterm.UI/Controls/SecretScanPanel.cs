@@ -194,6 +194,7 @@ namespace Gdterm.UI.Controls
             _btnStop.Enabled = true;
             _progress.Style = ProgressBarStyle.Marquee;
             _lblStatus.Text = L10n.T("扫描中...");
+            _lblStatus.ForeColor = GdtermColorTable.Muted;
             _lblScore.Text = L10n.T("安全评分: 扫描中...");
             _lblScore.ForeColor = GdtermColorTable.Success;
 
@@ -254,6 +255,7 @@ namespace Gdterm.UI.Controls
                 report.CriticalCount, report.HighCount, report.MediumCount, report.LowCount);
 
             _lblStatus.Text = string.Format(L10n.T("扫描耗时: {0:F1}秒"), report.Duration.TotalSeconds);
+            _lblStatus.ForeColor = GdtermColorTable.Muted;   // 成功态复位，别把上一轮的红字留在这
 
             if (_empty != null)
             {
@@ -278,7 +280,9 @@ namespace Gdterm.UI.Controls
         private void OnError(string error)
         {
             if (InvokeRequired) { BeginInvoke(new Action(() => OnError(error))); return; }
+            // 失败必须一眼可见：状态行以前用中性灰写「错误: xxx」，和「就绪」长得一样
             _lblStatus.Text = L10n.T("错误: ") + error;
+            _lblStatus.ForeColor = GdtermColorTable.Danger;
             _btnScan.Enabled = true;
             _btnStop.Enabled = false;
             _progress.Style = ProgressBarStyle.Continuous;

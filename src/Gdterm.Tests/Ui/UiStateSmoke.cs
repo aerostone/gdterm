@@ -319,7 +319,7 @@ namespace Gdterm.Tests.Ui
         // ── 诊断辅助 ────────────────────────────────────────────────────────────
 
         /// <summary>把可见标签的文案与颜色打进日志（颜色断言红了不用再猜一轮）。</summary>
-        private static void DiagLabels(Control root, Action<string> log)
+        internal static void DiagLabels(Control root, Action<string> log)
         {
             foreach (Control c in UiSmokeRunner.AllControls(root))
             {
@@ -335,7 +335,7 @@ namespace Gdterm.Tests.Ui
             return c != null && c.GetType().Name.IndexOf("Label", StringComparison.Ordinal) >= 0;
         }
 
-        private static Control FindLabelByText(Control root, string text)
+        internal static Control FindLabelByText(Control root, string text)
         {
             if (string.IsNullOrEmpty(text)) return null;
             foreach (Control c in UiSmokeRunner.AllControls(root))
@@ -346,7 +346,7 @@ namespace Gdterm.Tests.Ui
             return null;
         }
 
-        private static string DescribeLabels(Control root)
+        internal static string DescribeLabels(Control root)
         {
             var sb = new System.Text.StringBuilder();
             foreach (Control c in UiSmokeRunner.AllControls(root))
@@ -362,7 +362,7 @@ namespace Gdterm.Tests.Ui
         }
 
         /// <summary>控件在窗体客户区里的矩形——截图是 PrintWindow 客户区，直接对得上。</summary>
-        private static Rectangle ClientRect(Form f, Control c)
+        internal static Rectangle ClientRect(Form f, Control c)
         {
             try { return new Rectangle(f.PointToClient(c.PointToScreen(Point.Empty)), c.Size); }
             catch { return Rectangle.Empty; }
@@ -373,7 +373,7 @@ namespace Gdterm.Tests.Ui
         /// 这是"用户真的看见了语义色"的证据；读 Control.ForeColor 不算（见错误态处的注释）。
         /// 返回 -1 表示截图缺失（判据不成立，调用方阈值会红）。
         /// </summary>
-        private static int CountColorPixels(string pngPath, Rectangle rect, Color want, int tol)
+        internal static int CountColorPixels(string pngPath, Rectangle rect, Color want, int tol)
         {
             if (string.IsNullOrEmpty(pngPath) || !File.Exists(pngPath)) return -1;
             if (rect.Width <= 0 || rect.Height <= 0) return -1;
@@ -399,7 +399,7 @@ namespace Gdterm.Tests.Ui
             catch { return -1; }
         }
 
-        private static string Hex(Color c)
+        internal static string Hex(Color c)
         {
             return "#" + c.R.ToString("X2") + c.G.ToString("X2") + c.B.ToString("X2") +
                    (c.A == 255 ? "" : "/A" + c.A.ToString("X2"));

@@ -8,17 +8,17 @@
 #   none           当前零验证 —— 技术债，见 docs/UI-UX-VERIFICATION.md §5 收敛计划
 #
 # floor：dump 条目数下限。删/降级任何 dump 覆盖都会让门变红（棘轮）。
-# floor: 43
+# floor: 52（2026-11 矩阵扩页 + 失败态：dump 覆盖 43 → 52，降级任何一条都会红）
 #
 Forms/MainForm.cs | dump:mainform | 主壳：菜单/树/Tab/底栏/状态
 Forms/AiSettingsForm.cs | dump:ai-settings |
 Forms/AppearanceSettingsForm.cs | dump:appearance-settings |
 Forms/ChangeMasterPasswordForm.cs | dump:change-masterpwd |
-Forms/ConnectionDialog.cs | dump:connection-ssh,connection-rdp,connection-serial | 三协议 + 高级区展开
+Forms/ConnectionDialog.cs | dump:connection-ssh,connection-rdp,connection-serial,fail-conn-emptyhost,fail-conn-recovered | 三协议 + 高级区展开 + 失败态（空主机拦截/改对后收回）
 Forms/DangerousCommandConfigForm.cs | dump:dangerous-cmd |
 Forms/KeePassEntryPicker.cs | dump:keepass-picker |
 Forms/KeePassManagerForm.cs | dump:keepass-manager,keepass-manager-empty | 有数据 / 空态两态
-Forms/KeePassUnlockForm.cs | dump:keepass-unlock |
+Forms/KeePassUnlockForm.cs | dump:keepass-unlock,fail-unlock-wrongpwd,fail-unlock-recovered | 密码错常驻提示（此前只有 2 秒 toast）
 Forms/PasswordGeneratorForm.cs | dump:pwd-generator |
 Forms/PasswordHealthForm.cs | dump:password-health |
 Forms/QuickCommandEditorForm.cs | dump:quickcmd-editor |
@@ -35,24 +35,24 @@ Controls/CommandPaletteForm.cs | manual:transient modal (hotkey-triggered, input
 Controls/AiChatPanel.cs | none | 侧栏常驻
 Controls/BatchCommandPanel.cs | dump:batch-command | 侧栏常驻
 Controls/BarFit.cs | none | 工具条自适应收口（纯布局辅助，随 TableShell/ListShell 的 dump 间接验证）
-Controls/BottomBarPanel.cs | none | 主壳底栏（mainform dump 内含节点，但无独立断言）
-Controls/CommandHistoryPanel.cs | dump:command-history | 侧栏常驻（审计 C7-2 入 dump）
+Controls/BottomBarPanel.cs | dump:bottom-bar | 主壳底栏（2026-11 起独立 dump：图标按钮排 + 窄高条）
+Controls/CommandHistoryPanel.cs | dump:command-history,fail-history-load | 侧栏常驻（审计 C7-2 入 dump）+ 读取失败态
 Controls/CommandTemplatePanel.cs | dump:command-template | 侧栏常驻
 Controls/ConnectionQuickJumpForm.cs | none | 模态浮层
-Controls/ConnectionTreeControl.cs | none | 主壳常驻（mainform dump 内含节点）
+Controls/ConnectionTreeControl.cs | dump:connection-tree | 主壳常驻（2026-11 起独立 dump：树 + 折叠窄边）
 Controls/DangerousCommandDialog.cs | none | 模态浮层
 Controls/HostKeyDialog.cs | dump:hostkey-unknown,hostkey-changed | P0 主机密钥校验决策出口；首次信任/密钥变更两态（指纹可见性比排版更重要）
 Controls/FilePaneControl.cs | none | SFTP 双栏
 Controls/HealthMonitorPanel.cs | dump:health-monitor | 侧栏常驻
 Controls/HighlightRulePanel.cs | dump:highlight-rule | 侧栏常驻
 Controls/KeyBindingPanel.cs | dump:key-binding | 侧栏常驻（审计 C7-2 入 dump）
-Controls/LockOverlayControl.cs | none | 主壳遮罩（mainform 锁定态 dump 内含）
+Controls/LockOverlayControl.cs | dump:lock-overlay | 主壳遮罩（2026-11 起独立 dump：覆盖层输入框/按钮排）
 Controls/LogonScriptPanel.cs | dump:logon-script | 侧栏常驻（审计 C7-2 入 dump）
 Controls/MacroPanel.cs | dump:macro | 侧栏常驻
 Controls/MultiChannelPanel.cs | dump:multi-channel | 侧栏常驻
 Controls/NotificationCenterPanel.cs | dump:notification-center | 侧栏常驻
 Controls/PortForwardPanel.cs | dump:port-forward | 侧栏常驻（审计 C7-2 入 dump）
-Controls/SecretScanPanel.cs | dump:secret-scan | 侧栏常驻（审计 C7-2 入 dump）
+Controls/SecretScanPanel.cs | dump:secret-scan,fail-scan-error | 侧栏常驻（审计 C7-2 入 dump）+ 扫描失败态（Danger 状态行）
 Controls/SessionBookmarksPanel.cs | dump:bookmarks | 侧栏常驻
 Controls/SftpDualPanePanel.cs | none | 标签页常驻
 Controls/SnippetSearchPanel.cs | dump:snippet-search | 模态浮层
@@ -65,11 +65,11 @@ Controls/TerminalControl.Links.cs | manual:随宿主 | 部分类：链接探测/
 Controls/TerminalControl.Triggers.cs | manual:随宿主 | 部分类：输出触发器（P1-7），随 TerminalControl
 Controls/TerminalControl.Recording.cs | manual:随宿主 | 部分类：会话录制抓取（P1-2）；回放侧由 dump:session-recordings 覆盖
 Controls/TextPromptDialog.cs | manual:瞬态输入框 | 重命名标签用；Esc/取消路径靠人工验收（无落盘副作用）
-Controls/RemoteMonitorPanel.cs | manual:需真实 SSH 会话 | 主机资源面板（P1-4），采样靠独立 SSH 连接，无 dump 意义
-Controls/TerminalSearchBar.cs | none | 终端内浮条
+Controls/RemoteMonitorPanel.cs | dump:remote-monitor | 主机资源面板（P1-4）：采样需真实 SSH，但空数据态的度量条几何可 dump（2026-11）
+Controls/TerminalSearchBar.cs | dump:terminal-search | 终端内浮条（2026-11 起独立 dump：搜索条控高）
 Controls/ToolboxPanel.cs | dump:toolbox | 侧栏常驻（审计 C7-2 入 dump）
 Controls/TransferCenterPanel.cs | dump:transfer-center | 侧栏常驻
-Controls/WelcomePanel.cs | none | 标签页常驻
+Controls/WelcomePanel.cs | dump:welcome | 标签页常驻（2026-11 起独立 dump：欢迎页/空态）
 Controls/MenuTip.cs | manual:瞬态 | 菜单悬停提示，无稳定生命周期
 Controls/TerminalCompletion.cs | manual:瞬态 | 补全候选数据源
 Controls/TerminalCompletionPopup.cs | manual:瞬态 | 补全浮层

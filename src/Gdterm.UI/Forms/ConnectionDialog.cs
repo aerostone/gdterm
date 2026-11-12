@@ -92,6 +92,9 @@ namespace Gdterm.UI.Forms
         private int _expandedDelta;   // 本次展开实际增加的高度（收起时原样减回，兼容工作区封顶）
         private Control _btnPanel;      // 日志用
         private AntdUI.Button _okBtn;
+        /// <summary>底部校验错误行（Danger 语义色，默认隐藏）。此前保存不做任何校验：
+        /// 主机留空也能“创建”成功，回到列表里是一条点不开的连接——失败态必须当场可见。</summary>
+        private AntdUI.Label _errorLabel;
         private Panel _topPanel;
 
         private readonly IKeePassService _keepass;
@@ -519,6 +522,18 @@ namespace Gdterm.UI.Forms
                 Padding = new Padding(0, DpiScale.V(this, 7), DpiScale.V(this, 16), DpiScale.V(this, 7))
             };
             _btnPanel = btnPanel;
+            // 校验错误行：钉在按钮行之上（Dock 处理顺序 = 后加的先占边，故必须加在 btnPanel 之前）
+            _errorLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label
+            {
+                Name = "ConnDialogErrorLabel",
+                Dock = DockStyle.Bottom,
+                Text = string.Empty,
+                Visible = false,
+                ForeColor = GdtermColorTable.Danger,
+                TextAlign = ContentAlignment.MiddleLeft,
+                Padding = new Padding(DpiScale.V(this, 16), 0, DpiScale.V(this, 16), DpiScale.V(this, 2)),
+                BackColor = GdtermColorTable.Background
+            });
             var okBtn = new AntdUI.Button {
                 Text = _isNew ? L10n.T("创建") : L10n.T("保存"),
                 Type = AntdUI.TTypeMini.Primary,
@@ -531,7 +546,12 @@ namespace Gdterm.UI.Forms
                 Margin = new Padding(0, 0, DpiScale.V(this, 8), 0)
             };
             Services.FormFontPolicy.SizeActionButton(this, cancelBtn, 12, 5);
-            okBtn.Click += (s, e) => { SaveToConfig(); DialogResult = DialogResult.OK; Close(); };
+            okBtn.Click += (s, e) =>
+            {
+                if (!CommitValidated()) return;
+                DialogResult = DialogResult.OK;
+                Close();
+            };
             _okBtn = okBtn;
             btnPanel.Controls.Add(okBtn);      // RightToLeft：第一个在最右
             cancelBtn.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
@@ -539,6 +559,7 @@ namespace Gdterm.UI.Forms
 
             // Dock 顺序：后添加的先布局——Top 先钉住，Bottom 再钉住，Fill 吃剩余空间
             Controls.Add(_advancedHost);
+            Controls.Add(_errorLabel);
             Controls.Add(btnPanel);
             Controls.Add(topPanel);
 
@@ -546,6 +567,9 @@ namespace Gdterm.UI.Forms
             _hostBox.TextChanged += (s, e) => UpdateAutoMatchPreview();
             _usernameBox.TextChanged += (s, e) => UpdateAutoMatchPreview();
             _portBox.ValueChanged += (s, e) => UpdateAutoMatchPreview();
+            // 就地收回旧错误：用户改的就是被判错的那格，不该还挂着红字
+            _hostBox.TextChanged += (s, e) => ClearErrorIfResolved();
+            _portBox.ValueChanged += (s, e) => ClearErrorIfResolved();
 
             AcceptButton = okBtn;
             CancelButton = cancelBtn;
@@ -868,6 +892,75 @@ namespace Gdterm.UI.Forms
 
             // 配置过高级选项则自动展开，避免“明明配了却看不见”
             MaybeAutoExpand();
+        }
+
+        /// <summary>
+        /// 保存前的就地校验：返回 true 才允许关窗。空主机、超范围端口、含空白的地址三种。
+        /// 刻意不用“按钮置灰”做唯一防护：置灰只说明“不行”，不说“为什么”，用户会去找浮动提示。
+        /// </summary>
+        private bool CommitValidated()
+        {
+            string error = FirstValidationError(out Control culprit);
+            if (error == null) { SetError(null); return true; }
+
+            SetError(error);
+            if (culprit != null && culprit.CanFocus) culprit.Focus();
+            DiagLog.Info("ConnDialog", "validate-blocked: " + error);
+            return false;
+        }
+
+        /// <summary>第一个不通过的字段（message 为 null 表示全部通过）。</summary>
+        private string FirstValidationError(out Control culprit)
+        {
+            culprit = null;
+            string host = (_hostBox.Text ?? "").Trim();
+            bool serial = IsSerialProtocol();
+            if (host.Length == 0)
+            {
+                culprit = _hostBox;
+                return serial ? L10n.T("串口设备路径不能为空") : L10n.T("主机不能为空");
+            }
+            if (host.IndexOf(' ') >= 0)
+            {
+                culprit = _hostBox;
+                return L10n.T("主机不能包含空格");
+            }
+            int port = (int)_portBox.Value;
+            if (!serial && (port < 1 || port > 65535))
+            {
+                culprit = _portBox;
+                return L10n.Tf("端口必须在 1-65535 之间，当前 {0}", port);
+            }
+            return null;
+        }
+
+        private bool IsSerialProtocol()
+        {
+            var v = _protocolCombo != null ? _protocolCombo.SelectedValue as string : null;
+            return string.Equals(v, "Serial", StringComparison.Ordinal);
+        }
+
+        /// <summary>写错误行（null/空 = 收起）。高度归零，没错误时不占位。</summary>
+        private void SetError(string message)
+        {
+            if (_errorLabel == null) return;
+            bool show = !string.IsNullOrEmpty(message);
+            _errorLabel.Text = show ? message : string.Empty;
+            _errorLabel.AccessibleName = show ? message : null;
+            if (_errorLabel.Visible != show)
+            {
+                _errorLabel.Visible = show;
+                _errorLabel.Height = show ? FormFontPolicy.LineBox(_errorLabel.Font, this, 1.6f) : 0;
+                PerformLayout();
+            }
+        }
+
+        /// <summary>字段改好了就立即收回错误（不拆弹：改成仍不合法就继续挂着）。</summary>
+        private void ClearErrorIfResolved()
+        {
+            if (_errorLabel == null || !_errorLabel.Visible) return;
+            Control ignored;
+            if (FirstValidationError(out ignored) == null) SetError(null);
         }
 
         private void SaveToConfig()

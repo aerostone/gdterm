@@ -20,6 +20,12 @@ namespace Gdterm.UI.Forms
         private readonly IKeePassService _keepassService;
         private AntdUI.Input _passwordBox;
         private AntdUI.Label _statusLabel;
+        /// <summary>上一次解锁失败的文案（常驻到用户重新输入为止）。
+        /// 此前失败只发一个 toast + 清空密码框：toast 两秒就没了，用户回来只看到一个空框，
+        /// 分不清“我当时没输”还是“输了但密码错了”。</summary>
+        private string _unlockError;
+        /// <summary>内部改密码框文本时置位，避免联动校验把错误提示冲成“密码不能为空”。</summary>
+        private bool _suppressValidate;
         private bool _busy;
         private AntdUI.Button _unlockButton;
         private AntdUI.Button _cancelButton;
@@ -66,6 +72,7 @@ namespace Gdterm.UI.Forms
             y += Math.Max(DpiScale.V(this, 44), FormFontPolicy.RowStep(this) + DpiScale.V(this, 10));
 
             _statusLabel = new AntdUI.Label {
+                Name = "UnlockStatusLabel",
                 Text = L10n.T("请输入主密码以解锁 KeePass 密码库"),
                 Location = new Point(pad, y)
             };
@@ -75,6 +82,7 @@ namespace Gdterm.UI.Forms
 
             // ── 密码输入（AntdUI.Input：占位符/清除钮/回车提交）──
             _passwordBox = new AntdUI.Input {
+                Name = "UnlockPasswordBox",
                 Location = new Point(pad, y),
                 Size = new Size(clientW - pad * 2, fieldH),
                 PlaceholderText = L10n.T("主密码"),
@@ -120,14 +128,37 @@ namespace Gdterm.UI.Forms
         /// <summary>输入校验：密码非空才允许解锁（并给出即时反馈，而不是点完再弹框）。</summary>
         private void ValidateInput()
         {
+            if (_suppressValidate) return;
             bool ok = !string.IsNullOrWhiteSpace(_passwordBox.Text);
+            if (ok) _unlockError = null;   // 重新输入即收回旧错误
             if (_unlockButton != null && !_busy) _unlockButton.Enabled = ok;
-            if (_statusLabel != null)
+            if (_statusLabel == null) return;
+
+            if (_unlockError != null)
+            {
+                _statusLabel.Text = _unlockError;
+                _statusLabel.ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Danger;
+            }
+            else
             {
                 _statusLabel.Text = ok ? L10n.T("请输入主密码以解锁 KeePass 密码库") : L10n.T("密码不能为空");
                 _statusLabel.ForeColor = ok
                     ? System.Drawing.SystemColors.ControlText
                     : Gdterm.UI.Diagnostics.GdtermColorTable.Danger;
+            }
+        }
+
+        /// <summary>失败写入常驻提示（Danger 色）；密码框清空但不覆盖成“密码不能为空”。</summary>
+        private void ShowUnlockError(string message)
+        {
+            _unlockError = message;
+            _suppressValidate = true;
+            try { _passwordBox.Text = ""; } finally { _suppressValidate = false; }
+            if (_statusLabel != null)
+            {
+                _statusLabel.Text = message;
+                _statusLabel.ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Danger;
+                _statusLabel.AccessibleName = message;
             }
         }
 
@@ -159,19 +190,22 @@ namespace Gdterm.UI.Forms
                 }
                 else
                 {
-                    AntdUI.Message.error(this, L10n.T("密码错误或密码库文件损坏"));
-                    _passwordBox.Text = "";
+                    // 失败不能只靠 toast：toast 闪完就没了，错误必须留在界面上
+                    ShowUnlockError(L10n.T("密码错误或密码库文件损坏"));
                     _passwordBox.Focus();
                 }
             }
             catch (Exception ex)
             {
-                AntdUI.Message.error(this, L10n.T("解锁失败：") + ex.Message);
+                ShowUnlockError(L10n.T("解锁失败：") + ex.Message);
             }
             finally
             {
-                _unlockButton.Enabled = true;
+                _busy = false;
                 _unlockButton.Text = L10n.T("解锁");
+                // 按钮可用性/状态文案只有一个来源（ValidateInput）。此前 finally 无条件
+                // Enabled = true，于是失败后密码框是空的、按钮却是亮的，点下去只弹个 toast。
+                ValidateInput();
             }
         }
 

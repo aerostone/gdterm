@@ -139,6 +139,20 @@ namespace Gdterm.UI.Controls
         /// <summary>空态主按钮（未提供 actionText 时为 null）。</summary>
         public AntdUI.Button ActionButton { get { return _action; } }
 
+        /// <summary>
+        /// 就地改主按钮文案（同一面板在“空”与“坏”下需要不同动作：打开终端 / 重试）。
+        /// 只改文案不改可见性——宽度让位由 <see cref="EnsureActionFits"/> 统一管，两处都写会抖。
+        /// </summary>
+        public void SetAction(string text)
+        {
+            if (_action == null || string.IsNullOrEmpty(text)) return;
+            if (_action.Text == text) return;
+            _action.Text = text;
+            _action.AccessibleName = text;
+            // 文案变长会超出按钮宽（SizeActionButton 是按当时文案算的）——这里按新文案重量一次
+            try { FormFontPolicy.SizeActionButton(this, _action, 12, 4); } catch (Exception) { }
+        }
+
         /// <summary>切换显示：数据源为空时 true。加载中请用 BusyScope，不要复用本组件。</summary>
         public void SetEmpty(bool empty)
         {
@@ -151,12 +165,23 @@ namespace Gdterm.UI.Controls
         /// </summary>
         public void SetEmpty(bool empty, string title, string description = null)
         {
+            SetEmpty(empty, title, description, false);
+        }
+
+        /// <summary>
+        /// 同上，额外区分「空」与「坏」：isError=true 时标题取 Danger 语义色。
+        /// 读取失败如果复用中性空态文案，用户会以为“本来就没有数据”——这是最常见的一类静默故障。
+        /// </summary>
+        public void SetEmpty(bool empty, string title, string description, bool isError)
+        {
             if (title != null && _title.Text != title)
             {
                 _title.Text = title;
                 AccessibleName = title;
                 FitTitleWidth();
             }
+            var wantColor = isError ? GdtermColorTable.Danger : GdtermColorTable.Foreground;
+            if (_title.ForeColor != wantColor) _title.ForeColor = wantColor;
             if (description != null && _desc != null && _desc.Text != description)
                 _desc.Text = description;
             SetEmpty(empty);

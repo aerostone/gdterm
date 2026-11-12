@@ -61,9 +61,13 @@ namespace Gdterm.Tests.Ui
         /// <summary>最后一次送达的密码——断言"界面填的密码原样到服务"，而不是被清洗成空。</summary>
         public string LastPassword { get; private set; }
 
+        /// <summary>false = 模拟"密码错/库损坏"（失败态冒烟用）。默认 true。</summary>
+        public bool UnlockSucceeds { get; set; } = true;
+
         public Task<bool> EnsureDatabaseAsync(string masterPassword)
         {
             LastPassword = masterPassword;
+            if (!UnlockSucceeds) return Task.FromResult(false);
             var gate = UnlockGate;
             if (gate != null) return gate.Task;
             return Task.FromResult(true);

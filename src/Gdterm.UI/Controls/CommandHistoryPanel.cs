@@ -134,9 +134,12 @@ namespace Gdterm.UI.Controls
 
 
             // 审计 C1：空态引导（此前打开就是“一整片背景色”，分不清空/加载/坏了）
+            // 主按钮必须真有动作：原来写的是「打开终端」+ 没接 ActionClicked，点了完全没反应（死按钮）。
+            // 本面板拿不到终端宿主，能自洽兑现的是「刷新」；失败态复用它当「重试」。
             _empty = EmptyStateView.Attach(this, L10n.T("还没有命令历史"),
                 L10n.T("在终端里执行过的命令会自动记录在这里，可按命令内容或主机过滤"),
-                L10n.T("打开终端"));
+                L10n.T("刷新"),
+                (s2, e2) => RefreshHistory());
 
             // 事件绑定
             _searchBox.TextChanged += (s, e) => RefreshHistory();
@@ -177,7 +180,19 @@ namespace Gdterm.UI.Controls
             if (_hostFilter.SelectedIndex > 0)
                 query.Hostname = _hostFilter.SelectedValue as string;
 
-            var entries = _store.Query(query);
+            System.Collections.Generic.IList<CommandHistoryEntry> entries;
+            try
+            {
+                entries = _store.Query(query);
+            }
+            catch (Exception ex)
+            {
+                // 读坏了 ≠ 没有记录：以前这里静默当空（只进 DiagLog），用户看到“还没有命令历史”，
+                // 会以为审计数据本来就没有——审计面板最不该骗人的就是这个。
+                try { DiagLog.Error("CommandHistoryPanel.Refresh", ex); } catch (Exception) { }
+                ShowLoadError(ex.Message);
+                return;
+            }
 
             var items = new System.Collections.Generic.List<ListViewItem>(entries.Count);
             foreach (var entry in entries)
@@ -192,6 +207,8 @@ namespace Gdterm.UI.Controls
             }
             _shell.SetItems(items);
             _statusLabel.Text = L10n.Tf("共 {0} 条记录", entries.Count);
+            _statusLabel.ForeColor = GdtermColorTable.Muted;
+            if (_empty != null) _empty.SetAction(L10n.T("刷新"));
 
             // 审计 C1：空态文案区分“确实没有”与“筛选后为空”
             if (_empty != null)
@@ -203,6 +220,22 @@ namespace Gdterm.UI.Controls
                     filtered
                         ? L10n.T("换个关键词，或把主机过滤切回“所有主机”")
                         : L10n.T("在终端里执行过的命令会自动记录在这里，可按命令内容或主机过滤"));
+            }
+        }
+
+        /// <summary>
+        /// 读取失败态：错误标题取 Danger 色 + 主按钮变「重试」，与中性空态区分开。
+        /// </summary>
+        private void ShowLoadError(string message)
+        {
+            _shell.SetItems(new System.Collections.Generic.List<ListViewItem>());
+            _statusLabel.Text = L10n.T("读取失败");
+            _statusLabel.ForeColor = GdtermColorTable.Danger;
+            if (_empty != null)
+            {
+                _empty.SetAction(L10n.T("重试"));
+                _empty.SetEmpty(true, L10n.T("命令历史读取失败"),
+                    string.IsNullOrEmpty(message) ? L10n.T("存储文件可能损坏，点击重试") : message, true);
             }
         }
 

@@ -620,7 +620,11 @@ def main():
                               # 2026-11 新增的 10 个侧栏面板 dump（同为面板，无 Close 语义）
                               "macro", "bookmarks", "command-template", "highlight-rule",
                               "transfer-center", "notification-center", "multi-channel",
-                              "batch-command", "health-monitor", "snippet-search")):
+                              "batch-command", "health-monitor", "snippet-search",
+                              # 2026-11 补的 6 个"以前从没进过 dump"的页 + 失败态宿主（同为面板）
+                              "remote-monitor", "bottom-bar", "lock-overlay", "welcome",
+                              "connection-tree", "terminal-search", "fail-history-load",
+                              "fail-scan-error")):
             check(True, "关闭绑定免判(" + fname + ")")
         else:
             closelike = [n for (n, _, _, _, _) in all_nodes

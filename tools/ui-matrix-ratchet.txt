@@ -1,0 +1,41 @@
+# L2 矩阵覆盖度棘轮：这里的每一页都必须在每一个显示格子都产出 dump。
+# 新增/改名页面时同步改本文件——只加冒烟清单不加这里会被矩阵门判红
+# （这条棘轮存在的理由：页面可以"只在低 DPI 验过"而没人发现）。
+command-history
+port-forward
+secret-scan
+key-binding
+toolbox
+logon-script
+macro
+bookmarks
+command-template
+highlight-rule
+transfer-center
+notification-center
+multi-channel
+batch-command
+health-monitor
+snippet-search
+remote-monitor
+bottom-bar
+lock-overlay
+welcome
+connection-tree
+terminal-search
+ai-settings
+appearance-settings
+change-masterpwd
+dangerous-cmd
+keepass-picker
+keepass-unlock
+keepass-manager
+otp-manager
+add-otp
+pwd-generator
+quickcmd-editor
+sshkey-manager
+transfer-progress
+trash
+sftp-permission
+setup-wizard

@@ -345,10 +345,15 @@ def load_registry():
                     continue
                 if line.startswith("#"):
                     if "floor:" in line:
-                        try:
-                            floor = int(line.split("floor:")[1].split()[0])
-                        except ValueError:
-                            pass
+                        # 棘轮解析必须响。此前是 try/except ValueError: pass ——
+                        # "floor: 52（说明文字）" 解析失败后下限静默变 0，
+                        # 门还在跑、棘轮已经没了，这是最坏的一种假绿。
+                        mt = re.search(r"floor:\s*(\d+)", line)
+                        if not mt:
+                            raise SystemExit(
+                                "ui-ux-lint: %s 的 floor 行无法解析（要 floor: <整数>）: %s"
+                                % (os.path.relpath(REGISTRY), line))
+                        floor = int(mt.group(1))
                     continue
                 parts = [x.strip() for x in line.split("|")]
                 if len(parts) >= 2:

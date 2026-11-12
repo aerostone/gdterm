@@ -84,7 +84,11 @@ namespace Gdterm.Logging
         /// <summary>
         /// 查询命令历史
         /// </summary>
-        public IList<CommandHistoryEntry> Query(CommandHistoryQuery query = null)
+        /// <summary>
+        /// 查询历史。虚方法：UI 侧要能注入“读坏了”的替身——否则“读取失败”这条分支
+        /// 永远只能靠人肉改磁盘文件复现，等于没有回归保护。
+        /// </summary>
+        public virtual IList<CommandHistoryEntry> Query(CommandHistoryQuery query = null)
         {
             var result = new List<CommandHistoryEntry>();
 
