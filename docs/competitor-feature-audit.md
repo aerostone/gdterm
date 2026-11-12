@@ -163,3 +163,5 @@ X11 转发、SSH agent 转发、GSSAPI、VNC/XDMCP/FTP/Rlogin、移动端/跨平
 | P2-10 | i18n | ✅ 完成 | 批次 1–5f 全量接入（含插值字符串补扫 17 文件 ~43 处，词典 900+ 项）；用户可见中文残留清零，功能原文（测试/远程脚本/AI 提示词）有意保留，feature-map 门兜底 |
 | F2 | 表单设置持久化（横切） | ✅ | `FormSettings` 助手（data/config/form-settings.ini，与 appearance.ini 同构）；5 窗体接入：密码生成器（长度+5 字符集）、AddOtp（位数/周期/发行方）、工具箱（lastTool）、快捷命令（分组）、SSH 密钥（主机/用户）；敏感信息（口令/密钥/账户）一律不落盘 |
 | F3 | 失败提示 + 危险操作确认（横切） | ✅ | SFTP 权限「其他可写」Modal 确认（真实安全风险，词典 +2）；feature-map 检测证据扩展（Modal.open / Message.warn / ToastNotifier.Error /「…失败」字面）；10 个语义不适用页面 drop_caps+note 豁免；persist/a11y 缺口清零；剩余 §4 长尾（撤销/分页/多选/导出/聊天历史持久化）记入 contracts known_gaps 技术债 |
+| **S-1** | **SSH 主机密钥校验（known_hosts / TOFU）** | ✅ 2026-11 | `KnownHostsStore`（OpenSSH 格式，可写本程序目录 + 只读叠加系统 `~/.ssh/known_hosts`）+ `HostKeyVerification`（判定表：一致放行 / 变更必问 / 问不到拒绝）+ `SshHostKeyGuard.CreateClient/CreateSftpClient`（**唯一建连出口**，6 处裸建连全收敛；隧道钉目标机身份）+ `HostKeyDialog`（首次信任 / 变更危险态）+ sec-gate S05/S06 防回流 |
+| **P1-3** | **日志查看器 + Hex 视图** | ✅ 2026-11 | `LogViewerForm`（帮助菜单）：文件列表 + 文本视图（尾部 2MB，超出首行标注）+ 十六进制视图（4KB 分页）+ 查找上/下一个 + 跟随最新 + 范围过滤（全部/terminal/audit/crash）；`Core/Serialization/HexDump` 纯函数带单测（对齐 `xxd` 排布）；smoke dump `log-viewer` |

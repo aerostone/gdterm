@@ -87,6 +87,16 @@ namespace Gdterm.Tests.Ui
                 PreviousSha256Fingerprint = "SHA256:smokeOldFingerprintValueForLayoutOnly"
             }), outDir, log, check);
 
+            // 日志查看器（P1-3）：用 tmp 目录灌一份真实日志 + 一份二进制，
+            // 锁住"文件列表有行、十六进制视图不是空白、查找/关闭按钮在"。
+            string logDir = Path.Combine(tmp, "logs");
+            Directory.CreateDirectory(Path.Combine(logDir, "terminal"));
+            File.WriteAllText(Path.Combine(logDir, "terminal", "smoke_host_20260101_000000.log"),
+                "# gdterm terminal log\r\n# Host: smoke\r\n[2026-01-01 00:00:00.000] $ ls -la\r\n[2026-01-01 00:00:00.100] total 0\r\n");
+            File.WriteAllBytes(Path.Combine(logDir, "crash-smoke.bin"),
+                new byte[] { 0x47, 0x44, 0x00, 0x0a, 0xff, 0x7f, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b });
+            Show("log-viewer", () => (Form)new LogViewerForm(logDir), outDir, log, check);
+
             // SFTP 权限编辑：此前是唯一没有 dump 的窗体（registry 里自己都写着"建议补 Show 用例"）。
             // 3×3 复选 + octal 双向联动靠反射量不到，至少把盒模型和"确定/取消绑定"锁住。
             Show("sftp-permission", () => (Form)new SftpPermissionForm("report.csv", "rw-r--r--", 644), outDir, log, check);

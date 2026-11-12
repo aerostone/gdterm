@@ -78,6 +78,7 @@ namespace Gdterm.UI.Services
             public EventHandler ShowTrash { get; set; }
             public EventHandler QuickJump { get; set; }
             public EventHandler ShowLogsFolder { get; set; }
+            public EventHandler ShowLogViewer { get; set; }
             public EventHandler ToggleDebugMode { get; set; }
         }
 
@@ -230,6 +231,8 @@ namespace Gdterm.UI.Services
             var helpMenu = new ToolStripMenuItem(L10n.T("帮助(&H)"));
             helpMenu.DropDownItems.Add(Mk(L10n.T("快捷键列表"), cb.ShowHotkeys, "helpq"));
             helpMenu.DropDownItems.Add(Mk(L10n.T("检查更新…"), cb.ShowUpdateCheck, "update"));
+            if (cb.ShowLogViewer != null)
+                helpMenu.DropDownItems.Add(Mk(L10n.T("日志查看器"), cb.ShowLogViewer, "logs"));
             helpMenu.DropDownItems.Add(Mk(L10n.T("打开日志文件夹"), cb.ShowLogsFolder, "logs"));
             if (cb.DiagnosticsPackage != null)
                 helpMenu.DropDownItems.Add(Mk(L10n.T("导出诊断包…"), cb.DiagnosticsPackage, "export"));

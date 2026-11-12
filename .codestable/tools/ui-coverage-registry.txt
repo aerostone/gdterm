@@ -8,7 +8,7 @@
 #   none           当前零验证 —— 技术债，见 docs/UI-UX-VERIFICATION.md §5 收敛计划
 #
 # floor：dump 条目数下限。删/降级任何 dump 覆盖都会让门变红（棘轮）。
-# floor: 42
+# floor: 43
 #
 Forms/MainForm.cs | dump:mainform | 主壳：菜单/树/Tab/底栏/状态
 Forms/AiSettingsForm.cs | dump:ai-settings |
@@ -26,6 +26,7 @@ Forms/ScannerCenterForm.cs | dump:scanner-center |
 Forms/SetupWizardForm.cs | dump:setup-wizard |
 Forms/SshKeyManagerForm.cs | dump:sshkey-manager |
 Forms/SftpPermissionForm.cs | dump:sftp-permission | 唯一未进 dump 的窗体；建议补 Show 用例
+Forms/LogViewerForm.cs | dump:log-viewer | P1-3：文本+十六进制双视图；smoke 灌 tmp 日志目录锁文件列表/视图非空
 Forms/TrashForm.cs | dump:trash | 回收站（F16 加分项撤销/回收站）；smoke 灌 2 条锁三列/按钮启用态
 Controls/TransferProgressDialog.cs | dump:transfer-progress |
 Controls/CommandPaletteForm.cs | manual:transient modal (hotkey-triggered, input-driven filtering) | A1 command palette; structure consistent with QuickJump
@@ -37,6 +38,7 @@ Controls/CommandTemplatePanel.cs | dump:command-template | 侧栏常驻
 Controls/ConnectionQuickJumpForm.cs | none | 模态浮层
 Controls/ConnectionTreeControl.cs | none | 主壳常驻（mainform dump 内含节点）
 Controls/DangerousCommandDialog.cs | none | 模态浮层
+Controls/HostKeyDialog.cs | dump:hostkey-unknown,hostkey-changed | P0 主机密钥校验决策出口；首次信任/密钥变更两态（指纹可见性比排版更重要）
 Controls/FilePaneControl.cs | none | SFTP 双栏
 Controls/HealthMonitorPanel.cs | dump:health-monitor | 侧栏常驻
 Controls/HighlightRulePanel.cs | dump:highlight-rule | 侧栏常驻

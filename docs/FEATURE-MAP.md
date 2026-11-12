@@ -26,7 +26,7 @@
 
 ## 1. 入口大纲（L1 → L2）
 
-共 6 个一级菜单 / 54 个二级入口。
+共 6 个一级菜单 / 55 个二级入口。
 
 ### 文件(&F)
 
@@ -108,13 +108,14 @@
 |---|---|---|---|
 | 快捷键列表 | — | — | （动作，无需页面） |
 | 检查更新… | PasswordGeneratorForm | `src/Gdterm.UI/Forms/PasswordGeneratorForm.cs` | ✅ `page.PasswordGeneratorForm` |
+| 日志查看器 | LogViewerForm | `src/Gdterm.UI/Forms/LogViewerForm.cs` | ✅ `page.LogViewerForm` |
 | 打开日志文件夹 | — | — | （动作，无需页面） |
 | 导出诊断包… | — | — | （动作，无需页面） |
 | 关于 gdterm | — | — | （动作，无需页面） |
 
 ## 2. 完备性矩阵（按缺口排序，最烂的在最上面）
 
-44 个页面，其中 0 个存在未登记缺口。
+45 个页面，其中 0 个存在未登记缺口。
 
 | 页面 | 一级菜单 | 类型 | 完备度 | 缺口 | dump |
 |---|---|---|---|---|---|
@@ -140,6 +141,7 @@
 | 密码库管理 `page.KeePassManagerForm` | 工具 > 密码库管理 | list | 100% (4/4) | — | keepass-manager,keepass-manager-empty | 有数据 / 空态两态 |
 | 密码库解锁 `page.KeePassUnlockForm` | 密码库 > 解锁 | input | 100% (2/2) | — | keepass-unlock | |
 | 快捷键绑定 `page.KeyBindingPanel` | 工具 > 快捷键绑定 | list | 100% (3/3) | — | key-binding | 侧栏常驻（审计 C7-2 入 dump） |
+| 日志查看器 `page.LogViewerForm` | 帮助 > 日志查看器 | list | 100% (4/4) | — | log-viewer | P1-3：文本+十六进制双视图；smoke 灌 tmp 日志目录锁文件列表/视图非空 |
 | 登录脚本 `page.LogonScriptPanel` | 终端 > 登录脚本 | editor | 100% (3/3) | — | logon-script | 侧栏常驻（审计 C7-2 入 dump） |
 | 宏录制 `page.MacroPanel` | 终端 > 宏录制 | list | 100% (4/4) | — | macro | 侧栏常驻 |
 | 多通道广播 `page.MultiChannelPanel` | 终端 > 多通道广播 | list | 100% (4/4) | — | multi-channel | 侧栏常驻 |
@@ -173,4 +175,5 @@
 
 | 页面 | 已有/总数 | 缺口 |
 |---|---|---|
+| 日志查看器 `page.LogViewerForm` | 8/9 | 撤销/回收站 |
 

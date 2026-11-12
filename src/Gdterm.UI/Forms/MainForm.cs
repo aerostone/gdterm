@@ -557,6 +557,7 @@ namespace Gdterm.UI.Forms
                 ShowHotkeys = (s, e) => _toolsDialogs.ShowHotkeysHelp(),
                 ShowUpdateCheck = (s, e) => _toolsDialogs.OpenUpdateCheck(),
                 ShowLogsFolder = (s, e) => { try { _toolsDialogs.ShowLogsFolder(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.LogsFolder", ex); } },
+                ShowLogViewer = (s, e) => { try { _toolsDialogs.ShowLogViewer(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.LogViewer", ex); } },
                 DiagnosticsPackage = (s, e) => { try { _toolsDialogs.ShowDiagnosticsPackage(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.Diagnostics", ex); } },
                 ToggleDebugMode = (s, e) => ToggleDebugMode(),
                 About = (s, e) => _toolsDialogs.ShowAbout(),
@@ -1128,6 +1129,7 @@ namespace Gdterm.UI.Forms
             Add(L10n.T("AI 设置"), L10n.T("设置"), () => _toolsDialogs?.OpenAiSettings());
             Add(L10n.T("危险命令设置"), L10n.T("设置"), () => _toolsDialogs?.OpenDangerousCmdSettings());
             Add(L10n.T("快捷键列表"), L10n.T("帮助"), () => _toolsDialogs?.ShowHotkeysHelp());
+            Add(L10n.T("日志查看器"), L10n.T("帮助"), () => { try { _toolsDialogs?.ShowLogViewer(); } catch { } });
             Add(L10n.T("打开日志文件夹"), L10n.T("帮助"), () => { try { _toolsDialogs?.ShowLogsFolder(); } catch { } });
             Add(L10n.T("导出诊断包"), L10n.T("帮助"), () => { try { _toolsDialogs?.ShowDiagnosticsPackage(); } catch { } });
             Add(L10n.T("关于 gdterm"), L10n.T("帮助"), () => _toolsDialogs?.ShowAbout());

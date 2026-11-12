@@ -405,6 +405,17 @@ namespace Gdterm.UI.Services
                 L10n.T("快捷键"), MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
+        /// <summary>
+        /// 帮助 → 日志查看器（P1-3）：把 logs/ 下的会话/审计/崩溃日志在应用内读出，
+        /// 文本 + 十六进制双视图、查找、跟随最新。此前只有"打开文件夹"，
+        /// 便携版在只读介质或被远程指导时等于没有日志。
+        /// </summary>
+        public void ShowLogViewer()
+        {
+            using (var form = new LogViewerForm(Gdterm.UI.Program.LogsDir))
+                form.ShowDialog(_owner);
+        }
+
         /// <summary>用资源管理器打开诊断日志目录（程序主目录 logs\），方便排查问题。</summary>
         public void ShowLogsFolder()
         {
