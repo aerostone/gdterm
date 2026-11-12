@@ -1,4 +1,5 @@
 using System;
+using System.Windows.Forms;
 using Gdterm.Tests.Ai;
 using Gdterm.Tests.Connections;
 using Gdterm.Tests.Core;
@@ -19,8 +20,24 @@ namespace Gdterm.Tests
     /// </summary>
     public static class Program
     {
+        /// <summary>
+        /// 复刻生产入口的全局渲染初始化：视觉样式、文本渲染、AntdUI 暗色、ToolStrip 渲染器。
+        /// 缺任何一项，"测试里的界面"就不是"用户的界面"。
+        /// </summary>
+        private static void InitUiHost()
+        {
+            try { Application.EnableVisualStyles(); } catch { }
+            try { Application.SetCompatibleTextRenderingDefault(false); } catch { }
+            try { AntdUI.Config.IsDark = true; } catch { }
+            try { ToolStripManager.Renderer = new Gdterm.UI.Diagnostics.GdtermToolStripRenderer(); } catch { }
+        }
         public static int Main(string[] args)
         {
+            // 全局 UI 初始化必须和 Gdterm.UI.Program.Main 一致——2026-11-07 发现宿主漏了这一步：
+            // AntdUI 用的是浅色色板（截图里底栏按钮是一片白块）、原生控件走 classic 渲染，
+            // 于是所有 dump/截图的尺寸与颜色都不是用户实际看到的那套。证据本身失真，门禁再绿也没意义。
+            InitUiHost();
+
             // 渲染性能基准：--perf-bench [out.json]（P2-8 基线；Windows GDI 路径）。
             // 放在单测之前：CI 里单测已经单独跑过，基准模式不必重复。
             int perfIdx = Array.IndexOf(args, "--perf-bench");

@@ -150,10 +150,7 @@ namespace Gdterm.UI.Services
 
         public OpenedTab CreateSsh(ConnectionConfig config, CredentialPayload credential)
         {
-            var tab = new TabPage(config.Name)
-            {
-                ToolTipText = (config.Username ?? "") + "@" + config.Host + ":" + config.Port
-            };
+            var tab = NewThemedPage(config.Name, (config.Username ?? "") + "@" + config.Host + ":" + config.Port);
 
             var terminalControl = new TerminalControl(
                 config, _terminalFactory, _tunnelManager, _auditLogger, _dangerousDetector, _gate);
@@ -181,10 +178,7 @@ namespace Gdterm.UI.Services
 
         public OpenedTab CreateRdp(ConnectionConfig config, CredentialPayload credential)
         {
-            var tab = new TabPage(config.Name)
-            {
-                ToolTipText = "RDP: " + config.Host + ":" + config.Port
-            };
+            var tab = NewThemedPage(config.Name, "RDP: " + config.Host + ":" + config.Port);
 
             // --- 抓包代理：连接级自动 dump ---
             // 用户配置的 Host/Port 一律不动（那是用户设置的）；开启抓包时仅在内部
@@ -373,10 +367,7 @@ namespace Gdterm.UI.Services
 
         public OpenedTab CreateSerial(ConnectionConfig config)
         {
-            var tab = new TabPage(config.Name)
-            {
-                ToolTipText = "Serial: " + (config.Serial?.PortName ?? "Unknown")
-            };
+            var tab = NewThemedPage(config.Name, "Serial: " + (config.Serial?.PortName ?? "Unknown"));
 
             var terminalControl = new TerminalControl(
                 config, _terminalFactory, _tunnelManager, _auditLogger, _dangerousDetector, _gate);
@@ -403,10 +394,7 @@ namespace Gdterm.UI.Services
         /// <summary>Telnet 明文标签：与 Serial 同走 TerminalControl 文本通道，会话由工厂 CreateTelnet 提供。</summary>
         public OpenedTab CreateTelnet(ConnectionConfig config)
         {
-            var tab = new TabPage(config.Name)
-            {
-                ToolTipText = "Telnet: " + (config.Host ?? "Unknown") + ":" + (config.Port > 0 ? config.Port : 23) + L10n.T("（明文）")
-            };
+            var tab = NewThemedPage(config.Name, "Telnet: " + (config.Host ?? "Unknown") + ":" + (config.Port > 0 ? config.Port : 23) + L10n.T("（明文）"));
 
             var terminalControl = new TerminalControl(
                 config, _terminalFactory, _tunnelManager, _auditLogger, _dangerousDetector, _gate);
@@ -436,10 +424,7 @@ namespace Gdterm.UI.Services
                 throw new InvalidOperationException(L10n.T("ITerminalSessionFactory 未注入，无法创建本地终端"));
 
             var local = _terminalFactory.CreateLocal(shellPath);
-            var tab = new TabPage(L10n.T("本地终端"))
-            {
-                ToolTipText = L10n.T("本地 Shell")
-            };
+            var tab = NewThemedPage(L10n.T("本地终端"), L10n.T("本地 Shell"));
 
             var terminal = new TerminalControl(local, _auditLogger, _gate);
             terminal.Dock = DockStyle.Fill;
@@ -472,10 +457,7 @@ namespace Gdterm.UI.Services
 
             var credential = ResolveCredential(config)
                 ?? new CredentialPayload { Username = config.Username };
-            var tab = new TabPage("SFTP: " + config.Name)
-            {
-                ToolTipText = "sftp://" + config.Host
-            };
+            var tab = NewThemedPage("SFTP: " + config.Name, "sftp://" + config.Host);
 
             var panel = new SftpDualPanePanel(config, credential, _sftpFactory, _tunnelManager);
             panel.Dock = DockStyle.Fill;

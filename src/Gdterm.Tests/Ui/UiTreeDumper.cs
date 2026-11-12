@@ -20,6 +20,14 @@ namespace Gdterm.Tests.Ui
             sb.Append("{\"form\":\"").Append(Esc(form.GetType().Name)).Append("\",");
             sb.Append("\"text\":\"").Append(Esc(form.Text)).Append("\",");
             sb.Append("\"clientSize\":").Append(SizeJson(form.ClientSize)).Append(",");
+            // 客户区(0,0) 的屏幕坐标：截图是 PrintWindow 抓客户区，像素坐标 = abs - 这个原点。
+            // 没有它就没法把 dump 里的控件盒对到截图像素上，"白块"这类只能靠像素发现的问题无从自动判。
+            try
+            {
+                var org = form.PointToScreen(new Point(0, 0));
+                sb.Append("\"clientOrigin\":{\"x\":").Append(org.X).Append(",\"y\":").Append(org.Y).Append("},");
+            }
+            catch { }
             sb.Append("\"dpi\":").Append(DpiOf(form)).Append(",");
             // 主题名 + 每控件实际色值：判"暗色主题下还留白底/黑字"（旧色残留）只靠截图看不出来，
             // 有了色值就能在 R7 里逐控件判，也能让矩阵主题轴有可比的证据。
