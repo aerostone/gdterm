@@ -25,12 +25,81 @@ namespace Gdterm.Tests.Ui
         private static int _fails;
         private static readonly List<string> _messages = new List<string>();
 
+        // ── 看门狗（2026-11-13：一次提交把 CI 卡了 25 分钟，日志要等整条流水线
+        //    超时才拿得到，等于"hang 一次亏半小时"）。规则很简单：任何一步在
+        //    IDLE_LIMIT 秒内没有推进进度，就把"卡在哪一步"写进 console/progress.log
+        //    并且自己退出（退出码 3）——失败要快，失败要指得出位置。
+        private const int IdleLimitSeconds = 120;
+        private static readonly object _progLock = new object();
+        private static string _progStep = "(not started)";
+        private static DateTime _progAt = DateTime.UtcNow;
+        private static string _progFile;
+
+        /// <summary>声明"我正在做第 N 步"。所有可能长跑的用例都要调一次。</summary>
+        public static void Progress(string step)
+        {
+            lock (_progLock)
+            {
+                _progStep = step;
+                _progAt = DateTime.UtcNow;
+                try
+                {
+                    if (_progFile != null)
+                        File.AppendAllText(_progFile,
+                            DateTime.Now.ToString("HH:mm:ss") + " " + step + "\r\n",
+                            System.Text.Encoding.UTF8);
+                }
+                catch (Exception) { }
+            }
+        }
+
+        /// <summary>启动看门狗并把轨迹写到 outDir/progress.log（矩阵冒烟也要，卡一次亏半小时）。</summary>
+        public static void StartWatchdog(string outDir)
+        {
+            _progFile = Path.Combine(outDir, "progress.log");
+            try { File.WriteAllText(_progFile, "", System.Text.Encoding.UTF8); } catch (Exception) { }
+            StartWatchdog();
+        }
+
+        private static void StartWatchdog()
+        {
+            var t = new Thread(() =>
+            {
+                while (true)
+                {
+                    Thread.Sleep(10000);
+                    string step;
+                    double idle;
+                    lock (_progLock)
+                    {
+                        step = _progStep;
+                        idle = (DateTime.UtcNow - _progAt).TotalSeconds;
+                    }
+                    if (idle < IdleLimitSeconds) continue;
+                    string msg = "[HANG] 卡在 " + step + "：已 " + (int)idle + " 秒无进度"
+                                 + "（看门狗上限 " + IdleLimitSeconds + "s，progress.log 有完整轨迹）";
+                    try { Console.WriteLine(msg); Console.Out.Flush(); } catch (Exception) { }
+                    try
+                    {
+                        if (_progFile != null) File.AppendAllText(_progFile, msg + "\r\n", System.Text.Encoding.UTF8);
+                    }
+                    catch (Exception) { }
+                    Environment.Exit(3);
+                }
+            });
+            t.IsBackground = true;
+            t.Name = "smoke-watchdog";
+            t.Start();
+        }
+
         public static int Run(string[] args)
         {
             string outDir = args.Length > 0 ? args[0] : Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory, "ui-smoke");
             Directory.CreateDirectory(outDir);
             _smokeOutDir = outDir;
+            StartWatchdog(outDir);
+            Progress("start");
             Console.WriteLine("=== gdterm UI smoke (screenshots to " + outDir + ") ===");
 
             // 1) 密码管理器：行数 + 列宽 + 行高 + 关闭
@@ -255,6 +324,7 @@ namespace Gdterm.Tests.Ui
 
         private static void RunCase(string name, Action body)
         {
+            Progress("case:" + name);
             try
             {
                 body();
@@ -383,6 +453,7 @@ namespace Gdterm.Tests.Ui
             string outDir = _smokeOutDir;
             string name = page.Name;
             var emptyMode = page.Empty;
+            Progress("panel:" + name);
 
             Control panel = null;
             // tmp 作用域：面板的 store/manager/scanner 依赖随作用域释放，目录自动清理

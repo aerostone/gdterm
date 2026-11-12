@@ -43,6 +43,8 @@ namespace Gdterm.Tests.Ui
         {
             string outDir = args.Length > 0 && !args[0].StartsWith("--") ? args[0] : "ui-matrix";
             Directory.CreateDirectory(outDir);
+            UiSmokeRunner.StartWatchdog(outDir);
+            UiSmokeRunner.Progress("matrix:start");
             Console.WriteLine("=== gdterm L2 matrix (geometry + theme axis) -> " + outDir + " ===");
 
             var pages = new List<UiPage>();
@@ -74,6 +76,7 @@ namespace Gdterm.Tests.Ui
                     Console.WriteLine("[combo] " + label);
                     foreach (var page in pages)
                     {
+                        UiSmokeRunner.Progress("matrix:" + label + "/" + page.Name);
                         try
                         {
                             DumpPage(page, dir, font, dpi);

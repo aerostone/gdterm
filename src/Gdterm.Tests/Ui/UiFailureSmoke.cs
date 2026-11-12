@@ -41,6 +41,7 @@ namespace Gdterm.Tests.Ui
 
         private static void Section(string name, Action<string> log, List<string> errs, Action body)
         {
+            UiSmokeRunner.Progress("failure:" + name);
             log("section: " + name);
             try
             {

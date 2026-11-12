@@ -98,6 +98,9 @@ jobs:
       # UI 冒烟：起窗体截图 + 断言（要桌面会话，GHA windows-latest 有）
       - name: UI smoke
         shell: pwsh
+        # 看门狗在 Gdterm.Tests 里（120s 无进度即退出 3 并写 progress.log）；
+        # 这层是兜底：进程被 Windows 弹窗/模态卡死时，PowerShell 这层也不能陪它等半小时。
+        timeout-minutes: 6
         run: |
           $ErrorActionPreference = 'Continue'
           $testExe = "src\Gdterm.Tests\bin\$env:CONFIGURATION\Gdterm.Tests.exe"
@@ -134,6 +137,7 @@ jobs:
       # 条件没生效（曲线全平）也判红——否则"跑了 8 格全绿"可能只是同一张图跑 8 遍。
       - name: UI matrix gate (DPI x font x theme)
         shell: pwsh
+        timeout-minutes: 12
         run: |
           $ErrorActionPreference = 'Continue'
           $env:PYTHONIOENCODING = "utf-8"
