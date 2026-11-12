@@ -103,7 +103,7 @@ namespace Gdterm.UI.Forms
                 Font = FormFontPolicy.UiFont()
             };
             Controls.Add(tipLabel);
-            y += Math.Max(DpiScale.V(this, 58), FormFontPolicy.RowStep(this) * 2);
+            y += Math.Max(DpiScale.V(this, 58), tipLabel.Height + DpiScale.V(this, 8));
 
             Controls.Add(MakeFieldLabel(L10n.T("当前密码"), labelX, y, fieldH));
             _oldBox = MakePasswordBox(boxX, y, boxWidth, fieldH);

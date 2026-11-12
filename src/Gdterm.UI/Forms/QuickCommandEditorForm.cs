@@ -68,16 +68,17 @@ namespace Gdterm.UI.Forms
             // 占位符提示
             // 占位符清单很长（360px），对话框正文只有 326px：用原生 Label 按宽换行，
             // 而不是 AntdUI.Label 的单行（单行要么裁掉尾部，要么把对话框撑宽）
+            // 占位符清单是单行提示：用原生 AutoSize Label（原生量宽是准的，AntdUI 的 AutoSize
+            // 窄 10% 会把尾部裁掉）。行距按它自己的实际高度推进，别用固定 32 去盖住下一行。
             var lblHint = new Label {
                 Text = L10n.T("占位符: {host} {user} {date} {time} {datetime} {env:VAR_NAME}"),
-                AutoSize = false,
+                AutoSize = true,
                 Location = new Point(inputX, y),
-                Size = new Size(inputW, FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this, 1.7f) * 2),
                 ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Muted,
                 Font = FormFontPolicy.UiFont()
             };
             Controls.Add(lblHint);
-            y += Math.Max(DpiScale.V(this, 32), FormFontPolicy.RowStep(this));
+            y += Math.Max(DpiScale.V(this, 32), lblHint.Height + DpiScale.V(this, 8));
 
             // 分组
             AddLabel(L10n.T("分组"), lblX, y, fieldH);
