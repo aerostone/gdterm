@@ -65,7 +65,15 @@ namespace Gdterm.UI.Controls
             {
                 var f = Environment.GetEnvironmentVariable("GDTERM_TRACE_FILE");
                 if (string.IsNullOrEmpty(f)) return;
-                File.AppendAllText(f, DateTime.Now.ToString("HH:mm:ss.fff") + " ctor:" + stage + "\n");
+                var line = DateTime.Now.ToString("HH:mm:ss.fff") + " ctor:" + stage;
+                try { Console.Error.WriteLine(line); Console.Error.Flush(); } catch { }
+                // 双落盘：独立标记文件 + 追加日志。若标记在、日志缺，说明卡在日志写入而不是代码。
+                File.WriteAllText(f + "." + stage + ".mk", line);
+                using (var sw = new StreamWriter(f, true))
+                {
+                    sw.WriteLine(line);
+                    sw.Flush();
+                }
             }
             catch { }
         }
