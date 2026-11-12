@@ -39,6 +39,9 @@ namespace Gdterm.UI.Services
         /// </summary>
         public Func<TabPage, int?> AccentResolver { get; set; }
 
+        /// <summary>标签是否需要「录制中」红点（与强调色互不干扰：颜色说"我标了色"，红点说"我在录"）。</summary>
+        public Func<TabPage, bool> BadgeResolver { get; set; }
+
         /// <summary>
         /// 计算所有标签的统一宽度（设计 px）：取"最长标签理想宽"与可视宽/标签数中较小者，
         /// 并夹在 [MinTabWidth, MaxTabWidth]。标签很多时自动收窄，避免互相挤压出滚动。
@@ -126,9 +129,45 @@ namespace Gdterm.UI.Services
             var closeR = (int)Math.Round(CloseButtonRightMargin * dpi);
             var closeT = (int)Math.Round(CloseButtonTopOffset * dpi);
 
+            // 录制中红点：画在文字左边（不是右上角/右侧）——右侧被关闭钮占着，
+            // 右上角在窄标签里会压到文字；左侧让出固定 10dp，长标题只会更早省略，不会互相覆盖。
+            bool recording = false;
+            if (BadgeResolver != null)
+            {
+                try { recording = BadgeResolver(tab); }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabChromePainter.Badge", exSwallowed); } catch { } }
+            }
+            int dotW = (int)Math.Round(6 * dpi);
+            int dotGap = (int)Math.Round(4 * dpi);
+            int dotX = rect.X + (int)Math.Round(7 * dpi);   // 强调条占左 3dp，红点从 7 起，不叠在一起
+            int textLeft = recording ? dotX + dotW + dotGap : rect.X + (int)Math.Round(4 * dpi);
+            if (recording)
+            {
+                int cy = rect.Y + rect.Height / 2;
+                var dotRect = new Rectangle(dotX, cy - dotW / 2, dotW, dotW);
+                try
+                {
+                    var oldMode = e.Graphics.SmoothingMode;
+                    using (var brush = new SolidBrush(GdtermColorTable.Danger))
+                    {
+                        e.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+                        e.Graphics.FillEllipse(brush, dotRect);
+                    }
+                    e.Graphics.SmoothingMode = oldMode;
+                    // 自绘图形无声：补无障碍描述，屏幕阅读器/UI 树能看到"录制中"
+                    tab.AccessibleDescription = Gdterm.Core.L10n.T("录制中");
+                }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabChromePainter.Badge", exSwallowed); } catch { } }
+            }
+            else
+            {
+                // 停录后要撤掉这句描述：红点没了但无障碍还念"录制中"就是在骗屏幕阅读器
+                try { if (tab.AccessibleDescription == Gdterm.Core.L10n.T("录制中")) tab.AccessibleDescription = null; } catch { }
+            }
+
             int textRightPad = showClose ? closeR : (int)Math.Round(10 * dpi);
-            var textRect = new Rectangle(rect.X + (int)Math.Round(4 * dpi), rect.Y + 2,
-                rect.Width - textRightPad - (int)Math.Round(4 * dpi), rect.Height - 4);
+            var textRect = new Rectangle(textLeft, rect.Y + 2,
+                Math.Max(0, rect.Width - textRightPad - (textLeft - rect.X)), rect.Height - 4);
             TextRenderer.DrawText(e.Graphics, tab.Text, e.Font, textRect,
                 isSelected ? GdtermColorTable.Foreground : GdtermColorTable.Muted,
                 TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPrefix);

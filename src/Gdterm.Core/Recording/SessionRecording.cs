@@ -63,6 +63,13 @@ namespace Gdterm.Core.Recording
     /// 为什么不用 asciinema 的 `.cast`：它的帧载荷带 JSON 转义，二进制控制序列要
     /// JSON 转义后再 base64，两层转义在 Win7 + net462 上手写解析器极易出边界 bug；
     /// 而"文本行 + base64"用 no-alloc 的 Convert 就能往返，且审计时可肉眼读时间轴。
+    ///
+    /// **文件里有两种时间口径，别混用**：
+    /// - 帧的 `&lt;ms&gt;` 与尾部 `duration=`：写端 Stopwatch 量的单调毫秒。时长、进度条、
+    ///   回放调度一律用这个；
+    /// - 头 `started` 与尾部 `# end` 的时间戳：墙上时钟，只用于显示"这是几点录的"。
+    ///   拿墙上时钟相减算时长，会在系统校时/休眠唤醒/改时间时给出任意值（真踩过：
+    ///   时长一度显示成 7563:29:44）。
     /// </summary>
     public sealed class SessionRecording
     {
@@ -93,18 +100,28 @@ namespace Gdterm.Core.Recording
             Frames = new List<SessionFrame>();
         }
 
-        /// <summary>总时长（毫秒）：最后一帧偏移与尾部 duration 取大者。</summary>
+        /// <summary>
+        /// 尾部 `# end … duration=N` 里的总时长（单调时钟，写端用 Stopwatch 量的）。
+        /// 没写（老文件/坏文件）为 0。
+        /// </summary>
+        public long TailDurationMs { get; private set; }
+
+        /// <summary>
+        /// 总时长（毫秒）= 最后一帧偏移与尾部 duration 取大者。
+        ///
+        /// **绝不用墙上时钟算时长**。这里踩过一次真坑（CI dump 里时长显示成 7563:29:44）：
+        /// 头里的 `started` 是墙上时钟，尾部 `# end` 的时间戳也是墙上时钟，两者相减在
+        /// 「录制期间系统校时 / 休眠唤醒 / 用户改系统时间」时会给出任意值，而这个值又会
+        /// 顶掉真实的单调时长，把回放进度条和「时长」列一起带沟里。
+        /// 墙上时钟只用于**显示开始时间**，时长一律以 Stopwatch 口径为准。
+        /// </summary>
         public long DurationMs
         {
             get
             {
                 long last = 0;
                 if (Frames.Count > 0) last = Frames[Frames.Count - 1].OffsetMs;
-                if (EndedUtc.HasValue)
-                {
-                    long span = (long)(EndedUtc.Value - Header.StartedUtc).TotalMilliseconds;
-                    if (span > last) last = span;
-                }
+                if (TailDurationMs > last) last = TailDurationMs;
                 return last < 0 ? 0 : last;
             }
         }
@@ -166,7 +183,12 @@ namespace Gdterm.Core.Recording
                     if (line[0] == '#')
                     {
                         if (line.StartsWith("# end", StringComparison.Ordinal))
+                        {
                             rec.EndedUtc = ParseEndLine(line) ?? rec.EndedUtc;
+                            long tailMs;
+                            if (ParseEndDuration(line, out tailMs)) rec.TailDurationMs = tailMs;
+                            // 缺 duration=（老文件/写端崩溃）不记坏行：退回「最后一帧偏移」，那是单调的，够用
+                        }
                         continue;
                     }
                     var frame = ParseFrame(line);
@@ -231,6 +253,7 @@ namespace Gdterm.Core.Recording
         private static DateTime? ParseEndLine(string line)
         {
             // "# end 2026-11-12T02:05:00Z duration=300000 frames=2"
+            // 墙上时钟：只用于显示「录制开始/结束时刻」，不参与时长计算（见 DurationMs 注释）。
             var parts = line.Split(' ');
             if (parts.Length < 3) return null;
             DateTime dt;
@@ -238,6 +261,21 @@ namespace Gdterm.Core.Recording
                     DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out dt))
                 return dt;
             return null;
+        }
+
+        /// <summary>取尾部行里的 `duration=N`（写端的 Stopwatch 口径毫秒）。</summary>
+        internal static bool ParseEndDuration(string line, out long ms)
+        {
+            ms = 0;
+            if (string.IsNullOrEmpty(line)) return false;
+            int i = line.IndexOf("duration=", StringComparison.Ordinal);
+            if (i < 0) return false;
+            int start = i + "duration=".Length;
+            int end = start;
+            while (end < line.Length && line[end] >= '0' && line[end] <= '9') end++;
+            if (end == start) return false;
+            return long.TryParse(line.Substring(start, end - start), NumberStyles.Integer,
+                CultureInfo.InvariantCulture, out ms) && ms >= 0;
         }
 
         // ── 微型 JSON 取值（只服务头部，字段名靠引号定位，不处理嵌套） ──

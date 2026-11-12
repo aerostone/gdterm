@@ -397,7 +397,14 @@ namespace Gdterm.UI.Forms
                 WindowOpacity = _opacityNum != null ? (int)_opacityNum.Value : 100,
                 Language = _langCombo != null && _langCombo.SelectedIndex == 1 ? L10n.En : L10n.Zh,
                 QuickBarGroup = old != null ? old.QuickBarGroup : null,
-                PinTmux = old != null && old.PinTmux
+                PinTmux = old != null && old.PinTmux,
+                // 视图状态不在本对话框编辑：同样必须透传（否则保存一次外观就把窗口几何/侧板宽度清零）
+                WindowX = old != null ? old.WindowX : int.MinValue,
+                WindowY = old != null ? old.WindowY : int.MinValue,
+                WindowWidth = old != null ? old.WindowWidth : 0,
+                WindowHeight = old != null ? old.WindowHeight : 0,
+                WindowMaximized = old != null && old.WindowMaximized,
+                SidePanelWidth = old != null ? old.SidePanelWidth : 0
             };
             try
             {
@@ -601,6 +608,19 @@ namespace Gdterm.UI.Forms
         /// <summary>窗口不透明度（整窗 Opacity；终端画布为不透明子控件，WinForms 下无逐区透明）。</summary>
         public int WindowOpacity { get; set; } = 100;
 
+        // ── 视图状态（窗口几何 / 侧板宽度）──────────────────────────────────
+        // 和字体配色放同一个 ini：它们都是"这台机器上的显示偏好"，分两个文件反而要维护两条
+        // 读写路径。注意 Save() 是**整文件重写**——任何一处只带自己那几个字段去 Save()，
+        // 就会静默清掉别人的键（SaveResult 里已踩过 pinTmux 的坑，新键一律 pass-through）。
+        /// <summary>窗口左上角 X（WindowWidth/Height 有效才用；未保存过为 int.MinValue）。</summary>
+        public int WindowX { get; set; } = int.MinValue;
+        public int WindowY { get; set; } = int.MinValue;
+        public int WindowWidth { get; set; }
+        public int WindowHeight { get; set; }
+        public bool WindowMaximized { get; set; }
+        /// <summary>侧板宽度（工具箱/监控/多通道等右挂面板），0=未设置用默认 360。</summary>
+        public int SidePanelWidth { get; set; }
+
         public static AppearanceSettings Load(string path)
         {
             var s = new AppearanceSettings();
@@ -650,6 +670,29 @@ namespace Gdterm.UI.Forms
                         // 路线图口径 30%-100%，非法值回 100（不透明）。
                         if (int.TryParse(val, out n) && n >= 30 && n <= 100) s.WindowOpacity = n;
                     }
+                    else if (string.Equals(key, "windowX", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int n; if (int.TryParse(val, out n)) s.WindowX = n;
+                    }
+                    else if (string.Equals(key, "windowY", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int n; if (int.TryParse(val, out n)) s.WindowY = n;
+                    }
+                    else if (string.Equals(key, "windowWidth", StringComparison.OrdinalIgnoreCase))
+                    {
+                        // 下限挡掉"上次最小化时存了 160×28"这类把窗口缩成一条的值
+                        int n; if (int.TryParse(val, out n) && n >= 640 && n <= 20000) s.WindowWidth = n;
+                    }
+                    else if (string.Equals(key, "windowHeight", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int n; if (int.TryParse(val, out n) && n >= 480 && n <= 20000) s.WindowHeight = n;
+                    }
+                    else if (string.Equals(key, "windowMax", StringComparison.OrdinalIgnoreCase))
+                        s.WindowMaximized = val == "1" || string.Equals(val, "true", StringComparison.OrdinalIgnoreCase);
+                    else if (string.Equals(key, "sidePanelWidth", StringComparison.OrdinalIgnoreCase))
+                    {
+                        int n; if (int.TryParse(val, out n) && n >= 320 && n <= 1600) s.SidePanelWidth = n;
+                    }
                 }
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("AppearanceSettingsForm", exSwallowed); } catch { } }
@@ -673,7 +716,13 @@ namespace Gdterm.UI.Forms
                 "quickBarGroup=" + (QuickBarGroup ?? "") + "\r\n" +
                 "pinTmux=" + (PinTmux ? "1" : "0") + "\r\n" +
                 "language=" + (Language ?? "zh") + "\r\n" +
-                "windowOpacity=" + WindowOpacity + "\r\n");
+                "windowOpacity=" + WindowOpacity + "\r\n" +
+                "windowX=" + WindowX + "\r\n" +
+                "windowY=" + WindowY + "\r\n" +
+                "windowWidth=" + WindowWidth + "\r\n" +
+                "windowHeight=" + WindowHeight + "\r\n" +
+                "windowMax=" + (WindowMaximized ? "1" : "0") + "\r\n" +
+                "sidePanelWidth=" + SidePanelWidth + "\r\n");
         }
 
         public static string DefaultPath

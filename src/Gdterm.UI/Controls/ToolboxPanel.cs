@@ -18,6 +18,7 @@ namespace Gdterm.UI.Controls
         private readonly ListView _lvTools;
         private readonly AntdUI.Input _filterTools;
         private readonly Panel _pnlDetail;
+        private readonly Panel _pnlToolList;
         private readonly AntdUI.Label _lblTitle;
         private readonly AntdUI.Label _lblDescription;
         private readonly RichTextBox _txtOutput;
@@ -32,7 +33,7 @@ namespace Gdterm.UI.Controls
             // 左侧工具列表（F5：上方加过滤框）
             var split = new Splitter { Dock = DockStyle.Left, Width = 3, BackColor = GdtermColorTable.Surface };
 
-            var pnlToolList = new Panel
+            _pnlToolList = new Panel
             {
                 Dock = DockStyle.Left,
                 Width = 220,
@@ -65,8 +66,8 @@ namespace Gdterm.UI.Controls
             _lvTools.Columns.Add("", 210);
             _lvTools.SelectedIndexChanged += OnToolSelected;
 
-            pnlToolList.Controls.Add(_lvTools);
-            pnlToolList.Controls.Add(_filterTools);
+            _pnlToolList.Controls.Add(_lvTools);
+            _pnlToolList.Controls.Add(_filterTools);
 
             // 右侧详情面板
             _pnlDetail = new Panel
@@ -127,10 +128,14 @@ namespace Gdterm.UI.Controls
 
             Controls.Add(_pnlDetail);
             Controls.Add(split);
-            Controls.Add(pnlToolList);
+            Controls.Add(_pnlToolList);
 
             LoadTools();
             RestoreLastTool();
+            // 侧板是 360 宽，工具列表写死 220 的话右侧详情只剩 ~137（减掉 15px padding 后正文 107px），
+            // 输出一行日志要折三折——等于读不了。列表宽按宿主比例给，并给详情留硬下限。
+            ApplyToolListWidth();
+            SizeChanged += (s2, e) => ApplyToolListWidth();
             // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
             UiA11y.AutoName(this);
         }
@@ -214,6 +219,38 @@ namespace Gdterm.UI.Controls
         }
 
         /// <summary>恢复上次使用的工具（form-settings.ini [toolbox] lastTool；缺失/已移除则不动）。</summary>
+        /// <summary>
+        /// 工具列表宽度自适应：宿主越窄，列表越窄（详情下限 200 设计 px 先保）。
+        /// 宽宿主（独立窗口/大侧板）仍是原来的 220，视觉不变。
+        /// </summary>
+        private void ApplyToolListWidth()
+        {
+            try
+            {
+                if (_pnlToolList == null) return;
+                int host = ClientSize.Width;
+                if (host <= 0) return;
+                int minDetail = Services.DpiScale.S(this, 200, 0).Width;   // 详情区硬下限（设计 px → 当前 DPI）
+                int want = Math.Min((int)(host * 0.4), Services.DpiScale.S(this, 220, 0).Width);
+                int maxList = Math.Max(Services.DpiScale.S(this, 130, 0).Width, host - minDetail - 3 /*splitter*/);
+                if (want > maxList) want = maxList;
+                int floor = Services.DpiScale.S(this, 130, 0).Width;
+                if (want < floor) want = floor;
+                if (_pnlToolList.Width != want) _pnlToolList.Width = want;
+                // 列宽跟着列表走：列宽写死 210 而列表只有 130，会在列表里生出横向滚动条（比省略号更难用）
+                try
+                {
+                    if (_lvTools != null && _lvTools.Columns.Count > 0)
+                    {
+                        int colW = Math.Max(Services.DpiScale.S(this, 100, 0).Width, want - Services.DpiScale.S(this, 6, 0).Width);
+                        if (_lvTools.Columns[0].Width != colW) _lvTools.Columns[0].Width = colW;
+                    }
+                }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ToolboxPanel.ApplyToolListWidth.col", exSwallowed); } catch { } }
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ToolboxPanel.ApplyToolListWidth", exSwallowed); } catch { } }
+        }
+
         private void RestoreLastTool()
         {
             try

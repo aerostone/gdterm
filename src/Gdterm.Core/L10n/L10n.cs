@@ -2369,6 +2369,7 @@ namespace Gdterm.Core
             ["标签颜色（跟随主题）"] = "Tab color (follow theme)",
             ["橙"] = "Orange",
             ["正在录制会话"] = "Recording session",
+            ["录制中"] = "Recording",
             ["永久豁免命中的规则（写入配置）"] = "Permanently exempt the matched rules (written to config)",
             ["没有录制文件"] = "No recordings",
             ["添加白名单"] = "Add to whitelist",

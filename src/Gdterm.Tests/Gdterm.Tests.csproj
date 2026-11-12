@@ -137,6 +137,7 @@
     <Compile Include="Core\SessionRecordingTests.cs" />
     <Compile Include="Core\L10nDictionaryTests.cs" />
     <Compile Include="Ui\DialogsSmoke.cs" />
+    <Compile Include="Ui\AppearanceSettingsTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

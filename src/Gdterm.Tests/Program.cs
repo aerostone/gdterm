@@ -76,6 +76,7 @@ namespace Gdterm.Tests
             RunTest("HexDump", HexDumpTests.Run);
             RunTest("SessionRecording", SessionRecordingTests.Run);
             RunTest("L10nDictionary", L10nDictionaryTests.Run);
+            RunTest("AppearanceSettings", Gdterm.Tests.Ui.AppearanceSettingsTests.Run);
 
             // 可观测性失败信号（A4/A5/A8/A9）——依赖 CrashLog.Initialize 改写全局路径，必须最后跑
             RunTest("Observability", ObservabilityTests.Run);

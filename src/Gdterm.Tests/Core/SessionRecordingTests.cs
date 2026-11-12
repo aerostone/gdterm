@@ -25,6 +25,7 @@ namespace Gdterm.Tests.Core
                 EmptyPayloadsIgnored(dir);
                 FutureVersionRejected(dir);
                 HeaderEscaping(dir);
+                DurationUsesMonotonicClock(dir);
             }
             finally
             {
@@ -178,6 +179,61 @@ namespace Gdterm.Tests.Core
             var rec = SessionRecording.Load(path);
             Assert.Equal("host\"with\\quote", rec.Header.Host, "escaped host round-trips");
             Assert.Equal("名 字\t带制表\n换行", rec.Header.ConnectionName, "escaped name round-trips");
+        }
+
+        /// <summary>
+        /// 时长只认单调时钟（尾部 duration= / 最后一帧偏移），墙上时钟跳变不许参与。
+        /// 回归来源：CI dump 的会话录制中心显示「00:00 / 7563:29:44」——头 started 是 2026-01-01
+        /// （测试灌的假值），尾部时间戳是当下，两者相减 315 天被当成时长，把进度条也带偏了。
+        /// 真实触发条件：录制期间系统校时、休眠唤醒、用户改系统时间。
+        /// </summary>
+        private static void DurationUsesMonotonicClock(string dir)
+        {
+            string path = Path.Combine(dir, "clockjump.gtr");
+            var lines = new[]
+            {
+                "GTR1",
+                // 头写 2026-01-01，尾部写 2026-11-12：墙上时钟差 315 天（正是 CI 里那条 7563 小时）
+                "{\"v\":1,\"cols\":80,\"rows\":24,\"host\":\"h\",\"name\":\"n\",\"started\":\"2026-01-01T00:00:00Z\"}",
+                "o 0 " + Convert.ToBase64String(Encoding.ASCII.GetBytes("a")),
+                "o 5000 " + Convert.ToBase64String(Encoding.ASCII.GetBytes("b")),
+                "# end 2026-11-12T02:05:00Z duration=9000 frames=2",
+            };
+            File.WriteAllLines(path, lines, new UTF8Encoding(false));
+
+            var rec = SessionRecording.Load(path);
+            Assert.Equal(9000L, rec.DurationMs, "duration comes from the monotonic tail (9000ms), not 315 days");
+            Assert.Equal(9000L, rec.TailDurationMs, "tail duration parsed");
+            Assert.True(rec.EndedUtc.HasValue, "wall clock still parsed (display only)");
+
+            // 老文件没有 duration=：退回最后一帧偏移（同样是单调的）
+            string legacy = Path.Combine(dir, "legacy.gtr");
+            File.WriteAllLines(legacy, new[]
+            {
+                "GTR1",
+                "{\"v\":1,\"cols\":80,\"rows\":24,\"host\":\"h\",\"name\":\"n\",\"started\":\"2026-01-01T00:00:00Z\"}",
+                "o 0 " + Convert.ToBase64String(Encoding.ASCII.GetBytes("a")),
+                "o 4200 " + Convert.ToBase64String(Encoding.ASCII.GetBytes("b")),
+                "# end 2026-11-12T02:05:00Z frames=2",
+            }, new UTF8Encoding(false));
+            var rec2 = SessionRecording.Load(legacy);
+            Assert.Equal(4200L, rec2.DurationMs, "no duration= -> last frame offset, wall clock ignored");
+            Assert.Equal(0, rec2.SkippedLines, "tail without duration= is not a corrupt line");
+
+            // 写端：Stopwatch 口径 + 尾部 duration 与实际走过的时间一致
+            string self = Path.Combine(dir, "self.gtr");
+            var header = new SessionRecordingHeader { Columns = 80, Rows = 24 };
+            using (var w = new SessionRecordingWriter(self, header))
+            {
+                w.Append(SessionFrameKind.Output, Encoding.ASCII.GetBytes("x"));
+                System.Threading.Thread.Sleep(60);
+                w.Append(SessionFrameKind.Output, Encoding.ASCII.GetBytes("y"));
+            }
+            var rec3 = SessionRecording.Load(self);
+            Assert.True(rec3.TailDurationMs >= 50, "tail duration reflects real elapsed time: " + rec3.TailDurationMs);
+            long lastOffset = rec3.Frames[rec3.Frames.Count - 1].OffsetMs;
+            Assert.True(lastOffset >= 50, "frame offset reflects real elapsed time: " + lastOffset);
+            Assert.Equal(rec3.TailDurationMs, rec3.DurationMs, "duration == tail when tail is the largest");
         }
 
         private static void AssertBytesEqual(byte[] expected, byte[] actual, string what)

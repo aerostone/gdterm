@@ -263,6 +263,9 @@ namespace Gdterm.UI.Forms
             Size = new Size(1200, 800);
             MinimumSize = new Size(800, 600);
             StartPosition = FormStartPosition.CenterScreen;
+            // 上次退出时的窗口位置/大小/最大化：摆回原处（屏幕变了会在里面回退到居中）
+            try { RestoreWindowGeometry(Gdterm.UI.Program.GlobalAppearance); }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.RestoreWindowGeometry", exSwallowed); } catch { } }
 
             _connectionTree = new ConnectionTreeControl(_connectionStore, _keepassService);
             _connectionTree.Dock = DockStyle.Left;
@@ -370,6 +373,7 @@ namespace Gdterm.UI.Forms
                 this);
 
             var sideHostPanel = SidePanelHost.CreateHost((s, e) => _sidePanelHost?.Hide());
+            ApplySidePanelWidth(sideHostPanel);
             _sidePanelHost = new SidePanelHost(sideHostPanel);
             // 工具箱会话重绑：Show 工具箱时按当前活动标签取远程会话（切标签不再拿旧会话跑命令）。
             _sidePanelHost.ToolboxSessionProvider = () =>
@@ -770,6 +774,8 @@ namespace Gdterm.UI.Forms
                 _scanPluginStore);
             FormClosing += MaybeCloseToTray;
             FormClosing += _shutdown.OnFormClosing;
+            // 视图状态落盘：放在关闭链最后（用户取消退出时也照记——他当时确实把窗口摆在那儿了）
+            FormClosing += (s, e) => SaveWindowGeometry();
         }
 
         private void OnSessionClosed(object sender, string sessionId)
@@ -797,6 +803,8 @@ namespace Gdterm.UI.Forms
                 _connectionStateNotifier?.RefreshStatusBar();
 
                 try { _sidePanels?.SyncMultiChannelRegistrations(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.SyncMultiChannel", ex); }
+                // 切签时重画徽标：从"在录"的标签切走再切回，红点必须还在（它说的是会话事实，不是选中态）
+                _tabContainer?.RefreshTabBadges();
             }
             catch (Exception ex) { DiagLog.Swallowed("MainForm.OnActiveSessionChanged", ex); }
         }
@@ -838,6 +846,8 @@ namespace Gdterm.UI.Forms
                     _statusBar?.UpdateConnectionStatus(L10n.T("正在录制会话"));
                     try { ToastNotifier.Info(L10n.T("开始录制：") + System.IO.Path.GetFileName(path)); } catch (Exception) { }
                 }
+                // 红点必须立刻亮/灭：录制是持续动作，靠"翻菜单看有没有勾"记住状态是不可靠的
+                _tabContainer?.RefreshTabBadges();
             }
             catch (Exception ex)
             {
@@ -1027,6 +1037,83 @@ namespace Gdterm.UI.Forms
         }
 
 
+
+        /// <summary>
+        /// 回放窗口几何。StartPosition 一直 CenterScreen 的话，用户每天开机都要把窗口和列宽重新摆一遍——
+        /// 运维客户端是一开一整天的东西，这条"每天一次"的摩擦很扎人。
+        /// 存的是 Normal 态的 Bounds（最大化的真实尺寸在 RestoreBounds 里），再按当前虚拟屏做一次
+        /// "看得见"校验：笔记本拔了外接屏/分辨率变小后，别把窗口还原到屏幕外面的空气里。
+        /// </summary>
+        private void RestoreWindowGeometry(AppearanceSettings ga)
+        {
+            if (ga == null || ga.WindowWidth < 640 || ga.WindowHeight < 480) return;
+            try
+            {
+                if (ga.WindowX == int.MinValue || ga.WindowY == int.MinValue) return;
+                var vs = SystemInformation.VirtualScreen;
+                var bounds = new Rectangle(ga.WindowX, ga.WindowY, ga.WindowWidth, ga.WindowHeight);
+                var visible = Rectangle.Intersect(vs, bounds);
+                // 标题栏至少要露出一块能抓的地方（宽 200/高 40），否则用户拖不动也找不到窗口
+                if (visible.Width < 200 || visible.Height < 40)
+                {
+                    DiagLog.Info("MainForm.Geometry", "saved bounds off-screen, fallback to centered: " + bounds);
+                    return;
+                }
+                StartPosition = FormStartPosition.Manual;
+                Bounds = bounds;
+                if (ga.WindowMaximized) WindowState = FormWindowState.Maximized;
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.RestoreWindowGeometry", exSwallowed); } catch { } }
+        }
+
+        /// <summary>落盘窗口几何 + 侧板宽度（退出时一次，不做每次拖动就写盘）。</summary>
+        private void SaveWindowGeometry()
+        {
+            try
+            {
+                var ga = Gdterm.UI.Program.GlobalAppearance;
+                if (ga == null) return;
+                var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
+                // 最小化时 RestoreBounds 是"最小化前的样子"，正常退出不会走到这里；
+                // 真走到（托盘退出）也只会记下最小化前的位置，不会记成 160×28 的标题条。
+                if (bounds.Width >= 640 && bounds.Height >= 480)
+                {
+                    ga.WindowX = bounds.X;
+                    ga.WindowY = bounds.Y;
+                    ga.WindowWidth = bounds.Width;
+                    ga.WindowHeight = bounds.Height;
+                }
+                ga.WindowMaximized = WindowState == FormWindowState.Maximized;
+                var side = FindSideHostPanel();
+                if (side != null && side.Width >= 320) ga.SidePanelWidth = side.Width;
+                ga.Save(AppearanceSettings.DefaultPath);
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.SaveWindowGeometry", exSwallowed); } catch { } }
+        }
+
+        /// <summary>侧板容器（Dock=Right 那个 Panel）；没建出来为 null。</summary>
+        private Panel FindSideHostPanel()
+        {
+            try
+            {
+                if (_sidePanelHost != null && _sidePanelHost.Host != null) return _sidePanelHost.Host;
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.FindSideHostPanel", exSwallowed); } catch { } }
+            return null;
+        }
+
+        /// <summary>按上次退出时的宽度摆侧板（未设置用设计值 360）。</summary>
+        private void ApplySidePanelWidth(Panel sideHostPanel)
+        {
+            try
+            {
+                var ga = Gdterm.UI.Program.GlobalAppearance;
+                if (ga == null || sideHostPanel == null) return;
+                if (ga.SidePanelWidth < 320 || ga.SidePanelWidth > 1600) return;
+                sideHostPanel.Width = ga.SidePanelWidth;
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.ApplySidePanelWidth", exSwallowed); } catch { } }
+        }
 
         private void MaybeCloseToTray(object sender, FormClosingEventArgs e)
         {

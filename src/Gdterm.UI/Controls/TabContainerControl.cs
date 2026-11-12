@@ -133,6 +133,7 @@ namespace Gdterm.UI.Controls
             _splitService = new TabSplitService(_opener);
             _chrome = new TabChromePainter();
             _chrome.AccentResolver = GetTabAccent;
+            _chrome.BadgeResolver = IsTabRecording;
             _selection = new TabSelectionCoordinator();
             _activeQuery = new TabActiveSessionQuery(
                 () => _tabControl != null ? _tabControl.SelectedTab : null,
@@ -941,6 +942,39 @@ namespace Gdterm.UI.Controls
         {
             var page = _tabControl != null ? _tabControl.SelectedTab : null;
             if (page != null) SetTabAccent(page, argb);
+        }
+
+        /// <summary>
+        /// 重画标签徽标（录制红点等）。录制状态**不另存一份**、每次绘制现读会话里的
+        /// TerminalControl.IsSessionRecording——存副本就一定会飘（停止录制忘了清、
+        /// 标签关了没删、分屏里第二个终端在录看不到），而录制状态是"现在到底有没有在写盘"这么硬的事实。
+        /// </summary>
+        public void RefreshTabBadges()
+        {
+            try { if (_tabControl != null) _tabControl.Invalidate(); } catch { }
+        }
+
+        /// <summary>某标签是否在录制（供绘制器读取；分屏下任一终端在录即为真）。</summary>
+        internal bool IsTabRecording(TabPage page)
+        {
+            TabSessionState session;
+            if (page == null || !_sessions.TryGetValue(page, out session) || session == null) return false;
+            return IsRecordingIn(session.Control) ||
+                   (session.PrimaryTerminal != null && session.PrimaryTerminal.IsSessionRecording);
+        }
+
+        private static bool IsRecordingIn(Control root)
+        {
+            if (root == null) return false;
+            var terminal = root as TerminalControl;
+            if (terminal != null) return terminal.IsSessionRecording;
+            try
+            {
+                foreach (Control child in root.Controls)
+                    if (IsRecordingIn(child)) return true;
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl.IsRecordingIn", exSwallowed); } catch { } }
+            return false;
         }
 
         /// <summary>某标签的强调色（供绘制器读取；未设为 null）。</summary>
