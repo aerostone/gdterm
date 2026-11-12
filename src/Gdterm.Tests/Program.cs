@@ -27,10 +27,21 @@ namespace Gdterm.Tests
         private static void InitUiHost()
         {
             try { Application.EnableVisualStyles(); } catch { }
+            // WinForms 原生控件（拖放/OLE/剪贴板）要求 STA。补这一步是幂等的：
+            // 线程本来就是 STA（Main 上的 [STAThread]）时直接返回。
+            try { Application.OleRequired(); } catch { }
             try { Application.SetCompatibleTextRenderingDefault(false); } catch { }
             try { AntdUI.Config.IsDark = true; } catch { }
             try { ToolStripManager.Renderer = new Gdterm.UI.Diagnostics.GdtermToolStripRenderer(); } catch { }
         }
+        // [STAThread] 不是可选装饰：WinForms 原生控件（TreeView 的拖放注册、剪贴板、
+        // OLE 相关消息）在 MTA 线程上会卡死在句柄创建里。CI 实证（2026-11-12）：
+        // ui-smoke 主线程一直跑在 MTA 上，connection-tree 这一页在
+        // Controls.Add(TreeView) 处永久挂住（AllowDrop=true 触发 RegisterDragDrop），
+        // 而 MainForm 那一路因为自带 STA 线程所以照常通过——掩盖了这个缺口。
+        // 产品入口 Gdterm.UI.Program.Main 本来就是 STA，测试宿主必须一致，
+        // 否则"测试里的界面"就不是"用户的界面"。
+        [STAThread]
         public static int Main(string[] args)
         {
             // 全局 UI 初始化必须和 Gdterm.UI.Program.Main 一致——2026-11-07 发现宿主漏了这一步：

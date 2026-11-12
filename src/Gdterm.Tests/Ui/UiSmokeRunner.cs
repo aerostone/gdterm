@@ -98,8 +98,6 @@ namespace Gdterm.Tests.Ui
                 AppDomain.CurrentDomain.BaseDirectory, "ui-smoke");
             Directory.CreateDirectory(outDir);
             _smokeOutDir = outDir;
-            Environment.SetEnvironmentVariable("GDTERM_TRACE_FILE", Path.Combine(outDir, "ctor-trace.log"));
-            if (Environment.GetEnvironmentVariable("GDTERM_SMOKE_PROBE") == "1") NativeProbe(outDir);
             StartWatchdog(outDir);
             Progress("start");
             Console.WriteLine("=== gdterm UI smoke (screenshots to " + outDir + ") ===");
@@ -386,64 +384,6 @@ namespace Gdterm.Tests.Ui
             return x;
         }
 
-        /// <summary>
-        /// 临时探针（GDTERM_SMOKE_PROBE=1）：把"原生 TreeView 挂到父容器"拆成最小步骤逐步落盘。
-        /// 用来回答"是 WinForms 原生控件在建句柄时挂，还是我们自己的代码挂"。
-        /// </summary>
-        private static void NativeProbe(string outDir)
-        {
-            string f = Path.Combine(outDir, "ctor-trace.log");
-            Action<string> P = st =>
-            {
-                try { File.AppendAllText(f, DateTime.Now.ToString("HH:mm:ss.fff") + " probe:" + st + "\n"); } catch { }
-            };
-            P("start");
-            var host = new UserControl();
-            P("host");
-            var tv = new TreeView();
-            P("tv-new");
-            host.Controls.Add(tv);
-            P("tv-added-noimagelist");
-            var il = new ImageList { ImageSize = new Size(16, 16), ColorDepth = ColorDepth.Depth32Bit };
-            il.Images.Add("folder", new Bitmap(16, 16));
-            P("il-built");
-            tv.ImageList = il;
-            P("il-assigned");
-            tv.Nodes.Add(new TreeNode("x"));
-            P("nodes-added");
-            tv.ExpandAll();
-            P("expanded");
-            tv.Dispose(); host.Dispose();
-            P("done");
-
-            // 第二臂：先让父容器建句柄（CreateGraphics —— 产品构造期 DpiScale/RowStep 就这么干），
-            // 再挂 TreeView。对照组一臂是"父容器未建句柄"。
-            var host2 = new UserControl();
-            P("2:host");
-            using (var g = host2.CreateGraphics()) P("2:host-handle=" + host2.IsHandleCreated);
-            var il2 = new ImageList { ImageSize = new Size(16, 16), ColorDepth = ColorDepth.Depth32Bit };
-            il2.Images.Add("folder", new Bitmap(16, 16));
-            var tv2 = new TreeView
-            {
-                Dock = DockStyle.Fill,
-                ImageList = il2,
-                ShowLines = true,
-                ShowPlusMinus = true,
-                ShowRootLines = true,
-                HotTracking = true,
-                FullRowSelect = true
-            };
-            P("2:tv-ready");
-            host2.Controls.Add(tv2);
-            P("2:tv-added");
-            tv2.Nodes.Add(new TreeNode("x"));
-            P("2:nodes");
-            tv2.ExpandAll();
-            P("2:expanded");
-            tv2.Dispose(); host2.Dispose();
-            P("2:done");
-        }
-
         internal static void AssertNoDockOverlap(Control root, string where)
         {
             int bad = 0;
@@ -519,8 +459,6 @@ namespace Gdterm.Tests.Ui
             if (!string.IsNullOrEmpty(only) && !string.Equals(only, name, StringComparison.OrdinalIgnoreCase))
                 return;
             Progress("panel:" + name + ":create");
-            // 构造期细粒度轨迹（产品侧 GDTERM_TRACE_FILE 钩子）落同一目录，随证据一起上传
-            Environment.SetEnvironmentVariable("GDTERM_TRACE_FILE", Path.Combine(outDir, "ctor-trace.log"));
 
             Control panel = null;
             // tmp 作用域：面板的 store/manager/scanner 依赖随作用域释放，目录自动清理

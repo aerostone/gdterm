@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.IO;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
 using Gdterm.Connections;
@@ -48,40 +47,15 @@ namespace Gdterm.UI.Controls
             _keepass = keepass;
             // collapsed 窄边上画 pin 图标作为展开提示
             SetStyle(ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
-            TraceCtor("begin");
             InitializeComponent();
-            TraceCtor("initialized");
             LoadConnections();
-            TraceCtor("loaded");
             // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
             UiA11y.AutoName(this);
-            TraceCtor("a11y-done");
-        }
-
-        // TODO 临时排查：构造阶段写盘（GDTERM_TRACE_FILE），用于定位"构造把 CI 卡死"。
-        private static void TraceCtor(string stage)
-        {
-            try
-            {
-                var f = Environment.GetEnvironmentVariable("GDTERM_TRACE_FILE");
-                if (string.IsNullOrEmpty(f)) return;
-                var line = DateTime.Now.ToString("HH:mm:ss.fff") + " ctor:" + stage;
-                try { Console.Error.WriteLine(line); Console.Error.Flush(); } catch { }
-                // 双落盘：独立标记文件 + 追加日志。若标记在、日志缺，说明卡在日志写入而不是代码。
-                File.WriteAllText(f + "." + stage + ".mk", line);
-                using (var sw = new StreamWriter(f, true))
-                {
-                    sw.WriteLine(line);
-                    sw.Flush();
-                }
-            }
-            catch { }
         }
 
         private void InitializeComponent()
         {
             BuildImageList();
-            TraceCtor("imagelist");
 
             // 顶部筛选框（输即过滤）-- Xshell/SecureCRT filter bar 风格。
             _filterBox = new TextBox
@@ -97,7 +71,6 @@ namespace Gdterm.UI.Controls
             try { Gdterm.UI.Diagnostics.WinFormsCompat.SetCueBanner(_filterBox, L10n.T("输入主机/名称/分组过滤…")); }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionTreeControl", exSwallowed); } catch { } }
             _filterBox.TextChanged += (s, e) => ApplyFilter(_filterBox.Text);
-            TraceCtor("filterbox");
 
             _treeView = new TreeView
             {
@@ -120,23 +93,17 @@ namespace Gdterm.UI.Controls
             _treeView.ItemDrag += OnItemDrag;
             _treeView.DragOver += OnDragOver;
             _treeView.DragDrop += OnDragDrop;
-            TraceCtor("treeview");
             // WinForms Dock：Fill 要先加，Top 后加才能占位
             Controls.Add(_treeView);
-            TraceCtor("add-tree");
             Controls.Add(_filterBox);
-            TraceCtor("add-filter");
 
             // 右键菜单——在 Opening 中按右键节点动态调整项，避免“主机上右键也弹新建”
             // 顺序按使用频率：连接/复制地址（主机节点专属）→ 本地终端 → 新建/编辑/删除
             _contextMenu = new ContextMenuStrip();
-            TraceCtor("ctxmenu-new");
 
             var itemConnect = new ToolStripMenuItem(L10n.T("连接(&C)"), null, OnConnect);
-            TraceCtor("item-connect");
             itemConnect.Tag = "connect";
             AttachMenuIcon(itemConnect, "globe");
-            TraceCtor("icon-globe");
             _contextMenu.Items.Add(itemConnect);
 
             var itemCopyHost = new ToolStripMenuItem(L10n.T("复制主机地址(&O)"), null, OnCopyHost);
@@ -175,7 +142,6 @@ namespace Gdterm.UI.Controls
 
             _contextMenu.Opening += OnContextMenuOpening;
             _treeView.ContextMenuStrip = _contextMenu;
-            TraceCtor("menu");
 
             // 拖拽归组：拖动连接节点到分组/根节点即改 GroupPath（浏览器/书签管理器惯例）
             _treeView.AllowDrop = true;
@@ -183,7 +149,6 @@ namespace Gdterm.UI.Controls
             _treeView.DragEnter += OnTreeDragEnter;
             _treeView.DragOver += OnTreeDragOver;
             _treeView.DragDrop += OnTreeDragDrop;
-            TraceCtor("events");
         }
 
         /// <summary>
