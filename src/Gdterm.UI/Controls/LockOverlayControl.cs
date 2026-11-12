@@ -51,12 +51,12 @@ namespace Gdterm.UI.Controls
             int line = Gdterm.UI.Services.FormFontPolicy.LineBox(Font, this, 1f);
             int lockTitleH = Math.Max(DpiScale.V(this, 24),
                 Gdterm.UI.Services.FormFontPolicy.LineBox(titleLabelFont, this, 1.25f));
-            int lockMsgBoxH = Math.Max(DpiScale.V(this, 20), (int)Math.Round(line * 1.25));
+            int lockMsgBoxH = Math.Max(DpiScale.V(this, 20), (int)Math.Round(line * 1.6));
             int lockTitleY = DpiScale.V(this, 16);
             int lockMsgY = lockTitleY + lockTitleH + DpiScale.V(this, 6);
-            int lockInputH2 = Math.Max(DpiScale.V(this, 30), (int)Math.Round(line * 1.7));
+            int lockInputH2 = Math.Max(DpiScale.V(this, 30), (int)Math.Round(line * 2.0));
             int lockInputY2 = lockMsgY + lockMsgBoxH + DpiScale.V(this, 10);
-            int lockBtnH = Math.Max(DpiScale.V(this, 32), (int)Math.Round(line * 1.75));
+            int lockBtnH = Math.Max(DpiScale.V(this, 32), (int)Math.Round(line * 2.1));
             int lockBtnY2 = lockInputY2 + lockInputH2 + DpiScale.V(this, 10);
             int lockPanelH = lockBtnY2 + lockBtnH + DpiScale.V(this, 20);
             _centerPanel = new Panel
