@@ -186,6 +186,8 @@ namespace Gdterm.Tests.Ui
                         check(f.ClientSize.Width > 200 && f.ClientSize.Height > 150,
                             name + "-client=" + f.ClientSize.Width + "x" + f.ClientSize.Height);
                         File.WriteAllText(Path.Combine(outDir, name + ".json"), UiTreeDumper.Dump(f), System.Text.Encoding.UTF8);
+                        try { UiSmokeRunner.Shot(f, Path.Combine(outDir, name + ".png")); }
+                        catch (Exception exShot) { log("SHOT_FAIL " + name + " " + exShot.Message); }
                         log("dump: " + name + ".json");
                         // 停靠遮挡门(change 2026-09-25-dangerous-cmd-dock-overlap D3):CI 全量 dump 实测除
                         // scanner-center 与 dangerous-cmd 外零命中,故对全部对话框挂载是零噪声的;
@@ -232,6 +234,10 @@ namespace Gdterm.Tests.Ui
                     // scanner-center 与 dangerous-cmd 外零命中,故对全部对话框挂载是零噪声的;
                     // 只挂单个窗体则下个窗体复发仍要人眼发现。
                     File.WriteAllText(Path.Combine(outDir, name + ".json"), UiTreeDumper.Dump(f), System.Text.Encoding.UTF8);
+                    // 截图与 dump 成对：R8（截图白块）只能判有图的页面。
+                    // 之前 50 个 dump 里 23 个对话框没图，等于这批页面在像素层完全没证据。
+                    try { UiSmokeRunner.Shot(f, Path.Combine(outDir, name + ".png")); }
+                    catch (Exception exShot) { log("SHOT_FAIL " + name + " " + exShot.Message); }
                     log("dump: " + name + ".json");
                     UiSmokeRunner.AssertNoDockOverlap(f, name);
                 }

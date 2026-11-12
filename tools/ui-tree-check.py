@@ -306,6 +306,18 @@ def main():
         check(False, "无 json dump")
         return 1
 
+    # 截图覆盖：dump 与 png 必须成对。R8 是像素判据，没图的页面等于在像素层零证据——
+    # 而"没有证据"和"通过"在报告里长得一模一样，这是最危险的一种假绿。
+    # 免判清单只允许写"捕获手段本身做不到"的页面，并必须注明原因（当前为空）。
+    NO_PNG_OK = set()
+    missing_png = [f[:-5] for f in files
+                   if not os.path.exists(os.path.join(d, f[:-5] + ".png"))
+                   and f[:-5] not in NO_PNG_OK]
+    print("  截图覆盖: %d/%d" % (len(files) - len(missing_png), len(files)))
+    if missing_png:
+        for m in missing_png[:10]:
+            check(False, "缺截图 " + m + ".png（R8 无法判该页面）")
+
     for fn in files:
         with open(os.path.join(d, fn), encoding="utf-8-sig") as fp:
             tree = json.load(fp)
