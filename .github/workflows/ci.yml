@@ -101,7 +101,8 @@ jobs:
         run: |
           $ErrorActionPreference = 'Continue'
           $testExe = "src\Gdterm.Tests\bin\$env:CONFIGURATION\Gdterm.Tests.exe"
-          & $testExe --ui-smoke "ui-smoke"
+          # 输出必须落盘：冒烟红过而"只报一行 FAIL、dump 一张没有"时，没有 stdout 就无法定位
+          & $testExe --ui-smoke "ui-smoke" 2>&1 | Tee-Object -FilePath ui-smoke.log
           exit $LASTEXITCODE
 
       # 全控件树校验门（R1-R6 + 自绘命中区）；零第三方依赖（仅 stdlib）
@@ -173,6 +174,7 @@ jobs:
             build.log
             test-run.log
             ui-smoke/
+            ui-smoke.log
             ui-matrix/
             ui-matrix-run.log
             ui-matrix-report.txt

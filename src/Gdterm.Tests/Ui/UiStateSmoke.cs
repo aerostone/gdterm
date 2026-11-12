@@ -31,22 +31,46 @@ namespace Gdterm.Tests.Ui
     {
         public static void Run(string outDir, Action<string> log, Action<bool, string> check)
         {
-            UnlockFormStates(outDir, log, check);
-            BusyScopeContract(log, check);
-            NarrowPanels(outDir, log, check);
+            // 分节跑 + 逐节留痕：某节硬崩时后面几节仍会产证据，崩溃原因也进日志
+            // （CI 里"整个 case 只报一行 FAIL、dump 一张没有"是最难查的形态）。
+            var errs = new List<string>();
+            Section("unlock-states", log, errs, () => UnlockFormStates(outDir, log, check));
+            Section("busy-scope", log, errs, () => BusyScopeContract(log, check));
+            Section("narrow-panels", log, errs, () => NarrowPanels(outDir, log, check));
+            if (errs.Count > 0)
+                throw new Exception("UiStateSmoke 分节失败 " + errs.Count + " 节: " + string.Join(" | ", errs));
+        }
+
+        private static void Section(string name, Action<string> log, List<string> errs, Action body)
+        {
+            log("section: " + name);
+            try
+            {
+                body();
+                log("section done: " + name);
+            }
+            catch (Exception ex)
+            {
+                string m = name + " -> " + UiSmokeRunner.FlatEx(ex);
+                log("section FAILED: " + m);
+                errs.Add(m);
+            }
         }
 
         // ── ① 解锁框的三种状态：禁用 → 错误 → 可用 → 忙碌 → 复位 ─────────────────
         private static void UnlockFormStates(string outDir, Action<string> log, Action<bool, string> check)
         {
             var svc = new FakeKeePassService();
+            log("  unlock: ctor");
             using (var f = new KeePassUnlockForm(svc))
             {
+                log("  unlock: show");
                 f.Show();
                 f.BringToFront();
                 Application.DoEvents();
                 Thread.Sleep(400);
                 Application.DoEvents();
+                log("  unlock: shown");
 
                 IButtonControl unlockBtn = f.AcceptButton;
                 var unlock = unlockBtn as Control;
