@@ -25,7 +25,7 @@ namespace Gdterm.UI.Controls
         private readonly AntdUI.Button _btnScan;
         private readonly AntdUI.Button _btnStop;
         private readonly AntdUI.Button _btnCopySel;
-        private readonly ProgressBar _progress;
+        private readonly ThemedProgress _progress;
         private readonly AntdUI.Label _lblStatus;
 
         public SecretScanPanel(SecretScanner scanner, ISecurityManager security = null)
@@ -107,8 +107,15 @@ namespace Gdterm.UI.Controls
             topPanel.Controls.Add(_btnCopySel);
 
             // ── 进度条 ──
-            _progress = new ProgressBar { Dock = DockStyle.Top, Height = 3, Style = ProgressBarStyle.Continuous };
-            WinFormsCompat.SetProgressState(_progress, WinFormsCompat.ProgressStateNormal); // 绿色
+            // 3px 细线进度条：原生 ProgressBar 的轨道是系统浅灰，暗色下是一条白线；
+            // 换成主题化控件后轨道跟 Surface2 走（R8 截图白块的同源问题）。
+            _progress = new ThemedProgress
+            {
+                Dock = DockStyle.Top,
+                Height = 3,
+                Style = ProgressBarStyle.Continuous,
+                State = ThemedProgress.ProgressState.Normal
+            };
 
             // ── 发现列表 ──
             _lvFindings = new ListView

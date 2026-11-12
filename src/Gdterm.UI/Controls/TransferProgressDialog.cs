@@ -14,7 +14,7 @@ namespace Gdterm.UI.Controls
     {
         private readonly AntdUI.Label _titleLabel;
         private readonly AntdUI.Label _detailLabel;
-        private readonly ProgressBar _bar;
+        private readonly ThemedProgress _bar;
         private readonly AntdUI.Label _percentLabel;
         private readonly AntdUI.Button _cancelButton;
         private bool _completed;
@@ -64,7 +64,7 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Background,
                 Padding = new Padding(padH, DpiScale.V(this, 10), padH, 0)
             };
-            _bar = new ProgressBar
+            _bar = new ThemedProgress
             {
                 Dock = DockStyle.Fill,
                 Minimum = 0,

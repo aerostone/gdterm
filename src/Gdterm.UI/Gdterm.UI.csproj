@@ -209,6 +209,7 @@
     <Compile Include="Controls\TransferProgressDialog.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="Controls\ThemedProgress.cs" />
     <Compile Include="Controls\WelcomePanel.cs">
       <SubType>UserControl</SubType>
     </Compile>

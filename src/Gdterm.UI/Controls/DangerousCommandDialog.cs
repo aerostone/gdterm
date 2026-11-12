@@ -34,7 +34,7 @@ namespace Gdterm.UI.Controls
         private AntdUI.Label _confirmLabel;
         private AntdUI.Button _confirmButton;
         private AntdUI.Button _cancelButton;
-        private ProgressBar _progressBar;   // 原生 ProgressBar：确认次数进度语义简单
+        private ThemedProgress _progressBar;   // 主题化进度条：原生 ProgressBar 轨道是浅灰白块
         private AntdUI.Checkbox _sessionExempt;
         private AntdUI.Checkbox _permanentExempt;
 
@@ -168,7 +168,7 @@ namespace Gdterm.UI.Controls
             FormFontPolicy.FitSingleLineLabel(_confirmLabel);
 
             // 进度条
-            _progressBar = new ProgressBar
+            _progressBar = new ThemedProgress
             {
                 Dock = DockStyle.Top,
                 Height = DpiScale.V(this, 8),

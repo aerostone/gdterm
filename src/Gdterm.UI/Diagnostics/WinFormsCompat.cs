@@ -6,15 +6,12 @@ namespace Gdterm.UI.Diagnostics
 {
     /// <summary>
     /// .NET Framework 4.6.2 / Win7 兼容辅助：
-    /// PlaceholderText、ProgressBar 状态色等在 net462 没有托管 API。
+    /// PlaceholderText（EM_SETCUEBANNER）在 net462 没有托管 API。
+    /// 进度条状态色曾经也靠这里（PBM_SETSTATE），现已换成 ThemedProgress 控件。
     /// </summary>
     internal static class WinFormsCompat
     {
         private const int EM_SETCUEBANNER = 0x1501;
-        private const int PBM_SETSTATE = 0x0410;
-        public const int ProgressStateNormal = 1; // green
-        public const int ProgressStateError = 2;  // red
-        public const int ProgressStatePaused = 3; // yellow
 
         [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, string lParam);
@@ -40,27 +37,6 @@ namespace Gdterm.UI.Diagnostics
             }
 
             try { SendMessage(box.Handle, EM_SETCUEBANNER, (IntPtr)1, text ?? string.Empty); }
-            catch { /* ignore */ }
-        }
-
-        /// <summary>设置 ProgressBar Vista+ 状态色（PBM_SETSTATE）。失败则忽略。</summary>
-        public static void SetProgressState(ProgressBar bar, int state)
-        {
-            if (bar == null) return;
-            if (!bar.IsHandleCreated)
-            {
-                EventHandler onCreate = null;
-                onCreate = (s, e) =>
-                {
-                    bar.HandleCreated -= onCreate;
-                    try { SendMessage(bar.Handle, PBM_SETSTATE, (IntPtr)state, IntPtr.Zero); }
-                    catch { /* ignore */ }
-                };
-                bar.HandleCreated += onCreate;
-                return;
-            }
-
-            try { SendMessage(bar.Handle, PBM_SETSTATE, (IntPtr)state, IntPtr.Zero); }
             catch { /* ignore */ }
         }
     }

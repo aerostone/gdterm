@@ -38,7 +38,7 @@ namespace Gdterm.UI.Controls
         private bool _disposed2;
         private bool _loading = true;          // 首帧未到 → 顶部显示跑马灯 + “正在连接采样”
         private bool _failing;                 // 连续失败中（只在跃迁那一次提示，避免每 5 秒刷屏）
-        private ProgressBar _firstLoadBar;
+        private ThemedProgress _firstLoadBar;
         private AntdUI.Button _btnExport;
         // F9：采样历史（与 HealthMonitorPanel 同容量策略：120 截到 60），供导出 CSV
         private readonly List<RemoteStatsSnapshot> _history = new List<RemoteStatsSnapshot>();
@@ -108,7 +108,7 @@ namespace Gdterm.UI.Controls
 
             // 首帧加载态：本地 5s 采样 + 远端 SSH 建链，第一轮多半要等 1-3 秒。
             // 此前这段时间面板是一片“0.0%”，看起来像采集全挂了。
-            _firstLoadBar = new ProgressBar
+            _firstLoadBar = new ThemedProgress
             {
                 Dock = DockStyle.Fill,
                 Height = DpiScale.V(this, 3),
