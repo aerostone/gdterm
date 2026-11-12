@@ -3,7 +3,7 @@
 # 背景（2026-11-03 沉淀）：AppVeyor 平台自 0.1.456 起 3 天+ 不接单（GitHub status 恒 0 条，
 # 匿名日志/历史 API 均 404，平台侧无法自证），迁移验证门到 GitHub Actions（仓库内纯内容，
 # 公开仓库免费分钟数无限，不依赖 AppVeyor webhook/平台存活）。
-# 口径与 appveyor.yml 逐门对齐：restore → build → 单测 → UI 冒烟 → ui-tree-check →
+# 口径与 appveyor.yml 逐门对齐：restore → build → 单测 → UI 冒烟 → ui-tree-check → L2 矩阵 →
 # perf-bench → 编码守卫 → ui-ux-lint → gen-tokens → feature-map。
 # 哲学不变：证据先于宣判——无论成败都上传 test-run.log/冒烟 dump/门报告。
 # 绿色版打包（ILRepack + FreeRDP）暂留 appveyor.yml；验证门绿稳后另批移植。
@@ -114,6 +114,22 @@ jobs:
           python tools\ui-tree-check.py ui-smoke 2>&1 | Tee-Object -FilePath ui-tree-check-report.txt
           exit $LASTEXITCODE
 
+      # L2 矩阵门（docs/UI-UX-VERIFICATION.md §4.2）：同一批窗/面板在
+      # DPI 100/150% × UI 字号 9/14pt × 主题 Dark/OLED 共 8 格下重跑，复用 ui-tree-check 的 R1-R6
+      # （--dpi-factor 让逻辑阈值随该格系数走），再由 ui-matrix-check 做反空转比对：
+      # 条件没生效（曲线全平）也判红——否则"跑了 8 格全绿"可能只是同一张图跑 8 遍。
+      - name: UI matrix gate (DPI x font x theme)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Continue'
+          $env:PYTHONIOENCODING = "utf-8"
+          $env:PYTHONUTF8 = "1"
+          $testExe = "src\Gdterm.Tests\bin\$env:CONFIGURATION\Gdterm.Tests.exe"
+          & $testExe --ui-matrix "ui-matrix" 2>&1 | Tee-Object -FilePath ui-matrix-run.log
+          if ($LASTEXITCODE -ne 0) { throw "ui-matrix smoke failed exit=$LASTEXITCODE (ui-matrix-run.log)" }
+          python tools\ui-matrix-check.py ui-matrix 2>&1 | Tee-Object -FilePath ui-matrix-report.txt
+          exit $LASTEXITCODE
+
       # 渲染性能基准（P2-8）：崩溃（非零退出）才红
       - name: Render perf bench
         shell: pwsh
@@ -157,6 +173,9 @@ jobs:
             build.log
             test-run.log
             ui-smoke/
+            ui-matrix/
+            ui-matrix-run.log
+            ui-matrix-report.txt
             ui-tree-check-report.txt
             perf-bench.json
             perf-bench-crash.txt

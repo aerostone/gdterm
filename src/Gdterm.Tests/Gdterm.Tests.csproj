@@ -138,6 +138,8 @@
     <Compile Include="Terminal\PerfBench.cs" />
     <Compile Include="Core\TerminalProfileTests.cs" />
     <Compile Include="Scanning\ScanPluginTests.cs" />
+    <Compile Include="Ui\UiStateSmoke.cs" />
+    <Compile Include="Ui\UiMatrixSmoke.cs" />
     <Compile Include="Ui\UiSmokeRunner.cs" />
     <Compile Include="Ui\UiTreeDumper.cs" />
     <Compile Include="Ui\MainFormSmoke.cs" />

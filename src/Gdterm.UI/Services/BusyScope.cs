@@ -38,7 +38,17 @@ namespace Gdterm.UI.Services
         private readonly Cursor _prevCursor;
         private readonly List<Control> _disabled;
         private readonly CancellationTokenSource _cts;
+        private readonly string _prevA11yDescription;
         private bool _disposed;
+
+        /// <summary>
+        /// 本作用域的用户可见文案（<c>Begin(owner, status:…)</c> 的入参）。
+        /// 背景（L2/状态轴补测 2026-11-13）：<c>status</c> 此前是个<b>死参数</b>——7 个调用点
+        /// 都传了“正在读取…”，但构造器把它丢了，用户看不到任何进度文案，只剩光标变沙漏。
+        /// 现落到两处可观测的地方：AntdUI Tooltip（悬停可见）+ AccessibleDescription（读屏可见），
+        /// 两者都不改布局（忙碌态不该引起重排），且能被冒烟断言读到。
+        /// </summary>
+        public string Status { get; private set; }
 
         /// <summary>重入时返回的空操作作用域（AlreadyBusy=true）。调用方可用它提前 return。</summary>
         public bool AlreadyBusy { get; private set; }
@@ -49,7 +59,7 @@ namespace Gdterm.UI.Services
             get { return _cts != null ? _cts.Token : CancellationToken.None; }
         }
 
-        private BusyScope(Control owner, bool alreadyBusy)
+        private BusyScope(Control owner, bool alreadyBusy, string status = null)
         {
             _owner = owner;
             AlreadyBusy = alreadyBusy;
@@ -57,12 +67,29 @@ namespace Gdterm.UI.Services
             if (!alreadyBusy)
             {
                 _cts = new CancellationTokenSource();
+                Status = status;
                 if (owner != null)
                 {
                     _prevCursor = owner.Cursor;
                     try { owner.Cursor = Cursors.WaitCursor; } catch { }
+                    if (!string.IsNullOrWhiteSpace(status))
+                    {
+                        // 状态文案必须真的可见（读屏 + 悬停），否则“正在读取…”就是死参数。
+                        try { _prevA11yDescription = owner.AccessibleDescription; } catch { }
+                        try { owner.AccessibleDescription = status; } catch { }
+                        try { owner.ToolTipText2(status); } catch { }
+                    }
                 }
             }
+        }
+
+        /// <summary>宿主当前忙碌文案（无进行中的操作时为 null）——冒烟断言用。</summary>
+        public static string StatusOf(Control owner)
+        {
+            if (owner == null) return null;
+            BusyScope s;
+            if (Active.TryGetValue(owner, out s) && s != null && !s._disposed) return s.Status;
+            return null;
         }
 
         /// <summary>
@@ -82,7 +109,7 @@ namespace Gdterm.UI.Services
                 return new BusyScope(owner, true);
             }
 
-            var scope = new BusyScope(owner, false);
+            var scope = new BusyScope(owner, false, status);
             Active.Remove(owner);
             Active.Add(owner, scope);
 
@@ -124,6 +151,11 @@ namespace Gdterm.UI.Services
                 try { if (!_disabled[i].IsDisposed) _disabled[i].Enabled = true; } catch { }
             }
             _disabled.Clear();
+            // 状态文案随作用域结束一起收回（无障碍描述是“当前正在做什么”，不是常驻说明）
+            if (_owner != null && !string.IsNullOrWhiteSpace(Status))
+            {
+                try { if (!_owner.IsDisposed) _owner.AccessibleDescription = _prevA11yDescription; } catch { }
+            }
             try { if (_cts != null) _cts.Dispose(); } catch { }
         }
 

@@ -19,11 +19,11 @@
 |---|---|---|---|
 | 几何越界/重叠/遮挡 | 工具栏盖住表体、文字互相压 | dump 断言（L1 R5） | ✅ 结构 |
 | 文字放不下/被裁 | 长主机名截断、按钮文字挤两行、标签贴顶 | CI 截图 + 人眼 | ✅ 度量（当前缺） |
-| DPI / 字号放大 | 双倍缩放、14pt 下窗体溢出 | 用户报障 | ✅ 矩阵（当前缺） |
+| DPI / 字号放大 | 双倍缩放、14pt 下窗体溢出 | 用户报障 | ✅ 矩阵（8 格，DPI 轴为受控近似） |
 | 规范漂移 | "确定"当 Primary、裸色、固定行距 | 人工 grep | ✅ 静态（已补） |
 | 状态缺失 | 空列表一片黑、按钮可重复点、无等待感 | 用户报障 | ⚠️ 半自动 |
 | 语义/无障碍 | 屏幕阅读器读不出、命中区太小 | 几乎从不 | ⚠️ 半自动 |
-| 主题 | 切 OLED 后部分面板还是旧色 | 用户报障 | ⚠️ 需矩阵 |
+| 主题 | 切 OLED 后部分面板还是旧色 | 用户报障 | ✅ 矩阵（Dark/OLED 两轴覆盖） |
 
 结论：**几何类已经被 L1 覆盖，剩下的洞集中在"文字度量、状态轴、矩阵轴、语义轴"。**
 
@@ -35,7 +35,7 @@
 |---|---|---|---|---|---|
 | **L0** 静态规范 | 源码规则匹配 + 基线棘轮 | `tools/ui-ux-lint.py` | 无（stdlib） | build 后、ui-smoke 前，秒级 | 新代码违反 SSOT 明确条款 |
 | **L1** 结构 | 真实控件树 dump 断言 | `tools/ui-tree-check.py` + `UiTreeDumper` | Windows 桌面会话 | ui-smoke 之后 | 布局算错了（几何/停靠/触击/键盘） |
-| **L2** 矩阵 | 同 dump 在 DPI×字号×主题 下重跑 | 待建（§4.2） | Windows + 缩放注入 | 独立 job（慢） | 只在某些缩放/字号下坏 |
+| **L2** 矩阵 | 同 dump 在 DPI×字号×主题 下重跑 | ✅ §4.2（8 格，CI 独立 step） | Windows + 缩放注入 | 同 job 内（~1min） | 只在某些缩放/字号下坏 |
 | **L3** 视觉基线 | 截图与基线 diff | `tools/ui-check.py`（当前未进 CI） | Windows + 稳定渲染 | 独立 job（可选） | 视觉回归（颜色/间距/字形） |
 | **L4** 运行时+人工 | 埋点/耗时/失败提示 + 验收清单 | `ObservabilityTests` + 清单（§4.4） | 真实使用 | 发版前 | 体验退化但布局没错 |
 
@@ -157,13 +157,25 @@ CI 失败路径修正：smoke 非零不再立即 throw，dump/截图先上传再
 ⑧ smoke 无 tab 场景。反例验证：96/192dpi 正反例、空树、tabStop=false、不可见零尺寸叶，
 均按预期规则标识失败（合成例只证明判定算法，不等同真实高 DPI 布局验证）。
 
-**仍开放的缺口**：
+**状态轴（2026-11-11 闭合，原为最大状态缺口）**：此前只有 `keepass-manager` 跑了空+满两态，
+禁用/错误/忙碌/窄窗一次都没进过门。现由 `src/Gdterm.Tests/Ui/UiStateSmoke.cs` 作为
+`--ui-smoke` 的第 6 个 case（`StateAxis`）产证据，断言的是**语义**而不是像素：
 
-1. **状态轴只有“默认”。** 只有 `keepass-manager` 跑了空+满两态，其余全是满/默认态。
-   禁用、错误、忙碌、窄窗全部无 dump。
-2. **L2 矩阵未建**（见 §4.2）——历史事故全在 DPI/字号/主题两根轴上，一次都没跑过。
+| 状态 | 断言 | 反什么 |
+|---|---|---|
+| 禁用 | 空密码时解锁钮 `Enabled=false` | "点完再弹框"（预防式校验缺失） |
+| 错误 | Danger 语义色标签可见、非空、有面积 | 错误只写在灰字里没人在意 |
+| 忙碌 | 主操作禁用 + 文案变「解锁中…」，闸门放行后复位 | 重复提交 / 无进度反馈 |
+| 窄窗 | 240×420 宿主下三面板仍可构造、主操作叶有面积且不越界 | 窄侧栏下文字被裁 |
+| BusyScope 契约 | `IsBusy/StatusOf/AccessibleDescription`、重入不误伤外层、Dispose 复位 | `status` 曾是死参数（用户看不到任何进度文案） |
 
-### 4.2 L2 矩阵门（未建）—— 最大缺口
+`BusyScope` 的重入契约单独立了断言：重入返回 `AlreadyBusy` 且**其 Dispose 不得关掉外层**
+（否则嵌套调用会提前解除忙碌态）。
+
+**仍开放的缺口**：状态轴目前只做了"默认→禁用→错误→忙碌→复位"这一条主链（解锁框 + 忙碌契约
++ 窄窗），尚未逐面板铺满；失败态（网络错误/校验失败）仍靠 L4 人工。
+
+### 4.2 L2 矩阵门（2026-11-11 已建，受控近似）
 
 必须在三个轴上重跑 L1 断言（判断标准仍是"无越界/无重叠/文字不裁切/触击达标"）：
 
@@ -173,12 +185,27 @@ CI 失败路径修正：smoke 非零不再立即 throw，dump/截图先上传再
 | UI 字号 | 9 / 11 / 14 / 20pt | 14pt 下窗体溢出、行重叠 |
 | 主题 | Dark / Darker / OLED | 切主题后旧色残留 |
 
-实现前提（两个小改动，都不难）：
-- `DpiScale` 加测试钩子（`DpiScale.SetOverrideForTests(float)`），使非 UI 线程也能按目标比例算；
-  否则只能靠真实改系统 DPI，CI 不可行。
-- `Program.GlobalAppearance.UIFontSize` 与 `GdtermColorTable.ApplyTheme` 已可编程注入（现成）。
+**已实现（`--ui-matrix` + `tools/ui-matrix-check.py`，CI 有独立 step）**：
 
-成本估计：钩子 0.5d + 矩阵脚本 1d + 收紧既有 dump 假设 0.5d。
+- `src/Gdterm.Tests/Ui/UiMatrixSmoke.cs`：Dark/OLED × DPI 100/150% × 字号 9/14pt = **8 格**，
+  每格对 4 个目标（keepass-manager / keepass-unlock / port-forward / command-history）Show + dump；
+  每格写 `combo.json`（该格的显示条件），dump 目录 `ui-matrix/<theme>-d<dpi>-f<font>/`。
+- `tools/ui-tree-check.py` 加 `--dpi-factor=f`：矩阵 dump 是"在系数 f 下算出的 96dpi 设备像素"，
+  故所有**逻辑**阈值（R1 触击 32 / 命中区 24 / 表行高 24–34 / R6 容差 4px）统一乘 f。
+  默认 1 = 原口径，行为与加参数前完全一致。`combo.json` 不当 dump 判（否则每格多一条假红）。
+- `tools/ui-matrix-check.py`：每格单独跑 L1（规则一套不重写）+ **反空转**：
+  字号轴 14pt/9pt 控件总高须 ≥1.05、DPI 轴 150%/100% 须 ≥1.10，否则说明条件没生效
+  （缓存/被绕过/构造早于注入）→ 判红。格子缺一也判红。
+
+**两条轴的性质必须分清（别把近似当真实）**：
+- **字号轴是真实的**：`UIFontSize` 真换字体，`TextRenderer` 真 GDI 度量 → "14pt 下文字裁切/
+  行重叠"这类历史事故在这里能被真判；
+- **DPI 轴是受控近似**：CI 无高 DPI 显示器（GHA windows-latest 恒 96dpi），只能注入
+  `DpiScale.SetOverrideForTests`，覆盖的是**我们自己的 DpiScale 数学**；WinForms
+  `AutoScaleMode`/PerMonitorV2 的系统缩放仍需真机矩阵。这也是反空转存在的理由——
+  近似轴最容易安静地退化成"同一张图跑 8 遍"。
+
+**未覆盖**：DPI 120/192、字号 11/20pt、Dark 与 OLED 以外的主题（Darker）；真机 PerMonitorV2 缩放。
 
 ### 4.3 L3 视觉基线（有工具，未进 CI）
 
@@ -286,7 +313,7 @@ Controls/FilePaneModel.cs    | n/a:非UI
 
 | # | 事项 | 工作量 | 状态 |
 |---|---|---|---|
-| 5 | L2 矩阵门（先做 96/144 DPI × 9/14pt 四格，主题后补） | 1.5d | ❌ **当前最大缺口** |
+| 5 | L2 矩阵门（DPI × 字号 × 主题 8 格 + 反空转） | 1.5d | ✅ 已建（§4.2）；真机 PerMonitorV2 仍缺 |
 | 6 | L1 加 `accessibleName` 断言 + 图标按钮补 `AccessibleName` | 1d | ⚠️ 半完成：`UiA11y.AutoName` 自动命名已铺（Form/TabPage/列表/文本/进度等 9 类）；图标钮逐一补 + dump 带 accessibleName 字段待做 |
 | 7 | 自绘命中区纳入 R1（dump 增 `hitRegions` 节点） | 0.5d | ✅（`IHitRegionProvider` + 检查器 ≥24 逻辑 px） |
 | 8 | 空态标准组件 `EmptyStateView` 铺 11 处 | 1d | ⚠️ 3/11（历史/转发/通知）；组件已含可见性语义 |
@@ -311,7 +338,7 @@ Controls/FilePaneModel.cs    | n/a:非UI
 |---|---|---|
 | L0 | 报错的 `file:line` + 规则依据条款 | ❌ 直接 `--write-baseline` 把新违规吸收进基线 |
 | L1 | `ui-smoke/*.json`（产物已上传）+ 失败断言行 | ❌ 调大 `TOL`/`HIT_MIN` 让断言过 |
-| L2 | 矩阵里哪一个格子红（DPI/字号/主题） | ❌ 只修 96dpi 那格 |
+| L2 | 矩阵里哪一个格子红（DPI/字号/主题） | ✅ 按 ui-matrix 目录定位到格 |
 | L3 | diff 图 | ❌ 无条件重刷基线 |
 
 基线收紧的唯一合法时机：**修完存量、测试通过、同 PR 内**。

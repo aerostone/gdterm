@@ -51,7 +51,23 @@ namespace Gdterm.Tests.Ui
 
         public void Dispose() { }
         public Task<bool> UnlockAsync(string masterPassword) => Task.FromResult(true);
-        public Task<bool> EnsureDatabaseAsync(string masterPassword) => Task.FromResult(true);
+        /// <summary>
+        /// 解锁闸门（状态轴冒烟用）：非 null 时 <see cref="EnsureDatabaseAsync"/> 挂起，
+        /// 直到测试 <c>SetResult</c> 放行。没有闸门就只能观测到"瞬间完成"，
+        /// 忙碌态（防重复提交 / 进行中文案）永远抓不到那一帧。
+        /// </summary>
+        public System.Threading.Tasks.TaskCompletionSource<bool> UnlockGate { get; set; }
+
+        /// <summary>最后一次送达的密码——断言"界面填的密码原样到服务"，而不是被清洗成空。</summary>
+        public string LastPassword { get; private set; }
+
+        public Task<bool> EnsureDatabaseAsync(string masterPassword)
+        {
+            LastPassword = masterPassword;
+            var gate = UnlockGate;
+            if (gate != null) return gate.Task;
+            return Task.FromResult(true);
+        }
         public Task<bool> ChangeMasterPasswordAsync(string o, string n) => Task.FromResult(true);
         public void Lock() { }
         public CredentialPayload GetCredential(string id) => throw new NotSupportedException();

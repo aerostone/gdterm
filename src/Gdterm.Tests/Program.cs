@@ -85,6 +85,15 @@ namespace Gdterm.Tests
             // 可观测性失败信号（A4/A5/A8/A9）——依赖 CrashLog.Initialize 改写全局路径，必须最后跑
             RunTest("Observability", ObservabilityTests.Run);
 
+            // L2 矩阵：--ui-matrix [outDir] 才跑（DPI × 字号 × 主题，要桌面会话；比冒烟更慢）
+            int mxIdx = Array.IndexOf(args, "--ui-matrix");
+            if (mxIdx >= 0)
+            {
+                string[] mxArgs = new string[args.Length - mxIdx - 1];
+                Array.Copy(args, mxIdx + 1, mxArgs, 0, mxArgs.Length);
+                return UiMatrixSmoke.Run(mxArgs);
+            }
+
             // UI 冒烟：--ui-smoke [outDir] 才跑（要桌面会话，默认单元测试不跑）
             int uiIdx = Array.IndexOf(args, "--ui-smoke");
             if (uiIdx >= 0)

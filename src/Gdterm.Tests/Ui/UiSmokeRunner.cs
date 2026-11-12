@@ -297,6 +297,13 @@ namespace Gdterm.Tests.Ui
                 Console.WriteLine("  dialogs done");
             });
 
+            // 6) 状态轴（docs/UI-UX-VERIFICATION.md §4.1 遗留缺口①）：禁用/错误/忙碌/窄窗。
+            // 此前全仓 dump 只有"满/默认态"，用户真报的 bug 全发生在其余状态。
+            RunCase("StateAxis", () =>
+            {
+                UiStateSmoke.Run(outDir, s => Console.WriteLine("  " + s), (ok, what) => Check(ok, what));
+            });
+
             Console.WriteLine();
             Console.WriteLine("UI smoke Passed: {0}  Failed: {1}", _passes, _fails);
             foreach (var m in _messages) Console.WriteLine(m);
@@ -411,7 +418,7 @@ namespace Gdterm.Tests.Ui
             return label + "(" + c.Dock + ")";
         }
 
-        private static Control FindByName(Control root, string name)
+        internal static Control FindByName(Control root, string name)
         {
             if (root.Name == name) return root;
             foreach (Control c in root.Controls)
@@ -494,14 +501,24 @@ namespace Gdterm.Tests.Ui
         /// <summary>侧栏 dump 用：outDir 由 Run() 开头设一次。</summary>
         private static string _smokeOutDir;
 
-        private static int CountControls(Control root)
+        internal static int CountControls(Control root)
         {
             int n = 1;
             foreach (Control c in root.Controls) n += CountControls(c);
             return n;
         }
 
-        private static Control FindByType(Control root, string typeName)
+        /// <summary>先序遍历整棵控件树（状态轴断言 / 语义色扫描用）。</summary>
+        internal static IEnumerable<Control> AllControls(Control root)
+        {
+            if (root == null) yield break;
+            yield return root;
+            foreach (Control c in root.Controls)
+                foreach (var d in AllControls(c))
+                    yield return d;
+        }
+
+        internal static Control FindByType(Control root, string typeName)
         {
             if (root.GetType().Name == typeName) return root;
             foreach (Control c in root.Controls)
@@ -512,7 +529,7 @@ namespace Gdterm.Tests.Ui
             return null;
         }
 
-        private static void Shot(Form f, string path)
+        internal static void Shot(Form f, string path)
         {
             // AntdUI 自绘控件 DrawToBitmap 抓不到内容，必须用 Win32 PrintWindow 抓真实渲染。
             // PW_CLIENTONLY(0x1): 只抓客户区；失败时回退 DrawToBitmap（至少有窗口框架）。

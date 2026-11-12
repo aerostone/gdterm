@@ -32,8 +32,12 @@ R5 停靠遮挡：同父可见兄弟中 Dock=Fill 与边停靠(Top/Bottom/Left/R
 另含：兄弟重叠（交叠面积 > OVERLAP_MIN(16px2)，过滤包含关系）、子越界（容差 TOL(2px)）、
 零尺寸可见叶、表行高 24-34、AntdUI.Button 左右 padding 全 0。
 
-用法: python3 tools/ui-tree-check.py <jsonDir>
+用法: python3 tools/ui-tree-check.py <jsonDir> [--dpi-factor=1.5]
 退出码 0=全过，1=有失败。
+
+--dpi-factor=f（L2 矩阵门用）：dump 的几何是在「DpiScale 系数 f」下算出的 96dpi 设备像素，
+  故所有逻辑阈值（R1 触击 32 / 命中区 24 / 表行高 24-34 / R6 容差 4px）统一乘 f。
+  默认 1 = 常规 ui-smoke 口径（行为与加参数前完全一致）。
 """
 import json
 import os
@@ -46,6 +50,23 @@ OVERLAP_MIN = 16  # 重叠告警阈值 px2（4x4）
 HIT_MIN = 32      # 最小触击目标 px（R1；change 2026-09-24 定稿，44 噪音过大否决）
 TEXTFIT_TOL = 4   # 文本适配容差 px（R6；96/120dpi 度量差异的经验上限）
 TEXTFIT_STRICT = "--textfit-strict" in sys.argv
+
+
+def flag_value(name, default=None):
+    """读 --name=value 形式的旗标（值自带 = 避免与位置参数目录混淆）。"""
+    for a in sys.argv[1:]:
+        if a.startswith(name + "="):
+            return a.split("=", 1)[1]
+    return default
+
+
+# L2 矩阵门（docs/UI-UX-VERIFICATION.md §4.2）：矩阵里的 dump 是"在 DPI 系数 f 下算出来的 96dpi
+# 设备像素"，所有**逻辑**阈值（触击 32 / 命中区 24 / 表行高 24-34 / 文本容差）都要乘 f，
+# 否则 150% 那一格会按 100% 的尺子量，出现大批假红。
+try:
+    DPI_FACTOR = float(flag_value("--dpi-factor", "1") or "1")
+except ValueError:
+    DPI_FACTOR = 1.0
 
 
 def sbool(v, default=False):
@@ -179,7 +200,10 @@ def main():
     # flag 放第一位会 FileNotFoundError 崩溃（2026-11-01 复核发现）。
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     d = args[0] if args else "ui-smoke"
-    files = sorted(f for f in os.listdir(d) if f.endswith(".json"))
+    # combo.json 是 L2 矩阵的"这一格的显示条件"，不是控件树 dump —— 不能当 dump 判，
+    # 否则每格都会多出一条毫无意义的"关闭路径=0"假红。
+    files = sorted(f for f in os.listdir(d)
+                   if f.endswith(".json") and f != "combo.json")
     print("=== ui-tree-check on %s (%d files) ===" % (d, len(files)))
     if not files:
         check(False, "无 json dump")
@@ -263,7 +287,7 @@ def main():
         # 此前写成 24×96/dpi（方向反了）：96dpi 下 s=1 恰好隐藏，192dpi 下 16逻辑px 的
         # 命中区（32 设备px）会假过 —— 高 dpi 只能要求更多设备像素，不能更少。
         dpi = tree.get("dpi", 96) or 96
-        scale = dpi / 96.0
+        scale = (dpi / 96.0) * DPI_FACTOR
         hit_min_d = 24.0 * scale
         hit_total = 0
         hit_nodes = 0
@@ -321,13 +345,13 @@ def main():
             avail_h = box.get("h", 0) - pad.get("t", 0) - pad.get("b", 0)
             if sbool(n.get("wrap")):
                 need_h = n.get("textWrapH", 0)
-                if need_h > avail_h + TEXTFIT_TOL:
+                if need_h > avail_h + TEXTFIT_TOL * scale:
                     overflow += 1
                     WARN.append("文字裁切 %s[%s] 需%dpx高 可用%dpx「%s」" % (
                         _nm(n), short, need_h, avail_h, text[:20]))
             else:
                 need_w = n.get("textSingleW", 0)
-                if need_w > avail_w + TEXTFIT_TOL:
+                if need_w > avail_w + TEXTFIT_TOL * scale:
                     overflow += 1
                     WARN.append("文字溢出 %s[%s] 需%dpx宽 可用%dpx「%s」" % (
                         _nm(n), short, need_w, avail_w, text[:20]))
@@ -353,7 +377,10 @@ def main():
             if rh and rh != "null" and rh != "":
                 try:
                     v = int(float(rh))
-                    check(24 <= v <= 34, "%s 行高=%d 在24-34" % (n.get("name") or "表", v))
+                    # 行高地板是逻辑 px（24）→ 阈值随 DPI 系数走（150% 下 36-51 才是对的）
+                    check(24 * scale <= v <= 34 * scale,
+                          "%s 行高=%d 在%d-%d" % (n.get("name") or "表", v,
+                                                int(24 * scale), int(34 * scale)))
                 except ValueError:
                     pass
 
