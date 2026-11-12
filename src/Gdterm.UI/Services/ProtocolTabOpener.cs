@@ -24,6 +24,21 @@ namespace Gdterm.UI.Services
     /// </summary>
     public sealed class ProtocolTabOpener
     {
+        /// <summary>
+        /// 建一个跟随主题的 TabPage。
+        /// TabPage 不设 BackColor 时是系统默认 #F0F0F0（浅底），终端控件画满时看不见，
+        /// 但页面空白期、标签栏右侧留白、切主题瞬间都会露出一块白——R7「主题色残留」抓的就是这个。
+        /// 主题切换不需要额外处理：MainForm 的 ThemeColorRemap 会按 旧色→新色 遍历整棵树重贴。
+        /// </summary>
+        private static TabPage NewThemedPage(string title, string toolTip)
+        {
+            var page = new TabPage(title);
+            page.BackColor = GdtermColorTable.Background;
+            page.ForeColor = GdtermColorTable.Foreground;
+            if (!string.IsNullOrEmpty(toolTip)) page.ToolTipText = toolTip;
+            return page;
+        }
+
         private readonly ITunnelManager _tunnelManager;
         private readonly ITerminalSessionFactory _terminalFactory;
         private readonly IRdpClientFactory _rdpFactory;

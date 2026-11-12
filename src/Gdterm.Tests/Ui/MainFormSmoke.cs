@@ -118,6 +118,9 @@ namespace Gdterm.Tests.Ui
                 // v2 单栏：StatusBarControl 已合并进 BottomBarPanel（独立状态条不存在），状态项由底栏承载
                 check(FindByType(f, "BottomBarPanel") != null, "status-found");
                 check(f.MainMenuStrip != null, "menu-found");
+                // 截图：R7 主题色残留查到 TabControl/TabPage 还是系统默认 #F0F0F0，
+                // 这类"白条/白页"必须眼见为实——没有图就只能猜它到底露不露出来。
+                try { UiSmokeRunner.Shot(f, Path.Combine(outDir, "mainform.png")); } catch (Exception exShot) { log("SHOT_FAIL " + exShot.Message); }
                 log("STEP mainform-dump");
                 File.WriteAllText(Path.Combine(outDir, "mainform.json"), UiTreeDumper.Dump(f), System.Text.Encoding.UTF8);
             }
