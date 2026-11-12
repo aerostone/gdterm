@@ -53,6 +53,7 @@ namespace Gdterm.Tests
             RunTest("AiAssistantService", AiAssistantServiceTests.Run);
             RunTest("CommandHistoryStore", CommandHistoryStoreTests.Run);
             RunTest("ExternalFormatImporter", ExternalFormatImporterTests.Run);
+            RunTest("SshConnectionInfoFactory", Gdterm.Tests.Tunnel.SshConnectionInfoFactoryTests.Run);
             RunTest("NetworkDiagnosticsTool", Gdterm.Tests.Tools.NetworkDiagnosticsToolTests.Run);
             RunTest("OnlineLinks", OnlineLinksTests.Run);
             RunTest("Otp", OtpTests.Run);

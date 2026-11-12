@@ -32,8 +32,12 @@ namespace Gdterm.Tunnel
             // 且「密码认证 + 代理认证」没有公开构造重载，只能退回 ConnectionInfo + AuthenticationMethod。
             ProxyTypes proxyType;
             bool useProxy = TryMapProxy(proxy, out proxyType);
-            string proxyUser = useProxy && !string.IsNullOrEmpty(proxy.Username) ? proxy.Username : null;
-            string proxyPass = proxy.Password ?? string.Empty;
+            // proxy 为 null 是**正常**状态（ConnectionConfig.Proxy 文档：「null 或 Kind=None 表示直连」，
+            // 且 ConnectionDialog 在未启用代理时就把 Proxy 置 null）——绝不能在 useProxy 检查之外解引用。
+            // 2026-11-11 实证：裸 `proxy.Password ?? ""` 让每一台「没配代理」的 SSH 连接在
+            // Connect() 里抛 NullReferenceException，直连 SSH 全部连不上。
+            string proxyUser = useProxy && proxy != null && !string.IsNullOrEmpty(proxy.Username) ? proxy.Username : null;
+            string proxyPass = proxy != null ? (proxy.Password ?? string.Empty) : string.Empty;
             ConnectionInfo info;
 
             PrivateKeyFile keyFile = null;

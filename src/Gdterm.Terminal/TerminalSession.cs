@@ -424,6 +424,17 @@ namespace Gdterm.Terminal
                 }
             };
 
+            // 远端礼貌关闭通道（用户输 exit / sshd 踢会话 / 空闲超时）时 ShellStream 只发 Closed，
+            // 之前只订了 ErrorOccurred 与 sshClient 的 ErrorOccurred —— 这条最常见路径上
+            // Disconnected 永不触发：终端窗口停在最后一帧、看起来还活着，按键开始静默丢弃，
+            // 自动重连看门狗（订阅 SessionDisconnected）也就永不接手。
+            // 2026-11-11 端到端实证：假服务器 EXITNOW → IsConnected 已变 false，Disconnected 8s 内未触发。
+            _shellStream.Closed += (sender, e) =>
+            {
+                TerminalLog.Info("SshSession.ShellClosed", "远端关闭 shell 通道");
+                RaiseDisconnected();
+            };
+
             _shellStream.ErrorOccurred += (sender, e) =>
             {
                 // SSH.NET ShellStream 错误原文——断线排查第一证据
