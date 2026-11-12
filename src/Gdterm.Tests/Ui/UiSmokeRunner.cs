@@ -453,7 +453,12 @@ namespace Gdterm.Tests.Ui
             string outDir = _smokeOutDir;
             string name = page.Name;
             var emptyMode = page.Empty;
-            Progress("panel:" + name);
+            // 单页复现钩子：GDTERM_SMOKE_PAGE=<页面名> 只跑这一页（排查"某一页把 CI 卡死"时
+            // 不必整轮冒烟重跑，也不用把看门狗当唯一线索）。
+            string only = Environment.GetEnvironmentVariable("GDTERM_SMOKE_PAGE");
+            if (!string.IsNullOrEmpty(only) && !string.Equals(only, name, StringComparison.OrdinalIgnoreCase))
+                return;
+            Progress("panel:" + name + ":create");
 
             Control panel = null;
             // tmp 作用域：面板的 store/manager/scanner 依赖随作用域释放，目录自动清理
@@ -472,6 +477,7 @@ namespace Gdterm.Tests.Ui
                     Check(false, name + " CTOR_FAIL: " + FlatEx(ex));
                     return;
                 }
+                Progress("panel:" + name + ":created");
                 Check(panel != null, name + " PANEL_NULL");
                 if (panel == null) return;
 
@@ -480,6 +486,7 @@ namespace Gdterm.Tests.Ui
                 // 覆盖式面板（SnippetSearch 等浮层）出厂 Visible=false，靠 ShowAndFocus 才现身；
                 // 不显式点亮的话它整棵子树都是"不可见"，空态断言会假红/假绿。
                 panel.Visible = true;
+                Progress("panel:" + name + ":show");
                 host.Show();
                 host.BringToFront();
                 Application.DoEvents();
@@ -488,6 +495,7 @@ namespace Gdterm.Tests.Ui
                 Thread.Sleep(250);
                 Application.DoEvents();
 
+                Progress("panel:" + name + ":pumped");
                 AssertNoDockOverlap(host, name);
                 Check(CountControls(panel) > 3, name + " TOO_FEW_CONTROLS=" + CountControls(panel) + " (>3)");
 
@@ -508,6 +516,7 @@ namespace Gdterm.Tests.Ui
                         Check(!empty.Visible, name + " EMPTY_SHOWN (data present but layer still visible)");
                 }
 
+                Progress("panel:" + name + ":shot");
                 Shot(host, Path.Combine(outDir, name + ".png"));
                 File.WriteAllText(Path.Combine(outDir, name + ".json"), UiTreeDumper.Dump(host), System.Text.Encoding.UTF8);
                 Console.WriteLine("  dump: " + name + ".json");
