@@ -22,10 +22,13 @@ namespace Gdterm.Tests.Ui
     ///
     /// 本文件把四个状态变成**可断言的对象**，且断言的是语义而不是像素：
     ///   - 禁用态：不满足前置条件的动作必须 Enabled=false（预防式校验，不是点完再弹框）；
-    ///   - 错误态：错误文案必须可见、非空、且用 Danger 语义色（不是灰字混在正文里）；
+    ///   - 错误态：错误文案必须可见、非空、给出具体原因，且用语义色（不是灰字混在正文里）；
     ///   - 忙碌态：主操作必须禁用 + 文案改为进行中（防重复提交），结束后必须复位；
     ///   - 窄窗：240px 侧栏下仍能构造、无停靠遮挡、关键动作控件仍有非零面积。
     /// 每个状态同时落一份 dump，几何规则（R1/R5/R6/越界/重叠）由 tools/ui-tree-check.py 复用。
+    ///
+    /// 反"只报一行 FAIL"：每条断言的诊断信息带**实际值**（实际颜色/实际文案/实际面积），
+    /// dump 在断言之前落盘——断言红了也一定有证据文件。
     /// </summary>
     public static class UiStateSmoke
     {
@@ -61,38 +64,47 @@ namespace Gdterm.Tests.Ui
         private static void UnlockFormStates(string outDir, Action<string> log, Action<bool, string> check)
         {
             var svc = new FakeKeePassService();
-            log("  unlock: ctor");
+            string emptyHint = L10n.T("密码不能为空");
+            string idleHint = L10n.T("请输入主密码以解锁 KeePass 密码库");
             using (var f = new KeePassUnlockForm(svc))
             {
-                log("  unlock: show");
                 f.Show();
                 f.BringToFront();
                 Application.DoEvents();
                 Thread.Sleep(400);
                 Application.DoEvents();
-                log("  unlock: shown");
 
-                IButtonControl unlockBtn = f.AcceptButton;
+                // 诊断先行：把所有可见标签的文案/颜色打进日志。颜色断言一旦红，
+                // 从这里就能看出"是颜色没设上"还是"找错了控件"，不用再猜一轮。
+                DiagLabels(f, log);
+
+                var unlockBtn = f.AcceptButton;
                 var unlock = unlockBtn as Control;
                 check(unlockBtn != null && unlock != null, "state-unlock: AcceptButton 可定位（Enter 可提交）");
 
-                // —— 禁用态 + 错误态（同一瞬间：空密码 → 键灰 + 红字说明）——
-                check(unlock != null && !unlock.Enabled, "state-unlock: 空密码时「解锁」置灰（预防式校验）");
-                var danger = FirstDangerLabel(f);
-                check(danger != null, "state-unlock: 错误态用 Danger 语义色文案（不是无声置灰）");
-                if (danger != null)
-                {
-                    check(danger.Visible, "state-unlock: 错误文案可见");
-                    check(!string.IsNullOrWhiteSpace(danger.Text), "state-unlock: 错误文案非空=" + danger.Text);
-                    check(danger.Width > 0 && danger.Height > 0,
-                        "state-unlock: 错误文案有面积=" + danger.Width + "x" + danger.Height);
-                }
+                // —— 证据先落盘：断言红了也必须有 dump，否则又回到"只报一行 FAIL" ——
                 UiSmokeRunner.Shot(f, Path.Combine(outDir, "state-unlock-disabled.png"));
                 File.WriteAllText(Path.Combine(outDir, "state-unlock-disabled.json"),
                     UiTreeDumper.Dump(f), System.Text.Encoding.UTF8);
                 log("dump: state-unlock-disabled.json");
 
-                // —— 状态迁移：输入后必须转可用，且红字收回 ——
+                // —— 禁用态：空密码 → 主操作置灰（预防式校验）——
+                check(unlock != null && !unlock.Enabled, "state-unlock: 空密码时「解锁」置灰（预防式校验）");
+
+                // —— 错误态：必须给出具体原因 + 语义色（不是无声置灰、不是灰字混正文）——
+                Control hint = FindLabelByText(f, emptyHint);
+                check(hint != null,
+                    "state-unlock: 禁用态给出具体原因「" + emptyHint + "」(实际标签=" + DescribeLabels(f) + ")");
+                if (hint != null)
+                {
+                    check(hint.Visible, "state-unlock: 原因文案可见");
+                    check(hint.Width > 0 && hint.Height > 0,
+                        "state-unlock: 原因文案有面积=" + hint.Width + "x" + hint.Height);
+                    check(hint.ForeColor != SystemColors.ControlText,
+                        "state-unlock: 原因文案用语义色而非默认正文色 (实际=" + Hex(hint.ForeColor) + ")");
+                }
+
+                // —— 状态迁移：输入后必须转可用，且提示色收回正文色 ——
                 var input = UiSmokeRunner.FindByType(f, "Input") as Control;
                 check(input != null, "state-unlock: 密码输入框可定位");
                 if (input != null)
@@ -103,27 +115,27 @@ namespace Gdterm.Tests.Ui
                     Application.DoEvents();
                 }
                 check(unlock != null && unlock.Enabled, "state-unlock: 输入密码后「解锁」转可用（禁用态不是死的）");
-                var stillDanger = FirstDangerLabel(f);
-                check(stillDanger == null, "state-unlock: 校验通过后错误色收回 (残留=" +
-                    (stillDanger == null ? 0 : 1) + ")");
+                Control idle = FindLabelByText(f, idleHint);
+                check(idle != null, "state-unlock: 校验通过后提示改回引导语「" + idleHint + "」(实际=" + DescribeLabels(f) + ")");
+                check(idle == null || idle.ForeColor != GdtermColorTable.Danger,
+                    "state-unlock: 校验通过后语义色收回 (实际=" + (idle == null ? "?" : Hex(idle.ForeColor)) + ")");
 
                 // —— 忙碌态：闸门挂起服务调用，抓"进行中"这一帧 ——
                 var gate = new TaskCompletionSource<bool>();
                 svc.UnlockGate = gate;
-                if (unlockBtn != null)
-                {
-                    unlockBtn.PerformClick();
-                    Application.DoEvents();
-                    Thread.Sleep(200);
-                    Application.DoEvents();
-                }
-                check(unlock != null && !unlock.Enabled, "state-unlock: 忙碌中主操作禁用（防重复提交）");
-                check(unlock != null && (unlock.Text ?? "").Contains("解锁中"),
-                    "state-unlock: 忙碌中文案可见=" + (unlock == null ? "?" : unlock.Text));
+                if (unlockBtn != null) unlockBtn.PerformClick();
+                Application.DoEvents();
+                Thread.Sleep(200);
+                Application.DoEvents();
+
                 UiSmokeRunner.Shot(f, Path.Combine(outDir, "state-unlock-busy.png"));
                 File.WriteAllText(Path.Combine(outDir, "state-unlock-busy.json"),
                     UiTreeDumper.Dump(f), System.Text.Encoding.UTF8);
                 log("dump: state-unlock-busy.json");
+
+                check(unlock != null && !unlock.Enabled, "state-unlock: 忙碌中主操作禁用（防重复提交）");
+                check(unlock != null && (unlock.Text ?? "").Contains("解锁中"),
+                    "state-unlock: 忙碌中文案可见=" + (unlock == null ? "?" : unlock.Text));
 
                 // —— 复位契约：闸门放行后 busy 标记与按钮都必须回到初始态 ——
                 gate.SetResult(true);
@@ -236,7 +248,7 @@ namespace Gdterm.Tests.Ui
                     check(leaf != null && leaf.Visible && leaf.Width > 0 && leaf.Height > 0,
                         name + ": 主操作控件在窄窗下仍可见且有面积=" +
                         (leaf == null ? "none" : leaf.Name + " " + leaf.Width + "x" + leaf.Height));
-                    // 横向不被裁：面板内最右可见控件不得越过宿主客户区（越界由 Python 侧再判一次）
+                    // 横向不被裁：面板内主操作控件不得越过宿主客户区（越界由 Python 侧再判一次）
                     check(leaf == null || leaf.Right <= host.ClientSize.Width + 2,
                         name + ": 主操作控件右缘=" + (leaf == null ? -1 : leaf.Right) +
                         " 未越出窄窗宽=" + host.ClientSize.Width);
@@ -253,17 +265,55 @@ namespace Gdterm.Tests.Ui
             }
         }
 
-        /// <summary>第一个 ForeColor 为 Danger 的可见标签（错误态的语义色证据）。</summary>
-        private static Control FirstDangerLabel(Control root)
+        // ── 诊断辅助 ────────────────────────────────────────────────────────────
+
+        /// <summary>把可见标签的文案与颜色打进日志（颜色断言红了不用再猜一轮）。</summary>
+        private static void DiagLabels(Control root, Action<string> log)
         {
             foreach (Control c in UiSmokeRunner.AllControls(root))
             {
-                if (!c.Visible) continue;
-                if (c.GetType().Name.IndexOf("Label", StringComparison.Ordinal) < 0) continue;
-                try { if (c.ForeColor == GdtermColorTable.Danger) return c; }
-                catch { }
+                if (!IsLabel(c) || !c.Visible) continue;
+                string t = (c.Text ?? "").Replace("\r", " ").Replace("\n", " ");
+                if (t.Length > 40) t = t.Substring(0, 40);
+                log("  label[" + c.GetType().Name + "] fore=" + Hex(c.ForeColor) + " text=" + t);
+            }
+        }
+
+        private static bool IsLabel(Control c)
+        {
+            return c != null && c.GetType().Name.IndexOf("Label", StringComparison.Ordinal) >= 0;
+        }
+
+        private static Control FindLabelByText(Control root, string text)
+        {
+            if (string.IsNullOrEmpty(text)) return null;
+            foreach (Control c in UiSmokeRunner.AllControls(root))
+            {
+                if (!IsLabel(c) || !c.Visible) continue;
+                if (string.Equals((c.Text ?? "").Trim(), text.Trim(), StringComparison.Ordinal)) return c;
             }
             return null;
+        }
+
+        private static string DescribeLabels(Control root)
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (Control c in UiSmokeRunner.AllControls(root))
+            {
+                if (!IsLabel(c) || !c.Visible) continue;
+                string t = (c.Text ?? "").Replace("\r", " ").Replace("\n", " ");
+                if (t.Length > 20) t = t.Substring(0, 20);
+                if (sb.Length > 0) sb.Append(" | ");
+                sb.Append(t).Append('/').Append(Hex(c.ForeColor));
+                if (sb.Length > 220) { sb.Append(" …"); break; }
+            }
+            return sb.Length == 0 ? "无可见标签" : sb.ToString();
+        }
+
+        private static string Hex(Color c)
+        {
+            return "#" + c.R.ToString("X2") + c.G.ToString("X2") + c.B.ToString("X2") +
+                   (c.A == 255 ? "" : "/A" + c.A.ToString("X2"));
         }
 
         /// <summary>第一个可见且 Enabled 的交互叶（按钮/输入/下拉），用来判"窄窗下主操作还在"。</summary>
