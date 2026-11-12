@@ -257,7 +257,8 @@ CI 失败路径修正：smoke 非零不再立即 throw，dump/截图先上传再
 **已实现（`--ui-matrix` + `tools/ui-matrix-check.py`，CI 有独立 step）**：
 
 - `src/Gdterm.Tests/Ui/UiMatrixSmoke.cs`：Dark/OLED × DPI 100/150% × 字号 9/14pt = **8 格**，
-  每格对 4 个目标（keepass-manager / keepass-unlock / port-forward / command-history）Show + dump；
+  每格对 8 个目标（keepass-manager / keepass-unlock / port-forward / command-history /
+  secret-scan / toolbox / transfer-center / health-monitor）Show + dump；
   每格写 `combo.json`（该格的显示条件），dump 目录 `ui-matrix/<theme>-d<dpi>-f<font>/`。
 - `tools/ui-tree-check.py` 加 `--dpi-factor=f`：矩阵 dump 是"在系数 f 下算出的 96dpi 设备像素"，
   故所有**逻辑**阈值（R1 触击 32 / 命中区 24 / 表行高 24–34 / R6 容差 4px）统一乘 f。

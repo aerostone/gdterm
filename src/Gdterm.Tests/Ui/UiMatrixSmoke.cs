@@ -33,10 +33,15 @@ namespace Gdterm.Tests.Ui
         private static readonly float[] DpiFactors = { 1.0f, 1.5f };
         private static readonly float[] FontSizes = { 9f, 14f };
 
-        /// <summary>矩阵目标：2 个窗 + 2 个侧栏面板（覆盖表格/输入/按钮/标签/空态）。</summary>
+        /// <summary>
+        /// 矩阵目标：2 个窗 + 6 个侧栏面板（覆盖表格/输入/按钮/标签/空态/进度条/多列表）。
+        /// 每格跑全量同一批目标——tools/ui-matrix-check.py 会断言"同一批目标在每格都出现"，
+        /// 少一个就是某格被静默跳过；那是防假绿的护栏，不能为了省时间改成按主题分片。
+        /// </summary>
         private static readonly string[] Targets =
         {
-            "keepass-manager", "keepass-unlock", "port-forward", "command-history"
+            "keepass-manager", "keepass-unlock", "port-forward", "command-history",
+            "secret-scan", "toolbox", "transfer-center", "health-monitor"
         };
 
         private static int _fails;
@@ -146,6 +151,39 @@ namespace Gdterm.Tests.Ui
                             ShowAndDump(host, dir, target, font, dpi);
                         }
                         finally { try { Directory.Delete(tmp, true); } catch { } }
+                    }
+                    break;
+                case "secret-scan":
+                    // 分数 Label 用 +11pt 粗体、按钮 3 个、上方还有进度条——
+                    // 这是 14pt 字号下最容易被顶出侧栏的一页（10 分钟内改过两次布局）
+                    using (var scanner = new Gdterm.Security.SecretScanner(
+                        Gdterm.Security.SecretScanConfig.GetDefault()))
+                    using (var host = PanelHost())
+                    {
+                        host.Controls.Add(new SecretScanPanel(scanner, null) { Dock = DockStyle.Fill, Visible = true });
+                        ShowAndDump(host, dir, target, font, dpi);
+                    }
+                    break;
+                case "toolbox":
+                    using (var registry = new Gdterm.Tools.ToolRegistry())
+                    using (var host = PanelHost())
+                    {
+                        host.Controls.Add(new ToolboxPanel(registry) { Dock = DockStyle.Fill, Visible = true });
+                        ShowAndDump(host, dir, target, font, dpi);
+                    }
+                    break;
+                case "transfer-center":
+                    using (var host = PanelHost())
+                    {
+                        host.Controls.Add(new TransferCenterPanel { Dock = DockStyle.Fill, Visible = true });
+                        ShowAndDump(host, dir, target, font, dpi);
+                    }
+                    break;
+                case "health-monitor":
+                    using (var host = PanelHost())
+                    {
+                        host.Controls.Add(new HealthMonitorPanel { Dock = DockStyle.Fill, Visible = true });
+                        ShowAndDump(host, dir, target, font, dpi);
                     }
                     break;
                 default:
