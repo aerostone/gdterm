@@ -184,7 +184,14 @@ namespace Gdterm.UI.Controls
             // 与 TableShell 同机制：AntdUI.Tabs 隐藏页 0×0 时，AutoSize 工具条的子件
             // 会画到宿主左上角（WinForms 子窗不裁剪父边界）。零面积隐藏，有尺寸恢复。
             bool hasArea = ClientSize.Width > 0 && ClientSize.Height > 0;
-            if (_bar.Visible != hasArea) _bar.Visible = hasArea;
+            // 工具条是 Dock=Top 的固定行：宿主比这一行还矮时（书签页 SplitContainer 被拖到
+            // 53px，壳只剩 32px 而工具行要 38px）它会画到壳外，ui-tree-check R-溢出 实测红。
+            // 放不下就整行收起——32px 里塞过滤/排序本来也没有可操作空间。
+            int barH = 0;
+            try { barH = _bar.GetPreferredSize(new Size(Math.Max(1, ClientSize.Width), int.MaxValue)).Height; }
+            catch (Exception) { barH = 0; }
+            bool showBar = hasArea && (barH <= 0 || ClientSize.Height >= barH);
+            if (_bar.Visible != showBar) _bar.Visible = showBar;
             _pager.SyncArea(hasArea);
             base.OnClientSizeChanged(e);
         }

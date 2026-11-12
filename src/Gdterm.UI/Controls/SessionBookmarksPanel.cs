@@ -183,8 +183,26 @@ namespace Gdterm.UI.Controls
             _emptyRecent = EmptyStateView.Attach(recentHost, L10n.T("还没有连接记录"),
                 L10n.T("连过的会话会按时间倒序留在这里，成功/失败一目了然"));
 
-            // 布局顺序：Bottom 先加会被挤；用 Resume 后设 splitter
-            split.SplitterDistance = 220;
+            // 构造期 split.Height 还是 0：这里设 SplitterDistance 会被钳成极小值，
+            // 于是上半区（收藏书签）只剩几十像素——空态层一路挤到 32px 并越界
+            // （ui-tree-check R-溢出 实测：EmptyStateView 32px 里塞 61px 盒体）。
+            // 改为等壳有真实高度后设一次：上面给书签列表 ~45%，下面留给最近连接。
+            Layout += (s2, e2) => ApplySplitOnce(split);
+            split.SizeChanged += (s2, e2) => ApplySplitOnce(split);
+        }
+
+        private bool _splitApplied;
+
+        /// <summary>有真实高度后设一次分隔位置（构造期 SplitterDistance 会被钳掉，见调用处注释）。</summary>
+        private void ApplySplitOnce(SplitContainer split)
+        {
+            if (_splitApplied || split == null || split.Height < 120) return;
+            _splitApplied = true;              // 先置位：赋值本身会再触发 Layout/SizeChanged
+            try
+            {
+                split.SplitterDistance = Math.Max(DpiScale.V(this, 160), (int)(split.Height * 0.45));
+            }
+            catch (Exception ex) { DiagLog.Swallowed("SessionBookmarksPanel.Splitter", ex); }
         }
 
         private static ListView CreateListView(string name)

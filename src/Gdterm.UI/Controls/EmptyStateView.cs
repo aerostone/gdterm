@@ -156,6 +156,34 @@ namespace Gdterm.UI.Controls
             if (empty) CenterBox();
         }
 
+
+        /// <summary>空间不足时舍掉主操作按钮；空间恢复再挂回来（不抖动：放不下就继续收着）。</summary>
+        private void EnsureActionFits()
+        {
+            if (_action == null) return;
+            if (_action.Visible)
+            {
+                if (_box.Height <= ClientSize.Height) { _actionSuppressed = false; return; }
+                _action.Visible = false;
+                _actionSuppressed = true;
+                try { _box.PerformLayout(); } catch (Exception) { }
+                return;
+            }
+            if (!_actionSuppressed) return;
+            _action.Visible = true;                      // 试恢复
+            try { _box.PerformLayout(); } catch (Exception) { }
+            if (_box.Height > ClientSize.Height)
+            {
+                _action.Visible = false;
+                try { _box.PerformLayout(); } catch (Exception) { }
+            }
+            else
+            {
+                _actionSuppressed = false;
+            }
+        }
+
+        private bool _actionSuppressed;
         /// <summary>
         /// 把空态层挂到宿主（通常是面板自身）上并置于最前。
         /// list 仅用于可读性/顺序约定：本方法不订阅列表事件，调用方在刷新末尾显式 SetEmpty。
@@ -245,6 +273,16 @@ namespace Gdterm.UI.Controls
             FitHeight();
             int w = _box.Width, h = _box.Height;
             if (w <= 0 || h <= 0) { _box.PerformLayout(); w = _box.Width; h = _box.Height; }
+            // 连"标题 + 主操作"都塞不进这条窄带时逐级降级（书签页 SplitContainer 被拖到 53px，
+            // 空态位只剩 32px：61px 的盒体会越界画到父容器外，ui-tree-check R-溢出 实测红）。
+            // 顺序：先舍按钮（标题仍能说明"这里为什么是空的"）→ 再舍整个盒体（空白胜于越界）。
+            EnsureActionFits();
+            w = _box.Width; h = _box.Height;
+            if (_box.Height > ClientSize.Height)
+            {
+                _box.Visible = false;
+                return;
+            }
             _box.Left = Math.Max(0, (ClientSize.Width - w) / 2);
             _box.Top = Math.Max(0, (ClientSize.Height - h) / 2);
         }
