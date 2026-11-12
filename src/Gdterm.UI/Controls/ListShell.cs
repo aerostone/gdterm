@@ -40,6 +40,7 @@ namespace Gdterm.UI.Controls
         private readonly string _filterHint;
         private readonly List<string> _sortKeys = new List<string>();
         private readonly AntdUI.Label _countLabel;
+        private readonly BarFit _barFit;
 
         public ListView List { get; private set; }
         public AntdUI.Input FilterBox { get; private set; }
@@ -143,6 +144,13 @@ namespace Gdterm.UI.Controls
             FormFontPolicy.FitSingleLineLabel(_countLabel);
             _bar.Controls.Add(_countLabel);
 
+            // 自适应收口（2026-11-07）：过滤/排序/方向/计数在拥挤时先让位，动作按钮保留
+            _barFit = new BarFit(_bar);
+            _barFit.Record(FilterBox, optional: true);
+            _barFit.Record(SortSelect, optional: true);
+            _barFit.Record(SortDirection, optional: true);
+            _barFit.Record(_countLabel, optional: true);
+
             // 分页条：默认 50 条/页，单页时整条隐藏；翻页 → 重切片（AntdUI.Pagination 只出页码 UI）
             _pager = new ListPager();
             _pager.PageChanged += page => Apply();
@@ -187,13 +195,20 @@ namespace Gdterm.UI.Controls
             // 工具条是 Dock=Top 的固定行：宿主比这一行还矮时（书签页 SplitContainer 被拖到
             // 53px，壳只剩 32px 而工具行要 38px）它会画到壳外，ui-tree-check R-溢出 实测红。
             // 放不下就整行收起——32px 里塞过滤/排序本来也没有可操作空间。
+            bool showBar = hasArea;
             int barH = 0;
-            try { barH = _bar.GetPreferredSize(new Size(Math.Max(1, ClientSize.Width), int.MaxValue)).Height; }
-            catch (Exception) { barH = 0; }
-            bool showBar = hasArea && (barH <= 0 || ClientSize.Height >= barH);
+            if (hasArea)
+            {
+                // 先收宽再量高：子件比容器宽时换行也救不了（会直接画出父边界）
+                _barFit.RestoreOptional();
+                barH = _barFit.Fit(ClientSize.Width);
+                // 仍放不下（矮宿主 + 换行）→ 逐个收起可省子件；还放不下就整条收起
+                while (barH > 0 && ClientSize.Height < barH + DpiScale.V(this, 40) && _barFit.HideOneOptional())
+                    barH = _barFit.Fit(ClientSize.Width);
+                showBar = barH <= 0 || ClientSize.Height >= barH;
+            }
             if (_bar.Visible != showBar) _bar.Visible = showBar;
-            // 换行时 AutoSize 不会按新宽度重算高度（与 TableShell.RelayoutBar 同一缺陷，
-            // 只是这里 PreferredSize 已经算过了，直接回写即可）。
+            // 换行时 AutoSize 不会按新宽度重算高度（与 TableShell 同一缺陷），显式回写
             if (showBar && barH > 0 && _bar.Height != barH) _bar.Height = barH;
             _pager.SyncArea(hasArea);
             base.OnClientSizeChanged(e);
@@ -214,6 +229,7 @@ namespace Gdterm.UI.Controls
             FormFontPolicy.SizeActionButton(this, b, 8, 3);
             if (onClick != null) b.Click += onClick;
             _bar.Controls.Add(b);
+            _barFit.Record(b);
             return b;
         }
 

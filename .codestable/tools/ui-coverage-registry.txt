@@ -34,6 +34,7 @@ Controls/TransferProgressDialog.cs | dump:transfer-progress |
 Controls/CommandPaletteForm.cs | manual:transient modal (hotkey-triggered, input-driven filtering) | A1 command palette; structure consistent with QuickJump
 Controls/AiChatPanel.cs | none | 侧栏常驻
 Controls/BatchCommandPanel.cs | dump:batch-command | 侧栏常驻
+Controls/BarFit.cs | none | 工具条自适应收口（纯布局辅助，随 TableShell/ListShell 的 dump 间接验证）
 Controls/BottomBarPanel.cs | none | 主壳底栏（mainform dump 内含节点，但无独立断言）
 Controls/CommandHistoryPanel.cs | dump:command-history | 侧栏常驻（审计 C7-2 入 dump）
 Controls/CommandTemplatePanel.cs | dump:command-template | 侧栏常驻

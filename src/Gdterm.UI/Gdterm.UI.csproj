@@ -135,6 +135,7 @@
     <Compile Include="Controls\TabContainerControl.cs">
       <SubType>UserControl</SubType>
     </Compile>
+    <Compile Include="Controls\BarFit.cs" />
     <Compile Include="Controls\BottomBarPanel.cs">
       <SubType>UserControl</SubType>
     </Compile>

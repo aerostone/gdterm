@@ -34,6 +34,7 @@ namespace Gdterm.UI.Controls
         private readonly string[] _columns;
         private readonly FlowLayoutPanel _bar;
         private readonly AntdUI.Label _countLabel;
+        private readonly BarFit _barFit;
         private TableMultiSelect _multi;
 
         public AntdUI.Input FilterBox { get; private set; }
@@ -128,6 +129,13 @@ namespace Gdterm.UI.Controls
             FormFontPolicy.FitSingleLineLabel(_countLabel);
             _bar.Controls.Add(_countLabel);
 
+            // 自适应收口（2026-11-07）：拥挤时过滤/排序/计数先让位，动作按钮最后保留
+            _barFit = new BarFit(_bar);
+            _barFit.Record(FilterBox, optional: true);
+            _barFit.Record(SortSelect, optional: true);
+            _barFit.Record(SortDirection, optional: true);
+            _barFit.Record(_countLabel, optional: true);
+
             // 分页条：默认 50 条/页，单页时整条隐藏（AntdUI.Pagination 只出页码 UI，切数据靠 Apply）
             _pager = new ListPager();
             _pager.PageChanged += page => Apply();
@@ -163,10 +171,14 @@ namespace Gdterm.UI.Controls
         {
             int w = ClientSize.Width;
             if (w <= 0) return;
-            int need;
-            try { need = _bar.GetPreferredSize(new Size(w, 0)).Height; }
-            catch (Exception) { return; }
-            if (need > 0 && _bar.Height != need) _bar.Height = need;
+            // 先收宽（子件比容器宽时换行救不了）→ 再按当前宽度量高 → 不够就让位
+            _barFit.RestoreOptional();
+            int need = _barFit.Fit(w);
+            while (need > 0 && ClientSize.Height < need + DpiScale.V(this, 60) && _barFit.HideOneOptional())
+                need = _barFit.Fit(w);
+            bool showBar = need <= 0 || ClientSize.Height >= need;
+            if (_bar.Visible != showBar) _bar.Visible = showBar;
+            if (showBar && need > 0 && _bar.Height != need) _bar.Height = need;
         }
 
         public AntdUI.Button AddAction(string text, EventHandler onClick, string name = null)
@@ -182,6 +194,7 @@ namespace Gdterm.UI.Controls
             // 统一交给 FormFontPolicy 按真实 GDI 文字宽 + FieldHeight 定尺寸。
             FormFontPolicy.SizeActionButton(this, b, 8, 3);
             if (onClick != null) b.Click += onClick;
+            _barFit.Record(b);
             _bar.Controls.Add(b);
             return b;
         }
