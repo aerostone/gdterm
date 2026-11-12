@@ -69,12 +69,9 @@ namespace Gdterm.UI.Controls
 
         private static AntdUI.Button MkBtn(MacroPanel self, string text, string tip)
         {
-            var b = new AntdUI.Button
-            {
-                Text = text,
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(self, 8), DpiScale.V(self, 3), DpiScale.V(self, 8), DpiScale.V(self, 3))
-            };
+            var b = new AntdUI.Button { Text = text };
+            // 同 ListShell：AutoSize 不吃 DPI/字号，统一度量
+            Services.FormFontPolicy.SizeActionButton(self, b, 8, 3);
             if (!string.IsNullOrEmpty(tip)) b.ToolTipText2(tip);
             return b;
         }

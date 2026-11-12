@@ -192,18 +192,16 @@ namespace Gdterm.UI.Controls
         /// <summary>宿主追加自己的动作按钮（导出 / 批量删除 / 启用…），进入同一行工具条。</summary>
         public AntdUI.Button AddAction(string text, EventHandler onClick, string name = null)
         {
-            int fieldH = FormFontPolicy.FieldHeight(this);
             var b = new AntdUI.Button
             {
                 Name = name,
                 Text = text,
                 Type = AntdUI.TTypeMini.Default,
-                AutoSize = true,
-                Height = fieldH,
-                // AutoSize 钮不吃库内默认 sps，Padding 必须显式给，否则文字贴边（ui-tree-check L0 会红）
-                Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3)),
                 Margin = new Padding(0, 0, DpiScale.V(this, 4), 0)
             };
+            // AutoSize 量出来的尺寸不跟 DPI/字号走（矩阵实证：d100 与 d150 同为 46x30），
+            // 改由 FormFontPolicy 按真实 GDI 文字宽 + 输入框同高做尺寸。
+            FormFontPolicy.SizeActionButton(this, b, 8, 3);
             if (onClick != null) b.Click += onClick;
             _bar.Controls.Add(b);
             return b;

@@ -130,14 +130,16 @@ namespace Gdterm.UI.Controls
 
         private AntdUI.Button CreateBtn(string text)
         {
-            return new AntdUI.Button
+            var b = new AntdUI.Button
             {
-                Text = text, AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
+                Text = text,
                 Margin = new Padding(0, 0, DpiScale.V(this, 8), 0),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-0.5f)
             };
+            // 同 ListShell：AutoSize 不吃 DPI，交给统一度量（d150 下 46x34 触发触击红线）
+            Services.FormFontPolicy.SizeActionButton(this, b, 10, 4);
+            return b;
         }
 
         private void RefreshList()
