@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """UI/UX 静态规范门（L0）——设计语言 SSOT 的机器可读投影。
 
