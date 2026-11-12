@@ -63,6 +63,7 @@
     <Compile Include="Serialization\JsonText.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Security\HostKeyVerification.cs" />
+    <Compile Include="Recording\SessionRecording.cs" />
     <Compile Include="Serialization\HexDump.cs" />
     <Compile Include="Security\KnownHostsStore.cs" />
     <Compile Include="Security\ShellArgument.cs" />

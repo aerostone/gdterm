@@ -89,6 +89,12 @@ namespace Gdterm.UI.Services
                     {
                         var config = all.FirstOrDefault(c => c.Id == tab.ConnectionId);
                         if (config != null) _tabs.OpenConnection(config);
+                        // 标签改名/染色也要复原（P2）：存的是"屏幕上的标题"，
+                        // 与连接名不同才套回去，否则等于把连接名改了一次
+                        if (config != null && (!string.IsNullOrEmpty(tab.Title) && tab.Title != config.Name
+                                               || tab.AccentColor != 0))
+                            _tabs.RestoreTabDecoration(config.Id, tab.Title != config.Name ? tab.Title : null,
+                                tab.AccentColor != 0 ? (int?)tab.AccentColor : null);
                     }
                     if (state.ActiveTabIndex >= 0)
                         _tabs.SetActiveTabIndex(state.ActiveTabIndex);

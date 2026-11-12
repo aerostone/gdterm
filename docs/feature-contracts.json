@@ -212,6 +212,15 @@
       "src": []
     },
     {
+      "id": "act.ToggleSessionRecording",
+      "name": "开始/停止录制会话",
+      "menu": "终端 > 开始录制会话",
+      "type": "action",
+      "kind": "action",
+      "menu_leaf": "开始录制会话",
+      "src": []
+    },
+    {
       "id": "page.AddOtpForm",
       "name": "添加 OTP",
       "menu": "OTP > 新增",
@@ -589,6 +598,21 @@
         "loading"
       ],
       "note": "P1-3 缺口补齐：文本(尾部 2MB)+十六进制(4KB 分页)双视图、查找上一个/下一个、跟随最新(tail 定时器)、四种范围过滤、ListShell 过滤/排序、EmptyStateView 空态；loading 走「读取失败：」内联文本 + 状态栏（日志本地读，无网络等待）"
+    },
+    {
+      "id": "page.SessionRecordingsForm",
+      "name": "会话录制中心",
+      "menu": "终端 > 会话录制中心…",
+      "type": "list",
+      "src": [
+        "src/Gdterm.UI/Forms/SessionRecordingsForm.cs",
+        "src/Gdterm.Core/Recording/SessionRecording.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": [
+        "loading"
+      ],
+      "note": "P1-2：data/recordings 下的 .gtr 列表（ListShell 过滤 + 空态引导）+ 原样回放（同一 VT 引擎 CellGdiRenderer 重放原始字节，而非打印日志）+ 播放/暂停/重新开始 + 0.5x-8x 变速 + 拖动定位（从头重放保证状态一致）+ 删除/打开文件夹；格式 SessionRecording（GTR1，文本行 + base64 帧）带单测；smoke dump session-recordings 断言回放内容真的出现在网格里"
     },
     {
       "id": "page.LogonScriptPanel",

@@ -22,9 +22,10 @@ namespace Gdterm.UI.Services
             {
                 Title = L10n.T("导入连接"),
                 Multiselect = true,
-                Filter = L10n.T("所有支持格式 (*.xsh;*.ini;*.json;user.sessions)|*.xsh;*.ini;*.json;user.sessions|")
+                Filter = L10n.T("所有支持格式 (*.xsh;*.ini;*.json;*.reg;user.sessions)|*.xsh;*.ini;*.json;*.reg;user.sessions|")
                     + L10n.T("Xshell 会话 (*.xsh)|*.xsh|")
                     + L10n.T("MobaXterm 配置 (*.ini)|*.ini|")
+                    + L10n.T("PuTTY / KiTTY 会话 (*.reg)|*.reg|")
                     + L10n.T("WindTerm 会话 (user.sessions)|user.sessions|")
                     + "JSON (*.json)|*.json|"
                     + "CSV (*.csv)|*.csv|"

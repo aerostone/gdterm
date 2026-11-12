@@ -74,6 +74,7 @@
     <Compile Include="Modules\RepoConfigTool.cs" />
     <Compile Include="Modules\PortScannerTool.cs" />
     <Compile Include="Modules\NetworkScannerTool.cs" />
+    <Compile Include="Modules\NetworkDiagnosticsTool.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ISshRemoteSession.cs" />
     <Compile Include="SshNetRemoteSession.cs" />

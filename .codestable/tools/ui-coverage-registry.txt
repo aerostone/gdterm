@@ -27,6 +27,7 @@ Forms/SetupWizardForm.cs | dump:setup-wizard |
 Forms/SshKeyManagerForm.cs | dump:sshkey-manager |
 Forms/SftpPermissionForm.cs | dump:sftp-permission | 唯一未进 dump 的窗体；建议补 Show 用例
 Forms/LogViewerForm.cs | dump:log-viewer | P1-3：文本+十六进制双视图；smoke 灌 tmp 日志目录锁文件列表/视图非空
+Forms/SessionRecordingsForm.cs | dump:session-recordings | P1-2：smoke 灌一段 tmp 录制并驱动回放，断言重放字节真的画在网格上
 Forms/TrashForm.cs | dump:trash | 回收站（F16 加分项撤销/回收站）；smoke 灌 2 条锁三列/按钮启用态
 Controls/TransferProgressDialog.cs | dump:transfer-progress |
 Controls/CommandPaletteForm.cs | manual:transient modal (hotkey-triggered, input-driven filtering) | A1 command palette; structure consistent with QuickJump
@@ -60,6 +61,8 @@ Controls/TerminalControl.Keyboard.cs | manual:随宿主 | 部分类，随 Termin
 Controls/TerminalControl.Profile.cs | manual:随宿主 | 部分类，随 TerminalControl
 Controls/TerminalControl.Links.cs | manual:随宿主 | 部分类：链接探测/点击（含 URL、路径、行号），随 TerminalControl
 Controls/TerminalControl.Triggers.cs | manual:随宿主 | 部分类：输出触发器（P1-7），随 TerminalControl
+Controls/TerminalControl.Recording.cs | manual:随宿主 | 部分类：会话录制抓取（P1-2）；回放侧由 dump:session-recordings 覆盖
+Controls/TextPromptDialog.cs | manual:瞬态输入框 | 重命名标签用；Esc/取消路径靠人工验收（无落盘副作用）
 Controls/RemoteMonitorPanel.cs | manual:需真实 SSH 会话 | 主机资源面板（P1-4），采样靠独立 SSH 连接，无 dump 意义
 Controls/TerminalSearchBar.cs | none | 终端内浮条
 Controls/ToolboxPanel.cs | dump:toolbox | 侧栏常驻（审计 C7-2 入 dump）

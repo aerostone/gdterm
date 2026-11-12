@@ -53,6 +53,7 @@ namespace Gdterm.Tests
             RunTest("AiAssistantService", AiAssistantServiceTests.Run);
             RunTest("CommandHistoryStore", CommandHistoryStoreTests.Run);
             RunTest("ExternalFormatImporter", ExternalFormatImporterTests.Run);
+            RunTest("NetworkDiagnosticsTool", Gdterm.Tests.Tools.NetworkDiagnosticsToolTests.Run);
             RunTest("OnlineLinks", OnlineLinksTests.Run);
             RunTest("Otp", OtpTests.Run);
             RunTest("CredentialPayload", CredentialPayloadTests.Run);
@@ -73,6 +74,8 @@ namespace Gdterm.Tests
             RunTest("PaletteUsageStore", PaletteUsageStoreTests.Run);
             RunTest("TrashStore", TrashStoreTests.Run);
             RunTest("HexDump", HexDumpTests.Run);
+            RunTest("SessionRecording", SessionRecordingTests.Run);
+            RunTest("L10nDictionary", L10nDictionaryTests.Run);
 
             // 可观测性失败信号（A4/A5/A8/A9）——依赖 CrashLog.Initialize 改写全局路径，必须最后跑
             RunTest("Observability", ObservabilityTests.Run);

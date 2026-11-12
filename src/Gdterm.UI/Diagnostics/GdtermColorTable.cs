@@ -25,6 +25,26 @@ namespace Gdterm.UI.Diagnostics
         /// 半透明叠加色（行内命中高亮、选中底色等）。透明度也是设计语言的一部分，
         /// 和色值一样收在 token 表里，避免各处写各自的 alpha（§1.2）。
         /// </summary>
+        /// <summary>
+        /// 运行期算出来的色值（标签强调色、用户自选色）转 Color。
+        /// 存在的意义是让调用方不必直接写 Color.FromArgb——色值来源集中在这里，
+        /// 将来统一做主题适配（例如暗色下自动压亮度）只有一个落点。
+        /// </summary>
+        public static Color FromToken(int argb)
+        {
+            return Color.FromArgb(argb);
+        }
+
+        /// <summary>
+        /// 标签强调色预设（P2 标签颜色）：蓝 / 绿 / 橙 / 红 / 紫。
+        /// 这五个是**语义无关的标识色**，不进 §1 token 表（token 表管的是设计语言色，
+        /// 这里管的是"给用户贴标签"，两者混在一起会让 token 表失去约束力）。
+        /// </summary>
+        public static readonly int[] TabAccentPalette =
+        {
+            0x3B82F6, 0x22C55E, 0xF97316, 0xEF4444, 0xA855F7
+        };
+
         public static Color Translucent(Color color, int alpha)
         {
             if (alpha < 0) alpha = 0;

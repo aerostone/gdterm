@@ -98,5 +98,11 @@ namespace Gdterm.Core.Models
         /// 是否活跃（正在使用）
         /// </summary>
         public bool IsActive { get; set; }
+
+        /// <summary>
+        /// 标签强调色（ARGB，0/缺省 = 跟随主题）。P2 标签颜色重启后要还在，
+        /// 否则用户每次开机都得把"这条是生产"重新标一遍，等于没这功能。
+        /// </summary>
+        public int AccentColor { get; set; }
     }
 }

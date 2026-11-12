@@ -98,6 +98,7 @@ namespace Gdterm.Connections
                 sb.Append($" \"title\": {Escape(tab.Title)},");
                 sb.Append($" \"protocol\": {Escape(tab.Protocol)},");
                 sb.Append($" \"host\": {Escape(tab.Host)},");
+                sb.Append($" \"accentColor\": {tab.AccentColor},");
                 sb.Append($" \"isActive\": {(tab.IsActive ? "true" : "false")} ");
                 sb.Append("}");
             }
@@ -148,6 +149,7 @@ namespace Gdterm.Connections
                             Title = ExtractString(obj, "title"),
                             Protocol = ExtractString(obj, "protocol"),
                             Host = ExtractString(obj, "host"),
+                            AccentColor = ExtractInt(obj, "accentColor"),
                             IsActive = ExtractBool(obj, "isActive")
                         });
                         pos = objEnd + 1;

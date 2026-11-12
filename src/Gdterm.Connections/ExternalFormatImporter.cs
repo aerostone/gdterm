@@ -311,6 +311,162 @@ namespace Gdterm.Connections
             return fields;
         }
 
+        // ========== PuTTY / KiTTY ==========
+
+        /// <summary>
+        /// 导入 PuTTY / KiTTY 会话导出（*.reg，注册表导出文本）。
+        ///
+        /// 格式（Windows Registry Editor Version 5.00，UTF-16LE；老版本 REGEDIT4 是 ANSI）：
+        /// <code>
+        /// [HKEY_CURRENT_USER\\Software\\SimonTatham\\PuTTY\\Sessions\\My%20Box]
+        /// "HostName"="10.0.0.8"
+        /// "UserName"="root"
+        /// "PortNumber"=dword:00000016
+        /// "Protocol"="ssh"
+        /// </code>
+        /// 三条现实约束，直接决定这份解析器长什么样：
+        /// 1) 会话名是 URL 编码的（空格 → %20），键名里的 `\\` 在 .reg 文本中是双反斜杠；
+        /// 2) `Sessions\\Default%20Settings` 是"默认设置"模板不是连接，必须跳过——否则用户会多出一条假连接；
+        /// 3) 值有三种形态：字符串 "v"、dword:xxxxxxxx、hex(2):..（KiTTY 的 Font 之类），只有前两种有连接信息。
+        /// KiTTY 把同一套键放在 SimonTatham 路径下（有些版本用 KiTTY），两者都认。
+        /// 明文口令同样不导入（PuTTY 也从不导出密码，这里只是把规则写实）。
+        /// </summary>
+        public static List<ConnectionConfig> ImportPuTTY(string filePath)
+        {
+            var result = new List<ConnectionConfig>();
+            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return result;
+
+            string text;
+            try { text = ReadAllTextSmartEncoding(filePath); }
+            catch { return result; }
+
+            var lines = text.Split(new[] { '\r', '\n' });
+            Dictionary<string, string> current = null;
+            string currentName = null;
+
+            foreach (var rawLine in lines)
+            {
+                var line = rawLine.Trim();
+                if (line.Length == 0) continue;
+
+                if (line[0] == '[')
+                {
+                    // 收口上一段
+                    FlushPuTTYSession(result, currentName, current);
+                    current = null;
+                    currentName = null;
+
+                    int close = line.IndexOf(']');
+                    var keyPath = close > 0 ? line.Substring(1, close - 1) : line.Substring(1);
+                    if (!IsPuTTYSessionKey(keyPath)) continue;
+                    current = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                    currentName = SessionNameFromKeyPath(keyPath);
+                    continue;
+                }
+
+                if (current == null) continue;
+
+                int eq = line.IndexOf('=');
+                if (eq <= 1 || line[0] != '"') continue;
+                var name = line.Substring(1, eq - 2); // 去首尾引号
+                var value = ParseRegValue(line.Substring(eq + 1).Trim());
+                if (value != null) current[name] = value;
+            }
+            FlushPuTTYSession(result, currentName, current);
+
+            return result;
+        }
+
+        /// <summary>[HKEY_..\Sessions\&lt;name&gt;] 判定；Default Settings 模板返回 false。</summary>
+        internal static bool IsPuTTYSessionKey(string keyPath)
+        {
+            if (string.IsNullOrEmpty(keyPath)) return false;
+            if (keyPath.IndexOf("\\Sessions\\", StringComparison.OrdinalIgnoreCase) < 0) return false;
+            if (keyPath.IndexOf("SimonTatham\\PuTTY\\", StringComparison.OrdinalIgnoreCase) < 0 &&
+                keyPath.IndexOf("SimonTatham\\KiTTY\\", StringComparison.OrdinalIgnoreCase) < 0)
+                return false;
+            var name = SessionNameFromKeyPath(keyPath);
+            return !string.IsNullOrEmpty(name) &&
+                   !name.Equals("Default Settings", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>末段会话名 + URL 解码（%20 / %XX；非法转义原样保留）。</summary>
+        internal static string SessionNameFromKeyPath(string keyPath)
+        {
+            int idx = keyPath.LastIndexOf("Sessions\\", StringComparison.OrdinalIgnoreCase);
+            if (idx < 0) return null;
+            var raw = keyPath.Substring(idx + "Sessions\\".Length).Trim('\\');
+            if (raw.Length == 0) return null;
+            try { return Uri.UnescapeDataString(raw); }
+            catch { return raw; }
+        }
+
+        /// <summary>
+        /// .reg 值解析：`"str"` → 原文（\" 还原成 "）；`dword:00000016` → 十进制 "22"；
+        /// hex/hex(2)/hex(7) 等二进制形态 → null（对连接信息无意义）。
+        /// </summary>
+        internal static string ParseRegValue(string v)
+        {
+            if (string.IsNullOrEmpty(v)) return null;
+            if (v[0] == '"')
+            {
+                var sb = new StringBuilder();
+                for (int i = 1; i < v.Length; i++)
+                {
+                    char c = v[i];
+                    if (c == '\\' && i + 1 < v.Length)
+                    {
+                        char n = v[i + 1];
+                        if (n == '"' || n == '\\') { sb.Append(n); i++; continue; }
+                        sb.Append(c);
+                        continue;
+                    }
+                    if (c == '"') break; // 结束引号
+                    sb.Append(c);
+                }
+                return sb.ToString();
+            }
+            if (v.StartsWith("dword:", StringComparison.OrdinalIgnoreCase))
+            {
+                var hex = v.Substring(6).Trim();
+                long n;
+                if (long.TryParse(hex, System.Globalization.NumberStyles.HexNumber,
+                        System.Globalization.CultureInfo.InvariantCulture, out n))
+                    return n.ToString(System.Globalization.CultureInfo.InvariantCulture);
+                return null;
+            }
+            if (v[0] == '-') return null; // 删除标记
+            if (v.StartsWith("hex", StringComparison.OrdinalIgnoreCase)) return null;
+            return v;
+        }
+
+        /// <summary>一段会话 → ConnectionConfig；HostName 缺失则丢弃（PuTTY 里"只存设置不存主机"的键不少）。</summary>
+        private static void FlushPuTTYSession(List<ConnectionConfig> into, string name, Dictionary<string, string> fields)
+        {
+            if (into == null || fields == null) return;
+            string host;
+            if (!fields.TryGetValue("HostName", out host) || string.IsNullOrEmpty(host)) return;
+
+            string user, portStr, proto;
+            fields.TryGetValue("UserName", out user);
+            fields.TryGetValue("PortNumber", out portStr);
+            fields.TryGetValue("Protocol", out proto);
+
+            // PuTTY 的 raw / rlogin 是无协商裸 TCP；gdterm 没有 Raw 协议，就近落到 Telnet
+            // （同为明文纯终端，不会像 SSH 那样直接连不上）。协议语义差异写进 source 元数据。
+            if (!string.IsNullOrEmpty(proto) &&
+                (proto.Equals("raw", StringComparison.OrdinalIgnoreCase) ||
+                 proto.Equals("rlogin", StringComparison.OrdinalIgnoreCase)))
+                proto = "telnet";
+
+            var c = Build(host, portStr, user, proto,
+                string.IsNullOrEmpty(name) ? host : name,
+                "", "PuTTY",
+                isSerialGuess: !string.IsNullOrEmpty(proto) &&
+                               proto.IndexOf("serial", StringComparison.OrdinalIgnoreCase) >= 0);
+            if (c != null) into.Add(c);
+        }
+
         // ========== 公共构建 ==========
 
         /// <summary>

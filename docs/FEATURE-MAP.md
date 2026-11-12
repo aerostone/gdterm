@@ -26,7 +26,7 @@
 
 ## 1. 入口大纲（L1 → L2）
 
-共 6 个一级菜单 / 55 个二级入口。
+共 6 个一级菜单 / 57 个二级入口。
 
 ### 文件(&F)
 
@@ -74,6 +74,8 @@
 | 批量命令 | BatchCommandPanel | `src/Gdterm.UI/Controls/BatchCommandPanel.cs` | ✅ `page.BatchCommandPanel` |
 | 宏录制 Ctrl+Shift+H | MacroPanel | `src/Gdterm.UI/Controls/MacroPanel.cs` | ✅ `page.MacroPanel` |
 | 命令历史 | CommandHistoryPanel | `src/Gdterm.UI/Controls/CommandHistoryPanel.cs` | ✅ `page.CommandHistoryPanel` |
+| 开始录制会话 | — | — | （动作，无需页面） |
+| 会话录制中心… | SessionRecordingsForm | `src/Gdterm.UI/Forms/SessionRecordingsForm.cs` | ✅ `page.SessionRecordingsForm` |
 | AI 助手 Ctrl+Shift+G | AiChatPanel | `src/Gdterm.UI/Controls/AiChatPanel.cs` | ✅ `page.AiChatPanel` |
 | 命令模板库 | CommandTemplatePanel | `src/Gdterm.UI/Controls/CommandTemplatePanel.cs` | ✅ `page.CommandTemplatePanel` |
 | 健康监控 | HealthMonitorPanel | `src/Gdterm.UI/Controls/HealthMonitorPanel.cs` | ✅ `page.HealthMonitorPanel` |
@@ -115,7 +117,7 @@
 
 ## 2. 完备性矩阵（按缺口排序，最烂的在最上面）
 
-45 个页面，其中 0 个存在未登记缺口。
+46 个页面，其中 0 个存在未登记缺口。
 
 | 页面 | 一级菜单 | 类型 | 完备度 | 缺口 | dump |
 |---|---|---|---|---|---|
@@ -155,6 +157,7 @@
 | 扫描中心 `page.ScannerCenterForm` | 工具 > 扫描中心（插件） | list | 100% (4/4) | — | scanner-center | |
 | 敏感信息扫描 `page.SecretScanPanel` | 工具 > 敏感信息扫描 | list | 100% (4/4) | — | secret-scan | 侧栏常驻（审计 C7-2 入 dump） |
 | 书签 / 最近连接 `page.SessionBookmarksPanel` | 连接 > 书签 / 最近连接 | list | 100% (4/4) | — | bookmarks | 侧栏常驻 |
+| 会话录制中心 `page.SessionRecordingsForm` | 终端 > 会话录制中心… | list | 100% (4/4) | — | session-recordings | P1-2：smoke 灌一段 tmp 录制并驱动回放，断言重放字节真的画在网格上 |
 | 首次启动向导 `page.SetupWizardForm` | 首启 | wizard | 100% (3/3) | — | setup-wizard | |
 | SFTP 双栏 `page.SftpDualPanePanel` | 文件 > SFTP 浏览器 | list | 100% (4/4) | — | — |
 | SFTP 权限修改 `page.SftpPermissionForm` | SFTP > 右键 > 权限 | input | 100% (2/2) | — | sftp-permission | 唯一未进 dump 的窗体；建议补 Show 用例 |

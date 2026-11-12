@@ -563,6 +563,7 @@ namespace Gdterm.UI.Controls
             }
             try
             {
+                RecordInputBytes(data);
                 _session.SendBytes(data);
                 try
                 {
@@ -1150,6 +1151,9 @@ public async void Connect()
         private void OnSessionDisconnected(object sender, EventArgs e)
         {
             if (_disposed) return;
+            // P1-2：会话断了就地收尾录制（写 end 行）。等 Dispose 再收尾的话，
+            // 用户"关标签前先断开"这条最常见路径里，文件会缺尾部时长/帧数统计。
+            DiagLog.Try("TerminalControl.Recording.StopOnDisconnect", () => StopSessionRecording());
             void Raise()
             {
                 try { SessionDisconnected?.Invoke(this, EventArgs.Empty); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
@@ -1267,6 +1271,7 @@ public async void Connect()
 
             if (!SafeSend(text))
                 return false;
+            RecordInput(text);
 
             if (isCommandLine && !string.IsNullOrWhiteSpace(trimmed))
             {
@@ -1603,6 +1608,7 @@ public async void Connect()
             if (_isPaused)
             {
                 try { _renderer?.Write(e.Text); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+                RecordOutput(e.Text);
                 try { EvaluateTriggers(e.Text); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Triggers", exSwallowed); } catch { } }
                 try { _autoLogger?.LogOutput(e.Text); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 return;
@@ -1620,6 +1626,7 @@ public async void Connect()
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.EnvBootstrap", exSwallowed); } catch { } }
 
             _renderer?.Write(e.Text);
+            RecordOutput(e.Text);   // P1-2：先入录再判断分支，录制与暂停/渲染状态无关
             // P1-7：触发器只看输出流，与渲染无关
             try { EvaluateTriggers(e.Text); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Triggers", exSwallowed); } catch { } }
             try { _autoLogger?.LogOutput(e.Text); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
@@ -1639,6 +1646,8 @@ public async void Connect()
                 if (disposing)
                 {
                     Credentials = null;
+                    // P1-2：令牌/会话拆除前先收尾录制，否则尾部缺 end 行、缓冲丢最后几帧
+                    DiagLog.Try("TerminalControl.Dispose.Recording", () => StopSessionRecording());
                     if (_cellRenderer != null)
                     {
                         try { _cellRenderer.SendToHost -= OnCellSendToHost; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }

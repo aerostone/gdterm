@@ -108,6 +108,7 @@
     <Compile Include="Logging\CommandHistoryStoreTests.cs" />
     <Compile Include="Connections\ConnectionStoreJsonTests.cs" />
     <Compile Include="Connections\ExternalFormatImporterTests.cs" />
+    <Compile Include="Tools\NetworkDiagnosticsToolTests.cs" />
     <Compile Include="Connections\JsonRoundTripTests.cs" />
     <Compile Include="Core\OnlineLinksTests.cs" />
     <Compile Include="Security\SecretFindingTests.cs" />
@@ -133,6 +134,8 @@
     <Compile Include="Ui\PaletteUsageStoreTests.cs" />
     <Compile Include="Ui\TrashStoreTests.cs" />
     <Compile Include="Core\HexDumpTests.cs" />
+    <Compile Include="Core\SessionRecordingTests.cs" />
+    <Compile Include="Core\L10nDictionaryTests.cs" />
     <Compile Include="Ui\DialogsSmoke.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

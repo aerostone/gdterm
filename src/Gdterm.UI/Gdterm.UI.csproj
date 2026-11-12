@@ -125,6 +125,7 @@
     <Compile Include="Forms\OtpManagerForm.cs" />
     <Compile Include="Forms\TrashForm.cs" />
     <Compile Include="Forms\LogViewerForm.cs" />
+    <Compile Include="Forms\SessionRecordingsForm.cs" />
     <Compile Include="Forms\MainForm.Designer.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
@@ -154,6 +155,7 @@
     <Compile Include="Controls\KeyBindingPanel.cs" />
     <Compile Include="Forms\QuickCommandEditorForm.cs" />
     <Compile Include="Controls\HostKeyDialog.cs" />
+    <Compile Include="Controls\TextPromptDialog.cs" />
     <Compile Include="Controls\HighlightRulePanel.cs" />
     <Compile Include="Controls\TerminalSearchBar.cs" />
     <Compile Include="Controls\PortForwardPanel.cs" />
@@ -184,6 +186,7 @@
     <Compile Include="Controls\TerminalControl.Triggers.cs" />
     <Compile Include="Controls\TerminalControl.Keyboard.cs" />
     <Compile Include="Controls\TerminalControl.Profile.cs" />
+    <Compile Include="Controls\TerminalControl.Recording.cs" />
     <Compile Include="DebugConfig.cs" />
     <Compile Include="Diagnostics\CrashLog.cs" />
     <Compile Include="Diagnostics\DiagLog.cs" />

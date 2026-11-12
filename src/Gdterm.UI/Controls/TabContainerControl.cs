@@ -47,6 +47,22 @@ namespace Gdterm.UI.Controls
         private TabControl _tabControl;
         private ContextMenuStrip _tabContextMenu;
 
+        /// <summary>
+        /// 标签装饰（P2：重命名 / 颜色）。按 TabPage 记账，不写进 ConnectionConfig——
+        /// "这个标签叫生产库"是会话级的临时视图，改连接名才是持久事实，两者不能混。
+        /// 需要跨重启保留的部分由 GetOpenTabStates 带进 session-state.json。
+        /// </summary>
+        private readonly Dictionary<TabPage, TabDecoration> _decorations = new Dictionary<TabPage, TabDecoration>();
+
+        /// <summary>标签装饰数据：自定义标题（null=用连接名）+ 强调色（null=跟随主题）。</summary>
+        private sealed class TabDecoration
+        {
+            public string Title;
+            public int? AccentArgb;
+            /// <summary>首次加装饰时标签的原始标题（恢复连接名时的兜底）。</summary>
+            public string BaseTitle;
+        }
+
         /// <summary>活动标签变化</summary>
         public event EventHandler ActiveSessionChanged;
 
@@ -116,6 +132,7 @@ namespace Gdterm.UI.Controls
                 _lifecycle, _reconnectWatchdog, keepassService, tunnelManager);
             _splitService = new TabSplitService(_opener);
             _chrome = new TabChromePainter();
+            _chrome.AccentResolver = GetTabAccent;
             _selection = new TabSelectionCoordinator();
             _activeQuery = new TabActiveSessionQuery(
                 () => _tabControl != null ? _tabControl.SelectedTab : null,
@@ -173,6 +190,16 @@ namespace Gdterm.UI.Controls
             _tabControl.MouseMove += OnTabMouseMove;
             _tabControl.MouseLeave += OnTabMouseLeave;
             _tabControl.SelectedIndexChanged += OnTabSelectedIndexChanged;
+            // 标签关掉就把装饰一起丢掉：字典持有 TabPage 强引用，不清理会随开合次数累积
+            _tabControl.ControlRemoved += (s, e) =>
+            {
+                try
+                {
+                    var page = e.Control as TabPage;
+                    if (page != null) _decorations.Remove(page);
+                }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
+            };
             _tabControl.Resize += (s, e) => ApplyElasticTabWidth();
             Controls.Add(_tabControl);
 
@@ -186,6 +213,17 @@ namespace Gdterm.UI.Controls
             AddCtxItem(_tabContextMenu, L10n.T("垂直拆分(&V)"), "splitv", (s, e) => SplitVertical());
             _tabContextMenu.Items.Add("-");
             AddCtxItem(_tabContextMenu, L10n.T("重连当前(&E)"), "reconnect", (s, e) => { try { ReconnectActiveTab(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } } });
+            _tabContextMenu.Items.Add("-");
+            AddCtxItem(_tabContextMenu, L10n.T("重命名标签(&N)…"), "rename", (s, e) => PromptRenameActiveTab());
+            var colorMenu = new ToolStripMenuItem(L10n.T("标签颜色(&L)"));
+            AddColorItem(colorMenu, L10n.T("跟随主题"), null);
+            colorMenu.DropDownItems.Add("-");
+            AddColorItem(colorMenu, L10n.T("蓝"), TabAccentPalette[0]);
+            AddColorItem(colorMenu, L10n.T("绿"), TabAccentPalette[1]);
+            AddColorItem(colorMenu, L10n.T("橙"), TabAccentPalette[2]);
+            AddColorItem(colorMenu, L10n.T("红"), TabAccentPalette[3]);
+            AddColorItem(colorMenu, L10n.T("紫"), TabAccentPalette[4]);
+            _tabContextMenu.Items.Add(colorMenu);
         }
 
         public void OpenConnection(ConnectionConfig config)
@@ -821,6 +859,129 @@ namespace Gdterm.UI.Controls
             get { return _tabControl.SelectedIndex; }
         }
 
+        // ========== 标签重命名 / 颜色（P2） ==========
+
+        /// <summary>标签强调色预设（顺序与右键菜单一致；色值收在 GdtermColorTable）。</summary>
+        public static int[] TabAccentPalette
+        {
+            get { return Gdterm.UI.Diagnostics.GdtermColorTable.TabAccentPalette; }
+        }
+
+        private void AddColorItem(ToolStripMenuItem parent, string text, int? argb)
+        {
+            var item = new ToolStripMenuItem(text);
+            if (argb.HasValue)
+            {
+                try
+                {
+                    var swatch = new Bitmap(DpiScale.V(this, 12), DpiScale.V(this, 12));
+                    using (var g = Graphics.FromImage(swatch))
+                    using (var b = new SolidBrush(Gdterm.UI.Diagnostics.GdtermColorTable.FromToken(argb.Value)))
+                        g.FillRectangle(b, 0, 0, swatch.Width, swatch.Height);
+                    item.Image = swatch;
+                }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } }
+            }
+            item.Click += (s, e) => SetActiveTabAccent(argb);
+            parent.DropDownItems.Add(item);
+        }
+
+        /// <summary>右键入口：弹输入框改名；取消（null）则什么都不改，空串=恢复连接名。</summary>
+        /// <summary>右键/命令面板入口：给当前活动标签改名。</summary>
+        public void PromptRenameActiveTab()
+        {
+            try
+            {
+                var page = _tabControl != null ? _tabControl.SelectedTab : null;
+                if (page == null) return;
+                TabDecoration dec;
+                _decorations.TryGetValue(page, out dec);
+                var current = dec != null && !string.IsNullOrEmpty(dec.Title) ? dec.Title : page.Text;
+                var name = Gdterm.UI.Controls.TextPromptDialog.Ask(FindForm(), L10n.T("重命名标签"),
+                    L10n.T("标签名称（留空恢复连接名）"), current, L10n.T("只改这个标签的显示名，不影响连接配置"));
+                if (name == null) return;
+                RenameTab(page, name);
+            }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl.Rename", exSwallowed); } catch { } }
+        }
+
+        /// <summary>给某个标签改名。title 为空 → 恢复连接名（不做"空标签"）。</summary>
+        public void RenameTab(TabPage page, string title)
+        {
+            if (page == null) return;
+            TabDecoration dec;
+            if (!_decorations.TryGetValue(page, out dec)) { dec = new TabDecoration { BaseTitle = page.Text }; _decorations[page] = dec; }
+            var trimmed = (title ?? "").Trim();
+            if (trimmed.Length == 0)
+            {
+                dec.Title = null;
+                page.Text = DefaultTabTitle(page);
+            }
+            else
+            {
+                dec.Title = trimmed;
+                page.Text = trimmed;
+            }
+            ApplyElasticTabWidth();   // 标题长度变了，弹性宽必须重算，否则长名字被裁
+            try { _tabControl.Invalidate(); } catch { }
+        }
+
+        /// <summary>给某个标签设强调色（null=跟随主题）。</summary>
+        public void SetTabAccent(TabPage page, int? argb)
+        {
+            if (page == null) return;
+            TabDecoration dec;
+            if (!_decorations.TryGetValue(page, out dec)) { dec = new TabDecoration { BaseTitle = page.Text }; _decorations[page] = dec; }
+            dec.AccentArgb = argb;
+            try { _tabControl.Invalidate(); } catch { }
+        }
+
+        /// <summary>当前活动标签设强调色（菜单/命令面板用）。</summary>
+        public void SetActiveTabAccent(int? argb)
+        {
+            var page = _tabControl != null ? _tabControl.SelectedTab : null;
+            if (page != null) SetTabAccent(page, argb);
+        }
+
+        /// <summary>某标签的强调色（供绘制器读取；未设为 null）。</summary>
+        internal int? GetTabAccent(TabPage page)
+        {
+            TabDecoration dec;
+            if (page != null && _decorations.TryGetValue(page, out dec)) return dec.AccentArgb;
+            return null;
+        }
+
+        /// <summary>标签"本该叫什么"：优先连接名，没有会话（SFTP/RDP 等）则保留创建时的标题。</summary>
+        private string DefaultTabTitle(TabPage page)
+        {
+            TabSessionState session;
+            if (page != null && _sessions.TryGetValue(page, out session) &&
+                session.Config != null && !string.IsNullOrEmpty(session.Config.Name))
+                return session.Config.Name;
+            TabDecoration dec;
+            if (page != null && _decorations.TryGetValue(page, out dec) && !string.IsNullOrEmpty(dec.BaseTitle))
+                return dec.BaseTitle;
+            return page != null ? page.Text : "";
+        }
+
+        /// <summary>
+        /// 重启后复原标签装饰：按连接 Id 找标签，套回标题与颜色。
+        /// 找不到（连接已删/没开）静默跳过——恢复是尽力而为，不该弹错。
+        /// </summary>
+        public void RestoreTabDecoration(string connectionId, string title, int? accentArgb)
+        {
+            if (string.IsNullOrEmpty(connectionId)) return;
+            foreach (TabPage tab in _tabControl.TabPages)
+            {
+                TabSessionState session;
+                if (!_sessions.TryGetValue(tab, out session) || session.Config == null) continue;
+                if (session.Config.Id != connectionId) continue;
+                if (!string.IsNullOrEmpty(title)) RenameTab(tab, title);
+                if (accentArgb.HasValue) SetTabAccent(tab, accentArgb);
+                return;
+            }
+        }
+
         public List<OpenTabState> GetOpenTabStates()
         {
             var result = new List<OpenTabState>();
@@ -828,10 +989,14 @@ namespace Gdterm.UI.Controls
             {
                 if (_sessions.TryGetValue(tab, out var session) && session.Config != null)
                 {
+                    TabDecoration dec;
+                    _decorations.TryGetValue(tab, out dec);
                     result.Add(new OpenTabState
                     {
                         ConnectionId = session.Config.Id,
-                        Title = session.Config.Name,
+                        // 存"屏幕上真正的标题"而不是连接名：用户改过名字，重启后应该还是那个名字
+                        Title = tab.Text,
+                        AccentColor = dec != null && dec.AccentArgb.HasValue ? dec.AccentArgb.Value : 0,
                         Protocol = session.Protocol.ToString(),
                         Host = session.Config.Host,
                         IsActive = (tab == _tabControl.SelectedTab)

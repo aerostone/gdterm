@@ -23,6 +23,18 @@ namespace Gdterm.UI.Services
     /// </summary>
     public class MainFormMenuBuilder
     {
+        /// <summary>"开始/停止录制会话"条目：文案随活动标签状态在 DropDownOpening 时刷新。</summary>
+        private ToolStripMenuItem _recordingToggleItem;
+
+        private void RefreshRecordingToggleText(Callbacks cb)
+        {
+            if (_recordingToggleItem == null) return;
+            bool recording = false;
+            try { recording = cb.IsRecordingActive != null && cb.IsRecordingActive(); }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainFormMenuBuilder.Recording", exSwallowed); } catch { } }
+            _recordingToggleItem.Text = recording ? L10n.T("停止录制会话") : L10n.T("开始录制会话");
+        }
+
         public sealed class Callbacks
         {
             public EventHandler NewConnection { get; set; }
@@ -79,6 +91,12 @@ namespace Gdterm.UI.Services
             public EventHandler QuickJump { get; set; }
             public EventHandler ShowLogsFolder { get; set; }
             public EventHandler ShowLogViewer { get; set; }
+            /// <summary>P1-2：开始/停止当前标签的会话录制（录制中心负责回放）。</summary>
+            public EventHandler ToggleSessionRecording { get; set; }
+            /// <summary>P1-2：会话录制中心（列表 + 原样回放）。</summary>
+            public EventHandler ShowRecordings { get; set; }
+            /// <summary>P1-2：活动标签当前是否在录制（决定菜单文案是"开始"还是"停止"）。</summary>
+            public Func<bool> IsRecordingActive { get; set; }
             public EventHandler ToggleDebugMode { get; set; }
         }
 
@@ -187,6 +205,20 @@ namespace Gdterm.UI.Services
             termMenu.DropDownItems.Add(Mk(L10n.T("批量命令"), cb.ShowBatch, "batch"));
             termMenu.DropDownItems.Add(Mk(L10n.T("宏录制 Ctrl+Shift+H"), cb.ShowMacro, "macro"));
             termMenu.DropDownItems.Add(Mk(L10n.T("命令历史"), cb.ShowHistory, "history"));
+            if (cb.ToggleSessionRecording != null || cb.ShowRecordings != null)
+            {
+                termMenu.DropDownItems.Add(new ToolStripSeparator());
+                if (cb.ToggleSessionRecording != null)
+                {
+                    // 文案随状态变（"开始/停止"）：DropDownOpening 里取活动标签的实时状态，
+                    // 而不是建菜单时定死——标签会切、录制会被断开自动收尾。
+                    _recordingToggleItem = Mk(L10n.T("开始录制会话"), cb.ToggleSessionRecording, "record");
+                    termMenu.DropDownItems.Add(_recordingToggleItem);
+                }
+                if (cb.ShowRecordings != null)
+                    termMenu.DropDownItems.Add(Mk(L10n.T("会话录制中心…"), cb.ShowRecordings, "record"));
+                termMenu.DropDownOpening += (s2, e2) => RefreshRecordingToggleText(cb);
+            }
             termMenu.DropDownItems.Add(Mk(L10n.T("AI 助手 Ctrl+Shift+G"), cb.ShowAiChat, "ai"));
             termMenu.DropDownItems.Add(Mk(L10n.T("命令模板库"), cb.ShowCmdTemplates, "template"));
             termMenu.DropDownItems.Add(new ToolStripSeparator());

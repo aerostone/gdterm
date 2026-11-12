@@ -33,6 +33,13 @@ namespace Gdterm.UI.Services
         public int HoverIndex { get; set; }
 
         /// <summary>
+        /// 标签强调色解析器（P2 标签颜色）。返回 null 表示该标签跟随主题。
+        /// 用委托而不是往 TabPage.Tag 塞颜色：绘制器不该反向依赖 TabContainerControl 的记账结构，
+        /// 谁掌握"标签颜色"的事实谁提供解析。
+        /// </summary>
+        public Func<TabPage, int?> AccentResolver { get; set; }
+
+        /// <summary>
         /// 计算所有标签的统一宽度（设计 px）：取"最长标签理想宽"与可视宽/标签数中较小者，
         /// 并夹在 [MinTabWidth, MaxTabWidth]。标签很多时自动收窄，避免互相挤压出滚动。
         /// </summary>
@@ -91,6 +98,25 @@ namespace Gdterm.UI.Services
                 int h = Math.Max(2, (int)Math.Round(2 * dpi));
                 using (var brush = new SolidBrush(GdtermColorTable.Accent))
                     e.Graphics.FillRectangle(brush, rect.Left, rect.Bottom - h, rect.Width, h);
+            }
+
+            // P2 标签颜色：左侧 3px 竖条。选竖条而不是染整块底，是因为底色已经承载
+            // "选中/悬停"两个状态，再叠一层色就分不清"我是因为选中所以亮"还是"我标了色"。
+            if (AccentResolver != null)
+            {
+                int? argb = null;
+                try { argb = AccentResolver(tab); }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabChromePainter", exSwallowed); } catch { } }
+                if (argb.HasValue)
+                {
+                    int sw = Math.Max(2, (int)Math.Round(3 * dpi));
+                    try
+                    {
+                        using (var brush = new SolidBrush(GdtermColorTable.FromToken(argb.Value)))
+                            e.Graphics.FillRectangle(brush, rect.Left, rect.Y + 1, sw, rect.Height - 2);
+                    }
+                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabChromePainter", exSwallowed); } catch { } }
+                }
             }
 
             // L2: 关闭钮仅悬停/选中时绘制；文字先用满宽，绘制关闭钮时再让位

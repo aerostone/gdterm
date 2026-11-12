@@ -97,6 +97,54 @@ namespace Gdterm.Tests.Ui
                 new byte[] { 0x47, 0x44, 0x00, 0x0a, 0xff, 0x7f, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48, 0x49, 0x4a, 0x4b });
             Show("log-viewer", () => (Form)new LogViewerForm(logDir), outDir, log, check);
 
+            // 会话录制中心（P1-2）：灌一段真录制再开，锁"列表有行 + 回放引擎真的把字节画出来了"。
+            // 只断言"窗开了"是骗自己——回放链（读文件→建渲染器→喂帧）断了照样是空白舞台。
+            string recDir = Path.Combine(tmp, "recordings");
+            Directory.CreateDirectory(recDir);
+            string recPath = Path.Combine(recDir, "smoke_prod_20260101_000000.gtr");
+            using (var w = new Gdterm.Core.Recording.SessionRecordingWriter(recPath,
+                new Gdterm.Core.Recording.SessionRecordingHeader
+                {
+                    Columns = 80,
+                    Rows = 24,
+                    Host = "10.0.0.11",
+                    ConnectionName = "smoke",
+                    StartedUtc = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+                }))
+            {
+                w.Append(Gdterm.Core.Recording.SessionFrameKind.Output,
+                    System.Text.Encoding.UTF8.GetBytes("$ echo smoke-replay\r\n"));
+                w.Append(Gdterm.Core.Recording.SessionFrameKind.Input,
+                    System.Text.Encoding.UTF8.GetBytes("echo smoke-replay\r"));
+                w.Append(Gdterm.Core.Recording.SessionFrameKind.Output,
+                    System.Text.Encoding.UTF8.GetBytes("smoke-replay\r\n$ "));
+            }
+            Show("session-recordings", () => (Form)new SessionRecordingsForm(recDir), outDir, log, check, f =>
+            {
+                var t = f.GetType();
+                var flags = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+                var list = t.GetField("_list", flags).GetValue(f) as ListView;
+                check(list != null && list.Items.Count == 1, "session-recordings-list-one=" +
+                    (list == null ? "nulllist" : list.Items.Count.ToString()) + " (==1)");
+                if (list != null && list.Items.Count > 0) list.SelectedIndices.Add(0);
+                Application.DoEvents();
+                Thread.Sleep(200);
+                Application.DoEvents();
+                t.GetMethod("StartPlayback", flags).Invoke(f, new object[] { true });
+                Thread.Sleep(900);
+                Application.DoEvents();
+                var renderer = t.GetField("_renderer", flags).GetValue(f);
+                check(renderer != null, "session-recordings-renderer");
+                string screen = string.Empty;
+                if (renderer != null)
+                {
+                    var lines = (string[])renderer.GetType().GetMethod("GetRecentLines").Invoke(renderer, new object[] { 24 });
+                    screen = string.Join("\n", lines);
+                }
+                check(screen.Contains("smoke-replay"),
+                    "session-recordings-replayed-text (回放的内容必须真出现在网格里)");
+            });
+
             // SFTP 权限编辑：此前是唯一没有 dump 的窗体（registry 里自己都写着"建议补 Show 用例"）。
             // 3×3 复选 + octal 双向联动靠反射量不到，至少把盒模型和"确定/取消绑定"锁住。
             Show("sftp-permission", () => (Form)new SftpPermissionForm("report.csv", "rw-r--r--", 644), outDir, log, check);
@@ -155,7 +203,8 @@ namespace Gdterm.Tests.Ui
             }
         }
 
-        private static void Show(string name, Func<Form> make, string outDir, Action<string> log, Action<bool, string> check)
+        private static void Show(string name, Func<Form> make, string outDir, Action<string> log, Action<bool, string> check,
+            Action<Form> after = null)
         {
             try
             {
@@ -167,6 +216,7 @@ namespace Gdterm.Tests.Ui
                     Application.DoEvents();
                     Thread.Sleep(500);
                     Application.DoEvents();
+                    if (after != null) after(f);
                     int n = Count(f);
                     check(n > 5, name + "-controls=" + n + " (>5)");
                     // R3 关闭绑定（change 2026-09-24）：免判清单——transfer-progress（进度窗无

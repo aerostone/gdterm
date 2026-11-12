@@ -558,6 +558,13 @@ namespace Gdterm.UI.Forms
                 ShowUpdateCheck = (s, e) => _toolsDialogs.OpenUpdateCheck(),
                 ShowLogsFolder = (s, e) => { try { _toolsDialogs.ShowLogsFolder(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.LogsFolder", ex); } },
                 ShowLogViewer = (s, e) => { try { _toolsDialogs.ShowLogViewer(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.LogViewer", ex); } },
+                ToggleSessionRecording = (s, e) => ToggleSessionRecording(),
+                ShowRecordings = (s, e) => ShowSessionRecordings(),
+                IsRecordingActive = () =>
+                {
+                    var active = _tabContainer != null ? _tabContainer.GetActiveTerminalControl() : null;
+                    return active != null && active.IsSessionRecording;
+                },
                 DiagnosticsPackage = (s, e) => { try { _toolsDialogs.ShowDiagnosticsPackage(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.Diagnostics", ex); } },
                 ToggleDebugMode = (s, e) => ToggleDebugMode(),
                 About = (s, e) => _toolsDialogs.ShowAbout(),
@@ -798,6 +805,61 @@ namespace Gdterm.UI.Forms
         /// 导出当前活动终端的滚动缓冲到文本或 HTML 文件。
         /// 从右键菜单「导出缓冲」触发；本会话未连接时弹提示。
         /// </summary>
+        /// <summary>
+        /// 终端 → 开始/停止录制会话（P1-2）。只作用于**活动标签**：录制是显式动作，
+        /// 不做"开始后自动跟随新标签"——那会让用户在不知情的情况下录制了别的会话。
+        /// </summary>
+        private void ToggleSessionRecording()
+        {
+            var terminal = _tabContainer != null ? _tabContainer.GetActiveTerminalControl() : null;
+            if (terminal == null)
+            {
+                try { ToastNotifier.Info(L10n.T("当前没有活动的终端会话")); } catch (Exception) { }
+                return;
+            }
+            try
+            {
+                if (terminal.IsSessionRecording)
+                {
+                    string path = terminal.SessionRecordingPath;
+                    terminal.StopSessionRecording();
+                    _statusBar?.UpdateConnectionStatus(L10n.T("录制已停止"));
+                    try { ToastNotifier.Success(L10n.T("录制已保存：") + path); } catch (Exception) { }
+                }
+                else
+                {
+                    string path = terminal.StartSessionRecording(Gdterm.UI.Program.RecordingsDir);
+                    if (string.IsNullOrEmpty(path))
+                    {
+                        _statusBar?.UpdateConnectionStatus(L10n.T("录制启动失败"), BottomBarPanel.ConnectionStatusLevel.Failed);
+                        try { ToastNotifier.Warning(L10n.T("录制启动失败，详见诊断日志")); } catch (Exception) { }
+                        return;
+                    }
+                    _statusBar?.UpdateConnectionStatus(L10n.T("正在录制会话"));
+                    try { ToastNotifier.Info(L10n.T("开始录制：") + System.IO.Path.GetFileName(path)); } catch (Exception) { }
+                }
+            }
+            catch (Exception ex)
+            {
+                DiagLog.Swallowed("MainForm.ToggleSessionRecording", ex);
+            }
+        }
+
+        /// <summary>终端 → 会话录制中心：列出 data/recordings 下的录制并原样回放。</summary>
+        private void ShowSessionRecordings()
+        {
+            try
+            {
+                using (var form = new SessionRecordingsForm(Gdterm.UI.Program.RecordingsDir))
+                    form.ShowDialog(this);
+            }
+            catch (Exception ex)
+            {
+                DiagLog.Swallowed("MainForm.ShowSessionRecordings", ex);
+                try { ToastNotifier.Warning(L10n.T("打开会话录制中心失败：") + ex.Message); } catch (Exception) { }
+            }
+        }
+
         private void ExportActiveTerminalBuffer()
         {
             try
@@ -1116,6 +1178,13 @@ namespace Gdterm.UI.Forms
             Add(L10n.T("传输中心"), L10n.T("面板"), () => _sidePanelHost?.Show(_sidePanels?.CreateTransferCenterPanel()));
             Add(L10n.T("通知中心"), L10n.T("面板"), () => _sidePanelHost?.Show(_sidePanels?.CreateNotificationCenterPanel()));
             Add(L10n.T("AI 助手聊天"), L10n.T("面板"), ShowAiChatPanel, "Ctrl+Shift+G", "ai 聊天");
+            // P1-2：录制是显式动作，命令面板里必须能搜到（快捷键故意不给——录制开关误触的代价是
+            // 一整个会话的原始字节落盘，不适合绑在易误按的组合上）
+            Add(L10n.T("开始/停止录制会话"), L10n.T("面板"), ToggleSessionRecording, null, "record 录制 回放 asciinema");
+            Add(L10n.T("会话录制中心（回放）"), L10n.T("面板"), ShowSessionRecordings, null, "record 录制 回放 replay");
+            // P2：标签重命名/染色只在标签右键里，但命令面板是"记不住右键在哪"的兜底入口
+            Add(L10n.T("重命名当前标签"), L10n.T("视图"), () => { try { _tabContainer?.PromptRenameActiveTab(); } catch { } }, null, "rename 标签 改名");
+            Add(L10n.T("标签颜色（跟随主题）"), L10n.T("视图"), () => { try { _tabContainer?.SetActiveTabAccent(null); } catch { } }, null, "tab color 颜色");
 
             // 5) 工具/设置/帮助（工具菜单）
             Add(L10n.T("密码库管理（KeePass）"), L10n.T("工具"), () => _toolsDialogs?.OpenKeePassManager(), null, "keepass 密码库");

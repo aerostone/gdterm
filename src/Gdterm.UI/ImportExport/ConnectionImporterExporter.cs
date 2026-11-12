@@ -89,6 +89,7 @@ namespace Gdterm.UI.ImportExport
                 case ".xml": return ImportFromMRemoteNgXml(filePath);
                 case ".xsh": return ExternalFormatImporter.ImportXshell(filePath);
                 case ".ini": return ExternalFormatImporter.ImportMobaXterm(filePath);
+                case ".reg": return ExternalFormatImporter.ImportPuTTY(filePath);
                 default:
                     // 无扩展名或其他：按内容顺序尝试（gdterm JSON → WindTerm → CSV）
                     var autoJson = TryImportFromJson(filePath);

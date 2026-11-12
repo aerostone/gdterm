@@ -30,6 +30,14 @@ namespace Gdterm.UI
         public static readonly string LogsDir = Path.Combine(
             AppDomain.CurrentDomain.BaseDirectory, "logs");
 
+        /// <summary>
+        /// 会话录制根目录（P1-2）：data\recordings\。
+        /// 与 logs\terminal\ 的文本日志分开：录制是原始字节流，体量大、需要成套回放，
+        /// 混在日志目录里会被日志清理策略连带删掉。
+        /// </summary>
+        public static readonly string RecordingsDir = Path.Combine(
+            AppDomain.CurrentDomain.BaseDirectory, "data", "recordings");
+
         [STAThread]
         static void Main()
         {
@@ -68,6 +76,7 @@ namespace Gdterm.UI
             Directory.CreateDirectory(toolsConfigDir);
             Directory.CreateDirectory(Path.Combine(logsDir, "commands"));
             Directory.CreateDirectory(Path.Combine(logsDir, "terminal"));
+            try { Directory.CreateDirectory(RecordingsDir); } catch { }
 
             try
             {
@@ -309,6 +318,7 @@ namespace Gdterm.UI
                 toolRegistry.Register(new RepoConfigTool());
                 toolRegistry.Register(new PortScannerTool());
                 toolRegistry.Register(new NetworkScannerTool());
+                toolRegistry.Register(new NetworkDiagnosticsTool());
                 toolRegistry.LoadAllConfigs();
             }
             catch (Exception ex)

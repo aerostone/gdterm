@@ -123,7 +123,7 @@ jobs:
           & $testExe --perf-bench perf-bench.json
           exit $LASTEXITCODE
 
-      # 静态门五连：编码守卫 → L0 设计语言 → token SSOT → 功能完备性（棘轮）→ 安全闸门结构
+      # 静态门六连：编码守卫 → L0 设计语言 → token SSOT → 功能完备性（棘轮）→ 安全闸门结构 → i18n 词典
       - name: Static gates (encoding / ui-ux-lint / gen-tokens / feature-map / sec-gate)
         shell: pwsh
         run: |
@@ -141,6 +141,9 @@ jobs:
           # 危险命令闸门结构门：`rm -rf /` 粘贴进来能绕过拦截这一类旁路，靠静态门长期守住
           python tools\check-sec-gate.py
           if ($LASTEXITCODE -ne 0) { throw "sec-gate failed exit=$LASTEXITCODE" }
+          # i18n 词典门：新增 L10n.T 文案必须同步英文条目（"i18n 已完成"靠门守，不靠记性）
+          python tools\check-i18n.py
+          if ($LASTEXITCODE -ne 0) { throw "i18n gate failed exit=$LASTEXITCODE" }
 
       # 证据先于宣判：无论成败上传全部日志/dump/门报告
       - name: Upload evidence

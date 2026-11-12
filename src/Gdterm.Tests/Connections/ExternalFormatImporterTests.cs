@@ -27,6 +27,7 @@ namespace Gdterm.Tests.Connections
                 TestXshellDirectory(dir);
                 TestMobaXterm(dir);
                 TestWindTerm(dir);
+                TestPuTTY(dir);
             }
             finally
             {
@@ -141,6 +142,78 @@ namespace Gdterm.Tests.Connections
             var tel = list.FirstOrDefault(x => x.Name == "tel1");
             Assert.True(tel != null && tel.Protocol == ProtocolType.Telnet, "moba: telnet code 98");
             if (tel != null) Assert.Equal("dev", tel.GroupPath, "moba: second folder");
+        }
+
+        /// <summary>
+        /// PuTTY/KiTTY .reg：注册表导出文本（UTF-16LE）、会话名 URL 编码、Default Settings 必须跳过、
+        /// dword 端口、raw 协议落到 Telnet。真实导出文件的编码/引号/双反斜杠形态都覆盖到。
+        /// </summary>
+        private static void TestPuTTY(string dir)
+        {
+            var reg =
+                "Windows Registry Editor Version 5.00\r\n" +
+                "\r\n" +
+                "[HKEY_CURRENT_USER\\Software\\SimonTatham\\PuTTY\\Sessions\\Default%20Settings]\r\n" +
+                "\"HostName\"=\"should-not-appear\"\r\n" +
+                "\"Protocol\"=\"ssh\"\r\n" +
+                "\r\n" +
+                "[HKEY_CURRENT_USER\\Software\\SimonTatham\\PuTTY\\Sessions\\prod%20web]\r\n" +
+                "\"HostName\"=\"10.4.0.8\"\r\n" +
+                "\"UserName\"=\"root\"\r\n" +
+                "\"PortNumber\"=dword:00000016\r\n" +
+                "\"Protocol\"=\"ssh\"\r\n" +
+                "\"PublicKeyFile\"=\"C:\\\\keys\\\\id_rsa.ppk\"\r\n" +
+                "\r\n" +
+                "[HKEY_CURRENT_USER\\Software\\SimonTatham\\KiTTY\\Sessions\\old%20switch\"\r\n" +
+                "\"HostName\"=\"10.4.0.9\"\r\n" +
+                "\"Protocol\"=\"raw\"\r\n" +
+                "\"PortNumber\"=dword:00000bb8\r\n" +
+                "\r\n" +
+                "[HKEY_CURRENT_USER\\Software\\SimonTatham\\PuTTY\\Sessions\\empty-settings]\r\n" +
+                "\"TerminalType\"=\"xterm\"\r\n" +
+                "\r\n" +
+                "[HKEY_CURRENT_USER\\Software\\SimonTatham\\PuTTY\\SshHostKeys]\r\n" +
+                "\"ssh-rsa@22:10.4.0.8\"=\"0x10001,0xabc\"\r\n";
+
+            var path = Path.Combine(dir, "putty.reg");
+            File.WriteAllText(path, reg, new UnicodeEncoding(false, true)); // UTF-16LE + BOM（真实导出）
+
+            var list = ExternalFormatImporter.ImportPuTTY(path);
+            Assert.Equal(2, list.Count, "putty: Default Settings / no-host / host-key 段全部跳过");
+
+            var web = list.FirstOrDefault(x => x.Host == "10.4.0.8");
+            Assert.True(web != null, "putty: prod web found");
+            if (web != null)
+            {
+                Assert.Equal("prod web", web.Name, "putty: URL 解码 %20");
+                Assert.Equal(ProtocolType.SSH, web.Protocol, "putty: ssh");
+                Assert.Equal(22, web.Port, "putty: dword 0x16 → 22");
+                Assert.Equal("root", web.Username, "putty: user");
+                Assert.True(web.Metadata != null && web.Metadata.ContainsKey("source")
+                    && web.Metadata["source"] == "PuTTY", "putty: metadata source");
+            }
+
+            var sw = list.FirstOrDefault(x => x.Host == "10.4.0.9");
+            Assert.True(sw != null, "putty: KiTTY path also parsed");
+            if (sw != null)
+            {
+                Assert.Equal(ProtocolType.Telnet, sw.Protocol, "putty: raw → telnet（无 Raw 协议就近落）");
+                Assert.Equal(3000, sw.Port, "putty: dword 0xbb8 → 3000");
+            }
+
+            // 老式 ANSI 导出（REGEDIT4）也要能读
+            var legacy = Path.Combine(dir, "legacy.reg");
+            File.WriteAllText(legacy,
+                "REGEDIT4\r\n\r\n" +
+                "[HKEY_CURRENT_USER\\Software\\SimonTatham\\PuTTY\\Sessions\\legacy1]\r\n" +
+                "\"HostName\"=\"10.4.1.1\"\r\n", Encoding.GetEncoding(936));
+            var legacyList = ExternalFormatImporter.ImportPuTTY(legacy);
+            Assert.Equal(1, legacyList.Count, "putty: REGEDIT4 兼容");
+            if (legacyList.Count == 1) Assert.Equal(22, legacyList[0].Port, "putty: 缺 PortNumber 默认 22");
+
+            // 缺失文件不抛
+            Assert.Equal(0, ExternalFormatImporter.ImportPuTTY(Path.Combine(dir, "nope.reg")).Count,
+                "putty: missing file empty list");
         }
 
         private static void TestWindTerm(string dir)
