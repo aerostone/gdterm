@@ -152,18 +152,16 @@ namespace Gdterm.UI.Controls
 
         public AntdUI.Button AddAction(string text, EventHandler onClick, string name = null)
         {
-            int fieldH = FormFontPolicy.FieldHeight(this);
             var b = new AntdUI.Button
             {
                 Name = name,
                 Text = text,
                 Type = AntdUI.TTypeMini.Default,
-                AutoSize = true,
-                Height = fieldH,
-                // AutoSize 钮不吃库内默认 sps，Padding 必须显式给，否则文字贴边（ui-tree-check L0 会红）
-                Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3)),
                 Margin = new Padding(0, 0, DpiScale.V(this, 4), 0)
             };
+            // 与 ListShell 同源：AutoSize + Padding 在 d150 量出的尺寸不变（矩阵在 keepass-manager 上实证），
+            // 统一交给 FormFontPolicy 按真实 GDI 文字宽 + FieldHeight 定尺寸。
+            FormFontPolicy.SizeActionButton(this, b, 8, 3);
             if (onClick != null) b.Click += onClick;
             _bar.Controls.Add(b);
             return b;

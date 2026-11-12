@@ -82,6 +82,7 @@ CI 里已挂在 `appveyor.yml` 的 test_script 段（编码守卫之后、ui-smo
 | R13 | 裸像素 `Margin/Padding(a,b,c,d)` | SC 规则 4/4d | 24 |
 | R14 | `Location = … ClientSize.Width …`（Forms/ 构造期绝对坐标） | SC 规则 2（0.1.359 门禁首捕） | 0 |
 | R15 | 对话框未绑 `CancelButton`（且自身不截 `Keys.Escape`） | §2.3 关闭绑定（冒烟门 R3 的本地化） | 0 |
+| R16 | `AntdUI.Button` 靠 `AutoSize = true` + `Padding(DpiScale…)` 定尺寸 | SC 规则 4 / **L2 矩阵门 2026-11-13 首捕** | 65（棘轮中，见下） |
 
 ### 3.3 基线棘轮（为什么不直接"必须为 0"）
 
@@ -90,6 +91,25 @@ CI 里已挂在 `appveyor.yml` 的 test_script 段（编码守卫之后、ui-smo
 - **今天绿**（基线 46 键）；
 - **新增即红**（新写的 `确定`+Primary 立刻失败）；
 - **修一条收紧一条**（`--write-baseline`），基线只降不升 —— 这条要写进 PR 模板。
+
+### 3.4 R16：AutoSize 钮不吃 DPI（L2 矩阵门第一次跑就抓到的系统性缺陷）
+
+`AntdUI.Button` 的 `AutoSize = true` 只用库内固定 sps 算尺寸，**赋给它的 `Padding` 只作用于绘制、
+不进测量**。dump 实证：`HistoryExportButton` 在 d100 与 d150 都是 46x30（padding 从 8 变成 12，
+尺寸一点没变），于是 150% 缩放下逻辑尺寸掉到 30.6x20，低于 L1 的 32 逻辑 px 触击下限 ——
+7 条 R1 红线，全是同一个根因。
+
+正确写法（已用于 `ListShell` / `TableShell` / `PortForwardPanel` / `HighlightRulePanel` /
+`LogonScriptPanel` / `MacroPanel` / `CommandHistoryPanel`）：
+
+```csharp
+var b = new AntdUI.Button { Text = "导出", Margin = … };
+FormFontPolicy.SizeActionButton(this, b, padX: 10, padY: 4);   // 关 AutoSize，按 GDI 文字宽 + FieldHeight 定尺寸
+```
+
+剩余 65 处（`--strict` 可列全，多在对话框页脚按钮与 BottomBar）走棘轮：新增即红，修一条收紧一条。
+注意 `Height = FormFontPolicy.FieldHeight(this)` + `AutoSize = true` 同样是无效写法（AutoSize 会盖掉 Height），
+R16 一并判红。
 
 已知局限（诚实记录）：
 - 基线键 = `规则|文件|片段`，**不含行号**（容忍插入行）。同文件内两处完全相同片段会折叠成 1 键（当前 47 命中 → 46 键）。文本级棘轮，不追求精确到实例。

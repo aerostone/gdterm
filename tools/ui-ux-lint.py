@@ -29,6 +29,9 @@ R12 select-autosize AntdUI.Select 设了 AutoSize（缩放规则 4d）
 R13 bare-pad       裸像素 Margin/Padding（缩放规则 4d / 规则 4）
 R14 loc-from-client 构造期绝对坐标源自 ClientSize.Width（规则 2；CI 0.1.359 首捕：
                    字体 AutoScale 后客户端已变，绝对 X 飞出 docked 面板；Forms/ 生效）
+R16 autosize-dpi  AntdUI.Button 用 AutoSize+Padding 定尺寸（矩阵门 2026-11-13 首捕：
+                 库内 AutoSize 不吃 Padding，d100/d150 都是 46x30，触击目标随 DPI 变小；
+                 改用 FormFontPolicy.SizeActionButton）
 
 基线棘轮（ratchet）
 ===================
@@ -442,6 +445,39 @@ def r15(path, lines):
         if re.search(r"class\s+\w+\s*:\s*(?:.*\b)?(?:AntdUI\.)?(?:Window|Form)\b", line):
             yield i, snippet(line)
             return
+
+
+# ────────────────────────────── R16 ──────────────────────────────
+# AutoSize + Padding 定不出 DPI 感知的钮尺寸（L2 矩阵门 2026-11-13 首捕，7 条 R1 触击红线）：
+#   AntdUI.Button 的 AutoSize 只用库内固定 sps 算尺寸，赋给它的 Padding 只作用于绘制、不进测量。
+#   实测 HistoryExportButton 在 d100 与 d150 都是 46x30 → 150% 下逻辑尺寸掉到 30.6x20。
+# 正确写法：FormFontPolicy.SizeActionButton(host, btn, padX, padY)。
+# 免判：显式给了 MinimumSize 地板的钮不在本条口径内。
+AUTOSIZE_BTN_RE = re.compile(r"AntdUI\.Button")
+DPI_SIZE_HELPER = "SizeActionButton"
+
+
+@rule("R16", "AntdUI.Button 用 AutoSize+Padding 定尺寸（不吃 DPI）",
+      "SCALING 规则 4 / L2 矩阵门 2026-11-13")
+def r16(path, lines):
+    block_start = None
+    for i, line in enumerate(lines):
+        if AUTOSIZE_BTN_RE.search(line) and not is_comment(line):
+            # 一行式（整块写在一行）
+            if "AutoSize = true" in line and "DpiScale" in line and "MinimumSize" not in line:
+                yield i + 1, snippet(line)
+                block_start = None
+            else:
+                block_start = i
+            continue
+        if block_start is None:
+            continue
+        block = "\n".join(lines[block_start:i + 1])
+        if "};" in line or line.strip() == "}":
+            if "AutoSize = true" in block and "DpiScale" in block \
+                    and "MinimumSize" not in block and DPI_SIZE_HELPER not in block:
+                yield block_start + 1, snippet(lines[block_start])
+            block_start = None
 
 
 # ────────────────────────────── 主流程 ──────────────────────────────

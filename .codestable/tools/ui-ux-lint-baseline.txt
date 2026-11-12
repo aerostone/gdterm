@@ -1,3 +1,68 @@
 # UI/UX L0 静态门基线（棘轮）。新增违规会让 CI 红；
 # 修复后运行 `python3 tools/ui-ux-lint.py --write-baseline` 收紧。
 # 格式：rule|file|snippet
+R16|Controls/AiChatPanel.cs|_btnClear = new AntdUI.Button
+R16|Controls/AiChatPanel.cs|_btnSend = new AntdUI.Button
+R16|Controls/AiChatPanel.cs|var b = new AntdUI.Button
+R16|Controls/BatchCommandPanel.cs|_btnExecute = new AntdUI.Button { Text = L10n.T("▶ 执行"), AutoSize = true, Padding = new Padding(DpiScale.V(this, 10), Dp
+R16|Controls/BatchCommandPanel.cs|_btnSelectAll = new AntdUI.Button { Text = L10n.T("全选"), AutoSize = true, Margin = new Padding(0, 0, DpiScale.V(this, 6)
+R16|Controls/BatchCommandPanel.cs|var btnDeselect = new AntdUI.Button { Text = L10n.T("取消"), AutoSize = true, Padding = new Padding(DpiScale.V(this, 10), 
+R16|Controls/BottomBarPanel.cs|_groupBtn = new AntdUI.Button
+R16|Controls/BottomBarPanel.cs|_pinBtn = new AntdUI.Button
+R16|Controls/BottomBarPanel.cs|var b = new AntdUI.Button
+R16|Controls/BottomBarPanel.cs|var btn = new AntdUI.Button
+R16|Controls/BottomBarPanel.cs|var more = new AntdUI.Button
+R16|Controls/CommandTemplatePanel.cs|var b = new AntdUI.Button
+R16|Controls/DangerousCommandDialog.cs|_cancelButton = new AntdUI.Button {
+R16|Controls/DangerousCommandDialog.cs|_confirmButton = new AntdUI.Button {
+R16|Controls/EmptyStateView.cs|_action = new AntdUI.Button
+R16|Controls/FilePaneControl.cs|var b = new AntdUI.Button {
+R16|Controls/FilePaneControl.cs|var cancel = new AntdUI.Button { Text = L10n.T("取消"), DialogResult = DialogResult.Cancel, AutoSize = true, Padding = new
+R16|Controls/FilePaneControl.cs|var close = new AntdUI.Button { Text = L10n.T("关闭"), DialogResult = DialogResult.OK, AutoSize = true, Padding = new Padd
+R16|Controls/FilePaneControl.cs|var ok = new AntdUI.Button { Text = L10n.T("确定"), DialogResult = DialogResult.OK, AutoSize = true, Padding = new Padding
+R16|Controls/HealthMonitorPanel.cs|_btnExport = new AntdUI.Button
+R16|Controls/HostKeyDialog.cs|var copy = new AntdUI.Button
+R16|Controls/HostKeyDialog.cs|var once = new AntdUI.Button
+R16|Controls/HostKeyDialog.cs|var reject = new AntdUI.Button
+R16|Controls/HostKeyDialog.cs|var save = new AntdUI.Button
+R16|Controls/KeyBindingPanel.cs|return new AntdUI.Button {
+R16|Controls/MultiChannelPanel.cs|return new AntdUI.Button
+R16|Controls/RemoteMonitorPanel.cs|_btnExport = new AntdUI.Button
+R16|Controls/SecretScanPanel.cs|_btnCopySel = new AntdUI.Button {
+R16|Controls/SecretScanPanel.cs|_btnScan = new AntdUI.Button {
+R16|Controls/SecretScanPanel.cs|_btnStop = new AntdUI.Button {
+R16|Controls/SecretScanPanel.cs|private readonly AntdUI.Button _btnCopySel;
+R16|Controls/SecretScanPanel.cs|var btnReveal = new AntdUI.Button {
+R16|Controls/SecretScanPanel.cs|var btnWhitelist = new AntdUI.Button {
+R16|Controls/SessionBookmarksPanel.cs|return new AntdUI.Button
+R16|Controls/TransferProgressDialog.cs|_cancelButton = new AntdUI.Button {
+R16|Controls/TransferProgressDialog.cs|private readonly AntdUI.Button _cancelButton;
+R16|Forms/AddOtpForm.cs|var btnCancel = new AntdUI.Button
+R16|Forms/AddOtpForm.cs|var btnOk = new AntdUI.Button
+R16|Forms/ConnectionDialog.cs|var btnClearCred = new AntdUI.Button {
+R16|Forms/ConnectionDialog.cs|var btnPickCred = new AntdUI.Button {
+R16|Forms/ConnectionDialog.cs|var cancelBtn = new AntdUI.Button {
+R16|Forms/ConnectionDialog.cs|var okBtn = new AntdUI.Button {
+R16|Forms/DangerousCommandConfigForm.cs|var btnAddWhitelist = new AntdUI.Button { Text = L10n.T("添加"), Type = AntdUI.TTypeMini.Primary, AutoSize = true, Padding
+R16|Forms/ImportPreviewForm.cs|var cancel = new AntdUI.Button
+R16|Forms/ImportPreviewForm.cs|var ok = new AntdUI.Button
+R16|Forms/KeePassEntryPicker.cs|_selectButton = new AntdUI.Button {
+R16|Forms/KeePassEntryPicker.cs|var btnCancel = new AntdUI.Button {
+R16|Forms/KeePassEntryPicker.cs|var btnManage = new AntdUI.Button {
+R16|Forms/KeePassEntryPicker.cs|var btnNew = new AntdUI.Button {
+R16|Forms/KeePassManagerForm.cs|var btnShowPwd = new AntdUI.Button {
+R16|Forms/LogViewerForm.cs|var btn = new AntdUI.Button
+R16|Forms/OtpManagerForm.cs|var btnAdd = new AntdUI.Button
+R16|Forms/OtpManagerForm.cs|var btnClose = new AntdUI.Button
+R16|Forms/OtpManagerForm.cs|var btnCopy = new AntdUI.Button
+R16|Forms/OtpManagerForm.cs|var btnDelete = new AntdUI.Button
+R16|Forms/PasswordHealthForm.cs|var closeButton = new AntdUI.Button
+R16|Forms/ScannerCenterForm.cs|_newPluginButton = new AntdUI.Button { Text = L10n.T("新建插件模板"), Type = AntdUI.TTypeMini.Default, AutoSize = true, Paddin
+R16|Forms/ScannerCenterForm.cs|_openFolderButton = new AntdUI.Button { Text = L10n.T("打开插件目录"), Type = AntdUI.TTypeMini.Default, AutoSize = true, Paddi
+R16|Forms/ScannerCenterForm.cs|_reloadButton = new AntdUI.Button { Text = L10n.T("重新加载插件"), Type = AntdUI.TTypeMini.Default, AutoSize = true, Padding =
+R16|Forms/ScannerCenterForm.cs|_runButton = new AntdUI.Button { Text = L10n.T("运行选中"), Type = AntdUI.TTypeMini.Primary, AutoSize = true, Padding = btnP
+R16|Forms/SessionRecordingsForm.cs|var btn = new AntdUI.Button
+R16|Forms/SetupWizardForm.cs|_cancelButton = new AntdUI.Button
+R16|Forms/SetupWizardForm.cs|_nextButton = new AntdUI.Button {
+R16|Forms/TrashForm.cs|var btnClose = new AntdUI.Button
+R16|Services/ViewModeController.cs|_exitFocusButton = new AntdUI.Button {

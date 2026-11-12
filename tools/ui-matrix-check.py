@@ -14,10 +14,14 @@
   1. **复用 L1**：每个格子单独跑 tools/ui-tree-check.py（带 --dpi-factor=该格系数），
      规则一套不重写 —— 矩阵门加的是"换条件重跑"，不是"另一套标准"。
   2. **反空转**（这条是矩阵门存在的理由）：条件和几何必须有因果关系。
-     若"字号 14pt"那格的总高与 9pt 一样、或"DPI 150%"那格与 100% 一样，
+     若"字号 14pt"那格与 9pt 一样、或"DPI 150%"那格与 100% 一样，
      说明条件没生效（缓存/被绕过/构造早于注入），此时全绿是假绿 —— 直接判失败。
-     口径：跨格比同目标的控件高度总和，字号轴 ≥5%、DPI 轴 ≥10%（宽松下限，
-     只用来抓"完全没变"，不用于精确度量）。
+
+     口径（2026-11-13 修正）：**按控件身份（类型/Name/Text）配对后比高度**，
+     取全部可比控件里的最大比值。原先比"整棵树的 abs.h 总和"，对 Dock=Fill 的页面
+     完全失效——宿主高度由窗口定死（480 → 480，比值恒 1.0），命令历史页因此假红；
+     而真正缩放的控件（Select/Pagination/Input，实测恒 1.50）被它摊平了。
+     阈值取宽松下限（DPI ≥1.35、字号 ≥1.15），只用于抓"完全没变"，不做精确度量。
 
 用法: python3 tools/ui-matrix-check.py <ui-matrixDir>
 退出码 0=全过，1=有失败（任一格子的 L1 规则红、格子缺失、或反空转不成立）。
@@ -34,8 +38,8 @@ TREE_CHECK = os.path.join(HERE, "ui-tree-check.py")
 EXPECT_THEMES = ("Dark", "OLED")
 EXPECT_DPI = (1.0, 1.5)
 EXPECT_FONT = (9.0, 14.0)
-MIN_FONT_GROWTH = 1.05   # 14pt vs 9pt：控件总高至少 +5%
-MIN_DPI_GROWTH = 1.10    # 150% vs 100%：控件总高至少 +10%
+MIN_FONT_GROWTH = 1.15   # 14pt vs 9pt：同身份控件最大高度比（实测 1.41~1.53）
+MIN_DPI_GROWTH = 1.35    # 150% vs 100%：同身份控件最大高度比（实测 1.50~2.71）
 
 FAIL = []
 
@@ -49,20 +53,40 @@ def ok(msg):
     print("  ok: " + msg)
 
 
-def height_sum(path):
-    """dump 里所有节点的 abs.h 之和（规模无关的几何指纹）。"""
+def heights_by_identity(path):
+    """→ {(短类型, Name, Text前12): abs.h}，只留高度 >0 的节点。
+
+    键里带 Text 是因为同一页常有一堆同名/匿名控件（Button "刷新"、"删除"…），
+    只按类型配对会把不同控件比到一起。
+    """
     with open(path, encoding="utf-8-sig") as fp:
         tree = json.load(fp)
-    total = 0
+    out = {}
     stack = list(tree.get("controls") or [])
     while stack:
         n = stack.pop()
         a = n.get("abs") or {}
         h = a.get("h", 0)
         if isinstance(h, (int, float)) and h > 0:
-            total += h
+            key = (str(n.get("type") or "").split(".")[-1],
+                   n.get("name") or "",
+                   (n.get("text") or "")[:12])
+            out[key] = h
         stack.extend(n.get("children") or [])
-    return total
+    return out
+
+
+def max_growth(a, b):
+    """同身份控件里最大的 b/a → (比值, 键)；无可比控件时 (None, None)。"""
+    best, best_key = None, None
+    for k, ha in a.items():
+        hb = b.get(k)
+        if not ha or not hb:
+            continue
+        r = float(hb) / float(ha)
+        if best is None or r > best:
+            best, best_key = r, k
+    return best, best_key
 
 
 def combos(root):
@@ -133,34 +157,45 @@ def main():
             ok(label + " L1 全过 (%d dumps)" % len(files))
 
     # ── 2) 反空转：条件必须真的改变了几何 ─────────────────────────
-    def sum_of(theme, dpi, font, target):
+    def heights_of(theme, dpi, font, target):
         d = grid.get((theme, dpi, font))
         if not d:
             return None
         p = os.path.join(d, target + ".json")
-        return height_sum(p) if os.path.exists(p) else None
+        return heights_by_identity(p) if os.path.exists(p) else None
 
     for target in sorted(targets or []):
         for theme in EXPECT_THEMES:
+            # 字号轴：同 DPI 下 14pt vs 9pt
             for dpi in EXPECT_DPI:
-                a, b = sum_of(theme, dpi, 9.0, target), sum_of(theme, dpi, 14.0, target)
-                if a and b:
-                    r = float(b) / a
-                    if r < MIN_FONT_GROWTH:
-                        fail("字号轴没生效 %s/%s d%03d: 14pt 总高/9pt=%0.3f (< %0.2f)"
-                             % (theme, target, int(dpi * 100), r, MIN_FONT_GROWTH))
-                    else:
-                        ok("字号轴生效 %s/%s d%03d: 14pt/9pt 高度比=%0.2f" % (theme, target, int(dpi * 100), r))
+                a = heights_of(theme, dpi, 9.0, target)
+                b = heights_of(theme, dpi, 14.0, target)
+                if a is None or b is None:
+                    continue
+                r, k = max_growth(a, b)
+                if r is None:
+                    fail("字号轴无法验证 %s/%s d%03d: 两格没有可比控件" % (theme, target, int(dpi * 100)))
+                elif r < MIN_FONT_GROWTH:
+                    fail("字号轴没生效 %s/%s d%03d: 14pt/9pt 最大高度比=%0.2f (< %0.2f)"
+                         % (theme, target, int(dpi * 100), r, MIN_FONT_GROWTH))
+                else:
+                    ok("字号轴生效 %s/%s d%03d: 14pt/9pt 最大高度比=%0.2f（%s %s）"
+                       % (theme, target, int(dpi * 100), r, k[0], (k[1] or k[2] or "-")))
+            # DPI 轴：同字号下 150% vs 100%
             for font in EXPECT_FONT:
-                a, b = sum_of(theme, 1.0, font, target), sum_of(theme, 1.5, font, target)
-                if a and b:
-                    r = float(b) / a
-                    if r < MIN_DPI_GROWTH:
-                        fail("DPI 轴没生效 %s/%s f%02d: 150%% 总高/100%%=%0.3f (< %0.2f)"
-                             % (theme, target, int(font), r, MIN_DPI_GROWTH))
-                    else:
-                        ok("DPI 轴生效 %s/%s f%02d: 150%%/100%% 高度比=%0.2f"
-                           % (theme, target, int(font), r))
+                a = heights_of(theme, 1.0, font, target)
+                b = heights_of(theme, 1.5, font, target)
+                if a is None or b is None:
+                    continue
+                r, k = max_growth(a, b)
+                if r is None:
+                    fail("DPI 轴无法验证 %s/%s f%02d: 两格没有可比控件" % (theme, target, int(font)))
+                elif r < MIN_DPI_GROWTH:
+                    fail("DPI 轴没生效 %s/%s f%02d: 150%%/100%% 最大高度比=%0.2f (< %0.2f)"
+                         % (theme, target, int(font), r, MIN_DPI_GROWTH))
+                else:
+                    ok("DPI 轴生效 %s/%s f%02d: 150%%/100%% 最大高度比=%0.2f（%s %s）"
+                       % (theme, target, int(font), r, k[0], (k[1] or k[2] or "-")))
 
     print()
     if FAIL:

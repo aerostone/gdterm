@@ -77,9 +77,13 @@ namespace Gdterm.UI.Controls
             _hostFilter.Items.Add(L10n.T("所有主机"));
             _hostFilter.SelectedIndex = 0;
 
-            var btnRefresh = new AntdUI.Button { Text = L10n.T("刷新"), AutoSize = true, Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3))};
-            var btnDeleteSel = new AntdUI.Button { Text = L10n.T("删选中"), AutoSize = true, Enabled = false, Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3))};
-            var btnClear = new AntdUI.Button { Text = L10n.T("清空"), AutoSize = true, Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3))};
+            // 尺寸统一走 FormFontPolicy（AutoSize 不吃 DPI：d150 下这三个钮仍是 46x30，低于触击下限）
+            var btnRefresh = new AntdUI.Button { Text = L10n.T("刷新") };
+            var btnDeleteSel = new AntdUI.Button { Text = L10n.T("删选中"), Enabled = false };
+            var btnClear = new AntdUI.Button { Text = L10n.T("清空") };
+            Services.FormFontPolicy.SizeActionButton(this, btnRefresh, 8, 3);
+            Services.FormFontPolicy.SizeActionButton(this, btnDeleteSel, 8, 3);
+            Services.FormFontPolicy.SizeActionButton(this, btnClear, 8, 3);
 
             searchPanel.Controls.AddRange(new Control[] { _searchBox, _hostFilter, btnRefresh, btnDeleteSel, btnClear });
 
