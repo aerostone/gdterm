@@ -31,6 +31,7 @@ namespace Gdterm.UI.Controls
         private AntdUI.Button _btnExecute;
         private AntdUI.Button _btnSelectAll;
         private Panel _leftPanel;
+        private FlowLayoutPanel _leftHeader;
         private AntdUI.Label _lblStatus;
         private Dictionary<string, ITerminalSession> _sessions = new Dictionary<string, ITerminalSession>();
         // 批量命令历史（↑/↓ 召回）：批量入口的命令都是精心拼出来的，关掉面板就丢等于每次重写
@@ -128,7 +129,10 @@ namespace Gdterm.UI.Controls
             var leftPanel = new Panel { Dock = DockStyle.Left, BackColor = GdtermColorTable.Surface, Padding = new Padding(DpiScale.V(this, 4)) };
             _leftPanel = leftPanel;
 
-            var leftHeader = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, BackColor = GdtermColorTable.Surface, Padding = new Padding(DpiScale.V(this, 4)) };
+            // 换行必须开：d150 + 14pt 下"全选/取消"各 79px，两个就 190px > 左栏 168px，
+            // WrapContents=false 时第二个按钮直接被摆到栏外（矩阵第三批判红：x=111 宽 79 出 168）。
+            var leftHeader = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, BackColor = GdtermColorTable.Surface, Padding = new Padding(DpiScale.V(this, 4)) };
+            _leftHeader = leftHeader;
             _btnSelectAll = new AntdUI.Button {
                 Text = L10n.T("全选"),
                 Margin = new Padding(0, 0, DpiScale.V(this, 6), 0),
@@ -205,6 +209,15 @@ namespace Gdterm.UI.Controls
             int w = Math.Min(want, room);
             if (w < floor) w = Math.Min(floor, Math.Max(0, ClientSize.Width));
             if (w > 0 && _leftPanel.Width != w) _leftPanel.Width = w;
+            // 换行后 AutoSize 不按新宽度重算高度（与 TableShell 同一坑）：显式量一次并回写，
+            // 否则第二行按钮会压在会话列表上。
+            if (_leftHeader != null && _leftHeader.Width > 0)
+            {
+                int need;
+                try { need = _leftHeader.GetPreferredSize(new Size(_leftHeader.Width, 0)).Height; }
+                catch (Exception) { need = 0; }
+                if (need > 0 && _leftHeader.Height != need) _leftHeader.Height = need;
+            }
         }
 
         protected override void OnSizeChanged(EventArgs e)
