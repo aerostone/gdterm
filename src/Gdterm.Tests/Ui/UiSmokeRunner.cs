@@ -144,12 +144,16 @@ namespace Gdterm.Tests.Ui
                     Check(FindByName(f, "ScannerPluginTable") != null, "插件表可定位");
                     Check(FindByName(f, "ScannerFindingTable") != null, "结果表可定位");
                     AssertNoDockOverlap(f, "ScannerCenter");
-                    // UX change 2026-09-25：0 插件 / 0 发现 / 空输出 三条空状态引导都在
-                    foreach (var nm in new[] { "ScannerPluginEmptyHint", "ScannerFindingEmptyHint", "ScannerRawEmptyHint" })
+                    // UX change 2026-09-25：0 插件 / 0 发现 / 空输出 三条空状态引导都在。
+                    // 插件侧已从「一行 20px 灰字」升级为 EmptyStateView（C1 标准空态层），
+                    // 旧标签删除——断言跟着搬到空态层，否则门会跟着死代码一起假绿。
+                    foreach (var nm in new[] { "ScannerFindingEmptyHint", "ScannerRawEmptyHint" })
                     {
                         var h = FindByName(f, nm);
                         Check(h != null && h.Visible, nm + " 空状态可见");
                     }
+                    var plugEmpty = FindByType(f, "EmptyStateView");
+                    Check(plugEmpty != null && plugEmpty.Visible, "ScannerPluginEmpty 空状态可见");
                     // 右列左缘与左列同 pad（原 0：空态下左右不对称）。
                     // 发现表现在包在 TableShell 里（Parent 是壳而非列 Panel），不能再直接比
                     // Parent 相对的 Left——改为沿父链走到列 Panel 累加偏移（gutter），两列内缩相等才算对齐。
@@ -227,7 +231,8 @@ namespace Gdterm.Tests.Ui
                 // 快捷键仓库开箱即带内置预设（tmux 等）→ 表非空，空态层应隐藏
                 tryPanel("key-binding", () => new KeyBindingPanel(
                     new Gdterm.Connections.TerminalKeyBindingStore(Path.Combine(tmp, "keybind.json"))), empty: EmptyExpect.Hidden);
-                tryPanel("toolbox", () => new ToolboxPanel(toolRegistry), empty: EmptyExpect.Ignore);
+                // 空 registry → 工具列表空 → 必须有空态引导（R09 补接，2026-11-11）
+                tryPanel("toolbox", () => new ToolboxPanel(toolRegistry), empty: EmptyExpect.Visible);
                 tryPanel("logon-script", () => new LogonScriptPanel(
                     new Gdterm.Connections.LogonScriptStore(Path.Combine(tmp, "logon.json"))), empty: EmptyExpect.Visible);
 
@@ -248,10 +253,10 @@ namespace Gdterm.Tests.Ui
                 // 通知中心用进程级静态缓冲，前面用例可能已写入 → 空态不可控，只 dump 不判
                 tryPanel("notification-center", () => new NotificationCenterPanel(), empty: EmptyExpect.Ignore);
                 tryPanel("multi-channel", () => new MultiChannelPanel(new Gdterm.Terminal.MultiChannelManager()), empty: EmptyExpect.Visible);
-                tryPanel("batch-command", () => new BatchCommandPanel(), empty: EmptyExpect.Ignore);
+                tryPanel("batch-command", () => new BatchCommandPanel(), empty: EmptyExpect.Visible);
                 tryPanel("health-monitor", () => new HealthMonitorPanel(), empty: EmptyExpect.Ignore);
                 tryPanel("snippet-search", () => new SnippetSearchPanel(
-                    new System.Collections.Generic.List<Gdterm.Core.Models.QuickCommand>()), empty: EmptyExpect.Ignore);
+                    new System.Collections.Generic.List<Gdterm.Core.Models.QuickCommand>()), empty: EmptyExpect.Visible);
 
                 try { Directory.Delete(tmp, true); } catch { }
                 try { toolRegistry.Dispose(); } catch { }

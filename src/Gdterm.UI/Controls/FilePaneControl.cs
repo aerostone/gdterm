@@ -236,7 +236,7 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(DpiScale.V(this, 5), DpiScale.V(this, 2), DpiScale.V(this, 5), DpiScale.V(this, 2)),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
-                Margin = new Padding(1, 0, 1, 0),
+                Margin = DpiScale.Pad(this, 1, 0, 1, 0),
                 TabStop = false
             };
             b.Click += onClick;

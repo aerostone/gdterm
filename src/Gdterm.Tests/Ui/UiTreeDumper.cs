@@ -101,8 +101,14 @@ namespace Gdterm.Tests.Ui
                 string text = c.Text;
                 if (!string.IsNullOrEmpty(text))
                 {
-                    singleW = TextRenderer.MeasureText(text, c.Font, new Size(int.MaxValue, int.MaxValue),
-                        TextFormatFlags.NoPadding | TextFormatFlags.SingleLine).Width;
+                    // 按显式换行切行后取最宽行——否则 SetupWizard 那类「\r\n 分段说明」
+                    // 会被整串量成一行（实测 1411px vs 可用 514px），R6 报的是假溢出。
+                    foreach (var line in text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+                    {
+                        int w = TextRenderer.MeasureText(line, c.Font, new Size(int.MaxValue, int.MaxValue),
+                            TextFormatFlags.NoPadding | TextFormatFlags.SingleLine).Width;
+                        if (w > singleW) singleW = w;
+                    }
                     wrap = CanWrap(c);
                     if (wrap)
                     {

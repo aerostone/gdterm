@@ -65,9 +65,10 @@ namespace Gdterm.UI.Controls
             };
             _searchBox.PlaceholderText = L10n.T("搜索命令...");
 
+            // AntdUI.Select 是自绘控件，不认基类 AutoSize（宽度只能靠 Width/MinimumSize 定）；
+            // 写 AutoSize=true 曾让下拉宽失控——只显示半个字（SCALING 规则 4d / R12）。
             _hostFilter = new AntdUI.Select {
                 Width = DpiScale.V(this, 120),
-                AutoSize = true,
                 MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this)),
             };
             _hostFilter.Items.Add(L10n.T("所有主机"));
@@ -101,7 +102,7 @@ namespace Gdterm.UI.Controls
                 AutoSize = true,
                 Text = L10n.T("就绪"),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(3, 0, 0, 0),
+                Padding = new Padding(DpiScale.V(this, 3), 0, 0, 0),
                 BackColor = GdtermColorTable.Surface
             };
 

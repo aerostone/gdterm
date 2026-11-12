@@ -25,6 +25,7 @@ namespace Gdterm.UI.Controls
         private CommandGate _commandGate;
         private ListView _lvSessions;
         private ListShell _shell;
+        private EmptyStateView _emptySessions;
         private AntdUI.Input _txtCommand;
         private RichTextBox _rtbResults;
         private AntdUI.Button _btnExecute;
@@ -114,7 +115,7 @@ namespace Gdterm.UI.Controls
             FitCommandBox(topPanel);
 
             // ── 左侧：会话列表 ──
-            var leftPanel = new Panel { Dock = DockStyle.Left, Width = 250, BackColor = GdtermColorTable.Surface, Padding = new Padding(4) };
+            var leftPanel = new Panel { Dock = DockStyle.Left, Width = DpiScale.V(this, 250), BackColor = GdtermColorTable.Surface, Padding = new Padding(DpiScale.V(this, 4)) };
 
             var leftHeader = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, BackColor = GdtermColorTable.Surface, Padding = new Padding(DpiScale.V(this, 4)) };
             _btnSelectAll = new AntdUI.Button { Text = L10n.T("全选"), AutoSize = true, Margin = new Padding(0, 0, DpiScale.V(this, 6), 0), Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 3), DpiScale.V(this, 10), DpiScale.V(this, 3)), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.UiFont(-1f) };
@@ -142,6 +143,10 @@ namespace Gdterm.UI.Controls
 
             leftPanel.Controls.Add(_shell);
             leftPanel.Controls.Add(leftHeader);
+            // 会话列表空态：一个会话都没连上时，别让左侧只剩一片空白（R09 / UX 审计 C1）
+            _emptySessions = EmptyStateView.Attach(leftPanel, L10n.T("还没有可广播的会话"),
+                L10n.T("打开几个终端标签后，这里会列出可批量下发的会话"));
+            RefreshSessions();   // 空态默认 Visible=false：构造期早于此挂载，这里补一次同步
 
             // ── 右侧：结果对比 ──
             _rtbResults = new RichTextBox
@@ -172,6 +177,7 @@ namespace Gdterm.UI.Controls
                 items.Add(item);
             }
             _shell.SetItems(items);
+            if (_emptySessions != null) _emptySessions.SetEmpty(items.Count == 0);
         }
 
         private void OnCommandKeyDown(object sender, KeyEventArgs e)

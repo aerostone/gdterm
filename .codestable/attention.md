@@ -20,9 +20,11 @@ standards:
 
 ### UI 体系（2026-09-05 AntdUI 全迁移后）
 
-- **视觉 SSOT**：docs/DESIGN-LANGUAGE.md v1.2（色 token/字体阶梯/间距/AntdUI 规范）；
+- **视觉 SSOT**：docs/DESIGN-LANGUAGE.md v1.4（色 token/字体阶梯/间距/AntdUI 规范）；
   布局机械规则 docs/UI-SCALING-CONVENTIONS.md。一句话：颜色找 ColorTable、字体找 FontPolicy、
-  组件找 DialogStyle、原生控件暗色找 NativeTheme、坐标找 DpiScale。
+  组件找 **AntdUI**（`Type=TTypeMini.*`，不手涂 BackColor）、原生控件暗色找 NativeTheme、坐标找 DpiScale。
+  `DialogStyle` 原生样式工厂已于 2026-11-11 删除（零调用点，且 `MakePrimary` 会画出隐形按钮）——
+  文档/评审里再见到它按过期引用处理。
 - **AntdUI 2.4.8 已全窗体迁移**（lib/AntdUI.dll，net40 版，Apache-2.0）：A 类完整迁移 16 个窗体、
   B 类基类替换 7 个；豁免区 MainForm/TerminalControl/连接树/ToastForm。
   新窗体默认 `AntdUI.Window` + TTypeMini 语义按钮；提示用 AntdUI.Message（warn/error/info），

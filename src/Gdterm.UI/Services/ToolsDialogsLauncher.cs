@@ -202,12 +202,11 @@ namespace Gdterm.UI.Services
                     try { Gdterm.UI.Diagnostics.ToastNotifier.Success(L10n.T("外观已保存（DPI 需重启）")); }
                     catch
                     {
-                        MessageBox.Show(
-                            _owner,
-                            L10n.T("外观已保存。终端与界面字体已即时生效；DPI 感知需重启应用。"),
-                            L10n.T("外观设置"),
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Information);
+                        // 角落 Toast 失败时的兜底也必须是框架内的非阻断提示——
+                        // 阻断 MessageBox 会把“保存成功”做成“必须点一下”（R08 / DL §9.3）。
+                        var host = _owner as Form;
+                        if (host != null)
+                            AntdUI.Message.success(host, L10n.T("外观已保存。终端与界面字体已即时生效；DPI 感知需重启应用。"));
                     }
                 }
             }

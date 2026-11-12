@@ -61,7 +61,7 @@ namespace Gdterm.UI.Services
                 // 隐式 Default 钮会忽略 BackColor（Accent 底画不出 + OnAccent 深字 = 隐形钮，见 509df1b 教训）→ 显式 Primary
                 Type = AntdUI.TTypeMini.Primary,
                 Font = Services.FormFontPolicy.UiFont(0f, FontStyle.Bold),
-                Padding = new Padding(10, 4, 10, 4),
+                Padding = Services.DpiScale.Pad(_host, 10, 4, 10, 4),
                 Visible = false,
                 TabStop = false,
                 Cursor = Cursors.Hand
@@ -122,7 +122,7 @@ namespace Gdterm.UI.Services
                     if (_connectionTree != null)
                     {
                         _connectionTree.Visible = true;
-                        _connectionTree.Width = 250;
+                        _connectionTree.Width = Services.DpiScale.V(_connectionTree, 250);
                     }
                     if (_statusBar != null) _statusBar.Visible = true;
                     if (_menuStrip != null) _menuStrip.Visible = true;
@@ -141,7 +141,7 @@ namespace Gdterm.UI.Services
                     if (_connectionTree != null)
                     {
                         _connectionTree.Visible = true;
-                        _connectionTree.Width = 200;
+                        _connectionTree.Width = Services.DpiScale.V(_connectionTree, 200);
                     }
                     if (_statusBar != null) _statusBar.Visible = false;
                     if (_menuStrip != null) _menuStrip.Visible = false;

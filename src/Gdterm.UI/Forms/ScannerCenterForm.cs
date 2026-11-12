@@ -41,7 +41,6 @@ namespace Gdterm.UI.Forms
         private AntdUI.Input _rawOutput;
         private SplitContainer _split;
         /// <summary>空状态引导（UX change 2026-09-25）：0 插件 / 0 发现 / 空输出时各显一条，指向已有入口。</summary>
-        private AntdUI.Label _pluginEmptyHint;
         private EmptyStateView _pluginEmpty;
         private AntdUI.Label _findingEmptyHint;
         private AntdUI.Label _rawEmptyHint;
@@ -199,23 +198,15 @@ namespace Gdterm.UI.Forms
             _pluginTable.CheckedChanged += (s, ev) => UpdateRunButtonState();
             _pluginTable.CellDoubleClick += (s, ev) => { if (!_running && SelectedRunnablePlugins().Count > 0) OnRunClicked(null, null); };
             pluginPanel.Controls.Add(_pluginTable);
-            // 空清单引导：0 插件时指向已有入口（打开插件目录/新建模板），不改布局层级
-            _pluginEmptyHint = new AntdUI.Label
-            {
-                Name = "ScannerPluginEmptyHint",
-                Dock = DockStyle.Bottom,
-                Height = Math.Max(DpiScale.V(this, 20), hintH),
-                Text = L10n.T("还没有插件：先放入脚本文件（下方提示有入口）"),  // 左列仅 ~284px，长文案会被硬裁
-                TextAlign = ContentAlignment.MiddleLeft,
-                ForeColor = GdtermColorTable.Muted,
-                Visible = false
-            };
-            pluginPanel.Controls.Add(_pluginEmptyHint);
+            // 0 插件引导只留下面那个 EmptyStateView（标题+说明+按钮）：
+            // 原来这行 20px 灰字既与空态层重复，又超出左列 284px 实测宽（R6 溢出）。
             var pluginHint = new AntdUI.Label {
                 Name = "ScannerPluginTipHint",
                 Dock = DockStyle.Bottom,
                 Height = Math.Max(DpiScale.V(this, 20), hintH),
-                Text = L10n.T("提示：双击运行；在 插件目录 增删改脚本即热更新（无需重启）"),
+                // 左列实测可用 284px：原「提示：双击运行；在 插件目录 增删改脚本即热更新（无需重启）」
+                // 量得 352px，后半句直接被裁掉（ui-tree-check R6 抓到的真溢出）。
+                Text = L10n.T("双击运行；插件目录增删改即热更新，无需重启"),
                 TextAlign = ContentAlignment.MiddleLeft,
                 ForeColor = GdtermColorTable.Muted
             };
@@ -397,7 +388,6 @@ namespace Gdterm.UI.Forms
         /// <summary>0 插件 / 0 发现 / 空输出三处空状态引导集中开关（UX change 2026-09-25）。</summary>
         private void UpdateEmptyHints()
         {
-            if (_pluginEmptyHint != null) _pluginEmptyHint.Visible = _store.Plugins.Count == 0;
             if (_pluginEmpty != null) _pluginEmpty.SetEmpty(_store.Plugins.Count == 0);
             if (_findingEmptyHint != null) _findingEmptyHint.Visible = _findingRows.Count == 0;
             if (_rawEmptyHint != null) _rawEmptyHint.Visible = string.IsNullOrEmpty(_rawOutput.Text);

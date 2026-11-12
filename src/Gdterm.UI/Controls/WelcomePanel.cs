@@ -43,7 +43,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 ColumnCount = 1,
                 RowCount = 5,
-                Padding = new Padding(40, 24, 40, 20)
+                Padding = DpiScale.Pad(this, 40, 24, 40, 20)
             };
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -69,7 +69,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(2, 0, 0, 0)
+                Padding = DpiScale.Pad(this, 2, 0, 0, 0)
             };
             var header = new Panel { Dock = DockStyle.Fill };
             header.Controls.Add(subtitle);
@@ -248,7 +248,7 @@ namespace Gdterm.UI.Controls
             var panel = new Panel
             {
                 Dock = DockStyle.Fill,
-                Padding = new Padding(0, 8, 0, 0)
+                Padding = DpiScale.Pad(this, 0, 8, 0, 0)
             };
             var lbl = new AntdUI.Label {
                 Text = title,
@@ -263,7 +263,7 @@ namespace Gdterm.UI.Controls
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
                 AutoScroll = true,
-                Padding = new Padding(0, 4, 0, 0)
+                Padding = DpiScale.Pad(this, 0, 4, 0, 0)
             };
             panel.Controls.Add(host);
             panel.Controls.Add(lbl);
@@ -297,7 +297,7 @@ namespace Gdterm.UI.Controls
                 AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
                 Text = text,
-                Margin = new Padding(4, 8, 4, 4)
+                Margin = DpiScale.Pad(this, 4, 8, 4, 4)
             });
         }
 

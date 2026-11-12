@@ -128,6 +128,11 @@ toolbox / logon-script）；空数据源面板（command-history / port-forward�
 **先断言存在、再断言可见**（2026-11-01 复核：“找到才检查”会在组件被删后假绿；
 其余面板空态未接，属已知遗留，不强制存在）。
 
+**空态补接（2026-11-11）**：`toolbox` / `batch-command` / `snippet-search` 三处此前 `Ignore`
+（= 空列表可以只是一片背景色），现全部接上 `EmptyStateView` 并翻成 `EmptyExpect.Visible`；
+L0 `R09` 违规归零、基线同步清空（44 → 0）。同轮把 ScannerCenter 那行被空态层取代的
+20px 灰字删掉，断言从「旧标签可见」搬到「空态层可见」——否则门会跟着死代码一起假绿。
+
 **主窗场景要求（2026-11-01 复核）**：MainFormSmoke 开 1 个本地终端标签
 （`OpenLocalTerminal`，本地 PTY 不连主机）并断言 `GetHitRegions()≥1`——
 空会话下 dump 的 hitRegions 永远为空，命中区规则受检=0 即空过。
@@ -135,6 +140,11 @@ toolbox / logon-script）；空数据源面板（command-history / port-forward�
 **判定器可达性硬门（2026-11-01 复核）**：空控件树 → 该文件 FAIL（不再 ALL OK）；
 每条新规则打印受检对象数（`自绘命中区受检=N`/`文本适配受检=N`），0 对象只报 info 不假绿；
 CI 失败路径修正：smoke 非零不再立即 throw，dump/截图先上传再宣判（先留证据、后红）。
+
+**R6 度量修正（2026-11-11）**：`textSingleW` 原按整串 `SingleLine` 度量，带 `\r\n` 的分段说明
+会被量成一行（SetupWizard 段落 1411px vs 可用 514px）→ R6 报假溢出。现按显式换行切行取最宽行。
+同一轮的真实命中：ScannerCenter 左列 284px 里塞了 352px 的提示语（后半句被裁），已收短；
+其并列的一行灰字与空态层重复，直接删除。
 
 **已闭合的缺口（2026-10-07 审计修复）**：① 文字适配断言（R6 + dump 度量字段）；
 ② 面板零覆盖（+6 dump）；③ 自绘命中区不可见（hitRegions + R1 扩展）；⑤ R2 空转（已删）。

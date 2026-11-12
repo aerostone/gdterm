@@ -65,7 +65,7 @@ namespace Gdterm.UI.Forms
                 Dock = DockStyle.Top,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                Padding = new Padding(12, 10, 12, 6),
+                Padding = DpiScale.Pad(this, 12, 10, 12, 6),
                 BackColor = GdtermColorTable.Background,
                 ColumnCount = 2,
                 RowCount = 1
@@ -116,7 +116,7 @@ namespace Gdterm.UI.Forms
                 BackColor = GdtermColorTable.Surface,
                 ColumnCount = 5,
                 RowCount = 1,
-                Padding = new Padding(12, 7, 12, 7)
+                Padding = DpiScale.Pad(this, 12, 7, 12, 7)
             };
             btnPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             btnPanel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -144,7 +144,7 @@ namespace Gdterm.UI.Forms
                 Type = AntdUI.TTypeMini.Primary,
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
-                Margin = new Padding(8, 0, 0, 0),
+                Margin = DpiScale.Pad(this, 8, 0, 0, 0),
                 Enabled = false
             };
             _selectButton.Click += (s, e) => SelectEntry();
@@ -153,7 +153,7 @@ namespace Gdterm.UI.Forms
                 Type = AntdUI.TTypeMini.Default,
                 AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
-                Margin = new Padding(8, 0, 0, 0)
+                Margin = DpiScale.Pad(this, 8, 0, 0, 0)
             };
             btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
             btnPanel.Controls.Add(btnNew, 0, 0);

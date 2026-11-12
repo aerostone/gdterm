@@ -229,7 +229,7 @@ namespace Gdterm.UI.Forms
             Font = Services.FormFontPolicy.UiFont();
 
             // ===== 顶部：基本信息 + 凭据 + 更多选项开关 =====
-            var topPanel = new Panel { Dock = DockStyle.Top, AutoSize = true, BackColor = GdtermColorTable.Background, Padding = new Padding(12, 10, 12, 4) };
+            var topPanel = new Panel { Dock = DockStyle.Top, AutoSize = true, BackColor = GdtermColorTable.Background, Padding = DpiScale.Pad(this, 12, 10, 12, 4) };
             _topPanel = topPanel;
 
             var basicLayout = new TableLayoutPanel
@@ -311,7 +311,7 @@ namespace Gdterm.UI.Forms
 
             // ===== 高级区：协议专属选项 + 备注（默认折叠）=====
             // AutoScroll：内容超过剩余空间时出滚动条，保证保存/取消按钮永远可见
-            _advancedHost = new Panel { Dock = DockStyle.Fill, Visible = false, AutoScroll = true, BackColor = GdtermColorTable.Background, Padding = new Padding(12, 4, 12, 4) };
+            _advancedHost = new Panel { Dock = DockStyle.Fill, Visible = false, AutoScroll = true, BackColor = GdtermColorTable.Background, Padding = DpiScale.Pad(this, 12, 4, 12, 4) };
             _advFlow = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
@@ -423,7 +423,7 @@ namespace Gdterm.UI.Forms
             // 域名仅 RDP 域账户有意义——从基本信息移到这里
             _domainBox = AddRow(rdpGrid, 0, L10n.T("RDP域名"), new AntdUI.Input());
             _domainBox.PlaceholderText = L10n.T("域账户如 CONTOSO，普通账户留空");
-            var rdpChecks = new TableLayoutPanel { ColumnCount = 2, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 4, 0, 4) };
+            var rdpChecks = new TableLayoutPanel { ColumnCount = 2, AutoSize = true, Dock = DockStyle.Fill, Margin = DpiScale.Pad(this, 0, 4, 0, 4) };
             rdpChecks.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
             rdpChecks.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
             _rdpDriveCheck = new AntdUI.Checkbox { Text = L10n.T("本地磁盘"), AutoSize = true };
@@ -593,7 +593,7 @@ namespace Gdterm.UI.Forms
                 Width = DpiScale.V(this, 516),
                 // 只锁宽度下限：AutoSize 高度仍随内容撑高，宽度不因内容窄而收缩（CI 318 实测三区 176~472 不等宽）
                 MinimumSize = new Size(DpiScale.V(this, 516), 0),
-                Margin = new Padding(0, 0, 0, 10)
+                Margin = DpiScale.Pad(this, 0, 0, 0, 10)
             };
             t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -602,7 +602,7 @@ namespace Gdterm.UI.Forms
                 Text = title,
                 AutoSize = true,
                 Font = Services.FormFontPolicy.UiFont(0f, FontStyle.Bold),
-                Margin = new Padding(0, 0, 0, 3)
+                Margin = DpiScale.Pad(this, 0, 0, 0, 3)
             }, 0, 0);
             return t;
         }

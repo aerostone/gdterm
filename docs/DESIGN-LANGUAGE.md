@@ -8,8 +8,13 @@
 
 
 > 约束前提：.NET Framework 4.6.2 WinForms、Windows 7 / Server 2008 R2 起步、单 EXE；组件框架固定为 AntdUI 2.4.8。
-> 执行规则：本文是唯一视觉事实来源（SSOT）。代码以 `GdtermColorTable` + `DialogStyle` + `FormFontPolicy`
-> 三个类为实现载体；**写新 UI 前先读本文，评审 UI 代码时以本文为准。**
+> 执行规则：本文是唯一视觉事实来源（SSOT）。代码以 `GdtermColorTable` + **AntdUI 控件** + `FormFontPolicy`
+> 三个载体实现（颜色/组件/字体各归一处）；**写新 UI 前先读本文，评审 UI 代码时以本文为准。**
+>
+> v1.4（2026-11-11）：**删除 `DialogStyle` 原生样式工厂**（201 行、零调用点）。它是 v1.3 之前的
+> 原生 WinForms 样式层，`MakePrimary` 之类走「原生 `Button` + 手写 `BackColor=Accent`」——
+> 正是 §9.4 记录的隐形按钮病根，留着只会被复制。组件一律用 AntdUI 的语义属性（`Type=`），
+> 样式不手搓。文档中旧引用同步改为 AntdUI 口径。
 
 ---
 
@@ -132,7 +137,8 @@ SnippetSearchPanel）以及 TableLayoutPanel 表达不了的精确对齐；且�
 ### 3.3 对齐
 
 - 表单标签**左列右对齐**（`TextAlign = MiddleRight`），值区左对齐；
-- 底部按钮条右对齐，主按钮最右（Windows 惯例），用 `DialogStyle.ButtonStrip`；
+- 底部按钮条右对齐，主按钮最右（Windows 惯例）：`FlowLayoutPanel{FlowDirection=RightToLeft, WrapContents=false}`
+  或 `AntdUI.StackPanel{Vertical=false, Gap=DpiScale.V(this,8)}`，按钮 `Margin` 一律过 `DpiScale`；
 - 标题与正文的左边距统一（12 或 16，同窗体内不得混用）。
 
 ### 3.4 形状语言
@@ -145,15 +151,20 @@ SnippetSearchPanel）以及 TableLayoutPanel 表达不了的精确对齐；且�
 
 ## 4. 组件规范
 
-实现：`DialogStyle`。新窗体一律走 `DialogStyle.*`，不手搓样式。
+实现：**AntdUI 控件族**。新窗体继承 `AntdUI.Window`，控件一律用 `AntdUI.*` + 本文 token；
+不手搓 `BackColor`/`ForeColor` 组合，不加自绘圆角容器。原生控件只剩两处合法用途：
+① 明确豁免的核心区（§7.1 名单）；② `ListView`/`ListBox`/`RichTextBox` 等 AntdUI 无对位组件的数据区。
 
 ### 4.1 按钮
 
-| 级别 | 工厂 | 视觉 | 用途（每窗体≤1 Primary） |
+| 级别 | 写法 | 视觉 | 用途（每窗体≤1 Primary） |
 |---|---|---|---|
-| Primary | `MakePrimary` | Accent 实心、黑字 | 窗体主操作（连接/解锁/保存） |
-| Secondary | `MakeSecondary` | Surface 底 + Border 描边、白字 | 次操作（刷新/浏览…） |
-| Danger | `MakeDanger` | Danger 实心、白字 | 删除/断开（破坏性） |
+| Primary | `Type = AntdUI.TTypeMini.Primary` | Accent 实心、字色由库按对比度自动取 | 窗体主操作（连接/解锁/保存） |
+| Secondary | `Type = AntdUI.TTypeMini.Default`（或省略 Type） | Surface 面 + Border 描边 | 次操作（刷新/浏览…） |
+| Danger | `Type = AntdUI.TTypeMini.Error` | Danger 实心 | 删除/断开（破坏性） |
+
+> 铁律（§9.4）：主按钮**只写 `Type`**，不写 `BackColor`/`ForeColor`。`AntdUI.Button` 在 `Type=Default`
+> 分支压根不读 `BackColor`，手写 `BackColor=Accent` 会画出「深字 + 暗底」的隐形按钮。
 
 - 按钮文字 2–6 字动词优先（"连接"、"解锁"、"删除"），禁止"确定/OK"类无语义文案做 Primary。
 - 按钮 `AutoSize` + 水平 Padding，高度由字体决定；`FlatStyle.Flat` + `BorderSize=0`。
@@ -161,20 +172,26 @@ SnippetSearchPanel）以及 TableLayoutPanel 表达不了的精确对齐；且�
 
 ### 4.2 输入控件
 
-- `DialogStyle.ApplyInput`：Surface 底 + Foreground 字 + 1px FixedSingle 边。
+- `AntdUI.Input` / `InputNumber` / `Select`：底色字色走主题（`Config.IsDark`），**不逐控件手涂**；
+  高度地板 `MinimumSize = new Size(0, Math.Max(DpiScale.V(this, 38), FormFontPolicy.RowStep(this)))`
+  （低于 38 会把 12px 文字上下裁掉，用户会同时报“高度不对/字太小”，其实是同一个病）；
+  `Select` 没有 `AutoSize`，宽度只能给 `Width`/`MinimumSize`（≥ `DpiScale.V(72)`，否则只剩半个字）。
 - 密码框等宽 Consolas 展示；普通文本输入用 UI 字体。
 - 聚焦反馈：背景切换到 `#1C2128`（Surface 加亮一档）。
 
 ### 4.3 标签/标题
 
-- 字段标签：`DialogStyle.FieldLabel`（Muted、基准字号、右对齐列）。
-- 组标题：`DialogStyle.GroupTitle`（Foreground、+0.5 粗体）。
+- 字段标签：`AntdUI.Label { AutoSize=true, ForeColor=GdtermColorTable.Muted, TextAlign=MiddleRight }`（右对齐列）。
+- 组标题：`AntdUI.Label { Font=FormFontPolicy.UiFont(+1f, FontStyle.Bold), ForeColor=Foreground }`。
+- `Dock=Top/Bottom` 的单行标签高度写 `Math.Max(DpiScale.V(this, N), FormFontPolicy.LineBox(字体, this))`，
+  禁止裸 `Height=20/22`（大字号下必裁字）。
 - 窗体主标题：+2~+5 粗体白字，可带 emoji 图标（密码生成器 🔑 风格）。
 
 ### 4.4 弹窗与对话框
 
-- 外壳：`DialogStyle.ApplyChrome(form, w, h)`（Dark 底、FixedDialog、无任务栏按钮）。
-- 底部：`ButtonStrip(btnCancel, btnPrimary)` 传入顺序=视觉左→右。
+- 外壳：`AntdUI.Window`（Dark 底 + 自绘边框）；禁拉伸须 `FormBorderStyle.FixedDialog` **与** `Resizable = false` **成对写**
+  （AntdUI 自绘边框不认 `FixedDialog` 语义）；固定 `ClientSize` 时配 `AutoHandDpi = false`，避免 DPI 双缩放。
+- 底部：`AcceptButton`=主操作、`CancelButton`=取消/关闭（`Esc` 可达，`R15` 静态门会查）。
 - 错误行：Danger 色 AutoSize 标签，占位在按钮条上方，不弹 MessageBox 打断流。
 - 中断式确认（危险操作）才用 MessageBox，且用 `YesNo` 并写明后果。
 
@@ -219,13 +236,13 @@ WinForms 下动效克制到三个：
 
 ### 7.1 现状（2026-09-07 基线）
 
-- `DialogStyle` 已落地并在 KeePassUnlock 等窗体使用；
+- 组件层已全量迁到 AntdUI（30 个窗体继承 `AntdUI.Window`；`DialogStyle` 原生工厂已于 v1.4 删除）；
 - 历史裸颜色仍有少量自绘图标/透明遮罩专用值、裸字体构造残留；新 UI 外壳颜色必须走 token；
 - 绝对布局窗体已基本完成 RowStep/AutoSize 化（本轮 7 窗体）。
 
 ### 7.2 迁移规则
 
-- **改到哪，迁到哪**：触碰旧窗体时顺手把裸颜色换成 token、按钮换成 `DialogStyle` 工厂；
+- **改到哪，迁到哪**：触碰旧窗体时顺手把裸颜色换成 token、原生按钮换成 `AntdUI.Button` + `Type`；
 - **禁止新增违规**：新代码出现裸 `FromArgb`/裸字体/固定行距 → 评审直接打回；
 - 豁免名单（UI-SCALING-CONVENTIONS.md）不变。
 
@@ -252,14 +269,14 @@ git diff -U0 | grep "^+" | grep -v "^+++" | grep "y += 3[0-9]"
 | 字体阶梯 | `FormFontPolicy.UiFont(±delta[, style])` |
 | 字族回退 | `FormFontPolicy.UiFontName` |
 | 行距 | `FormFontPolicy.RowStep(ctrl)` |
-| 按钮 | `DialogStyle.MakePrimary/Secondary/Danger` |
-| 按钮条 | `DialogStyle.ButtonStrip(...)` |
-| 字段标签/组题 | `DialogStyle.FieldLabel/GroupTitle` |
-| 输入样式 | `DialogStyle.ApplyInput` |
-| 窗体壳 | `DialogStyle.ApplyChrome` |
+| 按钮 | `AntdUI.Button` + `Type = TTypeMini.Primary/Default/Error` |
+| 按钮条 | `FlowLayoutPanel(RightToLeft)` / `AntdUI.StackPanel{Gap}` |
+| 字段标签/组题 | `AntdUI.Label` + `ForeColor=Muted` / `UiFont(+1f, Bold)` |
+| 输入/下拉 | `AntdUI.Input/InputNumber/Select` + `MinimumSize` 高度地板 |
+| 窗体壳 | `AntdUI.Window`（+ `AcceptButton`/`CancelButton`） |
 | DPI 换算 | `DpiScale.V/P/S` |
 
-**一句话标准：颜色找 ColorTable、字体找 FontPolicy、组件找 DialogStyle、坐标找 DpiScale——四者之外无样式。**
+**一句话标准：颜色找 ColorTable、字体找 FontPolicy、组件找 AntdUI、坐标找 DpiScale——四者之外无样式。**
 
 ---
 
@@ -284,7 +301,7 @@ DarkUI（作者离世停更）、AcrylicUI/Beep（net Core/net8，Win7 出局）
 3. **新旧视觉对齐**：AntdUI 初始化使用 `IsDark=true` + `SetPrimary(GdtermColorTable.Accent)`，
    所有主题变更也同步更新 AntdUI 主色；不再维护第二套主色值；
 4. **改到哪迁到哪**：触碰旧窗体时如果该窗体布局要大改，直接迁 AntdUI；小修小补维持原生；
-5. **设计 Token 映射**：§1 色彩/§2 字体的语义不变，实现载体从 DialogStyle 逐场景过渡到 AntdUI 控件
+5. **设计 Token 映射**：§1 色彩/§2 字体的语义不变，实现载体一律是 AntdUI 控件的语义属性
    （Primary=Type.Primary、Muted=AntdUI 默认次级色、RowStep 仅存留于原生窗体）。
 
 ### 9.3 代码规范
@@ -336,3 +353,28 @@ ListView 交互核心面板）在不动交互逻辑的前提下统一暗色；�
 
 **裸色迁移**：全局外壳和功能色必须取 token；自绘图标的几何颜色、透明遮罩、终端 ANSI 调色板可保留专用值，
 但不得复用为按钮、面板、文字或状态色。连接树图标已统一使用 `Info/Success/Warning/Border` 及其反色 token。
+
+### 9.6 原生控件残留清单（2026-11-11 实测，替代口头"基本迁完了"）
+
+统计口径：`src/Gdterm.UI/**/*.cs` 里 `new <类型>` 的实例化次数（注释行不计）。
+**交互控件已零残留**——`Button / CheckBox / ComboBox / NumericUpDown` 实例化次数全为 **0**。
+
+| 类型 | 次数 | 位置 | 结论 |
+|---|---|---|---|
+| `ListView` | 20 | CommandHistory / CommandTemplate / Macro / LogonScript / HighlightRule / PortForward … | ✅ §9.5 规则 2 豁免（数据列表，AntdUI.Table 需 DataSource 重写） |
+| `RichTextBox` | 4 | AiChatPanel / BatchCommandPanel / DangerousCommandDialog / ToolboxPanel | ✅ 日志/输出只读区（无对位组件） |
+| `ListBox` | 3 | CommandPaletteForm / ConnectionQuickJumpForm / ImportPreviewForm | ✅ 轻量候选列表，`NativeTheme.Dark()` 上暗色 |
+| `Label` | 5 | AddOtpForm ×3 / EmptyStateView(说明行) / ToastNotifier | ✅ 需要**自动折行/多行**时用原生 Label 并自行算行高（`FormFontPolicy.LineBox`） |
+| `TextBox` | 4 | HostKeyDialog(指纹块) / LogViewerForm(日志体) / ToolsDialogsLauncher(正文预览) / ConnectionTreeControl | ✅ 多行只读文本；单行输入一律 `AntdUI.Input` |
+| `TabControl` / `TreeView` | 各 1 | TabContainerControl / ConnectionTreeControl | ✅ §9.5 规则 1 核心区永久豁免 |
+
+**多行文案的口径（实测两种行为并存，不要混用）**：
+
+- **显式分行** → `AntdUI.Label`，文案里写 `\r\n`，高度按行数给
+  （AntdUI Label 按行绘制，如 KeyBindingPanel 的 2 行提示）；
+- **自动折行**（窄宿主里长度不确定）→ `System.Windows.Forms.Label` + `AutoSize=false` + 自算高度
+  （`EmptyStateView` 的说明行就是这条路，`ClampWidth` 夹宽后按 GDI 行高重算）。
+  拿 AntdUI.Label 装窄栏长句 = 溢出被裁。
+
+**单行标签高度铁律**：`Height = Math.Max(DpiScale.V(this, N), FormFontPolicy.LineBox(字体, this))`，
+裸 `Height=20/22` 在大字号/高 DPI 下必裁字（§4.3）。

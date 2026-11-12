@@ -20,6 +20,7 @@ namespace Gdterm.UI.Controls
         private AntdUI.Input _txtSearch;
         private ListView _lvResults;
         private AntdUI.Label _lblHint;
+        private EmptyStateView _empty;
         private readonly List<QuickCommand> _commands;
         private List<QuickCommand> _filtered;
         private ITerminalSession _activeSession;
@@ -92,6 +93,10 @@ namespace Gdterm.UI.Controls
             Controls.Add(_lvResults);
             Controls.Add(_lblHint);
             Controls.Add(_txtSearch);
+            // 结果空态：搜索词无命中 vs 一条片段都没配，引导不同（R09 / UX 审计 C1）
+            _empty = EmptyStateView.Attach(this, L10n.T("没有匹配的片段"),
+                L10n.T("换个关键词，或在「快捷命令」里新增一条"));
+            FilterResults();   // 空态默认 Visible=false：挂上后先同步一次（一条命令都没配时也要有引导）
         }
 
         /// <summary>显示搜索面板</summary>
@@ -138,6 +143,15 @@ namespace Gdterm.UI.Controls
 
             if (_lvResults.Items.Count > 0)
                 _lvResults.Items[0].Selected = true;
+
+            if (_empty != null)
+            {
+                bool none = _lvResults.Items.Count == 0;
+                if (none && !string.IsNullOrEmpty(query))
+                    _empty.SetEmpty(true, L10n.T("没有匹配的片段"), L10n.T("换个关键词，或在「快捷命令」里新增一条"));
+                else
+                    _empty.SetEmpty(true, L10n.T("还没有快捷命令"), L10n.T("在「快捷命令」面板里存几条常用命令即可模糊搜索"));
+            }
         }
 
         private bool FuzzyMatch(string text, string query)

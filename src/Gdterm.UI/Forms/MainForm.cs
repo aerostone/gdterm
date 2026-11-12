@@ -269,7 +269,7 @@ namespace Gdterm.UI.Forms
 
             _connectionTree = new ConnectionTreeControl(_connectionStore, _keepassService);
             _connectionTree.Dock = DockStyle.Left;
-            _connectionTree.Width = 250; // 标准模式树宽；Compact 模式由 ViewModeController 置 200
+            _connectionTree.Width = DpiScale.V(this, 250); // 标准模式树宽；Compact 模式由 ViewModeController 置 200
 
             var mainSplitter = new Splitter
             {

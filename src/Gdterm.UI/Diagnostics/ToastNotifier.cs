@@ -149,7 +149,7 @@ namespace Gdterm.UI.Diagnostics
                     ForeColor = GdtermColorTable.Foreground,
                     Font = Services.FormFontPolicy.UiFont(),
                     TextAlign = ContentAlignment.MiddleLeft,
-                    Padding = new Padding(12, 8, 12, 8)
+                    Padding = DpiScale.Pad(this, 12, 8, 12, 8)
                 };
                 Controls.Add(label);
                 Controls.Add(bar);

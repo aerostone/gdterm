@@ -99,10 +99,10 @@ namespace Gdterm.UI.Controls
             _btnRecord = MkBtn(this, L10n.T("● 录制"), L10n.T("开始录制当前活动终端的后续全部按键"));
             _btnStop = MkBtn(this, L10n.T("■ 停止"), L10n.T("停止录制，未保存的宏保留在内存"));
             _btnReplay = MkBtn(this, L10n.T("▶ 回放"), L10n.T("把选中宏回放到当前活动终端（回放前会整批判定，含危险命令时需确认）"));
+            // AntdUI.Select 不认 AutoSize（自绘控件，宽度靠 Width/MinimumSize）——R12
             _speedBox = new AntdUI.Select
             {
                 Width = DpiScale.V(this, 96),
-                AutoSize = true,
                 MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this))
             };
             _speedBox.Items.AddRange(new object[] { "1x", "2x", "4x" });
@@ -151,7 +151,7 @@ namespace Gdterm.UI.Controls
                 AutoSize = true,
                 Text = L10n.T("回放直接发送，不经过危险命令确认；请先在测试机验证。"),
                 TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(3, 0, 0, 0),
+                Padding = new Padding(DpiScale.V(this, 3), 0, 0, 0),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Muted
             };

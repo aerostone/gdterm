@@ -39,16 +39,16 @@ namespace Gdterm.UI.Services
             var host = new Panel
             {
                 Dock = DockStyle.Right,
-                // 侧板宿主宽 360 设计 px：内容面板多为 300+ 列，窄于 320 会挤；同样不叠手工 Scale。
-                Width = 360,
+                // 侧板宿主宽 360 设计 px：内容面板多为 300+ 列，窄于 320 会挤；缩放只走 DpiScale（不叠手工 Scale）。
+                Width = DpiScale.V(null, 360),
                 Visible = false,
                 BackColor = GdtermColorTable.Background
             };
             var sideClose = new AntdUI.Button {
                 Text = L10n.T("✕ 关闭面板"),
                 Dock = DockStyle.Top,
-                // 固定 28 在大字号下裁字 → 字体驱动（host 建成后才有字号，此处先给 28 地板，Show 时校准）
-                Height = 28,
+                // 固定高在大字号下裁字 → 字体驱动（host 建成后才有字号，此处先给 28 地板，Show 时校准）
+                Height = DpiScale.V(null, 28),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground
             };

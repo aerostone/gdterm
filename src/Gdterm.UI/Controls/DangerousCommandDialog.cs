@@ -137,7 +137,7 @@ namespace Gdterm.UI.Controls
             {
                 Dock = DockStyle.Top,
                 Height = DpiScale.V(this, batch ? 96 : 84),
-                Padding = new Padding(15, 10, 15, 10)
+                Padding = DpiScale.Pad(this, 15, 10, 15, 10)
             };
 
             var ruleNameLabel = new AntdUI.Label {
@@ -204,7 +204,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Bottom,
                 Height = DpiScale.V(this, 50),
                 FlowDirection = FlowDirection.RightToLeft,
-                Padding = new Padding(10, 8, 10, 8)
+                Padding = DpiScale.Pad(this, 10, 8, 10, 8)
             };
 
             _cancelButton = new AntdUI.Button {

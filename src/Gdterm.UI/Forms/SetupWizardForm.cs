@@ -263,7 +263,7 @@ namespace Gdterm.UI.Forms
                 ColumnCount = 2,
                 RowCount = 7,
                 BackColor = Color.Transparent,
-                Padding = new Padding(0, 4, 0, 0)
+                Padding = DpiScale.Pad(this, 0, 4, 0, 0)
             };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DpiScale.V(this, 64)));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
@@ -296,7 +296,7 @@ namespace Gdterm.UI.Forms
                 Dock = DockStyle.Fill,
                 Font = Services.FormFontPolicy.MonoFont(),
                 UseSystemPasswordChar = true,
-                Margin = new Padding(0, 6, 0, 6)
+                Margin = DpiScale.Pad(this, 0, 6, 0, 6)
             };
             _passwordBox.TextChanged += OnPasswordChanged;
             layout.Controls.Add(pwdLabel, 0, 1);
@@ -312,7 +312,7 @@ namespace Gdterm.UI.Forms
                 Dock = DockStyle.Fill,
                 Font = Services.FormFontPolicy.MonoFont(),
                 UseSystemPasswordChar = true,
-                Margin = new Padding(0, 6, 0, 6)
+                Margin = DpiScale.Pad(this, 0, 6, 0, 6)
             };
             layout.Controls.Add(confirmLabel, 0, 2);
             layout.Controls.Add(_confirmBox, 1, 2);

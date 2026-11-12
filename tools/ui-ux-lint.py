@@ -216,6 +216,33 @@ def strip_line_comment(line):
     return line
 
 
+def initializer_block(lines, i, max_scan=40):
+    """从第 i 行（1-based）起取**同一个** new 表达式的初始化块（花括号配平）。
+
+    2026-11-11 修正：R12 旧实现是"往后扫 12 行找 AutoSize"，同屏相邻 Label
+    的 AutoSize=true 会被算进 Select 的账上（KeyBindingPanel 两处全是假阳性）。
+    R07 已在 2026-10-07 因同类问题改过一次，这里抽成公共函数两边共用。
+    """
+    start = i - 1
+    block = []
+    depth = 0
+    started = False
+    for j in range(start, min(len(lines), start + max_scan)):
+        cur = lines[j]
+        block.append(cur)
+        for ch in cur:
+            if ch == "{":
+                depth += 1
+                started = True
+            elif ch == "}":
+                depth -= 1
+        if started and depth <= 0:
+            break
+        if not started and ";" in cur:
+            break
+    return "".join(strip_line_comment(x) for x in block)
+
+
 @rule("R07", "AntdUI.Button 语义色被覆盖", "DESIGN-LANGUAGE §9.3 / §4.1")
 def r07(path, lines):
     """同一个对象初始化器内 Type=TTypeMini.X 与 BackColor 并存 = 语义级别已被手涂色覆盖。
@@ -346,14 +373,7 @@ def r12(path, lines):
         nxt = lines[i].strip() if i < len(lines) else ""
         if "{" not in line.split("new AntdUI.Select", 1)[1] and not nxt.startswith("{"):
             continue
-        block = [line]
-        j = i
-        while j < len(lines) and j < i + 12:
-            block.append(lines[j])
-            if "};" in lines[j] or lines[j].strip() == "}":
-                break
-            j += 1
-        if any("AutoSize" in b and not is_comment(b) for b in block):
+        if "AutoSize" in initializer_block(lines, i):
             yield i, snippet(line)
 
 

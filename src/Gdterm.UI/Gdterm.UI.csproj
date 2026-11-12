@@ -222,7 +222,6 @@
     <Compile Include="Services\FormFontPolicy.cs" />
     <Compile Include="Services\FormSettings.cs" />
     <Compile Include="Services\PaletteUsageStore.cs" />
-    <Compile Include="Services\DialogStyle.cs" />
     <Compile Include="Services\NativeTheme.cs" />
     <Compile Include="Services\DpiScale.cs" />
     <Compile Include="Services\MenuIconFactory.cs" />

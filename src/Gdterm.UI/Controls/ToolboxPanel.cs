@@ -23,6 +23,7 @@ namespace Gdterm.UI.Controls
         private readonly AntdUI.Label _lblDescription;
         private readonly RichTextBox _txtOutput;
         private ISshRemoteSession _remoteSession;
+        private EmptyStateView _emptyTools;
 
         public ToolboxPanel(ToolRegistry registry)
         {
@@ -36,7 +37,7 @@ namespace Gdterm.UI.Controls
             _pnlToolList = new Panel
             {
                 Dock = DockStyle.Left,
-                Width = 220,
+                Width = Services.DpiScale.V(this, 220),
                 BackColor = GdtermColorTable.Surface
             };
 
@@ -68,6 +69,9 @@ namespace Gdterm.UI.Controls
 
             _pnlToolList.Controls.Add(_lvTools);
             _pnlToolList.Controls.Add(_filterTools);
+            // 列表空态：过滤把工具滤空时提示清搜索，而不是留一整片背景色（R09 / UX 审计 C1）
+            _emptyTools = EmptyStateView.Attach(_pnlToolList, L10n.T("没有匹配的工具"),
+                L10n.T("清空上方过滤词试试"));
 
             // 右侧详情面板
             _pnlDetail = new Panel
@@ -131,6 +135,9 @@ namespace Gdterm.UI.Controls
             Controls.Add(_pnlToolList);
 
             LoadTools();
+            // 空态默认 Visible=false；LoadTools 之后才知道列表是否真的空，
+            // 否则「没有工具」这层要等用户敲过滤词才出现（或反过来盖住已填好的列表）
+            if (_emptyTools != null) _emptyTools.SetEmpty(_lvTools.Items.Count == 0);
             RestoreLastTool();
             // 侧板是 360 宽，工具列表写死 220 的话右侧详情只剩 ~137（减掉 15px padding 后正文 107px），
             // 输出一行日志要折三折——等于读不了。列表宽按宿主比例给，并给详情留硬下限。
@@ -206,6 +213,16 @@ namespace Gdterm.UI.Controls
                 }
             }
             _lvTools.EndUpdate();
+
+            if (_emptyTools != null)
+            {
+                bool none = _lvTools.Items.Count == 0;
+                bool filtered = none && q.Length > 0;
+                if (filtered)
+                    _emptyTools.SetEmpty(true, L10n.T("没有匹配的工具"), L10n.T("清空上方过滤词试试"));
+                else
+                    _emptyTools.SetEmpty(true, L10n.T("工具箱是空的"), L10n.T("没有注册任何运维工具"));
+            }
 
             // 过滤后保持选中（当前工具仍可见时）
             if (visibleToolId.Length > 0)
