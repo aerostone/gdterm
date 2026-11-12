@@ -1662,6 +1662,8 @@ namespace Gdterm.Core
             ["还没有书签"] = "No bookmarks yet",
             ["把常用会话收进书签，下次按名称/标签就能搜到"] = "Pin frequent sessions here—find them by name or tag later",
             ["还没有连接记录"] = "No connection records yet",
+            ["还没有连接"] = "No connections yet",
+            ["右键空白处或点下面的按钮新建第一台主机；也可以直接打开本地终端"] = "Right-click the empty area or press the button below to add your first host — or open a local terminal right away",
             ["连过的会话会按时间倒序留在这里，成功/失败一目了然"] = "Sessions you connect to stay here, newest first, with outcomes at a glance",
             ["正在读取书签…"] = "Reading bookmarks…",
             ["书签 "] = "Bookmark ",

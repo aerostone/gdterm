@@ -23,6 +23,7 @@ namespace Gdterm.UI.Controls
         private readonly IConnectionStore _connectionStore;
         private readonly IKeePassService _keepass;
         private TreeView _treeView;
+        private Panel _treeHost;
         private ContextMenuStrip _contextMenu;
         private ImageList _imageList;
         // 右键点中的节点（ContextMenuStrip.Opening 读的），后后菜单设置选中
@@ -31,6 +32,8 @@ namespace Gdterm.UI.Controls
         private TextBox _filterBox;
         // 所有连接的原始列表（筛选时从它重建树）
         private List<ConnectionConfig> _allConnections;
+        // 空态引导层（零连接时盖在树上：此前打开就是一片背景色，用户分不清"空/坏了/还在加载"）
+        private EmptyStateView _empty;
         // auto-hide 状态：true=固定展开（默认）；false=收为窄边，悬停展开。
         private bool _pinned = true;
         private int _pinnedWidth = 250;
@@ -48,6 +51,11 @@ namespace Gdterm.UI.Controls
             // collapsed 窄边上画 pin 图标作为展开提示
             SetStyle(ControlStyles.UserPaint | ControlStyles.ResizeRedraw, true);
             InitializeComponent();
+            // 空态层必须在树/筛选框加入之后再挂（Attach 会 BringToFront 盖在上面）
+            _empty = EmptyStateView.Attach(_treeHost ?? (Control)this, L10n.T("还没有连接"),
+                L10n.T("右键空白处或点下面的按钮新建第一台主机；也可以直接打开本地终端"),
+                L10n.T("新建连接"), (s2, e2) => OnNewConnection(this, EventArgs.Empty));
+            _empty.WithNames("ConnectionTreeEmpty");
             LoadConnections();
             // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
             UiA11y.AutoName(this);
@@ -93,8 +101,15 @@ namespace Gdterm.UI.Controls
             _treeView.ItemDrag += OnItemDrag;
             _treeView.DragOver += OnDragOver;
             _treeView.DragDrop += OnDragDrop;
+            // 树单独挂一层宿主面板：空态引导层要盖的是"树这片区域"，
+            // 不能盖住顶部筛选框（同父 Fill 与 Top 边停靠相交 → ui-tree-check R5 直接红）。
+            _treeHost = new Panel {
+                Dock = DockStyle.Fill,
+                BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Background
+            };
+            _treeHost.Controls.Add(_treeView);
             // WinForms Dock：Fill 要先加，Top 后加才能占位
-            Controls.Add(_treeView);
+            Controls.Add(_treeHost);
             Controls.Add(_filterBox);
 
             // 右键菜单——在 Opening 中按右键节点动态调整项，避免“主机上右键也弹新建”
@@ -346,6 +361,17 @@ namespace Gdterm.UI.Controls
             }
 
             rootNode.Expand();
+            UpdateEmptyState();
+        }
+
+        /// <summary>
+        /// 零连接时点亮空态引导层。判定用 <b>全量</b>列表而不是当前树：
+        /// 筛选后为空只说"没匹配"，不能说"还没有连接"（否则用户会去重新建一条已有的连接）。
+        /// </summary>
+        private void UpdateEmptyState()
+        {
+            if (_empty == null) return;
+            _empty.SetEmpty(_allConnections == null || _allConnections.Count == 0);
         }
 
         /// <summary>

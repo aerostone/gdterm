@@ -228,9 +228,11 @@ namespace Gdterm.Tests.Ui
                         int danger = UiStateSmoke.CountColorPixels(Path.Combine(outDir, "fail-history-load.png"),
                             UiStateSmoke.ClientRect(host, empty), GdtermColorTable.Danger, 24);
                         check(danger >= 20, "fail-history: 失败标题渲染成 Danger 色（像素=" + danger + "/≥20）");
-                        var action = UiStateSmoke.FindLabelByText(empty, retry);
+                        // 主操作是 AntdUI.Button（不是 Label）：早前用 FindLabelByText 找，
+                        // 永远为 null —— 断言本身写错了（CI 从未跑绿过这一节，所以一直没暴露）。
+                        var action = FindAnyControlByText(empty, retry);
                         check(action != null, "fail-history: 主按钮改文案为「" + retry + "」（实际=" +
-                            UiStateSmoke.DescribeLabels(empty) + "）");
+                            DescribeVisibleTexts(empty) + "）");
                     }
                     // 重试必须是真按钮动作：点一次会再查一遍，仍然失败则错误态保持（不崩、不白屏）
                     var btn = UiSmokeRunner.FindByType(empty, "Button") as AntdUI.Button;
@@ -314,6 +316,35 @@ namespace Gdterm.Tests.Ui
             var f = target.GetType().GetField(name,
                 System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
             return f == null ? null : f.GetValue(target);
+        }
+
+        /// <summary>按可见文案找控件（Label / Button / HyperlinkLabel 都算）。</summary>
+        private static Control FindAnyControlByText(Control root, string text)
+        {
+            if (root == null || string.IsNullOrEmpty(text)) return null;
+            foreach (var c in UiSmokeRunner.AllControls(root))
+            {
+                if (!c.Visible) continue;
+                if (string.Equals((c.Text ?? "").Trim(), text.Trim(), StringComparison.Ordinal)) return c;
+            }
+            return null;
+        }
+
+        /// <summary>把所有可见文案连同类型列出来（断言失败时的"实际是什么"）。</summary>
+        private static string DescribeVisibleTexts(Control root)
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var c in UiSmokeRunner.AllControls(root))
+            {
+                if (!c.Visible) continue;
+                string t = (c.Text ?? "").Replace("\r", " ").Replace("\n", " ").Trim();
+                if (t.Length == 0) continue;
+                if (t.Length > 20) t = t.Substring(0, 20);
+                if (sb.Length > 0) sb.Append(" | ");
+                sb.Append(c.GetType().Name).Append(':').Append(t);
+                if (sb.Length > 240) { sb.Append(" …"); break; }
+            }
+            return sb.Length == 0 ? "无可见文案" : sb.ToString();
         }
 
         private static Control Descendant(Control root, string name)

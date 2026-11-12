@@ -140,24 +140,27 @@ namespace Gdterm.UI.Controls
             _lvFindings.DoubleClick += OnFindingDoubleClick;
 
             // ── 底部状态栏 ──
-            var bottomPanel = new FlowLayoutPanel
+            // 状态行用普通 Panel + Dock=Fill（不是 FlowLayoutPanel + AutoSize）：
+            // FlowLayoutPanel 忽略子控件 Dock，而 AntdUI.Label 在 AutoSize=false 且未显式给高时
+            // 高度是 0 —— CI dump 实证「选择扫描路径后点击…」「错误: …」两个文案都是 0 高，
+            // 整条状态栏只有 padding 的 12px，"扫描中/扫描耗时/已复制 N 条/错误原因" 全都从没显示过。
+            // 高度取 RowStep（字体行高 + 留白，DPI 感知），文案变长也不会被裁。
+            var bottomPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                WrapContents = false,
+                Height = FormFontPolicy.RowStep(this),
                 BackColor = GdtermColorTable.Surface,
-                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 3), DpiScale.V(this, 10), DpiScale.V(this, 3))
+                Padding = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 10), 0)
             };
             _lblStatus = new AntdUI.Label {
                 Dock = DockStyle.Fill,
+                AutoSize = false,
                 Font = Services.FormFontPolicy.UiFont(-1f),
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(0),
                 Text = L10n.T("选择扫描路径后点击「开始扫描」")
             };
-            FormFontPolicy.FitSingleLineLabel(_lblStatus);
             bottomPanel.Controls.Add(_lblStatus);
 
             _shell = new ListShell(_lvFindings, L10n.T("过滤规则/文件/内容…"));

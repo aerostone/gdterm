@@ -142,7 +142,8 @@ namespace Gdterm.Tests.Ui
                 t => new Gdterm.UI.Controls.WelcomePanel(
                     t.Track(new Gdterm.Connections.ConnectionStoreJson(t.Path_("conns.json"))),
                     t.Track(new Gdterm.Connections.BookmarkStoreJson(t.Path_("bookmarks")))));
-            Add(list, "connection-tree", "树", PanelEmptyExpect.Ignore,
+            // 空库（tmp 空 conns.json）→ 树上必须挂可见的空态引导层（C1/R09）
+            Add(list, "connection-tree", "树", PanelEmptyExpect.Visible,
                 t => new Gdterm.UI.Controls.ConnectionTreeControl(
                     t.Track(new Gdterm.Connections.ConnectionStoreJson(t.Path_("conns.json"))),
                     new FakeKeePassService(empty: true)));
