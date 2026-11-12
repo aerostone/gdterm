@@ -116,8 +116,10 @@ namespace Gdterm.Core.Models
                 {
                     Id = "mkfs-format",
                     Name = L10n.T("格式化磁盘"),
-                    Pattern = @"mkfs\.",
-                    PatternType = PatternType.Contains,
+                    // 审计发现：这条规则写成了 PatternType.Contains + 正则转义 `mkfs\.`，
+                    // 于是它去找字面量 "mkfs\."（带反斜杠）——真命令里永远不存在，规则实际是死的。
+                    Pattern = @"\bmkfs\.",
+                    PatternType = PatternType.Regex,
                     Level = DangerLevel.Critical,
                     ConfirmCount = 3,
                     Description = L10n.T("格式化文件系统，目标分区所有数据将被清除"),
@@ -216,8 +218,9 @@ namespace Gdterm.Core.Models
                 {
                     Id = "killall-9",
                     Name = L10n.T("杀死所有进程"),
-                    Pattern = @"killall\s+-9",
-                    PatternType = PatternType.Contains,
+                    // 同 mkfs-format：Contains + 正则转义写法 = 死规则（找 "killall\s+-9" 字面量）
+                    Pattern = @"\bkillall\s+-9",
+                    PatternType = PatternType.Regex,
                     Level = DangerLevel.High,
                     ConfirmCount = 2,
                     Description = L10n.T("强制杀死所有匹配进程，可能导致服务中断"),

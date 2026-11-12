@@ -27,6 +27,7 @@ namespace Gdterm.Tests.Security
             TestBuiltinRulesAreReadOnly();
             TestUserDeltaSurvivesMerge();
             TestExcludePatternVetoesCustomRule();
+            TestNoDeadRulesFromRegexEscapes();
         }
 
         private static string TempConfigPath()
@@ -222,6 +223,25 @@ namespace Gdterm.Tests.Security
             {
                 try { if (File.Exists(path)) File.Delete(path); } catch { }
             }
+        }
+
+        /// <summary>
+        /// 死规则：PatternType 是 Contains/Equals 却按正则习惯写了转义（`mkfs\.` 实际含反斜杠），
+        /// 于是拿字面量去 IndexOf 永远找不到——规则在界面上“启用着”，实际从不触发。
+        /// 2026-11 审计实测命中两条内置规则：mkfs-format、killall-9。
+        /// </summary>
+        private static void TestNoDeadRulesFromRegexEscapes()
+        {
+            var detector = new DangerousCommandDetector();
+            foreach (var rule in detector.GetAllRules())
+            {
+                if (rule.PatternType == PatternType.Regex) continue;
+                Assert.True(rule.Pattern == null || rule.Pattern.IndexOf('\\') < 0,
+                    "内置规则 [" + rule.Id + "] 用 " + rule.PatternType + " 匹配却带正则转义，永远不会命中");
+            }
+
+            Assert.True(detector.Check("mkfs.ext4 /dev/sdb1").IsDangerous, "死规则已复活: mkfs.ext4");
+            Assert.True(detector.Check("killall -9 nginx").IsDangerous, "死规则已复活: killall -9");
         }
 
         private static void TestExcludePatternVetoesCustomRule()

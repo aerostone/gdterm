@@ -293,6 +293,7 @@ F1–F6 是"结构债"。这一条不是结构债，是**功能只在一条路�
 | B5 | 白名单只有"整条命令精确匹配" | `DangerousCommandDetector.AddToWhitelist` | 对带参数命令形同虚设：`rm -rf /tmp/a` 豁免了，`/tmp/b` 照样弹；用户被逼着点"记住"→ 迅速学会无脑确认 |
 | B6 | 内置规则被整份冻进用户配置文件 | 保存时全量落盘，加载时以文件为准 | 之后**任何规则精度修复都到不了老用户机器上**（改代码只影响新装用户） |
 | B7 | `rm -rf /` 规则 `\s+/` 把 `/tmp/build` 也算删根 | `DangerousCommandConfig` | 每天误报一次 → 用户学会闭眼点确认 → 整套闸门归零 |
+| B8 | **两条内置规则是死的** | `mkfs-format` = `Contains` + `mkfs\.`、`killall-9` = `Contains` + `killall\s+-9` | `Contains` 拿模式去 `IndexOf` 字面量，带反斜杠的串在真命令里不存在 → 界面显示“启用着”，从不触发（`mkfs.ext4 /dev/sdb1` 实测 Safe） |
 
 #### 定性（决定了所有取舍）
 
@@ -314,11 +315,14 @@ B5/B7 正是把用户训练成"确认机器"的两个机制，比 B1–B4 更隐
 4. **配置架构 v2**：`schemaVersion: 2` = 内置规则只读 + 用户 delta。
    内置规则的 pattern/level/文案以**代码**为准，只继承用户的 `enabled`；用户自建规则原样保留。
    界面侧同步：内置规则禁止编辑/删除（提示改用启用禁用 + 自定义规则）。
-5. **规则精度**：`rm-rf-root` 改为 `[-{1,2}\S+\s+]*/(\s|$)`（`/` 后必须空白或行尾）；
+5. **死规则复活**：`mkfs-format`（`mkfs\.`）与 `killall-9`（`killall\s+-9`）原本是 `Contains` 配正则转义，
+   等于找带反斜杠的字面量，从不命中。改回 `Regex` 语义（`\bmkfs\.` / `\bkillall\s+-9`）。
+   回归锁里加了一条“非 Regex 规则不得含反斜杠”的形状断言，防止再写出同一个坑。
+6. **规则精度**：`rm-rf-root` 改为 `[-{1,2}\S+\s+]*/(\s|$)`（`/` 后必须空白或行尾）；
    `chmod/chown -R` 同理要求目标就是根；新增 `rm-system-dirs`（`/etc /usr /bin /boot /lib /opt /srv /sys /proc /dev`）。
    `DangerousCommandRule.Exclude` 支持否决模式（把已知安全形态从宽规则里摘出来，不必整条关）。
-6. **fail-closed**：判定抛异常 / 弹窗弹不出来 → **阻止发送** + 审计，不再默默放行。
-7. **审计补全**：`DangerousCommandConfirmed`（确认执行也留痕，否则事后查不出"这条 rm -rf 是谁点过去的"）、
+7. **fail-closed**：判定抛异常 / 弹窗弹不出来 → **阻止发送** + 审计，不再默默放行。
+8. **审计补全**：`DangerousCommandConfirmed`（确认执行也留痕，否则事后查不出"这条 rm -rf 是谁点过去的"）、
    `DangerousCommandBlocked`、会话豁免放行 —— 三条都带 `InputSource` 和目标主机。
 
 #### 回归锁
