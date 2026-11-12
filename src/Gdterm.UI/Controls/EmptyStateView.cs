@@ -193,7 +193,10 @@ namespace Gdterm.UI.Controls
             int avail = Width - DpiScale.V(this, 20);
             if (avail <= 0) return;
             int design = DpiScale.V(this, 360);
-            int want = Math.Max(DpiScale.V(this, 140), Math.Min(design, avail));
+            // 窄宿主自适配的下限：地板本身也不能超过可用宽，否则 240px 侧栏里那一栏只有 130px 时
+            // 固定 140 的地板反而造成横向溢出（toolbox-narrow dump 实证：Panel 140 > 父 130）。
+            int floor = Math.Min(DpiScale.V(this, 140), avail);
+            int want = Math.Max(floor, Math.Min(design, avail));
             if (_desc.Width == want) return;
             _desc.Width = want;
             // 宽度变了行数也变：按真实 GDI 行高重算高度（宽 140~360 之间最多 3 行）
