@@ -67,14 +67,19 @@ namespace Gdterm.UI.Controls
 
             // 提示
             _lblHint = new AntdUI.Label {
-                Text = L10n.T("输入关键词搜索快捷命令 | Enter 执行 | Esc 关闭"),
+                // 同上：360px + 14pt 要 392px。可见文字保留操作键位，前缀交给 tooltip
+                Text = L10n.T("搜索快捷命令 | Enter 执行 | Esc 关闭"),
                 Dock = DockStyle.Top,
                 Height = Math.Max(DpiScale.V(this, 22), FormFontPolicy.LineBox(FormFontPolicy.UiFont(-1f), this)),
                 Font = Services.FormFontPolicy.UiFont(-1f),
                 ForeColor = GdtermColorTable.Muted,
                 BackColor = GdtermColorTable.Background,
-                TextAlign = ContentAlignment.MiddleLeft
+                TextAlign = ContentAlignment.MiddleLeft,
+                // dock 在窄宿主里超宽时由 … 收尾（R6 对 autoEllipsis 控件按"设计上就该省略"处理）
+                AutoEllipsis = true
             };
+            _lblHint.AccessibleDescription = L10n.T("输入关键词搜索快捷命令 | Enter 执行 | Esc 关闭");
+            _lblHint.ToolTipText2(L10n.T("输入关键词搜索快捷命令 | Enter 执行 | Esc 关闭"));
 
             // 结果列表
             _lvResults = new ListView

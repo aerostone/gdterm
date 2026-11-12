@@ -192,6 +192,9 @@ namespace Gdterm.UI.Controls
             catch (Exception) { barH = 0; }
             bool showBar = hasArea && (barH <= 0 || ClientSize.Height >= barH);
             if (_bar.Visible != showBar) _bar.Visible = showBar;
+            // 换行时 AutoSize 不会按新宽度重算高度（与 TableShell.RelayoutBar 同一缺陷，
+            // 只是这里 PreferredSize 已经算过了，直接回写即可）。
+            if (showBar && barH > 0 && _bar.Height != barH) _bar.Height = barH;
             _pager.SyncArea(hasArea);
             base.OnClientSizeChanged(e);
         }

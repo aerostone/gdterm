@@ -89,13 +89,17 @@ namespace Gdterm.UI.Controls
             };
             FormFontPolicy.FitSingleLineLabel(_lblDescription);
 
+            // 360px 侧栏 + 14pt 时整句放不下（实测需 366px，父宽 360），AutoSize 的 Checkbox
+            // 又不换行 → 溢出父边界。可见文字只留主标题，解释走 tooltip + 无障碍描述。
             _chkIntercept = new AntdUI.Checkbox {
-                Text = L10n.T("拦截模式（匹配的按键不发送到终端）"),
+                Text = L10n.T("拦截模式"),
                 AutoSize = true,
                 Margin = new Padding(0, DpiScale.V(this, 7), 0, 0),
                 Checked = _config.InterceptMode
             };
             _chkIntercept.CheckedChanged += (s, e) => { _config.InterceptMode = _chkIntercept.Checked; _store.Save(); };
+            _chkIntercept.AccessibleDescription = L10n.T("匹配的按键不发送到终端");
+            _chkIntercept.ToolTipText2(L10n.T("拦截模式：匹配的按键不发送到终端"));
 
             topPanel.Controls.AddRange(new Control[] { lblPreset, _cmbPreset, _lblDescription, _chkIntercept });
 

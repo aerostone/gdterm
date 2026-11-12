@@ -63,6 +63,9 @@ namespace Gdterm.Tests.Ui
             sb.Append("\"dock\":\"").Append(c.Dock).Append("\",");
             sb.Append("\"anchor\":\"").Append(c.Anchor).Append("\",");
             sb.Append("\"autoSize\":").Append(c.AutoSize ? "true" : "false").Append(",");
+            // 省略号语义（2026-11-07）：状态行/提示行刻意 "…" 收尾，R6 不该把"设计上就省略"
+            // 当成"文字溢出"。字段只在 true 时写，老 dump 兼容（缺字段=不跳过）。
+            if (HasAutoEllipsis(c)) sb.Append("\"autoEllipsis\":true,");
             sb.Append("\"tabIndex\":").Append(c.TabIndex).Append(",");
             sb.Append("\"tabStop\":").Append(c.TabStop ? "true" : "false").Append(",");
             sb.Append("\"visible\":").Append(c.Visible ? "true" : "false").Append(",");
@@ -250,6 +253,22 @@ namespace Gdterm.Tests.Ui
             if (t == null) return "";
             t = t.Replace("\r", " ").Replace("\n", " ");
             return t.Length > 60 ? t.Substring(0, 60) : t;
+        }
+
+        /// <summary>是否声明了 AutoEllipsis（AntdUI.Label 走反射：它可能把该语义藏在属性里）。</summary>
+        private static bool HasAutoEllipsis(Control c)
+        {
+            var lbl = c as System.Windows.Forms.Label;
+            if (lbl != null) return lbl.AutoEllipsis;
+            try
+            {
+                var pi = c.GetType().GetProperty("AutoEllipsis",
+                    System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance);
+                if (pi != null && pi.PropertyType == typeof(bool))
+                    return (bool)pi.GetValue(c, null);
+            }
+            catch (Exception) { }
+            return false;
         }
 
         private static string Esc(string s)

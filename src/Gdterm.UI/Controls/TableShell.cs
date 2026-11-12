@@ -147,7 +147,26 @@ namespace Gdterm.UI.Controls
             bool hasArea = ClientSize.Width > 0 && ClientSize.Height > 0;
             if (_bar.Visible != hasArea) _bar.Visible = hasArea;
             _pager.SyncArea(hasArea);
+            if (hasArea) RelayoutBar();
             base.OnClientSizeChanged(e);
+        }
+
+        /// <summary>
+        /// 按"当前宽度"重算工具条高度（L2 矩阵第二批目标抓到的真实缺陷，2026-11-07）。
+        ///
+        /// Dock=Top + AutoSize + WrapContents 的组合在换行时不会按新宽度重算高度：
+        /// FlowLayoutPanel 的 PreferredSize 用的是**上一次**的宽度，于是 d150 + 14pt 下
+        /// 按钮已经折成两行、工具条高度还停在 38，第二行直接画到表格上并越过父边界。
+        /// 显式问一次 GetPreferredSize(w) 并回写高度；只在高度真变了时才写，避免布局递归。
+        /// </summary>
+        private void RelayoutBar()
+        {
+            int w = ClientSize.Width;
+            if (w <= 0) return;
+            int need;
+            try { need = _bar.GetPreferredSize(new Size(w, 0)).Height; }
+            catch (Exception) { return; }
+            if (need > 0 && _bar.Height != need) _bar.Height = need;
         }
 
         public AntdUI.Button AddAction(string text, EventHandler onClick, string name = null)

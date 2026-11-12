@@ -145,13 +145,19 @@ namespace Gdterm.UI.Controls
             _statusLabel = new AntdUI.Label
             {
                 Dock = DockStyle.Bottom,
-                Text = L10n.T("回放直接发送，不经过危险命令确认；请先在测试机验证。"),
+                // 侧栏 360px + 14pt 时整句要 506px（矩阵第二批判红）：
+                // 可见文字只留结论，完整句子放 tooltip/无障碍描述 —— 底部状态行不该占两行。
+                Text = L10n.T("回放不经过危险命令确认"),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(DpiScale.V(this, 3), 0, 0, 0),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Muted
             };
             FormFontPolicy.FitSingleLineLabel(_statusLabel);
+            // 再窄的宿主里由 … 收尾而不是溢出；完整语义仍在 tooltip 与无障碍描述里
+            _statusLabel.AutoEllipsis = true;
+            _statusLabel.AccessibleDescription = L10n.T("回放直接发送，不经过危险命令确认；请先在测试机验证。");
+            _statusLabel.ToolTipText2(L10n.T("回放直接发送，不经过危险命令确认；请先在测试机验证。"));
 
             Controls.Add(_shell);
             Controls.Add(toolPanel);

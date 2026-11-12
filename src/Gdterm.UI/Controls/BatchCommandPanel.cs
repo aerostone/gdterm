@@ -30,6 +30,7 @@ namespace Gdterm.UI.Controls
         private RichTextBox _rtbResults;
         private AntdUI.Button _btnExecute;
         private AntdUI.Button _btnSelectAll;
+        private Panel _leftPanel;
         private AntdUI.Label _lblStatus;
         private Dictionary<string, ITerminalSession> _sessions = new Dictionary<string, ITerminalSession>();
         // 批量命令历史（↑/↓ 召回）：批量入口的命令都是精心拼出来的，关掉面板就丢等于每次重写
@@ -122,7 +123,10 @@ namespace Gdterm.UI.Controls
             FitCommandBox(topPanel);
 
             // ── 左侧：会话列表 ──
-            var leftPanel = new Panel { Dock = DockStyle.Left, Width = DpiScale.V(this, 250), BackColor = GdtermColorTable.Surface, Padding = new Padding(DpiScale.V(this, 4)) };
+            // 左栏不写死 250：d150 下它等于 375px，比 360 的侧栏宿主还宽 → 越界（矩阵第二批判红）。
+            // 由 OnSizeChanged 里的 ClampLeftPane 按宿主宽度收口，右侧永远留够结果区。
+            var leftPanel = new Panel { Dock = DockStyle.Left, BackColor = GdtermColorTable.Surface, Padding = new Padding(DpiScale.V(this, 4)) };
+            _leftPanel = leftPanel;
 
             var leftHeader = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, BackColor = GdtermColorTable.Surface, Padding = new Padding(DpiScale.V(this, 4)) };
             _btnSelectAll = new AntdUI.Button {
@@ -182,8 +186,31 @@ namespace Gdterm.UI.Controls
             Controls.Add(_rtbResults);
             Controls.Add(leftPanel);
             Controls.Add(topPanel);
+            ClampLeftPane();
             // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
             UiA11y.AutoName(this);
+        }
+
+        /// <summary>
+        /// 左栏宽度收口：期望 250 逻辑 px，但绝不超过"宿主宽 − 结果区下限"。
+        /// 独立窗口（≥900）下仍是 250；侧栏 360 + d150 下退到 ~210，右侧不至于只剩一条缝。
+        /// </summary>
+        private void ClampLeftPane()
+        {
+            if (_leftPanel == null) return;
+            int want = DpiScale.V(this, 250);
+            int floor = DpiScale.V(this, 120);
+            int reserve = DpiScale.V(this, 150);
+            int room = ClientSize.Width - reserve;
+            int w = Math.Min(want, room);
+            if (w < floor) w = Math.Min(floor, Math.Max(0, ClientSize.Width));
+            if (w > 0 && _leftPanel.Width != w) _leftPanel.Width = w;
+        }
+
+        protected override void OnSizeChanged(EventArgs e)
+        {
+            base.OnSizeChanged(e);
+            ClampLeftPane();
         }
 
         private void RefreshSessions()

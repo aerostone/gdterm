@@ -432,6 +432,7 @@ def main():
         TEXTFIT_TYPES = ("Button", "Label", "Checkbox", "CheckBox", "Radio", "RadioButton")
         overflow = 0
         measured = 0
+        skipped_ellipsis = 0
         for n, _a, _b, _c, _d in all_nodes:
             if not sbool(n.get("visible")):
                 continue
@@ -442,6 +443,12 @@ def main():
             if short not in TEXTFIT_TYPES:
                 continue
             if sbool(n.get("autoSize")):
+                continue
+            # 声明了 AutoEllipsis 的控件（底部状态行/提示行）设计上就用 "…" 收尾，
+            # 完整语义在 tooltip / AccessibleDescription 里 —— 判它"溢出"是误报。
+            # 前提是 dump 真带了这个字段（老 dump 没有 → 照旧判）。
+            if sbool(n.get("autoEllipsis")):
+                skipped_ellipsis += 1
                 continue
             if "textSingleW" not in n:
                 continue
@@ -534,7 +541,8 @@ def main():
         if measured == 0:
             print("  info: 文本适配受检=0（无 textSingleW 字段或无文本承载控件）")
         elif overflow == 0:
-            check(True, "文本适配=0 (受检=%d)" % measured)
+            check(True, "文本适配=0 (受检=%d%s)" % (
+                measured, "，省略号豁免 %d" % skipped_ellipsis if skipped_ellipsis else ""))
         elif TEXTFIT_STRICT:
             for w in WARN[-overflow:]:
                 check(False, w)
