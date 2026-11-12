@@ -213,6 +213,11 @@ namespace Gdterm.UI.Services
             // AutoSize 关掉后宽度是定值，文字后改（「显示/隐藏」「下一步 → 开始设置」
             // 「⚠ 确认执行 ⚠」及倒计时）必须重量宽——否则长文案在固定宽里被裁。
             b.TextChanged += (s, e) => Apply();
+            // 字体后改同理，而且更隐蔽：构造期按钮继承的还是父容器的当前字体，
+            // FormFontPolicy.Apply 在窗体末尾才把 14pt 落下来 —— 于是宽度是 9pt 量的、
+            // 画的时候是 14pt 的字。UI 字号调大到 14pt 后，这一族按钮整排被裁
+            //（CI 矩阵 f14 格实证：'打开终端' 需 88px 只有 81px）。
+            b.FontChanged += (s, e) => Apply();
         }
 
         /// <summary>
@@ -276,6 +281,8 @@ namespace Gdterm.UI.Services
             Apply();
             // 文案后改（「共 N 条记录」「3/12」这类计数）必须重量宽，否则长文案在定宽里被裁
             lbl.TextChanged += delegate { Apply(); };
+            // 字体后改同上一族：构造期继承的是父容器当前字体，字宽要跟着变
+            lbl.FontChanged += delegate { Apply(); };
             return lbl;
         }
 
