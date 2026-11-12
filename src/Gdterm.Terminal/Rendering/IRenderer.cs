@@ -38,6 +38,11 @@ namespace Gdterm.Terminal.Rendering
         string GetSelection();
 
         /// <summary>
+        /// 全选当前可视区。返回 false 表示该渲染器不支持选区或屏上无内容。
+        /// </summary>
+        bool SelectAll();
+
+        /// <summary>
         /// 获取终端最近 N 行文本内容
         /// </summary>
         string[] GetRecentLines(int lineCount);

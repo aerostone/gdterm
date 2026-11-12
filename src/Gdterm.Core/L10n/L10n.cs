@@ -2442,6 +2442,19 @@ namespace Gdterm.Core
             ["已删除 {0} 项"] = "Deleted {0} items",
             ["彻底清空回收站（{0} 项）？清空后不可恢复。"] = "Permanently empty the recycle bin ({0} items)? This cannot be undone.",
             ["已复制 {0} 条发现"] = "{0} findings copied",
+            // —— 终端右键：全选 / 断开（2026-11 用户流程回归） ——
+            ["全选(&A)"] = "Select &All",
+            ["断开(&D)"] = "&Disconnect",
+            ["—— 已断开（手动）——"] = "—— Disconnected (manual) ——",
+            ["已断开连接"] = "Disconnected",
+            // —— 连接树右键：创建副本 ——
+            ["创建副本(&U)"] = "Create &Duplicate",
+            ["创建副本"] = "Duplicate",
+            ["创建副本失败，请查看诊断日志。"] = "Failed to duplicate the connection. See the diagnostics log.",
+            ["已创建副本：{0}"] = "Duplicated as: {0}",
+            [" (副本)"] = " (copy)",
+            [" (副本 {0})"] = " (copy {0})",
+            ["未命名连接"] = "Unnamed connection",
         };
     }
 }

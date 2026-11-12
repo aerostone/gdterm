@@ -363,6 +363,9 @@ namespace Gdterm.UI.Controls
             if (terminalControl != null)
             {
                 terminalControl.SearchRequested += (s, e) => SearchRequested?.Invoke(terminalControl, e);
+                // 右键「断开」：宿主先摘看门狗与健康监控，控件随后拆会话（顺序不能反，
+                // 否则 session.Disconnected 会先喂给看门狗，1s 后自动重连把用户的选择顶掉）。
+                terminalControl.DisconnectRequested += (s, e) => HandleUserDisconnect(tab, terminalControl);
                 terminalControl.ReconnectRequested += (s, e) =>
                 {
                     // 直接走当前活动标签重连；重连路径已 awaited。
@@ -475,6 +478,34 @@ namespace Gdterm.UI.Controls
         {
             if (tab != null && _sessions.TryGetValue(tab, out var ts))
                 ts.IsConnected = true;
+        }
+
+        /// <summary>
+        /// 用户主动断开：摘掉自动重连监视 + 健康监控，标记标签已断开，留可见提示。
+        /// 会话本身由 TerminalControl.DisconnectSession 拆（保住渲染缓冲，可翻阅/重连）。
+        /// </summary>
+        private void HandleUserDisconnect(TabPage tab, TerminalControl terminalControl)
+        {
+            if (tab == null || terminalControl == null) return;
+            TabSessionState ts;
+            if (_sessions.TryGetValue(tab, out ts) && ts != null)
+            {
+                if (!string.IsNullOrEmpty(ts.SessionId))
+                {
+                    try { _reconnectWatchdog?.Unwatch(ts.SessionId); }
+                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainer.UserDisconnect.Unwatch", exSwallowed); } catch { } }
+                }
+                try { ts.HealthMonitor?.Dispose(); }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainer.UserDisconnect.Monitor", exSwallowed); } catch { } }
+                ts.HealthMonitor = null;
+                ts.IsConnected = false;
+            }
+            try { DiagLog.Info("TabContainer.UserDisconnect", "host=" + (terminalControl.Config != null ? terminalControl.Config.Host : "-")); }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainer.UserDisconnect", exSwallowed); } catch { } }
+            try { ToastNotifier.Show(L10n.T("已断开连接"), ToastNotifier.Level.Info, 2500, pushToCenter: false); }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainer.UserDisconnect.Toast", exSwallowed); } catch { } }
+            try { ActiveSessionChanged?.Invoke(this, EventArgs.Empty); }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainer.UserDisconnect", exSwallowed); } catch { } }
         }
 
         private void WireHealthAndReconnect(TabSessionState ts, ITerminalSession session)

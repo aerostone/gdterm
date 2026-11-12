@@ -308,25 +308,26 @@ namespace Gdterm.Terminal.Rendering
                 sc = _selStartCol; sr = _selStartRow;
                 ec = _selEndCol; er = _selEndRow;
             }
-            if (page == null || page.Lines == null) return string.Empty;
-            // 规范化：从上到下、左到右
-            if (er < sr || (er == sr && ec < sc))
+            return TerminalSelection.ComputeText(page, sc, sr, ec, er);
+        }
+
+        /// <summary>全选可视区（右键菜单「全选」）。返回是否有内容可选。</summary>
+        public bool SelectAll()
+        {
+            int sc, sr, ec, er;
+            bool ok;
+            lock (_lock)
             {
-                int t = sc; sc = ec; ec = t;
-                t = sr; sr = er; er = t;
+                ok = TerminalSelection.TryComputeSelectAll(_page, out sc, out sr, out ec, out er);
+                if (!ok) return false;
+                _hasSelection = true;
+                _selStartCol = sc; _selStartRow = sr;
+                _selEndCol = ec; _selEndRow = er;
+                ForceFullRepaint();
+                _needsRedraw = true;
             }
-            var sb = new StringBuilder();
-            for (int r = sr; r <= er && r < page.Lines.Count; r++)
-            {
-                var line = page.Lines[r];
-                int lineLen = LineTextLength(line);
-                int startC = (r == sr) ? Math.Min(sc, lineLen) : 0;
-                int endC = (r == er) ? Math.Min(ec, lineLen) : lineLen;
-                if (endC > startC)
-                    sb.Append(ExtractSubstring(line, startC, endC - startC));
-                if (r < er) sb.Append('\n');
-            }
-            return WideText.Strip(sb.ToString());
+            ScheduleRedraw();
+            return true;
         }
 
         /// <summary>左键拖选起点（像素）。返回是否进入选择模式。</summary>
@@ -378,38 +379,6 @@ namespace Gdterm.Terminal.Rendering
         }
 
         public bool HasSelection { get { lock (_lock) return _hasSelection; } }
-
-        private static int LineTextLength(VtLineSnapshot line)
-        {
-            if (line == null || line.Spans == null) return 0;
-            int n = 0;
-            foreach (var s in line.Spans)
-                if (s != null && s.Text != null) n += s.Text.Length;
-            return n;
-        }
-
-        private static string ExtractSubstring(VtLineSnapshot line, int start, int length)
-        {
-            if (line == null || line.Spans == null || length <= 0) return string.Empty;
-            var sb = new StringBuilder(length);
-            int taken = 0, skipped = 0;
-            foreach (var s in line.Spans)
-            {
-                if (s == null || string.IsNullOrEmpty(s.Text)) continue;
-                if (skipped + s.Text.Length <= start)
-                {
-                    skipped += s.Text.Length;
-                    continue;
-                }
-                int off = Math.Max(0, start - skipped);
-                int take = Math.Min(s.Text.Length - off, length - taken);
-                if (take > 0) sb.Append(s.Text, off, take);
-                taken += take;
-                skipped += s.Text.Length;
-                if (taken >= length) break;
-            }
-            return sb.ToString();
-        }
 
         public string[] GetRecentLines(int lineCount)
         {
@@ -620,8 +589,8 @@ namespace Gdterm.Terminal.Rendering
             lock (_lock) page = _page;
             if (page == null || page.Lines == null || row < 0 || row >= page.Lines.Count) return string.Empty;
             var line = page.Lines[row];
-            int len = LineTextLength(line);
-            return len <= 0 ? string.Empty : WideText.Strip(ExtractSubstring(line, 0, len));
+            int len = TerminalSelection.LineTextLength(line);
+            return len <= 0 ? string.Empty : WideText.Strip(TerminalSelection.ExtractSubstring(line, 0, len));
         }
 
         private void ScheduleRedraw()

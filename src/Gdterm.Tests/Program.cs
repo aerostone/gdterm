@@ -49,6 +49,7 @@ namespace Gdterm.Tests
             RunTest("LogSanitizer", LogSanitizerTests.Run);
             RunTest("ConnectionStoreJson", ConnectionStoreJsonTests.Run);
             RunTest("JsonRoundTrip", JsonRoundTripTests.Run);
+            RunTest("ConnectionConfigCopy", ConnectionConfigCopyTests.Run);
             RunTest("ChatHistoryStore", ChatHistoryStoreTests.Run);
             RunTest("AiAssistantService", AiAssistantServiceTests.Run);
             RunTest("CommandHistoryStore", CommandHistoryStoreTests.Run);
@@ -66,6 +67,8 @@ namespace Gdterm.Tests
             RunTest("SftpPermission", SftpPermissionTests.Run);
             RunTest("TerminalProfile", TerminalProfileTests.Run);
             RunTest("VtTerminalEngine", VtTerminalEngineTests.Run);
+            RunTest("ReverseVideo", ReverseVideoTests.Run);
+            RunTest("TerminalSelection", TerminalSelectionTests.Run);
             RunTest("TerminalNotification", TerminalNotificationTests.Run);
             RunTest("TriggerAndLimits", TriggerAndLimitsTests.Run);
             RunTest("ZmodemReceiver", ZmodemReceiverTests.Run);

@@ -89,6 +89,7 @@
     <Compile Include="Rendering\Vt\GraphicsDecoder.cs" />
     <Compile Include="Rendering\Vt\KittyGraphicsParser.cs" />
     <Compile Include="Rendering\Vt\WideText.cs" />
+    <Compile Include="Rendering\Vt\TerminalSelection.cs" />
     <Compile Include="Rendering\Vt\TerminalNotification.cs" />
     <Compile Include="Interop\ConPTY.cs" />
     <Compile Include="Interop\WinPty.cs" />

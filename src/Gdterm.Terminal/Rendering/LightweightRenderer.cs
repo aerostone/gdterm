@@ -224,6 +224,12 @@ namespace Gdterm.Terminal.Rendering
             return string.Empty;
         }
 
+        /// <summary>轻量渲染器没有选区模型（历史原因：只做行文本流），全选不可用。</summary>
+        public bool SelectAll()
+        {
+            return false;
+        }
+
         /// <summary>设置关键词高亮规则（null/空=关闭）。只影响此后封行的新行。</summary>
         public void SetHighlightRules(System.Collections.Generic.List<Gdterm.Core.Models.HighlightRule> rules)
         {

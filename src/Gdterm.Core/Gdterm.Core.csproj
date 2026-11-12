@@ -40,6 +40,7 @@
     <Compile Include="Enums\ProtocolType.cs" />
     <Compile Include="Enums\TunnelType.cs" />
     <Compile Include="Models\ConnectionConfig.cs" />
+    <Compile Include="Models\ConnectionConfigCopy.cs" />
     <Compile Include="Models\ProxyConfig.cs" />
     <Compile Include="Models\CredentialPayload.cs" />
     <Compile Include="Models\CommandHistoryEntry.cs" />

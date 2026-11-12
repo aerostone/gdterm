@@ -128,6 +128,11 @@ namespace Gdterm.UI.Controls
             AttachMenuIcon(itemEdit, "pencil");
             _contextMenu.Items.Add(itemEdit);
 
+            var itemDup = new ToolStripMenuItem(L10n.T("创建副本(&U)"), null, OnDuplicateConnection);
+            itemDup.Tag = "duplicate";
+            AttachMenuIcon(itemDup, "copy");
+            _contextMenu.Items.Add(itemDup);
+
             _contextMenu.Items.Add(new ToolStripSeparator { Tag = "sep1" });
 
             var itemDelete = new ToolStripMenuItem(L10n.T("删除(&D)"), null, OnDeleteConnection);
@@ -585,8 +590,9 @@ namespace Gdterm.UI.Controls
             var itemDel = FindItemByTag("delete") as ToolStripMenuItem;
             var itemConn = FindItemByTag("connect") as ToolStripMenuItem;
             var itemCopyHost = FindItemByTag("copyhost") as ToolStripMenuItem;
+            var itemDup = FindItemByTag("duplicate") as ToolStripMenuItem;
 
-            if (itemLocal == null || itemNew == null || itemEdit == null || sep1 == null || sep0 == null || itemDel == null || itemConn == null || itemCopyHost == null)
+            if (itemLocal == null || itemNew == null || itemEdit == null || sep1 == null || sep0 == null || itemDel == null || itemConn == null || itemCopyHost == null || itemDup == null)
                 return;
 
             // “本地终端”始终可用——根节点/空白/分组/连接都可开本地终端（独立动作，不依赖节点语义）。
@@ -600,6 +606,7 @@ namespace Gdterm.UI.Controls
                 itemNew.Text = string.IsNullOrEmpty(grp) ? L10n.T("新建连接(&N)") : L10n.T("新建连接到本分组(&N)");
                 itemEdit.Enabled = true;
                 itemDel.Enabled = true;
+                itemDup.Enabled = true;
                 itemConn.Enabled = true;
                 itemCopyHost.Enabled = !string.IsNullOrEmpty(cfg.Host);
                 sep0.Visible = sep1.Visible = true;
@@ -611,6 +618,7 @@ namespace Gdterm.UI.Controls
                 itemNew.Text = L10n.T("新建连接到本分组(&N)");
                 itemEdit.Enabled = false; // 未支持编辑分组（实现重构后可动）
                 itemDel.Enabled = false;  // 未支持删分组（避免误删连接）
+                itemDup.Enabled = false;
                 itemConn.Enabled = false;
                 itemCopyHost.Enabled = false;
                 sep0.Visible = false;
@@ -621,6 +629,7 @@ namespace Gdterm.UI.Controls
                 itemNew.Text = L10n.T("新建连接(&N)");
                 itemEdit.Enabled = false;
                 itemDel.Enabled = false;
+                itemDup.Enabled = false;
                 itemConn.Enabled = false;
                 itemCopyHost.Enabled = false;
                 sep0.Visible = false;
@@ -800,6 +809,39 @@ namespace Gdterm.UI.Controls
                         ConnectionListChanged?.Invoke(this, EventArgs.Empty);
                     }
                 }
+            }
+        }
+
+        /// <summary>
+        /// 创建副本：深拷贝配置（Id 重新生成、Name 自动去重），落到同一分组并选中。
+        /// 复制出来的不是"同一台机器的别名"，而是可独立编辑的新连接——所以不做 Id 复用。
+        /// </summary>
+        private void OnDuplicateConnection(object sender, EventArgs e)
+        {
+            var node = _rightClickedNode ?? _treeView.SelectedNode;
+            var config = node != null ? node.Tag as ConnectionConfig : null;
+            if (config == null) return;
+            try
+            {
+                var existing = _connectionStore.LoadAll();
+                var names = new List<string>();
+                foreach (var c in existing) names.Add(c != null ? c.Name : null);
+                string name = Gdterm.Core.Models.ConnectionConfigCopy.SuggestCopyName(
+                    config.Name, names,
+                    L10n.T("未命名连接"), L10n.T(" (副本)"), L10n.T(" (副本 {0})"));
+                var copy = Gdterm.Core.Models.ConnectionConfigCopy.Clone(config, name);
+                _connectionStore.Add(copy);
+                LoadConnections();
+                SelectNodeByConfigId(copy.Id);
+                ConnectionListChanged?.Invoke(this, EventArgs.Empty);
+                try { ToastNotifier.Show(L10n.Tf("已创建副本：{0}", copy.Name), ToastNotifier.Level.Success, 2500, pushToCenter: false); }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionTree.Duplicate.Toast", exSwallowed); } catch { } }
+            }
+            catch (Exception ex)
+            {
+                DiagLog.Swallowed("ConnectionTree.Duplicate", ex);
+                MessageBox.Show(this, L10n.T("创建副本失败，请查看诊断日志。"), L10n.T("创建副本"),
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 

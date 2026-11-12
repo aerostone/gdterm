@@ -45,6 +45,14 @@ namespace Gdterm.Terminal.Rendering.Vt
         private int _modifyOtherKeys;
 
         // 宽字符展开的 UTF-8 跨包残留（正文可能被拆包，半截序列必须留到下一包）
+        // ===== 反显（SGR 7）颜色交换状态 =====
+        // 库把反显实现成"前景固定黑、背景取原前景"，主题默认前景/背景完全不参与，
+        // 结果 \e[31;7m 变成黑底红上的黑字（Δ≈43 难读），默认反显也永远是纯黑而非主题前景。
+        // 修法在预处理层：见到 7 就把逻辑 fg/bg 交换后以真彩显式下发，27 还原。
+        private bool _sgrReverse;
+        private string _logicalFg;    // "#rrggbb"；null = 默认前景
+        private string _logicalBg;    // "#rrggbb"；null = 默认背景
+
         private readonly byte[] _utf8Pend = new byte[4];
         private int _utf8PendLen;
 
@@ -335,6 +343,7 @@ namespace Gdterm.Terminal.Rendering.Vt
                 }
                 if (kind != (byte)'[')
                 {
+                    if (kind == (byte)'c') ResetReverseTracking();   // RIS：引擎整屏复位，反显状态跟着复位
                     _out[w++] = b;   // 不是 CSI（例如单 ESC 键、ESC(0、ESC=）：原样透传
                     i++;
                     continue;
@@ -411,7 +420,8 @@ namespace Gdterm.Terminal.Rendering.Vt
                 }
 
                 string body = Encoding.ASCII.GetString(src, srcOffset + bodyOff, bodyLen);
-                string rewritten = Rewrite(body);
+                string rewritten = RewriteReverse(body);      // 反显交换优先（顺带跟踪逻辑颜色）
+                if (rewritten == null) rewritten = Rewrite(body);
                 if (rewritten == null)
                 {
                     for (int k = i; k <= j; k++) _out[w++] = src[srcOffset + k];
@@ -1168,6 +1178,147 @@ namespace Gdterm.Terminal.Rendering.Vt
                 Array.Copy(_out, bigger, _out.Length);
                 _out = bigger;
             }
+        }
+
+        // ================= 反显（SGR 7）颜色交换 =================
+
+        /// <summary>重置反显/颜色跟踪（RIS 或整屏复位时）。</summary>
+        private void ResetReverseTracking()
+        {
+            _sgrReverse = false;
+            _logicalFg = null;
+            _logicalBg = null;
+        }
+
+        /// <summary>
+        /// SGR 反显补丁：把 `7` 翻译成"交换后的真彩色"，`27` 翻译回逻辑色。
+        ///
+        /// 只在序列里真的出现 7/27、或反显生效期间改了颜色时才改写；
+        /// 其它情况返回 null（字节原样透传），因此不碰反显的流完全零行为变化。
+        /// </summary>
+        internal string RewriteReverse(string body)
+        {
+            if (string.IsNullOrEmpty(body)) return null;
+            string normalized = body.IndexOf(':') >= 0 ? ColonToSemicolon(body) : body;
+            var parts = normalized.Split(';');
+
+            var others = new List<string>();
+            bool need = false;
+
+            for (int p = 0; p < parts.Length; p++)
+            {
+                string token = parts[p];
+                int v = 0;
+                bool numeric = token.Length > 0 && int.TryParse(token, out v);
+                if (!numeric)
+                {
+                    if (token.Length > 0) others.Add(token);
+                    continue;
+                }
+
+                // 扩展色：38/48（前景/背景）、58（下划线色，引擎不支持 → 丢弃）
+                if (v == 38 || v == 48 || v == 58)
+                {
+                    int mode = 0;
+                    if (p + 1 < parts.Length) int.TryParse(parts[p + 1], out mode);
+                    int need3 = mode == 5 ? 3 : mode == 2 ? 5 : 0;
+                    if (need3 > 0 && p + need3 - 1 < parts.Length)
+                    {
+                        string color = ResolveExtendedColor(parts, p, mode);
+                        if (v != 58)
+                        {
+                            if (v == 38) _logicalFg = color;
+                            else _logicalBg = color;
+                            if (_sgrReverse) need = true;
+                        }
+                        p += need3 - 1;
+                        continue;
+                    }
+                    others.Add(token);
+                    continue;
+                }
+
+                if (v == 0)
+                {
+                    bool wasReverse = _sgrReverse;
+                    _logicalFg = null;
+                    _logicalBg = null;
+                    _sgrReverse = false;
+                    if (wasReverse) need = true;
+                    others.Add("0");
+                    continue;
+                }
+                if (v == 7)
+                {
+                    if (!_sgrReverse) { _sgrReverse = true; need = true; }
+                    continue;   // 不再让库自己处理反显
+                }
+                if (v == 27)
+                {
+                    if (_sgrReverse) { _sgrReverse = false; need = true; }
+                    continue;
+                }
+                if (v == 39) { _logicalFg = null; if (_sgrReverse) need = true; continue; }
+                if (v == 49) { _logicalBg = null; if (_sgrReverse) need = true; continue; }
+                if ((v >= 30 && v <= 37) || (v >= 90 && v <= 97))
+                {
+                    _logicalFg = LookupPalette(v <= 37 ? v - 30 : v - 90 + 8);
+                    if (_sgrReverse) need = true;
+                    continue;
+                }
+                if ((v >= 40 && v <= 47) || (v >= 100 && v <= 107))
+                {
+                    _logicalBg = LookupPalette(v <= 47 ? v - 40 : v - 100 + 8);
+                    if (_sgrReverse) need = true;
+                    continue;
+                }
+                others.Add(token);   // 其它属性（粗体/下划线/闪烁…）原样保留
+            }
+
+            if (!need) return null;
+
+            // 反显期间：显示前景 = 逻辑背景（缺省用主题背景），显示背景 = 逻辑前景（缺省用主题前景）
+            string showFg = _sgrReverse ? (_logicalBg ?? DefaultBackground) : (_logicalFg ?? DefaultForeground);
+            string showBg = _sgrReverse ? (_logicalFg ?? DefaultForeground) : (_logicalBg ?? DefaultBackground);
+            int fr, fg, fb, br, bg, bb;
+            if (!TryParseHex(showFg, out fr, out fg, out fb) || !TryParseHex(showBg, out br, out bg, out bb))
+            {
+                // 颜色解析不出来就退回老路：让库自己反显，状态别装作自己在管
+                _sgrReverse = false;
+                return null;
+            }
+
+            // 库只认"一条 SGR 一个颜色"：38;2;…;48;2;… 连着发会被解析丢色（见 Rewrite 的拆分逻辑），
+            // 所以这里也必须拆成多条。
+            var sb = new StringBuilder(others.Count * 4 + 56);
+            if (others.Count > 0)
+            {
+                sb.Append('\u001b').Append('[');
+                sb.Append(string.Join(";", others));
+                sb.Append('m');
+            }
+            sb.Append('\u001b').Append('[');
+            sb.Append("38;2;").Append(fr).Append(';').Append(fg).Append(';').Append(fb).Append('m');
+            sb.Append('\u001b').Append('[');
+            sb.Append("48;2;").Append(br).Append(';').Append(bg).Append(';').Append(bb).Append('m');
+            return sb.ToString();
+        }
+
+        /// <summary>解析 38/48 的扩展色参数（mode 5 = 调色板号，mode 2 = 真彩 RGB）。</summary>
+        private string ResolveExtendedColor(string[] parts, int at, int mode)
+        {
+            if (mode == 5)
+            {
+                int idx;
+                if (int.TryParse(parts[at + 2], out idx)) return LookupPalette(idx);
+                return null;
+            }
+            int r, g, b;
+            if (!int.TryParse(parts[at + 2], out r)) return null;
+            if (!int.TryParse(parts[at + 3], out g)) return null;
+            if (!int.TryParse(parts[at + 4], out b)) return null;
+            r = Math.Min(255, Math.Max(0, r)); g = Math.Min(255, Math.Max(0, g)); b = Math.Min(255, Math.Max(0, b));
+            return "#" + r.ToString("x2") + g.ToString("x2") + b.ToString("x2");
         }
 
         // ================= SGR 归一化 =================

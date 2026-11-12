@@ -74,6 +74,8 @@ namespace Gdterm.UI.Controls
         public event EventHandler SearchRequested;
         /// <summary>用户在右键菜单点了「重连」。</summary>
         public event EventHandler ReconnectRequested;
+        /// <summary>用户在右键菜单点了「断开」。宿主先摘看门狗/健康监控，本控件随后真正拆会话。</summary>
+        public event EventHandler DisconnectRequested;
         /// <summary>用户在右键菜单点了「导出缓冲」。</summary>
         public event EventHandler ExportRequested;
         /// <summary>用户在右键菜单点了「外观设置」。</summary>
@@ -294,10 +296,12 @@ namespace Gdterm.UI.Controls
                 bool hasSel = false;
                 try { hasSel = !string.IsNullOrWhiteSpace(GetSelection()); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 SetMenuItemEnabled("_copyItem", hasSel);
+                SetMenuItemEnabled("_selectAllItem", IsVtCell);
                 SetMenuItemEnabled("_pasteItem", IsConnected && ClipboardContainsText());
                 SetMenuItemEnabled("_clearItem", IsConnected);
                 SetMenuItemEnabled("_reconnectItem", !IsConnected || _config != null);
                 SetMenuItemEnabled("_exportItem", IsConnected);
+                SetMenuItemEnabled("_disconnectItem", IsConnected);
                 // 在线动作：需要选中；IP 查询需选中含合法 IPv4；host:port 需含合法地址
                 SetMenuItemEnabled("_onlineSearchItem", hasSel);
                 SetMenuItemEnabled("_onlineTranslateItem", hasSel);
@@ -333,8 +337,16 @@ namespace Gdterm.UI.Controls
                 catch (Exception ex) { DiagLog.Swallowed("TerminalControl.Paste", ex); }
             };
 
+            var selectAllItem = new ToolStripMenuItem(L10n.T("全选(&A)"));
+            selectAllItem.Name = "_selectAllItem";
+            selectAllItem.Click += (s, e) =>
+            {
+                try { SelectAllText(); } catch (Exception ex) { DiagLog.Swallowed("TerminalControl.SelectAll", ex); }
+            };
+
             _termMenu.Items.Add(copyItem);
             _termMenu.Items.Add(pasteItem);
+            _termMenu.Items.Add(selectAllItem);
             _termMenu.Items.Add(new ToolStripSeparator());
 
             var clearItem = new ToolStripMenuItem(L10n.T("清屏(&L)"));
@@ -412,6 +424,14 @@ namespace Gdterm.UI.Controls
                 try { ReconnectRequested?.Invoke(this, EventArgs.Empty); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
             };
             _termMenu.Items.Add(reconnectItem);
+
+            var disconnectItem = new ToolStripMenuItem(L10n.T("断开(&D)"));
+            disconnectItem.Name = "_disconnectItem";
+            disconnectItem.Click += (s, e) =>
+            {
+                try { RequestDisconnect(); } catch (Exception ex) { DiagLog.Swallowed("TerminalControl.Disconnect", ex); }
+            };
+            _termMenu.Items.Add(disconnectItem);
 
             var exportItem = new ToolStripMenuItem(L10n.T("导出缓冲(&E)..."));
             exportItem.Name = "_exportItem";
@@ -1371,6 +1391,46 @@ public async void Connect()
         public string GetSelection()
         {
             return _renderer?.GetSelection() ?? string.Empty;
+        }
+
+        /// <summary>全选可视区（右键菜单「全选」）。轻量渲染器无选区模型，返回 false。</summary>
+        public bool SelectAllText()
+        {
+            var r = _renderer;
+            if (r == null) return false;
+            return r.SelectAll();
+        }
+
+        /// <summary>用户主动断开：先通知宿主（摘看门狗/健康监控），再拆会话。</summary>
+        private void RequestDisconnect()
+        {
+            if (!IsConnected) return;
+            try { DisconnectRequested?.Invoke(this, EventArgs.Empty); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.DisconnectRequested", exSwallowed); } catch { } }
+            DisconnectSession();
+        }
+
+        /// <summary>
+        /// 拆掉当前会话但保留标签页/渲染缓冲：用户还能往上翻旧输出、复制、重连。
+        /// 与 Dispose 的区别是不动渲染器与控件树，也不清 Credentials。
+        /// </summary>
+        public bool DisconnectSession()
+        {
+            var session = _session;
+            if (session == null) return false;
+            DiagLog.Try("TerminalControl.DisconnectSession", () =>
+            {
+                session.OutputReceived -= OnTerminalOutput;
+                session.Disconnected -= OnSessionDisconnected;
+            });
+            DiagLog.Try("TerminalControl.DisconnectSession.Dispose", () => session.Dispose());
+            _session = null;
+            _selecting = false;
+            _mouseDown = false;
+            // 缓冲里留一行可见提示，避免用户以为程序卡住
+            try { _renderer?.Write("\r\n\u001b[2m" + L10n.T("—— 已断开（手动）——") + "\u001b[0m\r\n"); }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.DisconnectHint", exSwallowed); } catch { } }
+            try { SessionDisconnected?.Invoke(this, EventArgs.Empty); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.SessionDisconnected", exSwallowed); } catch { } }
+            return true;
         }
 
         public string[] GetRecentLines(int count)
