@@ -32,6 +32,10 @@ R14 loc-from-client 构造期绝对坐标源自 ClientSize.Width（规则 2；CI
 R16 autosize-dpi  AntdUI.Button 用 AutoSize+Padding 定尺寸（矩阵门 2026-11-13 首捕：
                  库内 AutoSize 不吃 Padding，d100/d150 都是 46x30，触击目标随 DPI 变小；
                  改用 FormFontPolicy.SizeActionButton）
+R17 label-autosize AntdUI.Label/HyperlinkLabel 用 AutoSize 定宽（窄宿主硬断言 2026-11-14 首捕：
+                 库内 AutoSize 比 GDI 实测窄约 10%（「还没有命令历史」需 100px 只给 89px，
+                 「共 0 条记录」需 67px 只给 64px），超出部分静默裁掉；
+                 改用 FormFontPolicy.FitSingleLineLabel）
 
 基线棘轮（ratchet）
 ===================
@@ -476,6 +480,40 @@ def r16(path, lines):
         if "};" in line or line.strip() == "}":
             if "AutoSize = true" in block and "DpiScale" in block \
                     and "MinimumSize" not in block and DPI_SIZE_HELPER not in block:
+                yield block_start + 1, snippet(lines[block_start])
+            block_start = None
+
+
+# ────────────────────────────── R17 ──────────────────────────────
+# 单行标签定宽不能用 AutoSize（窄宿主硬断言 2026-11-14 首捕）：
+#   AntdUI.Label 的 AutoSize 用库内 sps 量宽，比 GDI 实测窄约 10%，超出的字符静默裁掉。
+#   实证：「还没有命令历史」需 100px → AutoSize 89px；「共 0 条记录」需 67px → 64px；
+#         「没有匹配的条目」需 100px → 89px（ci-evidence 的 ui-smoke dump）。
+# 正确写法：FormFontPolicy.FitSingleLineLabel(label) 或
+#           x = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { ... });
+AUTOSIZE_LABEL_RE = re.compile(r"new\s+AntdUI\.(Label|HyperlinkLabel)\b")
+LABEL_FIT_HELPER = "FitSingleLineLabel"
+
+
+@rule("R17", "AntdUI.Label 用 AutoSize 定宽（比真实字宽窄约 10%）",
+      "SCALING 规则 4 / 窄宿主硬断言 2026-11-14")
+def r17(path, lines):
+    block_start = None
+    for i, line in enumerate(lines):
+        if is_comment(line):
+            continue
+        if AUTOSIZE_LABEL_RE.search(line) and LABEL_FIT_HELPER not in line:
+            if "AutoSize = true" in line and "FitSingleLineLabel" not in line:
+                yield i + 1, snippet(line)       # 一行式
+                block_start = None
+            else:
+                block_start = i
+            continue
+        if block_start is None:
+            continue
+        block = "\n".join(lines[block_start:i + 1])
+        if "};" in line or line.strip() == "}":
+            if "AutoSize = true" in block and LABEL_FIT_HELPER not in block:
                 yield block_start + 1, snippet(lines[block_start])
             block_start = None
 

@@ -141,15 +141,14 @@ namespace Gdterm.UI.Controls
 
         private AntdUI.Label CreateCard(string title, string value, Color valueColor)
         {
-            var lbl = new AntdUI.Label {
-                AutoSize = true,
+            var lbl = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 8), DpiScale.V(this, 10), DpiScale.V(this, 8)),
                 Margin = new Padding(0, 0, DpiScale.V(this, 8), 0),
                 Font = new Font("Consolas", 14f, FontStyle.Bold),
                 ForeColor = valueColor,
                 Text = value,
                 TextAlign = ContentAlignment.MiddleCenter
-            };
+            });
             var tip = new ToolTip();
             tip.SetToolTip(lbl, title);
             return lbl;

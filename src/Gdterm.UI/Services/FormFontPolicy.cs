@@ -216,6 +216,70 @@ namespace Gdterm.UI.Services
         }
 
         /// <summary>
+        /// 单行标签按真实字宽定宽（关掉 AntdUI.Label 的 AutoSize）。
+        ///
+        /// 为什么不能用 AutoSize：AntdUI.Label 的 AutoSize 用库内 sps 量宽，比 GDI 实测窄约 10%
+        /// （CI dump 实证：「还没有命令历史」需 100px 只给 89px，「共 0 条记录」需 67px 只给 64px，
+        /// 「没有匹配的条目」需 100px 只给 89px）——超出的字符直接裁掉，且不报错。
+        /// 与 R16（AntdUI.Button 的 AutoSize 不吃 Padding）同一族。
+        ///
+        /// 只定宽、不动高：高度由 Dock/显式 Height 决定，贸然改高会推动整片布局。
+        /// </summary>
+        /// <param name="lbl">目标标签（AntdUI.Label / HyperlinkLabel 等同族；按 Control 约束收口）。</param>
+        /// <param name="host">取 DPI 的宿主；空则用标签自身。</param>
+        /// <param name="padX">左右各留的最小内边距（设计 px，按 DPI 缩放）。</param>
+        /// <returns>同一个标签，便于写成 <c>= FitSingleLineLabel(new AntdUI.Label {...})</c>（字段初始化器里只有表达式可用）。</returns>
+        public static T FitSingleLineLabel<T>(T lbl, Control host = null, int padX = 6) where T : Control
+        {
+            if (lbl == null) return null;
+            lbl.AutoSize = false;
+
+            void Apply()
+            {
+                if (lbl.IsDisposed) return;
+                var f = lbl.Font ?? UiFont();
+                var h = host ?? lbl;
+                string text = lbl.Text ?? string.Empty;
+                int tw = 0;
+                foreach (var line in text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+                {
+                    int w;
+                    try
+                    {
+                        w = TextRenderer.MeasureText(line, f, new Size(int.MaxValue, int.MaxValue),
+                            TextFormatFlags.NoPadding | TextFormatFlags.SingleLine).Width;
+                    }
+                    catch
+                    {
+                        w = line.Length * (int)Math.Ceiling(f.SizeInPoints * 96f / 72f);
+                    }
+                    if (w > tw) tw = w;
+                }
+                if (tw <= 0)
+                {
+                    // 空文案收成 0 宽：AutoSize 关掉后若留默认宽，流式布局里会白占一行空间
+                    lbl.Width = 0;
+                    return;
+                }
+                int px = Math.Max(0, DpiScale.V(h, padX));
+                var pad = lbl.Padding;
+                lbl.Width = tw + Math.Max(pad.Left, px) + Math.Max(pad.Right, px) + DpiScale.V(h, 2);
+                // 高度只托底不压缩：AntdUI 的 AutoSize 高度≈em 盒（无 leading），
+                // 关掉之后若沿用更矮的默认高，字形下缘会被裁
+                if (!lbl.AutoSize)
+                {
+                    int minH = LineBox(f, h);
+                    if (lbl.Height < minH && lbl.Dock != DockStyle.Left && lbl.Dock != DockStyle.Right) lbl.Height = minH;
+                }
+            }
+
+            Apply();
+            // 文案后改（「共 N 条记录」「3/12」这类计数）必须重量宽，否则长文案在定宽里被裁
+            lbl.TextChanged += delegate { Apply(); };
+            return lbl;
+        }
+
+        /// <summary>
         /// 字体驱动的表单行距——按当前全局 UI 字体实际行高推导每行步进。
         ///
         /// 背景：大量手写对话框用固定 y += 35 步进布局。该步进按 9pt@96dpi 设计；

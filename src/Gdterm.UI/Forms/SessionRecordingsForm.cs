@@ -157,11 +157,11 @@ namespace Gdterm.UI.Forms
             _progressLabel = new AntdUI.Label
             {
                 Name = "RecordingsProgressLabel",
-                AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
                 Text = "00:00 / 00:00",
                 Margin = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 6), 0, 0)
             };
+            FormFontPolicy.FitSingleLineLabel(_progressLabel);
             topBar.Controls.Add(_progressLabel);
 
             var stagePanel = new Panel { Dock = DockStyle.Fill, BackColor = GdtermColorTable.Background };
@@ -224,11 +224,11 @@ namespace Gdterm.UI.Forms
             {
                 Name = "RecordingsStatus",
                 Dock = DockStyle.Right,
-                AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleRight,
                 Padding = new Padding(0, DpiScale.V(this, 6), 0, 0)
             };
+            FormFontPolicy.FitSingleLineLabel(_status);
 
             var rightFlow = new FlowLayoutPanel
             {

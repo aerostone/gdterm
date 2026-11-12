@@ -84,20 +84,18 @@ namespace Gdterm.UI.Forms
             int rowH = fieldH + DpiScale.V(this, 8);
             int y = DpiScale.V(this, 20);
 
-            var titleLabel = new AntdUI.Label {
+            var titleLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = L10n.T("修改主密码"),
                 Font = Gdterm.UI.Services.FormFontPolicy.UiFont(+6f, FontStyle.Bold),
-                AutoSize = true,
                 Location = new Point(labelX, y)
-            };
+            });
             Controls.Add(titleLabel);
             y += Math.Max(DpiScale.V(this, 46), FormFontPolicy.RowStep(this) + DpiScale.V(this, 10));
 
-            var tipLabel = new AntdUI.Label {
+            var tipLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = L10n.T("修改后，KeePass 密码库 (gdterm.kdbx) 将用新主密码重新加密。\n请妥善保管新密码，丢失将无法找回。"),
-                AutoSize = true,
                 Location = new Point(labelX, y)
-            };
+            });
             Controls.Add(tipLabel);
             y += Math.Max(DpiScale.V(this, 58), FormFontPolicy.RowStep(this) * 2);
 
@@ -116,18 +114,18 @@ namespace Gdterm.UI.Forms
 
             _strengthLabel = new AntdUI.Label {
                 Text = L10n.T("密码强度：未输入"),
-                AutoSize = true,
                 Location = new Point(boxX, y)
             };
+            FormFontPolicy.FitSingleLineLabel(_strengthLabel);
             Controls.Add(_strengthLabel);
             y += rowH;
 
             _errorLabel = new AntdUI.Label {
                 Text = "",
-                AutoSize = true,
                 ForeColor = GdtermColorTable.Danger,
                 Location = new Point(labelX, y)
             };
+            FormFontPolicy.FitSingleLineLabel(_errorLabel);
             Controls.Add(_errorLabel);
             y += rowH;
 
@@ -177,7 +175,7 @@ namespace Gdterm.UI.Forms
         {
             // P0-2：与 AiSettingsForm/QuickCommandEditorForm 对齐，用真实 FontHeight 代替写死 17
             int offset = Math.Max(4, (fieldH - FontHeight) / 2);
-            return new AntdUI.Label { Text = text, AutoSize = true, Location = new Point(x, y + offset) };
+            return FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = text,  Location = new Point(x, y + offset) });
         }
 
         private AntdUI.Input MakePasswordBox(int x, int y, int width, int fieldH)

@@ -141,7 +141,7 @@ namespace Gdterm.UI.Forms
         private static AntdUI.Label MakeLabel(string text, int x, int y, int fieldH)
         {
             int offset = Math.Max(4, (fieldH - 17) / 2);
-            return new AntdUI.Label { Text = text, AutoSize = true, Location = new Point(x, y + offset) };
+            return FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = text,  Location = new Point(x, y + offset) });
         }
 
         private void OnImport(object sender, EventArgs e)

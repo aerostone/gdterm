@@ -94,21 +94,19 @@ namespace Gdterm.UI.Forms
             headerPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             headerPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-            var titleLabel = new AntdUI.Label {
+            var titleLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = L10n.T("欢迎使用 gdterm"),
                 // 标题强调：相对当前字体放大加粗，不硬编码字族/磅值（规范规则③）,
                 Font = new Font(Font.FontFamily, Font.Size + 6f, FontStyle.Bold),
                 ForeColor = GdtermColorTable.Foreground,
-                AutoSize = true,
                 TextAlign = ContentAlignment.MiddleLeft
-            };
+            });
 
-            var subtitleLabel = new AntdUI.Label {
+            var subtitleLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = L10n.T("绿色运维客户端 · 首次使用请完成以下设置"),
                 ForeColor = GdtermColorTable.Muted,
-                AutoSize = true,
                 TextAlign = ContentAlignment.TopLeft
-            };
+            });
 
             headerPanel.Controls.Add(titleLabel, 0, 0);
             headerPanel.Controls.Add(subtitleLabel, 0, 1);
@@ -128,9 +126,9 @@ namespace Gdterm.UI.Forms
             _stepIndicator = new AntdUI.Label {
                 Text = BuildStepText(0),
                 ForeColor = GdtermColorTable.Muted,
-                AutoSize = true,
                 TextAlign = ContentAlignment.MiddleCenter
             };
+            FormFontPolicy.FitSingleLineLabel(_stepIndicator);
             _stepIndicator.Margin = new Padding(0, DpiScale.V(this, 7), 0, DpiScale.V(this, 7));
             stepBar.Controls.Add(_stepIndicator);
 
@@ -318,9 +316,9 @@ namespace Gdterm.UI.Forms
                 Text = L10n.T("密码强度：未输入"),
                 ForeColor = GdtermColorTable.Muted,
                 Dock = DockStyle.Fill,
-                AutoSize = true,
                 TextAlign = ContentAlignment.MiddleLeft
             };
+            FormFontPolicy.FitSingleLineLabel(_strengthLabel);
             layout.SetColumnSpan(_strengthLabel, 2);
             layout.Controls.Add(_strengthLabel, 0, 3);
 
@@ -328,9 +326,9 @@ namespace Gdterm.UI.Forms
                 Text = "",
                 ForeColor = GdtermColorTable.Danger,
                 Dock = DockStyle.Fill,
-                AutoSize = true,
                 TextAlign = ContentAlignment.TopLeft
             };
+            FormFontPolicy.FitSingleLineLabel(_errorLabel);
             layout.SetColumnSpan(_errorLabel, 2);
             layout.Controls.Add(_errorLabel, 0, 4);
 
@@ -372,15 +370,14 @@ namespace Gdterm.UI.Forms
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 50f));
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 30f));
 
-            var doneLabel = new AntdUI.Label {
+            var doneLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = L10n.T("设置完成"),
                 // 标题强调：相对当前字体放大加粗（规范规则③）,
                 Font = new Font(Font.FontFamily, Font.Size + 7f, FontStyle.Bold),
                 ForeColor = GdtermColorTable.Success,
                 Dock = DockStyle.Fill,
-                AutoSize = true,
                 TextAlign = ContentAlignment.MiddleCenter
-            };
+            });
 
             var summaryLabel = new AntdUI.Label {
                 Text =

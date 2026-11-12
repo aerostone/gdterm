@@ -83,6 +83,7 @@ CI 里已挂在 `appveyor.yml` 的 test_script 段（编码守卫之后、ui-smo
 | R14 | `Location = … ClientSize.Width …`（Forms/ 构造期绝对坐标） | SC 规则 2（0.1.359 门禁首捕） | 0 |
 | R15 | 对话框未绑 `CancelButton`（且自身不截 `Keys.Escape`） | §2.3 关闭绑定（冒烟门 R3 的本地化） | 0 |
 | R16 | `AntdUI.Button` 靠 `AutoSize = true` + `Padding(DpiScale…)` 定尺寸 | SC 规则 4 / **L2 矩阵门 2026-11-13 首捕** | 0（2026-11-14 存量清零，见 §3.4） |
+| R17 | `AntdUI.Label` 靠 `AutoSize = true` 定宽 | SC 规则 4 / **窄宿主硬断言 2026-11-14 首捕** | 0（见 §3.5） |
 
 ### 3.3 基线棘轮（为什么不直接"必须为 0"）
 
@@ -92,7 +93,7 @@ CI 里已挂在 `appveyor.yml` 的 test_script 段（编码守卫之后、ui-smo
 - **新增即红**（新写的 `确定`+Primary 立刻失败）；
 - **修一条收紧一条**（`--write-baseline`），基线只降不升 —— 这条要写进 PR 模板。
 
-**2026-11-14 基线归零**：R01–R16 全部存量清完（基线文件只剩注释头，0 键），
+**2026-11-14 基线归零**：R01–R17 全部存量清完（基线文件只剩注释头，0 键），
 L0 门从"棘轮容忍"转成"任何一条命中即红"。之后新增违规没有豁免通道，只能改代码。
 
 ### 3.4 R16：AutoSize 钮不吃 DPI（L2 矩阵门第一次跑就抓到的系统性缺陷）
@@ -124,6 +125,38 @@ R16 一并判红。
 已知局限（诚实记录）：
 - 基线键 = `规则|文件|片段`，**不含行号**（容忍插入行）。同文件内两处完全相同片段会折叠成 1 键（当前 47 命中 → 46 键）。文本级棘轮，不追求精确到实例。
 - 只做词法匹配，无法识别"变量拼出来的颜色"或"运行时注入的尺寸"。这类归 L1/L2。
+
+### 3.5 R17：AutoSize 标签不吃真实字宽（窄宿主硬断言第一次跑就抓到）
+
+和 R16 同一族的第二例：`AntdUI.Label` 的 `AutoSize` 用库内 sps 量宽，**比 GDI 实测窄约 10%**，
+超出的字符直接裁掉、不报错也不省略号。dump 实证（ci-evidence 的 ui-smoke）：
+
+| 文案 | GDI 实测 | AutoSize 给 |
+|---|---|---|
+| 还没有命令历史 | 100px | 89px |
+| 没有匹配的条目 | 100px | 89px |
+| 共 0 条记录 | 67px | 64px |
+
+抓到的过程也值得记：R6（文本适配）一直是 **warn-only**，永远不会让 CI 红，所以这类裁切在
+45 个 dump 里躺了几个月。改成窄宿主（`UiStateSmoke.DumpNarrow`）的**硬断言**后，第一次跑就红了三条。
+断言口径：单行标签（原生 `AutoSize` 标签 / AntdUI 标签）实测文字宽必须 ≤ 可用宽 + 4px；
+自动换行的原生标签（`AutoSize = false`）不在判据内。
+
+正确写法：
+
+```csharp
+var lbl = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = …, Padding = … });
+// 或者语句式（赋值之后）
+_statusLabel = new AntdUI.Label { … };
+FormFontPolicy.FitSingleLineLabel(_statusLabel);
+```
+
+`FitSingleLineLabel` 做三件事：关 `AutoSize`、按 `TextRenderer` 实测宽 + 左右 padding + 2px 定宽、
+挂 `TextChanged` 重量（「共 N 条记录」这类计数会变）；空文案收成 0 宽（否则流式布局里白占一行）；
+高度只托底不压缩（行盒 < 当前高时才抬）。
+
+**存量已清零（2026-11-14）**：82 处（37 语句式 + 45 字段初始化式）全部转 `FitSingleLineLabel`，
+`--strict` 存量=0，规则转为新增即红。
 
 ---
 

@@ -45,14 +45,13 @@ namespace Gdterm.UI.Controls
             Size = new Size(DpiScale.V(this, 460), DpiScale.V(this, hint != null ? 210 : 180));
             Text = title ?? L10n.T("输入");
 
-            var lbl = new AntdUI.Label
+            var lbl = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label
             {
                 Text = label ?? "",
                 Dock = DockStyle.Top,
-                AutoSize = true,
                 ForeColor = GdtermColorTable.Foreground,
                 Padding = DpiScale.Pad(this, 12, 12, 12, 4)
-            };
+            });
 
             _input = new AntdUI.Input
             {
@@ -66,15 +65,14 @@ namespace Gdterm.UI.Controls
                 else if (e.KeyCode == Keys.Escape) { e.SuppressKeyPress = true; DialogResult = DialogResult.Cancel; Close(); }
             };
 
-            var hintLabel = new AntdUI.Label
+            var hintLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label
             {
                 Text = hint ?? "",
                 Dock = DockStyle.Top,
-                AutoSize = true,
                 Visible = !string.IsNullOrEmpty(hint),
                 ForeColor = GdtermColorTable.Muted,
                 Padding = DpiScale.Pad(this, 12, 6, 12, 0)
-            };
+            });
 
             // 按钮一律 FlowLayoutPanel 流式（SCALING 规则 4e：页脚不用绝对坐标）
             var footer = new FlowLayoutPanel

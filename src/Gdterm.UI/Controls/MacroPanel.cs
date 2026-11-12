@@ -145,13 +145,13 @@ namespace Gdterm.UI.Controls
             _statusLabel = new AntdUI.Label
             {
                 Dock = DockStyle.Bottom,
-                AutoSize = true,
                 Text = L10n.T("回放直接发送，不经过危险命令确认；请先在测试机验证。"),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(DpiScale.V(this, 3), 0, 0, 0),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Muted
             };
+            FormFontPolicy.FitSingleLineLabel(_statusLabel);
 
             Controls.Add(_shell);
             Controls.Add(toolPanel);

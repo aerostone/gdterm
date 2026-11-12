@@ -272,17 +272,16 @@ namespace Gdterm.UI.Services
             {
                 int pad = DpiScale.V(form, 14);
                 int fieldH = FormFontPolicy.FieldHeight(form);
-                var head = new AntdUI.Label
+                var head = Gdterm.UI.Services.FormFontPolicy.FitSingleLineLabel(new AntdUI.Label
                 {
                     Text = failed ? L10n.T("检查失败：") + (info != null ? info.Error : L10n.T("未知错误"))
                          : newer ? L10n.T("发现新版本 ") + info.Version
                          : L10n.T("已是最新版本（") + UpdateChecker.CurrentVersion + "）",
-                    AutoSize = true,
                     Location = new Point(pad, pad),
                     ForeColor = failed ? GdtermColorTable.Danger
                              : newer ? GdtermColorTable.Accent : GdtermColorTable.Foreground,
                     Font = FormFontPolicy.UiFont(+1f)
-                };
+                });
                 form.Controls.Add(head);
 
                 var body = new TextBox

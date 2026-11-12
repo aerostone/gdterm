@@ -59,17 +59,17 @@ namespace Gdterm.UI.Controls
                 Text = L10n.T("安全评分: --"),
                 Font = Services.FormFontPolicy.UiFont(+11f, FontStyle.Bold),
                 ForeColor = GdtermColorTable.Success,
-                AutoSize = true,
                 Margin = new Padding(0, 0, DpiScale.V(this, 12), DpiScale.V(this, 4))
             };
+            FormFontPolicy.FitSingleLineLabel(_lblScore);
 
             _lblStats = new AntdUI.Label {
                 Text = L10n.T("等待扫描..."),
                 Font = Services.FormFontPolicy.UiFont(),
                 ForeColor = GdtermColorTable.Muted,
-                AutoSize = true,
                 Margin = new Padding(0, 0, DpiScale.V(this, 12), 0)
             };
+            FormFontPolicy.FitSingleLineLabel(_lblStats);
 
             _btnScan = new AntdUI.Button {
                 Text = L10n.T("开始扫描"),
@@ -147,7 +147,6 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 3), DpiScale.V(this, 10), DpiScale.V(this, 3))
             };
             _lblStatus = new AntdUI.Label {
-                AutoSize = true,
                 Dock = DockStyle.Fill,
                 Font = Services.FormFontPolicy.UiFont(-1f),
                 ForeColor = GdtermColorTable.Muted,
@@ -155,6 +154,7 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(0),
                 Text = L10n.T("选择扫描路径后点击「开始扫描」")
             };
+            FormFontPolicy.FitSingleLineLabel(_lblStatus);
             bottomPanel.Controls.Add(_lblStatus);
 
             _shell = new ListShell(_lvFindings, L10n.T("过滤规则/文件/内容…"));

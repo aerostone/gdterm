@@ -70,11 +70,10 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(DpiScale.V(this, 10))
             };
 
-            var lblPreset = new AntdUI.Label {
+            var lblPreset = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = L10n.T("预设:"),
-                AutoSize = true,
                 Margin = new Padding(0, DpiScale.V(this, 8), DpiScale.V(this, 10), 0)
-            };
+            });
 
             _cmbPreset = new AntdUI.Select {
                 Size = DpiScale.S(this, 200, 34),
@@ -86,9 +85,9 @@ namespace Gdterm.UI.Controls
 
             _lblDescription = new AntdUI.Label {
                 Text = "",
-                AutoSize = true,
                 Margin = new Padding(0, DpiScale.V(this, 8), DpiScale.V(this, 14), 0)
             };
+            FormFontPolicy.FitSingleLineLabel(_lblDescription);
 
             _chkIntercept = new AntdUI.Checkbox {
                 Text = L10n.T("拦截模式（匹配的按键不发送到终端）"),
@@ -418,11 +417,11 @@ namespace Gdterm.UI.Controls
                 int rowH = fieldH + DpiScale.V(this, 10);
                 int lblOff = DpiScale.V(this, 8);
                 int y = 20;
-                var lblName = new AntdUI.Label { Text = L10n.T("名称"), Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
+                var lblName = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("名称"), Location = DpiScale.P(this, 15, y + lblOff) });
                 var txtName = new AntdUI.Input { Location = DpiScale.P(this, 100, y), Size = new Size(DpiScale.V(this, 330), fieldH) };
                 y += rowH;
 
-                var lblCombo = new AntdUI.Label { Text = L10n.T("按键组合"), Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
+                var lblCombo = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("按键组合"), Location = DpiScale.P(this, 15, y + lblOff) });
                 var chkCtrl = new AntdUI.Checkbox { Text = "Ctrl", Location = DpiScale.P(this, 100, y + lblOff), AutoSize = true };
                 var chkAlt = new AntdUI.Checkbox { Text = "Alt", Location = DpiScale.P(this, 160, y + lblOff), AutoSize = true };
                 var chkShift = new AntdUI.Checkbox { Text = "Shift", Location = DpiScale.P(this, 218, y + lblOff), AutoSize = true };
@@ -430,16 +429,16 @@ namespace Gdterm.UI.Controls
                 FillKeyCombo(cmbKey);
                 y += rowH;
 
-                var lblType = new AntdUI.Label { Text = L10n.T("类型"), Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
+                var lblType = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("类型"), Location = DpiScale.P(this, 15, y + lblOff) });
                 var cmbType = new AntdUI.Select { Location = DpiScale.P(this, 100, y), Size = new Size(DpiScale.V(this, 155), fieldH) };
                 cmbType.Items.AddRange(new object[] { L10n.T("Sequence (转义序列)"), L10n.T("Text (字面文本)"), L10n.T("Action (内置动作)") });
                 y += rowH;
 
-                var lblValue = new AntdUI.Label { Text = L10n.T("发送内容"), Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
+                var lblValue = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("发送内容"), Location = DpiScale.P(this, 15, y + lblOff) });
                 var txtValue = new AntdUI.Input { Location = DpiScale.P(this, 100, y), Size = new Size(DpiScale.V(this, 330), fieldH), Font = Services.FormFontPolicy.MonoFont() };
                 y += rowH;
 
-                var lblDesc = new AntdUI.Label { Text = L10n.T("描述"), Location = DpiScale.P(this, 15, y + lblOff), AutoSize = true };
+                var lblDesc = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("描述"), Location = DpiScale.P(this, 15, y + lblOff) });
                 var txtDesc = new AntdUI.Input { Location = DpiScale.P(this, 100, y), Size = new Size(DpiScale.V(this, 330), fieldH) };
                 y += rowH + DpiScale.V(this, 2);
 

@@ -55,42 +55,39 @@ namespace Gdterm.UI.Controls
             Text = IsChanged ? L10n.T("主机密钥已变更") : L10n.T("首次连接 - 确认主机密钥");
 
             // —— 标题 ——
-            var title = new AntdUI.Label
+            var title = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label
             {
                 Text = IsChanged ? L10n.T("⚠ 主机密钥与记录不一致") : L10n.T("确认这台主机的身份"),
                 Font = new Font(Font.FontFamily, Font.Size + 3f, FontStyle.Bold),
                 ForeColor = accent,
                 Dock = DockStyle.Top,
-                AutoSize = true,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Padding = new Padding(10)
-            };
+            });
 
             // —— 目标 ——
-            var target = new AntdUI.Label
+            var target = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label
             {
                 Text = _info.Target + "  ·  " + _info.KeyBits + " " + L10n.T("位") + "  " + (_info.KeyType ?? ""),
                 Font = new Font(Services.FormFontPolicy.MonoFont().FontFamily, Font.Size + 1f, FontStyle.Bold),
                 ForeColor = GdtermColorTable.Foreground,
                 Dock = DockStyle.Top,
-                AutoSize = true,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Padding = new Padding(4)
-            };
+            });
 
             // —— 结论性说明 ——
-            var message = new AntdUI.Label
+            var message = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label
             {
                 Text = IsChanged
                     ? L10n.T("这台主机出示的公钥与 known_hosts 里的记录不同。\n可能是重装/更换了主机密钥，也可能是中间人攻击。\n确认之前请通过其他渠道（管理员、控制台）核对指纹。")
                     : L10n.T("这是第一次连接这台主机，还没有它的公钥记录。\n请核对下面的指纹与服务端实际指纹是否一致（sshd -T | grep hostkey，或管理员提供）。"),
                 ForeColor = IsChanged ? GdtermColorTable.Danger : GdtermColorTable.Foreground,
                 Dock = DockStyle.Top,
-                AutoSize = true,
                 MaximumSize = new Size(DpiScale.V(this, 560), 0),
                 TextAlign = ContentAlignment.TopLeft,
                 Padding = new Padding(DpiScale.V(this, 16), DpiScale.V(this, 8), DpiScale.V(this, 16), DpiScale.V(this, 8))
-            };
+            });
 
             // —— 指纹块 ——
             var prints = new Panel

@@ -45,18 +45,18 @@ namespace Gdterm.UI.Controls
             _titleLabel = new AntdUI.Label {
                 Text = title ?? L10n.T("传输中…"),
                 Dock = DockStyle.Top,
-                AutoSize = true,
                 Padding = new Padding(padH, DpiScale.V(this, 14), padH, 0),
                 Font = new Font(Font.FontFamily, Font.Size + 1f, FontStyle.Bold),
                 ForeColor = GdtermColorTable.Foreground
             };
+            FormFontPolicy.FitSingleLineLabel(_titleLabel);
             _detailLabel = new AntdUI.Label {
                 Text = L10n.T("准备中…"),
                 Dock = DockStyle.Top,
-                AutoSize = true,
                 Padding = new Padding(padH, DpiScale.V(this, 8), padH, 0),
                 ForeColor = GdtermColorTable.Muted
             };
+            FormFontPolicy.FitSingleLineLabel(_detailLabel);
             var barHost = new Panel
             {
                 Dock = DockStyle.Top,
@@ -85,11 +85,11 @@ namespace Gdterm.UI.Controls
             };
             _percentLabel = new AntdUI.Label {
                 Text = "0%",
-                AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
                 Margin = new Padding(DpiScale.V(this, 3), 0, DpiScale.V(this, 12), 0),
                 Anchor = AnchorStyles.Left
             };
+            FormFontPolicy.FitSingleLineLabel(_percentLabel);
             _cancelButton = new AntdUI.Button {
                 Text = L10n.T("取消"),
                 Type = AntdUI.TTypeMini.Default

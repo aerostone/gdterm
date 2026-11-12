@@ -182,12 +182,11 @@ namespace Gdterm.UI.Forms
             _langCombo.Items.Add("English");
             _langCombo.Location = new Point(colValue, y);
             Controls.Add(_langCombo);
-            var langHint = new AntdUI.Label {
+            var langHint = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = L10n.T("重启后生效"),
-                AutoSize = true,
                 Location = new Point(colValue + valueW + DpiScale.V(this, 10), y + DpiScale.V(this, 10)),
                 ForeColor = GdtermColorTable.Muted
-            };
+            });
             Controls.Add(langHint);
             y += rowH;
 
@@ -205,12 +204,11 @@ namespace Gdterm.UI.Forms
             Controls.Add(_preview);
             y += _preview.Height + DpiScale.V(this, 14);
 
-            var resetHint = new AntdUI.Label {
+            var resetHint = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = L10n.T("字体异常可恢复默认"),
-                AutoSize = true,
                 Location = new Point(colLabel, y),
                 ForeColor = GdtermColorTable.Muted
-            };
+            });
             Controls.Add(resetHint);
             y += rowH;
 
@@ -256,7 +254,7 @@ namespace Gdterm.UI.Forms
 
         private AntdUI.Label MakeLabel(string text, int x, int y)
         {
-            var label = new AntdUI.Label { Text = text, AutoSize = true, Font = Font, ForeColor = GdtermColorTable.Muted };
+            var label = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = text, Font = Font, ForeColor = GdtermColorTable.Muted });
             int offset = Math.Max(4, (_rowHeight - label.Font.Height) / 2);
             label.Location = new Point(x, y + offset);
             return label;

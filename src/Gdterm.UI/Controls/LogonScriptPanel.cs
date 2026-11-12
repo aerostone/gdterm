@@ -331,7 +331,7 @@ namespace Gdterm.UI.Controls
             };
         }
 
-        private static AntdUI.Label Lbl(string t, int x, int y, Form f) { var l = new AntdUI.Label { Text = t, Location = DpiScale.P(f, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }; f.Controls.Add(l); return l; }
+        private static AntdUI.Label Lbl(string t, int x, int y, Form f) { var l = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = t, Location = DpiScale.P(f, x, y + 3), Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }); f.Controls.Add(l); return l; }
         private static AntdUI.Input Txt(int x, int y, int w, Form f, int fieldH) { var t = new AntdUI.Input { Location = DpiScale.P(f, x, y), Size = new Size(DpiScale.V(f, w), fieldH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.MonoFont()}; f.Controls.Add(t); return t; }
 
         protected override void Dispose(bool disposing) { base.Dispose(disposing); }

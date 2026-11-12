@@ -46,14 +46,13 @@ namespace Gdterm.UI.Forms
             Font = FormFontPolicy.UiFont();
             ClientSize = DpiScale.S(this, 560, 420);
 
-            var title = new AntdUI.Label
+            var title = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label
             {
                 Dock = DockStyle.Top,
-                AutoSize = true,
                 Text = L10n.T("将新增 ") + addCount + L10n.T(" 条连接") + (skipCount > 0 ? L10n.T("，跳过 ") + skipCount + L10n.T(" 条重复") : ""),
                 Font = FormFontPolicy.UiFont(+1f, FontStyle.Bold),
                 Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 10), DpiScale.V(this, 12), 0)
-            };
+            });
 
             _filter = new AntdUI.Input
             {

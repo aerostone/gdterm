@@ -111,10 +111,10 @@ namespace Gdterm.UI.Controls
                 Font = new Font(Font.FontFamily, Font.Size + 3f, FontStyle.Bold),
                 ForeColor = textColor,
                 Dock = DockStyle.Top,
-                AutoSize = true,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Padding = new Padding(10)
             };
+            FormFontPolicy.FitSingleLineLabel(_titleLabel);
 
             // 命令预览（命中片段高亮）
             _preview = new RichTextBox {
@@ -140,12 +140,11 @@ namespace Gdterm.UI.Controls
                 Padding = DpiScale.Pad(this, 15, 10, 15, 10)
             };
 
-            var ruleNameLabel = new AntdUI.Label {
+            var ruleNameLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = BuildRuleSummary(),
                 ForeColor = textColor,
                 Dock = DockStyle.Top,
-                AutoSize = true
-            };
+            });
 
             _descriptionLabel = new AntdUI.Label {
                 Text = BuildDescription(),
@@ -164,9 +163,9 @@ namespace Gdterm.UI.Controls
                 Font = new Font(Font.FontFamily, Font.Size + 1.5f, FontStyle.Bold),
                 ForeColor = textColor,
                 Dock = DockStyle.Top,
-                AutoSize = true,
                 TextAlign = ContentAlignment.MiddleCenter
             };
+            FormFontPolicy.FitSingleLineLabel(_confirmLabel);
 
             // 进度条
             _progressBar = new ProgressBar

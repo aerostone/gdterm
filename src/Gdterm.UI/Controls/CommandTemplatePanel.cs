@@ -144,10 +144,10 @@ namespace Gdterm.UI.Controls
             {
                 Text = L10n.T("Enter 发送 | 双击发送 | {host}/{user}/{date}/{prompt} 自动填充"),
                 Dock = DockStyle.Bottom,
-                AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
                 Font = FormFontPolicy.UiFont(-1f)
             };
+            FormFontPolicy.FitSingleLineLabel(_statusLabel);
             Controls.Add(_statusLabel);
             _lvResults.AccessibleName = L10n.T("命令模板列表");
             // 无障碍名称回填：ListView/Table 本身没有 Text，AutoName 只补有文本的控件，
@@ -284,14 +284,13 @@ namespace Gdterm.UI.Controls
                 MinimizeBox = false
             };
             int fieldH = FormFontPolicy.FieldHeight(form);
-            var lbl = new AntdUI.Label
+            var lbl = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label
             {
                 Text = placeholder + ":",
                 Location = new Point(DpiScale.V(form, 15), DpiScale.V(form, 18)),
-                AutoSize = true,
                 Font = FormFontPolicy.UiFont(),
                 ForeColor = GdtermColorTable.Foreground
-            };
+            });
             var txt = new AntdUI.Input
             {
                 Location = DpiScale.P(form, 100, 12),

@@ -240,11 +240,11 @@ namespace Gdterm.UI.Forms
             {
                 Name = "LogViewerStatus",
                 Dock = DockStyle.Right,
-                AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleRight,
                 Padding = new Padding(0, DpiScale.V(this, 6), 0, 0)
             };
+            FormFontPolicy.FitSingleLineLabel(_status);
 
             bottom.Controls.Add(leftFlow);
             bottom.Controls.Add(_status);

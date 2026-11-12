@@ -54,15 +54,14 @@ namespace Gdterm.UI.Controls
             BackColor = GdtermColorTable.Background;
             Dock = DockStyle.Fill;
 
-            var title = new AntdUI.Label {
+            var title = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = L10n.T("书签 / 最近连接"),
                 Dock = DockStyle.Top,
-                AutoSize = true,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = Services.FormFontPolicy.UiFont(+1f, FontStyle.Bold),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(DpiScale.V(this, 8), 0, 0, 0)
-            };
+            });
 
             _searchBox = new AntdUI.Input {
                 Dock = DockStyle.Top,
@@ -94,12 +93,12 @@ namespace Gdterm.UI.Controls
 
             _statusLabel = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
-                AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
                 Font = Services.FormFontPolicy.UiFont(-0.5f),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(DpiScale.V(this, 8), 0, 0, 0)
             };
+            FormFontPolicy.FitSingleLineLabel(_statusLabel);
 
             var split = new SplitContainer
             {
@@ -369,7 +368,7 @@ namespace Gdterm.UI.Controls
                 int rowH = fieldH + DpiScale.V(this, 12);
                 int pad = DpiScale.V(this, 15);
                 int y = DpiScale.V(this, 18);
-                var lblName = new AntdUI.Label { Text = L10n.T("名称"), ForeColor = GdtermColorTable.Muted, Location = new Point(pad, y), AutoSize = true };
+                var lblName = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("名称"), ForeColor = GdtermColorTable.Muted, Location = new Point(pad, y) });
                 y += Services.FormFontPolicy.RowStep(this);
                 var nameBox = new AntdUI.Input {
                     Location = new Point(pad, y),
@@ -378,7 +377,7 @@ namespace Gdterm.UI.Controls
                     ForeColor = GdtermColorTable.Foreground
                 };
                 y += rowH;
-                var lblConn = new AntdUI.Label { Text = L10n.T("连接"), ForeColor = GdtermColorTable.Muted, Location = new Point(pad, y), AutoSize = true };
+                var lblConn = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("连接"), ForeColor = GdtermColorTable.Muted, Location = new Point(pad, y) });
                 y += Services.FormFontPolicy.RowStep(this);
                 var combo = new AntdUI.Select {
                     Location = new Point(pad, y),

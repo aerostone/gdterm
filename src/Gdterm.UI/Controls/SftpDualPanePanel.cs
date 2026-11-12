@@ -98,13 +98,13 @@ namespace Gdterm.UI.Controls
 
             _connStatus = new AntdUI.Label {
                 Dock = DockStyle.Top,
-                AutoSize = true,
                 Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 4), DpiScale.V(this, 6), DpiScale.V(this, 4)),
                 Text = L10n.T("  连接 ") + (_config != null ? _config.Host : "?") + " …",
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleLeft,
                 BackColor = GdtermColorTable.Surface
             };
+            FormFontPolicy.FitSingleLineLabel(_connStatus);
 
             _split = new SplitContainer
             {
@@ -135,11 +135,11 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 3), DpiScale.V(this, 6), DpiScale.V(this, 3))
             };
             _queueLabel = new AntdUI.Label {
-                AutoSize = true,
                 Text = L10n.T("传输队列空闲"),
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleLeft
             };
+            FormFontPolicy.FitSingleLineLabel(_queueLabel);
             queueBar.Controls.Add(_queueLabel);
 
             Controls.Add(_split);

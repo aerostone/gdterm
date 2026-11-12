@@ -242,14 +242,13 @@ namespace Gdterm.UI.Controls
             var txtArg = Txt(100, y + rowH, 285, fieldH);
             var lblCd = Lbl(L10n.T("冷却(秒):"), 15, y + rowH * 2);
             var numCd = new AntdUI.InputNumber { Location = DpiScale.P(this, 100, y + rowH * 2), Size = new Size(DpiScale.V(this, 100), fieldH), Minimum = 0, Maximum = 600, Value = 5 };
-            var hintAction = new AntdUI.Label
+            var hintAction = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label
             {
                 Text = L10n.T("命令走危险命令闸门；通知进通知中心+托盘；切标签参数是标题关键字。"),
                 Location = DpiScale.P(this, 15, y + rowH * 3),
-                AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
                 Font = Services.FormFontPolicy.UiFont(-1f)
-            };
+            });
             y += rowH * 3 + DpiScale.V(this, 30);
 
             if (existing != null)
@@ -268,7 +267,7 @@ namespace Gdterm.UI.Controls
             }
 
             int btnH = Math.Max(DpiScale.V(this, 30), fieldH);
-            var btnOk = new AntdUI.Button { Text = L10n.T("保存"), Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 220, y), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary, };
+            var btnOk = new AntdUI.Button { Text = L10n.T("保存"), Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 220, y), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary };
             var btnCancel = new AntdUI.Button { Text = L10n.T("取消"), Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 310, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Surface2, ForeColor = GdtermColorTable.Foreground };
 
             form.Controls.AddRange(new Control[] { lblName, txtName, lblPattern, txtPattern, chkRegex, chkCase, lblFg, txtFg, lblBg, txtBg, chkBold,
@@ -292,7 +291,7 @@ namespace Gdterm.UI.Controls
             };
         }
 
-        private AntdUI.Label Lbl(string t, int x, int y) => new AntdUI.Label { Text = t, Location = DpiScale.P(this, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground };
+        private AntdUI.Label Lbl(string t, int x, int y) => FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = t, Location = DpiScale.P(this, x, y + 3), Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground });
         private AntdUI.Input Txt(int x, int y, int w, int fieldH) => new AntdUI.Input { Location = DpiScale.P(this, x, y), Size = new Size(DpiScale.V(this, w), fieldH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.MonoFont()};
         private AntdUI.Checkbox Chk(string t, int x, int y) { var c = new AntdUI.Checkbox { Text = t, Location = DpiScale.P(this, x, y), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }; Controls.Add(c); return c; }
 

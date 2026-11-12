@@ -282,7 +282,7 @@ namespace Gdterm.UI.Controls
             ToastNotifier.Success(L10n.T("已删除 ") + n + L10n.T(" 条转发规则"));
         }
 
-        private static void Lbl(Form f, string t, int x, int y) { f.Controls.Add(new AntdUI.Label { Text = t, Location = DpiScale.P(f, x, y + 3), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground }); }
+        private static void Lbl(Form f, string t, int x, int y) { f.Controls.Add(FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = t, Location = DpiScale.P(f, x, y + 3),  Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground })); }
         private static AntdUI.Input Txt(Form f, int x, int y, int w, int fieldH) { var t = new AntdUI.Input { Location = DpiScale.P(f, x, y), Size = new Size(DpiScale.V(f, w), fieldH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.MonoFont()}; f.Controls.Add(t); return t; }
 
         protected override void Dispose(bool disposing)

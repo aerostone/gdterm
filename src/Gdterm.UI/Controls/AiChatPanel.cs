@@ -140,10 +140,10 @@ namespace Gdterm.UI.Controls
             {
                 Text = L10n.T("AI 就绪：输入问题，Enter 发送"),
                 Dock = DockStyle.Bottom,
-                AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
                 Font = FormFontPolicy.UiFont(-1f)
             };
+            FormFontPolicy.FitSingleLineLabel(_statusLabel);
             Controls.Add(_statusLabel);
 
             var bottomRow = new TableLayoutPanel

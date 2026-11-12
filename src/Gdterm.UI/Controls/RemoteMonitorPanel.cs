@@ -66,14 +66,13 @@ namespace Gdterm.UI.Controls
             for (int i = 0; i < 9; i++) root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
 
-            var title = new AntdUI.Label
+            var title = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label
             {
                 Text = L10n.T("主机资源"),
-                AutoSize = true,
                 Dock = DockStyle.Fill,
                 Font = Services.FormFontPolicy.UiFont(+1f),
                 Margin = new Padding(0, 0, 0, DpiScale.V(this, 10))
-            };
+            });
             root.Controls.Add(title, 0, 0);
 
             _cpuBar = new MetricBar { Caption = "CPU" };
@@ -119,14 +118,13 @@ namespace Gdterm.UI.Controls
             };
             root.Controls.Add(_firstLoadBar, 0, 7);
 
-            var hint = new AntdUI.Label
+            var hint = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label
             {
                 Text = L10n.T("每 5 秒在独立 SSH 连接上只读采集 /proc，不干扰终端。"),
-                AutoSize = true,
                 MaximumSize = new Size(0, DpiScale.V(this, 34)),   // R03：裸像素高度要过 DpiScale
                 ForeColor = GdtermColorTable.Muted,
                 Margin = DpiScale.Pad(this, 0, 6, 0, 2)
-            };
+            });
             // F9：采样历史导出 CSV（与 ListShell 导出同惯例：BOM/转义/Toast）
             _btnExport = new AntdUI.Button {
                 Text = L10n.T("导出 CSV"),

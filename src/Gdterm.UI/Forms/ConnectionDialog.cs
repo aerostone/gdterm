@@ -259,20 +259,19 @@ namespace Gdterm.UI.Forms
             credRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             // 隐藏的 UUID 存储框（不入布局，仅作保存时读取的存储）
             _credentialRefBox = new AntdUI.Input { Visible = false, Enabled = false };
-            credRow.Controls.Add(new AntdUI.Label {
+            credRow.Controls.Add(FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = L10n.T("凭据"),
-                AutoSize = true,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleRight,
                 Padding = new Padding(0, 0, DpiScale.V(this, 8), 0)
-            }, 0, 0);
+            }), 0, 0);
             _credentialTitleLabel = new AntdUI.Label {
                 Text = L10n.T("未选（按主机+用户名自动匹配）"),
                 ForeColor = GdtermColorTable.Muted,
-                AutoSize = true,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft
             };
+            FormFontPolicy.FitSingleLineLabel(_credentialTitleLabel);
             credRow.Controls.Add(_credentialTitleLabel, 1, 0);
             var credBtns = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = false, AutoSize = true };
             var btnPickCred = new AntdUI.Button {
@@ -299,9 +298,9 @@ namespace Gdterm.UI.Forms
             _moreLink = new AntdUI.HyperlinkLabel
             {
                 Text = L10n.T("更多选项 ▾"),
-                AutoSize = true,
                 Margin = new Padding(0)
             };
+            FormFontPolicy.FitSingleLineLabel(_moreLink);
             _moreLink.Click += (s, e) => ToggleAdvanced();
             linkRow.Controls.Add(_moreLink);
             topPanel.Controls.Add(linkRow);
@@ -443,7 +442,7 @@ namespace Gdterm.UI.Forms
             var depthPanel = new TableLayoutPanel { ColumnCount = 2, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, DpiScale.V(this, 4)) };
             depthPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
             depthPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            depthPanel.Controls.Add(new AntdUI.Label { Text = L10n.T("色深:"), AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight }, 0, 0);
+            depthPanel.Controls.Add(FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("色深:"),  Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight }), 0, 0);
             _rdpColorDepth = new AntdUI.InputNumber { Minimum = 8, Maximum = 32, Value = 32, Increment = 8, Width = DpiScale.V(this, 60), Dock = DockStyle.Left,
                 // Flow 子无 Dock 高会被压 0（288 dump 实测 h=0）→ MinimumSize 保底 38 行
                 MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this)) };
@@ -455,7 +454,7 @@ namespace Gdterm.UI.Forms
             var enginePanel = new TableLayoutPanel { ColumnCount = 2, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, DpiScale.V(this, 4)) };
             enginePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
             enginePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            enginePanel.Controls.Add(new AntdUI.Label { Text = L10n.T("渲染引擎:"), AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight }, 0, 0);
+            enginePanel.Controls.Add(FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("渲染引擎:"),  Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight }), 0, 0);
             _rdpEngineCombo = new AntdUI.Select { Width = DpiScale.V(this, 170), Dock = DockStyle.Left,
                 MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this)) };
             _rdpEngineCombo.Items.AddRange(new object[] { L10n.T("自动（优先 FreeRDP）"), L10n.T("FreeRDP 进程嵌入"), L10n.T("系统 mstsc（兼容模式）") });
@@ -465,7 +464,7 @@ namespace Gdterm.UI.Forms
             var lbPanel = new TableLayoutPanel { ColumnCount = 2, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, DpiScale.V(this, 4)) };
             lbPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
             lbPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            lbPanel.Controls.Add(new AntdUI.Label { Text = L10n.T("负载均衡:"), AutoSize = true, Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight }, 0, 0);
+            lbPanel.Controls.Add(FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("负载均衡:"),  Dock = DockStyle.Fill, TextAlign = ContentAlignment.MiddleRight }), 0, 0);
             _rdpLoadBalanceBox = new AntdUI.Input { Width = DpiScale.V(this, 230),
                 MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this)) };
             _rdpLoadBalanceBox.PlaceholderText = L10n.T("如 Cookie: msts=NSFVERIFYHASH=... (选填)");
@@ -593,12 +592,11 @@ namespace Gdterm.UI.Forms
             t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             t.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            t.Controls.Add(new AntdUI.Label {
+            t.Controls.Add(FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = title,
-                AutoSize = true,
                 Font = Services.FormFontPolicy.UiFont(0f, FontStyle.Bold),
                 Margin = DpiScale.Pad(this, 0, 0, 0, 3)
-            }, 0, 0);
+            }), 0, 0);
             return t;
         }
 
@@ -709,13 +707,12 @@ namespace Gdterm.UI.Forms
             // 旧值 24 使本对话框输入框比原型和所有其他对话框矮 14px，文字在矮框内被挤显小。
             int fieldH = FormFontPolicy.FieldHeight(this);
             int verticalMargin = DpiScale.V(this, 4);
-            layout.Controls.Add(new AntdUI.Label {
+            layout.Controls.Add(FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = text,
-                AutoSize = true,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleRight,
                 Padding = new Padding(0, 0, DpiScale.V(this, 8), 0)
-            }, 0, row);
+            }), 0, row);
             control.Dock = DockStyle.Fill;
             control.Margin = new Padding(0, verticalMargin, 0, verticalMargin);
             if (control is AntdUI.Input || control is AntdUI.InputNumber || control is AntdUI.Select)

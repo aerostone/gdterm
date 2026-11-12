@@ -250,13 +250,12 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 Padding = DpiScale.Pad(this, 0, 8, 0, 0)
             };
-            var lbl = new AntdUI.Label {
+            var lbl = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = title,
                 Dock = DockStyle.Top,
-                AutoSize = true,
                 Font = Services.FormFontPolicy.UiFont(+1f, FontStyle.Bold),
                 ForeColor = GdtermColorTable.Foreground
-            };
+            });
             host = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
@@ -292,13 +291,12 @@ namespace Gdterm.UI.Controls
 
         private void AddEmpty(FlowLayoutPanel host, string text)
         {
-            host.Controls.Add(new AntdUI.Label
+            host.Controls.Add(FormFontPolicy.FitSingleLineLabel(new AntdUI.Label
             {
-                AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
                 Text = text,
                 Margin = DpiScale.Pad(this, 4, 8, 4, 4)
-            });
+            }));
         }
 
         private AntdUI.Button MakeAction(string text, Action onClick)

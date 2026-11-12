@@ -71,17 +71,16 @@ namespace Gdterm.UI.Forms
             int y = DpiScale.V(this, 22);
 
             // 标题
-            var titleLabel = new AntdUI.Label {
+            var titleLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = L10n.T("🔑 密码生成器"),
                 Font = new Font("Segoe UI Emoji", 15F, FontStyle.Bold),
-                AutoSize = true,
                 Location = new Point(pad, y)
-            };
+            });
             Controls.Add(titleLabel);
             y += Math.Max(DpiScale.V(this, 52), FormFontPolicy.RowStep(this) + DpiScale.V(this, 14));
 
             // 密码长度
-            var lengthLabel = new AntdUI.Label { Text = L10n.T("密码长度"), AutoSize = true, Location = new Point(pad, y + DpiScale.V(this, 10)) };
+            var lengthLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("密码长度"), Location = new Point(pad, y + DpiScale.V(this, 10)) });
             Controls.Add(lengthLabel);
 
             _lengthSpinner = new AntdUI.InputNumber {
@@ -113,7 +112,7 @@ namespace Gdterm.UI.Forms
             y += rowH + DpiScale.V(this, 4);
 
             // 字符集选项
-            var charsetTitle = new AntdUI.Label { Text = L10n.T("字符集"), AutoSize = true, Location = new Point(pad, y) };
+            var charsetTitle = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("字符集"), Location = new Point(pad, y) });
             Controls.Add(charsetTitle);
             y += Math.Max(DpiScale.V(this, 32), FormFontPolicy.RowStep(this));
 
@@ -129,7 +128,7 @@ namespace Gdterm.UI.Forms
             y += Math.Max(DpiScale.V(this, 44), FormFontPolicy.RowStep(this) + DpiScale.V(this, 12));
 
             // 生成结果
-            var resultLabel = new AntdUI.Label { Text = L10n.T("生成结果"), AutoSize = true, Location = new Point(pad, y) };
+            var resultLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("生成结果"), Location = new Point(pad, y) });
             Controls.Add(resultLabel);
             y += DpiScale.V(this, 28);
 
@@ -144,9 +143,9 @@ namespace Gdterm.UI.Forms
 
             _strengthLabel = new AntdUI.Label {
                 Text = L10n.T("强度：—"),
-                AutoSize = true,
                 Location = new Point(pad, y + resultH + DpiScale.V(this, 8))
             };
+            FormFontPolicy.FitSingleLineLabel(_strengthLabel);
             Controls.Add(_strengthLabel);
 
             var generateBtn = new AntdUI.Button {
@@ -187,11 +186,10 @@ namespace Gdterm.UI.Forms
             y += rowH + DpiScale.V(this, 4);
 
             // 历史记录（只读多行 Input，双击复制整行由 KeyDown/MouseUp 简化为一键复制全部）
-            var historyLabel = new AntdUI.Label {
+            var historyLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = L10n.T("本次生成记录（双击复制）"),
-                AutoSize = true,
                 Location = new Point(pad, y)
-            };
+            });
             Controls.Add(historyLabel);
             y += DpiScale.V(this, 28);
 

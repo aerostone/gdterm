@@ -213,12 +213,12 @@ namespace Gdterm.UI.Forms
             _statusLabel = new AntdUI.Label {
                 Name = "KeePassStatusLabel",
                 Dock = DockStyle.Bottom,
-                AutoSize = true,
                 Text = L10n.T("就绪"),
                 TextAlign = ContentAlignment.MiddleLeft,
                 ForeColor = GdtermColorTable.Muted,
                 Padding = new Padding(pad, DpiScale.V(this, 5), pad, DpiScale.V(this, 5))
             };
+            FormFontPolicy.FitSingleLineLabel(_statusLabel);
 
             // 底部关闭条（RightToLeft：关闭在右，ESC 快捷关闭）
             var bottomPanel = new FlowLayoutPanel
@@ -847,12 +847,11 @@ namespace Gdterm.UI.Forms
 
         private static void AddLabel(TableLayoutPanel grid, int row, string text, int padL, int padTop, int padR)
         {
-            grid.Controls.Add(new AntdUI.Label {
+            grid.Controls.Add(FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = text,
-                AutoSize = true,
                 Anchor = AnchorStyles.Left,
                 Margin = new Padding(padL, padTop, padR, 0)
-            }, 0, row);
+            }), 0, row);
         }
 
         private T AddField<T>(TableLayoutPanel grid, ref int row, string labelText, T control, int fieldH, int pad, int padL, int padTop, int padR) where T : Control

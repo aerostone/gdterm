@@ -60,20 +60,18 @@ namespace Gdterm.UI.Forms
             int rowH = fieldH + DpiScale.V(this, 10);
             int y = DpiScale.V(this, 18);
 
-            var titleLabel = new AntdUI.Label {
+            var titleLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = L10n.T("AI 模型配置"),
                 Font = Gdterm.UI.Services.FormFontPolicy.UiFont(+5f, FontStyle.Bold),
-                AutoSize = true,
                 Location = new Point(pad, y)
-            };
+            });
             Controls.Add(titleLabel);
             y += Math.Max(DpiScale.V(this, 36), FormFontPolicy.RowStep(this));
 
-            var subtitleLabel = new AntdUI.Label {
+            var subtitleLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = L10n.T("配置 OpenAI 兼容 API 端点和模型参数"),
-                AutoSize = true,
                 Location = new Point(pad, y)
-            };
+            });
             Controls.Add(subtitleLabel);
             y += Math.Max(DpiScale.V(this, 36), FormFontPolicy.RowStep(this));
 
@@ -138,9 +136,9 @@ namespace Gdterm.UI.Forms
             // 状态栏
             _statusLabel = new AntdUI.Label {
                 Text = "",
-                AutoSize = true,
                 Location = new Point(pad, y)
             };
+            FormFontPolicy.FitSingleLineLabel(_statusLabel);
             Controls.Add(_statusLabel);
             y += Math.Max(DpiScale.V(this, 40), FormFontPolicy.RowStep(this));
 
@@ -191,7 +189,7 @@ namespace Gdterm.UI.Forms
         private AntdUI.Label MakeLabel(string text, int x, int y, int fieldH)
         {
             int offset = Math.Max(4, (fieldH - FontHeight) / 2);
-            return new AntdUI.Label { Text = text, AutoSize = true, Location = new Point(x, y + offset) };
+            return FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = text,  Location = new Point(x, y + offset) });
         }
 
         private AntdUI.Input AddField(string labelText, int labelX, int boxX, int y, int boxW, int fieldH)

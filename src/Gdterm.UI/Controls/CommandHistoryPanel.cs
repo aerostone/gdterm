@@ -106,12 +106,12 @@ namespace Gdterm.UI.Controls
             // 状态栏
             _statusLabel = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
-                AutoSize = true,
                 Text = L10n.T("就绪"),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(DpiScale.V(this, 3), 0, 0, 0),
                 BackColor = GdtermColorTable.Surface
             };
+            FormFontPolicy.FitSingleLineLabel(_statusLabel);
 
             // 排序 + 导出走共用壳；过滤仍由上面这个搜索框负责（它走 store 查询，能搜全量而非当前屏）
             _shell = new ListShell(_historyList, showFilter: false);

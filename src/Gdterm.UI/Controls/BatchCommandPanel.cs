@@ -97,7 +97,7 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(DpiScale.V(this, 8))
             };
 
-            var lblCmd = new AntdUI.Label { Text = L10n.T("命令:"), AutoSize = true, Margin = new Padding(0, DpiScale.V(this, 6), DpiScale.V(this, 8), 0), Font = font, ForeColor = GdtermColorTable.Foreground };
+            var lblCmd = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("命令:"), Margin = new Padding(0, DpiScale.V(this, 6), DpiScale.V(this, 8), 0), Font = font, ForeColor = GdtermColorTable.Foreground });
             // 输入框高度与项目 38 地板统一（原先 28 在大字号下文字被裁）
             // 宽度不写死 500：侧栏只有 ~360，固定宽会顶出右边界（CI 0.1.381 越界 x=16 w=500）。
             // 先给一个设计宽，随后由 FitCommandBox 按宿主实际宽夹取。
@@ -113,7 +113,8 @@ namespace Gdterm.UI.Controls
             Services.FormFontPolicy.SizeActionButton(this, _btnExecute, 10, 4);
             _btnExecute.Click += (s, e) => ExecuteCommand();
 
-            _lblStatus = new AntdUI.Label { Text = "", AutoSize = true, Margin = new Padding(0, DpiScale.V(this, 6), 0, 0), Font = font, ForeColor = GdtermColorTable.Muted };
+            _lblStatus = new AntdUI.Label { Text = "", Margin = new Padding(0, DpiScale.V(this, 6), 0, 0), Font = font, ForeColor = GdtermColorTable.Muted };
+            FormFontPolicy.FitSingleLineLabel(_lblStatus);
 
             topPanel.Controls.AddRange(new Control[] { lblCmd, _txtCommand, _btnExecute, _lblStatus });
             // 宿主变宽/变窄时重算输入框宽度（侧栏 360 / 独立窗口 900 都要合适）

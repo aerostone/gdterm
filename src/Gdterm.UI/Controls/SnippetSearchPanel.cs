@@ -251,7 +251,7 @@ namespace Gdterm.UI.Controls
             {
                 // 标签垂直居中：用已知的 UiFont 行高代替受保护的 FontHeight
                 int lblOff = Math.Max(4, (fieldH - Services.FormFontPolicy.RowStep(form)) / 2);
-                var lbl = new AntdUI.Label { Text = ph + ":", Location = new Point(15, y + lblOff), AutoSize = true, Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground };
+                var lbl = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = ph + ":", Location = new Point(15, y + lblOff), Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground });
                 var txt = new AntdUI.Input { Location = DpiScale.P(form, 100, y), Size = new Size(DpiScale.V(form, 260), fieldH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.MonoFont()};
                 form.Controls.AddRange(new Control[] { lbl, txt });
                 inputs[ph] = txt;
@@ -260,7 +260,7 @@ namespace Gdterm.UI.Controls
             y += DpiScale.V(form, 4);
 
             int btnH = Math.Max(DpiScale.V(form, 30), fieldH);
-            var btnOk = new AntdUI.Button { Text = L10n.T("执行"), Size = new Size(DpiScale.V(form, 80), btnH), Location = DpiScale.P(form, 190, y), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary, };
+            var btnOk = new AntdUI.Button { Text = L10n.T("执行"), Size = new Size(DpiScale.V(form, 80), btnH), Location = DpiScale.P(form, 190, y), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary };
             var btnCancel = new AntdUI.Button { Text = L10n.T("取消"), Size = new Size(DpiScale.V(form, 80), btnH), Location = DpiScale.P(form, 280, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Surface2, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;

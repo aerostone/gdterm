@@ -168,13 +168,12 @@ namespace Gdterm.UI.Forms
 
             // 白名单工具栏按钮统一字体驱动尺寸
 
-            var whitelistHeader = new AntdUI.Label {
+            var whitelistHeader = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = L10n.T("白名单（豁免命令；rule:<规则Id> 表示整条规则豁免）"),
                 Font = Services.FormFontPolicy.UiFont(0.5f, FontStyle.Bold),
-                AutoSize = true,
                 ForeColor = GdtermColorTable.Foreground,
                 Margin = new Padding(0, 0, 0, DpiScale.V(this, 4))
-            };
+            });
 
             // 白名单按钮
             var whitelistButtons = new FlowLayoutPanel
@@ -218,12 +217,12 @@ namespace Gdterm.UI.Forms
             // 状态栏
             _statusLabel = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
-                AutoSize = true,
                 Text = L10n.T("就绪"),
                 TextAlign = ContentAlignment.MiddleLeft,
                 ForeColor = GdtermColorTable.Muted,
                 Padding = new Padding(pad, DpiScale.V(this, 5), pad, DpiScale.V(this, 5))
             };
+            FormFontPolicy.FitSingleLineLabel(_statusLabel);
 
             // Dock 装配：布局引擎按 Controls 集合从最大索引向 0 迭代分配，索引越大越先分配；
             // 且 Dock=Fill 拿的是"此刻尚未被边缘兄弟消耗的剩余区"、它自己并不消耗剩余区——
@@ -771,7 +770,7 @@ namespace Gdterm.UI.Forms
         private AntdUI.Label MakeLabel(string text, int x, int y, int fieldH)
         {
             int offset = Math.Max(4, (fieldH - FontHeight) / 2);
-            return new AntdUI.Label { Text = text, AutoSize = true, Location = new Point(x, y + offset) };
+            return FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = text,  Location = new Point(x, y + offset) });
         }
 
         private AntdUI.Input AddTextField(string labelText, int labelX, int boxX, ref int y, int boxW, int fieldH, int rowH)
@@ -815,11 +814,10 @@ namespace Gdterm.UI.Forms
             int fieldH = FormFontPolicy.FieldHeight(this);
             int y = pad;
 
-            var promptLabel = new AntdUI.Label {
+            var promptLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = prompt,
-                AutoSize = true,
                 Location = new Point(pad, y)
-            };
+            });
             Controls.Add(promptLabel);
             y += Math.Max(DpiScale.V(this, 30), Gdterm.UI.Services.FormFontPolicy.RowStep(this));
 

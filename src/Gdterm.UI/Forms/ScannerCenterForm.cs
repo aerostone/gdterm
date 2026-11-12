@@ -124,13 +124,12 @@ namespace Gdterm.UI.Forms
                 WrapContents = false,
                 BackColor = GdtermColorTable.Background
             };
-            top.Controls.Add(new AntdUI.Label {
+            top.Controls.Add(FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = L10n.T("目标:"),
-                AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
                 Anchor = AnchorStyles.Left,
                 Margin = new Padding(DpiScale.V(this, 3), 0, DpiScale.V(this, 4), 0)
-            });
+            }));
             _targetCombo = new AntdUI.Select {
                 // AntdUI.Select 无 AutoSize；宽度须覆盖文字 + 下拉箭头 + 内边距；高度锁 38 地板
                 Width = DpiScale.V(this, 250),
@@ -181,11 +180,11 @@ namespace Gdterm.UI.Forms
 
             _hotStateLabel = new AntdUI.Label {
                 Text = "",
-                AutoSize = true,
                 ForeColor = GdtermColorTable.Success,
                 Anchor = AnchorStyles.Left,
                 Margin = new Padding(DpiScale.V(this, 6), 0, DpiScale.V(this, 3), 0)
             };
+            FormFontPolicy.FitSingleLineLabel(_hotStateLabel);
             top.Controls.Add(_hotStateLabel);
             // 注意：top 不在此处 Add，见 BuildUi 末尾 —— Dock 按添加逆序布局，
             // 工具栏必须在 Fill(_split) 之后添加才能占住顶部空间（否则盖住两表表头，
@@ -426,22 +425,21 @@ namespace Gdterm.UI.Forms
             int wmiFieldH = FormFontPolicy.FieldHeight(this);
             _wmiPanel = new Panel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Visible = false, BackColor = GdtermColorTable.Background };
             var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, Padding = new Padding(pad, DpiScale.V(this, 4), pad, DpiScale.V(this, 4)), BackColor = GdtermColorTable.Background };
-            flow.Controls.Add(new AntdUI.Label { Text = L10n.T("主机:"), AutoSize = true, ForeColor = GdtermColorTable.Muted, Anchor = AnchorStyles.Left, Margin = new Padding(DpiScale.V(this, 3), 0, DpiScale.V(this, 4), 0) });
+            flow.Controls.Add(FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("主机:"),  ForeColor = GdtermColorTable.Muted, Anchor = AnchorStyles.Left, Margin = new Padding(DpiScale.V(this, 3), 0, DpiScale.V(this, 4), 0) }));
             _wmiHost = new AntdUI.Input { Width = DpiScale.V(this, 160), MinimumSize = new Size(0, wmiFieldH) };
             flow.Controls.Add(_wmiHost);
-            flow.Controls.Add(new AntdUI.Label { Text = L10n.T("用户名:"), AutoSize = true, ForeColor = GdtermColorTable.Muted, Anchor = AnchorStyles.Left, Margin = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 4), 0) });
+            flow.Controls.Add(FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("用户名:"),  ForeColor = GdtermColorTable.Muted, Anchor = AnchorStyles.Left, Margin = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 4), 0) }));
             _wmiUser = new AntdUI.Input { Width = DpiScale.V(this, 140), MinimumSize = new Size(0, wmiFieldH) };
             flow.Controls.Add(_wmiUser);
-            flow.Controls.Add(new AntdUI.Label { Text = L10n.T("密码:"), AutoSize = true, ForeColor = GdtermColorTable.Muted, Anchor = AnchorStyles.Left, Margin = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 4), 0) });
+            flow.Controls.Add(FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("密码:"),  ForeColor = GdtermColorTable.Muted, Anchor = AnchorStyles.Left, Margin = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 4), 0) }));
             _wmiPass = new AntdUI.Input { Width = DpiScale.V(this, 140), MinimumSize = new Size(0, wmiFieldH), UseSystemPasswordChar = true };
             flow.Controls.Add(_wmiPass);
-            flow.Controls.Add(new AntdUI.Label {
+            flow.Controls.Add(FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = L10n.T("留空凭据=用当前身份；域账号格式 DOMAIN\\user；需目标管理员权限 + ADMIN$ 共享"),
-                AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
                 Anchor = AnchorStyles.Left,
                 Margin = new Padding(DpiScale.V(this, 10), 0, DpiScale.V(this, 3), 0)
-            });
+            }));
             _wmiPanel.Controls.Add(flow);
             return _wmiPanel;
         }

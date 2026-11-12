@@ -66,11 +66,10 @@ namespace Gdterm.UI.Forms
             y += fieldH + DpiScale.V(this, 46);
 
             // 占位符提示
-            var lblHint = new AntdUI.Label {
+            var lblHint = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = L10n.T("占位符: {host} {user} {date} {time} {datetime} {env:VAR_NAME}"),
                 Location = new Point(inputX, y),
-                AutoSize = true
-            };
+            });
             Controls.Add(lblHint);
             y += Math.Max(DpiScale.V(this, 32), FormFontPolicy.RowStep(this));
 
@@ -164,7 +163,7 @@ namespace Gdterm.UI.Forms
         private void AddLabel(string text, int x, int y, int fieldH)
         {
             int offset = Math.Max(4, (fieldH - FontHeight) / 2);
-            Controls.Add(new AntdUI.Label { Text = text, AutoSize = true, Location = new Point(x, y + offset) });
+            Controls.Add(FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = text,  Location = new Point(x, y + offset) }));
         }
 
         private AntdUI.Input AddInput(int x, int y, int w, int fieldH)

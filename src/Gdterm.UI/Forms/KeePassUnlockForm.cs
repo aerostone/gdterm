@@ -57,20 +57,19 @@ namespace Gdterm.UI.Forms
             int y = DpiScale.V(this, 24);
 
             // ── 标题区 ──
-            var title = new AntdUI.Label {
+            var title = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = L10n.T("🔐 密码库已锁定"),
                 Font = new Font("Segoe UI Emoji", 14F, FontStyle.Bold),
-                AutoSize = true,
                 Location = new Point(pad, y)
-            };
+            });
             Controls.Add(title);
             y += Math.Max(DpiScale.V(this, 44), FormFontPolicy.RowStep(this) + DpiScale.V(this, 10));
 
             _statusLabel = new AntdUI.Label {
                 Text = L10n.T("请输入主密码以解锁 KeePass 密码库"),
-                AutoSize = true,
                 Location = new Point(pad, y)
             };
+            FormFontPolicy.FitSingleLineLabel(_statusLabel);
             Controls.Add(_statusLabel);
             y += Math.Max(DpiScale.V(this, 40), FormFontPolicy.RowStep(this) + DpiScale.V(this, 6));
 

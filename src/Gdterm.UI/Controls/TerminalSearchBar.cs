@@ -67,10 +67,10 @@ namespace Gdterm.UI.Controls
 
             _lblCount = new AntdUI.Label {
                 Text = "",
-                AutoSize = true,
                 Margin = new Padding(DpiScale.V(this, 8), 6, 3, 0),
                 ForeColor = GdtermColorTable.Muted
             };
+            FormFontPolicy.FitSingleLineLabel(_lblCount);
 
             _btnPrev.Click += (s, e) => NavigateRequested?.Invoke(false);
             _btnNext.Click += (s, e) => NavigateRequested?.Invoke(true);

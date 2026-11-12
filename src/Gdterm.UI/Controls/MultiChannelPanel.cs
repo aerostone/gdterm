@@ -132,13 +132,12 @@ namespace Gdterm.UI.Controls
                 Font = Services.FormFontPolicy.MonoFont()
             };
 
-            var inputHint = new AntdUI.Label {
+            var inputHint = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Dock = DockStyle.Fill,
-                AutoSize = true,
                 Text = L10n.T("输入命令后按 Enter 广播到所有选中会话"),
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleLeft
-            };
+            });
 
             inputPanel.Controls.Add(_commandInput, 0, 0);
             inputPanel.Controls.Add(inputHint, 0, 1);
@@ -146,12 +145,12 @@ namespace Gdterm.UI.Controls
             // 状态栏
             _statusLabel = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
-                AutoSize = true,
                 Text = L10n.T("就绪"),
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(DpiScale.V(this, 3), 0, 0, 0),
                 BackColor = GdtermColorTable.Surface
             };
+            FormFontPolicy.FitSingleLineLabel(_statusLabel);
 
             // 空态：一个终端都没打开时列表是纯空白 + 一排灰按钮，等于让用户猜「先干什么」
             _empty = EmptyStateView.Attach(this, L10n.T("还没有可广播的会话"),

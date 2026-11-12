@@ -136,11 +136,11 @@ namespace Gdterm.UI.Controls
             _countLabel = new AntdUI.Label
             {
                 Name = "ListShellCount",
-                AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
                 Font = FormFontPolicy.UiFont(-0.5f),
                 Margin = new Padding(0, DpiScale.V(this, 6), DpiScale.V(this, 6), 0)
             };
+            FormFontPolicy.FitSingleLineLabel(_countLabel);
             _bar.Controls.Add(_countLabel);
 
             // 分页条：默认 50 条/页，单页时整条隐藏；翻页 → 重切片（AntdUI.Pagination 只出页码 UI）
