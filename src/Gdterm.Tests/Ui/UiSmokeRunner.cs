@@ -459,6 +459,8 @@ namespace Gdterm.Tests.Ui
             if (!string.IsNullOrEmpty(only) && !string.Equals(only, name, StringComparison.OrdinalIgnoreCase))
                 return;
             Progress("panel:" + name + ":create");
+            // 构造期细粒度轨迹（产品侧 GDTERM_TRACE_FILE 钩子）落同一目录，随证据一起上传
+            Environment.SetEnvironmentVariable("GDTERM_TRACE_FILE", Path.Combine(outDir, "ctor-trace.log"));
 
             Control panel = null;
             // tmp 作用域：面板的 store/manager/scanner 依赖随作用域释放，目录自动清理
