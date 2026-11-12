@@ -53,7 +53,10 @@ namespace Gdterm.UI.Controls
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
+                // 窄侧栏（360px）里「搜索框 150 + 主机筛 120 + 三按钮」排不下一行：
+                // WrapContents=false 时按钮会被挤出父边界（CI 0.2.x: 末按钮右缘 385 > 360），
+                // 与 ListShell/TableShell/MacroPanel 一致，宁可换行也不溢出。
+                WrapContents = true,
                 Padding = new Padding(DpiScale.V(this, 3))
             };
 
