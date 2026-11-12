@@ -21,7 +21,7 @@ namespace Gdterm.UI.Controls
         private readonly Panel _pnlDetail;
         private readonly Panel _pnlToolList;
         private readonly AntdUI.Label _lblTitle;
-        private readonly AntdUI.Label _lblDescription;
+        private readonly System.Windows.Forms.Label _lblDescription;
         private readonly RichTextBox _txtOutput;
         private ISshRemoteSession _remoteSession;
         private EmptyStateView _emptyTools;
@@ -101,10 +101,15 @@ namespace Gdterm.UI.Controls
                 Text = L10n.T("运维工具箱")
             };
 
-            _lblDescription = new AntdUI.Label {
+            // 原生换行 Label：14pt 下这句要 202px，而两栏布局的详情栏只有 183px——
+            // AntdUI.Label 不换行，尾部字符直接被裁（CI 矩阵 f14 格实证）
+            _lblDescription = new System.Windows.Forms.Label {
                 Dock = DockStyle.Top,
-                Height = Math.Max(Services.DpiScale.V(this, 25), Services.FormFontPolicy.LineBox(Services.FormFontPolicy.UiFont(), this)),
+                AutoSize = false,
+                Height = Math.Max(Services.DpiScale.V(this, 25),
+                    Services.FormFontPolicy.LineBox(Services.FormFontPolicy.UiFont(), this, 1.7f) * 2),
                 Font = Services.FormFontPolicy.UiFont(),
+                BackColor = Color.Transparent,
                 ForeColor = GdtermColorTable.Muted,
                 Text = L10n.T("选择左侧工具开始使用")
             };

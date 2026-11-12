@@ -30,7 +30,7 @@ namespace Gdterm.UI.Controls
     public sealed class EmptyStateView : UserControl
     {
         private readonly Panel _box;
-        private readonly AntdUI.Label _title;
+        private readonly System.Windows.Forms.Label _title;
         private readonly System.Windows.Forms.Label _desc;
         private readonly AntdUI.Button _action;
 
@@ -64,13 +64,15 @@ namespace Gdterm.UI.Controls
                 Padding = Padding.Empty
             };
 
-            // 标题宽自量而不是 AutoSize：AntdUI.Label 的 AutoSize 用库内 sps 量，
-            // 比 GDI 实测窄约 10%（CI dump 实证：「还没有命令历史」需 100px，AutoSize 只给 89px，
-            // 「没有匹配的条目」需 100px 同样只给 89px）——超出的字符直接被裁掉。
-            _title = new AntdUI.Label
+            // 标题用原生 Label 而不是 AntdUI.Label：AutoSize 用库内 sps 量，比 GDI 实测窄约 10%
+            //（CI dump 实证：「还没有命令历史」需 100px，AutoSize 只给 89px），而且 AntdUI.Label
+            // 不换行——UI 字号 14pt 时「选择左侧工具开始使用」需 202px，144px 栏里直接被裁。
+            // 原生 Label 在 AutoSize=false 时按宽换行，窄栏/大字号两个方向都能兜住。
+            _title = new System.Windows.Forms.Label
             {
                 Text = title ?? string.Empty,
                 AutoSize = false,
+                BackColor = Color.Transparent,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = FormFontPolicy.UiFont(0.5f, FontStyle.Bold),
                 Margin = new Padding(0, 0, 0, DpiScale.V(null, 6)),
@@ -179,7 +181,12 @@ namespace Gdterm.UI.Controls
                     if (m > w) w = m;
                 }
                 int h = FormFontPolicy.LineBox(_title.Font, null, 1.45f);
-                _title.Size = new Size(Math.Max(DpiScale.V(null, 20), w + DpiScale.V(null, 4)), h);
+                int want = Math.Max(DpiScale.V(null, 20), w + DpiScale.V(null, 4));
+                // 宿主宽度够就单行，不够就换行（2 行封顶，再多说明文案该改了）
+                int avail = AvailableWidth();
+                int width = avail > 0 ? Math.Min(want, avail) : want;
+                int lines = width > 0 ? (int)Math.Ceiling((double)want / width) : 1;
+                _title.Size = new Size(width, h * Math.Min(2, Math.Max(1, lines)));
             }
             catch (Exception) { }
         }
@@ -238,10 +245,25 @@ namespace Gdterm.UI.Controls
         /// 但侧栏/三栏面板的可用宽常只有 280 左右——固定 360 会横向溢出
         /// （ui-tree-check 的 R-溢出 会红）。这里按宿主实际宽夹一次。
         /// </summary>
+        /// <summary>宿主内可用的内容宽（左 8 + 右 8 + 一点余量），未知时 -1。</summary>
+        private int AvailableWidth()
+        {
+            if (Width <= DpiScale.V(this, 20)) return -1;
+            return Width - DpiScale.V(this, 20);
+        }
+
         private void ClampWidth()
         {
+            // 标题也要夹：它是 AutoSize 面板里最宽的成员，不夹就会把 _box 一起顶宽
+            //（toolbox f14 dump 实证：标题 156px 撑出 144px 栏 12px 越界）
+            int availBox = AvailableWidth();
+            if (availBox > 0)
+            {
+                _box.MaximumSize = new Size(availBox, 0);
+                FitTitleWidth();
+            }
             if (_desc == null) return;
-            int avail = Width - DpiScale.V(this, 20);
+            int avail = availBox;
             if (avail <= 0) return;
             int design = DpiScale.V(this, 360);
             // 窄宿主自适配的下限：地板本身也不能超过可用宽，否则 240px 侧栏里那一栏只有 130px 时

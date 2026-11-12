@@ -18,7 +18,7 @@
      说明条件没生效（缓存/被绕过/构造早于注入），此时全绿是假绿 —— 直接判失败。
 
      口径（2026-11-13 修正）：**按控件身份（类型/Name/Text）配对后比高度**，
-     取全部可比控件里的最大比值。原先比"整棵树的 abs.h 总和"，对 Dock=Fill 的页面
+     取全部可比控件里宽/高两维的最大比值。原先比"整棵树的 abs.h 总和"，对 Dock=Fill 的页面
      完全失效——宿主高度由窗口定死（480 → 480，比值恒 1.0），命令历史页因此假红；
      而真正缩放的控件（Select/Pagination/Input，实测恒 1.50）被它摊平了。
      阈值取宽松下限（DPI ≥1.35、字号 ≥1.15），只用于抓"完全没变"，不做精确度量。
@@ -54,7 +54,7 @@ def ok(msg):
 
 
 def heights_by_identity(path):
-    """→ {(短类型, Name, Text前12): abs.h}，只留高度 >0 的节点。
+    """→ {(短类型, Name, Text前12): (abs.w, abs.h)}，只留宽高都 >0 的节点。
 
     键里带 Text 是因为同一页常有一堆同名/匿名控件（Button "刷新"、"删除"…），
     只按类型配对会把不同控件比到一起。
@@ -67,23 +67,31 @@ def heights_by_identity(path):
         n = stack.pop()
         a = n.get("abs") or {}
         h = a.get("h", 0)
-        if isinstance(h, (int, float)) and h > 0:
+        w = a.get("w", 0)
+        if isinstance(h, (int, float)) and h > 0 and isinstance(w, (int, float)) and w > 0:
             key = (str(n.get("type") or "").split(".")[-1],
                    n.get("name") or "",
                    (n.get("text") or "")[:12])
-            out[key] = h
+            out[key] = (w, h)
         stack.extend(n.get("children") or [])
     return out
 
 
 def max_growth(a, b):
-    """同身份控件里最大的 b/a → (比值, 键)；无可比控件时 (None, None)。"""
+    """同身份控件里最大的单维放大比 → (比值, 键)；无可比控件时 (None, None)。
+
+    口径（2026-11-07 修正）：取宽/高两个维度里**较大**的那个比值，而不是只看高度。
+    只看高度会把"高度被 38px 输入框地板吃住、但字宽明显变大"的页面判成条件没生效
+    （health-monitor f9→f14：按钮 81→115px 宽、高度恒 38px，最大高度比 1.00 假红）。
+    字宽同样是字体生效的直接证据，比"总高"更难被固定地板摊平。
+    """
     best, best_key = None, None
-    for k, ha in a.items():
-        hb = b.get(k)
-        if not ha or not hb:
+    for k, (wa, ha) in a.items():
+        pair = b.get(k)
+        if not pair or not ha or not wa:
             continue
-        r = float(hb) / float(ha)
+        wb, hb = pair
+        r = max(float(hb) / float(ha), float(wb) / float(wa))
         if best is None or r > best:
             best, best_key = r, k
     return best, best_key
@@ -176,10 +184,10 @@ def main():
                 if r is None:
                     fail("字号轴无法验证 %s/%s d%03d: 两格没有可比控件" % (theme, target, int(dpi * 100)))
                 elif r < MIN_FONT_GROWTH:
-                    fail("字号轴没生效 %s/%s d%03d: 14pt/9pt 最大高度比=%0.2f (< %0.2f)"
+                    fail("字号轴没生效 %s/%s d%03d: 14pt/9pt 最大尺寸比=%0.2f (< %0.2f)"
                          % (theme, target, int(dpi * 100), r, MIN_FONT_GROWTH))
                 else:
-                    ok("字号轴生效 %s/%s d%03d: 14pt/9pt 最大高度比=%0.2f（%s %s）"
+                    ok("字号轴生效 %s/%s d%03d: 14pt/9pt 最大尺寸比=%0.2f（%s %s）"
                        % (theme, target, int(dpi * 100), r, k[0], (k[1] or k[2] or "-")))
             # DPI 轴：同字号下 150% vs 100%
             for font in EXPECT_FONT:
@@ -191,10 +199,10 @@ def main():
                 if r is None:
                     fail("DPI 轴无法验证 %s/%s f%02d: 两格没有可比控件" % (theme, target, int(font)))
                 elif r < MIN_DPI_GROWTH:
-                    fail("DPI 轴没生效 %s/%s f%02d: 150%%/100%% 最大高度比=%0.2f (< %0.2f)"
+                    fail("DPI 轴没生效 %s/%s f%02d: 150%%/100%% 最大尺寸比=%0.2f (< %0.2f)"
                          % (theme, target, int(font), r, MIN_DPI_GROWTH))
                 else:
-                    ok("DPI 轴生效 %s/%s f%02d: 150%%/100%% 最大高度比=%0.2f（%s %s）"
+                    ok("DPI 轴生效 %s/%s f%02d: 150%%/100%% 最大尺寸比=%0.2f（%s %s）"
                        % (theme, target, int(font), r, k[0], (k[1] or k[2] or "-")))
 
     print()
