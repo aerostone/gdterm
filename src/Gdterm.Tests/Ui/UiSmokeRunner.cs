@@ -415,6 +415,33 @@ namespace Gdterm.Tests.Ui
             P("expanded");
             tv.Dispose(); host.Dispose();
             P("done");
+
+            // 第二臂：先让父容器建句柄（CreateGraphics —— 产品构造期 DpiScale/RowStep 就这么干），
+            // 再挂 TreeView。对照组一臂是"父容器未建句柄"。
+            var host2 = new UserControl();
+            P("2:host");
+            using (var g = host2.CreateGraphics()) P("2:host-handle=" + host2.IsHandleCreated);
+            var il2 = new ImageList { ImageSize = new Size(16, 16), ColorDepth = ColorDepth.Depth32Bit };
+            il2.Images.Add("folder", new Bitmap(16, 16));
+            var tv2 = new TreeView
+            {
+                Dock = DockStyle.Fill,
+                ImageList = il2,
+                ShowLines = true,
+                ShowPlusMinus = true,
+                ShowRootLines = true,
+                HotTracking = true,
+                FullRowSelect = true
+            };
+            P("2:tv-ready");
+            host2.Controls.Add(tv2);
+            P("2:tv-added");
+            tv2.Nodes.Add(new TreeNode("x"));
+            P("2:nodes");
+            tv2.ExpandAll();
+            P("2:expanded");
+            tv2.Dispose(); host2.Dispose();
+            P("2:done");
         }
 
         internal static void AssertNoDockOverlap(Control root, string where)
