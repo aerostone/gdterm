@@ -123,8 +123,8 @@ jobs:
           & $testExe --perf-bench perf-bench.json
           exit $LASTEXITCODE
 
-      # 静态门四连：编码守卫 → L0 设计语言 → token SSOT → 功能完备性（棘轮）
-      - name: Static gates (encoding / ui-ux-lint / gen-tokens / feature-map)
+      # 静态门五连：编码守卫 → L0 设计语言 → token SSOT → 功能完备性（棘轮）→ 安全闸门结构
+      - name: Static gates (encoding / ui-ux-lint / gen-tokens / feature-map / sec-gate)
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Continue'
@@ -137,7 +137,10 @@ jobs:
           python tools\gen-tokens.py --check
           if ($LASTEXITCODE -ne 0) { throw "gen-tokens check failed exit=$LASTEXITCODE" }
           python tools\feature-map.py --check --ascii
-          if ($LASTEXITCODE -ne 0) { throw "feature-map check failed exit=$LASTEXITCODE" }
+          if ($LASTEXITCODE -ne 0) { throw "feature-map gate failed exit=$LASTEXITCODE" }
+          # 危险命令闸门结构门：`rm -rf /` 粘贴进来能绕过拦截这一类旁路，靠静态门长期守住
+          python tools\check-sec-gate.py
+          if ($LASTEXITCODE -ne 0) { throw "sec-gate failed exit=$LASTEXITCODE" }
 
       # 证据先于宣判：无论成败上传全部日志/dump/门报告
       - name: Upload evidence

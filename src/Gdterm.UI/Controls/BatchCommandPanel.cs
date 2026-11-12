@@ -22,6 +22,7 @@ namespace Gdterm.UI.Controls
     {
         private readonly BatchCommandExecutor _executor;
         private DangerousCommandDetector _dangerousDetector;
+        private CommandGate _commandGate;
         private ListView _lvSessions;
         private ListShell _shell;
         private AntdUI.Input _txtCommand;
@@ -45,9 +46,16 @@ namespace Gdterm.UI.Controls
             LoadHistory();
         }
 
+        /// <summary>共享命令闸门（缺省时按检测器现建，会话豁免就不与其它入口互通了）。</summary>
+        public void SetCommandGate(CommandGate gate)
+        {
+            _commandGate = gate ?? (_dangerousDetector != null ? new CommandGate(_dangerousDetector) : null);
+        }
+
         public void SetDangerousDetector(DangerousCommandDetector detector)
         {
             _dangerousDetector = detector;
+            if (_commandGate == null && detector != null) _commandGate = new CommandGate(detector);
         }
 
         /// <summary>按可用宽夹取命令输入框（不低于 120 设计 px，按钮与标签优先不被挤没）。</summary>
@@ -252,31 +260,14 @@ namespace Gdterm.UI.Controls
                 return;
             }
 
-            // 危险命令闸门（批量入口）
-            if (_dangerousDetector != null)
+            // 危险命令闸门（批量入口）——一次发给 N 个会话，判定与审计统一走 DangerousCommandPrompt
+            if (!DangerousCommandPrompt.Confirm(
+                    FindForm(), _commandGate ?? (_dangerousDetector != null ? new CommandGate(_dangerousDetector) : null),
+                    command, InputSource.BatchPanel, null, "batch"))
             {
-                try
-                {
-                    var check = _dangerousDetector.Check(command);
-                    if (check != null && check.IsDangerous)
-                    {
-                        using (var dlg = new DangerousCommandDialog(command, check))
-                        {
-                            dlg.ShowDialog(FindForm());
-                            if (!dlg.IsConfirmed)
-                            {
-                                _lblStatus.Text = L10n.T("已取消危险命令");
-                                _lblStatus.ForeColor = GdtermColorTable.Warning;
-                                return;
-                            }
-                            if (dlg.RememberChoice)
-                            {
-                                try { _dangerousDetector.AddToWhitelist(command); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("BatchCommandPanel", exSwallowed); } catch { } }
-                            }
-                        }
-                    }
-                }
-                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("BatchCommandPanel", exSwallowed); } catch { } }
+                _lblStatus.Text = L10n.T("已取消危险命令");
+                _lblStatus.ForeColor = GdtermColorTable.Warning;
+                return;
             }
 
             RememberCommand(command);

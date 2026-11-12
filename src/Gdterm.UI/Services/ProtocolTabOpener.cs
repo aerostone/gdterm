@@ -31,6 +31,7 @@ namespace Gdterm.UI.Services
         private readonly IAuditLogger _auditLogger;
         private readonly IKeePassService _keepassService;
         private readonly DangerousCommandDetector _dangerousDetector;
+        private readonly CommandGate _gate;
         private readonly CredentialResolver _credentialResolver;
 
         /// <summary>
@@ -53,7 +54,8 @@ namespace Gdterm.UI.Services
             IAuditLogger auditLogger,
             IKeePassService keepassService,
             DangerousCommandDetector dangerousDetector,
-            CredentialResolver credentialResolver)
+            CredentialResolver credentialResolver,
+            CommandGate commandGate = null)
         {
             _tunnelManager = tunnelManager;
             _terminalFactory = terminalFactory;
@@ -62,6 +64,8 @@ namespace Gdterm.UI.Services
             _auditLogger = auditLogger;
             _keepassService = keepassService;
             _dangerousDetector = dangerousDetector;
+            // 共享闸门：会话级豁免跨标签页生效；没传就按检测器自建
+            _gate = commandGate ?? (dangerousDetector != null ? new CommandGate(dangerousDetector) : null);
             _credentialResolver = credentialResolver;
         }
 
@@ -137,7 +141,7 @@ namespace Gdterm.UI.Services
             };
 
             var terminalControl = new TerminalControl(
-                config, _terminalFactory, _tunnelManager, _auditLogger, _dangerousDetector);
+                config, _terminalFactory, _tunnelManager, _auditLogger, _dangerousDetector, _gate);
             terminalControl.Dock = DockStyle.Fill;
             terminalControl.Credentials = credential;
             terminalControl.SessionConnected += (s, e) =>
@@ -360,7 +364,7 @@ namespace Gdterm.UI.Services
             };
 
             var terminalControl = new TerminalControl(
-                config, _terminalFactory, _tunnelManager, _auditLogger, _dangerousDetector);
+                config, _terminalFactory, _tunnelManager, _auditLogger, _dangerousDetector, _gate);
             terminalControl.Dock = DockStyle.Fill;
             terminalControl.SessionConnected += (s, e) =>
             {
@@ -390,7 +394,7 @@ namespace Gdterm.UI.Services
             };
 
             var terminalControl = new TerminalControl(
-                config, _terminalFactory, _tunnelManager, _auditLogger, _dangerousDetector);
+                config, _terminalFactory, _tunnelManager, _auditLogger, _dangerousDetector, _gate);
             terminalControl.Dock = DockStyle.Fill;
             terminalControl.SessionConnected += (s, e) =>
             {
@@ -422,7 +426,7 @@ namespace Gdterm.UI.Services
                 ToolTipText = L10n.T("本地 Shell")
             };
 
-            var terminal = new TerminalControl(local, _auditLogger);
+            var terminal = new TerminalControl(local, _auditLogger, _gate);
             terminal.Dock = DockStyle.Fill;
             // 本地终端构造时已 Attach；再 Resume 确保 canvas 可输入并补启 shell
             try { terminal.ResumeRendering(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ProtocolTabOpener", exSwallowed); } catch { } }
@@ -479,7 +483,7 @@ namespace Gdterm.UI.Services
         public TerminalControl CreateSplitTerminal(ConnectionConfig config, CredentialPayload credential)
         {
             var newTerminal = new TerminalControl(
-                config, _terminalFactory, _tunnelManager, _auditLogger, _dangerousDetector);
+                config, _terminalFactory, _tunnelManager, _auditLogger, _dangerousDetector, _gate);
             newTerminal.Credentials = credential;
             newTerminal.Dock = DockStyle.Fill;
             newTerminal.ResumeRendering();

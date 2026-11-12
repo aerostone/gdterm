@@ -58,6 +58,23 @@ namespace Gdterm.UI.Services
                 if (match == null || match.Steps == null || match.Steps.Count == 0) return;
                 var session = terminal.Session;
                 if (session == null || !session.IsConnected) return;
+
+                // 旁路 #4（审计发现）：登录脚本每次连接都自动 Send 若干行，此前完全不判危险——
+                // 脚本里留了一条 rm -rf / 就会“每次连上都自动执行一次”，是最隐蔽的伤害路径。
+                // 在 UI 线程上先整批预演一次（引擎跑在后台线程，弹窗不能在那里弹），用户取消就不跑脚本。
+                var scriptText = new System.Text.StringBuilder();
+                foreach (var step in match.Steps)
+                {
+                    if (step != null && step.Type == LogonStepType.Send && !string.IsNullOrEmpty(step.Value))
+                        scriptText.Append(step.Value).Append('\n');
+                }
+                if (scriptText.Length > 0 && !DangerousCommandPrompt.Confirm(
+                        terminal.FindForm(), terminal.Gate, scriptText.ToString(),
+                        Gdterm.Security.InputSource.LogonScript, _auditLogger, config.Host))
+                {
+                    return;
+                }
+
                 var engine = new LogonScriptEngine();
                 Task.Run(async () =>
                 {

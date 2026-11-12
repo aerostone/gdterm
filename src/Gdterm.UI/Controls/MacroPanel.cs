@@ -98,7 +98,7 @@ namespace Gdterm.UI.Controls
 
             _btnRecord = MkBtn(this, L10n.T("● 录制"), L10n.T("开始录制当前活动终端的后续全部按键"));
             _btnStop = MkBtn(this, L10n.T("■ 停止"), L10n.T("停止录制，未保存的宏保留在内存"));
-            _btnReplay = MkBtn(this, L10n.T("▶ 回放"), L10n.T("把选中宏回放到当前活动终端（直接发送，不过危险命令确认）"));
+            _btnReplay = MkBtn(this, L10n.T("▶ 回放"), L10n.T("把选中宏回放到当前活动终端（回放前会整批判定，含危险命令时需确认）"));
             _speedBox = new AntdUI.Select
             {
                 Width = DpiScale.V(this, 96),
@@ -324,6 +324,26 @@ namespace Gdterm.UI.Controls
                     MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
+            // 旁路 #3（审计发现）：回放是“把录制时敲过的东西再灌一遍”，而录制时敲的都是已确认过的命令——
+            // 但录制可能是在别的机/别的会话上，且用户可能早就忘了里面有什么。回放前必须整批预演。
+            try
+            {
+                var rec0 = MacroRecorder.FromFile(path);
+                if (rec0 != null && !DangerousCommandPrompt.Confirm(
+                        FindForm(), tc.Gate, rec0.GetReplayText(), Gdterm.Security.InputSource.Macro,
+                        tc.Audit, tc.HostForAudit))
+                {
+                    SetStatus(L10n.T("已取消宏回放（含危险命令）"));
+                    return;
+                }
+            }
+            catch (Exception ex)
+            {
+                // 读不出/判不了就不放：fail-closed
+                SetStatus(L10n.T("宏校验失败，已取消回放：") + ex.Message);
+                return;
+            }
+
             double speed = Speed();
             SetStatus(L10n.T("正在回放 ") + Path.GetFileNameWithoutExtension(path) + L10n.T("（") + speed + L10n.T("x）…"));
             Task.Run(async () =>

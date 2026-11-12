@@ -277,3 +277,62 @@ F1 只修了转义的对称性，没管**切分**：十来个 store 各自复制
 gen-tokens / feature-map 全绿；change 驱动 dock-gate / dead-ui(green) / hotkey-ssot(green) / cancel-height /
 ui-fix / ux-empty 全绿（utf8-norm 按标注为提交绑定、ci-gate 缺 dump 故 SKIP）。
 本机无 WinForms 运行时，UI 行为仍未验证，需 CI 那一轮 dump。
+
+### F7[P0 安全] 危险命令拦截的 4 条旁路 + 3 个设计缺陷 —— 已修
+
+F1–F6 是"结构债"。这一条不是结构债，是**功能只在一条路上有效**。
+
+#### 审计发现（全部有代码位置）
+
+| # | 问题 | 位置 | 后果 |
+|---|---|---|---|
+| B1 | 粘贴整行不发 Enter 判定 | `TerminalControl.cs` 粘贴路径直接 `TrySendInput(text)` | **手敲 `rm -rf /` 要点 3 下确认，粘贴进终端直接执行** |
+| B2 | 宏回放不过闸门 | `MacroPanel.ReplaySelected` → `rec.ReplayAsync(sess)` | 录制里有什么就跑什么，跨机回放更危险 |
+| B3 | 快捷键绑定送出的序列不过闸门 | `TerminalControl.Keyboard.cs:144` | 绑一条 `rm -rf /` 的命令序列即可静默触发 |
+| B4 | 登录脚本每次连接自动 Send，完全不判 | `TabSessionLifecycle.TryRunLogonScript` | 脚本里留一条破坏命令 = 每次连上都自动执行一次 |
+| B5 | 白名单只有"整条命令精确匹配" | `DangerousCommandDetector.AddToWhitelist` | 对带参数命令形同虚设：`rm -rf /tmp/a` 豁免了，`/tmp/b` 照样弹；用户被逼着点"记住"→ 迅速学会无脑确认 |
+| B6 | 内置规则被整份冻进用户配置文件 | 保存时全量落盘，加载时以文件为准 | 之后**任何规则精度修复都到不了老用户机器上**（改代码只影响新装用户） |
+| B7 | `rm -rf /` 规则 `\s+/` 把 `/tmp/build` 也算删根 | `DangerousCommandConfig` | 每天误报一次 → 用户学会闭眼点确认 → 整套闸门归零 |
+
+#### 定性（决定了所有取舍）
+
+这套东西**防手滑，不防绕过**。黑名单正则天然可绕（`base64 -d | sh`、`sudo bash -c`、heredoc、alias）。
+所以 KPI 不是"拦住多少攻击"，而是**日常不打扰、关键时刻拦一次**：误报率就是它的生死线。
+B5/B7 正是把用户训练成"确认机器"的两个机制，比 B1–B4 更隐蔽也更致命。
+
+#### 处置
+
+1. **入口收敛（消灭旁路）**：新增 `Gdterm.Security.CommandGate`（唯一判定点）+
+   `Gdterm.UI.Services.DangerousCommandPrompt`（唯一弹窗/审计/豁免出口）。
+   8 个入口全部接入并标 `InputSource`：键盘 / 粘贴 / 宏 / 快捷键绑定 / 登录脚本 / 批量面板 / 广播 / AI。
+   `TrySendInput(isCommandLine: true)` 仍是公共收口，模板、快捷命令、AI 面板、侧栏发送因此一次性覆盖。
+2. **整批判定**：`GateDecision` 按行切开（`\r\n` / `\n` / `\r` 都算）逐行判，
+   弹窗显示"命中 1/20 行"；确认次数取命中行的最高等级而**不是按行累加**
+   （粘贴 5 行 `rm -rf` 让用户点 15 次 == 训练他闭眼点）。
+3. **豁免分层**：规则级（`rule:<id>` 存配置文件 + 会话级内存 `ExemptRuleForSession`）+ 命令级（保留旧行为）。
+   粒度从"整条命令"改成"规则"：豁免 `rm -rf` 这条规则，其它写法也就不再骚扰。
+4. **配置架构 v2**：`schemaVersion: 2` = 内置规则只读 + 用户 delta。
+   内置规则的 pattern/level/文案以**代码**为准，只继承用户的 `enabled`；用户自建规则原样保留。
+   界面侧同步：内置规则禁止编辑/删除（提示改用启用禁用 + 自定义规则）。
+5. **规则精度**：`rm-rf-root` 改为 `[-{1,2}\S+\s+]*/(\s|$)`（`/` 后必须空白或行尾）；
+   `chmod/chown -R` 同理要求目标就是根；新增 `rm-system-dirs`（`/etc /usr /bin /boot /lib /opt /srv /sys /proc /dev`）。
+   `DangerousCommandRule.Exclude` 支持否决模式（把已知安全形态从宽规则里摘出来，不必整条关）。
+6. **fail-closed**：判定抛异常 / 弹窗弹不出来 → **阻止发送** + 审计，不再默默放行。
+7. **审计补全**：`DangerousCommandConfirmed`（确认执行也留痕，否则事后查不出"这条 rm -rf 是谁点过去的"）、
+   `DangerousCommandBlocked`、会话豁免放行 —— 三条都带 `InputSource` 和目标主机。
+
+#### 回归锁
+
+- `src/Gdterm.Tests/Security/CommandGateTests.cs`（9 组）：多行切分/整批判定、精度不误报 `/tmp`、
+  真删根仍拦、会话规则豁免、永久 `rule:` 豁免持久化、内置只读、老配置 delta 合并、`Exclude` 否决。
+- `tools/check-sec-gate.py`（新增静态门，已进 CI `Static gates`）：
+  S01 `new DangerousCommandDialog(` 只准在统一出口；S02 `.Check(` 只准在 Security 层；
+  S03 运行时白名单写入只准在设置表单；S04 `InputSource` 每个成员必须有调用点
+  —— 防的是**收敛之后重新发散**：加一个"一键跑命令"入口，最省事的写法就是直接构造弹窗。
+
+#### 未做的边界（明确留下）
+
+- **它是防手滑层，不是安全边界**：`echo … | base64 -d | sh`、`sudo bash -c '…'`、heredoc、alias 一律可以绕。
+  真要防恶意输入得做 shell 解析（引号/管道/子命令/变量展开），成本远超收益，且仍可绕。
+- 多行粘贴目前是"整批拒绝或整批放行"，**没有逐行勾选**（预演清单可读，但不能只执行一半）。
+  真要"选择性执行"得改终端写入模型，不在本次范围。

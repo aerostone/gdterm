@@ -1,6 +1,7 @@
 using System;
 using System.Windows.Forms;
 using Gdterm.Core.Models;
+using Gdterm.Security;
 using Gdterm.Terminal;
 using Gdterm.UI.Diagnostics;
 
@@ -138,6 +139,9 @@ namespace Gdterm.UI.Controls
                 {
                     case SendType.Sequence:
                     case SendType.Text:
+                        // 旁路 #2（审计发现）：快捷键绑定能把任意文本/序列（含回车）直接灌进主机，
+                        // 此前完全绕过危险命令闸门——一条“删除”绑定就是后门。这里补上判定。
+                        if (!ConfirmDangerousCommand(result.Value, InputSource.KeyBinding)) break;
                         SafeSend(result.Value);
                         break;
                     case SendType.Action:

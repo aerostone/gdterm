@@ -170,7 +170,7 @@ namespace Gdterm.UI.Forms
             var wlBtnPadding = new Padding(btnPad, DpiScale.V(this, 3), btnPad, DpiScale.V(this, 3));
 
             var whitelistHeader = new AntdUI.Label {
-                Text = L10n.T("白名单（豁免命令）"),
+                Text = L10n.T("白名单（豁免命令；rule:<规则Id> 表示整条规则豁免）"),
                 Font = Services.FormFontPolicy.UiFont(0.5f, FontStyle.Bold),
                 AutoSize = true,
                 ForeColor = GdtermColorTable.Foreground,
@@ -358,6 +358,13 @@ namespace Gdterm.UI.Forms
         {
             var rule = SelectedRule();
             if (rule == null) return;
+            // 内置规则只读：改了下次加载会被代码里收紧的版本覆盖，静默失效能算成“保存成功”才是真的坑
+            if (DangerousCommandDetector.IsBuiltinRule(rule.Id))
+            {
+                AntdUI.Message.warn(this,
+                    L10n.T("内置规则只读（模式/等级随版本更新），只能启用或禁用。需要新语义请「添加自定义规则」。"));
+                return;
+            }
             using (var dlg = new DangerousCommandRuleEditForm(_detector.GetCategories(), rule))
             {
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;
@@ -424,6 +431,12 @@ namespace Gdterm.UI.Forms
         {
             var rule = SelectedRule();
             if (rule == null) return;
+            if (DangerousCommandDetector.IsBuiltinRule(rule.Id))
+            {
+                AntdUI.Message.warn(this,
+                    L10n.T("内置规则不可删除（随版本更新）；不需要时请用「启用/禁用」关掉它。"));
+                return;
+            }
             var confirm = MessageBox.Show(this,
                 L10n.Tf("确定要删除规则 \"{0}\" 吗？此操作会写入配置文件，内置默认规则不受影响。", rule.Name),
                 L10n.T("确认删除"),
@@ -482,7 +495,7 @@ namespace Gdterm.UI.Forms
 
         private void OnAddWhitelistClick(object sender, EventArgs e)
         {
-            using (var inputDlg = new TextInputForm(L10n.T("添加白名单命令"), L10n.T("请输入要豁免的完整命令：")))
+            using (var inputDlg = new TextInputForm(L10n.T("添加白名单"), L10n.T("完整命令 = 仅豁免这一条；rule:<规则Id> = 豁免整条规则：")))
             {
                 if (inputDlg.ShowDialog(this) == DialogResult.OK)
                 {

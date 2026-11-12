@@ -45,6 +45,7 @@ namespace Gdterm.UI.Forms
         private readonly IAiAssistantService _aiService;
         private readonly ISecurityManager _securityManager;
         private readonly DangerousCommandDetector _dangerousCmdDetector;
+        private readonly CommandGate _commandGate;
         private readonly IFolderCredentialStore _folderCredStore;
         private readonly SessionStateStore _sessionStore;
         private readonly IBookmarkStore _bookmarkStore;
@@ -107,6 +108,9 @@ namespace Gdterm.UI.Forms
             _aiService = services.AiService;
             _securityManager = services.SecurityManager;
             _dangerousCmdDetector = services.DangerousCommandDetector;
+            // 命令闸门：优先用组合根注入的共享实例，其次按检测器现建（测试/嵌入）
+            _commandGate = services.CommandGate
+                ?? (_dangerousCmdDetector != null ? new CommandGate(_dangerousCmdDetector) : null);
             _folderCredStore = services.FolderCredentialStore;
             _sessionStore = services.SessionStateStore;
             _bookmarkStore = services.BookmarkStore;
@@ -281,6 +285,7 @@ namespace Gdterm.UI.Forms
                 KeePassService = _keepassService,
                 FolderCredentialStore = _folderCredStore,
                 DangerousCommandDetector = _dangerousCmdDetector,
+                CommandGate = _commandGate,
                 ReconnectWatchdog = _reconnectWatchdog,
                 ConnectionStore = _connectionStore,
                 RdpFactory = _rdpFactory,
@@ -296,6 +301,7 @@ namespace Gdterm.UI.Forms
                 _secretScanner,
                 _multiChannelManager,
                 _dangerousCmdDetector,
+                _commandGate,
                 _auditLogger,
                 _commandHistoryStore,
                 _highlightStore,
@@ -360,7 +366,7 @@ namespace Gdterm.UI.Forms
             AiCommandGateBinder.Bind(
                 _aiService,
                 () => _tabContainer.GetActiveTerminalControl(),
-                _dangerousCmdDetector,
+                _commandGate,
                 this);
 
             var sideHostPanel = SidePanelHost.CreateHost((s, e) => _sidePanelHost?.Hide());

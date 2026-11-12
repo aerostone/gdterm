@@ -9,6 +9,16 @@ namespace Gdterm.Core.Models
     /// </summary>
     public class DangerousCommandConfig
     {
+        /// <summary>当前配置架构版本（2 = 内置规则只读 + 用户 delta）</summary>
+        public const int CurrentSchemaVersion = 2;
+
+        /// <summary>
+        /// 配置架构版本。
+        /// 2 = 内置规则只读 + 用户 delta（内置规则的 pattern/level/文案以代码为准，仅继承用户的 enabled）；
+        /// 1/0 = 旧文件，文件里的内置规则视为过期副本，加载时丢弃并升级。
+        /// </summary>
+        public int SchemaVersion { get; set; } = 1;
+
         /// <summary>
         /// 是否启用危险命令检测
         /// </summary>
@@ -44,7 +54,9 @@ namespace Gdterm.Core.Models
                 {
                     Id = "rm-rf-root",
                     Name = L10n.T("递归删除根目录"),
-                    Pattern = @"rm\s+.*-[^\s]*r[^\s]*f[^\s]*\s+/",
+                    // 精度修正：旧写法 `...\s+/` 会把 `rm -rf /tmp/build` 也算成删根（/ 后面接什么都命中），
+                    // 每天踩一次误报 → 用户学会无脑点确认，整套闸门失效。现在只认真正的根：`/` 后必须是空白或行尾。
+                    Pattern = @"\brm\s+(-{1,2}\S+\s+)*/(\s|$)",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Critical,
                     ConfirmCount = 3,
@@ -55,7 +67,7 @@ namespace Gdterm.Core.Models
                 {
                     Id = "rm-rf-root-star",
                     Name = L10n.T("递归删除根目录通配"),
-                    Pattern = @"rm\s+.*-[^\s]*r[^\s]*f[^\s]*\s+/\*",
+                    Pattern = @"\brm\s+(-{1,2}\S+\s+)*/\*",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Critical,
                     ConfirmCount = 3,
@@ -66,11 +78,25 @@ namespace Gdterm.Core.Models
                 {
                     Id = "rm-rf-home",
                     Name = L10n.T("删除用户主目录"),
-                    Pattern = @"rm\s+.*-[^\s]*r[^\s]*f[^\s]*\s+(~/|~|\$HOME)",
+                    // 只拦主目录本身（~ / ~/ / ~/* / $HOME），`rm -rf ~/build` 属日常操作
+                    Pattern = @"\brm\s+(-{1,2}\S+\s+)*(~|\$HOME)(/\*)?(\s|$)",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Critical,
                     ConfirmCount = 3,
                     Description = L10n.T("递归强制删除用户主目录，所有个人数据将丢失"),
+                    Category = "filesystem"
+                },
+                new DangerousCommandRule
+                {
+                    // 覆铜：旧 rm-rf-root 的宽正则顺带盖住了 `rm -rf /etc`；收紧后必须显式补上，
+                    // 否则“删根”变安全了、“删 /etc”却没人管。只认目录本身，`/etc/nginx` 这种子目录不算。
+                    Id = "rm-system-dirs",
+                    Name = L10n.T("删除系统关键目录"),
+                    Pattern = @"\brm\s+(-{1,2}\S+\s+)*/(etc|usr|bin|sbin|boot|lib|lib64|opt|srv|sys|proc|dev)(/\*)?(\s|$)",
+                    PatternType = PatternType.Regex,
+                    Level = DangerLevel.Critical,
+                    ConfirmCount = 3,
+                    Description = L10n.T("删除系统关键目录，将导致服务不可用甚至无法开机"),
                     Category = "filesystem"
                 },
 
@@ -138,7 +164,7 @@ namespace Gdterm.Core.Models
                 {
                     Id = "chmod-777-root",
                     Name = L10n.T("根目录权限 777"),
-                    Pattern = @"chmod\s+.*777\s+/",
+                    Pattern = @"\bchmod\s+(-\S+\s+)*777\s+/(\s|$)",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Critical,
                     ConfirmCount = 3,
@@ -149,7 +175,9 @@ namespace Gdterm.Core.Models
                 {
                     Id = "chmod-r-root",
                     Name = L10n.T("递归修改根目录权限"),
-                    Pattern = @"chmod\s+-[^\s]*R\s+",
+                    // 旧写法 `chmod\s+-\S*R\s+` 对每条 `chmod -R 755 .` 都报 Critical（3 次确认），纯噪声。
+                    // 现在要求目标是根目录本身：`chmod -R <mode> /`
+                    Pattern = @"\bchmod\s+(-\S+\s+)*\S+\s+/(\s|$)",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Critical,
                     ConfirmCount = 3,
@@ -160,7 +188,7 @@ namespace Gdterm.Core.Models
                 {
                     Id = "chown-r-root",
                     Name = L10n.T("递归修改根目录所有者"),
-                    Pattern = @"chown\s+-[^\s]*R\s+",
+                    Pattern = @"\bchown\s+(-\S+\s+)*\S+\s+/(\s|$)",
                     PatternType = PatternType.Regex,
                     Level = DangerLevel.Critical,
                     ConfirmCount = 3,
@@ -748,6 +776,13 @@ namespace Gdterm.Core.Models
         /// 是否启用
         /// </summary>
         public bool Enabled { get; set; } = true;
+
+        /// <summary>
+        /// 否决模式（正则，可选）——匹配到命令时撤销本条规则的命中。
+        /// 黑名单正则最容易死在“太宽”上（rm -rf / 顺带干掉 /tmp/x），有了它用户不必关掉整条规则，
+        /// 只需把已知安全的形态摘出去。只对自定义规则生效；内置规则只读（改精度走代码）。
+        /// </summary>
+        public string Exclude { get; set; }
     }
 
     /// <summary>

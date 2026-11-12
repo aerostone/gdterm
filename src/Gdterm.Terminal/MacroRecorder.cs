@@ -64,6 +64,21 @@ namespace Gdterm.Terminal
         }
 
         /// <summary>回放到终端会话</summary>
+        /// <summary>
+        /// 回放前的判定素材：把所有 Input 步骤按录制顺序拼回去（录制是逐次 SafeSend，
+        /// 一行命令可能被拆成 r/m/空格/…/回车 十几步，必须拼完再判，否则逐片判定等于不判）。
+        /// </summary>
+        public string GetReplayText()
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (var step in _steps)
+            {
+                if (step.StepType == MacroStepType.Input && !string.IsNullOrEmpty(step.Input))
+                    sb.Append(step.Input);
+            }
+            return sb.ToString();
+        }
+
         public async Task ReplayAsync(ITerminalSession session, double speed = 1.0, CancellationToken ct = default)
         {
             if (session == null) throw new ArgumentNullException("session");

@@ -21,6 +21,17 @@ namespace Gdterm.UI.Diagnostics
     /// </remarks>
     internal sealed class GdtermColorTable : ProfessionalColorTable
     {
+        /// <summary>
+        /// 半透明叠加色（行内命中高亮、选中底色等）。透明度也是设计语言的一部分，
+        /// 和色值一样收在 token 表里，避免各处写各自的 alpha（§1.2）。
+        /// </summary>
+        public static Color Translucent(Color color, int alpha)
+        {
+            if (alpha < 0) alpha = 0;
+            else if (alpha > 255) alpha = 255;
+            return Color.FromArgb(alpha, color);
+        }
+
         // 石墨暗色 + 薄荷绿 — 降低荧光色造成的视觉噪声
         // 采用静态属性 + 后台字段，使运行时可切换主题而不重启。
         private static Color s_background = Color.FromArgb(0x0D, 0x11, 0x16);

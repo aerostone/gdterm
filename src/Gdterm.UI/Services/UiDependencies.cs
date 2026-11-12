@@ -35,6 +35,11 @@ namespace Gdterm.UI.Services
         public IAiAssistantService AiService { get; set; }
         public ISecurityManager SecurityManager { get; set; }
         public DangerousCommandDetector DangerousCommandDetector { get; set; }
+        /// <summary>
+        /// 命令闸门（所有输入入口共用的唯一判定点）。缺省时由 DangerousCommandDetector 现建一个，
+        /// 但那样各面板各持一份、会话级豁免不互通——组合根应当显式注入同一个实例。
+        /// </summary>
+        public CommandGate CommandGate { get; set; }
         public IFolderCredentialStore FolderCredentialStore { get; set; }
         public SessionStateStore SessionStateStore { get; set; }
 
@@ -87,6 +92,7 @@ namespace Gdterm.UI.Services
         public IFolderCredentialStore FolderCredentialStore { get; set; }
         public IRdpClientFactory RdpFactory { get; set; }
         public DangerousCommandDetector DangerousCommandDetector { get; set; }
+        public CommandGate CommandGate { get; set; }
         public AutoReconnectWatchdog ReconnectWatchdog { get; set; }
         public IConnectionStore ConnectionStore { get; set; }
         public HighlightStore HighlightStore { get; set; }

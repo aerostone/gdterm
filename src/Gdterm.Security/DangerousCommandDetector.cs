@@ -29,6 +29,8 @@ namespace Gdterm.Security
         private DangerousCommandConfig _config;
         private readonly List<CompiledRule> _compiledRules = new List<CompiledRule>();
         private readonly HashSet<string> _whitelist = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        /// <summary>规则级永久豁免（配置里存为 rule:&lt;id&gt;）</summary>
+        private readonly HashSet<string> _exemptRuleIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private readonly string _configPath;
 
         /// <summary>
@@ -74,18 +76,22 @@ namespace Gdterm.Security
             // 匹配所有规则，返回最危险的
             DangerousCommandRule matched = null;
             DangerLevel maxLevel = DangerLevel.Medium;
+            SpanMatch matchedSpan = default(SpanMatch);
 
             foreach (var rule in _compiledRules)
             {
                 if (!rule.Rule.Enabled) continue;
+                // 规则级永久豁免：跳过这条规则，而不是让整条命令不再受其它规则约束
+                if (IsRuleWhitelisted(rule.Rule.Id)) continue;
 
-                if (IsMatch(trimmed, rule))
+                SpanMatch span;
+                if (!TryMatch(trimmed, rule, out span)) continue;
+
+                if (matched == null || rule.Rule.Level > maxLevel)
                 {
-                    if (matched == null || rule.Rule.Level > maxLevel)
-                    {
-                        matched = rule.Rule;
-                        maxLevel = rule.Rule.Level;
-                    }
+                    matched = rule.Rule;
+                    maxLevel = rule.Rule.Level;
+                    matchedSpan = span;
                 }
             }
 
@@ -96,11 +102,14 @@ namespace Gdterm.Security
             {
                 IsDangerous = true,
                 MatchedRule = matched,
+                RuleId = matched.Id,
                 Level = matched.Level,
                 ConfirmCount = matched.ConfirmCount,
                 Description = matched.Description,
                 RuleName = matched.Name,
-                Category = matched.Category
+                Category = matched.Category,
+                MatchIndex = matchedSpan.Index,
+                MatchLength = matchedSpan.Length
             };
 
             CommandBlocked?.Invoke(this, new CommandBlockedEventArgs
@@ -134,11 +143,54 @@ namespace Gdterm.Security
         {
             if (string.IsNullOrWhiteSpace(command)) return;
             var cmd = command.Trim();
+            // 配置界面里白名单是一整块文本，rule:<id> 条目和命令条目混在一起
+            if (cmd.StartsWith(RuleWhitelistPrefix, StringComparison.OrdinalIgnoreCase))
+            {
+                RemoveRuleFromWhitelist(cmd.Substring(RuleWhitelistPrefix.Length).Trim());
+                return;
+            }
             _whitelist.Remove(cmd);
             if (_config.Whitelist != null)
                 _config.Whitelist.RemoveAll(w => string.Equals(w, cmd, StringComparison.OrdinalIgnoreCase));
             SaveConfig();
         }
+
+        /// <summary>
+        /// 规则级永久豁免（存为 rule:&lt;id&gt;）。粒度选规则而非命令：
+        /// “记住这条命令”对带参数的运维命令几乎无用——换个目录就再弹一次，
+        /// 用户要么被烦死、要么学会无脑点确认，两种结果都等于闸门失效。
+        /// </summary>
+        public void AddRuleToWhitelist(string ruleId)
+        {
+            if (string.IsNullOrWhiteSpace(ruleId)) return;
+            var id = ruleId.Trim();
+            var entry = "rule:" + id;
+            if (!_exemptRuleIds.Add(id)) return;
+            if (_config.Whitelist == null) _config.Whitelist = new List<string>();
+            if (!_config.Whitelist.Any(w => string.Equals(w, entry, StringComparison.OrdinalIgnoreCase)))
+                _config.Whitelist.Add(entry);
+            SaveConfig();
+        }
+
+        /// <summary>取消规则级永久豁免并落盘。</summary>
+        public void RemoveRuleFromWhitelist(string ruleId)
+        {
+            if (string.IsNullOrWhiteSpace(ruleId)) return;
+            var id = ruleId.Trim();
+            _exemptRuleIds.Remove(id);
+            if (_config.Whitelist != null)
+                _config.Whitelist.RemoveAll(w => string.Equals(w, RuleWhitelistPrefix + id, StringComparison.OrdinalIgnoreCase));
+            SaveConfig();
+        }
+
+        /// <summary>该规则是否被永久豁免。</summary>
+        public bool IsRuleWhitelisted(string ruleId)
+        {
+            return !string.IsNullOrEmpty(ruleId) && _exemptRuleIds.Contains(ruleId);
+        }
+
+        /// <summary>规则级豁免在配置白名单里的前缀。</summary>
+        public const string RuleWhitelistPrefix = "rule:";
 
         /// <summary>白名单快照（配置界面回填用；此前没有这个入口，界面只能显示一句“功能已就绪”）。</summary>
         public IReadOnlyList<string> GetWhitelist()
@@ -163,6 +215,8 @@ namespace Gdterm.Security
         public bool UpdateRule(string id, DangerousCommandRule updated)
         {
             if (string.IsNullOrWhiteSpace(id) || updated == null) return false;
+            // 内置规则只读：改完下次加载会被代码里收紧的版本覆盖，静默失效能算作“保存成功”才是真的坑
+            if (IsBuiltinRule(id)) return false;
             var idx = _config.Rules.FindIndex(r => string.Equals(r.Id, id, StringComparison.OrdinalIgnoreCase));
             if (idx < 0) return false;
             updated.Id = id;
@@ -175,6 +229,7 @@ namespace Gdterm.Security
         /// <summary>按 Id 删除规则并落盘。</summary>
         public bool RemoveRule(string id)
         {
+            if (IsBuiltinRule(id)) return false;
             var idx = _config.Rules.FindIndex(r => string.Equals(r.Id, id, StringComparison.OrdinalIgnoreCase));
             if (idx < 0) return false;
             _config.Rules.RemoveAt(idx);
@@ -221,6 +276,7 @@ namespace Gdterm.Security
         {
             var sb = new StringBuilder();
             sb.Append("{\n");
+            sb.Append("  \"schemaVersion\": ").Append(DangerousCommandConfig.CurrentSchemaVersion.ToString(CultureInfo.InvariantCulture)).Append(",\n");
             sb.Append("  \"enabled\": ").Append(cfg.Enabled ? "true" : "false").Append(",\n");
             sb.Append("  \"applyToBroadcast\": ").Append(cfg.ApplyToBroadcast ? "true" : "false").Append(",\n");
             sb.Append("  \"whitelist\": [");
@@ -246,6 +302,8 @@ namespace Gdterm.Security
                 sb.Append("\"description\": ").Append(Quote(r.Description)).Append(", ");
                 sb.Append("\"category\": ").Append(Quote(r.Category)).Append(", ");
                 sb.Append("\"enabled\": ").Append(r.Enabled ? "true" : "false");
+                if (!string.IsNullOrEmpty(r.Exclude))
+                    sb.Append(", \"exclude\": ").Append(Quote(r.Exclude));
                 sb.Append("}");
             }
             sb.Append("\n  ]\n}\n");
@@ -312,7 +370,7 @@ namespace Gdterm.Security
             try
             {
                 var json = File.ReadAllText(path, Encoding.UTF8);
-                _config = ParseConfig(json);
+                _config = MergeWithBuiltins(ParseConfig(json));
             }
             catch
             {
@@ -321,10 +379,66 @@ namespace Gdterm.Security
             }
         }
 
+        /// <summary>
+        /// 内置规则只读 + 用户 delta（schemaVersion 2）。
+        /// 老形态把 55 条内置规则整份冻进用户文件，于是“收紧 rm-rf 正则”这类修复永远到不了老用户机器上——
+        /// 全量写的配置就是一次性的代码快照。现在：内置规则的模式/等级/文案以代码为准，
+        /// 只继承用户的 enabled；用户自建规则原样保留。
+        /// </summary>
+        private static DangerousCommandConfig MergeWithBuiltins(DangerousCommandConfig fromFile)
+        {
+            if (fromFile == null) return DangerousCommandConfig.GetDefault();
+
+            var defaults = DangerousCommandConfig.GetDefault();
+            var builtinIds = new HashSet<string>(defaults.Rules.Select(r => r.Id), StringComparer.OrdinalIgnoreCase);
+
+            var savedById = new Dictionary<string, DangerousCommandRule>(StringComparer.OrdinalIgnoreCase);
+            foreach (var r in fromFile.Rules ?? new List<DangerousCommandRule>())
+            {
+                if (r == null || string.IsNullOrEmpty(r.Id)) continue;
+                if (!savedById.ContainsKey(r.Id)) savedById[r.Id] = r;
+            }
+
+            var merged = new DangerousCommandConfig
+            {
+                SchemaVersion = DangerousCommandConfig.CurrentSchemaVersion,
+                Enabled = fromFile.Enabled,
+                ApplyToBroadcast = fromFile.ApplyToBroadcast,
+                Whitelist = fromFile.Whitelist ?? new List<string>()
+            };
+
+            foreach (var builtin in defaults.Rules)
+            {
+                DangerousCommandRule saved;
+                if (savedById.TryGetValue(builtin.Id, out saved))
+                    builtin.Enabled = saved.Enabled;   // 用户在界面上关掉的内置规则，尊重
+                merged.Rules.Add(builtin);
+            }
+
+            foreach (var r in fromFile.Rules ?? new List<DangerousCommandRule>())
+            {
+                if (r == null || string.IsNullOrEmpty(r.Id)) continue;
+                if (builtinIds.Contains(r.Id)) continue;   // 内置 Id 的旧副本丢弃
+                merged.Rules.Add(r);
+            }
+
+            return merged;
+        }
+
+        /// <summary>该 Id 是否为内置规则（内置只读：可启用/禁用，不可改模式或删除）。</summary>
+        public static bool IsBuiltinRule(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return false;
+            return DangerousCommandConfig.GetDefault().Rules
+                .Any(r => string.Equals(r.Id, id, StringComparison.OrdinalIgnoreCase));
+        }
+
         private void CompileRules()
         {
             _compiledRules.Clear();
             _whitelist.Clear();
+
+            _exemptRuleIds.Clear();
 
             foreach (var rule in _config.Rules)
             {
@@ -344,33 +458,82 @@ namespace Gdterm.Security
                     }
                 }
 
+                if (!string.IsNullOrWhiteSpace(rule.Exclude))
+                {
+                    try
+                    {
+                        compiled.ExcludeRegex = new Regex(rule.Exclude, RegexOptions.Compiled | RegexOptions.IgnoreCase);
+                    }
+                    catch
+                    {
+                        compiled.ExcludeRegex = null; // 否决模式写坏了不能把整条规则带走
+                    }
+                }
+
                 _compiledRules.Add(compiled);
             }
 
-            // 加载白名单
+            // 加载白名单（命令级精确匹配 + rule:<id> 规则级豁免）
             if (_config.Whitelist != null)
             {
-                foreach (var w in _config.Whitelist)
-                    _whitelist.Add(w.Trim());
+                foreach (var raw in _config.Whitelist)
+                {
+                    if (string.IsNullOrWhiteSpace(raw)) continue;
+                    var w = raw.Trim();
+                    if (w.StartsWith(RuleWhitelistPrefix, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var id = w.Substring(RuleWhitelistPrefix.Length).Trim();
+                        if (id.Length > 0) _exemptRuleIds.Add(id);
+                        continue;
+                    }
+                    _whitelist.Add(w);
+                }
             }
         }
 
-        private static bool IsMatch(string command, CompiledRule rule)
+        private static bool TryMatch(string command, CompiledRule rule, out SpanMatch span)
         {
+            span = default(SpanMatch);
+
+            // 否决模式：用户把已知安全的形态从宽规则里摘出去，不必整条关掉
+            if (rule.ExcludeRegex != null && rule.ExcludeRegex.IsMatch(command))
+                return false;
+
             switch (rule.Rule.PatternType)
             {
                 case PatternType.Equals:
-                    return command.Equals(rule.Rule.Pattern, StringComparison.OrdinalIgnoreCase);
+                    if (!command.Equals(rule.Rule.Pattern, StringComparison.OrdinalIgnoreCase)) return false;
+                    span = new SpanMatch(0, command.Length);
+                    return true;
 
                 case PatternType.Contains:
-                    return command.IndexOf(rule.Rule.Pattern, StringComparison.OrdinalIgnoreCase) >= 0;
+                {
+                    var idx = command.IndexOf(rule.Rule.Pattern, StringComparison.OrdinalIgnoreCase);
+                    if (idx < 0) return false;
+                    span = new SpanMatch(idx, rule.Rule.Pattern.Length);
+                    return true;
+                }
 
                 case PatternType.Regex:
-                    return rule.Regex != null && rule.Regex.IsMatch(command);
+                {
+                    if (rule.Regex == null) return false;
+                    var m = rule.Regex.Match(command);
+                    if (!m.Success) return false;
+                    span = new SpanMatch(m.Index, m.Length);
+                    return true;
+                }
 
                 default:
                     return false;
             }
+        }
+
+        /// <summary>命中片段在命令里的位置（弹窗把这一段涂红）。</summary>
+        private struct SpanMatch
+        {
+            public SpanMatch(int index, int length) { Index = index; Length = length; }
+            public int Index { get; }
+            public int Length { get; }
         }
 
         /// <summary>
@@ -380,7 +543,8 @@ namespace Gdterm.Security
         {
             var config = new DangerousCommandConfig();
 
-            // 解析 Enabled
+            // 解析 Enabled / 架构版本
+            config.SchemaVersion = ExtractInt(json, "schemaVersion") ?? 1;
             config.Enabled = ExtractBool(json, "enabled") ?? true;
             config.ApplyToBroadcast = ExtractBool(json, "applyToBroadcast") ?? true;
 
@@ -448,7 +612,8 @@ namespace Gdterm.Security
                     ConfirmCount = ExtractInt(obj, "confirmCount") ?? 1,
                     Description = ExtractString(obj, "description"),
                     Category = ExtractString(obj, "category"),
-                    Enabled = ExtractBool(obj, "enabled") ?? true
+                    Enabled = ExtractBool(obj, "enabled") ?? true,
+                    Exclude = ExtractString(obj, "exclude")
                 };
 
                 if (!string.IsNullOrEmpty(rule.Id) && !string.IsNullOrEmpty(rule.Pattern))
@@ -503,6 +668,8 @@ namespace Gdterm.Security
         {
             public DangerousCommandRule Rule { get; set; }
             public Regex Regex { get; set; }
+            /// <summary>否决模式（命中即撤销本条规则）</summary>
+            public Regex ExcludeRegex { get; set; }
         }
     }
 
@@ -515,6 +682,15 @@ namespace Gdterm.Security
 
         public bool IsDangerous { get; set; }
         public DangerousCommandRule MatchedRule { get; set; }
+
+        /// <summary>命中规则 Id（规则级豁免 / 审计用；比 Name 稳定）。</summary>
+        public string RuleId { get; set; }
+
+        /// <summary>命中片段在命令中的起始位置（-1 = 无位置信息）</summary>
+        public int MatchIndex { get; set; } = -1;
+
+        /// <summary>命中片段长度</summary>
+        public int MatchLength { get; set; }
         public DangerLevel Level { get; set; }
         public int ConfirmCount { get; set; }
         public string Description { get; set; }

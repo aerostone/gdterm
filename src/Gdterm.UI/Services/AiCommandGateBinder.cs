@@ -21,7 +21,7 @@ namespace Gdterm.UI.Services
         public static void Bind(
             IAiAssistantService aiService,
             Func<TerminalControl> getActiveTerminal,
-            DangerousCommandDetector detector,
+            CommandGate gate,
             IWin32Window owner)
         {
             var aiSvc = aiService as AiAssistantService;
@@ -29,41 +29,15 @@ namespace Gdterm.UI.Services
 
             aiSvc.CommandGate = cmd =>
             {
+                // 活动终端存在就用它的闸门（同一实例，会话豁免一致）；否则用组合根的共享闸门
                 var tc = getActiveTerminal != null ? getActiveTerminal() : null;
-                if (tc != null)
-                    return tc.ConfirmDangerousCommand(cmd);
+                var effective = tc != null && tc.Gate != null ? tc.Gate : gate;
+                if (effective == null) return true;
 
-                if (detector == null) return true;
-                try
-                {
-                    var check = detector.Check(cmd);
-                    if (check == null || !check.IsDangerous) return true;
-                    using (var dlg = new DangerousCommandDialog(cmd, check))
-                    {
-                        dlg.ShowDialog(owner);
-                        if (!dlg.IsConfirmed) return false;
-                        if (dlg.RememberChoice)
-                        {
-                            try { detector.AddToWhitelist(cmd); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("AiCommandGateBinder", exSwallowed); } catch { } }
-                        }
-                        return true;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    // finding-02：fail-closed
-                    try
-                    {
-                        MessageBox.Show(
-                            owner,
-                            L10n.T("危险命令检测失败，已阻止 AI 执行该命令。\n") + ex.Message,
-                            L10n.T("安全拦截"),
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning);
-                    }
-                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("AiCommandGateBinder", exSwallowed); } catch { } }
-                    return false;
-                }
+                var host = tc != null ? tc.HostForAudit : "ai";
+                var audit = tc != null ? tc.Audit : null;
+                // fail-closed 由 DangerousCommandPrompt 统一保证（判定异常/弹窗失败都不放行）
+                return DangerousCommandPrompt.Confirm(owner, effective, cmd, InputSource.Ai, audit, host);
             };
         }
     }

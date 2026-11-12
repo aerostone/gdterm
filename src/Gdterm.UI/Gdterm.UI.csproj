@@ -251,6 +251,8 @@
     <Compile Include="Services\TabChromePainter.cs" />
     <Compile Include="Services\TabSelectionCoordinator.cs" />
     <Compile Include="Services\AiCommandGateBinder.cs" />
+    <!-- 2026-11 审计：危险命令闸门收敛（统一判定/弹窗/审计出口） -->
+    <Compile Include="Services\DangerousCommandPrompt.cs" />
     <Compile Include="Services\MainFormCommandRouter.cs" />
     <Compile Include="Services\LockStateCoordinator.cs" />
     <Compile Include="Services\AppShutdownCoordinator.cs" />

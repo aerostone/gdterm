@@ -58,6 +58,7 @@ namespace Gdterm.Tests
             RunTest("CredentialPayload", CredentialPayloadTests.Run);
             RunTest("SecretFinding", SecretFindingTests.Run);
             RunTest("SecurityManagerHash", SecurityManagerHashTests.Run);
+            RunTest("CommandGate", CommandGateTests.Run);
             RunTest("SftpSyncPlanner", SftpSyncPlannerTests.Run);
             RunTest("SftpPermission", SftpPermissionTests.Run);
             RunTest("TerminalProfile", TerminalProfileTests.Run);

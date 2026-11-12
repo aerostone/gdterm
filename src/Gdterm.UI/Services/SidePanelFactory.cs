@@ -32,6 +32,7 @@ namespace Gdterm.UI.Services
         private readonly MultiChannelManager _multiChannelManager;
         private readonly MultiChannelRecorder _syncRecorder;
         private readonly DangerousCommandDetector _dangerousDetector;
+        private readonly CommandGate _commandGate;
         private readonly IAuditLogger _auditLogger;
         private readonly CommandHistoryStore _commandHistoryStore;
         private readonly HighlightStore _highlightStore;
@@ -49,6 +50,7 @@ namespace Gdterm.UI.Services
             SecretScanner secretScanner,
             MultiChannelManager multiChannelManager,
             DangerousCommandDetector dangerousDetector,
+            CommandGate commandGate,
             IAuditLogger auditLogger,
             CommandHistoryStore commandHistoryStore,
             HighlightStore highlightStore,
@@ -66,6 +68,7 @@ namespace Gdterm.UI.Services
             _secretScanner = secretScanner;
             _multiChannelManager = multiChannelManager;
             _dangerousDetector = dangerousDetector;
+            _commandGate = commandGate ?? (dangerousDetector != null ? new CommandGate(dangerousDetector) : null);
             _auditLogger = auditLogger;
             _commandHistoryStore = commandHistoryStore;
             _highlightStore = highlightStore;
@@ -116,6 +119,7 @@ namespace Gdterm.UI.Services
         {
             var panel = new BatchCommandPanel();
             panel.SetDangerousDetector(_dangerousDetector);
+            panel.SetCommandGate(_commandGate);
             if (_tabs != null)
                 panel.SetSessions(_tabs.GetConnectedSessions());
             return panel;
@@ -325,31 +329,11 @@ namespace Gdterm.UI.Services
         private void OnBroadcastCommandRequested(object sender, string cmd)
         {
             if (string.IsNullOrEmpty(cmd) || _multiChannelManager == null) return;
-            if (_dangerousDetector != null)
+            // 广播 = 一次打到 N 个会话，一次手滑放大 N 倍；判定必须走统一闸门并留痕
+            if (!DangerousCommandPrompt.Confirm(
+                    _dialogOwner, _commandGate, cmd, InputSource.Broadcast, _auditLogger, "broadcast"))
             {
-                var check = _dangerousDetector.Check(cmd);
-                if (check != null && check.IsDangerous)
-                {
-                    using (var dlg = new DangerousCommandDialog(cmd, check))
-                    {
-                        dlg.ShowDialog(_dialogOwner);
-                        if (!dlg.IsConfirmed)
-                        {
-                            try
-                            {
-                                _auditLogger?.LogSecurityEvent(
-                                    SecurityEvent.DangerousCommandBlocked,
-                                    "broadcast blocked: " + cmd);
-                            }
-                            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SidePanelFactory", exSwallowed); } catch { } }
-                            return;
-                        }
-                        if (dlg.RememberChoice)
-                        {
-                            try { _dangerousDetector.AddToWhitelist(cmd); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SidePanelFactory", exSwallowed); } catch { } }
-                        }
-                    }
-                }
+                return;
             }
             _multiChannelManager.BroadcastCommand(cmd + "\r");
             try

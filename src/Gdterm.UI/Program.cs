@@ -271,6 +271,9 @@ namespace Gdterm.UI
             var aiService = new AiAssistantService(aiConfig,
                 new Gdterm.AI.ChatHistoryStore(Path.Combine(dataDir, "ai-chat-history.json")));
             var dangerousCmdDetector = new DangerousCommandDetector(dangerousCmdPath);
+            // 唯一的命令闸门：终端/粘贴/宏/键位/登录脚本/批量/广播/AI 全部共用一个，
+            // 会话级豁免才能跨入口一致（否则每个面板各判一套，豁免了这边还弹）。
+            var commandGate = new Gdterm.Security.CommandGate(dangerousCmdDetector);
             var folderCredStore = new FolderCredentialStoreJson(folderCredPath);
             var sessionStateStore = new SessionStateStore(sessionStatePath);
             var bookmarkStore = new BookmarkStoreJson(dataDir);
@@ -316,6 +319,7 @@ namespace Gdterm.UI
                 AiService = aiService,
                 SecurityManager = securityManager,
                 DangerousCommandDetector = dangerousCmdDetector,
+                CommandGate = commandGate,
                 FolderCredentialStore = folderCredStore,
                 SessionStateStore = sessionStateStore,
                 RdpFactory = rdpFactory,

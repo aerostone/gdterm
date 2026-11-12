@@ -99,6 +99,11 @@ standards:
 - 密码库随绿色版走（U盘便携），强制高密码强度策略
 - 主密码会话级解锁，闲时自动锁定
 - Jump Server 手动跳板链，连接配置显式声明
+- **危险命令闸门只有一个入口（2026-11 审计，硬约束）**：任何"把文本送进主机"的新功能，
+  必须走 `TerminalControl.TrySendInput(isCommandLine: true)` 或 `DangerousCommandPrompt.Confirm(...)`，
+  并给一个 `InputSource`；**禁止**自己 `new DangerousCommandDialog(...)` 或直接调 `detector.Check(...)`
+  —— `tools/check-sec-gate.py` 会在 CI 拦下来。它防的是手滑不是恶意（正则可绕），
+  所以**误报率就是它的生死线**：宁可放宽一条规则，也不要让用户学会无脑点确认。
 
 ### 运行与本地起服务
 

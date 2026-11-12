@@ -87,6 +87,8 @@ namespace Gdterm.UI.Controls
             var keepassService = services.KeePassService;
             var folderCredStore = services.FolderCredentialStore;
             var dangerousDetector = services.DangerousCommandDetector;
+            var commandGate = services.CommandGate
+                ?? (dangerousDetector != null ? new CommandGate(dangerousDetector) : null);
             var reconnectWatchdog = services.ReconnectWatchdog;
             var connectionStore = services.ConnectionStore;
             var rdpFactory = services.RdpFactory;
@@ -105,7 +107,8 @@ namespace Gdterm.UI.Controls
                 auditLogger,
                 keepassService,
                 dangerousDetector,
-                new CredentialResolver(keepassService, folderCredStore));
+                new CredentialResolver(keepassService, folderCredStore),
+                commandGate);
             _opener.OnTerminalConnected = HandleTerminalConnected;
             _opener.OnRdpConnected = HandleRdpConnected;
             _reconnectService = new TabReconnectService();

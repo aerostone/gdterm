@@ -15,6 +15,7 @@ using Gdterm.Terminal.Rendering;
 using Gdterm.Terminal.Themes;
 using Gdterm.Tunnel;
 using Gdterm.UI.Diagnostics;
+using Gdterm.UI.Services;
 using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
@@ -30,6 +31,8 @@ namespace Gdterm.UI.Controls
         private readonly ITunnelManager _tunnelManager;
         private readonly IAuditLogger _auditLogger;
         private readonly DangerousCommandDetector _dangerousDetector;
+        /// <summary>命令闸门（所有输入入口的唯一判定点；与其它面板共享同一实例，会话豁免才全局一致）</summary>
+        private readonly CommandGate _gate;
         private readonly TerminalKeyBindingResolver _keyResolver = new TerminalKeyBindingResolver();
         private readonly StringBuilder _commandLine = new StringBuilder();
         private MacroRecorder _macroRecorder;
@@ -99,13 +102,16 @@ namespace Gdterm.UI.Controls
             ITerminalSessionFactory terminalFactory,
             ITunnelManager tunnelManager,
             IAuditLogger auditLogger,
-            DangerousCommandDetector dangerousDetector = null)
+            DangerousCommandDetector dangerousDetector = null,
+            CommandGate commandGate = null)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _terminalFactory = terminalFactory ?? throw new ArgumentNullException(nameof(terminalFactory));
             _tunnelManager = tunnelManager;
             _auditLogger = auditLogger;
             _dangerousDetector = dangerousDetector;
+            // 没有共享闸门时按检测器自建一个（测试/嵌入场景）；有检测器就一定有闸门
+            _gate = commandGate ?? (dangerousDetector != null ? new CommandGate(dangerousDetector) : null);
 
             _profile = TerminalProfile.FromMetadata(config.Metadata);
             NormalizeProfile(_profile);
@@ -123,10 +129,12 @@ namespace Gdterm.UI.Controls
             }
         }
 
-        public TerminalControl(ITerminalSession localSession, IAuditLogger auditLogger = null)
+        public TerminalControl(ITerminalSession localSession, IAuditLogger auditLogger = null, CommandGate commandGate = null)
         {
             _session = localSession ?? throw new ArgumentNullException(nameof(localSession));
             _auditLogger = auditLogger;
+            _gate = commandGate;
+            _dangerousDetector = commandGate != null ? commandGate.Detector : null;
             _config = new ConnectionConfig
             {
                 Id = Guid.NewGuid().ToString("N"),
@@ -1228,6 +1236,12 @@ public async void Connect()
             if (string.IsNullOrEmpty(text)) return false;
             if (!IsConnected) return false;
 
+            // 旁路 #1（审计发现）：粘贴此前完全不判危险——多行粘贴在未开 bracketed paste 的远端
+            // 就是逐行回车执行，比手敲危险得多。这里先整批判定（多行逐行预演，一次确认放全批），
+            // 用户点了取消就一个字都不发。
+            if (!ConfirmDangerousCommand(text, InputSource.Paste))
+                return false;
+
             bool bracketed = false;
             try { bracketed = _cellRenderer != null && _cellRenderer.IsBracketedPasteEnabled; }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
@@ -1288,66 +1302,33 @@ public async void Connect()
             get { return _dangerousDetector != null && _cellRenderer != null; }
         }
 
-        public bool ConfirmDangerousCommand(string command)
+        /// <summary>
+        /// 判定并（必要时）确认一段输入。所有入口共用同一实现，弹窗/豁免/审计都在 DangerousCommandPrompt 里。
+        /// </summary>
+        public bool ConfirmDangerousCommand(string command, InputSource source = InputSource.Programmatic)
         {
-            return ConfirmIfDangerous(command);
+            if (string.IsNullOrWhiteSpace(command) || _gate == null)
+                return true;
+
+            return DangerousCommandPrompt.Confirm(
+                FindForm(), _gate, command, source, _auditLogger, _config != null ? _config.Host : null);
         }
 
         private bool ConfirmIfDangerous(string command)
         {
-            if (string.IsNullOrWhiteSpace(command) || _dangerousDetector == null)
-                return true;
+            return ConfirmDangerousCommand(command, InputSource.Keyboard);
+        }
 
-            CommandCheckResult check;
-            try
-            {
-                check = _dangerousDetector.Check(command);
-            }
-            catch (Exception ex)
-            {
-                try
-                {
-                    _auditLogger?.LogSecurityEvent(
-                        SecurityEvent.DangerousCommandBlocked,
-                        "detector error on " + (_config?.Host ?? "?") + ": " + ex.Message);
-                }
-                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
-                try
-                {
-                    MessageBox.Show(
-                        FindForm(),
-                        L10n.T("危险命令检测失败，已阻止发送该命令。\n") + ex.Message,
-                        L10n.T("安全拦截"),
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Warning);
-                }
-                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
-                return false;
-            }
+        /// <summary>命令闸门（宏回放等外部入口复用同一实例，保证会话豁免一致）。</summary>
+        public CommandGate Gate { get { return _gate; } }
 
-            if (check == null || !check.IsDangerous)
-                return true;
+        /// <summary>审计记录器（宏回放等外部入口补留痕用）。</summary>
+        public IAuditLogger Audit { get { return _auditLogger; } }
 
-            using (var dlg = new DangerousCommandDialog(command, check))
-            {
-                dlg.ShowDialog(FindForm());
-                if (!dlg.IsConfirmed)
-                {
-                    try
-                    {
-                        _auditLogger?.LogSecurityEvent(
-                            SecurityEvent.DangerousCommandBlocked,
-                            "blocked command on " + (_config?.Host ?? "?") + ": " + command);
-                    }
-                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
-                    return false;
-                }
-                if (dlg.RememberChoice)
-                {
-                    try { _dangerousDetector.AddToWhitelist(command); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
-                }
-            }
-            return true;
+        /// <summary>审计/弹窗用的目标主机标识。</summary>
+        public string HostForAudit
+        {
+            get { return _config != null && !string.IsNullOrEmpty(_config.Host) ? _config.Host : "?"; }
         }
 
         private void ClearLocalLine(bool eraseDisplay)
