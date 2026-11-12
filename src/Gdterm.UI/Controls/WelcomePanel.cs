@@ -274,10 +274,13 @@ namespace Gdterm.UI.Controls
 
         private Control MakeSection(string title, out FlowLayoutPanel host)
         {
+            // 面板不再留上内边距：标题行是 Dock=Top 的行盒（大字号 34px），
+            // 面板本身高度由 Percent 行给（14pt+150% 只分到 42px），再留 12px 上间距就顶出去 4px
+            //（矩阵门 d150-f14 实证）。上间距改到列表宿主的 Padding，视觉不变、不再挤压标题盒。
             var panel = new Panel
             {
                 Dock = DockStyle.Fill,
-                Padding = DpiScale.Pad(this, 0, 8, 0, 0)
+                Padding = new Padding(0)
             };
             var lbl = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = title,
@@ -291,7 +294,7 @@ namespace Gdterm.UI.Controls
                 FlowDirection = FlowDirection.TopDown,
                 WrapContents = false,
                 AutoScroll = true,
-                Padding = DpiScale.Pad(this, 0, 4, 0, 0)
+                Padding = DpiScale.Pad(this, 0, 8, 0, 0)
             };
             // 侧栏宽度变化（拖分隔条 / 换字号）时，行宽跟着走，不会留半截
             var hostRef = host; // out 参数不能进 lambda

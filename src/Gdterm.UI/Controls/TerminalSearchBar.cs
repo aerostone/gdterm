@@ -104,7 +104,10 @@ namespace Gdterm.UI.Controls
         private void SizeChk(AntdUI.Checkbox chk, Font font)
         {
             if (chk == null || font == null) return;
-            int h = Math.Max(DpiScale.V(this, 24), FormFontPolicy.LineBox(font, this));
+            // 高度取「设计下限」与「行盒 × 1.35」的较大者：只留 DpiScale 固定下限时，
+            // 150% + 9pt/14pt 两格都是同一个高度（矩阵门字号轴 1.14 实证）
+            int h = Math.Max(DpiScale.V(this, 24),
+                (int)Math.Round(FormFontPolicy.LineBox(font, this, 1f) * 1.35));
             int w = Math.Max(DpiScale.V(this, 34),
                 FormFontPolicy.MeasureTextWidth(chk.Text, font, this) + DpiScale.V(this, 32));
             chk.AutoSize = false;
@@ -116,7 +119,8 @@ namespace Gdterm.UI.Controls
         {
             if (btn == null) return;
             var f = font ?? Font;
-            int h = Math.Max(DpiScale.V(this, 24), FormFontPolicy.LineBox(f, this));
+            int h = Math.Max(DpiScale.V(this, 24),
+                (int)Math.Round(FormFontPolicy.LineBox(f, this, 1f) * 1.35));
             int w = Math.Max(DpiScale.V(this, 34),
                 FormFontPolicy.MeasureTextWidth(btn.Text, f, this) + DpiScale.V(this, 18));
             btn.AutoSize = false;

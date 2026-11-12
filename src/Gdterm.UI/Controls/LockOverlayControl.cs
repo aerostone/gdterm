@@ -45,14 +45,20 @@ namespace Gdterm.UI.Controls
             // 面板高跟随内容：按钮底 + 20（默认字号下约 190；大字号自动长高）
             // 注意：LineBox/RowStep 返回的是当前 DPI 下像素，V() 同样返回当前 DPI 像素，两者可直接相加。
             var titleLabelFont = new Font(Font.FontFamily, Font.Size + 2, FontStyle.Bold);
+            // 纵向节奏一律「设计 px 下限」与「行盒 × 系数」取大者：
+            // 只用 DpiScale.V 的固定下限时，150% + 9pt/14pt 两个格子的高度完全相同
+            // （矩阵门「字号轴没生效 1.06」实证——大字号下遮罩里一个像素都不长）
+            int line = Gdterm.UI.Services.FormFontPolicy.LineBox(Font, this, 1f);
             int lockTitleH = Math.Max(DpiScale.V(this, 24),
                 Gdterm.UI.Services.FormFontPolicy.LineBox(titleLabelFont, this, 1.25f));
-            int lockMsgBoxH = Math.Max(DpiScale.V(this, 20),
-                Gdterm.UI.Services.FormFontPolicy.LineBox(Font, this, 1.25f));
-            int lockInputY2 = DpiScale.V(this, 52) + lockMsgBoxH + DpiScale.V(this, 10);
-            int lockInputH2 = Math.Max(DpiScale.V(this, 30), Gdterm.UI.Services.FormFontPolicy.RowStep(this));
+            int lockMsgBoxH = Math.Max(DpiScale.V(this, 20), (int)Math.Round(line * 1.25));
+            int lockTitleY = DpiScale.V(this, 16);
+            int lockMsgY = lockTitleY + lockTitleH + DpiScale.V(this, 6);
+            int lockInputH2 = Math.Max(DpiScale.V(this, 30), (int)Math.Round(line * 1.7));
+            int lockInputY2 = lockMsgY + lockMsgBoxH + DpiScale.V(this, 10);
+            int lockBtnH = Math.Max(DpiScale.V(this, 32), (int)Math.Round(line * 1.75));
             int lockBtnY2 = lockInputY2 + lockInputH2 + DpiScale.V(this, 10);
-            int lockPanelH = lockBtnY2 + DpiScale.V(this, 32) + DpiScale.V(this, 20);
+            int lockPanelH = lockBtnY2 + lockBtnH + DpiScale.V(this, 20);
             _centerPanel = new Panel
             {
                 Size = new Size(DpiScale.V(this, 320), lockPanelH),
@@ -66,7 +72,7 @@ namespace Gdterm.UI.Controls
             // 标题标签：盒高取行盒（11pt 字跟随 UI 字号放大时不裁字）
             var titleLabel = new AntdUI.Label {
                 Text = L10n.T("应用已锁定"),
-                Location = new Point(DpiScale.V(this, 20), DpiScale.V(this, 18)),
+                Location = new Point(DpiScale.V(this, 20), lockTitleY),
                 Size = new Size(DpiScale.V(this, 280), lockTitleH),
                 TextAlign = ContentAlignment.MiddleCenter,
                 ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Foreground,
@@ -77,7 +83,7 @@ namespace Gdterm.UI.Controls
             // 消息标签（错误提示用，初始为说明文字）：盒高取行盒，大字号不裁字
             _messageLabel = new AntdUI.Label {
                 Text = L10n.T("请输入主密码解锁"),
-                Location = new Point(DpiScale.V(this, 20), DpiScale.V(this, 52)),
+                Location = new Point(DpiScale.V(this, 20), lockMsgY),
                 Size = new Size(DpiScale.V(this, 280), lockMsgBoxH),
                 TextAlign = ContentAlignment.MiddleCenter,
                 ForeColor = Gdterm.UI.Diagnostics.GdtermColorTable.Muted
@@ -104,7 +110,7 @@ namespace Gdterm.UI.Controls
             _unlockButton = new AntdUI.Button {
                 Text = L10n.T("解锁"),
                 Location = new Point(DpiScale.V(this, 110), lockBtnY2),
-                Size = new Size(DpiScale.V(this, 100), DpiScale.V(this, 32)),
+                Size = new Size(DpiScale.V(this, 100), lockBtnH),
                 Type = AntdUI.TTypeMini.Primary,
             };
             _unlockButton.Click += (s, e) => OnUnlock();
