@@ -83,7 +83,8 @@ namespace Gdterm.Tests.Ui
                 check(unlockBtn != null && unlock != null, "state-unlock: AcceptButton 可定位（Enter 可提交）");
 
                 // —— 证据先落盘：断言红了也必须有 dump，否则又回到"只报一行 FAIL" ——
-                UiSmokeRunner.Shot(f, Path.Combine(outDir, "state-unlock-disabled.png"));
+                string pngDisabled = Path.Combine(outDir, "state-unlock-disabled.png");
+                UiSmokeRunner.Shot(f, pngDisabled);
                 File.WriteAllText(Path.Combine(outDir, "state-unlock-disabled.json"),
                     UiTreeDumper.Dump(f), System.Text.Encoding.UTF8);
                 log("dump: state-unlock-disabled.json");
@@ -91,20 +92,28 @@ namespace Gdterm.Tests.Ui
                 // —— 禁用态：空密码 → 主操作置灰（预防式校验）——
                 check(unlock != null && !unlock.Enabled, "state-unlock: 空密码时「解锁」置灰（预防式校验）");
 
-                // —— 错误态：必须给出具体原因 + 语义色（不是无声置灰、不是灰字混正文）——
+                // —— 错误态：给出具体原因，且**屏幕上真的**是语义色 ——
+                //
+                // 这里不看 Control.ForeColor：AntdUI.Label 的 ForeColor 取值器返回的是主题正文色，
+                // 而 `ForeColor = Danger` 的赋值只作用于绘制。实测（CI 证据 state-unlock-disabled.png）：
+                // 提示行渲染出的主色确实是 #F47C74(Danger)，但 `label.ForeColor` 读回来是 #E8EEF3(Foreground)。
+                // 读属性 = 拿错证据；所以改成数**渲染像素**——用户看到的是像素，不是属性。
                 Control hint = FindLabelByText(f, emptyHint);
                 check(hint != null,
                     "state-unlock: 禁用态给出具体原因「" + emptyHint + "」(实际标签=" + DescribeLabels(f) + ")");
+                int hintDangerPx = 0;
                 if (hint != null)
                 {
                     check(hint.Visible, "state-unlock: 原因文案可见");
                     check(hint.Width > 0 && hint.Height > 0,
                         "state-unlock: 原因文案有面积=" + hint.Width + "x" + hint.Height);
-                    check(hint.ForeColor != SystemColors.ControlText,
-                        "state-unlock: 原因文案用语义色而非默认正文色 (实际=" + Hex(hint.ForeColor) + ")");
+                    var hintRect = ClientRect(f, hint);
+                    hintDangerPx = CountColorPixels(pngDisabled, hintRect, GdtermColorTable.Danger, 24);
+                    check(hintDangerPx >= 20,
+                        "state-unlock: 错误文案在屏幕上渲染成 Danger 色（矩形=" + hintRect + " 像素=" + hintDangerPx + "/≥20）");
                 }
 
-                // —— 状态迁移：输入后必须转可用，且提示色收回正文色 ——
+                // —— 状态迁移：输入后必须转可用，且提示色收回 ——
                 var input = UiSmokeRunner.FindByType(f, "Input") as Control;
                 check(input != null, "state-unlock: 密码输入框可定位");
                 if (input != null)
@@ -115,10 +124,22 @@ namespace Gdterm.Tests.Ui
                     Application.DoEvents();
                 }
                 check(unlock != null && unlock.Enabled, "state-unlock: 输入密码后「解锁」转可用（禁用态不是死的）");
+
+                string pngReady = Path.Combine(outDir, "state-unlock-ready.png");
+                UiSmokeRunner.Shot(f, pngReady);
+                File.WriteAllText(Path.Combine(outDir, "state-unlock-ready.json"),
+                    UiTreeDumper.Dump(f), System.Text.Encoding.UTF8);
+                log("dump: state-unlock-ready.json");
+
                 Control idle = FindLabelByText(f, idleHint);
                 check(idle != null, "state-unlock: 校验通过后提示改回引导语「" + idleHint + "」(实际=" + DescribeLabels(f) + ")");
-                check(idle == null || idle.ForeColor != GdtermColorTable.Danger,
-                    "state-unlock: 校验通过后语义色收回 (实际=" + (idle == null ? "?" : Hex(idle.ForeColor)) + ")");
+                if (idle != null && hint != null)
+                {
+                    // 同一块区域：红色必须收回（否则"错误态"会跟着用户一路留到输入正确之后）
+                    int stillRed = CountColorPixels(pngReady, ClientRect(f, idle), GdtermColorTable.Danger, 24);
+                    check(stillRed < 5,
+                        "state-unlock: 校验通过后提示区红色收回（残留像素=" + stillRed + "/<5）");
+                }
 
                 // —— 忙碌态：闸门挂起服务调用，抓"进行中"这一帧 ——
                 var gate = new TaskCompletionSource<bool>();
@@ -308,6 +329,44 @@ namespace Gdterm.Tests.Ui
                 if (sb.Length > 220) { sb.Append(" …"); break; }
             }
             return sb.Length == 0 ? "无可见标签" : sb.ToString();
+        }
+
+        /// <summary>控件在窗体客户区里的矩形——截图是 PrintWindow 客户区，直接对得上。</summary>
+        private static Rectangle ClientRect(Form f, Control c)
+        {
+            try { return new Rectangle(f.PointToClient(c.PointToScreen(Point.Empty)), c.Size); }
+            catch { return Rectangle.Empty; }
+        }
+
+        /// <summary>
+        /// 数 PNG 里接近 <paramref name="want"/> 的像素数（逐通道容差 <paramref name="tol"/>）。
+        /// 这是"用户真的看见了语义色"的证据；读 Control.ForeColor 不算（见错误态处的注释）。
+        /// 返回 -1 表示截图缺失（判据不成立，调用方阈值会红）。
+        /// </summary>
+        private static int CountColorPixels(string pngPath, Rectangle rect, Color want, int tol)
+        {
+            if (string.IsNullOrEmpty(pngPath) || !File.Exists(pngPath)) return -1;
+            if (rect.Width <= 0 || rect.Height <= 0) return -1;
+            try
+            {
+                using (var bmp = new Bitmap(pngPath))
+                {
+                    var clip = Rectangle.Intersect(rect, new Rectangle(0, 0, bmp.Width, bmp.Height));
+                    int n = 0;
+                    for (int y = clip.Top; y < clip.Bottom; y++)
+                    {
+                        for (int x = clip.Left; x < clip.Right; x++)
+                        {
+                            Color c = bmp.GetPixel(x, y);
+                            if (Math.Abs(c.R - want.R) <= tol &&
+                                Math.Abs(c.G - want.G) <= tol &&
+                                Math.Abs(c.B - want.B) <= tol) n++;
+                        }
+                    }
+                    return n;
+                }
+            }
+            catch { return -1; }
         }
 
         private static string Hex(Color c)
