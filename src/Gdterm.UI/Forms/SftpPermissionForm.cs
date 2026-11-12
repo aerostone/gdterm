@@ -36,12 +36,22 @@ namespace Gdterm.UI.Forms
             int pad = DpiScale.V(this, 16);
             int fieldH = FormFontPolicy.FieldHeight(this);
             int rowH = fieldH + DpiScale.V(this, 8);
-            int labelW = DpiScale.V(this, 64);
+            // 标签列/勾选框宽按实测文字推：14pt 下「八进制」69px、「写入(w)」77px，
+            // 写死 64/60 会当场把字裁掉（矩阵门 10 处文字溢出）
+            int labelW = Math.Max(DpiScale.V(this, 64),
+                FormFontPolicy.MeasureTextWidth(L10n.T("八进制"), FormFontPolicy.UiFont(), this) + DpiScale.V(this, 4));
             int chkW = DpiScale.V(this, 60);
             int y = pad;
 
             string[] rows = { L10n.T("属主"), L10n.T("属组"), L10n.T("其他") };
             string[] cols = { L10n.T("读取(r)"), L10n.T("写入(w)"), L10n.T("执行(x)") };
+            int chkH = Math.Max(DpiScale.V(this, 24), FormFontPolicy.LineBox(this));
+            foreach (var c0 in cols)
+            {
+                // 勾选框 = 方形勾选块 + 文字；文字实测宽 + 30px 勾选块与间距（14pt 下实测 30px）
+                chkW = Math.Max(chkW,
+                    FormFontPolicy.MeasureTextWidth(c0, FormFontPolicy.UiFont(), this) + DpiScale.V(this, 30));
+            }
             for (int r = 0; r < 3; r++)
             {
                 var lbl = new AntdUI.Label
@@ -58,8 +68,8 @@ namespace Gdterm.UI.Forms
                     var chk = new AntdUI.Checkbox
                     {
                         Text = cols[c],
-                        Location = new Point(pad + labelW + DpiScale.V(this, 8) + c * (chkW + DpiScale.V(this, 8)), y + (fieldH - DpiScale.V(this, 24)) / 2),
-                        Size = new Size(chkW, DpiScale.V(this, 24)),
+                        Location = new Point(pad + labelW + DpiScale.V(this, 8) + c * (chkW + DpiScale.V(this, 8)), y + (fieldH - chkH) / 2),
+                        Size = new Size(chkW, chkH),
                         Font = FormFontPolicy.UiFont(),
                         ForeColor = GdtermColorTable.Foreground
                     };

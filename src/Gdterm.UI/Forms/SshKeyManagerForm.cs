@@ -44,7 +44,11 @@ namespace Gdterm.UI.Forms
             // 字体驱动 + DPI 缩放布局（修复：固定坐标下预览框与底部按钮重叠）
             int clientW = DpiScale.V(this, 600);
             int pad = DpiScale.V(this, 20);
-            int boxX = DpiScale.V(this, 120);
+            // 标签列按实测宽推：「条目标题」14pt 实测 102px，写死 120 只差 2px，
+            // 换字体/字号后立刻压到输入框上（矩阵门 56px² 重叠 ×3）
+            int boxX = pad + FormFontPolicy.LabelColumn(this, 100,
+                L10n.T("条目标题"), L10n.T("用户名"), L10n.T("主机名"), L10n.T("密钥口令"),
+                L10n.T("私钥文件"), L10n.T("预览"));
             int boxW = clientW - boxX - pad;
             int fieldH = FormFontPolicy.FieldHeight(this);
             int rowH = fieldH + DpiScale.V(this, 12);

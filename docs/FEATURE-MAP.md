@@ -127,13 +127,13 @@
 | 外观设置 `page.AppearanceSettingsForm` | 工具 > 外观设置 | settings | 100% (3/3) | — | appearance-settings | |
 | 批量命令 `page.BatchCommandPanel` | 终端 > 批量命令 | editor | 100% (3/3) | — | batch-command | 侧栏常驻 |
 | 修改主密码 `page.ChangeMasterPasswordForm` | 工具 > 修改主密码 | input | 100% (2/2) | — | change-masterpwd | |
-| 命令历史 `page.CommandHistoryPanel` | 终端 > 命令历史 | list | 100% (4/4) | — | command-history | 侧栏常驻（审计 C7-2 入 dump） |
+| 命令历史 `page.CommandHistoryPanel` | 终端 > 命令历史 | list | 100% (4/4) | — | command-history,fail-history-load | 侧栏常驻（审计 C7-2 入 dump）+ 读取失败态 |
 | 命令面板 `page.CommandPaletteForm` | Ctrl+Shift+P 风格入口 | list | 100% (4/4) | — | — |
 | 命令模板库 `page.CommandTemplatePanel` | 终端 > 命令模板库 | list | 100% (4/4) | — | command-template | 侧栏常驻 |
-| 连接属性 `page.ConnectionDialog` | 文件 > 新建连接 | settings | 100% (3/3) | — | connection-ssh,connection-rdp,connection-serial | 三协议 + 高级区展开 |
+| 连接属性 `page.ConnectionDialog` | 文件 > 新建连接 | settings | 100% (3/3) | — | connection-ssh,connection-rdp,connection-serial,fail-conn-emptyhost,fail-conn-recovered | 三协议 + 高级区展开 + 失败态（空主机拦截/改对后收回） |
 | 连接导入/导出 `page.ConnectionImportExport` | 文件 > 导入连接 / 导出连接 | input | 100% (2/2) | — | import-preview | 导入连接预览裁定框（新增/跳过两类行，回车导入/Esc 取消） |
 | 快速跳转 `page.ConnectionQuickJumpForm` | 文件 > 快速跳转连接 | list | 100% (4/4) | — | — |
-| 连接树 `page.ConnectionTreeControl` | 主窗左侧 | panel | 100% (0/0) | — | — |
+| 连接树 `page.ConnectionTreeControl` | 主窗左侧 | panel | 100% (0/0) | — | connection-tree | 主壳常驻（2026-11 起独立 dump：树 + 折叠窄边） |
 | 危险命令规则 `page.DangerousCommandConfigForm` | 工具 > 危险命令规则 | list | 100% (4/4) | — | dangerous-cmd | |
 | 危险命令确认 `page.DangerousCommandDialog` | 终端 > 命中危险命令 | dialog | 100% (1/1) | — | — |
 | 文件面板（单栏） `page.FilePaneControl` | SFTP > 单栏 | list | 100% (4/4) | — | — |
@@ -141,7 +141,7 @@
 | 高亮规则 `page.HighlightRulePanel` | 终端 > 高亮规则 | list | 100% (4/4) | — | highlight-rule | 侧栏常驻 |
 | 密码库条目选择 `page.KeePassEntryPicker` | 密码库 > 选择条目 | list | 100% (4/4) | — | keepass-picker | |
 | 密码库管理 `page.KeePassManagerForm` | 工具 > 密码库管理 | list | 100% (4/4) | — | keepass-manager,keepass-manager-empty | 有数据 / 空态两态 |
-| 密码库解锁 `page.KeePassUnlockForm` | 密码库 > 解锁 | input | 100% (2/2) | — | keepass-unlock | |
+| 密码库解锁 `page.KeePassUnlockForm` | 密码库 > 解锁 | input | 100% (2/2) | — | keepass-unlock,fail-unlock-wrongpwd,fail-unlock-recovered | 密码错常驻提示（此前只有 2 秒 toast） |
 | 快捷键绑定 `page.KeyBindingPanel` | 工具 > 快捷键绑定 | list | 100% (3/3) | — | key-binding | 侧栏常驻（审计 C7-2 入 dump） |
 | 日志查看器 `page.LogViewerForm` | 帮助 > 日志查看器 | list | 100% (4/4) | — | log-viewer | P1-3：文本+十六进制双视图；smoke 灌 tmp 日志目录锁文件列表/视图非空 |
 | 登录脚本 `page.LogonScriptPanel` | 终端 > 登录脚本 | editor | 100% (3/3) | — | logon-script | 侧栏常驻（审计 C7-2 入 dump） |
@@ -153,9 +153,9 @@
 | 密码健康报告 `page.PasswordHealthForm` | 工具 > 密码健康报告 | list | 100% (4/4) | — | password-health | |
 | 端口转发 `page.PortForwardPanel` | 终端 > 端口转发 | list | 100% (4/4) | — | port-forward | 侧栏常驻（审计 C7-2 入 dump） |
 | 快捷命令编辑 `page.QuickCommandEditorForm` | 快捷命令栏 > 编辑 | input | 100% (2/2) | — | quickcmd-editor | |
-| 主机资源监控 `page.RemoteMonitorPanel` | 终端 > 主机资源（远端 CPU/内存） | monitor | 100% (2/2) | — | — |
+| 主机资源监控 `page.RemoteMonitorPanel` | 终端 > 主机资源（远端 CPU/内存） | monitor | 100% (2/2) | — | remote-monitor | 主机资源面板（P1-4）：采样需真实 SSH，但空数据态的度量条几何可 dump（2026-11） |
 | 扫描中心 `page.ScannerCenterForm` | 工具 > 扫描中心（插件） | list | 100% (4/4) | — | scanner-center | |
-| 敏感信息扫描 `page.SecretScanPanel` | 工具 > 敏感信息扫描 | list | 100% (4/4) | — | secret-scan | 侧栏常驻（审计 C7-2 入 dump） |
+| 敏感信息扫描 `page.SecretScanPanel` | 工具 > 敏感信息扫描 | list | 100% (4/4) | — | secret-scan,fail-scan-error | 侧栏常驻（审计 C7-2 入 dump）+ 扫描失败态（Danger 状态行） |
 | 书签 / 最近连接 `page.SessionBookmarksPanel` | 连接 > 书签 / 最近连接 | list | 100% (4/4) | — | bookmarks | 侧栏常驻 |
 | 会话录制中心 `page.SessionRecordingsForm` | 终端 > 会话录制中心… | list | 100% (4/4) | — | session-recordings | P1-2：smoke 灌一段 tmp 录制并驱动回放，断言重放字节真的画在网格上 |
 | 首次启动向导 `page.SetupWizardForm` | 首启 | wizard | 100% (3/3) | — | setup-wizard | |
@@ -166,7 +166,7 @@
 | 传输中心 `page.TransferCenterPanel` | 工具 > 传输中心 | list | 100% (4/4) | — | transfer-center | 侧栏常驻 |
 | 传输进度 `page.TransferProgressDialog` | SFTP > 上传/下载 | progress | 100% (2/2) | — | transfer-progress | |
 | 回收站 `page.TrashForm` | 工具 > 回收站 | list | 100% (4/4) | — | trash | 回收站（F16 加分项撤销/回收站）；smoke 灌 2 条锁三列/按钮启用态 |
-| 欢迎页 `page.WelcomePanel` | mainform > 空标签页 | panel | 100% (0/0) | — | — |
+| 欢迎页 `page.WelcomePanel` | mainform > 空标签页 | panel | 100% (0/0) | — | welcome | 标签页常驻（2026-11 起独立 dump：欢迎页/空态） |
 
 ## 3. 待补清单（按页面展开）
 

@@ -48,7 +48,11 @@ namespace Gdterm.UI.Forms
             // 字体驱动 + DPI 缩放布局（修复：固定像素步进在高 DPI/大字号下控件重叠）
             int clientW = DpiScale.V(this, 520);
             int y = DpiScale.V(this, 20);
-            int lblX = DpiScale.V(this, 20), inputX = DpiScale.V(this, 115);
+            // 标签列按实测文字宽推（14pt 下「前置命令」102px，写死 115 会压到输入框上）
+            int lblX = DpiScale.V(this, 20);
+            int inputX = lblX + FormFontPolicy.LabelColumn(this, 95,
+                L10n.T("名称"), L10n.T("命令"), L10n.T("前置命令"), L10n.T("后置命令"),
+                L10n.T("快捷键"), L10n.T("描述"));
             int inputW = clientW - inputX - DpiScale.V(this, 20);
             int fieldH = FormFontPolicy.FieldHeight(this);
             int rowH = fieldH + DpiScale.V(this, 8);
@@ -114,6 +118,8 @@ namespace Gdterm.UI.Forms
                 AutoSize = true
             };
             Controls.Add(_chkRequiresRoot);
+            // AutoSize 勾选框在大字号下比行距高（14pt 实测 48 > 行距 46）→ 行高让位
+            int rootChkH = _chkRequiresRoot.PreferredSize.Height;
 
             int sortX = inputX + DpiScale.V(this, 185);
             // 数字框位置按标签实测宽推，不写死 45px：FitSingleLineLabel 的重量宽
@@ -129,7 +135,7 @@ namespace Gdterm.UI.Forms
                 Increment = 1
             };
             Controls.Add(_numSortOrder);
-            y += rowH;
+            y += Math.Max(rowH, rootChkH + DpiScale.V(this, 8));
 
             // 快捷键
             AddLabel(L10n.T("快捷键"), lblX, y, fieldH);

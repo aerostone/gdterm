@@ -330,6 +330,72 @@ namespace Gdterm.UI.Services
         public static int LineBox(Control c, float rhythm = 1.25f)
             => LineBox(c != null ? c.Font : null, c, rhythm);
 
+        /// <summary>
+        /// GDI 实测单行文字宽（取最长行）。口径与 <see cref="FitSingleLineLabel"/> 一致。
+        /// 手写绝对定位的表单要靠它算"标签列该多宽"——写死 110 设计 px 时，
+        /// 14pt 下「最大 Token」实测 126px，直接压到右边的输入框上（矩阵门实证）。
+        /// </summary>
+        public static int MeasureTextWidth(string text, Font font = null, Control host = null)
+        {
+            if (string.IsNullOrEmpty(text)) return 0;
+            var f = font ?? (host != null && host.Font != null ? host.Font : UiFont());
+            int max = 0;
+            foreach (var line in text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+            {
+                int w;
+                try
+                {
+                    w = TextRenderer.MeasureText(line, f, new Size(int.MaxValue, int.MaxValue),
+                        TextFormatFlags.NoPadding | TextFormatFlags.SingleLine).Width;
+                }
+                catch { w = line.Length * (int)Math.Ceiling(f.SizeInPoints * 96f / 72f); }
+                if (w > max) max = w;
+            }
+            return max;
+        }
+
+        /// <summary>
+        /// 标签列的可用宽：内置设计下限与"最长标签实测宽 + 间距"取大者。
+        /// 手写布局的表单把它当 colValue 的起点，字号一变大标签自己撑开列，不会压到字段上。
+        /// </summary>
+        public static int LabelColumn(Control host, int designMin, params string[] labels)
+        {
+            int w = DpiScale.V(host, designMin);
+            var f = host != null && host.Font != null ? host.Font : UiFont();
+            if (labels != null)
+            {
+                foreach (var t in labels)
+                {
+                    int tw = MeasureTextWidth(t, f, host);
+                    if (tw > 0) w = Math.Max(w, tw + DpiScale.V(host, 12));
+                }
+            }
+            return w;
+        }
+
+        /// <summary>
+        /// 按当前宽度算换行后需要的文字高度（含行间距）。
+        /// 多行提示语在窄栏/大字号下会多折 1–2 行，写死高度就会把最后一行裁掉。
+        /// </summary>
+        public static int MeasureWrappedHeight(string text, int width, Font font = null, Control host = null)
+        {
+            if (string.IsNullOrEmpty(text)) return 0;
+            var f = font ?? (host != null && host.Font != null ? host.Font : UiFont());
+            if (width <= 0) return LineBox(f, host);
+            try
+            {
+                var sz = TextRenderer.MeasureText(text, f, new Size(width, int.MaxValue),
+                    TextFormatFlags.WordBreak | TextFormatFlags.NoPadding);
+                return sz.Height;
+            }
+            catch
+            {
+                int per = Math.Max(1, width / Math.Max(1, MeasureTextWidth("字", f, host)));
+                int lines = (text.Length + per - 1) / per;
+                return LineBox(f, host) * Math.Max(1, lines);
+            }
+        }
+
         /// <summary>运行时切换 UI 字号时，同步已有的显式 UI 字体。</summary>
         public static void ApplyChildUIFont(Control root, string name, float size)
         {

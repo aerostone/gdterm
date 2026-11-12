@@ -130,14 +130,20 @@ namespace Gdterm.UI.Controls
 
         private AntdUI.Checkbox CreateChk(string text, string tip)
         {
+            // 显式尺寸（不用 AutoSize + MinimumSize）：MinimumSize 是在 AutoSize 量完之后
+            // 才把控件撑大，而 FlowLayoutPanel 已经按撑大前的宽度排好了位置 → 相邻控件重叠
+            // （矩阵门 d150 实证 3 处重叠，交叠 180–396px²）。显式尺寸一次给对，流不会错位。
+            var font = new Font(Font.FontFamily, Font.Size - 0.5f);
+            int h = Math.Max(DpiScale.V(this, 24), FormFontPolicy.LineBox(font, this));
+            int w = Math.Max(DpiScale.V(this, 34),
+                FormFontPolicy.MeasureTextWidth(text, font, this) + DpiScale.V(this, 32));
             var chk = new AntdUI.Checkbox {
                 Text = text,
-                AutoSize = true,
+                AutoSize = false,
+                Size = new Size(w, h),
                 // 等宽语义例外：Aa/.*/W 为正则记号，字号相对当前字体缩小一号（规范规则③）,
-                Font = new Font(Font.FontFamily, Font.Size - 0.5f),
+                Font = font,
                 ForeColor = GdtermColorTable.Muted,
-                // 触击目标 ≥32 逻辑 px（AutoSize 实测只给 31：ui-tree-check 触击规则实证）
-                MinimumSize = new Size(DpiScale.V(this, 34), DpiScale.V(this, 24)),
                 Margin = new Padding(0, 4, DpiScale.V(this, 6), 0)
             };
             var t = new ToolTip();
@@ -147,11 +153,16 @@ namespace Gdterm.UI.Controls
 
         private AntdUI.Button CreateBtn(string text, string tip)
         {
+            // 图标钮显式尺寸：正文只有「▲」一个字形，AutoSize 后宽 26 逻辑 px，
+            // 过不了「触击目标 ≥32 逻辑 px」的门禁（d150 实证 39x36 设备 px）
+            int h = Math.Max(DpiScale.V(this, 24), FormFontPolicy.LineBox(this));
+            int w = Math.Max(DpiScale.V(this, 34),
+                FormFontPolicy.MeasureTextWidth(text, Font, this) + DpiScale.V(this, 18));
             var btn = new AntdUI.Button {
                 Text = text,
-                AutoSize = true,
+                AutoSize = false,
+                Size = new Size(w, h),
                 Padding = new Padding(DpiScale.V(this, 1), 0, DpiScale.V(this, 1), 0),
-                MinimumSize = new Size(DpiScale.V(this, 26), DpiScale.V(this, 24)),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground
             };

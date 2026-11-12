@@ -46,6 +46,8 @@ namespace Gdterm.UI.Controls
                 Padding = DpiScale.Pad(this, 40, 24, 40, 20)
             };
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            // 动作行 AutoSize：改成可换行的 FlowLayoutPanel 后它自己报得出优选高
+            //（旧的 AntdUI.StackPanel 优选高恒 0 → AutoSize 行压成 1px → 四个按钮画成 0 高）
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 50));
@@ -64,29 +66,50 @@ namespace Gdterm.UI.Controls
                 ForeColor = GdtermColorTable.Accent,
                 TextAlign = ContentAlignment.MiddleLeft
             };
-            var subtitle = new AntdUI.Label {
+            // 副标题用原生 Label + Dock=Top + AutoSize：窄侧栏（实测 234–274px）里
+            // 长副标题必须折行，AntdUI.Label 的 AutoSize 只按单行量宽 → 尾部被裁
+            var subtitle = new Label {
                 Text = L10n.T("便携运维终端  ·  选择最近会话或新建连接"),
-                Dock = DockStyle.Fill,
+                AutoSize = true,
+                Anchor = AnchorStyles.Left | AnchorStyles.Right,
                 ForeColor = GdtermColorTable.Muted,
+                BackColor = Color.Transparent,
                 TextAlign = ContentAlignment.MiddleLeft,
                 Padding = DpiScale.Pad(this, 2, 0, 0, 0)
             };
-            var header = new Panel { Dock = DockStyle.Fill };
-            header.Controls.Add(subtitle);
-            header.Controls.Add(title);
+            // 头两行用 TLP 排：标题固定行高（字形行盒），副标题 AutoSize 行 + 锚定左右，
+            // 折行后行高自动长出来 —— 旧版 Panel(AutoSize) 靠默认高 100 兜着，14pt 下副标题被裁。
+            var header = new TableLayoutPanel {
+                Dock = DockStyle.Fill,
+                ColumnCount = 1,
+                RowCount = 2,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Margin = new Padding(0),
+                Padding = new Padding(0),
+                BackColor = Color.Transparent
+            };
+            header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            header.RowStyles.Add(new RowStyle(SizeType.Absolute, titleBoxH));
+            header.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            title.Dock = DockStyle.Fill;
+            header.Controls.Add(title, 0, 0);
+            header.Controls.Add(subtitle, 0, 1);
             root.Controls.Add(header, 0, 0);
 
-            // 用 AntdUI.StackPanel + Gap 做横向按钮行：Gap 只在按钮之间产生间距，
-            // 首尾不贴边也不留多余空白（等价 CSS gap），避免 WinForms FlowLayoutPanel
-            // 的 Margin=(0,0,N,0) 造成「首个贴左、末个留尾」的非对称间距。
-            var actions = new AntdUI.StackPanel
+            // 横向按钮行：侧栏只有 234–274px，四个按钮（约 430px）必然放不下一行，
+            // 所以用可换行的 FlowLayoutPanel（AntdUI.StackPanel 不换行，宽了就画到面板外）。
+            // 间距按 Margin=(0,0,10,6) 给：末列留 10px 透明尾隙，视觉上不可见，换来窄栏不溢出。
+            var actions = new FlowLayoutPanel
             {
                 Dock = DockStyle.Fill,
-                Vertical = false,
-                Gap = DpiScale.V(this, 10),
-                AutoContainerBgTransparent = true,
-                BackColor = GdtermColorTable.Background,
-                Padding = new Padding(0, DpiScale.V(this, 8), 0, DpiScale.V(this, 8))
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                FlowDirection = FlowDirection.LeftToRight,
+                WrapContents = true,
+                Margin = new Padding(0),
+                Padding = new Padding(0, DpiScale.V(this, 8), 0, DpiScale.V(this, 8)),
+                BackColor = GdtermColorTable.Background
             };
             actions.Controls.Add(MakeAction(L10n.T("新建连接"), () => { if (NewConnectionRequested != null) NewConnectionRequested(); }));
             actions.Controls.Add(MakeAction(L10n.T("本地终端"), () => { if (OpenLocalTerminalRequested != null) OpenLocalTerminalRequested(); }));
@@ -184,6 +207,8 @@ namespace Gdterm.UI.Controls
                 AddEmpty(_favHost, q.Length > 0
                     ? L10n.T("没有匹配的收藏")
                     : L10n.T("暂无收藏 — 在书签面板中标记收藏后显示在这里"));
+
+            FitEmptyLabels();
         }
 
         private static int RowMatches(string title, string sub, string q)
@@ -264,6 +289,9 @@ namespace Gdterm.UI.Controls
                 AutoScroll = true,
                 Padding = DpiScale.Pad(this, 0, 4, 0, 0)
             };
+            // 侧栏宽度变化（拖分隔条 / 换字号）时，行宽跟着走，不会留半截
+            var hostRef = host; // out 参数不能进 lambda
+            host.SizeChanged += delegate { FitRowWidths(hostRef); };
             panel.Controls.Add(host);
             panel.Controls.Add(lbl);
             return panel;
@@ -272,8 +300,10 @@ namespace Gdterm.UI.Controls
         private void AddRow(FlowLayoutPanel host, string title, string sub, Action onClick)
         {
             int btnHeight = Math.Max(DpiScale.V(this, 40), FormFontPolicy.RowStep(this));
+            // 行宽跟随宿主列宽（原来写死 ≥320：侧栏只有 234–274px，整行会画到面板外被裁）；
+            // 构造期宿主还没布局（宽 0），先用下限兜底，MakeSection 里 SizeChanged 再校正
             var btn = new AntdUI.Button {
-                Width = Math.Max(DpiScale.V(this, 320), Width - DpiScale.V(this, 100)),
+                Width = Math.Max(DpiScale.V(this, 160), RowWidth(host)),
                 Height = btnHeight,
                 TextAlign = ContentAlignment.MiddleLeft,
                 BackColor = GdtermColorTable.Surface,
@@ -291,12 +321,52 @@ namespace Gdterm.UI.Controls
 
         private void AddEmpty(FlowLayoutPanel host, string text)
         {
-            host.Controls.Add(FormFontPolicy.FitSingleLineLabel(new AntdUI.Label
+            // 原生 Label + AutoSize：空态文案在窄侧栏里要折行（AntdUI.Label 单行量宽会画到面板外）
+            host.Controls.Add(new Label
             {
                 ForeColor = GdtermColorTable.Muted,
+                BackColor = Color.Transparent,
+                Font = Services.FormFontPolicy.UiFont(),
+                AutoSize = true,
                 Text = text,
                 Margin = DpiScale.Pad(this, 4, 8, 4, 4)
-            }));
+            });
+        }
+
+        /// <summary>行按钮的可用宽：宿主内宽减去滚动条（宿主未布局时按 320 设计 px 兜底）。</summary>
+        private int RowWidth(FlowLayoutPanel host)
+        {
+            if (host == null || host.ClientSize.Width <= 0) return DpiScale.V(this, 320);
+            return Math.Max(DpiScale.V(this, 160),
+                host.ClientSize.Width - host.Padding.Horizontal - SystemInformation.VerticalScrollBarWidth);
+        }
+
+        /// <summary>宿主变宽/变窄时把行按钮跟着改宽（只动数据行按钮，不动空态文本）。</summary>
+        private void FitRowWidths(FlowLayoutPanel host)
+        {
+            if (host == null || host.IsDisposed || host.ClientSize.Width <= 0) return;
+            int w = RowWidth(host);
+            foreach (Control c in host.Controls)
+            {
+                var b = c as AntdUI.Button;
+                if (b != null && b.Width != w) b.Width = w;
+            }
+        }
+
+        /// <summary>空态文案按宿主实际宽收口（受限于侧栏宽度，不能超出一行画到面板外）。</summary>
+        private void FitEmptyLabels()
+        {
+            foreach (var host in new Control[] { _recentHost, _favHost })
+            {
+                if (host == null || host.IsDisposed) continue;
+                int avail = host.ClientSize.Width - host.Padding.Horizontal - DpiScale.V(this, 12);
+                if (avail <= 0) continue;
+                foreach (Control c in host.Controls)
+                {
+                    var lbl = c as Label;
+                    if (lbl != null && lbl.AutoSize) lbl.MaximumSize = new Size(avail, 0);
+                }
+            }
         }
 
         private AntdUI.Button MakeAction(string text, Action onClick)
@@ -305,7 +375,8 @@ namespace Gdterm.UI.Controls
                 Text = text,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
-                Cursor = Cursors.Hand
+                Cursor = Cursors.Hand,
+                Margin = new Padding(0, 0, DpiScale.V(this, 10), DpiScale.V(this, 6))
             };
             // AutoSize + 不给 Padding 时 AntdUI 只按库内 sps 算宽，左右内边距是 0
             // （ui-tree-check「按钮左右padding=0(贴边风险)」实证：文字直接贴边框）。

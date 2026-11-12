@@ -118,13 +118,17 @@ namespace Gdterm.UI.Controls
             };
             root.Controls.Add(_firstLoadBar, 0, 7);
 
-            var hint = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label
+            // 原生 Label + AutoSize：这句在 330px 侧栏里一行放不下（需 514px），
+            // AntdUI.Label 单行量宽会整块画到面板外 → 用原生换行，宽度按流宽收口（见下面 SizeChanged）
+            var hint = new Label
             {
                 Text = L10n.T("每 5 秒在独立 SSH 连接上只读采集 /proc，不干扰终端。"),
-                MaximumSize = new Size(0, DpiScale.V(this, 34)),   // R03：裸像素高度要过 DpiScale
+                AutoSize = true,
                 ForeColor = GdtermColorTable.Muted,
+                BackColor = Color.Transparent,
+                Font = Services.FormFontPolicy.UiFont(),
                 Margin = DpiScale.Pad(this, 0, 6, 0, 2)
-            });
+            };
             // F9：采样历史导出 CSV（与 ListShell 导出同惯例：BOM/转义/Toast）
             _btnExport = new AntdUI.Button {
                 Text = L10n.T("导出 CSV"),
@@ -147,6 +151,14 @@ namespace Gdterm.UI.Controls
             };
             bottom.Controls.Add(hint);
             bottom.Controls.Add(_btnExport);
+            // 折行宽跟随流宽（侧栏可拖宽/换字号都会变），只改 MaximumSize 不重排父容器
+            EventHandler fitHint = delegate
+            {
+                int avail = bottom.ClientSize.Width - hint.Margin.Horizontal - DpiScale.V(this, 8);
+                if (avail > 0) hint.MaximumSize = new Size(avail, 0);
+            };
+            bottom.SizeChanged += fitHint;
+            fitHint(null, EventArgs.Empty);
             root.Controls.Add(bottom, 0, 8);
 
             Controls.Add(root);
@@ -165,7 +177,8 @@ namespace Gdterm.UI.Controls
         {
             _loading = loading;
             if (_firstLoadBar != null && _firstLoadBar.Visible != loading) _firstLoadBar.Visible = loading;
-            if (loading) SetStatus(L10n.T("正在连接采样（首个快照约 1-3 秒）…"), true);
+            // 文案按窄侧栏实测宽收（14pt+150% 下原句 335px > 栏宽 324px）
+            if (loading) SetStatus(L10n.T("正在连接采样（约 1-3 秒）…"), true);
         }
 
         private void Tick()

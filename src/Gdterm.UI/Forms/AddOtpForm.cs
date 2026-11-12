@@ -63,7 +63,9 @@ namespace Gdterm.UI.Forms
                 Height = 4 * fh + 3 * gap + DpiScale.V(this, 8),
                 Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 8), DpiScale.V(this, 12), 0)
             };
-            row1.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DpiScale.V(this, 96)));
+            // 标签列按实测宽推：「位数(6-8)」14pt 实测 100px，写死 96 会把标签挤成两行再被行高裁掉
+            row1.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, FormFontPolicy.LabelColumn(this, 96,
+                L10n.T("发行方"), L10n.T("账户"), L10n.T("位数(6-8)"), L10n.T("周期(秒)"))));
             row1.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             for (int r = 0; r < 4; r++) row1.RowStyles.Add(new RowStyle(SizeType.Percent, 25f));
 
@@ -139,6 +141,16 @@ namespace Gdterm.UI.Forms
             _period.Text = FormSettings.GetInt("add-otp", "period", 30, 1, 300).ToString();
             _issuer.Text = FormSettings.Get("add-otp", "issuer", "");
             FormFontPolicy.Apply(this);
+
+            // 客户区高度按内容重算：提示语是 2 行说明，大字号下换行会多折 1–2 行
+            // （14pt 需 100px，而 Dock 吃剩下的只有 62px → 最后一行被裁）
+            int hintNeedH = FormFontPolicy.MeasureWrappedHeight(
+                hint.Text, Math.Max(1, ClientSize.Width - hint.Padding.Horizontal), hint.Font, this)
+                + hint.Padding.Vertical + DpiScale.V(this, 4);
+            int dockUsedH = lblUri.Height + _uri.Height + row1.Height + bottom.PreferredSize.Height;
+            if (dockUsedH + hintNeedH > ClientSize.Height)
+                ClientSize = new Size(ClientSize.Width, dockUsedH + hintNeedH);
+
             // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
             UiA11y.AutoName(this);
         }
@@ -168,7 +180,8 @@ namespace Gdterm.UI.Forms
                 Font = FormFontPolicy.UiFont(),
                 Padding = pad,
                 AutoSize = false,
-                Height = FormFontPolicy.FieldHeight(this) - 4
+                // 高度按行盒+内边距推：FieldHeight-4 在大字号下比文字行盒还矮（14pt 需 25px 只给 18px）
+                Height = FormFontPolicy.LineBox(this) + pad.Top + pad.Bottom + DpiScale.V(this, 2)
             };
         }
 

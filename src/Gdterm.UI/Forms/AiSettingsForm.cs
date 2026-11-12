@@ -54,7 +54,11 @@ namespace Gdterm.UI.Forms
             // 字体驱动 + DPI 缩放布局（修复：固定像素步进在高 DPI/大字号下控件重叠）
             int pad = DpiScale.V(this, 20);
             int labelX = pad;
-            int boxX = pad + DpiScale.V(this, 110);
+            // 标签列按实测文字宽撑开：写死 110 设计 px 时 14pt「最大 Token」实测 126px，
+            // 直接压到右边输入框上（矩阵门 Dark-d100-f14 实证 5 处重叠）
+            int boxX = pad + FormFontPolicy.LabelColumn(this, 110,
+                L10n.T("配置名称"), L10n.T("端点 URL"), "API Key", L10n.T("模型名称"),
+                L10n.T("最大 Token"), L10n.T("温度"));
             int boxW = DpiScale.V(this, 350);
             int fieldH = FormFontPolicy.FieldHeight(this);
             int rowH = fieldH + DpiScale.V(this, 10);
@@ -66,14 +70,16 @@ namespace Gdterm.UI.Forms
                 Location = new Point(pad, y)
             });
             Controls.Add(titleLabel);
-            y += Math.Max(DpiScale.V(this, 36), FormFontPolicy.RowStep(this));
+            // 标题字号是 +5pt（19pt），行高必须用它的真实高，不能用表单行距：
+            // 14pt 时标题实测 42px 而 RowStep 只有 36 → 标题下缘压住副标题
+            y += titleLabel.Height + DpiScale.V(this, 6);
 
             var subtitleLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
                 Text = L10n.T("配置 OpenAI 兼容 API 端点和模型参数"),
                 Location = new Point(pad, y)
             });
             Controls.Add(subtitleLabel);
-            y += Math.Max(DpiScale.V(this, 36), FormFontPolicy.RowStep(this));
+            y += subtitleLabel.Height + DpiScale.V(this, 10);
 
             _nameBox = AddField(L10n.T("配置名称"), labelX, boxX, y, boxW, fieldH);
             y += rowH;
@@ -100,7 +106,18 @@ namespace Gdterm.UI.Forms
             };
             Controls.Add(_apiKeyBox);
             Controls.Add(_showKeyCheck);
-            y += rowH;
+            // 「显示」勾选框在大字号下比输入框还高（14pt 实测 48 > 字段 38）：
+            // 居中会把它压到下一行，行高必须让位给更高的那一个
+            int chkH = _showKeyCheck.PreferredSize.Height;
+            if (chkH > fieldH)
+            {
+                _showKeyCheck.Top = y;
+                y += chkH + DpiScale.V(this, 10);
+            }
+            else
+            {
+                y += rowH;
+            }
 
             _modelBox = AddField(L10n.T("模型名称"), labelX, boxX, y, boxW, fieldH);
             _modelBox.PlaceholderText = "gpt-4";

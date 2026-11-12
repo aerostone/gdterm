@@ -83,8 +83,10 @@ namespace Gdterm.UI.Forms
             var lengthLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("密码长度"), Location = new Point(pad, y + DpiScale.V(this, 10)) });
             Controls.Add(lengthLabel);
 
+            // 标签列按实测宽推：「密码长度」14pt 实测 102px，写死 90 会压到数字框上
+            int lenColX = pad + FormFontPolicy.LabelColumn(this, 90, L10n.T("密码长度"));
             _lengthSpinner = new AntdUI.InputNumber {
-                Location = new Point(pad + DpiScale.V(this, 90), y),
+                Location = new Point(lenColX, y),
                 Size = new Size(DpiScale.V(this, 90), fieldH),
                 Minimum = 8,
                 Maximum = 128,
@@ -96,7 +98,7 @@ namespace Gdterm.UI.Forms
 
             // 快捷长度按钮
             int[] quickLengths = { 12, 16, 20, 24, 32 };
-            int btnX = pad + DpiScale.V(this, 200);
+            int btnX = _lengthSpinner.Right + DpiScale.V(this, 12);
             foreach (var len in quickLengths)
             {
                 var lenCaptured = len;
@@ -130,7 +132,8 @@ namespace Gdterm.UI.Forms
             // 生成结果
             var resultLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("生成结果"), Location = new Point(pad, y) });
             Controls.Add(resultLabel);
-            y += DpiScale.V(this, 28);
+            // 步进按标签真实高推进：大字号下标签 31px 高，写死 28 会压住结果框
+            y += resultLabel.Height + DpiScale.V(this, 8);
 
             int resultH = fieldH + DpiScale.V(this, 6);
             _resultBox = new AntdUI.Input {
@@ -168,22 +171,24 @@ namespace Gdterm.UI.Forms
 
             var generate10Btn = new AntdUI.Button {
                 Text = L10n.T("批量生成 10 个"),
-                Location = new Point(pad, y),
-                Size = new Size(DpiScale.V(this, 130), fieldH)
+                Location = new Point(pad, y)
             };
+            // 按文案实测宽自适应（14pt 下需要 141px，写死 130 会裁字）
+            FormFontPolicy.SizeActionButton(this, generate10Btn, 16, 5);
             generate10Btn.Click += OnBatchGenerate;
             Controls.Add(generate10Btn);
             // 关闭按钮（审计 F6：本窗体无提交概念，不加"确定"；ESC/按钮双通道关闭）
             var closeBtn = new AntdUI.Button {
                 Text = L10n.T("关闭"),
-                Location = new Point(clientW - pad - DpiScale.V(this, 130), y),
-                Size = new Size(DpiScale.V(this, 130), fieldH),
                 DialogResult = DialogResult.Cancel,
                 BackColor = GdtermColorTable.Surface2,
                 ForeColor = GdtermColorTable.Foreground
             };
+            FormFontPolicy.SizeActionButton(this, closeBtn, 16, 5);
+            closeBtn.Size = new Size(Math.Max(closeBtn.Width, DpiScale.V(this, 130)), Math.Max(closeBtn.Height, fieldH));
+            closeBtn.Location = new Point(clientW - pad - closeBtn.Width, y);
             Controls.Add(closeBtn);
-            y += rowH + DpiScale.V(this, 4);
+            y += Math.Max(rowH, Math.Max(generate10Btn.Height, closeBtn.Height)) + DpiScale.V(this, 4);
 
             // 历史记录（只读多行 Input，双击复制整行由 KeyDown/MouseUp 简化为一键复制全部）
             var historyLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
@@ -191,7 +196,7 @@ namespace Gdterm.UI.Forms
                 Location = new Point(pad, y)
             });
             Controls.Add(historyLabel);
-            y += DpiScale.V(this, 28);
+            y += historyLabel.Height + DpiScale.V(this, 8);
 
             int historyH = DpiScale.V(this, 110);
             _historyBox = new AntdUI.Input {

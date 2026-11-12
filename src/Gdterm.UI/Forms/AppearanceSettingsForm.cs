@@ -69,10 +69,14 @@ namespace Gdterm.UI.Forms
             ForeColor = GdtermColorTable.Foreground;
 
             int pad = DpiScale.V(this, 20);
-            int clientW = DpiScale.V(this, 520);
             int colLabel = pad;
-            int colValue = pad + DpiScale.V(this, 110);
+            // 标签列按实测文字宽撑开（14pt 下「字号 (pt)」121px / 「不透明度 %」126px 会压到字段上）
+            int colValue = pad + FormFontPolicy.LabelColumn(this, 110,
+                L10n.T("终端字体"), L10n.T("字号 (pt)"), L10n.T("配色方案"), L10n.T("中日韩字体"),
+                L10n.T("界面主题"), L10n.T("界面字体"), L10n.T("不透明度 %"), L10n.T("界面语言"));
             int valueW = DpiScale.V(this, 220);
+            // 列宽撑开后客户区跟着长，否则值列被挤出右边界
+            int clientW = Math.Max(DpiScale.V(this, 520), colValue + valueW + pad);
             _fieldHeight = FormFontPolicy.FieldHeight(this);
             _rowHeight = Math.Max(DpiScale.V(this, 44), _fieldHeight + DpiScale.V(this, 6));
             int rowH = _rowHeight;
@@ -173,7 +177,8 @@ namespace Gdterm.UI.Forms
                 ForeColor = GdtermColorTable.Foreground
             };
             Controls.Add(_dpiAwareCheck);
-            y += rowH;
+            // AutoSize 勾选框在大字号下比行距还高（14pt 实测 48 > 行距 44）→ 压住下一行
+            y += Math.Max(rowH, _dpiAwareCheck.PreferredSize.Height + DpiScale.V(this, 8));
 
             // —— 界面语言（重启生效；选项名用各自母语自标识，业界惯例）——
             Controls.Add(MakeLabel(L10n.T("界面语言"), colLabel, y));

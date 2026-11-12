@@ -229,7 +229,10 @@ namespace Gdterm.UI.Forms
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
             layout.RowStyles.Add(new RowStyle(SizeType.Absolute, DpiScale.V(this, 8)));
 
-            var infoLabel = new AntdUI.Label {
+            // 原生 Label（不是 AntdUI.Label）：这段是整段说明文字，窄窗/大字号下必须折行，
+            // 而 AntdUI.Label 只按单行量宽 —— 14pt 首句实测需 655px 而栏宽 498px，整句被切成半句。
+            // 高度按真实可用宽用 GDI 折行量出来（不是写死），宿主再加 AutoScroll 兜底极小窗口。
+            var infoLabel = new Label {
                 Text =
                     L10n.T("为了保护您的连接信息和密码数据，gdterm 使用主密码加密所有敏感信息。\r\n\r\n") +
                     L10n.T("在开始之前，您需要：\r\n\r\n") +
@@ -238,13 +241,29 @@ namespace Gdterm.UI.Forms
                     L10n.T("    ·  此密码用于锁定/解锁应用和加密配置\r\n\r\n") +
                     L10n.T("请牢记此密码，忘记后无法恢复数据。"),
                 ForeColor = GdtermColorTable.Foreground,
-                Dock = DockStyle.Fill,
+                BackColor = Color.Transparent,
+                Dock = DockStyle.Top,
                 AutoSize = false,
-                TextAlign = ContentAlignment.MiddleLeft
+                TextAlign = ContentAlignment.TopLeft
             };
+            var infoHost = new Panel { Dock = DockStyle.Fill, AutoScroll = true };
+            infoHost.Controls.Add(infoLabel);
+
+            // 折行高度按宿主实际宽重算（首帧用窗体客户区宽估，SizeChanged 后校正）
+            EventHandler fitInfo = delegate
+            {
+                if (infoLabel.IsDisposed) return;
+                int w = infoHost.ClientSize.Width;
+                if (w <= 0) w = Math.Max(DpiScale.V(this, 320), ClientSize.Width - DpiScale.V(this, 64));
+                int need = FormFontPolicy.MeasureWrappedHeight(infoLabel.Text, Math.Max(1, w - DpiScale.V(this, 6)),
+                    infoLabel.Font, this) + DpiScale.V(this, 6);
+                if (infoLabel.Height != need) infoLabel.Height = need;
+            };
+            infoHost.SizeChanged += fitInfo;
+            fitInfo(null, EventArgs.Empty);
 
             layout.Controls.Add(new Panel { Dock = DockStyle.Fill }, 0, 0);
-            layout.Controls.Add(infoLabel, 0, 1);
+            layout.Controls.Add(infoHost, 0, 1);
             layout.Controls.Add(new Panel { Dock = DockStyle.Fill }, 0, 2);
             _welcomePanel.Controls.Add(layout);
         }

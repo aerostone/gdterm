@@ -111,9 +111,34 @@ namespace Gdterm.UI.Controls
             Recenter();
         }
 
+        /// <summary>
+        /// 居中 + 收口：面板宽 320 设计 px 在窄宿主/高 DPI 下会超出遮罩
+        /// （矩阵门 d150 实测 480 宽面板塞进 360 宽宿主 → 越界）。
+        /// 面板与内部控件都按宿主宽收口，宽度不够时不外溢。
+        /// </summary>
         private void Recenter()
         {
             if (_centerPanel == null) return;
+            int side = DpiScale.V(this, 24);
+            int maxW = Math.Max(DpiScale.V(this, 160), Width - side);
+            int w = Math.Min(DpiScale.V(this, 320), maxW);
+            if (_centerPanel.Width != w) _centerPanel.Width = w;
+
+            // 内部控件按面板内宽收口（左右各 20 设计 px 边距）
+            int innerPad = DpiScale.V(this, 20);
+            int innerW = Math.Max(DpiScale.V(this, 120), w - innerPad * 2);
+            foreach (Control child in _centerPanel.Controls)
+            {
+                if (child == _unlockButton) continue;
+                if (child.Width != innerW) child.Width = innerW;
+            }
+            if (_unlockButton != null)
+            {
+                int bw = Math.Min(DpiScale.V(this, 100), innerW);
+                if (_unlockButton.Width != bw) _unlockButton.Width = bw;
+                _unlockButton.Left = (w - bw) / 2;
+            }
+
             _centerPanel.Location = new Point(
                 (Width - _centerPanel.Width) / 2,
                 (Height - _centerPanel.Height) / 2);

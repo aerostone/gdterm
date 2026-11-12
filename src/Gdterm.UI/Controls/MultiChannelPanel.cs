@@ -73,7 +73,9 @@ namespace Gdterm.UI.Controls
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
+                // 6 个按钮在 360px 侧栏里一行放不下（14pt 实测 479px）→ 折行，
+                // 否则后两个按钮整块画到面板外（矩阵门 越界 ×2）
+                WrapContents = true,
                 Padding = new Padding(DpiScale.V(this, 3))
             };
 
@@ -132,12 +134,17 @@ namespace Gdterm.UI.Controls
                 Font = Services.FormFontPolicy.MonoFont()
             };
 
-            var inputHint = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
-                Dock = DockStyle.Fill,
+            // 原生 Label + Dock=Top + AutoSize：宽度由单元格给定、高度随折行增长。
+            // AntdUI.Label 的 AutoSize 只按单行量宽，14pt 下这句需 356px 而栏宽 348px → 尾部被裁
+            var inputHint = new Label {
+                Dock = DockStyle.Top,
+                AutoSize = true,
                 Text = L10n.T("输入命令后按 Enter 广播到所有选中会话"),
                 ForeColor = GdtermColorTable.Muted,
+                BackColor = Color.Transparent,
+                Font = Services.FormFontPolicy.UiFont(),
                 TextAlign = ContentAlignment.MiddleLeft
-            });
+            };
 
             inputPanel.Controls.Add(_commandInput, 0, 0);
             inputPanel.Controls.Add(inputHint, 0, 1);

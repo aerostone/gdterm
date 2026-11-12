@@ -558,6 +558,7 @@ namespace Gdterm.Core
             ["无活动 SSH 会话（连上后自动开始）"] = "No active SSH session (starts automatically once connected)",
             ["未启用"] = "Not enabled",
             ["正在连接采样（首个快照约 1-3 秒）…"] = "Connecting for sampling (first snapshot in ~1-3 s)…",
+            ["正在连接采样（约 1-3 秒）…"] = "Connecting for sampling (~1-3 s)…",
             ["每 5 秒在独立 SSH 连接上只读采集 /proc，不干扰终端。"] = "Read-only /proc sampling on a separate SSH connection every 5 seconds; it does not disturb your terminal.",
             ["渲染失败: "] = "Rendering failed: ",
             ["磁盘 /"] = "Disk /",
