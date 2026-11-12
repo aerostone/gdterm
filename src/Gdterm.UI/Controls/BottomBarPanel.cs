@@ -264,7 +264,7 @@ namespace Gdterm.UI.Controls
                 Font = FormFontPolicy.UiFont(-0.5f),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(DpiScale.V(this, 6), 0, 0, 0),
-                TabStop = false
+                TabStop = true   // 底栏按钮也要键盘可达（ui-tree-check R4：交互叶 TabStop=false 判红）
             };
             FormFontPolicy.SizeActionButton(this, _groupBtn, 8, 2, 22);
             _groupBtn.Click += (s, e) => { RefreshGroupMenu(); _groupMenu.Show(_groupBtn, new Point(0, _groupBtn.Height)); };
@@ -299,7 +299,7 @@ namespace Gdterm.UI.Controls
                 Font = new Font("Segoe UI Emoji", FormFontPolicy.UiFont().SizeInPoints - 0.5f),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(DpiScale.V(this, 4), 0, DpiScale.V(this, 4), 0),
-                TabStop = false
+                TabStop = true   // 底栏按钮也要键盘可达（ui-tree-check R4：交互叶 TabStop=false 判红）
             };
             // 状态栏紧凑键：设计高 22（不是 FieldHeight 38），否则状态栏被顶高一行
             FormFontPolicy.SizeActionButton(this, _pinBtn, 4, 2, 22);
@@ -497,7 +497,7 @@ namespace Gdterm.UI.Controls
                         ForeColor = GdtermColorTable.Muted,
                         Font = FormFontPolicy.UiFont(-0.5f),
                         Cursor = Cursors.Hand,
-                        TabStop = false,
+                        TabStop = true,
                         Padding = AddButtonPadding()
                     };
                     add.Click += (s, e) => AddRequested?.Invoke(_activeGroup ?? L10n.T("自定义"));
@@ -527,7 +527,7 @@ namespace Gdterm.UI.Controls
                 ForeColor = GdtermColorTable.Muted,
                 Font = FormFontPolicy.UiFont(-0.5f),
                 Cursor = Cursors.Hand,
-                TabStop = false
+                TabStop = true   // 底栏按钮也要键盘可达（ui-tree-check R4：交互叶 TabStop=false 判红）
             };
             FormFontPolicy.SizeActionButton(this, more, 7, 2, 22);
             more.ToolTipText2(L10n.T("显示其余快捷命令"));
@@ -624,7 +624,7 @@ namespace Gdterm.UI.Controls
                 ForeColor = cmd.RequiresRoot ? GdtermColorTable.Warning : GdtermColorTable.Foreground,
                 Font = FormFontPolicy.UiFont(-0.5f),
                 Cursor = Cursors.Hand,
-                TabStop = false,
+                TabStop = true,   // 快捷命令按钮要能被 Tab 到（R4）
                 Tag = cmd
             };
             FormFontPolicy.SizeActionButton(this, btn, 8, 2, 22);
@@ -724,6 +724,7 @@ namespace Gdterm.UI.Controls
 
         private int PlaceTmuxSeparator(int x)
         {
+            // 纯装饰分隔线不参与 Tab（R4 只判交互类型，Panel 不算）
             var sep = new Panel { Width = 1, BackColor = GdtermColorTable.Border, Margin = new Padding(0), TabStop = false };
             _cmdHost.Controls.Add(sep);
             sep.Location = new Point(x, DpiScale.V(this, 6));
@@ -745,7 +746,7 @@ namespace Gdterm.UI.Controls
                 ForeColor = GdtermColorTable.Foreground,
                 Font = font,
                 Cursor = Cursors.Hand,
-                TabStop = false
+                TabStop = true   // 底栏按钮也要键盘可达（ui-tree-check R4：交互叶 TabStop=false 判红）
             };
             FormFontPolicy.SizeActionButton(this, btn, 6, 2, 22);
             btn.Click += (s, e) => SendTmuxKey(k.Raw ?? (_prefix + k.Key));
@@ -761,7 +762,7 @@ namespace Gdterm.UI.Controls
                 ForeColor = GdtermColorTable.Muted,
                 Font = font,
                 Cursor = Cursors.Hand,
-                TabStop = false
+                TabStop = true   // 底栏按钮也要键盘可达（ui-tree-check R4：交互叶 TabStop=false 判红）
             };
             FormFontPolicy.SizeActionButton(this, more, 6, 2, 22);
             more.ToolTipText2(L10n.T("更多 tmux/screen 键"));
@@ -789,7 +790,7 @@ namespace Gdterm.UI.Controls
                 ForeColor = active ? GdtermColorTable.Accent : GdtermColorTable.Muted,
                 Font = active ? FormFontPolicy.UiFont(-0.5f, FontStyle.Bold) : FormFontPolicy.UiFont(-0.5f),
                 Cursor = Cursors.Hand,
-                TabStop = false
+                TabStop = true   // 底栏按钮也要键盘可达（ui-tree-check R4：交互叶 TabStop=false 判红）
             };
             FormFontPolicy.SizeActionButton(this, b, 4, 2, 22);
             b.Click += (s, e) => { if (_prefix != val) { _prefix = val; RefreshCommands(); } };

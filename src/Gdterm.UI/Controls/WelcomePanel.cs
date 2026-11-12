@@ -303,12 +303,14 @@ namespace Gdterm.UI.Controls
         {
             var b = new AntdUI.Button {
                 Text = text,
-                AutoSize = true,
-                MinimumSize = DpiScale.S(this, 110, Math.Max(32, FormFontPolicy.RowStep(this))),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 Cursor = Cursors.Hand
             };
+            // AutoSize + 不给 Padding 时 AntdUI 只按库内 sps 算宽，左右内边距是 0
+            // （ui-tree-check「按钮左右padding=0(贴边风险)」实证：文字直接贴边框）。
+            // SizeActionButton 用 GDI 实测文字宽 + 显式 Padding，DPI/字号两个方向都对。
+            FormFontPolicy.SizeActionButton(this, b, 16, 6, Math.Max(32, FormFontPolicy.RowStep(this)));
             b.Click += (s, e) => { if (onClick != null) onClick(); };
             return b;
         }
