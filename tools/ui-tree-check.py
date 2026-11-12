@@ -44,6 +44,12 @@ import json
 import os
 import sys
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+try:
+    import pnglite
+except Exception:      # 读不了 PNG 时 R8 自动降级为 info（老证据目录没有 png）
+    pnglite = None
+
 FAIL = []
 
 
@@ -189,6 +195,71 @@ def ancestor_visible_map(tree):
     return m
 
 
+
+def pixel_residue(node_list, av, png_path, origin):
+    """按截图像素判"白块"：几何全对、属性全对，画出来还是一块白。
+
+    为什么需要它：AntdUI 自绘控件用库自己的色板绘制，BackColor/ForeColor 根本不参与
+    （R7 只能跳过它们），于是"暗色主题下按钮是白底"这类问题属性层面无迹可寻，
+    R7 上线当天就实证过：底栏八个按钮在截图里是一排纯白块，而所有属性检查全绿。
+
+    判法：每个可见叶控件（≥24×12）在截图里的矩形，采样近白像素占比 > 0.5 → 白块。
+    大矩形隔像素采样（几何不变的统计量，20000px 以上降采样不影响结论）。
+    返回 (受检数, [问题描述...])。
+    """
+    if pnglite is None or not origin:
+        return 0, []
+    try:
+        img = pnglite.load(png_path)
+    except Exception:
+        return 0, []
+    ox, oy = origin
+    checked, bad = 0, []
+    for n, _pabs, _pn, _pnode, _pk in node_list:
+        if not av.get(id(n), True):
+            continue
+        if n.get("children"):
+            continue
+        a = n.get("abs") or {}
+        x0, y0 = int(a.get("x", 0)) - ox, int(a.get("y", 0)) - oy
+        w, h = int(a.get("w", 0)), int(a.get("h", 0))
+        if w < 24 or h < 12 or w * h < 600:
+            continue
+        x1, y1 = min(img.w, x0 + w), min(img.h, y0 + h)
+        x0, y0 = max(0, x0), max(0, y0)
+        if x1 - x0 < 24 or y1 - y0 < 12:
+            continue
+        short = (n.get("type") or "").split(".")[-1]
+        # 天生就是浅色的控件（二维码白底、图片）从规则里豁免
+        if short in ("QrCode", "PictureBox", "Image", "WebView2"):
+            continue
+        # 只数「中心一半」：整块矩形里带白字的深色控件白像素也有 10~20%，
+        # 而真正的白底 bug（底栏按钮实测）白只占中间一条 —— 全矩形占比 0.37，
+        # 中心一半却接近 1.0。这个指标对"文字发白"和"底色发白"区分得很干净。
+        cx0 = x0 + (x1 - x0) // 4
+        cx1 = x1 - (x1 - x0) // 4
+        cy0 = y0 + (y1 - y0) // 4
+        cy1 = y1 - (y1 - y0) // 4
+        if cx1 - cx0 >= 8 and cy1 - cy0 >= 6:
+            x0, y0, x1, y1 = cx0, cy0, cx1, cy1
+        step = 1 if (x1 - x0) * (y1 - y0) <= 20000 else 2
+        white = tot = 0
+        px = img.px
+        for y in range(y0, y1, step):
+            base = y * img.w * 4
+            for x in range(x0, x1, step):
+                i = base + x * 4
+                tot += 1
+                if px[i] > 200 and px[i + 1] > 200 and px[i + 2] > 200:
+                    white += 1
+        if tot == 0:
+            continue
+        checked += 1
+        ratio = white / float(tot)
+        if ratio > 0.5:
+            bad.append("白块 %s[%s] %dx%d 近白像素 %.0f%%（暗色主题下应为 Surface/Background）\"%s\"" % (
+                n.get("name") or "?", short, w, h, ratio * 100, (n.get("text") or "")[:16]))
+    return checked, bad
 def mainform_rules(tree, check):
     """主窗外壳盒模型（96dpi 基准）：菜单 Top/树 Left250/底栏 Bottom≈30/Tab Fill 余量。"""
     nodes = []
@@ -402,6 +473,13 @@ def main():
                 if full.startswith("AntdUI."):
                     continue
                 short = full.split(".")[-1]
+                # TabControl 的 BackColor 是不可信的幽灵值：开了视觉样式后 WinForms 直接
+                # 忽略它（代码里赋了 Background，读回来还是系统 #F0F0F0），而标签栏由
+                # TabChromePainter 自绘、内容区被 TabPage 盖满 —— 实测整块矩形里
+                # #F0F0F0 像素数为 0（mainform 截图 2026-11-07）。属性错、画面对，
+                # 这种"错在属性"的项不该判红；画面是否真有白块由 R8 按像素判。
+                if short == "TabControl" and (n.get("extra") or {}).get("DrawMode") == "OwnerDrawFixed":
+                    continue
                 back = n.get("back") or ""
                 fore = n.get("fore") or ""
                 if short in COLOR_CONTAINERS or short in COLOR_TEXT:
@@ -425,6 +503,22 @@ def main():
             else:
                 check(True, "主题色残留=0 (受检=%d, 主题=%s)" % (checked, theme))
 
+        # R8 截图像素残留：属性全绿但画面是白块（AntdUI 自绘色板、漏贴色的自绘控件）。
+        # 依赖同目录同名 .png + dump 的 clientOrigin；缺一即降级为 info（老证据目录兼容）。
+        origin = tree.get("clientOrigin")
+        png_path = os.path.join(d, fname[:-5] + ".png")
+        if pnglite is None or not origin or not os.path.exists(png_path):
+            print("  info: 像素检查跳过（pnglite/origin/png 缺一）")
+        else:
+            px_checked, px_bad = pixel_residue(
+                all_nodes, av, png_path, (origin.get("x", 0), origin.get("y", 0)))
+            if px_checked == 0:
+                print("  info: 像素受检=0（控件矩形都在截图外）")
+            elif px_bad:
+                for b in px_bad[:6]:
+                    check(False, "截图" + b)
+            else:
+                check(True, "截图白块=0 (受检=%d 叶)" % px_checked)
         if measured == 0:
             print("  info: 文本适配受检=0（无 textSingleW 字段或无文本承载控件）")
         elif overflow == 0:

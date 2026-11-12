@@ -85,6 +85,7 @@ namespace Gdterm.Tests.Ui
             AppendProp(c, sb, "Type");
             AppendProp(c, sb, "RowCount");
             AppendProp(c, sb, "AutoScroll");
+            AppendProp(c, sb, "DrawMode");
             sb.Append("},");
             // 子树：先走 Controls；AntdUI.Window 自绘容器可能把内容藏在内部字段，穿透找
             sb.Append("\"children\":[");

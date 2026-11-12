@@ -175,6 +175,7 @@ FormFontPolicy.FitSingleLineLabel(_statusLabel);
 | R5 | Dock=Fill 与边停靠兄弟不相交 | "工具栏盖住表体"的可测签名；C# 侧 `AssertNoDockOverlap` 同口径 |
 | R6 | 文本适配：单行所需宽/换行所需高 vs 可用空间 | **2026-11-07 起默认硬门**（`--textfit-lenient` 可退回告警）：R16/R17 清零后 ui-smoke 全部 50 个 dump 命中 0，基线不再是“积累中”；度量来自 dump 的 `textSingleW/textWrapH/wrap`（真实 GDI）；**2026-11-01 复核激活**：autoSize/wrap 字符串布尔修复前整条规则恒 0 受检 |
 | R7 | 主题色残留：暗色主题下容器/标签不得是浅底（相对亮度>0.5）、带字标签不得是黑字（<0.2） | **2026-11-07 新增**：几何全对、断言全绿、用户看到白页——这类 bug 此前只能靠人眼；dump 增 `theme/back/fore` 后逐控件判；AntdUI 自绘控件免判（用库主题绘制，色值不参与绘制） |
+| R8 | 截图白块：可见叶控件在截图里的**中心一半**区域近白像素 > 50% → 判红 | **2026-11-07 新增**：属性层判不出自绘控件（AntdUI 用库色板，BackColor 不参与绘制）。实证：底栏八个按钮在截图里是一排纯白块，当时所有属性检查全绿。用中心一半而非整块，是因为带白字的深色控件整块也有 10~20% 白像素，而真白底 bug 白集中在中间一条（实测整块 0.37 / 中心 1.0）。PNG 读取用 `tools/pnglite.py`（纯 stdlib zlib，CI 无 Pillow） |
 
 自绘命中区（审计 C5/C7-③ 落地）：实现 `IHitRegionProvider` 的控件（当前：`TabContainerControl`
 的标签关闭钮）在 dump 里输出 `hitRegions`（屏幕坐标），检查器按最小边 ≥24 逻辑 px 判
