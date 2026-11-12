@@ -174,6 +174,7 @@ FormFontPolicy.FitSingleLineLabel(_statusLabel);
 | R4 | 交互叶 TabStop=false 数为 0 | mainform 独立分支；**2026-11-01 复核激活**：原判定 `tabStop is False` 对字符串 dump 永不成立，规则从未生效（2026-09-25 spike 的“零命中”结论来自人工分析，非此规则） |
 | R5 | Dock=Fill 与边停靠兄弟不相交 | "工具栏盖住表体"的可测签名；C# 侧 `AssertNoDockOverlap` 同口径 |
 | R6 | 文本适配：单行所需宽/换行所需高 vs 可用空间 | **2026-11-07 起默认硬门**（`--textfit-lenient` 可退回告警）：R16/R17 清零后 ui-smoke 全部 50 个 dump 命中 0，基线不再是“积累中”；度量来自 dump 的 `textSingleW/textWrapH/wrap`（真实 GDI）；**2026-11-01 复核激活**：autoSize/wrap 字符串布尔修复前整条规则恒 0 受检 |
+| R7 | 主题色残留：暗色主题下容器/标签不得是浅底（相对亮度>0.5）、带字标签不得是黑字（<0.2） | **2026-11-07 新增**：几何全对、断言全绿、用户看到白页——这类 bug 此前只能靠人眼；dump 增 `theme/back/fore` 后逐控件判；AntdUI 自绘控件免判（用库主题绘制，色值不参与绘制） |
 
 自绘命中区（审计 C5/C7-③ 落地）：实现 `IHitRegionProvider` 的控件（当前：`TabContainerControl`
 的标签关闭钮）在 dump 里输出 `hitRegions`（屏幕坐标），检查器按最小边 ≥24 逻辑 px 判
@@ -263,9 +264,11 @@ CI 失败路径修正：smoke 非零不再立即 throw，dump/截图先上传再
 - `tools/ui-tree-check.py` 加 `--dpi-factor=f`：矩阵 dump 是"在系数 f 下算出的 96dpi 设备像素"，
   故所有**逻辑**阈值（R1 触击 32 / 命中区 24 / 表行高 24–34 / R6 容差 4px）统一乘 f。
   默认 1 = 原口径，行为与加参数前完全一致。`combo.json` 不当 dump 判（否则每格多一条假红）。
-- `tools/ui-matrix-check.py`：每格单独跑 L1（规则一套不重写）+ **反空转**：
-  字号轴 14pt/9pt 控件总高须 ≥1.05、DPI 轴 150%/100% 须 ≥1.10，否则说明条件没生效
-  （缓存/被绕过/构造早于注入）→ 判红。格子缺一也判红。
+- `tools/ui-matrix-check.py`：每格单独跑 L1（规则一套不重写）+ **三轴反空转**：
+  字号轴 14pt/9pt、DPI 轴 150%/100% 取同身份控件**宽/高两维的最大比值**
+  （只看高度会被 38px 输入框地板摊平成 1.00 假红），阈值 ≥1.15 / ≥1.35；
+  **主题轴比色**：Dark 与 OLED 的宿主背景必须不同，否则说明主题没切过去。
+  任一不成立说明条件没生效（缓存/被绕过/构造早于注入）→ 判红。格子缺一也判红。
 
 **两条轴的性质必须分清（别把近似当真实）**：
 - **字号轴是真实的**：`UIFontSize` 真换字体，`TextRenderer` 真 GDI 度量 → "14pt 下文字裁切/

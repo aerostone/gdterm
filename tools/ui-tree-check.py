@@ -45,6 +45,27 @@ import os
 import sys
 
 FAIL = []
+
+
+def hex_luminance(hex_str):
+    """"#RRGGBB"/"#AARRGGBB" → 相对亮度 0..1（WCAG 口径）；空/透明/解析失败 → None。"""
+    if not hex_str or not isinstance(hex_str, str) or not hex_str.startswith("#"):
+        return None
+    h = hex_str[1:]
+    try:
+        if len(h) == 8:
+            a = int(h[:2], 16)
+            if a == 0:
+                return None          # 全透明 = 继承父色，不判
+            h = h[2:]
+        if len(h) != 6:
+            return None
+        r, g, b = int(h[0:2], 16) / 255.0, int(h[2:4], 16) / 255.0, int(h[4:6], 16) / 255.0
+    except ValueError:
+        return None
+    def lin(c):
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+    return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
 WARN = []
 TOL = 2          # 越界容差 px
 OVERLAP_MIN = 16  # 重叠告警阈值 px2（4x4）
@@ -360,6 +381,50 @@ def main():
                     overflow += 1
                     WARN.append("文字溢出 %s[%s] 需%dpx宽 可用%dpx「%s」" % (
                         _nm(n), short, need_w, avail_w, text[:20]))
+        # R7 主题色残留（2026-11-07 新增）：暗色外壳里还留着浅底/黑字。
+        # 这类 bug 只有肉眼看得出来——几何全对、断言全绿，用户看到的是"一张白页"。
+        # 判定：外壳三套主题（Dark/Darker/OLED）全为深色，因此
+        #   ① 容器/标签的实际 BackColor 不得是浅色（相对亮度 > 0.5）；
+        #   ② 有文字的标签/勾选框 ForeColor 不得是深色（亮度 < 0.2）。
+        # 免判：AntdUI 自绘控件（用库主题绘制，BackColor/ForeColor 不参与绘制）、
+        #       Transparent/Empty（继承父色）、不可见节点。
+        theme = (tree.get("theme") or "Dark")
+        if theme in ("Dark", "Darker", "OLED"):
+            COLOR_CONTAINERS = ("Panel", "FlowLayoutPanel", "TableLayoutPanel", "SplitContainer",
+                                "SplitterPanel", "UserControl", "GroupBox", "TabControl", "TabPage")
+            COLOR_TEXT = ("Label", "CheckBox", "Checkbox", "RadioButton", "LinkLabel")
+            residue = []
+            checked = 0
+            for n, _a, _b, _c, _d in all_nodes:
+                if not sbool(n.get("visible")) or not sbool(n.get("enabled")):
+                    continue
+                full = n.get("type") or ""
+                if full.startswith("AntdUI."):
+                    continue
+                short = full.split(".")[-1]
+                back = n.get("back") or ""
+                fore = n.get("fore") or ""
+                if short in COLOR_CONTAINERS or short in COLOR_TEXT:
+                    lum = hex_luminance(back)
+                    if lum is not None:
+                        checked += 1
+                        if lum > 0.5:
+                            residue.append("浅底 %s[%s] back=%s（暗色主题下应为 Surface/Background）\"%s\"" % (
+                                n.get("name") or "?", short, back, (n.get("text") or "")[:16]))
+                if short in COLOR_TEXT and (n.get("text") or "").strip():
+                    lum = hex_luminance(fore)
+                    if lum is not None:
+                        if lum < 0.2:
+                            residue.append("黑字 %s[%s] fore=%s\"%s\"" % (
+                                n.get("name") or "?", short, fore, (n.get("text") or "")[:16]))
+            if checked == 0:
+                print("  info: 主题色受检=0（无 back/fore 字段）")
+            elif residue:
+                for r in residue[:8]:
+                    check(False, "主题色残留 " + r)
+            else:
+                check(True, "主题色残留=0 (受检=%d, 主题=%s)" % (checked, theme))
+
         if measured == 0:
             print("  info: 文本适配受检=0（无 textSingleW 字段或无文本承载控件）")
         elif overflow == 0:

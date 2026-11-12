@@ -97,6 +97,15 @@ def max_growth(a, b):
     return best, best_key
 
 
+def header_back(path):
+    """→ 该 dump 的窗体/宿主背景色字符串（"#RRGGBB"），无则 None。"""
+    try:
+        with open(path, encoding="utf-8-sig") as fp:
+            return (json.load(fp) or {}).get("back") or None
+    except Exception:
+        return None
+
+
 def combos(root):
     """→ {(theme, dpi, font): dirName}"""
     out = {}
@@ -204,6 +213,30 @@ def main():
                 else:
                     ok("DPI 轴生效 %s/%s f%02d: 150%%/100%% 最大尺寸比=%0.2f（%s %s）"
                        % (theme, target, int(font), r, k[0], (k[1] or k[2] or "-")))
+
+    # ── 3) 主题轴反空转：换主题必须真的换了色 ────────────────────
+    # 字号/DPI 两轴比几何，主题轴对几何几乎无影响——它影响的是色。
+    # 若 Dark 与 OLED 两格的宿主背景色一样，说明"主题没切过去"，此时全绿是假绿。
+    for target in sorted(targets or []):
+        for dpi in EXPECT_DPI:
+            for font in EXPECT_FONT:
+                da = grid.get(("Dark", dpi, font))
+                db = grid.get(("OLED", dpi, font))
+                if not da or not db:
+                    continue
+                pa = os.path.join(da, target + ".json")
+                pb = os.path.join(db, target + ".json")
+                if not (os.path.exists(pa) and os.path.exists(pb)):
+                    continue
+                ha, hb = header_back(pa), header_back(pb)
+                if ha is None or hb is None:
+                    continue
+                if ha == hb:
+                    fail("主题轴没生效 %s d%03d f%02d: Dark 与 OLED 宿主背景同为 %s"
+                         % (target, int(dpi * 100), int(font), ha))
+                else:
+                    ok("主题轴生效 %s d%03d f%02d: Dark %s → OLED %s"
+                       % (target, int(dpi * 100), int(font), ha, hb))
 
     print()
     if FAIL:

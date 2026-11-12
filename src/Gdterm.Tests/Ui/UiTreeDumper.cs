@@ -21,6 +21,11 @@ namespace Gdterm.Tests.Ui
             sb.Append("\"text\":\"").Append(Esc(form.Text)).Append("\",");
             sb.Append("\"clientSize\":").Append(SizeJson(form.ClientSize)).Append(",");
             sb.Append("\"dpi\":").Append(DpiOf(form)).Append(",");
+            // 主题名 + 每控件实际色值：判"暗色主题下还留白底/黑字"（旧色残留）只靠截图看不出来，
+            // 有了色值就能在 R7 里逐控件判，也能让矩阵主题轴有可比的证据。
+            sb.Append("\"theme\":\"").Append(Esc(Gdterm.UI.Diagnostics.GdtermColorTable.CurrentThemeName)).Append("\",");
+            sb.Append("\"back\":\"").Append(ColorHex(form.BackColor)).Append("\",");
+            sb.Append("\"fore\":\"").Append(ColorHex(form.ForeColor)).Append("\",");
             sb.Append("\"controls\":[");
             bool first = true;
             foreach (Control c in form.Controls)
@@ -55,6 +60,8 @@ namespace Gdterm.Tests.Ui
             sb.Append("\"visible\":").Append(c.Visible ? "true" : "false").Append(",");
             sb.Append("\"enabled\":").Append(c.Enabled ? "true" : "false").Append(",");
             sb.Append("\"font\":\"").Append(Esc(c.Font.Name + " " + c.Font.SizeInPoints.ToString("0.##") + "pt")).Append("\",");
+            sb.Append("\"back\":\"").Append(ColorHex(c.BackColor)).Append("\",");
+            sb.Append("\"fore\":\"").Append(ColorHex(c.ForeColor)).Append("\",");
             // 文本适配度量（审计 C7-1）：单行所需宽 / 换行所需高 / 是否可换行。
             // 历史最高频 bug 是“文字被裁”，此前 dump 只有 Bounds 没有文字需求尺寸，
             // 因此这类 bug 只能靠人眼看截图。有了这三个数，ui-tree-check R6 就能自动判。
@@ -86,6 +93,19 @@ namespace Gdterm.Tests.Ui
             }
             catch { }
             sb.Append("]}");
+        }
+
+        /// <summary>色值转 #RRGGBB（有透明度时 #AARRGGBB）；未设置时给空串。</summary>
+        private static string ColorHex(Color c)
+        {
+            try
+            {
+                if (c.IsEmpty) return "";
+                return c.A == 255
+                    ? "#" + c.R.ToString("X2") + c.G.ToString("X2") + c.B.ToString("X2")
+                    : "#" + c.A.ToString("X2") + c.R.ToString("X2") + c.G.ToString("X2") + c.B.ToString("X2");
+            }
+            catch { return ""; }
         }
 
         /// <summary>

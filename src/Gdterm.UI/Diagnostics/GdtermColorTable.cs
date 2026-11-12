@@ -110,10 +110,14 @@ namespace Gdterm.UI.Diagnostics
         /// <summary>链接/信息（蓝色仅在可点击文字场景；色值见 §1 生成表）。</summary>
         public static Color Info { get { return s_info; } }
 
+        /// <summary>当前外壳主题名（Dark / Darker / OLED）。给 dump 判"色值是否跟主题走"用。</summary>
+        public static string CurrentThemeName { get; private set; } = "Dark";
+
         /// <summary>运行时切换外壳主题（与终端 ColorScheme 独立）。v2 色板：三级明度 + 分级边框 + Tint。</summary>
         public static void ApplyTheme(string name)
         {
             if (string.IsNullOrEmpty(name)) name = "Dark";
+            CurrentThemeName = name;
             var before = CaptureTokens();
             switch (name)
             {
