@@ -47,6 +47,14 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <!-- 测试要直接构造/断言 SSH.NET 类型（SshConnectionInfoFactory 的返回值就是 ConnectionInfo）。
+         经典 csproj 的 ProjectReference 不透传 PackageReference 的程序集，所以这里要显式引一次
+         ——否则 csc-check（全仓编成一个程序集）绿、Windows msbuild 报 CS0246。 -->
+    <PackageReference Include="SSH.NET" Version="2026.0.0">
+      <PrivateAssets>none</PrivateAssets>
+    </PackageReference>
+  </ItemGroup>
+  <ItemGroup>
     <ProjectReference Include="..\Gdterm.Core\Gdterm.Core.csproj">
       <Project>{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}</Project>
       <Name>Gdterm.Core</Name>
