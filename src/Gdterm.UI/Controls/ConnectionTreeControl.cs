@@ -115,15 +115,20 @@ namespace Gdterm.UI.Controls
             TraceCtor("treeview");
             // WinForms Dock：Fill 要先加，Top 后加才能占位
             Controls.Add(_treeView);
+            TraceCtor("add-tree");
             Controls.Add(_filterBox);
+            TraceCtor("add-filter");
 
             // 右键菜单——在 Opening 中按右键节点动态调整项，避免“主机上右键也弹新建”
             // 顺序按使用频率：连接/复制地址（主机节点专属）→ 本地终端 → 新建/编辑/删除
             _contextMenu = new ContextMenuStrip();
+            TraceCtor("ctxmenu-new");
 
             var itemConnect = new ToolStripMenuItem(L10n.T("连接(&C)"), null, OnConnect);
+            TraceCtor("item-connect");
             itemConnect.Tag = "connect";
             AttachMenuIcon(itemConnect, "globe");
+            TraceCtor("icon-globe");
             _contextMenu.Items.Add(itemConnect);
 
             var itemCopyHost = new ToolStripMenuItem(L10n.T("复制主机地址(&O)"), null, OnCopyHost);
