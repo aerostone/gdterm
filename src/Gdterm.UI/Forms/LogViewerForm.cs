@@ -261,6 +261,9 @@ namespace Gdterm.UI.Forms
             };
             var btnClose = MkButton("LogViewerClose", L10n.T("关闭"), (s, e) => Close());
             btnClose.Margin = new Padding(DpiScale.V(this, 8), 0, 0, 0);
+            // Esc 关闭：只读查看器没有"确认/取消"对，关闭就是唯一的取消语义。
+            // 不绑 CancelButton 的话 Esc 什么都不做（冒烟门 R3 也是这么判的）。
+            CancelButton = btnClose;
             rightFlow.Controls.Add(btnClose);
             bottom.Controls.Add(rightFlow);
 

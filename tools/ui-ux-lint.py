@@ -387,6 +387,43 @@ def r14(path, lines):
             yield i, snippet(line)
 
 
+# ────────────────────────────── R15 ──────────────────────────────
+# 对话框必须有 Esc 出路：CancelButton 未绑 = 键盘用户只能点 × 或找鼠标。
+# 这条是 CI 20 分钟反馈换来的：LogViewerForm 只加了「关闭」按钮没绑 CancelButton，
+# 冒烟门 R3（DialogsSmoke 的 cancelbtn 断言）在 Windows 上才红，本地零信号。
+# 免判：MainForm（主窗不是对话框）、TrashForm（工具小窗，按钮全为操作语义，冒烟门已免判）。
+ESC_EXEMPT = {
+    "Forms/MainForm.cs",
+    "Forms/TrashForm.cs",
+}
+
+
+@rule("R15", "对话框未绑 Esc（CancelButton）", "UI-UX-VERIFICATION §2.3 / 冒烟门 R3")
+def r15(path, lines):
+    r = rel(path)
+    if not (r.startswith("Forms/") or r.startswith("Controls/")):
+        return
+    if r.endswith(".Designer.cs") or r in ESC_EXEMPT:
+        return
+    # 只看代码行：注释里提到 CancelButton/Escape（比如写"这里为什么不绑"）不算实现
+    joined = "".join(l for l in lines if not is_comment(l))
+    if "class " not in joined:
+        return
+    if "CancelButton" in joined:
+        return
+    # 自己截 Esc 也算"有出路"：命令面板/快速跳转（输入框吞 CancelButton）、
+    # 扫描中心（运行中不许硬关）都必须显式判 Keys.Escape。
+    if "Keys.Escape" in joined:
+        return
+    # 只判"窗体"：继承 Form / AntdUI.Window 的类才谈得上 Esc 语义
+    for i, line in enumerate(lines, 1):
+        if is_comment(line):
+            continue
+        if re.search(r"class\s+\w+\s*:\s*(?:.*\b)?(?:AntdUI\.)?(?:Window|Form)\b", line):
+            yield i, snippet(line)
+            return
+
+
 # ────────────────────────────── 主流程 ──────────────────────────────
 def scan():
     hits = []

@@ -81,6 +81,7 @@ CI 里已挂在 `appveyor.yml` 的 test_script 段（编码守卫之后、ui-smo
 | R12 | `AntdUI.Select` 设了 AutoSize | SC 规则 4d | 4 |
 | R13 | 裸像素 `Margin/Padding(a,b,c,d)` | SC 规则 4/4d | 24 |
 | R14 | `Location = … ClientSize.Width …`（Forms/ 构造期绝对坐标） | SC 规则 2（0.1.359 门禁首捕） | 0 |
+| R15 | 对话框未绑 `CancelButton`（且自身不截 `Keys.Escape`） | §2.3 关闭绑定（冒烟门 R3 的本地化） | 0 |
 
 ### 3.3 基线棘轮（为什么不直接"必须为 0"）
 
