@@ -116,9 +116,13 @@ namespace Gdterm.UI.Forms
             Controls.Add(_chkRequiresRoot);
 
             int sortX = inputX + DpiScale.V(this, 185);
-            AddLabel(L10n.T("排序"), sortX, y, fieldH);
+            // 数字框位置按标签实测宽推，不写死 45px：FitSingleLineLabel 的重量宽
+            // 会随字体差 1~2px（46 vs 45），写死就压住输入框 1px（CI 21px² 重叠）
+            var lblSort = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("排序") });
+            lblSort.Location = new Point(sortX, y + Math.Max(4, (fieldH - FontHeight) / 2));
+            Controls.Add(lblSort);
             _numSortOrder = new AntdUI.InputNumber {
-                Location = new Point(sortX + DpiScale.V(this, 45), y),
+                Location = new Point(lblSort.Right + DpiScale.V(this, 6), y),
                 Size = new Size(DpiScale.V(this, 80), fieldH),
                 Maximum = 999,
                 Value = 0,
