@@ -41,7 +41,11 @@ namespace Gdterm.Tests.Ui
         private static readonly string[] Targets =
         {
             "keepass-manager", "keepass-unlock", "port-forward", "command-history",
-            "secret-scan", "toolbox", "transfer-center", "health-monitor"
+            "secret-scan", "toolbox", "transfer-center", "health-monitor",
+            // 第二批（2026-11-07）：补的是"14pt 下最容易塌"的四种控件形态——
+            // 多列表格（key-binding）、表格+按钮排（macro）、多行输入（batch-command）、
+            // 搜索框+结果列表（snippet-search）。前 8 个目标里没有多行输入和搜索框。
+            "key-binding", "macro", "batch-command", "snippet-search"
         };
 
         private static int _fails;
@@ -186,8 +190,58 @@ namespace Gdterm.Tests.Ui
                         ShowAndDump(host, dir, target, font, dpi);
                     }
                     break;
+                case "key-binding":
+                    WithTempPanel(dir, target, font, dpi, tmp =>
+                        new KeyBindingPanel(new Gdterm.Connections.TerminalKeyBindingStore(
+                            Path.Combine(tmp, "keybind.json"))));
+                    break;
+                case "macro":
+                    WithTempPanel(dir, target, font, dpi, tmp =>
+                        new MacroPanel(Path.Combine(tmp, "macros"), null));
+                    break;
+                case "batch-command":
+                    WithTempPanel(dir, target, font, dpi, tmp => new BatchCommandPanel());
+                    break;
+                case "snippet-search":
+                    WithTempPanel(dir, target, font, dpi, tmp =>
+                        new SnippetSearchPanel(new List<Gdterm.Core.Models.QuickCommand>()));
+                    break;
                 default:
                     throw new ArgumentException("unknown matrix target: " + target);
+            }
+        }
+
+        /// <summary>
+        /// 需要临时目录的侧栏面板：目录用完即删，面板随宿主窗一起释放。
+        /// 第二批目标全部走这里，避免每个 case 复制一遍 tmp 管理（漏删会污染 data/）。
+        /// </summary>
+        private static void WithTempPanel(string dir, string target, float font, float dpi,
+            Func<string, Control> create)
+        {
+            string tmp = Path.Combine(Path.GetTempPath(), "gdterm-matrix-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(tmp);
+            try
+            {
+                var panel = create(tmp);
+                try
+                {
+                    using (var host = PanelHost())
+                    {
+                        host.Controls.Add(panel);
+                        panel.Dock = DockStyle.Fill;
+                        panel.Visible = true;
+                        ShowAndDump(host, dir, target, font, dpi);
+                    }
+                }
+                finally
+                {
+                    var d = panel as IDisposable;
+                    if (d != null) { try { d.Dispose(); } catch { } }
+                }
+            }
+            finally
+            {
+                try { Directory.Delete(tmp, true); } catch { }
             }
         }
 
