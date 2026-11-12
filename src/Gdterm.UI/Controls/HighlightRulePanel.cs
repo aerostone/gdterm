@@ -53,7 +53,8 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Top,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                WrapContents = false,
+                // 动作钮宽度随 DPI/字号变，窄窗下不换行就会把最后一个钮顶出可视区（port-forward-narrow 实证）
+                WrapContents = true,
                 BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 5), DpiScale.V(this, 8), DpiScale.V(this, 5))
             };
