@@ -35,6 +35,7 @@ namespace Gdterm.UI.Controls
         private readonly FlowLayoutPanel _bar;
         private readonly AntdUI.Label _countLabel;
         private readonly BarFit _barFit;
+        private bool _fittingBar;
         private TableMultiSelect _multi;
 
         public AntdUI.Input FilterBox { get; private set; }
@@ -152,11 +153,29 @@ namespace Gdterm.UI.Controls
             // 壳随之 0×0；AutoSize 工具条保持 38 高、其子件按宽 0 折行叠高，而 WinForms 子窗
             // 不裁剪父边界——工具条整条画到宿主左上角（叠在 tab 头上），tree-check 的越界
             // 规则正是抓到了这个真实渲染泄漏。零面积时隐藏工具条，页面激活获得真实尺寸后恢复。
-            bool hasArea = ClientSize.Width > 0 && ClientSize.Height > 0;
-            if (_bar.Visible != hasArea) _bar.Visible = hasArea;
-            _pager.SyncArea(hasArea);
-            if (hasArea) RelayoutBar();
+            _pager.SyncArea(ClientSize.Width > 0 && ClientSize.Height > 0);
+            ApplyBarFit();
             base.OnClientSizeChanged(e);
+        }
+
+        /// <summary>布局级兜底（同 ListShell.ApplyBarFit：只靠尺寸事件会漏掉布局内更新）。</summary>
+        protected override void OnLayout(LayoutEventArgs levent)
+        {
+            base.OnLayout(levent);
+            ApplyBarFit();
+        }
+
+        private void ApplyBarFit()
+        {
+            if (_fittingBar || _barFit == null || _bar == null) return;
+            _fittingBar = true;
+            try
+            {
+                bool hasArea = ClientSize.Width > 0 && ClientSize.Height > 0;
+                if (_bar.Visible != hasArea) _bar.Visible = hasArea;
+                if (hasArea) RelayoutBar();
+            }
+            finally { _fittingBar = false; }
         }
 
         /// <summary>

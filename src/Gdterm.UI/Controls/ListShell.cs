@@ -41,6 +41,7 @@ namespace Gdterm.UI.Controls
         private readonly List<string> _sortKeys = new List<string>();
         private readonly AntdUI.Label _countLabel;
         private readonly BarFit _barFit;
+        private bool _fittingBar;
 
         public ListView List { get; private set; }
         public AntdUI.Input FilterBox { get; private set; }
@@ -189,23 +190,42 @@ namespace Gdterm.UI.Controls
 
         protected override void OnClientSizeChanged(EventArgs e)
         {
-            // 与 TableShell 同机制：AntdUI.Tabs 隐藏页 0×0 时，AutoSize 工具条的子件
-            // 会画到宿主左上角（WinForms 子窗不裁剪父边界）。零面积隐藏，有尺寸恢复。
-            bool hasArea = ClientSize.Width > 0 && ClientSize.Height > 0;
-            // 工具条是 Dock=Top 的固定行：宿主比这一行还矮时（书签页 SplitContainer 被拖到
-            // 53px，壳只剩 32px 而工具行要 38px）它会画到壳外，ui-tree-check R-溢出 实测红。
-            // 放不下就整行收起——32px 里塞过滤/排序本来也没有可操作空间。
-            bool showBar = hasArea;
-            int barH = 0;
-            if (hasArea)
-            {
-                barH = FitBar(out showBar);
-            }
-            if (_bar.Visible != showBar) _bar.Visible = showBar;
-            // 换行时 AutoSize 不会按新宽度重算高度（与 TableShell 同一缺陷），显式回写
-            if (showBar && barH > 0 && _bar.Height != barH) _bar.Height = barH;
-            _pager.SyncArea(hasArea);
+            ApplyBarFit();
+            _pager.SyncArea(ClientSize.Width > 0 && ClientSize.Height > 0);
             base.OnClientSizeChanged(e);
+        }
+
+        /// <summary>
+        /// 布局级兜底：只靠 OnClientSizeChanged 不够 —— 壳在隐藏页里以 0×0 创建、随后被
+        /// Dock 摆成 168×213 时，宽高都变了但工具条自身宽度是在**这次布局内**才更新的，
+        /// 判定用的还是旧值（L2 矩阵第一批"改了没生效"就是这个）。OnLayout 每次真布局都会到，
+        /// 用它把判定重跑一遍；_fittingBar 防重入（内部会改 Height/Visible）。
+        /// </summary>
+        protected override void OnLayout(LayoutEventArgs levent)
+        {
+            base.OnLayout(levent);
+            ApplyBarFit();
+        }
+
+        private void ApplyBarFit()
+        {
+            if (_fittingBar || _barFit == null || _bar == null) return;
+            _fittingBar = true;
+            try
+            {
+                // AntdUI.Tabs 隐藏页 0×0 时，AutoSize 工具条的子件会画到宿主左上角
+                // （WinForms 子窗不裁剪父边界）。零面积隐藏，有尺寸恢复。
+                // 工具条是 Dock=Top 的固定行：宿主比这一行还矮时（书签页 SplitContainer 拖到
+                // 53px，壳只剩 32px 而工具行要 38px）它会画到壳外 —— 放不下就整行收起。
+                bool hasArea = ClientSize.Width > 0 && ClientSize.Height > 0;
+                bool showBar = hasArea;
+                int barH = 0;
+                if (hasArea) barH = FitBar(out showBar);
+                if (_bar.Visible != showBar) _bar.Visible = showBar;
+                // 换行时 AutoSize 不会按新宽度重算高度（与 TableShell 同一缺陷），显式回写
+                if (showBar && barH > 0 && _bar.Height != barH) _bar.Height = barH;
+            }
+            finally { _fittingBar = false; }
         }
 
         /// <summary>
