@@ -15,7 +15,7 @@ namespace Gdterm.UI.Controls
     /// 第二行整排压在表格上。
     ///
     /// 这里做三件事，顺序不能变：
-    ///   1. **收宽**：每个子件宽度收到「可用宽 − 外边距」，但记住它原本想要的宽度（窗口变宽要还回去）；
+    ///   1. **判宽**：有没有子件比工具条还宽（有 → 换行也救不了，直接让位）；
     ///   2. **量高**：按**当前**宽度问 PreferredSize，得到真实行高；
     ///   3. **让位**：宿主太矮时先隐藏可省子件（过滤/排序/计数），还放不下就整条收起 ——
     ///      宁可不显示工具条，也不能把它画到表格上。
@@ -23,7 +23,10 @@ namespace Gdterm.UI.Controls
     internal sealed class BarFit
     {
         private readonly FlowLayoutPanel _bar;
-        private readonly Dictionary<Control, int> _wantWidth = new Dictionary<Control, int>();
+        private readonly List<Control> _known = new List<Control>();
+        // 只记录"被本类隐藏的"子件：宿主自己按业务隐藏的（showFilter:false 的过滤框、
+        // 未排序时藏起来的方向钮）不能被恢复逻辑翻出来 —— 那是另一类 bug。
+        private readonly List<Control> _hiddenByMe = new List<Control>();
         private readonly List<Control> _optional = new List<Control>();
 
         public BarFit(FlowLayoutPanel bar)
@@ -35,22 +38,27 @@ namespace Gdterm.UI.Controls
         public void Record(Control c, bool optional = false)
         {
             if (c == null) return;
-            _wantWidth[c] = c.Width;
+            if (!_known.Contains(c)) _known.Add(c);
             if (optional && !_optional.Contains(c)) _optional.Add(c);
         }
 
-        public int Fit(int availWidth)
+        /// <summary>
+        /// 单个子件是不是比工具条还宽（这种情况下 WrapContents 也救不了，子件会画出父边界）。
+        /// </summary>
+        public bool AllFit(int availWidth)
+        {
+            if (_bar == null || availWidth <= 0) return true;
+            foreach (Control c in _bar.Controls)
+            {
+                if (c == null || !c.Visible) continue;
+                if (c.Width + c.Margin.Horizontal > availWidth) return false;
+            }
+            return true;
+        }
+
+        public int Measure(int availWidth)
         {
             if (_bar == null || availWidth <= 0) return 0;
-            foreach (var kv in _wantWidth)
-            {
-                Control c = kv.Key;
-                if (c == null || c.Parent == null) continue;
-                int room = Math.Max(1, availWidth - c.Margin.Horizontal);
-                int want = kv.Value > 0 ? kv.Value : c.Width;
-                int w = Math.Min(want, room);
-                if (c.Width != w) c.Width = w;
-            }
             _bar.PerformLayout();
             return PreferredHeight(availWidth);
         }
@@ -71,6 +79,7 @@ namespace Gdterm.UI.Controls
                 if (c != null && c.Parent != null && c.Visible)
                 {
                     c.Visible = false;
+                    _hiddenByMe.Add(c);
                     _bar.PerformLayout();
                     return true;
                 }
@@ -78,15 +87,16 @@ namespace Gdterm.UI.Controls
             return false;
         }
 
-        /// <summary>恢复全部可省子件（宿主变宽/变高后回到完整工具条）。</summary>
+        /// <summary>恢复本类此前隐藏的子件（宿主变宽/变高后回到完整工具条）。</summary>
         public void RestoreOptional()
         {
-            bool changed = false;
-            foreach (Control c in _optional)
+            if (_hiddenByMe.Count == 0) return;
+            foreach (Control c in _hiddenByMe)
             {
-                if (c != null && c.Parent != null && !c.Visible) { c.Visible = true; changed = true; }
+                if (c != null && c.Parent != null) c.Visible = true;
             }
-            if (changed) _bar.PerformLayout();
+            _hiddenByMe.Clear();
+            _bar.PerformLayout();
         }
     }
 }

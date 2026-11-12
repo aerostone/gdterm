@@ -171,12 +171,22 @@ namespace Gdterm.UI.Controls
         {
             int w = ClientSize.Width;
             if (w <= 0) return;
-            // 先收宽（子件比容器宽时换行救不了）→ 再按当前宽度量高 → 不够就让位
+            // 宽了让位（子件比容器宽时换行救不了）、矮了让位、都还不行整条收起
+            int minTable = DpiScale.V(this, 60);
             _barFit.RestoreOptional();
-            int need = _barFit.Fit(w);
-            while (need > 0 && ClientSize.Height < need + DpiScale.V(this, 60) && _barFit.HideOneOptional())
-                need = _barFit.Fit(w);
-            bool showBar = need <= 0 || ClientSize.Height >= need;
+            int need = _barFit.Measure(w);
+            bool showBar;
+            while ((need > 0 && ClientSize.Height < need + minTable) || !_barFit.AllFit(w))
+            {
+                if (!_barFit.HideOneOptional())
+                {
+                    // 已无可让位：整条收起，绝不把子件画到表格上
+                    if (_bar.Visible) _bar.Visible = false;
+                    return;
+                }
+                need = _barFit.Measure(w);
+            }
+            showBar = need <= 0 || ClientSize.Height >= need;
             if (_bar.Visible != showBar) _bar.Visible = showBar;
             if (showBar && need > 0 && _bar.Height != need) _bar.Height = need;
         }

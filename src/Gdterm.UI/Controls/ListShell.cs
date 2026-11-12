@@ -199,19 +199,33 @@ namespace Gdterm.UI.Controls
             int barH = 0;
             if (hasArea)
             {
-                // 先收宽再量高：子件比容器宽时换行也救不了（会直接画出父边界）
-                _barFit.RestoreOptional();
-                barH = _barFit.Fit(ClientSize.Width);
-                // 仍放不下（矮宿主 + 换行）→ 逐个收起可省子件；还放不下就整条收起
-                while (barH > 0 && ClientSize.Height < barH + DpiScale.V(this, 40) && _barFit.HideOneOptional())
-                    barH = _barFit.Fit(ClientSize.Width);
-                showBar = barH <= 0 || ClientSize.Height >= barH;
+                barH = FitBar(out showBar);
             }
             if (_bar.Visible != showBar) _bar.Visible = showBar;
             // 换行时 AutoSize 不会按新宽度重算高度（与 TableShell 同一缺陷），显式回写
             if (showBar && barH > 0 && _bar.Height != barH) _bar.Height = barH;
             _pager.SyncArea(hasArea);
             base.OnClientSizeChanged(e);
+        }
+
+        /// <summary>
+        /// 工具条自适应（2026-11-07，L2 矩阵 d150 抓到的两类越界）：宽了让位、矮了让位、都还不行整条收起。
+        /// 返回工具条该有的高度；showBar=false 表示这次不显示（宁可不显示也不画出父边界）。
+        /// </summary>
+        private int FitBar(out bool showBar)
+        {
+            int w = ClientSize.Width;
+            int minTable = DpiScale.V(this, 40);
+            _barFit.RestoreOptional();
+            int need = _barFit.Measure(w);
+            // 逐个收起可省子件（过滤/排序/方向/计数），直到"装得下且没有子件比工具条宽"
+            while ((need > 0 && ClientSize.Height < need + minTable) || !_barFit.AllFit(w))
+            {
+                if (!_barFit.HideOneOptional()) { showBar = false; return 0; }
+                need = _barFit.Measure(w);
+            }
+            showBar = need <= 0 || ClientSize.Height >= need;
+            return need;
         }
 
         /// <summary>宿主追加自己的动作按钮（导出 / 批量删除 / 启用…），进入同一行工具条。</summary>
