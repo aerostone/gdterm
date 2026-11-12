@@ -452,6 +452,9 @@ namespace Gdterm.Tests.Ui
 
                 panel.Dock = DockStyle.Fill;
                 host.Controls.Add(panel);
+                // 覆盖式面板（SnippetSearch 等浮层）出厂 Visible=false，靠 ShowAndFocus 才现身；
+                // 不显式点亮的话它整棵子树都是"不可见"，空态断言会假红/假绿。
+                panel.Visible = true;
                 host.Show();
                 host.BringToFront();
                 Application.DoEvents();
