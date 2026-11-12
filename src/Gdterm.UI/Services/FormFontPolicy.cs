@@ -170,26 +170,49 @@ namespace Gdterm.UI.Services
         /// <param name="b">要定尺寸的钮；null 直接返回。</param>
         /// <param name="padX">左右内边距（设计 px，会被 DPI 缩放）。</param>
         /// <param name="padY">上下内边距（设计 px，仅影响绘制留白）。</param>
-        public static void SizeActionButton(Control host, AntdUI.Button b, int padX = 10, int padY = 4)
+        /// <param name="designHeight">
+        /// 显式高度（设计 px）。0 = 取 <see cref="FieldHeight"/>（与输入框同高，适合工具条/页脚）。
+        /// 状态栏等紧凑场景传 22~24：仍然 DPI 感知，但不会被撑到输入框那么高。
+        /// </param>
+        public static void SizeActionButton(Control host, AntdUI.Button b, int padX = 10, int padY = 4,
+            int designHeight = 0)
         {
             if (b == null) return;
             b.AutoSize = false;
             int px = Math.Max(0, DpiScale.V(host, padX));
             int py = Math.Max(0, DpiScale.V(host, padY));
             b.Padding = new Padding(px, py, px, py);
-            var f = b.Font ?? UiFont();
-            string text = string.IsNullOrEmpty(b.Text) ? " " : b.Text;
-            int tw;
-            try
+
+            void Apply()
             {
-                tw = TextRenderer.MeasureText(text, f, new Size(int.MaxValue, int.MaxValue),
-                    TextFormatFlags.NoPadding).Width;
+                if (b.IsDisposed) return;
+                var f = b.Font ?? UiFont();
+                string text = string.IsNullOrEmpty(b.Text) ? " " : b.Text;
+                int tw;
+                try
+                {
+                    tw = TextRenderer.MeasureText(text, f, new Size(int.MaxValue, int.MaxValue),
+                        TextFormatFlags.NoPadding).Width;
+                }
+                catch { tw = text.Length * (int)Math.Ceiling(f.SizeInPoints * 96f / 72f); }
+                // +2 是字体 hinting 的余量：量出来的宽度与库内绘制宽度常差 1~2px，缺了会被判"文字被裁"
+                b.Width = tw + px * 2 + DpiScale.V(host, 2);
+                if (designHeight > 0)
+                {
+                    // 紧凑场景：设计高按 DPI 缩放，但不得小于"行高 + 上下留白"（否则文字被裁）
+                    int min = LineBox(f, host) + py * 2;
+                    b.Height = Math.Max(Math.Max(DpiScale.V(host, designHeight), min), 1);
+                }
+                else
+                {
+                    b.Height = FieldHeight(host);
+                }
             }
-            catch { tw = text.Length * (int)Math.Ceiling(f.SizeInPoints * 96f / 72f); }
-            // +2 是字体 hinting 的余量：量出来的宽度与库内绘制宽度常差 1~2px，缺了会被判"文字被裁"
-            b.Width = tw + px * 2 + DpiScale.V(host, 2);
-            b.Height = FieldHeight(host);
-            try { if (b.Font != f) f.Dispose(); } catch (Exception) { }
+
+            Apply();
+            // AutoSize 关掉后宽度是定值，文字后改（「显示/隐藏」「下一步 → 开始设置」
+            // 「⚠ 确认执行 ⚠」及倒计时）必须重量宽——否则长文案在固定宽里被裁。
+            b.TextChanged += (s, e) => Apply();
         }
 
         /// <summary>

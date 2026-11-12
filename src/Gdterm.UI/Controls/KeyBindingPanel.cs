@@ -208,14 +208,14 @@ namespace Gdterm.UI.Controls
 
         private AntdUI.Button CreateButton(string text)
         {
-            return new AntdUI.Button {
+            var btn = new AntdUI.Button {
                 Text = text,
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
                 Margin = new Padding(0, 0, DpiScale.V(this, 8), 0),
                 Type = AntdUI.TTypeMini.Default,
                 Cursor = Cursors.Hand
             };
+            Services.FormFontPolicy.SizeActionButton(this, btn, 10, 4);
+            return btn;
         }
 
         private void OnPresetChanged(object sender, EventArgs e)

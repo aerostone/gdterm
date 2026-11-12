@@ -170,24 +170,20 @@ namespace Gdterm.UI.Controls
             _inputBox.KeyDown += OnInputKeyDown;
             bottomRow.Controls.Add(_inputBox, 0, 0);
 
-            _btnSend = new AntdUI.Button
-            {
+            _btnSend = new AntdUI.Button {
                 Text = L10n.T("发送"),
                 Type = AntdUI.TTypeMini.Primary,
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 4), DpiScale.V(this, 12), DpiScale.V(this, 4)),
                 Margin = new Padding(DpiScale.V(this, 4), 0, 0, 0)
             };
+            FormFontPolicy.SizeActionButton(this, _btnSend, 12, 4);
             _btnSend.Click += (s, e) => BeginSend();
             bottomRow.Controls.Add(_btnSend, 1, 0);
 
-            _btnClear = new AntdUI.Button
-            {
+            _btnClear = new AntdUI.Button {
                 Text = L10n.T("清空"),
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
                 Margin = new Padding(DpiScale.V(this, 4), 0, 0, 0)
             };
+            FormFontPolicy.SizeActionButton(this, _btnClear, 10, 4);
             _btnClear.Click += (s, e) =>
             {
                 try
@@ -314,13 +310,11 @@ namespace Gdterm.UI.Controls
             {
                 var c = cmd;
                 if (string.IsNullOrWhiteSpace(c)) continue;
-                var b = new AntdUI.Button
-                {
+                var b = new AntdUI.Button {
                     Text = c.Length > 42 ? c.Substring(0, 42) + "…" : c,
-                    AutoSize = true,
-                    Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3)),
                     Margin = new Padding(0, 0, DpiScale.V(this, 4), 0)
                 };
+                FormFontPolicy.SizeActionButton(this, b, 8, 3);
                 b.Click += (s, e) =>
                 {
                     try

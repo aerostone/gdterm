@@ -278,19 +278,16 @@ namespace Gdterm.UI.Forms
             var btnPickCred = new AntdUI.Button {
                 Text = L10n.T("选择凭据..."),
                 Type = AntdUI.TTypeMini.Primary,
-                AutoSize = true,
-                // AutoSize 钮显式 Padding：无 Padding 时高 36 与 38 行不齐（287 dump 实测）
-                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
                 Margin = new Padding(0, DpiScale.V(this, 2), DpiScale.V(this, 6), 0)
             };
+            Services.FormFontPolicy.SizeActionButton(this, btnPickCred, 10, 4);
             btnPickCred.Click += OnPickCredential;
             var btnClearCred = new AntdUI.Button {
                 Text = L10n.T("清除"),
                 Type = AntdUI.TTypeMini.Default,
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
                 Margin = new Padding(0, DpiScale.V(this, 2), 0, 0)
             };
+            Services.FormFontPolicy.SizeActionButton(this, btnClearCred, 10, 4);
             btnClearCred.Click += OnClearCredential;
             credBtns.Controls.Add(btnPickCred);
             credBtns.Controls.Add(btnClearCred);
@@ -526,17 +523,15 @@ namespace Gdterm.UI.Forms
             var okBtn = new AntdUI.Button {
                 Text = _isNew ? L10n.T("创建") : L10n.T("保存"),
                 Type = AntdUI.TTypeMini.Primary,
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5)),
                 Margin = new Padding(0)
             };
+            Services.FormFontPolicy.SizeActionButton(this, okBtn, 12, 5);
             var cancelBtn = new AntdUI.Button {
                 Text = L10n.T("取消"),
                 Type = AntdUI.TTypeMini.Default,
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5)),
                 Margin = new Padding(0, 0, DpiScale.V(this, 8), 0)
             };
+            Services.FormFontPolicy.SizeActionButton(this, cancelBtn, 12, 5);
             okBtn.Click += (s, e) => { SaveToConfig(); DialogResult = DialogResult.OK; Close(); };
             _okBtn = okBtn;
             btnPanel.Controls.Add(okBtn);      // RightToLeft：第一个在最右

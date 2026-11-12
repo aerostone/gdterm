@@ -206,15 +206,14 @@ namespace Gdterm.UI.Controls
 
         private AntdUI.Button MakeButton(string text)
         {
-            return new AntdUI.Button
-            {
+            var btn = new AntdUI.Button {
                 Text = text,
-                AutoSize = true,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
-                Margin = new Padding(2),
-                Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3))
+                Margin = new Padding(2)
             };
+            Services.FormFontPolicy.SizeActionButton(this, btn, 8, 3);
+            return btn;
         }
 
         public void Reload()

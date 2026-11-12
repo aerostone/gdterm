@@ -257,18 +257,16 @@ namespace Gdterm.UI.Controls
             Height = GetPreferredHeight();
 
             // 左：分组下拉按钮
-            _groupBtn = new AntdUI.Button
-            {
+            _groupBtn = new AntdUI.Button {
                 Text = L10n.T("全部 ▾"),
-                AutoSize = true,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Muted,
                 Font = FormFontPolicy.UiFont(-0.5f),
                 Cursor = Cursors.Hand,
                 Margin = new Padding(DpiScale.V(this, 6), 0, 0, 0),
-                Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 2), DpiScale.V(this, 8), DpiScale.V(this, 2)),
                 TabStop = false
             };
+            FormFontPolicy.SizeActionButton(this, _groupBtn, 8, 2, 22);
             _groupBtn.Click += (s, e) => { RefreshGroupMenu(); _groupMenu.Show(_groupBtn, new Point(0, _groupBtn.Height)); };
 
             _groupMenu = new ContextMenuStrip
@@ -292,10 +290,8 @@ namespace Gdterm.UI.Controls
             _statusStrip = BuildStatusStrip();
 
             // 📌 钉住按钮（仅 tmux 组显示）
-            _pinBtn = new AntdUI.Button
-            {
+            _pinBtn = new AntdUI.Button {
                 Text = "📌",
-                AutoSize = true,
                 Visible = false,
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Muted,
@@ -305,6 +301,8 @@ namespace Gdterm.UI.Controls
                 Margin = new Padding(DpiScale.V(this, 4), 0, DpiScale.V(this, 4), 0),
                 TabStop = false
             };
+            // 状态栏紧凑键：设计高 22（不是 FieldHeight 38），否则状态栏被顶高一行
+            FormFontPolicy.SizeActionButton(this, _pinBtn, 4, 2, 22);
             _pinBtn.Click += (s, e) => SetPin(!_tmuxPinned);
 
             // 布局：Dock 顺序 Fill 必须最先 Add（z-order 语义）
@@ -523,17 +521,15 @@ namespace Gdterm.UI.Controls
         /// <summary>溢出命令收进「…」弹出菜单（不裁剪不滚动）。</summary>
         private int PlaceMoreButton(int x, int dpi, List<QuickCommand> rest)
         {
-            var more = new AntdUI.Button
-            {
+            var more = new AntdUI.Button {
                 Text = "…",
-                AutoSize = true,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Muted,
                 Font = FormFontPolicy.UiFont(-0.5f),
                 Cursor = Cursors.Hand,
-                TabStop = false,
-                Padding = new Padding(DpiScale.V(this, 7), DpiScale.V(this, 2), DpiScale.V(this, 7), DpiScale.V(this, 2))
+                TabStop = false
             };
+            FormFontPolicy.SizeActionButton(this, more, 7, 2, 22);
             more.ToolTipText2(L10n.T("显示其余快捷命令"));
             var menu = new ContextMenuStrip
             {
@@ -622,18 +618,16 @@ namespace Gdterm.UI.Controls
         {
             // RequiresRoot 标识：命令名前缀 "#"（sudo 语义），沿用预置"失败登录"等命令的提示传统；
             // 之前 CreateCommandButton 有空 if (cmd.RequiresRoot) 死分支，root 命令零视觉区分。
-            var btn = new AntdUI.Button
-            {
+            var btn = new AntdUI.Button {
                 Text = (cmd.RequiresRoot ? "# " : "") + cmd.Name,
-                AutoSize = true,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = cmd.RequiresRoot ? GdtermColorTable.Warning : GdtermColorTable.Foreground,
                 Font = FormFontPolicy.UiFont(-0.5f),
                 Cursor = Cursors.Hand,
                 TabStop = false,
-                Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 2), DpiScale.V(this, 8), DpiScale.V(this, 2)),
                 Tag = cmd
             };
+            FormFontPolicy.SizeActionButton(this, btn, 8, 2, 22);
             btn.Click += (s, e) => SendCommand(cmd, btn);
 
             var ctx = new ContextMenuStrip
@@ -745,18 +739,15 @@ namespace Gdterm.UI.Controls
 
         private AntdUI.Button MakeTmuxKeyButton(TmuxKey k, string pfx, Font font)
         {
-            var btn = new AntdUI.Button
-            {
+            var btn = new AntdUI.Button {
                 Text = k.Label,
-                AutoSize = true,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = font,
                 Cursor = Cursors.Hand,
-                TabStop = false,
-                // Padding(6)：与 FittedWidth 预算同源，窄键(◀Win/改名,/o切换/:命令)不换行
-                Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 2), DpiScale.V(this, 6), DpiScale.V(this, 2))
+                TabStop = false
             };
+            FormFontPolicy.SizeActionButton(this, btn, 6, 2, 22);
             btn.Click += (s, e) => SendTmuxKey(k.Raw ?? (_prefix + k.Key));
             btn.ToolTipText2("tmux/screen · " + k.Tip + (k.Raw == null ? " (" + pfx + "+" + k.Key + ")" : ""));
             return btn;
@@ -764,17 +755,15 @@ namespace Gdterm.UI.Controls
 
         private int PlaceTmuxMoreButton(int x, int dpi, List<object> rest, string pfx, Font font)
         {
-            var more = new AntdUI.Button
-            {
+            var more = new AntdUI.Button {
                 Text = "…",
-                AutoSize = true,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Muted,
                 Font = font,
                 Cursor = Cursors.Hand,
-                TabStop = false,
-                Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 2), DpiScale.V(this, 6), DpiScale.V(this, 2))
+                TabStop = false
             };
+            FormFontPolicy.SizeActionButton(this, more, 6, 2, 22);
             more.ToolTipText2(L10n.T("更多 tmux/screen 键"));
             var menu = new ContextMenuStrip { BackColor = GdtermColorTable.Surface2, ForeColor = GdtermColorTable.Foreground };
             foreach (var s in rest)
@@ -794,17 +783,15 @@ namespace Gdterm.UI.Controls
         private AntdUI.Button CreatePrefixButton(string label, string val, string tip)
         {
             bool active = _prefix == val;
-            var b = new AntdUI.Button
-            {
+            var b = new AntdUI.Button {
                 Text = label,
-                AutoSize = true,
                 BackColor = active ? GdtermColorTable.Surface2 : GdtermColorTable.Surface,
                 ForeColor = active ? GdtermColorTable.Accent : GdtermColorTable.Muted,
                 Font = active ? FormFontPolicy.UiFont(-0.5f, FontStyle.Bold) : FormFontPolicy.UiFont(-0.5f),
                 Cursor = Cursors.Hand,
-                TabStop = false,
-                Padding = new Padding(DpiScale.V(this, 4), DpiScale.V(this, 2), DpiScale.V(this, 4), DpiScale.V(this, 2))
+                TabStop = false
             };
+            FormFontPolicy.SizeActionButton(this, b, 4, 2, 22);
             b.Click += (s, e) => { if (_prefix != val) { _prefix = val; RefreshCommands(); } };
             b.ToolTipText2(tip);
             return b;

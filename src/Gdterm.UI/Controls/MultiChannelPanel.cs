@@ -166,13 +166,12 @@ namespace Gdterm.UI.Controls
 
         private AntdUI.Button CreateToolbarButton(string text)
         {
-            return new AntdUI.Button
-            {
+            var btn = new AntdUI.Button {
                 Text = text,
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 3), DpiScale.V(this, 8), DpiScale.V(this, 3)),
                 Margin = new Padding(DpiScale.V(this, 2))
             };
+            Services.FormFontPolicy.SizeActionButton(this, btn, 8, 3);
+            return btn;
         }
 
         private void WireEvents()

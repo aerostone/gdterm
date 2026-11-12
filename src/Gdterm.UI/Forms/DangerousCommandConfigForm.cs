@@ -167,7 +167,6 @@ namespace Gdterm.UI.Forms
             wlPanel.Height = wlBtnRow + DpiScale.V(this, 96) + DpiScale.V(this, 8);
 
             // 白名单工具栏按钮统一字体驱动尺寸
-            var wlBtnPadding = new Padding(btnPad, DpiScale.V(this, 3), btnPad, DpiScale.V(this, 3));
 
             var whitelistHeader = new AntdUI.Label {
                 Text = L10n.T("白名单（豁免命令；rule:<规则Id> 表示整条规则豁免）"),
@@ -187,10 +186,19 @@ namespace Gdterm.UI.Forms
                 BackColor = GdtermColorTable.Background,
                 Margin = new Padding(0, 0, 0, DpiScale.V(this, 4))
             };
-            var btnAddWhitelist = new AntdUI.Button { Text = L10n.T("添加"), Type = AntdUI.TTypeMini.Primary, AutoSize = true, Padding = wlBtnPadding, Margin = new Padding(0, 0, DpiScale.V(this, 6), 0) };
+            var btnAddWhitelist = new AntdUI.Button {
+                Text = L10n.T("添加"),
+                Type = AntdUI.TTypeMini.Primary,
+                Margin = new Padding(0, 0, DpiScale.V(this, 6), 0)
+            };
+            FormFontPolicy.SizeActionButton(this, btnAddWhitelist, 10, 3);
             btnAddWhitelist.Click += OnAddWhitelistClick;
 
-            var btnRemoveWhitelist = new AntdUI.Button { Text = L10n.T("移除"), Type = AntdUI.TTypeMini.Error, AutoSize = true, Padding = wlBtnPadding };
+            var btnRemoveWhitelist = new AntdUI.Button {
+                Text = L10n.T("移除"),
+                Type = AntdUI.TTypeMini.Error
+            };
+            FormFontPolicy.SizeActionButton(this, btnRemoveWhitelist, 10, 3);
             btnRemoveWhitelist.Click += OnRemoveWhitelistClick;
             whitelistButtons.Controls.Add(btnAddWhitelist);
             whitelistButtons.Controls.Add(btnRemoveWhitelist);

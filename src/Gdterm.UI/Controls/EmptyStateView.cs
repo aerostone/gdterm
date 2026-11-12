@@ -98,17 +98,13 @@ namespace Gdterm.UI.Controls
 
             if (!string.IsNullOrEmpty(actionText))
             {
-                _action = new AntdUI.Button
-                {
+                _action = new AntdUI.Button {
                     Text = actionText,
                     Type = AntdUI.TTypeMini.Primary,
-                    AutoSize = true,
                     Cursor = Cursors.Hand,
-                    // CI 0.1.349 实证：AutoSize 钮不设 Padding 会被 tree-check R-贴边 规则红
-                    // （命令历史「打开终端」/ 端口转发「新建规则」双红）；对齐设计语言按钮内边距。
-                    Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 4), DpiScale.V(this, 12), DpiScale.V(this, 4)),
                     Margin = new Padding(0)
                 };
+                FormFontPolicy.SizeActionButton(this, _action, 12, 4);
                 _action.AccessibleName = actionText;
                 _action.Click += (s, e) =>
                 {

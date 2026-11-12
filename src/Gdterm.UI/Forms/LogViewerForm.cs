@@ -300,15 +300,13 @@ namespace Gdterm.UI.Forms
 
         private AntdUI.Button MkButton(string name, string text, EventHandler onClick)
         {
-            var btn = new AntdUI.Button
-            {
+            var btn = new AntdUI.Button {
                 Name = name,
                 Text = text,
-                AutoSize = true,
                 Height = FormFontPolicy.FieldHeight(this),
-                Margin = new Padding(0, 0, DpiScale.V(this, 6), 0),
-                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4))
+                Margin = new Padding(0, 0, DpiScale.V(this, 6), 0)
             };
+            FormFontPolicy.SizeActionButton(this, btn, 10, 4);
             btn.Click += onClick;
             return btn;
         }

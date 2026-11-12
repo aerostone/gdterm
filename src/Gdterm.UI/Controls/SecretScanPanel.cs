@@ -73,37 +73,34 @@ namespace Gdterm.UI.Controls
 
             _btnScan = new AntdUI.Button {
                 Text = L10n.T("开始扫描"),
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 5), DpiScale.V(this, 10), DpiScale.V(this, 5)),
                 Margin = new Padding(0, 0, DpiScale.V(this, 8), 0),
                 Type = AntdUI.TTypeMini.Primary,
                 Font = Services.FormFontPolicy.UiFont(),
                 Cursor = Cursors.Hand
             };
+            Services.FormFontPolicy.SizeActionButton(this, _btnScan, 10, 5);
             _btnScan.Click += (s, e) => StartScan();
 
             _btnStop = new AntdUI.Button {
                 Text = L10n.T("停止"),
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 5), DpiScale.V(this, 10), DpiScale.V(this, 5)),
                 Type = AntdUI.TTypeMini.Error,
                 Font = Services.FormFontPolicy.UiFont(),
                 Enabled = false,
                 Cursor = Cursors.Hand
             };
+            Services.FormFontPolicy.SizeActionButton(this, _btnStop, 10, 5);
             _btnStop.Click += (s, e) => StopScan();
 
             // 批量：ListView 原生多选（Ctrl/Shift+点击），复制选中结果供贴进整改清单
             _btnCopySel = new AntdUI.Button {
                 Text = L10n.T("复制选中"),
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 5), DpiScale.V(this, 10), DpiScale.V(this, 5)),
                 Margin = new Padding(DpiScale.V(this, 8), 0, 0, 0),
                 Type = AntdUI.TTypeMini.Default,
                 Font = Services.FormFontPolicy.UiFont(),
                 Enabled = false,
                 Cursor = Cursors.Hand
             };
+            Services.FormFontPolicy.SizeActionButton(this, _btnCopySel, 10, 5);
             _btnCopySel.Name = "SecretScanCopySelButton";
             _btnCopySel.Click += (s, e) => OnCopySelectedClick();
 
@@ -373,12 +370,11 @@ namespace Gdterm.UI.Controls
 
             var btnReveal = new AntdUI.Button {
                 Text = L10n.T("显示明文"),
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(form, 10), DpiScale.V(form, 4), DpiScale.V(form, 10), DpiScale.V(form, 4)),
                 Margin = new Padding(0, 0, DpiScale.V(form, 8), 0),
                 BackColor = GdtermColorTable.Surface2,
-                ForeColor = GdtermColorTable.Foreground,
+                ForeColor = GdtermColorTable.Foreground
             };
+            Services.FormFontPolicy.SizeActionButton(form, btnReveal, 10, 4);
             btnReveal.Click += (s2, e2) =>
             {
                 if (revealed) return;
@@ -401,11 +397,10 @@ namespace Gdterm.UI.Controls
 
             var btnWhitelist = new AntdUI.Button {
                 Text = L10n.T("加入白名单"),
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(form, 10), DpiScale.V(form, 4), DpiScale.V(form, 10), DpiScale.V(form, 4)),
                 BackColor = GdtermColorTable.Surface2,
-                ForeColor = GdtermColorTable.Foreground,
+                ForeColor = GdtermColorTable.Foreground
             };
+            Services.FormFontPolicy.SizeActionButton(form, btnWhitelist, 10, 4);
             btnWhitelist.Click += (s2, e2) =>
             {
                 _scanner.AddToWhitelist(finding.FilePath, finding.MatchedContent);

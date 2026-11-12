@@ -84,55 +84,47 @@ namespace Gdterm.UI.Forms
                 Padding = new Padding(DpiScale.V(this, 8))
             };
 
-            var btnClose = new AntdUI.Button
-            {
+            var btnClose = new AntdUI.Button {
                 Text = L10n.T("关闭"),
-                AutoSize = true,
                 Cursor = Cursors.Hand,
                 Name = "btnClose",
                 BackColor = GdtermColorTable.Surface2,
                 ForeColor = GdtermColorTable.Foreground,
-                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5)),
                 Margin = new Padding(DpiScale.V(this, 4))
             };
+            FormFontPolicy.SizeActionButton(this, btnClose, 12, 5);
             btnClose.Click += (s, e) => Close();
             CancelButton = btnClose;
 
-            var btnCopy = new AntdUI.Button
-            {
+            var btnCopy = new AntdUI.Button {
                 Text = L10n.T("复制代码"),
-                AutoSize = true,
                 Type = AntdUI.TTypeMini.Primary,
                 Cursor = Cursors.Hand,
                 Name = "btnCopy",
-                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5)),
                 Margin = new Padding(DpiScale.V(this, 4))
             };
+            FormFontPolicy.SizeActionButton(this, btnCopy, 12, 5);
             btnCopy.Click += (s, e) => CopySelectedCode();
 
             // RightToLeft 流：先加者在右 → 视觉上 [添加][删除]，删除居右（与旧设计一致）
-            var btnAdd = new AntdUI.Button
-            {
+            var btnAdd = new AntdUI.Button {
                 Text = L10n.T("添加"),
-                AutoSize = true,
                 Cursor = Cursors.Hand,
                 Name = "btnAdd",
-                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5)),
                 Margin = new Padding(DpiScale.V(this, 4))
             };
+            FormFontPolicy.SizeActionButton(this, btnAdd, 12, 5);
             btnAdd.Click += (s, e) => AddEntry();
 
-            var btnDelete = new AntdUI.Button
-            {
+            var btnDelete = new AntdUI.Button {
                 Text = L10n.T("删除"),
-                AutoSize = true,
                 Cursor = Cursors.Hand,
                 Name = "btnDelete",
                 BackColor = GdtermColorTable.Surface2,
                 ForeColor = GdtermColorTable.Foreground,
-                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5)),
                 Margin = new Padding(DpiScale.V(this, 4))
             };
+            FormFontPolicy.SizeActionButton(this, btnDelete, 12, 5);
             btnDelete.Click += (s, e) => DeleteSelected();
 
             leftFlow.Controls.Add(btnClose);

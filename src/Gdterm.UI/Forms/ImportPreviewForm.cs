@@ -100,25 +100,21 @@ namespace Gdterm.UI.Forms
                 BackColor = GdtermColorTable.Background,
                 Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 6), DpiScale.V(this, 12), DpiScale.V(this, 8))
             };
-            var ok = new AntdUI.Button
-            {
+            var ok = new AntdUI.Button {
                 Text = L10n.T("导入"),
                 Type = AntdUI.TTypeMini.Primary,
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 14), DpiScale.V(this, 4), DpiScale.V(this, 14), DpiScale.V(this, 4)),
                 Margin = new Padding(0),
                 // 没有任何可新增条目时禁用：确定键在这里等于「白导一次」
                 Enabled = addCount > 0
             };
+            FormFontPolicy.SizeActionButton(this, ok, 14, 4);
             ok.Click += (s, e) => { Confirmed = true; DialogResult = DialogResult.OK; Close(); };
-            var cancel = new AntdUI.Button
-            {
+            var cancel = new AntdUI.Button {
                 Text = L10n.T("取消"),
                 Type = AntdUI.TTypeMini.Default,
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 14), DpiScale.V(this, 4), DpiScale.V(this, 14), DpiScale.V(this, 4)),
                 Margin = new Padding(0, 0, DpiScale.V(this, 8), 0)
             };
+            FormFontPolicy.SizeActionButton(this, cancel, 14, 4);
             cancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
             bottom.Controls.Add(ok);
             bottom.Controls.Add(cancel);

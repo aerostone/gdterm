@@ -92,10 +92,9 @@ namespace Gdterm.UI.Controls
             };
             _cancelButton = new AntdUI.Button {
                 Text = L10n.T("取消"),
-                AutoSize = true,
-                Type = AntdUI.TTypeMini.Default,
-                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 4), DpiScale.V(this, 12), DpiScale.V(this, 4))
+                Type = AntdUI.TTypeMini.Default
             };
+            Services.FormFontPolicy.SizeActionButton(this, _cancelButton, 12, 4);
             _cancelButton.Click += OnCancelClick;
             // F11 键盘：ESC 走取消按钮（完成态=关闭，进行中=取消传输——与鼠标点击同分支）
             CancelButton = _cancelButton;

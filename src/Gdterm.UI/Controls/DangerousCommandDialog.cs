@@ -209,19 +209,17 @@ namespace Gdterm.UI.Controls
 
             _cancelButton = new AntdUI.Button {
                 Text = L10n.T("取消 (Esc)"),
-                AutoSize = true,
-                Type = AntdUI.TTypeMini.Default,
-                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5))
+                Type = AntdUI.TTypeMini.Default
             };
+            Services.FormFontPolicy.SizeActionButton(this, _cancelButton, 12, 5);
             _cancelButton.Click += (s, e) => { IsConfirmed = false; DialogResult = DialogResult.Cancel; };
 
             _confirmButton = new AntdUI.Button {
                 Text = GetConfirmButtonText(),
-                AutoSize = true,
                 Font = new Font(Font.FontFamily, Font.Size + 0.5f, FontStyle.Bold),
-                Type = AccentToTType(accentColor),
-                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5))
+                Type = AccentToTType(accentColor)
             };
+            Services.FormFontPolicy.SizeActionButton(this, _confirmButton, 12, 5);
             _confirmButton.Click += OnConfirmClick;
 
             buttonPanel.Controls.Add(_cancelButton);

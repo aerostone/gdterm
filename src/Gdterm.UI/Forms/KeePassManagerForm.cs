@@ -804,11 +804,10 @@ namespace Gdterm.UI.Forms
             pwdCell.Controls.Add(_passwordBox, 0, 0);
             var btnShowPwd = new AntdUI.Button {
                 Text = L10n.T("显示"),
-                AutoSize = true,
                 Type = AntdUI.TTypeMini.Default,
-                Padding = new Padding(btnShowPad, DpiScale.V(this, 3), btnShowPad, DpiScale.V(this, 3)),
                 Margin = new Padding(btnShowPad, btnShowTop, 0, btnShowTop)
             };
+            Services.FormFontPolicy.SizeActionButton(this, btnShowPwd, 6, 3);
             btnShowPwd.Click += (s, e) =>
             {
                 _passwordBox.UseSystemPasswordChar = !_passwordBox.UseSystemPasswordChar;

@@ -93,28 +93,24 @@ namespace Gdterm.UI.Forms
                 BackColor = GdtermColorTable.Background,
                 Padding = new Padding(DpiScale.V(this, 16), DpiScale.V(this, 12), DpiScale.V(this, 16), DpiScale.V(this, 12))
             };
-            var btnOk = new AntdUI.Button
-            {
+            var btnOk = new AntdUI.Button {
                 Text = L10n.T("保存"),
-                AutoSize = true,
                 Type = AntdUI.TTypeMini.Primary,
                 Cursor = Cursors.Hand,
                 Name = "btnSave",
-                Padding = new Padding(DpiScale.V(this, 16), DpiScale.V(this, 5), DpiScale.V(this, 16), DpiScale.V(this, 5)),
                 Margin = new Padding(DpiScale.V(this, 8))
             };
+            FormFontPolicy.SizeActionButton(this, btnOk, 16, 5);
             btnOk.Click += (s, e) => OnOk();
-            var btnCancel = new AntdUI.Button
-            {
+            var btnCancel = new AntdUI.Button {
                 Text = L10n.T("取消"),
-                AutoSize = true,
                 Cursor = Cursors.Hand,
                 Name = "btnCancel",
                 BackColor = GdtermColorTable.Surface2,
                 ForeColor = GdtermColorTable.Foreground,
-                Padding = new Padding(DpiScale.V(this, 16), DpiScale.V(this, 5), DpiScale.V(this, 16), DpiScale.V(this, 5)),
                 Margin = new Padding(DpiScale.V(this, 8))
             };
+            FormFontPolicy.SizeActionButton(this, btnCancel, 16, 5);
             btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
             // RightToLeft 流：先加者在右，主操作（保存）居右，与 SetupWizard 一致
             bottom.Controls.Add(btnOk);

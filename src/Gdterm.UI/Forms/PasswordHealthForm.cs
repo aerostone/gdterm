@@ -114,15 +114,13 @@ namespace Gdterm.UI.Forms
                 BackColor = GdtermColorTable.Background,
                 Padding = new Padding(0, DpiScale.V(this, 4), DpiScale.V(this, 12), DpiScale.V(this, 4))
             };
-            var closeButton = new AntdUI.Button
-            {
+            var closeButton = new AntdUI.Button {
                 Name = "HealthCloseButton",
                 Text = L10n.T("关闭"),
-                AutoSize = true,
                 Type = AntdUI.TTypeMini.Default,
-                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
                 Margin = new Padding(0)
             };
+            Services.FormFontPolicy.SizeActionButton(this, closeButton, 10, 4);
             closeButton.Click += (s, e) => Close();
             bottomPanel.Controls.Add(closeButton);
 

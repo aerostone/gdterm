@@ -114,7 +114,6 @@ namespace Gdterm.UI.Forms
             int headerH = Math.Max(DpiScale.V(this, 24), FormFontPolicy.LineBox(Font, this, 1.4f));
             int btnPad = DpiScale.V(this, 8);
             int rightPad = pad; // 右列左缘与左列同 pad（原为 0，空态下左右不对称）
-            var btnPadding = new Padding(btnPad, DpiScale.V(this, 3), btnPad, DpiScale.V(this, 3));
 
             var top = new FlowLayoutPanel
             {
@@ -144,19 +143,39 @@ namespace Gdterm.UI.Forms
             _targetCombo.SelectedIndexChanged += (s, ev) => { UpdateWmiPanelVisibility(); UpdateRunButtonState(); };
             top.Controls.Add(_targetCombo);
 
-            _runButton = new AntdUI.Button { Text = L10n.T("运行选中"), Type = AntdUI.TTypeMini.Primary, AutoSize = true, Padding = btnPadding, Margin = new Padding(DpiScale.V(this, 2), 0, DpiScale.V(this, 2), 0) };
+            _runButton = new AntdUI.Button {
+                Text = L10n.T("运行选中"),
+                Type = AntdUI.TTypeMini.Primary,
+                Margin = new Padding(DpiScale.V(this, 2), 0, DpiScale.V(this, 2), 0)
+            };
+            FormFontPolicy.SizeActionButton(this, _runButton, 8, 3);
             _runButton.Click += OnRunClicked;
             top.Controls.Add(_runButton);
 
-            _reloadButton = new AntdUI.Button { Text = L10n.T("重新加载插件"), Type = AntdUI.TTypeMini.Default, AutoSize = true, Padding = btnPadding, Margin = new Padding(DpiScale.V(this, 2), 0, DpiScale.V(this, 2), 0) };
+            _reloadButton = new AntdUI.Button {
+                Text = L10n.T("重新加载插件"),
+                Type = AntdUI.TTypeMini.Default,
+                Margin = new Padding(DpiScale.V(this, 2), 0, DpiScale.V(this, 2), 0)
+            };
+            FormFontPolicy.SizeActionButton(this, _reloadButton, 8, 3);
             _reloadButton.Click += (s, ev) => _store.Reload();
             top.Controls.Add(_reloadButton);
 
-            _openFolderButton = new AntdUI.Button { Text = L10n.T("打开插件目录"), Type = AntdUI.TTypeMini.Default, AutoSize = true, Padding = btnPadding, Margin = new Padding(DpiScale.V(this, 2), 0, DpiScale.V(this, 2), 0) };
+            _openFolderButton = new AntdUI.Button {
+                Text = L10n.T("打开插件目录"),
+                Type = AntdUI.TTypeMini.Default,
+                Margin = new Padding(DpiScale.V(this, 2), 0, DpiScale.V(this, 2), 0)
+            };
+            FormFontPolicy.SizeActionButton(this, _openFolderButton, 8, 3);
             _openFolderButton.Click += OnOpenPluginsFolder;
             top.Controls.Add(_openFolderButton);
 
-            _newPluginButton = new AntdUI.Button { Text = L10n.T("新建插件模板"), Type = AntdUI.TTypeMini.Default, AutoSize = true, Padding = btnPadding, Margin = new Padding(DpiScale.V(this, 2), 0, DpiScale.V(this, 2), 0) };
+            _newPluginButton = new AntdUI.Button {
+                Text = L10n.T("新建插件模板"),
+                Type = AntdUI.TTypeMini.Default,
+                Margin = new Padding(DpiScale.V(this, 2), 0, DpiScale.V(this, 2), 0)
+            };
+            FormFontPolicy.SizeActionButton(this, _newPluginButton, 8, 3);
             _newPluginButton.Click += OnNewPluginTemplate;
             top.Controls.Add(_newPluginButton);
 

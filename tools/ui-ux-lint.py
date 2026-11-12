@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """UI/UX 静态规范门（L0）——设计语言 SSOT 的机器可读投影。
 
@@ -453,7 +453,7 @@ def r15(path, lines):
 #   实测 HistoryExportButton 在 d100 与 d150 都是 46x30 → 150% 下逻辑尺寸掉到 30.6x20。
 # 正确写法：FormFontPolicy.SizeActionButton(host, btn, padX, padY)。
 # 免判：显式给了 MinimumSize 地板的钮不在本条口径内。
-AUTOSIZE_BTN_RE = re.compile(r"AntdUI\.Button")
+AUTOSIZE_BTN_RE = re.compile(r"new AntdUI\.Button\b")   # 只认「创建」；字段声明 `private AntdUI.Button _x;` 不算
 DPI_SIZE_HELPER = "SizeActionButton"
 
 

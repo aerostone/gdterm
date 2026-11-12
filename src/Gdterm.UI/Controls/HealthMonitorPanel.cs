@@ -107,17 +107,15 @@ namespace Gdterm.UI.Controls
             cards.Controls.AddRange(new Control[] { _lblStatus, _lblUptime, _lblLatency, _lblReconnects, _lblHint });
 
             // F9：采样历史导出 CSV——监控面板的数据带出口（与 ListShell 导出同惯例：BOM/转义/Toast）
-            _btnExport = new AntdUI.Button
-            {
+            _btnExport = new AntdUI.Button {
                 Text = L10n.T("导出 CSV"),
-                AutoSize = true,
                 Enabled = false,   // 有采样点后才可用
                 Height = Math.Max(DpiScale.V(this, 28), Services.FormFontPolicy.LineBox(Services.FormFontPolicy.UiFont(), this)),
-                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 5), DpiScale.V(this, 10), DpiScale.V(this, 5)), // AutoSize 钮零 padding = 文字贴边（ui-tree-check 门）
                 Margin = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 6), 0, 0),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground
             };
+            Services.FormFontPolicy.SizeActionButton(this, _btnExport, 10, 5);
             _btnExport.Click += (s, e) => ExportCsv();
             cards.Controls.Add(_btnExport);
 

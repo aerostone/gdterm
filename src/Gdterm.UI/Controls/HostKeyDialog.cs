@@ -112,14 +112,12 @@ namespace Gdterm.UI.Controls
                 ScrollBars = ScrollBars.Vertical,
                 WordWrap = true
             };
-            var copy = new AntdUI.Button
-            {
+            var copy = new AntdUI.Button {
                 Text = L10n.T("复制指纹"),
                 Type = AntdUI.TTypeMini.Default,
-                AutoSize = true,
-                Dock = DockStyle.Bottom,
-                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4))
+                Dock = DockStyle.Bottom
             };
+            Services.FormFontPolicy.SizeActionButton(this, copy, 10, 4);
             copy.Click += (s, e) =>
             {
                 try { Clipboard.SetText(_info.Sha256Fingerprint ?? ""); }
@@ -137,31 +135,25 @@ namespace Gdterm.UI.Controls
                 Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 10), DpiScale.V(this, 12), DpiScale.V(this, 10))
             };
 
-            var reject = new AntdUI.Button
-            {
+            var reject = new AntdUI.Button {
                 Text = L10n.T("取消并断开 (Esc)"),
-                Type = AntdUI.TTypeMini.Default,
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5))
+                Type = AntdUI.TTypeMini.Default
             };
+            Services.FormFontPolicy.SizeActionButton(this, reject, 12, 5);
             reject.Click += (s, e) => Close(HostKeyDecision.Reject);
 
-            var save = new AntdUI.Button
-            {
+            var save = new AntdUI.Button {
                 Text = L10n.T("信任并记住"),
-                Type = IsChanged ? AntdUI.TTypeMini.Warn : AntdUI.TTypeMini.Primary,
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5))
+                Type = IsChanged ? AntdUI.TTypeMini.Warn : AntdUI.TTypeMini.Primary
             };
+            Services.FormFontPolicy.SizeActionButton(this, save, 12, 5);
             save.Click += (s, e) => OnAcceptAndSave();
 
-            var once = new AntdUI.Button
-            {
+            var once = new AntdUI.Button {
                 Text = L10n.T("仅本次信任"),
-                Type = AntdUI.TTypeMini.Default,
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5))
+                Type = AntdUI.TTypeMini.Default
             };
+            Services.FormFontPolicy.SizeActionButton(this, once, 12, 5);
             once.Click += (s, e) => Close(HostKeyDecision.AcceptOnce);
 
             strip.Controls.Add(reject);

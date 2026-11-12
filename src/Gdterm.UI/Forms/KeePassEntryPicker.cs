@@ -126,35 +126,31 @@ namespace Gdterm.UI.Forms
             var btnNew = new AntdUI.Button {
                 Text = L10n.T("新建凭据"),
                 Type = AntdUI.TTypeMini.Default,
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
                 Margin = new Padding(0)
             };
+            Services.FormFontPolicy.SizeActionButton(this, btnNew, 10, 4);
             btnNew.Click += (s, e) => CreateNewEntry();
             var btnManage = new AntdUI.Button {
                 Text = L10n.T("管理凭据…"),
                 Type = AntdUI.TTypeMini.Default,
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
                 Margin = new Padding(DpiScale.V(this, 8), 0, 0, 0)
             };
+            Services.FormFontPolicy.SizeActionButton(this, btnManage, 10, 4);
             btnManage.Click += (s, e) => OpenManager();
             _selectButton = new AntdUI.Button {
                 Text = L10n.T("选择"),
                 Type = AntdUI.TTypeMini.Primary,
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
                 Margin = DpiScale.Pad(this, 8, 0, 0, 0),
                 Enabled = false
             };
+            Services.FormFontPolicy.SizeActionButton(this, _selectButton, 10, 4);
             _selectButton.Click += (s, e) => SelectEntry();
             var btnCancel = new AntdUI.Button {
                 Text = L10n.T("取消"),
                 Type = AntdUI.TTypeMini.Default,
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
                 Margin = DpiScale.Pad(this, 8, 0, 0, 0)
             };
+            Services.FormFontPolicy.SizeActionButton(this, btnCancel, 10, 4);
             btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
             btnPanel.Controls.Add(btnNew, 0, 0);
             btnPanel.Controls.Add(btnManage, 1, 0);

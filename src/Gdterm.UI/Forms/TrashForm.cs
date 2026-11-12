@@ -94,15 +94,13 @@ namespace Gdterm.UI.Forms
                 Margin = new Padding(0),
                 Padding = new Padding(DpiScale.V(this, 8))
             };
-            var btnClose = new AntdUI.Button
-            {
+            var btnClose = new AntdUI.Button {
                 Name = "TrashCloseButton",
                 Text = L10n.T("关闭"),
-                AutoSize = true,
                 Height = FormFontPolicy.FieldHeight(this),
-                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 4), DpiScale.V(this, 12), DpiScale.V(this, 4)),
                 Margin = new Padding(0, 0, DpiScale.V(this, 8), 0)
             };
+            FormFontPolicy.SizeActionButton(this, btnClose, 12, 4);
             btnClose.Click += (s, e) => Close();
             rightFlow.Controls.Add(btnClose);
             bottom.Controls.Add(rightFlow);

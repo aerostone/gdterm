@@ -148,27 +148,24 @@ namespace Gdterm.UI.Forms
 
             _nextButton = new AntdUI.Button {
                 Text = L10n.T("开始设置 →"),
-                AutoSize = true,
                 Type = AntdUI.TTypeMini.Primary,
                 Cursor = Cursors.Hand,
-                Name = "nextButton",
-                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5))
+                Name = "nextButton"
             };
+            Services.FormFontPolicy.SizeActionButton(this, _nextButton, 12, 5);
             _nextButton.Click += OnNextClick;
             buttonPanel.Controls.Add(_nextButton);
 
             // 取消按钮（审计 F6）：完成前可见，点击/ESC 均走 Close() → 既有 FormClosing 确认；完成后隐藏
-            _cancelButton = new AntdUI.Button
-            {
+            _cancelButton = new AntdUI.Button {
                 Text = L10n.T("取消"),
-                AutoSize = true,
                 Cursor = Cursors.Hand,
                 Name = "cancelButton",
                 BackColor = GdtermColorTable.Surface2,
                 ForeColor = GdtermColorTable.Foreground,
-                Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 5), DpiScale.V(this, 12), DpiScale.V(this, 5)),
                 Margin = new Padding(0, 0, DpiScale.V(this, 12), 0)
             };
+            Services.FormFontPolicy.SizeActionButton(this, _cancelButton, 12, 5);
             _cancelButton.Click += (s, e) => Close();
             buttonPanel.Controls.Add(_cancelButton);
             CancelButton = _cancelButton; // ESC 与按钮同路：均触发 FormClosing 确认，不绕过主密码未设防贪EXIT

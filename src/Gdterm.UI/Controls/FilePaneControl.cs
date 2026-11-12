@@ -232,13 +232,12 @@ namespace Gdterm.UI.Controls
         {
             var b = new AntdUI.Button {
                 Text = text,
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 5), DpiScale.V(this, 2), DpiScale.V(this, 5), DpiScale.V(this, 2)),
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 Margin = DpiScale.Pad(this, 1, 0, 1, 0),
                 TabStop = false
             };
+            Services.FormFontPolicy.SizeActionButton(this, b, 5, 2);
             b.Click += onClick;
             _tips.SetToolTip(b, tip);
             return b;
@@ -568,7 +567,13 @@ namespace Gdterm.UI.Controls
                     ForeColor = GdtermColorTable.Foreground,
                 };
                 var flow = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(DpiScale.V(f, 12), DpiScale.V(f, 6), DpiScale.V(f, 12), DpiScale.V(f, 6)) };
-                var close = new AntdUI.Button { Text = L10n.T("关闭"), DialogResult = DialogResult.OK, AutoSize = true, Padding = new Padding(DpiScale.V(f, 12), DpiScale.V(f, 4), DpiScale.V(f, 12), DpiScale.V(f, 4)), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+                var close = new AntdUI.Button {
+                    Text = L10n.T("关闭"),
+                    DialogResult = DialogResult.OK,
+                    BackColor = GdtermColorTable.Surface,
+                    ForeColor = GdtermColorTable.Foreground
+                };
+                Services.FormFontPolicy.SizeActionButton(f, close, 12, 4);
                 flow.Controls.Add(close);
                 f.Controls.Add(box);
                 f.Controls.Add(flow);
@@ -607,8 +612,20 @@ namespace Gdterm.UI.Controls
                 };
                 if (!string.IsNullOrEmpty(initial)) box.Text = initial;
                 var flow = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.RightToLeft, Padding = new Padding(DpiScale.V(f, 12), DpiScale.V(f, 6), DpiScale.V(f, 12), DpiScale.V(f, 6)) };
-                var cancel = new AntdUI.Button { Text = L10n.T("取消"), DialogResult = DialogResult.Cancel, AutoSize = true, Padding = new Padding(DpiScale.V(f, 12), DpiScale.V(f, 4), DpiScale.V(f, 12), DpiScale.V(f, 4)), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
-                var ok = new AntdUI.Button { Text = L10n.T("确定"), DialogResult = DialogResult.OK, AutoSize = true, Padding = new Padding(DpiScale.V(f, 12), DpiScale.V(f, 4), DpiScale.V(f, 12), DpiScale.V(f, 4)), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+                var cancel = new AntdUI.Button {
+                    Text = L10n.T("取消"),
+                    DialogResult = DialogResult.Cancel,
+                    BackColor = GdtermColorTable.Surface,
+                    ForeColor = GdtermColorTable.Foreground
+                };
+                Services.FormFontPolicy.SizeActionButton(f, cancel, 12, 4);
+                var ok = new AntdUI.Button {
+                    Text = L10n.T("确定"),
+                    DialogResult = DialogResult.OK,
+                    BackColor = GdtermColorTable.Surface,
+                    ForeColor = GdtermColorTable.Foreground
+                };
+                Services.FormFontPolicy.SizeActionButton(f, ok, 12, 4);
                 flow.Controls.Add(cancel); // RightToLeft 流序：先加靠右
                 flow.Controls.Add(ok);
                 f.Controls.Add(box);

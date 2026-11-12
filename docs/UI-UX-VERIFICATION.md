@@ -82,15 +82,18 @@ CI 里已挂在 `appveyor.yml` 的 test_script 段（编码守卫之后、ui-smo
 | R13 | 裸像素 `Margin/Padding(a,b,c,d)` | SC 规则 4/4d | 24 |
 | R14 | `Location = … ClientSize.Width …`（Forms/ 构造期绝对坐标） | SC 规则 2（0.1.359 门禁首捕） | 0 |
 | R15 | 对话框未绑 `CancelButton`（且自身不截 `Keys.Escape`） | §2.3 关闭绑定（冒烟门 R3 的本地化） | 0 |
-| R16 | `AntdUI.Button` 靠 `AutoSize = true` + `Padding(DpiScale…)` 定尺寸 | SC 规则 4 / **L2 矩阵门 2026-11-13 首捕** | 65（棘轮中，见下） |
+| R16 | `AntdUI.Button` 靠 `AutoSize = true` + `Padding(DpiScale…)` 定尺寸 | SC 规则 4 / **L2 矩阵门 2026-11-13 首捕** | 0（2026-11-14 存量清零，见 §3.4） |
 
 ### 3.3 基线棘轮（为什么不直接"必须为 0"）
 
 存量债 47 条（2026-10-07 审计修复前 107 条），直接归零意味着一次性大改 UI 代码，风险高于收益。棘轮的正确姿势：
 
-- **今天绿**（基线 46 键）；
+- **今天绿**；
 - **新增即红**（新写的 `确定`+Primary 立刻失败）；
 - **修一条收紧一条**（`--write-baseline`），基线只降不升 —— 这条要写进 PR 模板。
+
+**2026-11-14 基线归零**：R01–R16 全部存量清完（基线文件只剩注释头，0 键），
+L0 门从"棘轮容忍"转成"任何一条命中即红"。之后新增违规没有豁免通道，只能改代码。
 
 ### 3.4 R16：AutoSize 钮不吃 DPI（L2 矩阵门第一次跑就抓到的系统性缺陷）
 
@@ -107,7 +110,14 @@ var b = new AntdUI.Button { Text = "导出", Margin = … };
 FormFontPolicy.SizeActionButton(this, b, padX: 10, padY: 4);   // 关 AutoSize，按 GDI 文字宽 + FieldHeight 定尺寸
 ```
 
-剩余 65 处（`--strict` 可列全，多在对话框页脚按钮与 BottomBar）走棘轮：新增即红，修一条收紧一条。
+**存量已清零（2026-11-14）**：65 处全部转为 `SizeActionButton`（对话框页脚、BottomBar、ScannerCenter、
+SecretScan、KeePass、DangerousCommandConfig 等 34 个文件），`--strict` 存量=0，规则转为新增即红。
+
+清零时补的一个必要行为：AutoSize 关掉后宽度是定值，而按钮文案常在构造后被改
+（KeePass「显示/隐藏」、SetupWizard「下一步 → 开始设置 →」、危险命令倒计时「⚠ 确认执行 ⚠」），
+所以 `SizeActionButton` 现挂 `TextChanged → 重新量宽`，等价恢复 AutoSize 的"跟着文案长"。
+只改字不改尺寸 = 长文案在固定宽里被裁，这类回归 L1 的「文字被裁」候选测得到，但门槛在人工 review。
+
 注意 `Height = FormFontPolicy.FieldHeight(this)` + `AutoSize = true` 同样是无效写法（AutoSize 会盖掉 Height），
 R16 一并判红。
 

@@ -158,13 +158,11 @@ namespace Gdterm.UI.Controls
 
         private AntdUI.Button MkBtn(string text, string tip)
         {
-            var b = new AntdUI.Button
-            {
+            var b = new AntdUI.Button {
                 Text = text,
-                AutoSize = true,
-                Padding = new Padding(DpiScale.V(this, 10), DpiScale.V(this, 4), DpiScale.V(this, 10), DpiScale.V(this, 4)),
                 Margin = new Padding(0, 0, DpiScale.V(this, 4), 0)
             };
+            FormFontPolicy.SizeActionButton(this, b, 10, 4);
             if (!string.IsNullOrEmpty(tip)) b.ToolTipText2(tip);
             return b;
         }
