@@ -118,10 +118,10 @@ namespace Gdterm.UI.Controls
             root.Controls.Add(actions, 0, 1);
 
             // F10 搜索过滤：按标题/副标题过滤下方两个列表（大小写不敏感）
-            // 最低高 = 字段高 + 上下内边距：不给下限时行高取 AntdUI.Input 的优选高，
-            // DPI 150% 下内边距翻倍、优选高不涨 → 输入框反而从 88 缩到 82（矩阵门反空转实证）
+            // 行高写死成「字段高 + 上下内边距」：留 AutoSize 时行高取 AntdUI.Input 的优选高（80），
+            // DPI 150% 下内边距翻倍而优选高反而缩 → 输入框从 88 掉到 82（矩阵门反空转实证）
             var filterHost = new Panel { Dock = DockStyle.Fill, Padding = DpiScale.Pad(this, 0, 4, 0, 8) };
-            filterHost.MinimumSize = new Size(0,
+            root.RowStyles[2] = new RowStyle(SizeType.Absolute,
                 FormFontPolicy.FieldHeight(this) + DpiScale.V(this, 12));
             _filter = new AntdUI.Input
             {
