@@ -194,11 +194,16 @@ namespace Gdterm.Tests.Ui
         /// <summary>侧栏面板的宿主窗：360×480 贴近真实侧栏几何，与 UiSmokeRunner 的口径一致。</summary>
         private static Form PanelHost()
         {
+            // 宿主窗也要显式吃 UI 字体：以前这里不设 Font，为了让"字体已生效"的断言不误红，
+            // 断言里专门把 port-forward/command-history 排除掉——等于 8 个目标里 6 个不设防
+            // （面板自己设字体不代表宿主设了，字号轴退化会被漏掉）。现在宿主也设，
+            // 断言对全部 8 个目标生效。
             return new Form
             {
                 Text = "matrix-host",
                 ClientSize = new Size(360, 480),
                 BackColor = GdtermColorTable.Background,
+                Font = Gdterm.UI.Services.FormFontPolicy.UiFont(),
                 StartPosition = FormStartPosition.Manual,
                 Location = new Point(0, 0)
             };
@@ -214,8 +219,7 @@ namespace Gdterm.Tests.Ui
 
             // 反空转：字体必须真的落到窗体上（FormFontPolicy 读 GlobalAppearance，若被缓存/绕过，
             // 字号轴会安静地退化成"同一张图跑 8 遍"，这行断言就是那道防线）。
-            if (f.Font != null && Math.Abs(f.Font.SizeInPoints - font) > 0.6f
-                && target != "port-forward" && target != "command-history")
+            if (f.Font != null && Math.Abs(f.Font.SizeInPoints - font) > 0.6f)
                 throw new Exception("font not applied to form: " + f.Font.SizeInPoints + "pt != " + font + "pt");
             if (Math.Abs(Gdterm.UI.Services.DpiScale.Factor(f) - dpi) > 0.01f)
                 throw new Exception("dpi override not in effect: " +
