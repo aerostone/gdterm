@@ -17,6 +17,7 @@ namespace Gdterm.UI.Controls
         private readonly ToolRegistry _registry;
         private readonly ListView _lvTools;
         private readonly AntdUI.Input _filterTools;
+        private readonly SplitContainer _split;
         private readonly Panel _pnlDetail;
         private readonly Panel _pnlToolList;
         private readonly AntdUI.Label _lblTitle;
@@ -31,13 +32,10 @@ namespace Gdterm.UI.Controls
             Dock = DockStyle.Fill;
             BackColor = GdtermColorTable.Background;
 
-            // 左侧工具列表（F5：上方加过滤框）
-            var split = new Splitter { Dock = DockStyle.Left, Width = 3, BackColor = GdtermColorTable.Surface };
-
+            // 工具列表（F5：上方加过滤框）
             _pnlToolList = new Panel
             {
-                Dock = DockStyle.Left,
-                Width = Services.DpiScale.V(this, 220),
+                Dock = DockStyle.Fill,
                 BackColor = GdtermColorTable.Surface
             };
 
@@ -80,6 +78,20 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Background,
                 Padding = new Padding(15)
             };
+
+            // 主从两栏用 SplitContainer 而不是 Splitter+Dock：窄侧栏（240 设计 px）里
+            // 「列表 130 + 详情 107 - 30 padding = 77」连标题都被裁（ui-tree-check R6 实测：
+            // 「运维工具箱」需 107px、「选择左侧工具开始使用」需 128px，可用 77px）。
+            // 宽度装不下两栏时改上下排：列表在上（40%），详情在下，两边都拿到全长。
+            _split = new SplitContainer
+            {
+                Dock = DockStyle.Fill,
+                Orientation = Orientation.Vertical,
+                SplitterWidth = 3,
+                BackColor = GdtermColorTable.Surface
+            };
+            _split.Panel1.Controls.Add(_pnlToolList);
+            _split.Panel2.Controls.Add(_pnlDetail);
 
             _lblTitle = new AntdUI.Label {
                 Dock = DockStyle.Top,
@@ -130,9 +142,7 @@ namespace Gdterm.UI.Controls
             _pnlDetail.Controls.Add(_lblDescription);
             _pnlDetail.Controls.Add(_lblTitle);
 
-            Controls.Add(_pnlDetail);
-            Controls.Add(split);
-            Controls.Add(_pnlToolList);
+            Controls.Add(_split);
 
             LoadTools();
             // 空态默认 Visible=false；LoadTools 之后才知道列表是否真的空，
@@ -141,8 +151,8 @@ namespace Gdterm.UI.Controls
             RestoreLastTool();
             // 侧板是 360 宽，工具列表写死 220 的话右侧详情只剩 ~137（减掉 15px padding 后正文 107px），
             // 输出一行日志要折三折——等于读不了。列表宽按宿主比例给，并给详情留硬下限。
-            ApplyToolListWidth();
-            SizeChanged += (s2, e) => ApplyToolListWidth();
+            ApplySplitLayout();
+            SizeChanged += (s2, e) => ApplySplitLayout();
             // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
             UiA11y.AutoName(this);
         }
@@ -240,32 +250,66 @@ namespace Gdterm.UI.Controls
         /// 工具列表宽度自适应：宿主越窄，列表越窄（详情下限 200 设计 px 先保）。
         /// 宽宿主（独立窗口/大侧板）仍是原来的 220，视觉不变。
         /// </summary>
-        private void ApplyToolListWidth()
+        /// <summary>
+        /// 主从分栏布局：够宽 = 左右（列表 40%，详情留硬下限）；不够宽 = 上下（列表在上 40% 高）。
+        /// 分界的算法与原来的"列表宽度"同源：列表地板 130 + 详情下限 200 + 分隔条 3。
+        /// </summary>
+        private void ApplySplitLayout()
         {
             try
             {
-                if (_pnlToolList == null) return;
-                int host = ClientSize.Width;
-                if (host <= 0) return;
-                int minDetail = Services.DpiScale.S(this, 200, 0).Width;   // 详情区硬下限（设计 px → 当前 DPI）
-                int want = Math.Min((int)(host * 0.4), Services.DpiScale.S(this, 220, 0).Width);
-                int maxList = Math.Max(Services.DpiScale.S(this, 130, 0).Width, host - minDetail - 3 /*splitter*/);
-                if (want > maxList) want = maxList;
-                int floor = Services.DpiScale.S(this, 130, 0).Width;
-                if (want < floor) want = floor;
-                if (_pnlToolList.Width != want) _pnlToolList.Width = want;
-                // 列宽跟着列表走：列宽写死 210 而列表只有 130，会在列表里生出横向滚动条（比省略号更难用）
+                if (_split == null || _pnlToolList == null) return;
+                int hostW = ClientSize.Width, hostH = ClientSize.Height;
+                if (hostW <= 0 || hostH <= 0) return;
+
+                int splitter = _split.SplitterWidth;
+                int listFloor = Services.DpiScale.S(this, 130, 0).Width;
+                int detailMin = Services.DpiScale.S(this, 200, 0).Width;
+                bool sideBySide = hostW >= listFloor + detailMin + splitter;
+
+                // MinSize 会随可用空间变化；先清零再换朝向，否则 WinForms 直接抛 InvalidOperation
+                try { _split.Panel1MinSize = 0; _split.Panel2MinSize = 0; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ToolboxPanel.MinSizeReset", exSwallowed); } catch { } }
+
+                var wantOrientation = sideBySide ? Orientation.Vertical : Orientation.Horizontal;
+                if (_split.Orientation != wantOrientation) _split.Orientation = wantOrientation;
+
+                try
+                {
+                    if (sideBySide)
+                    {
+                        int want = Math.Min((int)(hostW * 0.4), Services.DpiScale.S(this, 220, 0).Width);
+                        int maxList = Math.Max(listFloor, hostW - detailMin - splitter);
+                        if (want > maxList) want = maxList;
+                        if (want < listFloor) want = listFloor;
+                        if (_split.SplitterDistance != want) _split.SplitterDistance = want;
+                    }
+                    else
+                    {
+                        // 上下排：列表在上，给 40% 高度（≥120 设计 px），剩下的都是详情
+                        int want = Math.Max(Services.DpiScale.S(this, 120, 0).Height, (int)(hostH * 0.4));
+                        int maxList = Math.Max(Services.DpiScale.S(this, 120, 0).Height,
+                            hostH - Services.DpiScale.S(this, 120, 0).Height - splitter);
+                        if (want > maxList) want = maxList;
+                        if (_split.SplitterDistance != want) _split.SplitterDistance = want;
+                        _split.Panel1MinSize = Math.Min(Services.DpiScale.S(this, 120, 0).Height, Math.Max(0, hostH / 2));
+                        _split.Panel2MinSize = Math.Min(Services.DpiScale.S(this, 120, 0).Height, Math.Max(0, hostH / 2));
+                    }
+                }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ToolboxPanel.SplitterDistance", exSwallowed); } catch { } }
+
+                // 列宽跟着列表真实宽度走：列宽写死 210 而列表只有 130，会在列表里生出横向滚动条
                 try
                 {
                     if (_lvTools != null && _lvTools.Columns.Count > 0)
                     {
-                        int colW = Math.Max(Services.DpiScale.S(this, 100, 0).Width, want - Services.DpiScale.S(this, 6, 0).Width);
+                        int listW = Math.Max(1, _pnlToolList.ClientSize.Width);
+                        int colW = Math.Max(Services.DpiScale.S(this, 100, 0).Width, listW - Services.DpiScale.S(this, 6, 0).Width);
                         if (_lvTools.Columns[0].Width != colW) _lvTools.Columns[0].Width = colW;
                     }
                 }
-                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ToolboxPanel.ApplyToolListWidth.col", exSwallowed); } catch { } }
+                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ToolboxPanel.ApplySplitLayout.col", exSwallowed); } catch { } }
             }
-            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ToolboxPanel.ApplyToolListWidth", exSwallowed); } catch { } }
+            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ToolboxPanel.ApplySplitLayout", exSwallowed); } catch { } }
         }
 
         private void RestoreLastTool()

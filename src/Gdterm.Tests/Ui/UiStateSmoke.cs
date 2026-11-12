@@ -274,6 +274,30 @@ namespace Gdterm.Tests.Ui
                         name + ": 主操作控件右缘=" + (leaf == null ? -1 : leaf.Right) +
                         " 未越出窄窗宽=" + host.ClientSize.Width);
 
+                    // 文字不裁：单行标签的实测文字宽必须装得进可用宽（R6 的硬断言版）。
+                    // 窄宿主是主从两栏最容易崩的场景——toolbox 240px 时详情栏只剩 77px 可用，
+                    // 「运维工具箱」要 107px，靠 warn 守不住（warn-only 从不拦合并）。
+                    foreach (var c in UiSmokeRunner.AllControls(panel))
+                    {
+                        if (c == null || !c.Visible || string.IsNullOrEmpty(c.Text)) continue;
+                        var lbl = c as Label;
+                        bool isAntLabel = c.GetType().Name == "Label" &&
+                            c.GetType().Namespace != null && c.GetType().Namespace.StartsWith("AntdUI");
+                        if (lbl == null && !isAntLabel) continue;
+                        // 原生 Label 非 AutoSize 时按宽换行（空态说明就是这种），不算被裁
+                        if (lbl != null && !lbl.AutoSize) continue;
+                        int availW = Math.Max(0, c.ClientSize.Width - c.Padding.Left - c.Padding.Right);
+                        int needW = 0;
+                        foreach (var line in c.Text.Replace("\r\n", "\n").Replace('\r', '\n').Split('\n'))
+                        {
+                            int w = TextRenderer.MeasureText(line, c.Font, new Size(int.MaxValue, int.MaxValue),
+                                TextFormatFlags.NoPadding | TextFormatFlags.SingleLine).Width;
+                            if (w > needW) needW = w;
+                        }
+                        check(needW <= availW + 4,
+                            name + ": 标签被裁「" + Short(c.Text) + "」需 " + needW + "px 可用 " + availW + "px");
+                    }
+
                     UiSmokeRunner.Shot(host, Path.Combine(outDir, name + ".png"));
                     File.WriteAllText(Path.Combine(outDir, name + ".json"),
                         UiTreeDumper.Dump(host), System.Text.Encoding.UTF8);
@@ -284,6 +308,12 @@ namespace Gdterm.Tests.Ui
             {
                 try { if (panel != null) panel.Dispose(); } catch { }
             }
+        }
+
+        private static string Short(string s)
+        {
+            s = (s ?? "").Replace("\r", " ").Replace("\n", " ");
+            return s.Length <= 20 ? s : s.Substring(0, 20) + "…";
         }
 
         // ── 诊断辅助 ────────────────────────────────────────────────────────────
