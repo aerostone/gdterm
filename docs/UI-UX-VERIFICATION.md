@@ -173,7 +173,7 @@ FormFontPolicy.FitSingleLineLabel(_statusLabel);
 | R3 | 每窗至少一个关闭语义控件 | 有免判清单（含 6 个侧栏面板：关闭语义由宿主侧栏承担） |
 | R4 | 交互叶 TabStop=false 数为 0 | mainform 独立分支；**2026-11-01 复核激活**：原判定 `tabStop is False` 对字符串 dump 永不成立，规则从未生效（2026-09-25 spike 的“零命中”结论来自人工分析，非此规则） |
 | R5 | Dock=Fill 与边停靠兄弟不相交 | "工具栏盖住表体"的可测签名；C# 侧 `AssertNoDockOverlap` 同口径 |
-| R6 | 文本适配：单行所需宽/换行所需高 vs 可用空间 | 默认 warn-only（`--textfit-strict` 可翻硬门；**warn-only 是告警不是阻断门**）；度量来自 dump 的 `textSingleW/textWrapH/wrap`（真实 GDI）；**2026-11-01 复核激活**：autoSize/wrap 字符串布尔修复前整条规则恒 0 受检 |
+| R6 | 文本适配：单行所需宽/换行所需高 vs 可用空间 | **2026-11-07 起默认硬门**（`--textfit-lenient` 可退回告警）：R16/R17 清零后 ui-smoke 全部 50 个 dump 命中 0，基线不再是“积累中”；度量来自 dump 的 `textSingleW/textWrapH/wrap`（真实 GDI）；**2026-11-01 复核激活**：autoSize/wrap 字符串布尔修复前整条规则恒 0 受检 |
 
 自绘命中区（审计 C5/C7-③ 落地）：实现 `IHitRegionProvider` 的控件（当前：`TabContainerControl`
 的标签关闭钮）在 dump 里输出 `hitRegions`（屏幕坐标），检查器按最小边 ≥24 逻辑 px 判
@@ -215,7 +215,7 @@ CI 失败路径修正：smoke 非零不再立即 throw，dump/截图先上传再
 **2026-11-01 复核修正（as-desktop-ui-verify 技能按证据契约逐条验证后）**：
 ① 字符串布尔陷阱：dump 布尔是 `"true"/"false"` 字符串，直接 truthy 判使 R4/R6 成死规则、
 不可见节点过滤失效——统一 `sbool()` 修复；② 命中区量纲倒置（高 dpi 假过）；
-③ mainform 分支跳过新规则（真实目标 0 受检）；④ 空树假绿；⑤ `--textfit-strict` 放
+③ mainform 分支跳过新规则（真实目标 0 受检）；④ 空树假绿；⑤ `--textfit-lenient` 放
 第一位崩（argv 未过滤 flag）；⑥ CI 失败不留证；⑦ 空态“找到才检查”反模式；
 ⑧ smoke 无 tab 场景。反例验证：96/192dpi 正反例、空树、tabStop=false、不可见零尺寸叶，
 均按预期规则标识失败（合成例只证明判定算法，不等同真实高 DPI 布局验证）。
@@ -352,7 +352,7 @@ Controls/FilePaneModel.cs    | n/a:非UI
 | 焦点链合理 | | L1 R4（R2 已删：空转门不保留） | ⚠️ 无真实 Tab 序数据 |
 | 键盘可达（TabStop） | | L1 R4 | ✅ |
 | 停靠不遮挡 | | L1 R5 | ✅ |
-| **文字不裁切** | | L1 R6（默认 warn，`--textfit-strict` 可翻硬门） | ⚠️🔧 基线积累中 |
+| **文字不裁切** | | L1 R6（默认硬门） | ✅ |
 | **DPI×字号×主题** | | L2 | ❌ 最大缺口 |
 | 视觉回归 | | L3 | ❌ 未进 CI |
 | 无障碍名称 | | `UiA11y.AutoName`（Form/TabPage/ListBox/ListView/TextBox/RichTextBox/Tree/ProgressBar/CheckBox/Button 自动命名） | ⚠️🔧 图标钮待逐一补 |
@@ -373,7 +373,7 @@ Controls/FilePaneModel.cs    | n/a:非UI
 
 | # | 事项 | 工作量 | 状态 |
 |---|---|---|---|
-| 1 | L1 加 `textFit` 断言：dump 增字段 `textSingleW/textWrapH/wrap`（真实 GDI 度量），R6 断言 | 0.5d | ✅（默认 warn，`--textfit-strict` 可翻硬门） |
+| 1 | L1 加 `textFit` 断言：dump 增字段 `textSingleW/textWrapH/wrap`（真实 GDI 度量），R6 断言 | 0.5d | ✅（2026-11-07 起默认硬门） |
 | 2 | 面板进 dump：6 个高频侧栏在 360×480 宿主窗里 Show + dump | 0.5d | ✅（SidePanels 用例 + 空态可见断言） |
 | 3 | L0 R11：6 个 `none` 侧栏提升为 `dump:`，floor 16→22 | 0.2d | ✅ |
 | 4 | `FormFontPolicy.MonoFont()` 收口 R10 的 40 处 | 0.5d | ✅（L0 R10 归零，基线 94→46 键） |

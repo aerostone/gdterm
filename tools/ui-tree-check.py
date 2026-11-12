@@ -15,7 +15,8 @@ R4 键盘可达性：交互叶 TabStop=false 数必须为 0（精确短名匹配
 R6 文本适配（2026-10-07 审计 C7-1）：dump 自带 textSingleW/textWrapH/wrap，
    单行控件所需宽 > 可用宽+TOL 记为“文字溢出”；换行控件所需高 > 可用高+TOL 记为“文字裁切”。
    默认 **warn-only**（打印 WARN 不影响退出码）：AntdUI.Button 有意省略号截断、以及
-   96/120dpi 度量差异都会造成个位数像素级告警，先积累基线再翻转成硬门（--textfit-strict）。
+   96/120dpi 度量差异都会造成个位数像素级告警。基线已于 2026-11-07 清零（全部 dump 0 命中），
+  该规则**默认是硬门**；排查度量噪音时用 --textfit-lenient 退回告警。
    注意：warn-only 是告警不是阻断门，报告时不得称其为硬门。
    主窗分支（2026-11-01 复核修正）：hitRegions 与 R6 是通用规则，mainform 同样受判
    （此前 mainform 分支提前 continue，把这两条新规则的真实目标主窗跳掉了）。
@@ -49,7 +50,11 @@ TOL = 2          # 越界容差 px
 OVERLAP_MIN = 16  # 重叠告警阈值 px2（4x4）
 HIT_MIN = 32      # 最小触击目标 px（R1；change 2026-09-24 定稿，44 噪音过大否决）
 TEXTFIT_TOL = 4   # 文本适配容差 px（R6；96/120dpi 度量差异的经验上限）
-TEXTFIT_STRICT = "--textfit-strict" in sys.argv
+# R6 文本适配：2026-11-07 起默认硬门。
+# 翻转依据：R16（AutoSize 钮不吃 Padding）+ R17（AutoSize 标签窄 10%）清零后，
+# ui-smoke 全部 50 个 dump 文本适配=0（受检 500+ 个承载文本控件），基线不再是“积累中”。
+# 反向口子留给 DPI/字体矩阵里的度量噪音排查：--textfit-lenient 退回 warn-only。
+TEXTFIT_STRICT = "--textfit-lenient" not in sys.argv
 
 
 def flag_value(name, default=None):
@@ -196,7 +201,7 @@ def mainform_rules(tree, check):
 
 
 def main():
-    # flag（--textfit-strict 等）与位置参数分离：此前 argv[1] 无条件当目录，
+    # flag（--textfit-lenient 等）与位置参数分离：此前 argv[1] 无条件当目录，
     # flag 放第一位会 FileNotFoundError 崩溃（2026-11-01 复核发现）。
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     d = args[0] if args else "ui-smoke"
@@ -313,7 +318,7 @@ def main():
         elif hit_small == 0:
             check(True, "自绘命中区达标 %d 区/%d 控件 (%d 失败=0)" % (hit_total, hit_nodes, 0))
 
-        # R6 文本适配（审计 C7-1；warn-only = 告警不是阻断门，--textfit-strict 才转硬门）：
+        # R6 文本适配（审计 C7-1；基线 2026-11-07 清零，默认硬门，--textfit-lenient 退回告警）：
         # 历史最高频 bug 是“文字被裁/贴顶/挤成两行”，dump 带真实 GDI 度量后按“所需 > 可用”判。
         # 口径：
         #   - 只判承载标签文本的控件（Button/Label/CheckBox/RadioButton 等），
@@ -363,7 +368,7 @@ def main():
             for w in WARN[-overflow:]:
                 check(False, w)
         else:
-            print("  warn: 文本适配候选=%d (受检=%d；warn-only，加 --textfit-strict 转硬门)" % (overflow, measured))
+            print("  warn: 文本适配候选=%d (受检=%d；默认硬门，--textfit-lenient 只告警)" % (overflow, measured))
             for w in WARN[-overflow:]:
                 print("    - " + w)
 
@@ -492,7 +497,7 @@ def main():
 
     print()
     if WARN:
-        print("UI-TREE-CHECK WARN: %d（文本适配候选，--textfit-strict 时计为失败）" % len(WARN))
+        print("UI-TREE-CHECK WARN: %d（R6 文本适配候选，已计为失败；--textfit-lenient 可退回告警）" % len(WARN))
     if FAIL:
         print("UI-TREE-CHECK FAIL: %d" % len(FAIL))
         return 1
