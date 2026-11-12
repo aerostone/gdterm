@@ -270,6 +270,20 @@ namespace Gdterm.UI
             // AI 对话历史持久化（F4：data/ai-chat-history.json，跨重启保留；清空按钮仍即时生效）
             var aiService = new AiAssistantService(aiConfig,
                 new Gdterm.AI.ChatHistoryStore(Path.Combine(dataDir, "ai-chat-history.json")));
+            // 主机密钥校验（2026-11 功能缺口审计 P0）：可写一份在本程序目录（绿色版不去改用户 ~/.ssh），
+            // 同时只读叠加系统 known_hosts——用户命令行里连过的机器进 gdterm 就不再重复询问。
+            var knownHostsPath = Path.Combine(configDir, "known_hosts");
+            var systemKnownHosts = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".ssh", "known_hosts");
+            SshHostKeyGuard.Configure(
+                new Gdterm.Core.Security.KnownHostsStore(knownHostsPath, systemKnownHosts),
+                new HostKeyPromptUi());
+            // Tunnel 不引用日志程序集（架构 F2），日志出口由组合根接进来
+            SshHostKeyGuard.LogSink = (source, message) =>
+            {
+                try { DiagLog.Info(source, message); } catch { }
+            };
+
             var dangerousCmdDetector = new DangerousCommandDetector(dangerousCmdPath);
             // 唯一的命令闸门：终端/粘贴/宏/键位/登录脚本/批量/广播/AI 全部共用一个，
             // 会话级豁免才能跨入口一致（否则每个面板各判一套，豁免了这边还弹）。
@@ -335,6 +349,9 @@ namespace Gdterm.UI
                 CommandTemplateStore = cmdTemplateStore,
                 OtpStore = otpStore
             });
+
+            // 主机密钥确认框的归属窗口（后台 SSH 线程上弹窗要回到 UI 线程）
+            HostKeyPromptUi.Attach(mainForm);
 
             // finding-03：旧 SHA256 解锁升级为 PBKDF2 后立刻落盘
             securityManager.LockStateChanged += (s, e) =>

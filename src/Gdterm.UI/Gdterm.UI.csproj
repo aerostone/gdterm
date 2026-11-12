@@ -152,6 +152,7 @@
     <Compile Include="Controls\SecretScanPanel.cs" />
     <Compile Include="Controls\KeyBindingPanel.cs" />
     <Compile Include="Forms\QuickCommandEditorForm.cs" />
+    <Compile Include="Controls\HostKeyDialog.cs" />
     <Compile Include="Controls\HighlightRulePanel.cs" />
     <Compile Include="Controls\TerminalSearchBar.cs" />
     <Compile Include="Controls\PortForwardPanel.cs" />
@@ -237,6 +238,7 @@
     <Compile Include="Services\MasterPasswordPrompt.cs" />
     <!-- 2026-10-07 审计新增文件（旧式 csproj 必须显式列 Compile，漏列 = 不参与编译，CI 报 CS0246） -->
     <Compile Include="Services\BusyScope.cs" />
+    <Compile Include="Services\HostKeyPromptUi.cs" />
     <Compile Include="Services\HitRegions.cs" />
     <Compile Include="Services\ThemeColorRemap.cs" />
     <Compile Include="Services\UiA11y.cs" />

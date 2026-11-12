@@ -62,6 +62,31 @@ namespace Gdterm.Tests.Ui
                     new ConnectionConfig { Name = "已存在的主机", Protocol = ProtocolType.SSH, Host = "10.0.0.9", Port = 22 }
                 }), outDir, log, check);
 
+            // 主机密钥确认（2026-11 主机密钥校验的唯一安全决策出口）：
+            // 首次信任 + 密钥变更两种危险态各 dump 一次——指纹看不见/按钮点不到的盒子问题
+            // 在这里会直接变成"用户闭眼点信任"，比排版难看严重得多。
+            Show("hostkey-unknown", () => (Form)new HostKeyDialog(new Gdterm.Core.Security.HostKeyPromptInfo
+            {
+                Host = "10.0.0.11",
+                Port = 22,
+                KeyType = "ssh-ed25519",
+                KeyBits = 256,
+                Sha256Fingerprint = "SHA256:smokeUnknownFingerprintValueForLayoutOnly",
+                Md5Fingerprint = "aa:bb:cc:dd:ee:ff:00:11:22:33:44:55:66:77:88:99",
+                Situation = Gdterm.Core.Security.HostKeySituation.Unknown
+            }), outDir, log, check);
+            Show("hostkey-changed", () => (Form)new HostKeyDialog(new Gdterm.Core.Security.HostKeyPromptInfo
+            {
+                Host = "10.0.0.11",
+                Port = 2222,
+                KeyType = "ssh-ed25519",
+                KeyBits = 256,
+                Sha256Fingerprint = "SHA256:smokeNewFingerprintValueForLayoutOnly",
+                Md5Fingerprint = "11:22:33:44:55:66:77:88:99:aa:bb:cc:dd:ee:ff:00",
+                Situation = Gdterm.Core.Security.HostKeySituation.Changed,
+                PreviousSha256Fingerprint = "SHA256:smokeOldFingerprintValueForLayoutOnly"
+            }), outDir, log, check);
+
             // SFTP 权限编辑：此前是唯一没有 dump 的窗体（registry 里自己都写着"建议补 Show 用例"）。
             // 3×3 复选 + octal 双向联动靠反射量不到，至少把盒模型和"确定/取消绑定"锁住。
             Show("sftp-permission", () => (Form)new SftpPermissionForm("report.csv", "rw-r--r--", 644), outDir, log, check);

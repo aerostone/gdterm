@@ -21,6 +21,12 @@ S01 dialog-bypass    `new DangerousCommandDialog(` 只准出现在 DangerousComm
 S02 raw-check        `.Check(` 只准出现在 Gdterm.Security（判定只走 CommandGate）
 S03 raw-whitelist    UI 里 `detector.AddToWhitelist(cmd)` 只准出现在设置表单（用户显式承认）
 S04 unclassified     InputSource 的每个成员都必须至少有一个调用点（新入口必须标来源）
+S05 raw-client       `new SshClient(` / `new SftpClient(` 只准出现在 SshHostKeyGuard（主机密钥校验的唯一挂载点）
+S06 not-configured   组合根必须先 Configure 主机密钥校验（否则全仓静默降级成"不校验"）
+
+S05 的背景与 S01 同构：SSH.NET 在**没有** HostKeyReceived 处理器时完全不校验服务端主机密钥。
+2026-11 审计前全仓有 6 处裸建连，等于 6 条谁都能中间人接管的链路。收敛到工厂之后，
+最省事的写法依旧是 `new SshClient(info)`——编译过、跑得通、校验没了。
 
 用法
 ====
@@ -110,6 +116,25 @@ def main(argv):
         hits_for(files, lambda rel, line: ".AddToWhitelist(" in line
                  and "SecretScan" not in rel
                  and rel not in (config_form, prompt_file)))
+
+    # S05 —— 建连只能经工厂（主机密钥校验的唯一挂载点）
+    guard_file = "src/Gdterm.Tunnel/SshHostKeyGuard.cs"
+    add("S05", "裸建连",
+        "所有 SshClient/SftpClient 必须由 SshHostKeyGuard.CreateClient/CreateSftpClient 创建，"
+        "否则该链路不校验主机密钥（中间人可透明接管）",
+        hits_for(files, lambda rel, line: re.search(r"new\s+(SshClient|SftpClient)\s*\(", line) is not None
+                 and rel != guard_file))
+
+    # S06 —— 组合根必须真的把校验装上（S05 只保证走工厂，工厂不配置就等于没校验）
+    program_file = "src/Gdterm.UI/Program.cs"
+    program_text = read(os.path.join(ROOT, program_file)) if os.path.isfile(os.path.join(ROOT, program_file)) else ""
+    if "SshHostKeyGuard.Configure(" not in program_text:
+        violations.append({
+            "rule": "S06", "title": "主机密钥校验未装配",
+            "why": "启动时必须 SshHostKeyGuard.Configure(knownHosts, prompt)，否则建连走的是 Disabled（不校验）",
+            "file": program_file, "line": 0,
+            "text": "缺少 SshHostKeyGuard.Configure(...) 调用",
+        })
 
     # S04 —— InputSource 每个成员都要有调用点
     enum_path = os.path.join(SRC, "Gdterm.Security", "InputSource.cs")

@@ -113,6 +113,7 @@
     <Compile Include="Security\SecretFindingTests.cs" />
     <Compile Include="Security\SecurityManagerHashTests.cs" />
     <Compile Include="Security\CommandGateTests.cs" />
+    <Compile Include="Security\HostKeyVerificationTests.cs" />
     <Compile Include="Security\OtpTests.cs" />
     <Compile Include="Sftp\SftpSyncPlannerTests.cs" />
     <Compile Include="Sftp\SftpPermissionTests.cs" />

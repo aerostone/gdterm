@@ -50,6 +50,11 @@
       <Project>{A1B2C3D4-E5F6-7890-ABCD-EF1234567890}</Project>
       <Name>Gdterm.Core</Name>
     </ProjectReference>
+    <!-- 主机密钥校验（SshHostKeyGuard）需要：工具里的 SFTP 派生连接也必须钉同一份指纹 -->
+    <ProjectReference Include="..\Gdterm.Tunnel\Gdterm.Tunnel.csproj">
+      <Project>{C3D4E5F6-A7B8-9012-CDEF-123456789012}</Project>
+      <Name>Gdterm.Tunnel</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="IToolModule.cs" />

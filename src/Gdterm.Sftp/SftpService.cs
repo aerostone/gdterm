@@ -38,9 +38,10 @@ namespace Gdterm.Sftp
                 30,
                 config.Proxy);
 
-            _client = new SftpClient(connInfo);
+            _client = Gdterm.Tunnel.SshHostKeyGuard.CreateSftpClient(connInfo, config.Host, config.Port);
             Gdterm.Tunnel.SshKeepAlive.Apply(_client, config);
-            _client.Connect();
+            try { _client.Connect(); }
+            catch (Exception ex) { throw Gdterm.Tunnel.SshHostKeyGuard.Describe(_client, ex); }
 
             return Task.CompletedTask;
         }
@@ -60,9 +61,11 @@ namespace Gdterm.Sftp
                 credential.Username ?? config.Username,
                 credential);
 
-            _client = new SftpClient(connInfo);
+            // 与终端一致：隧道里握手的是目标机，指纹钉在 config.Host:config.Port 上
+            _client = Gdterm.Tunnel.SshHostKeyGuard.CreateSftpClient(connInfo, config.Host, config.Port);
             Gdterm.Tunnel.SshKeepAlive.Apply(_client, config);
-            _client.Connect();
+            try { _client.Connect(); }
+            catch (Exception ex) { throw Gdterm.Tunnel.SshHostKeyGuard.Describe(_client, ex); }
 
             return Task.CompletedTask;
         }

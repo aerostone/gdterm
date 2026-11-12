@@ -69,7 +69,8 @@ namespace Gdterm.Tunnel.Models
                 SshPrivateKeyPassphrase = passphrase
             };
             var connInfo = SshConnectionInfoFactory.Create(host, port, user, hopCredential);
-            var client = new SshClient(connInfo);
+            // 每一跳都要过主机密钥校验：跳板机被顶替，整条链都不可信
+            var client = SshHostKeyGuard.CreateClient(connInfo, hop.Host, hop.Port);
             SshKeepAlive.Apply(client, SshKeepAlive.DefaultSeconds); // hop 无连接级配置，用默认 30s
             try
             {
@@ -115,7 +116,7 @@ namespace Gdterm.Tunnel.Models
             // 审计 F2：直连与 hop 共用同一份 ConnectionInfo 构建（代理分支也在这里，含代理认证重载）
             var connInfo = SshConnectionInfoFactory.Create(
                 config.Host, config.Port, user, credential ?? new CredentialPayload(), 30, config.Proxy);
-            var client = new SshClient(connInfo);
+            var client = SshHostKeyGuard.CreateClient(connInfo, config.Host, config.Port);
             SshKeepAlive.Apply(client, config);
             client.Connect();
             _hopClients.Add(client);

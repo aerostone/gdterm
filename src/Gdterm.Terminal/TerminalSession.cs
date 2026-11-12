@@ -71,7 +71,7 @@ namespace Gdterm.Terminal
                 30,
                 config.Proxy);
 
-            _sshClient = new SshClient(connInfo);
+            _sshClient = Gdterm.Tunnel.SshHostKeyGuard.CreateClient(connInfo, config.Host, config.Port);
             Gdterm.Tunnel.SshKeepAlive.Apply(_sshClient, config);
             LogConnect("direct", connInfo, credential);
             try { _sshClient.Connect(); }
@@ -79,7 +79,7 @@ namespace Gdterm.Terminal
             {
                 // SSH.NET 报错原文（SocketException/PermissionDenied/SshException 等）是排查对接问题的第一证据
                 TerminalLog.Swallowed("SshSession.Connect", ex);
-                throw;
+                throw Gdterm.Tunnel.SshHostKeyGuard.Describe(_sshClient, ex);
             }
 
             CreateShellStream(_rows, _columns);
@@ -107,14 +107,16 @@ namespace Gdterm.Terminal
                 credential.Username ?? config.Username,
                 credential);
 
-            _sshClient = new SshClient(connInfo);
+            // 隧道里握手的是**目标机**：钉住的必须是 config.Host/config.Port，
+            // 否则同一台堡垒机后面的所有目标共用 127.0.0.1:localPort 这一条记录。
+            _sshClient = Gdterm.Tunnel.SshHostKeyGuard.CreateClient(connInfo, config.Host, config.Port);
             Gdterm.Tunnel.SshKeepAlive.Apply(_sshClient, config);
             LogConnect("tunnel->" + tunnelEndpoint.LocalHost + ":" + tunnelEndpoint.LocalPort, connInfo, credential);
             try { _sshClient.Connect(); }
             catch (Exception ex)
             {
                 TerminalLog.Swallowed("SshSession.Connect", ex);
-                throw;
+                throw Gdterm.Tunnel.SshHostKeyGuard.Describe(_sshClient, ex);
             }
 
             CreateShellStream(_rows, _columns);

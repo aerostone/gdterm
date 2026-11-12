@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Gdterm.Core.Models;
 using Renci.SshNet;
+using Gdterm.Tunnel;
 
 namespace Gdterm.Terminal.Monitoring
 {
@@ -101,8 +102,10 @@ namespace Gdterm.Terminal.Monitoring
                 _credential,
                 Math.Max(5, timeoutSeconds),
                 _config.Proxy);
-            var client = new SshClient(info);
-            client.Connect();
+            // 后台采样同样要过校验：指纹不符时应该报错，而不是把陌生主机的 CPU 数字画到面板上
+            var client = SshHostKeyGuard.CreateClient(info, _config.Host, _config.Port);
+            try { client.Connect(); }
+            catch (Exception ex) { throw SshHostKeyGuard.Describe(client, ex); }
             _client = client;
             // 新连接：上一轮的差分基线作废
             _prevCpuTotal = 0; _prevCpuIdle = 0; _prevRx = 0; _prevTx = 0; _prevAt = default(DateTime);

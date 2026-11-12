@@ -23,10 +23,11 @@ namespace Gdterm.Tools.Models
             {
                 _sftp?.Dispose();
                 var ci = _sshClient.ConnectionInfo;
-                _sftp = new SftpClient(ci.Host, ci.Port, ci.Username, new PrivateKeyFile[] { });
-                // 使用与 SSH 相同的认证
-                _sftp = new SftpClient(ci);
-                _sftp.Connect();
+                // 用与终端相同的认证，并钉同一份主机密钥：SFTP 是另一条独立握手，
+                // 不挂校验就等于给了一条绕过 P0 的后门（原实现还有一行立即被覆盖的裸建连，一并删掉）。
+                _sftp = Gdterm.Tunnel.SshHostKeyGuard.CreateSftpClient(ci, ci.Host, ci.Port);
+                try { _sftp.Connect(); }
+                catch (Exception ex) { throw Gdterm.Tunnel.SshHostKeyGuard.Describe(_sftp, ex); }
             }
             return _sftp;
         }
