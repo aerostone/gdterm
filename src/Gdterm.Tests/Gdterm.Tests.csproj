@@ -114,6 +114,7 @@
     <Compile Include="Ai\AiAssistantServiceTests.cs" />
     <Compile Include="Ai\AiSettingsFileTests.cs" />
     <Compile Include="Logging\CommandHistoryStoreTests.cs" />
+    <Compile Include="Logging\CommandHistoryQueryTests.cs" />
     <Compile Include="Connections\ConnectionStoreJsonTests.cs" />
     <Compile Include="Connections\ExternalFormatImporterTests.cs" />
     <Compile Include="Tunnel\SshConnectionInfoFactoryTests.cs" />

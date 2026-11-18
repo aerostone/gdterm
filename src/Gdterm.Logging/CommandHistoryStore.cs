@@ -290,14 +290,17 @@ namespace Gdterm.Logging
                 entry.ConnectionId != query.ConnectionId)
                 return false;
 
+            // 过滤条件对「该字段为空」的条目必须判不匹配：
+            // 从前写成 `entry.Hostname != null && 不等才算不匹配`，于是选了主机 web01 之后，
+            // 本地终端（Hostname 为 null）跑的命令照样混进结果——过滤看着生效、其实漏掉一半条件。
             if (!string.IsNullOrEmpty(query.Hostname) &&
-                entry.Hostname != null &&
-                !entry.Hostname.Equals(query.Hostname, StringComparison.OrdinalIgnoreCase))
+                (entry.Hostname == null ||
+                 !entry.Hostname.Equals(query.Hostname, StringComparison.OrdinalIgnoreCase)))
                 return false;
 
             if (!string.IsNullOrEmpty(query.CommandContains) &&
-                entry.Command != null &&
-                entry.Command.IndexOf(query.CommandContains, StringComparison.OrdinalIgnoreCase) < 0)
+                (entry.Command == null ||
+                 entry.Command.IndexOf(query.CommandContains, StringComparison.OrdinalIgnoreCase) < 0))
                 return false;
 
             if (query.From.HasValue && entry.ExecutedAt < query.From.Value)
@@ -309,12 +312,26 @@ namespace Gdterm.Logging
             if (query.IsBroadcast.HasValue && entry.IsBroadcast != query.IsBroadcast.Value)
                 return false;
 
-            if (!string.IsNullOrEmpty(query.Tag) &&
-                entry.Tags != null &&
-                !entry.Tags.Contains(query.Tag))
+            // Tag 是逗号分隔的多值串，按「任一标签相等」匹配（整串 Contains 会把 tag="db" 误命中 "db-prod"）
+            if (!string.IsNullOrEmpty(query.Tag) && !HasTag(entry.Tags, query.Tag))
                 return false;
 
             return true;
+        }
+
+        /// <summary>
+        /// 判断逗号分隔的标签串里是否有指定标签（去空白、不分大小写）。
+        /// </summary>
+        private static bool HasTag(string tags, string wanted)
+        {
+            if (string.IsNullOrEmpty(tags)) return false;
+            foreach (var raw in tags.Split(','))
+            {
+                var tag = raw.Trim();
+                if (tag.Length > 0 && tag.Equals(wanted, StringComparison.OrdinalIgnoreCase))
+                    return true;
+            }
+            return false;
         }
 
         // ===== JSON 序列化（手写，2026-11-08 替换 JavaScriptSerializer）=====

@@ -81,6 +81,7 @@ namespace Gdterm.Tests
             RunTest("ChatHistoryStore", ChatHistoryStoreTests.Run);
             RunTest("AiAssistantService", AiAssistantServiceTests.Run);
             RunTest("CommandHistoryStore", CommandHistoryStoreTests.Run);
+            RunTest("CommandHistoryQuery", CommandHistoryQueryTests.Run);
             RunTest("ExternalFormatImporter", ExternalFormatImporterTests.Run);
             RunTest("SshConnectionInfoFactory", Gdterm.Tests.Tunnel.SshConnectionInfoFactoryTests.Run);
             RunTest("NetworkDiagnosticsTool", Gdterm.Tests.Tools.NetworkDiagnosticsToolTests.Run);

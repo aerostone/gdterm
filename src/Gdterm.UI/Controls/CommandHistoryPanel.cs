@@ -24,6 +24,15 @@ namespace Gdterm.UI.Controls
         /// <summary>排序/批量/导出壳（自带搜索，故壳只出排序与导出）</summary>
         private ListShell _shell;
 
+        /// <summary>列表最多显示多少条（原写的 500）</summary>
+        private const int DisplayLimit = 500;
+        /// <summary>全量扇入上限：主机候选集和过滤都在这批里做</summary>
+        private const int HostScanLimit = 10000;
+        /// <summary>上次填进下拉的主机集合签名（相同则不动控件，避免打字时下拉抖动）</summary>
+        private string _hostSignature;
+        /// <summary>下拉选项映射：索引 0 = “所有主机”（null），其余与 Items 顺序一致。</summary>
+        private readonly System.Collections.Generic.List<string> _hostValues = new System.Collections.Generic.List<string>();
+
         /// <summary>
         /// 双击命令事件（用于重新执行）
         /// </summary>
@@ -75,6 +84,7 @@ namespace Gdterm.UI.Controls
                 MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this)),
             };
             _hostFilter.Items.Add(L10n.T("所有主机"));
+            _hostValues.Add(null);   // 与 Items 逐项对齐（SelectedHost 靠这个映射取值）
             _hostFilter.SelectedIndex = 0;
 
             // 尺寸统一走 FormFontPolicy（AutoSize 不吃 DPI：d150 下这三个钮仍是 46x30，低于触击下限）
@@ -143,7 +153,7 @@ namespace Gdterm.UI.Controls
 
             // 事件绑定
             _searchBox.TextChanged += (s, e) => RefreshHistory();
-            _hostFilter.SelectedIndexChanged += (s, e) => RefreshHistory();
+            _hostFilter.SelectedIndexChanged += OnHostFilterChanged;
             btnRefresh.Click += (s, e) => RefreshHistory();
             btnClear.Click += (s, e) => ClearHistory();
             btnDeleteSel.Click += (s, e) => DeleteSelected();
@@ -168,22 +178,13 @@ namespace Gdterm.UI.Controls
                 return;
             }
 
-            var query = new CommandHistoryQuery
-            {
-                Limit = 500,
-                NewestFirst = true
-            };
-
-            if (!string.IsNullOrEmpty(_searchBox.Text))
-                query.CommandContains = _searchBox.Text;
-
-            if (_hostFilter.SelectedIndex > 0)
-                query.Hostname = _hostFilter.SelectedValue as string;
-
-            System.Collections.Generic.IList<CommandHistoryEntry> entries;
+            // 一次全量查询，主机候选集与列表结果都从它派生。
+            // 以前拆成两次 Query（列表一次 + 建主机下拉再一次）：搜索框每个 TextChanged
+            // 都要把全部 jsonl 重读两遍，还得 Items.Clear() 重填下拉——打字时肉眼可见地闪。
+            System.Collections.Generic.IList<CommandHistoryEntry> all;
             try
             {
-                entries = _store.Query(query);
+                all = _store.Query(new CommandHistoryQuery { Limit = HostScanLimit, NewestFirst = true });
             }
             catch (Exception ex)
             {
@@ -193,6 +194,29 @@ namespace Gdterm.UI.Controls
                 ShowLoadError(ex.Message);
                 return;
             }
+
+            string search = (_searchBox.Text ?? "").Trim();
+            string host = SelectedHost();
+
+            // 主机下拉以前永远只有「所有主机」：UpdateHostFilter 是 public 但全仓无人调用，
+            // 于是那只能选的下拉框形同虚设。
+            RefreshHostFilter(all);
+
+            var matched = new System.Collections.Generic.List<CommandHistoryEntry>();
+            foreach (var entry in all)
+            {
+                if (host != null &&
+                    (entry.Hostname == null ||
+                     !entry.Hostname.Equals(host, StringComparison.OrdinalIgnoreCase)))
+                    continue;
+                if (search.Length > 0 &&
+                    (entry.Command == null ||
+                     entry.Command.IndexOf(search, StringComparison.OrdinalIgnoreCase) < 0))
+                    continue;
+                matched.Add(entry);
+                if (matched.Count >= DisplayLimit) break;
+            }
+            var entries = matched;
 
             var items = new System.Collections.Generic.List<ListViewItem>(entries.Count);
             foreach (var entry in entries)
@@ -213,7 +237,7 @@ namespace Gdterm.UI.Controls
             // 审计 C1：空态文案区分“确实没有”与“筛选后为空”
             if (_empty != null)
             {
-                bool filtered = !string.IsNullOrEmpty(_searchBox.Text) || _hostFilter.SelectedIndex > 0;
+                bool filtered = search.Length > 0 || host != null;
                 _empty.SetEmpty(entries.Count == 0, filtered
                     ? L10n.T("没有匹配的命令")
                     : L10n.T("还没有命令历史"),
@@ -240,24 +264,90 @@ namespace Gdterm.UI.Controls
         }
 
         /// <summary>
-        /// 更新主机过滤器下拉列表
+        /// 重建主机过滤器下拉：候选集取自全量历史（不受当前主机/搜索条件影响，
+        /// 否则选中某主机后其他主机就从下拉里消失，再也切不回去），并保留当前选中。
         /// </summary>
-        public void UpdateHostFilter(System.Collections.Generic.IList<CommandHistoryEntry> entries)
+        private void RefreshHostFilter(System.Collections.Generic.IList<CommandHistoryEntry> all)
         {
-            _hostFilter.Items.Clear();
-            _hostFilter.Items.Add(L10n.T("所有主机"));
+            if (_hostFilter == null) return;
 
-            var hosts = new System.Collections.Generic.SortedSet<string>();
-            foreach (var entry in entries)
+            var hosts = new System.Collections.Generic.SortedSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var entry in all)
             {
                 if (!string.IsNullOrEmpty(entry.Hostname))
                     hosts.Add(entry.Hostname);
             }
 
-            foreach (var host in hosts)
-                _hostFilter.Items.Add(host);
+            // 候选集没变就不碰控件：打字过滤时每键重建 Item 集合会让下拉/焦点可见抖动
+            string signature = string.Join("\u0001", hosts);
+            if (signature == _hostSignature) return;
+            _hostSignature = signature;
 
-            _hostFilter.SelectedIndex = 0;
+            string current = SelectedHost();
+
+            // SelectedIndexChanged 会递归调回 RefreshHistory——重建期间先摘掉监听
+            _hostFilter.SelectedIndexChanged -= OnHostFilterChanged;
+            try
+            {
+                _hostFilter.Items.Clear();
+                _hostValues.Clear();
+                _hostFilter.Items.Add(L10n.T("所有主机"));
+                _hostValues.Add(null);
+                foreach (var h in hosts)
+                {
+                    _hostFilter.Items.Add(h);
+                    _hostValues.Add(h);
+                }
+
+                int restore = 0;
+                if (!string.IsNullOrEmpty(current))
+                {
+                    for (int i = 1; i < _hostValues.Count; i++)
+                    {
+                        if (string.Equals(_hostValues[i], current, StringComparison.OrdinalIgnoreCase))
+                        {
+                            restore = i;
+                            break;
+                        }
+                    }
+                }
+                _hostFilter.SelectedIndex = restore;
+            }
+            finally
+            {
+                _hostFilter.SelectedIndexChanged += OnHostFilterChanged;
+            }
+        }
+
+        /// <summary>当前选中的主机；“所有主机”或取值不可靠时返回 null。</summary>
+        private string SelectedHost()
+        {
+            if (_hostFilter == null) return null;
+            int idx = _hostFilter.SelectedIndex;
+            if (idx <= 0 || idx >= _hostValues.Count) return null;
+            return _hostValues[idx];
+        }
+
+        private void OnHostFilterChanged(object sender, EventArgs e)
+        {
+            RefreshHistory();
+        }
+
+        /// <summary>
+        /// 重建主机过滤器下拉（供外部导入/刷新后调用；面板内部刷新走 RefreshHostFilter）。
+        /// entries 参数保留只为兼容旧调用方签名——候选集始终取自全量存储，
+        /// 否则传进来的“当前过滤结果”会让用户看不到其他主机。
+        /// </summary>
+        public void UpdateHostFilter(System.Collections.Generic.IList<CommandHistoryEntry> entries)
+        {
+            try
+            {
+                RefreshHostFilter(_store.Query(new CommandHistoryQuery { Limit = HostScanLimit }));
+            }
+            catch (Exception ex)
+            {
+                try { DiagLog.Swallowed("CommandHistoryPanel.UpdateHostFilter", ex); } catch (Exception) { }
+            }
         }
 
         private void OnItemDoubleClick(object sender, EventArgs e)
