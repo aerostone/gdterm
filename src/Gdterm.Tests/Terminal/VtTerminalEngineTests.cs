@@ -41,6 +41,23 @@ namespace Gdterm.Tests.Terminal
                 // 中/emoji 各占 2 列，ASCII 各占 1 列：2 + 1 + 2 + 1 = 6。
                 Assert.Equal(6, eng.CursorColumn, "cursor uses display columns after CJK and emoji");
                 Assert.Equal("中A😀B", eng.GetScreenText().Substring(0, 5), "wide text remains user-visible without filler");
+                var line = string.Concat(eng.SnapshotVisible().Lines[0].Spans.Select(s => s.Text));
+                Assert.True(line.StartsWith("中" + WideText.Filler + "A😀B", StringComparison.Ordinal),
+                    "snapshot keeps one model cell per UTF-16 unit including CJK filler");
+            }
+            // SSH/PTY 可以在四字节 UTF-8 的任一字节处拆包。
+            for (int split = 1; split < 4; split++)
+            {
+                using (var eng = new VtTerminalEngine(40, 5, 100))
+                {
+                    var bytes = Encoding.UTF8.GetBytes("😀");
+                    eng.Feed(bytes.Take(split).ToArray());
+                    eng.Feed(bytes.Skip(split).ToArray());
+                    eng.Feed("X");
+                    Assert.Equal(3, eng.CursorColumn, "split emoji cursor at byte " + split);
+                    Assert.True(eng.GetScreenText().StartsWith("😀X", StringComparison.Ordinal),
+                        "split emoji survives at byte " + split);
+                }
             }
         }
 

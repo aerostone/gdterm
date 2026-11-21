@@ -13,7 +13,7 @@ namespace Gdterm.Terminal.Rendering.Vt
     /// 每多一个宽字符就多偏 1 列，且不可重编库。
     ///
     /// 对策：喂给库之前给 BMP 宽字符补一个“占位列”（<see cref="Filler"/>，PUA U+E000），
-    /// 让库的列号与真实显示列一致；补充平面的字符（如 emoji）由 UTF-16 代理对自然占两列，
+    /// 让库的列号与真实显示列一致；预处理器把补充平面字符的代理项分别编码给库，令其占两列，
     /// 不再额外补占位；所有对外出文本的地方再用 <see cref="Strip"/> 去掉占位列。
     /// 渲染器遇到占位列不画、不推进 x（宽字符字形本身已占 2 格）。
     /// 组合字符（零宽）先在本地做 NFC 合成，合成不掉的直接丢弃——宁可少一个
@@ -158,7 +158,7 @@ namespace Gdterm.Terminal.Rendering.Vt
 
                 if (cp > 0xFFFF)
                 {
-                    // VtNetCore 写入的是 UTF-16 char：补充平面的代理对会自然推进两列。
+                    // 预处理器会把代理项分别编码交给 VtNetCore，写入两个 UTF-16 cell。
                     // 这里不能再补 Filler，否则 emoji 会被当成三列，光标落在字符后一个空格。
                     sb.Append(char.ConvertFromUtf32(cp));
                 }

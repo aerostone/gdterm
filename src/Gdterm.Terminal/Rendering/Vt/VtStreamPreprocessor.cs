@@ -568,9 +568,26 @@ namespace Gdterm.Terminal.Rendering.Vt
             if (string.IsNullOrEmpty(text)) return w;
 
             string expanded = WideText.Expand(text);
-            int blen = Encoding.UTF8.GetByteCount(expanded);
-            Grow(w + blen + 8);
-            w += Encoding.UTF8.GetBytes(expanded, 0, expanded.Length, _out, w);
+            // 库的 ReadUtf8 返回 char，会把四字节码点截成低 16 位。
+            // 只在这个私有输入边界将代理项分别编码成三字节，库便能还原两个
+            // UTF-16 cell；网络输入、复制和导出仍使用标准 UTF-8。
+            Grow(w + expanded.Length * 3 + 8);
+            for (int k = 0; k < expanded.Length; k++)
+            {
+                int ch = expanded[k];
+                if (ch < 0x80) _out[w++] = (byte)ch;
+                else if (ch < 0x800)
+                {
+                    _out[w++] = (byte)(0xC0 | (ch >> 6));
+                    _out[w++] = (byte)(0x80 | (ch & 0x3F));
+                }
+                else
+                {
+                    _out[w++] = (byte)(0xE0 | (ch >> 12));
+                    _out[w++] = (byte)(0x80 | ((ch >> 6) & 0x3F));
+                    _out[w++] = (byte)(0x80 | (ch & 0x3F));
+                }
+            }
             return w;
         }
 

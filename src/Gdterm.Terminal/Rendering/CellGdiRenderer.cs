@@ -1314,7 +1314,9 @@ namespace Gdterm.Terminal.Rendering
 
         private float CellWidth(string text)
         {
-            return Math.Max(0, WideText.Columns(text)) * _charWidth;
+            // 快照已经包含宽字符占位列，UTF-16 单元数就是库的 cell 数。
+            // 再用 Columns 会把「中 + Filler」的双列重复计算成三列。
+            return text.Length * _charWidth;
         }
 
         /// <summary>
