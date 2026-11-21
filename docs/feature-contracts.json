@@ -472,6 +472,44 @@
       "note": "对话框本身无 I/O 与自由输入（命令文本只读展示，输入仅为确认点击+记住勾选）。"
     },
     {
+      "id": "page.TerminalPasteDialog",
+      "name": "终端粘贴预览",
+      "menu": "终端 > 粘贴预览",
+      "type": "dialog",
+      "src": [
+        "src/Gdterm.UI/Forms/TerminalPasteDialog.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": [
+        "confirm"
+      ],
+      "drop_caps": [
+        "empty",
+        "error",
+        "validation"
+      ],
+      "note": "确认前可编辑并选择换行与逐行发送方式；取消不发送。"
+    },
+    {
+      "id": "page.TerminalPasteProgressDialog",
+      "name": "终端逐行粘贴进度",
+      "menu": "终端 > 逐行粘贴进度",
+      "type": "progress",
+      "src": [
+        "src/Gdterm.UI/Forms/TerminalPasteProgressDialog.cs"
+      ],
+      "known_gaps": [],
+      "manual_ok": [
+        "loading",
+        "error"
+      ],
+      "drop_caps": [
+        "empty",
+        "undo"
+      ],
+      "note": "逐行发送时显示当前行；完成、取消、断连和异常均展示实际已发送行数，取消按钮或关闭窗体会停止后续发送。"
+    },
+    {
       "id": "page.FilePaneControl",
       "name": "文件面板（单栏）",
       "menu": "SFTP > 单栏",

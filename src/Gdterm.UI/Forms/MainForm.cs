@@ -80,14 +80,14 @@ namespace Gdterm.UI.Forms
         private ConnectionOpenCoordinator _openCoord;
         private LockStateCoordinator _lockCoord;
         private AppShutdownCoordinator _shutdown;
+        private SessionRecordingCoordinator _recordingCoordinator;
+        private WelcomePanelCoordinator _welcomeCoordinator;
+        private MainWindowLifecycleCoordinator _windowLifecycle;
         private BottomBarPanel _statusBar; // v2 单栏合并底栏：快捷命令+tmux键组+状态三项合一
         private ConnectionStateNotifier _connectionStateNotifier; // A1：watchdog 三事件 → DiagLog/状态段/Toast
         private LockOverlayControl _lockOverlay;
         private MenuStrip _menuStrip;
         private ToolStripMenuItem _debugModeMenuItem;
-        private WelcomePanel _welcomePanel;
-        private NotifyIcon _trayIcon;
-        private bool _confirmExitPending;
 
         /// <summary>
         /// 组合根（审计 F4）：依赖收成一个对象，不再用 23 个位置参数。
@@ -125,6 +125,7 @@ namespace Gdterm.UI.Forms
             _secretScanner = services.SecretScanner;
             _commandTemplateStore = services.CommandTemplateStore;
             _otpStore = services.OtpStore;
+            _windowLifecycle = new MainWindowLifecycleCoordinator(this, FindSideHostPanel);
 
             // 消除重绘闪烁：DoubleBuffered + 指定一致暗色背景。
             // 这是「发虚」的第二根因——重绘时 GDI 一帧帧走，看起来不稳重。,
@@ -264,8 +265,7 @@ namespace Gdterm.UI.Forms
             MinimumSize = new Size(800, 600);
             StartPosition = FormStartPosition.CenterScreen;
             // 上次退出时的窗口位置/大小/最大化：摆回原处（屏幕变了会在里面回退到居中）
-            try { RestoreWindowGeometry(Gdterm.UI.Program.GlobalAppearance); }
-            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.RestoreWindowGeometry", exSwallowed); } catch { } }
+            _windowLifecycle.RestoreWindowGeometry(Gdterm.UI.Program.GlobalAppearance);
 
             _connectionTree = new ConnectionTreeControl(_connectionStore, _keepassService);
             _connectionTree.Dock = DockStyle.Left;
@@ -351,7 +351,7 @@ namespace Gdterm.UI.Forms
                 catch (Exception ex) { DiagLog.Swallowed("MainForm.HostPortOpen", ex); }
             };
             _tabContainer.BlankAreaDoubleClicked += (s, e) => { try { _openCoord.NewConnection(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } } };
-            _tabContainer.ExportRequested += (s, e) => ExportActiveTerminalBuffer();
+            _tabContainer.ExportRequested += (s, e) => _recordingCoordinator?.ExportActiveTerminalBuffer();
             _tabContainer.AppearanceSettingsRequested += (s, e) => _toolsDialogs.OpenAppearanceSettings();
             // 终端尺寸/编码变化→状态栏显示
             _tabContainer.TerminalInfoChanged += (s, size) =>
@@ -373,7 +373,7 @@ namespace Gdterm.UI.Forms
                 this);
 
             var sideHostPanel = SidePanelHost.CreateHost((s, e) => _sidePanelHost?.Hide());
-            ApplySidePanelWidth(sideHostPanel);
+            _windowLifecycle.ApplySidePanelWidth(sideHostPanel, Gdterm.UI.Program.GlobalAppearance);
             _sidePanelHost = new SidePanelHost(sideHostPanel);
             // 工具箱会话重绑：Show 工具箱时按当前活动标签取远程会话（切标签不再拿旧会话跑命令）。
             _sidePanelHost.ToolboxSessionProvider = () =>
@@ -495,7 +495,7 @@ namespace Gdterm.UI.Forms
                 NewConnection = (s, e) => _openCoord.NewConnection(),
                 ImportConnections = (s, e) => ConnectionImportExportUi.Import(this, _connectionStore, () => _connectionTree.LoadConnections()),
                 ExportConnections = (s, e) => ConnectionImportExportUi.Export(this, _connectionStore),
-                Exit = (s, e) => { _confirmExitPending = true; Close(); },
+                Exit = (s, e) => _windowLifecycle.RequestExit(),
                 OpenLocalTerminal = (s, e) => _tabContainer.OpenLocalTerminal(),
                 OpenSftp = (s, e) => _openCoord.OpenSftpFromActive(),
                 ReconnectActive = (s, e) => _tabContainer.ReconnectActiveTab(),
@@ -562,13 +562,9 @@ namespace Gdterm.UI.Forms
                 ShowUpdateCheck = (s, e) => _toolsDialogs.OpenUpdateCheck(),
                 ShowLogsFolder = (s, e) => { try { _toolsDialogs.ShowLogsFolder(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.LogsFolder", ex); } },
                 ShowLogViewer = (s, e) => { try { _toolsDialogs.ShowLogViewer(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.LogViewer", ex); } },
-                ToggleSessionRecording = (s, e) => ToggleSessionRecording(),
-                ShowRecordings = (s, e) => ShowSessionRecordings(),
-                IsRecordingActive = () =>
-                {
-                    var active = _tabContainer != null ? _tabContainer.GetActiveTerminalControl() : null;
-                    return active != null && active.IsSessionRecording;
-                },
+                ToggleSessionRecording = (s, e) => _recordingCoordinator.ToggleRecording(),
+                ShowRecordings = (s, e) => _recordingCoordinator.ShowRecordings(),
+                IsRecordingActive = () => _recordingCoordinator != null && _recordingCoordinator.IsRecordingActive,
                 DiagnosticsPackage = (s, e) => { try { _toolsDialogs.ShowDiagnosticsPackage(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.Diagnostics", ex); } },
                 ToggleDebugMode = (s, e) => ToggleDebugMode(),
                 About = (s, e) => _toolsDialogs.ShowAbout(),
@@ -611,8 +607,29 @@ namespace Gdterm.UI.Forms
 
             // Toast / 落地页 / 托盘
             try { ToastNotifier.Bind(this); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
-            try { SetupWelcomePanel(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.Welcome", ex); }
-            try { SetupTrayIcon(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.Tray", ex); }
+            _recordingCoordinator = new SessionRecordingCoordinator(
+                this,
+                () => _tabContainer != null ? _tabContainer.GetActiveTerminalControl() : null,
+                () => _tabContainer,
+                _statusBar,
+                () => Gdterm.UI.Program.RecordingsDir);
+            try
+            {
+                _welcomeCoordinator = new WelcomePanelCoordinator(
+                    this, _connectionStore, _bookmarkStore,
+                    () => _openCoord?.NewConnection(),
+                    () => _tabContainer?.OpenLocalTerminal(),
+                    () => _sidePanelHost?.Show(_sidePanels.CreateBookmarksPanel(cfg =>
+                    {
+                        if (cfg != null) _openCoord?.OpenConnection(cfg);
+                    })),
+                    () => _toolsDialogs?.OpenKeePassManager(),
+                    cfg => { if (cfg != null) _openCoord?.OpenConnection(cfg); },
+                    () => _tabContainer != null ? _tabContainer.OpenTabCount : 0);
+            }
+            catch (Exception ex) { DiagLog.Swallowed("MainForm.Welcome", ex); }
+            try { _windowLifecycle.SetupTrayIcon(() => _tabContainer?.OpenLocalTerminal()); }
+            catch (Exception ex) { DiagLog.Swallowed("MainForm.Tray", ex); }
             try
             {
                 if (_tabContainer != null)
@@ -772,10 +789,10 @@ namespace Gdterm.UI.Forms
                 _sessionState, _hotkeys, _tabContainer,
                 _tunnelManager, _keepassService, _securityManager,
                 _scanPluginStore);
-            FormClosing += MaybeCloseToTray;
+            FormClosing += _windowLifecycle.ConfirmClose;
             FormClosing += _shutdown.OnFormClosing;
             // 视图状态落盘：放在关闭链最后（用户取消退出时也照记——他当时确实把窗口摆在那儿了）
-            FormClosing += (s, e) => SaveWindowGeometry();
+            FormClosing += _windowLifecycle.SaveWindowGeometry;
         }
 
         private void OnSessionClosed(object sender, string sessionId)
@@ -809,286 +826,15 @@ namespace Gdterm.UI.Forms
             catch (Exception ex) { DiagLog.Swallowed("MainForm.OnActiveSessionChanged", ex); }
         }
 
-        /// <summary>
-        /// 导出当前活动终端的滚动缓冲到文本或 HTML 文件。
-        /// 从右键菜单「导出缓冲」触发；本会话未连接时弹提示。
-        /// </summary>
-        /// <summary>
-        /// 终端 → 开始/停止录制会话（P1-2）。只作用于**活动标签**：录制是显式动作，
-        /// 不做"开始后自动跟随新标签"——那会让用户在不知情的情况下录制了别的会话。
-        /// </summary>
-        private void ToggleSessionRecording()
-        {
-            var terminal = _tabContainer != null ? _tabContainer.GetActiveTerminalControl() : null;
-            if (terminal == null)
-            {
-                try { ToastNotifier.Info(L10n.T("当前没有活动的终端会话")); } catch (Exception) { }
-                return;
-            }
-            try
-            {
-                if (terminal.IsSessionRecording)
-                {
-                    string path = terminal.SessionRecordingPath;
-                    terminal.StopSessionRecording();
-                    _statusBar?.UpdateConnectionStatus(L10n.T("录制已停止"));
-                    try { ToastNotifier.Success(L10n.T("录制已保存：") + path); } catch (Exception) { }
-                }
-                else
-                {
-                    string path = terminal.StartSessionRecording(Gdterm.UI.Program.RecordingsDir);
-                    if (string.IsNullOrEmpty(path))
-                    {
-                        _statusBar?.UpdateConnectionStatus(L10n.T("录制启动失败"), BottomBarPanel.ConnectionStatusLevel.Failed);
-                        try { ToastNotifier.Warning(L10n.T("录制启动失败，详见诊断日志")); } catch (Exception) { }
-                        return;
-                    }
-                    _statusBar?.UpdateConnectionStatus(L10n.T("正在录制会话"));
-                    try { ToastNotifier.Info(L10n.T("开始录制：") + System.IO.Path.GetFileName(path)); } catch (Exception) { }
-                }
-                // 红点必须立刻亮/灭：录制是持续动作，靠"翻菜单看有没有勾"记住状态是不可靠的
-                _tabContainer?.RefreshTabBadges();
-            }
-            catch (Exception ex)
-            {
-                DiagLog.Swallowed("MainForm.ToggleSessionRecording", ex);
-            }
-        }
-
-        /// <summary>终端 → 会话录制中心：列出 data/recordings 下的录制并原样回放。</summary>
-        private void ShowSessionRecordings()
-        {
-            try
-            {
-                using (var form = new SessionRecordingsForm(Gdterm.UI.Program.RecordingsDir))
-                    form.ShowDialog(this);
-            }
-            catch (Exception ex)
-            {
-                DiagLog.Swallowed("MainForm.ShowSessionRecordings", ex);
-                try { ToastNotifier.Warning(L10n.T("打开会话录制中心失败：") + ex.Message); } catch (Exception) { }
-            }
-        }
-
-        private void ExportActiveTerminalBuffer()
-        {
-            try
-            {
-                var tc = _tabContainer?.GetActiveTerminalControl();
-                if (tc == null || !tc.IsConnected)
-                {
-                    ToastNotifier.Info(L10n.T("当前没有活动的终端会话")); return;
-                }
-
-                using (var dlg = new SaveFileDialog())
-                {
-                    dlg.Title = L10n.T("导出终端缓冲");
-                    dlg.Filter = L10n.T("文本文件 (*.txt)|*.txt|HTML 文件 (*.html)|*.html|所有文件 (*.*)|*.txt");
-                    dlg.FileName = "terminal-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") + ".txt";
-                    if (dlg.ShowDialog(this) != DialogResult.OK) return;
-
-                    var lines = tc.Session?.GetRecentOutput(2000);
-                    if (lines == null) lines = new System.Collections.Generic.List<string>();
-                    var host = tc.Config?.Host ?? "localhost";
-                    string content;
-                    if (System.IO.Path.GetExtension(dlg.FileName).Equals(".html", StringComparison.OrdinalIgnoreCase))
-                        content = Gdterm.Terminal.TerminalBufferExport.ExportAsHtml(new System.Collections.Generic.List<string>(lines), host);
-                    else
-                        content = Gdterm.Terminal.TerminalBufferExport.ExportAsText(new System.Collections.Generic.List<string>(lines), host);
-                    Gdterm.Terminal.TerminalBufferExport.SaveToFile(content, dlg.FileName);
-                    ToastNotifier.Success(L10n.T("已导出缓冲"));
-                }
-            }
-            catch (Exception ex)
-            {
-                Gdterm.UI.Diagnostics.DiagLog.Swallowed("MainForm.ExportBuffer", ex);
-                MessageBox.Show(this, L10n.Tf("导出失败：{0}", ex.Message), L10n.T("导出缓冲"),
-                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
-        }
-
-
-        private void SetupWelcomePanel()
-        {
-            _welcomePanel = new WelcomePanel(_connectionStore, _bookmarkStore)
-            {
-                Dock = DockStyle.Fill,
-                Visible = false
-            };
-            _welcomePanel.NewConnectionRequested += () =>
-            {
-                try { _openCoord?.NewConnection(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
-            };
-            _welcomePanel.OpenLocalTerminalRequested += () =>
-            {
-                try { _tabContainer?.OpenLocalTerminal(); UpdateWelcomeVisibility(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.OpenLocalTerminal(welcome)", ex); }
-            };
-            _welcomePanel.OpenBookmarksRequested += () =>
-            {
-                try
-                {
-                    _sidePanelHost?.Show(_sidePanels.CreateBookmarksPanel(cfg =>
-                    {
-                        if (cfg != null) _openCoord?.OpenConnection(cfg);
-                    }));
-                }
-                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
-            };
-            _welcomePanel.OpenKeePassRequested += () =>
-            {
-                try { _toolsDialogs?.OpenKeePassManager(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
-            };
-            _welcomePanel.OpenConnectionRequested += cfg =>
-            {
-                try
-                {
-                    if (cfg != null) _openCoord?.OpenConnection(cfg);
-                    UpdateWelcomeVisibility();
-                }
-                catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
-            };
-            Controls.Add(_welcomePanel);
-            _welcomePanel.BringToFront();
-            UpdateWelcomeVisibility();
-        }
-
         private void UpdateWelcomeVisibility()
         {
-            try
-            {
-                int tabs = 0;
-                try { tabs = _tabContainer != null ? _tabContainer.OpenTabCount : 0; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
-                bool show = tabs <= 0;
-                if (_welcomePanel != null && !_welcomePanel.IsDisposed)
-                {
-                    if (show) _welcomePanel.Reload();
-                    _welcomePanel.Visible = show;
-                    if (show) _welcomePanel.BringToFront();
-                }
-            }
-            catch (Exception ex) { DiagLog.Swallowed("MainForm.UpdateWelcome", ex); }
-        }
-
-        private void SetupTrayIcon()
-        {
-            _trayIcon = new NotifyIcon
-            {
-                Text = "gdterm",
-                Visible = true
-            };
-            try
-            {
-                if (this.Icon != null) _trayIcon.Icon = this.Icon;
-                else _trayIcon.Icon = SystemIcons.Application;
-            }
-            catch
-            {
-                try { _trayIcon.Icon = SystemIcons.Application; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
-            }
-
-            var menu = new ContextMenuStrip();
-            menu.Items.Add(L10n.T("显示主窗口"), null, (s, e) => RestoreFromTray());
-            menu.Items.Add(L10n.T("本地终端"), null, (s, e) =>
-            {
-                RestoreFromTray();
-                try { _tabContainer?.OpenLocalTerminal(); } catch (Exception ex) { DiagLog.Swallowed("MainForm.OpenLocalTerminal(tray)", ex); }
-            });
-            menu.Items.Add(new ToolStripSeparator());
-            menu.Items.Add(L10n.T("退出"), null, (s, e) =>
-            {
-                _confirmExitPending = true;
-                try { _trayIcon.Visible = false; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
-                Close();
-            });
-            _trayIcon.ContextMenuStrip = menu;
-            _trayIcon.DoubleClick += (s, e) => RestoreFromTray();
-        }
-
-        private void RestoreFromTray()
-        {
-            try
-            {
-                Show();
-                WindowState = FormWindowState.Normal;
-                Activate();
-                ShowInTaskbar = true;
-            }
-            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
+            _welcomeCoordinator?.UpdateVisibility();
         }
 
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
-            try
-            {
-                if (_trayIcon != null && WindowState == FormWindowState.Minimized)
-                {
-                    Hide();
-                    ShowInTaskbar = false;
-                    try
-                    {
-                        _trayIcon.ShowBalloonTip(1200, "gdterm",
-                            L10n.T("已最小化到托盘，双击图标恢复。"), ToolTipIcon.Info);
-                    }
-                    catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
-                }
-            }
-            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
-        }
-
-
-
-        /// <summary>
-        /// 回放窗口几何。StartPosition 一直 CenterScreen 的话，用户每天开机都要把窗口和列宽重新摆一遍——
-        /// 运维客户端是一开一整天的东西，这条"每天一次"的摩擦很扎人。
-        /// 存的是 Normal 态的 Bounds（最大化的真实尺寸在 RestoreBounds 里），再按当前虚拟屏做一次
-        /// "看得见"校验：笔记本拔了外接屏/分辨率变小后，别把窗口还原到屏幕外面的空气里。
-        /// </summary>
-        private void RestoreWindowGeometry(AppearanceSettings ga)
-        {
-            if (ga == null || ga.WindowWidth < 640 || ga.WindowHeight < 480) return;
-            try
-            {
-                if (ga.WindowX == int.MinValue || ga.WindowY == int.MinValue) return;
-                var vs = SystemInformation.VirtualScreen;
-                var bounds = new Rectangle(ga.WindowX, ga.WindowY, ga.WindowWidth, ga.WindowHeight);
-                var visible = Rectangle.Intersect(vs, bounds);
-                // 标题栏至少要露出一块能抓的地方（宽 200/高 40），否则用户拖不动也找不到窗口
-                if (visible.Width < 200 || visible.Height < 40)
-                {
-                    DiagLog.Info("MainForm.Geometry", "saved bounds off-screen, fallback to centered: " + bounds);
-                    return;
-                }
-                StartPosition = FormStartPosition.Manual;
-                Bounds = bounds;
-                if (ga.WindowMaximized) WindowState = FormWindowState.Maximized;
-            }
-            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.RestoreWindowGeometry", exSwallowed); } catch { } }
-        }
-
-        /// <summary>落盘窗口几何 + 侧板宽度（退出时一次，不做每次拖动就写盘）。</summary>
-        private void SaveWindowGeometry()
-        {
-            try
-            {
-                var ga = Gdterm.UI.Program.GlobalAppearance;
-                if (ga == null) return;
-                var bounds = WindowState == FormWindowState.Normal ? Bounds : RestoreBounds;
-                // 最小化时 RestoreBounds 是"最小化前的样子"，正常退出不会走到这里；
-                // 真走到（托盘退出）也只会记下最小化前的位置，不会记成 160×28 的标题条。
-                if (bounds.Width >= 640 && bounds.Height >= 480)
-                {
-                    ga.WindowX = bounds.X;
-                    ga.WindowY = bounds.Y;
-                    ga.WindowWidth = bounds.Width;
-                    ga.WindowHeight = bounds.Height;
-                }
-                ga.WindowMaximized = WindowState == FormWindowState.Maximized;
-                var side = FindSideHostPanel();
-                if (side != null && side.Width >= 320) ga.SidePanelWidth = side.Width;
-                ga.Save(AppearanceSettings.DefaultPath);
-            }
-            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.SaveWindowGeometry", exSwallowed); } catch { } }
+            _windowLifecycle?.OnResize(e);
         }
 
         /// <summary>侧板容器（Dock=Right 那个 Panel）；没建出来为 null。</summary>
@@ -1100,51 +846,6 @@ namespace Gdterm.UI.Forms
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.FindSideHostPanel", exSwallowed); } catch { } }
             return null;
-        }
-
-        /// <summary>按上次退出时的宽度摆侧板（未设置用设计值 360）。</summary>
-        private void ApplySidePanelWidth(Panel sideHostPanel)
-        {
-            try
-            {
-                var ga = Gdterm.UI.Program.GlobalAppearance;
-                if (ga == null || sideHostPanel == null) return;
-                if (ga.SidePanelWidth < 320 || ga.SidePanelWidth > 1600) return;
-                sideHostPanel.Width = ga.SidePanelWidth;
-            }
-            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm.ApplySidePanelWidth", exSwallowed); } catch { } }
-        }
-
-        private void MaybeCloseToTray(object sender, FormClosingEventArgs e)
-        {
-            // 菜单/托盘「退出」已明确意图，直接放行；用户点标题栏 X 才弹二次确认。
-            if (e.CloseReason != CloseReason.UserClosing)
-                return;
-            if (_confirmExitPending)
-            {
-                // 二次确认通过后放行
-                e.Cancel = false;
-                return;
-            }
-
-            e.Cancel = true;
-            try
-            {
-                var result = MessageBox.Show(this,
-                    L10n.T("确定要退出 gdterm 吗？\n\n所有打开的连接会话将被关闭。"),
-                    L10n.T("退出确认"),
-                    MessageBoxButtons.YesNo,
-                    MessageBoxIcon.Question,
-                    MessageBoxDefaultButton.Button2);
-                if (result != DialogResult.Yes)
-                    return;
-            }
-            catch { return; }
-
-            // 用户确认退出：标记后重新 Close，绕过再次确认
-            _confirmExitPending = true;
-            try { if (_trayIcon != null) _trayIcon.Visible = false; } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
-            Close();
         }
 
         /// <summary>切换调试模式——即时生效，写入 data/config/debug.ini。</summary>
@@ -1267,8 +968,8 @@ namespace Gdterm.UI.Forms
             Add(L10n.T("AI 助手聊天"), L10n.T("面板"), ShowAiChatPanel, "Ctrl+Shift+G", "ai 聊天");
             // P1-2：录制是显式动作，命令面板里必须能搜到（快捷键故意不给——录制开关误触的代价是
             // 一整个会话的原始字节落盘，不适合绑在易误按的组合上）
-            Add(L10n.T("开始/停止录制会话"), L10n.T("面板"), ToggleSessionRecording, null, "record 录制 回放 asciinema");
-            Add(L10n.T("会话录制中心（回放）"), L10n.T("面板"), ShowSessionRecordings, null, "record 录制 回放 replay");
+            Add(L10n.T("开始/停止录制会话"), L10n.T("面板"), () => _recordingCoordinator?.ToggleRecording(), null, "record 录制 回放 asciinema");
+            Add(L10n.T("会话录制中心（回放）"), L10n.T("面板"), () => _recordingCoordinator?.ShowRecordings(), null, "record 录制 回放 replay");
             // P2：标签重命名/染色只在标签右键里，但命令面板是"记不住右键在哪"的兜底入口
             Add(L10n.T("重命名当前标签"), L10n.T("视图"), () => { try { _tabContainer?.PromptRenameActiveTab(); } catch { } }, null, "rename 标签 改名");
             Add(L10n.T("标签颜色（跟随主题）"), L10n.T("视图"), () => { try { _tabContainer?.SetActiveTabAccent(null); } catch { } }, null, "tab color 颜色");

@@ -16,6 +16,7 @@ namespace Gdterm.Tests.Terminal
         {
             Console.WriteLine("-- VtTerminalEngine (Phase 0) --");
             PlainTextAndCursor();
+            WideCharacterCursorColumns();
             TrueColorRgb();
             Color256();
             AltScreenAndClear();
@@ -28,7 +29,41 @@ namespace Gdterm.Tests.Terminal
             ClipboardOsc52RoundTrip();
             SwallowKittyGraphicsApcs();
             AnswerCursorPositionReports();
+            CursorStyleAndBlinkProfile();
             XtGetTcapReplyFraming();
+        }
+
+        private static void WideCharacterCursorColumns()
+        {
+            using (var eng = new VtTerminalEngine(40, 5, 100))
+            {
+                eng.Feed("中A😀B");
+                // 中/emoji 各占 2 列，ASCII 各占 1 列：2 + 1 + 2 + 1 = 6。
+                Assert.Equal(6, eng.CursorColumn, "cursor uses display columns after CJK and emoji");
+                Assert.Equal("中A😀B", eng.GetScreenText().Substring(0, 5), "wide text remains user-visible without filler");
+            }
+        }
+
+        private static void CursorStyleAndBlinkProfile()
+        {
+            using (var eng = new VtTerminalEngine(80, 24, 100))
+            {
+                eng.SetCursorProfile("Underline", true);
+                Assert.Equal(3, eng.CursorShape, "profile underline blink default");
+
+                eng.SetCursorProfile("Bar", false);
+                Assert.Equal(6, eng.CursorShape, "profile disables default bar blink");
+
+                eng.Feed("\u001b[3 q");
+                Assert.Equal(4, eng.CursorShape, "profile disables remote underline blink");
+
+                eng.SetCursorProfile("Block", true);
+                eng.Feed("\u001b[5 q");
+                Assert.Equal(5, eng.CursorShape, "remote cursor shape overrides profile default");
+
+                eng.Feed("\u001b[0 q");
+                Assert.Equal(1, eng.CursorShape, "DECSCUSR default is blinking block");
+            }
         }
 
         /// <summary>配置的 TERM 要进 XTVERSION / XTGETTCAP TN（远端靠这个判断客户端身份）。</summary>
@@ -239,6 +274,15 @@ namespace Gdterm.Tests.Terminal
                 Assert.True(sawRed, "truecolor red 38;2;255;0;0");
                 Assert.True(sawGreen, "truecolor green 38;2;0;255;0");
                 Assert.True(sawBlue, "truecolor blue 38;2;0;0;255");
+
+                using (var colon = new VtTerminalEngine(40, 5, 100))
+                {
+                    colon.Feed("\u001b[38:2::255:80:120mC\u001b[0m");
+                    var cp = colon.SnapshotVisible();
+                    var c = cp.Lines[0].Spans.FirstOrDefault(s => s.Text != null && s.Text.IndexOf('C') >= 0);
+                    Assert.True(c != null && c.Foreground.R == 255 && c.Foreground.G == 80 && c.Foreground.B == 120,
+                        "colon SGR truecolor 38:2::r:g:b");
+                }
 
                 Console.WriteLine("   truecolor spans: " + string.Join(" | ",
                     spans.Where(s => !string.IsNullOrWhiteSpace(s.Text))

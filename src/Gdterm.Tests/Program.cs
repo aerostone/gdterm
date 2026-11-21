@@ -98,6 +98,9 @@ namespace Gdterm.Tests
             RunTest("VtTerminalEngine", VtTerminalEngineTests.Run);
             RunTest("ReverseVideo", ReverseVideoTests.Run);
             RunTest("TerminalSelection", TerminalSelectionTests.Run);
+            RunTest("TerminalSearchEngine", TerminalSearchEngineTests.Run);
+            RunTest("TerminalPasteContent", TerminalPasteContentTests.Run);
+            RunTest("MouseWheelDeltaAccumulator", MouseWheelDeltaAccumulatorTests.Run);
             RunTest("TerminalNotification", TerminalNotificationTests.Run);
             RunTest("TriggerAndLimits", TriggerAndLimitsTests.Run);
             RunTest("ZmodemReceiver", ZmodemReceiverTests.Run);

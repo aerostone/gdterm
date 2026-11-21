@@ -126,6 +126,12 @@
     <Compile Include="Forms\TrashForm.cs" />
     <Compile Include="Forms\LogViewerForm.cs" />
     <Compile Include="Forms\SessionRecordingsForm.cs" />
+    <Compile Include="Forms\TerminalPasteDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Forms\TerminalPasteProgressDialog.cs">
+      <SubType>Form</SubType>
+    </Compile>
     <Compile Include="Forms\MainForm.Designer.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
@@ -263,6 +269,9 @@
     <Compile Include="Services\MainFormCommandRouter.cs" />
     <Compile Include="Services\LockStateCoordinator.cs" />
     <Compile Include="Services\AppShutdownCoordinator.cs" />
+    <Compile Include="Services\SessionRecordingCoordinator.cs" />
+    <Compile Include="Services\WelcomePanelCoordinator.cs" />
+    <Compile Include="Services\MainWindowLifecycleCoordinator.cs" />
     <Compile Include="Services\ConnectionOpenCoordinator.cs" />
     <Compile Include="Controls\SplitPaneControl.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

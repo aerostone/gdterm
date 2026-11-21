@@ -132,6 +132,9 @@
     <Compile Include="Terminal\VtTerminalEngineTests.cs" />
     <Compile Include="Terminal\ReverseVideoTests.cs" />
     <Compile Include="Terminal\TerminalSelectionTests.cs" />
+    <Compile Include="Terminal\TerminalSearchEngineTests.cs" />
+    <Compile Include="Terminal\TerminalPasteContentTests.cs" />
+    <Compile Include="Terminal\MouseWheelDeltaAccumulatorTests.cs" />
     <Compile Include="Terminal\ZmodemReceiverTests.cs" />
     <Compile Include="Terminal\MacroRecorderTests.cs" />
     <Compile Include="Terminal\TerminalNotificationTests.cs" />

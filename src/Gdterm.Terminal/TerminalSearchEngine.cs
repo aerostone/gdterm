@@ -55,7 +55,7 @@ namespace Gdterm.Terminal
                     if (wholeWord) searchPattern = @"\b" + searchPattern + @"\b";
                 }
 
-                RegexOptions opts = RegexOptions.Compiled;
+                RegexOptions opts = RegexOptions.Compiled | RegexOptions.CultureInvariant;
                 if (!caseSensitive) opts |= RegexOptions.IgnoreCase;
 
                 var regex = new Regex(searchPattern, opts);
@@ -120,6 +120,11 @@ namespace Gdterm.Terminal
             var result = _results[_currentIndex];
             CurrentMatchChanged?.Invoke(result);
             return result;
+        }
+
+        public SearchResult Current
+        {
+            get { return _currentIndex >= 0 && _currentIndex < _results.Count ? _results[_currentIndex] : null; }
         }
 
         /// <summary>清除搜索</summary>

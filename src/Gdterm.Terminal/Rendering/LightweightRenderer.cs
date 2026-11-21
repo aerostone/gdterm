@@ -67,6 +67,10 @@ namespace Gdterm.Terminal.Rendering
 
         // 重绘定时器 — 用于合并高频写入
         private readonly Timer _redrawTimer;
+        private readonly Timer _cursorBlinkTimer;
+        private string _cursorStyle = "Block";
+        private bool _cursorBlinkEnabled = true;
+        private bool _cursorBlinkVisible = true;
 
         public int Rows { get; private set; }
         public int Columns { get; private set; }
@@ -98,6 +102,29 @@ namespace Gdterm.Terminal.Rendering
             // 只在 _needsRedraw=true 时触发 Invalidate，空闲时完全静默
             _redrawTimer = new Timer { Interval = MinRedrawIntervalMs };
             _redrawTimer.Tick += OnRedrawTimerTick;
+            _cursorBlinkTimer = new Timer { Interval = 500 };
+            _cursorBlinkTimer.Tick += (s, e) =>
+            {
+                if (_disposed || _isPaused || !_cursorBlinkEnabled)
+                {
+                    _cursorBlinkTimer.Stop();
+                    _cursorBlinkVisible = true;
+                }
+                else
+                {
+                    _cursorBlinkVisible = !_cursorBlinkVisible;
+                }
+                try { if (!_canvas.IsDisposed) _canvas.Invalidate(); } catch { }
+            };
+        }
+
+        public void ApplyCursorSettings(string style, bool blink)
+        {
+            _cursorStyle = string.Equals(style, "Underline", StringComparison.OrdinalIgnoreCase) ? "Underline"
+                : string.Equals(style, "Bar", StringComparison.OrdinalIgnoreCase) ? "Bar" : "Block";
+            _cursorBlinkEnabled = blink;
+            _cursorBlinkVisible = true;
+            try { _canvas.Invalidate(); } catch { }
         }
 
         /// <summary>运行时改字体；按真实字形测量 cell 宽高。
@@ -261,11 +288,13 @@ namespace Gdterm.Terminal.Rendering
             _isPaused = true;
             // 暂停时停止节流定时器 — 零 CPU
             _redrawTimer.Stop();
+            _cursorBlinkTimer.Stop();
         }
 
         public void Resume()
         {
             _isPaused = false;
+            _cursorBlinkVisible = true;
             if (_needsRedraw)
             {
                 ScheduleRedraw();
@@ -385,9 +414,30 @@ namespace Gdterm.Terminal.Rendering
         {
             if (_isPaused) return;
 
-            var cursorX = PadX + _currentLine.Length * _charWidth;
+            if (_cursorBlinkEnabled)
+            {
+                if (!_cursorBlinkTimer.Enabled)
+                {
+                    _cursorBlinkVisible = true;
+                    _cursorBlinkTimer.Start();
+                }
+            }
+            else
+            {
+                _cursorBlinkTimer.Stop();
+                _cursorBlinkVisible = true;
+            }
+            if (!_cursorBlinkVisible) return;
+
+            // 光标按终端显示列定位；UTF-16 长度不能表达 CJK/emoji 的双列宽度。
+            var cursorX = PadX + WideText.Columns(_currentLine.ToString()) * _charWidth;
             var brush = GetBrush(_scheme.CursorColor);
-            g.FillRectangle(brush, cursorX, y, _charWidth, _lineHeight);
+            if (_cursorStyle == "Underline")
+                g.FillRectangle(brush, cursorX, y + _lineHeight - Math.Max(2, _lineHeight / 8), _charWidth, Math.Max(2, _lineHeight / 8));
+            else if (_cursorStyle == "Bar")
+                g.FillRectangle(brush, cursorX, y, Math.Max(2, _charWidth / 6), _lineHeight);
+            else
+                g.FillRectangle(brush, cursorX, y, _charWidth, _lineHeight);
         }
 
         private void DrawColoredLine(Graphics g, ColoredLine line, int x, int y)
@@ -403,7 +453,7 @@ namespace Gdterm.Terminal.Rendering
             {
                 var brush = GetBrush(span.Color);
                 g.DrawString(WideText.Strip(span.Text), span.Bold && _boldFont != null ? _boldFont : _font, brush, x, y, StringFormat.GenericTypographic);
-                x += span.Text.Length * _charWidth;
+                x += WideText.Columns(span.Text) * _charWidth;
             }
         }
 
@@ -420,7 +470,7 @@ namespace Gdterm.Terminal.Rendering
             {
                 var brush = GetBrush(span.Color);
                 g.DrawString(WideText.Strip(span.Text), span.Bold && _boldFont != null ? _boldFont : _font, brush, x, y, StringFormat.GenericTypographic);
-                x += span.Text.Length * _charWidth;
+                x += WideText.Columns(span.Text) * _charWidth;
             }
         }
 
@@ -540,6 +590,8 @@ namespace Gdterm.Terminal.Rendering
 
             _redrawTimer.Stop();
             _redrawTimer.Dispose();
+            _cursorBlinkTimer.Stop();
+            _cursorBlinkTimer.Dispose();
 
             _font?.Dispose();
             _font = null;

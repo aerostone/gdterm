@@ -52,6 +52,8 @@ namespace Gdterm.Terminal.Rendering
         private bool _disposed;
         private bool _needsRedraw;
         private readonly Timer _redrawTimer;
+        private readonly Timer _cursorBlinkTimer;
+        private bool _cursorBlinkVisible = true;
         // 脏行差分：只重画变化的行，长日志刷屏时 CPU 明显降下来
         private VtPageSnapshot _paintedPage;
         private int _paintedTopRow = int.MinValue;
@@ -170,6 +172,15 @@ namespace Gdterm.Terminal.Rendering
             get { lock (_lock) return _engine.IsBracketedPasteEnabled; }
         }
 
+        public void ApplyCursorSettings(string style, bool blink)
+        {
+            if (_disposed) return;
+            _engine.SetCursorProfile(style, blink);
+            _cursorBlinkVisible = true;
+            lock (_lock) ForceFullRepaint();
+            try { _canvas.Invalidate(); } catch { }
+        }
+
         /// <summary>应用是否请求焦点事件上报（?1004）。</summary>
         public bool FocusReporting
         {
@@ -184,6 +195,8 @@ namespace Gdterm.Terminal.Rendering
 
         // ===== 文本选择（左键拖选 / Shift+左键 扩选） =====
         private bool _hasSelection;
+        private bool _trimTrailingWhitespace = true;
+        private bool _canvasFocused = true;
         private int _selStartCol, _selStartRow, _selEndCol, _selEndRow;
 
         public CellGdiRenderer(int rows = 24, int columns = 80, TerminalColorScheme scheme = null, int maxHistory = 500)
@@ -241,6 +254,8 @@ namespace Gdterm.Terminal.Rendering
 
             _redrawTimer = new Timer { Interval = MinRedrawIntervalMs };
             _redrawTimer.Tick += OnRedrawTimerTick;
+            _cursorBlinkTimer = new Timer { Interval = 500 };
+            _cursorBlinkTimer.Tick += OnCursorBlinkTimerTick;
 
             // 初始空白页
             RefreshSnapshot(force: true);
@@ -308,7 +323,94 @@ namespace Gdterm.Terminal.Rendering
                 sc = _selStartCol; sr = _selStartRow;
                 ec = _selEndCol; er = _selEndRow;
             }
-            return TerminalSelection.ComputeText(page, sc, sr, ec, er);
+            return TerminalSelection.ComputeText(page, sc, sr, ec, er, _trimTrailingWhitespace);
+        }
+
+        public bool TrimTrailingWhitespace
+        {
+            get { return _trimTrailingWhitespace; }
+            set { _trimTrailingWhitespace = value; }
+        }
+
+        public string[] GetHistoryLines()
+        {
+            return _engine.GetHistoryLines();
+        }
+
+        public bool ScrollToHistoryLine(int line)
+        {
+            lock (_lock)
+            {
+                if (!_engine.ScrollToHistoryLine(line)) return false;
+                _page = _engine.SnapshotVisible();
+                _pageTopRow = _engine.ViewportTopRow;
+                ForceFullRepaint();
+                _needsRedraw = true;
+            }
+            ScheduleRedraw();
+            return true;
+        }
+
+        public bool SelectWordAt(int pixelX, int pixelY)
+        {
+            int col, row;
+            if (!TryHitTest(pixelX, pixelY, out col, out row)) return false;
+            string line;
+            try { line = GetRowText(row); } catch { return false; }
+            int charIndex = CharacterIndexAtColumn(line, col);
+            int start, end;
+            if (!TerminalSelection.TryGetWordBounds(line, charIndex, out start, out end)) return false;
+            int startColumn = WideText.Columns(line.Substring(0, start));
+            int endColumn = startColumn + WideText.Columns(line.Substring(start, end - start + 1)) - 1;
+            SetSelection(startColumn, row, endColumn, row);
+            return true;
+        }
+
+        public bool SelectLineAt(int pixelX, int pixelY)
+        {
+            int col, row;
+            if (!TryHitTest(pixelX, pixelY, out col, out row)) return false;
+            string line;
+            try { line = GetRowText(row); } catch { return false; }
+            int length = WideText.Columns(TerminalSelection.ComputeLineText(line, _trimTrailingWhitespace));
+            if (length <= 0) return false;
+            SetSelection(0, row, length - 1, row);
+            return true;
+        }
+
+        private static int CharacterIndexAtColumn(string text, int column)
+        {
+            int current = 0;
+            for (int i = 0; i < text.Length; i++)
+            {
+                int length = char.IsHighSurrogate(text[i]) && i + 1 < text.Length && char.IsLowSurrogate(text[i + 1]) ? 2 : 1;
+                int width = WideText.Columns(text.Substring(i, length));
+                if (column < current + width) return i;
+                current += width;
+                if (length == 2) i++;
+            }
+            return text.Length - 1;
+        }
+
+        private void SetSelection(int startCol, int startRow, int endCol, int endRow)
+        {
+            lock (_lock)
+            {
+                _hasSelection = true;
+                _selStartCol = startCol; _selStartRow = startRow;
+                _selEndCol = endCol; _selEndRow = endRow;
+                ForceFullRepaint();
+                _needsRedraw = true;
+            }
+            ScheduleRedraw();
+        }
+
+        public void SetCanvasFocused(bool focused)
+        {
+            if (_canvasFocused == focused) return;
+            _canvasFocused = focused;
+            lock (_lock) ForceFullRepaint();
+            try { if (!_canvas.IsDisposed) _canvas.Invalidate(); } catch { }
         }
 
         /// <summary>全选可视区（右键菜单「全选」）。返回是否有内容可选。</summary>
@@ -401,12 +503,14 @@ namespace Gdterm.Terminal.Rendering
         {
             _isPaused = true;
             try { _redrawTimer.Stop(); } catch { }
+            try { _cursorBlinkTimer.Stop(); } catch { }
         }
 
         public void Resume()
         {
             if (_disposed) return;
             _isPaused = false;
+            _cursorBlinkVisible = true;
             lock (_lock)
             {
                 // 暂停期间引擎仍在 Feed；恢复时一次性 snapshot，不持续空转
@@ -635,6 +739,32 @@ namespace Gdterm.Terminal.Rendering
             }
         }
 
+        private void OnCursorBlinkTimerTick(object sender, EventArgs e)
+        {
+            lock (_lock)
+            {
+                var page = _page;
+                int shape = _engine.CursorShape;
+                bool blinking = shape == 1 || shape == 3 || shape == 5;
+                if (_disposed || _isPaused || page == null || !page.ShowCursor || !blinking)
+                {
+                    _cursorBlinkTimer.Stop();
+                    _cursorBlinkVisible = true;
+                }
+                else
+                {
+                    _cursorBlinkVisible = !_cursorBlinkVisible;
+                    if (page.Lines != null && page.CursorRow >= 0 && page.CursorRow < page.Lines.Count)
+                    {
+                        if (_dirtyRows == null || _dirtyRows.Length != page.Lines.Count)
+                            _dirtyRows = new bool[page.Lines.Count];
+                        _dirtyRows[page.CursorRow] = true;
+                    }
+                }
+            }
+            try { if (!_canvas.IsDisposed) _canvas.Invalidate(); } catch { }
+        }
+
         /// <summary>
         /// 同步快照帧：快照 + 脏行差分 + 异步 Invalidate（绘制交给消息泵/定时器合并，
         /// 不在本方法内同步 Update——0.1.395/396 教训：基准的 parentless 窗口在
@@ -844,18 +974,45 @@ namespace Gdterm.Terminal.Rendering
                 // 形状跟随 DECSCUSR（vim 插入模式的竖线/下划线光标）
                 Color cc = _scheme.CursorColor;
                 int shape = _engine.CursorShape;
-                bool thinShape = shape >= 3;          // 3/4 下划线、5/6 竖线
-                // 整格光标保持半透明（不遮挡字符，密度打磨过的观感）；细线只有几个像素，必须够实才看得见
-                using (var cursorBrush = new SolidBrush(Color.FromArgb(thinShape ? 235 : 110, cc.R, cc.G, cc.B)))
+                bool blinking = shape == 1 || shape == 3 || shape == 5;
+                if (blinking && !_isPaused)
                 {
-                    float thin = Math.Max(2f, _charHeight / 8f);
-                    if (shape == 3 || shape == 4)
-                        g.FillRectangle(cursorBrush, cx, cy + _charHeight - thin, _charWidth, thin);
-                    else if (shape == 5 || shape == 6)
-                        g.FillRectangle(cursorBrush, cx, cy, Math.Max(2f, _charWidth / 6f), _charHeight);
-                    else
-                        g.FillRectangle(cursorBrush, cx, cy, _charWidth, _charHeight);
+                    if (!_cursorBlinkTimer.Enabled)
+                    {
+                        _cursorBlinkVisible = true;
+                        _cursorBlinkTimer.Start();
+                    }
                 }
+                else
+                {
+                    _cursorBlinkTimer.Stop();
+                    _cursorBlinkVisible = true;
+                }
+                if (_cursorBlinkVisible || !_canvasFocused)
+                {
+                    bool thinShape = shape >= 3;          // 3/4 下划线、5/6 竖线
+                    // 整格光标保持半透明（不遮挡字符）；细线需要足够实才能看清。
+                    if (!_canvasFocused && !thinShape)
+                    {
+                        using (var cursorPen = new Pen(Color.FromArgb(220, cc.R, cc.G, cc.B), Math.Max(1f, _charHeight / 14f)))
+                            g.DrawRectangle(cursorPen, cx, cy, _charWidth, _charHeight);
+                    }
+                    else using (var cursorBrush = new SolidBrush(Color.FromArgb(thinShape ? 235 : 110, cc.R, cc.G, cc.B)))
+                    {
+                        float thin = Math.Max(2f, _charHeight / 8f);
+                        if (shape == 3 || shape == 4)
+                            g.FillRectangle(cursorBrush, cx, cy + _charHeight - thin, _charWidth, thin);
+                        else if (shape == 5 || shape == 6)
+                            g.FillRectangle(cursorBrush, cx, cy, Math.Max(2f, _charWidth / 6f), _charHeight);
+                        else
+                            g.FillRectangle(cursorBrush, cx, cy, _charWidth, _charHeight);
+                    }
+                }
+            }
+            else
+            {
+                _cursorBlinkTimer.Stop();
+                _cursorBlinkVisible = true;
             }
 
             DrawOverlays(g, _pageTopRow);
@@ -1137,10 +1294,6 @@ namespace Gdterm.Terminal.Rendering
         }
 
         /// <summary>
-        /// 测量 span 实宽（ASCII 主字体 + CJK 字体分段测量之和，与 DrawSpanText 的绘制宽度一致）。
-        /// 绘制前先测量：背景矩形需要宽度才能填充，而背景必须画在文字下面。
-        /// </summary>
-        /// <summary>
         /// 绘制一个（可能被选区裁出的）文本段：先背景后文字。
         /// 选区背景色即使是纯黑（0,0,0）也要填充（forceFill），否则选区在黑底主题下不可见。
         /// </summary>
@@ -1148,60 +1301,20 @@ namespace Gdterm.Terminal.Rendering
                                   Color bg, Color fg, bool underline, bool forceFill, ref float x, float y)
         {
             if (string.IsNullOrEmpty(text)) return;
-            // 双字体宽度：实际宽度以 MeasureSpanWidth 为准（取测量值与 cell 宽度较大者）
-            float w = MeasureSpanWidth(g, text, font, cjkFont);
-            w = Math.Max(w, text.Length * _charWidth);
+            // 终端的布局单位是 cell 列，而不是 GDI span 的测量宽度。
+            // MeasureString 会为每个 span 保留边距；当 tmux/opencode 高频切换颜色时，
+            // 这些边距会逐段累积，最终表现为行尾光标后多出一到两个空格。
+            // 文本仍按字体实测绘制，但 X 坐标和背景严格按模型列推进，保证光标/选区对齐。
+            float w = CellWidth(text);
             if (forceFill || (bg.A > 0 && (bg.R | bg.G | bg.B) != 0))
                 g.FillRectangle(GetBrush(bg), x, y, w, _charHeight);
             DrawSpanText(g, text, font, cjkFont, GetBrush(fg), x, y, underline, fg);
             x += w;
         }
 
-        private float MeasureSpanWidth(Graphics g, string text, Font mainFont, Font cjkFont)
+        private float CellWidth(string text)
         {
-            if (string.IsNullOrEmpty(text)) return 0;
-            var fmt = StringFormat.GenericTypographic;
-            // 没有 cjk 字体 -> 一次性测完
-            if (cjkFont == null)
-            {
-                return g.MeasureString(text, mainFont, int.MaxValue, fmt).Width;
-            }
-
-            // 按 ASCII/非 ASCII 分段测量，CJK 段末尾对齐 cell 网格（与 DrawSpanText 一致）
-            float cx = 0;
-            var asciiBuf = new System.Text.StringBuilder();
-            var cjkBuf = new System.Text.StringBuilder();
-            for (int i = 0; i <= text.Length; i++)
-            {
-                bool isLast = (i == text.Length);
-                char ch = isLast ? '\0' : text[i];
-                bool isAscii = !isLast && ch < 0x80;
-
-                if (isAscii)
-                    asciiBuf.Append(ch);
-                else if (!isLast && ch != WideText.Filler)
-                    cjkBuf.Append(ch);   // 占位列不画（宽字符字形本身占 2 格）
-
-                bool segBreak = isLast || (i + 1 < text.Length && ((text[i + 1] < 0x80) != isAscii));
-                if (segBreak || isLast)
-                {
-                    if (asciiBuf.Length > 0)
-                    {
-                        var s = asciiBuf.ToString();
-                        cx += g.MeasureString(s, mainFont, int.MaxValue, fmt).Width;
-                        asciiBuf.Clear();
-                    }
-                    if (cjkBuf.Length > 0)
-                    {
-                        var s = cjkBuf.ToString();
-                        cx += g.MeasureString(s, cjkFont, int.MaxValue, fmt).Width;
-                        cjkBuf.Clear();
-                        // CJK 字形占 2 cell —— 对齐 cell 网格，与 DrawSpanText 保持一致
-                        cx = (float)Math.Ceiling(cx / _charWidth) * _charWidth;
-                    }
-                }
-            }
-            return cx;
+            return Math.Max(0, WideText.Columns(text)) * _charWidth;
         }
 
         /// <summary>
@@ -1351,6 +1464,7 @@ namespace Gdterm.Terminal.Rendering
             if (_disposed) return;
             _disposed = true;
             try { _redrawTimer.Stop(); _redrawTimer.Dispose(); } catch { }
+            try { _cursorBlinkTimer.Stop(); _cursorBlinkTimer.Dispose(); } catch { }
             try { lock (_lock) ClearOverlaysLocked(); } catch { }
             try { _engine.Dispose(); } catch { }
             try { _font.Dispose(); } catch { }

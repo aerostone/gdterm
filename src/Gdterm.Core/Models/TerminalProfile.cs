@@ -54,9 +54,27 @@ namespace Gdterm.Core.Models
         public string CursorStyle { get; set; } = "Block";
 
         /// <summary>
-        /// 光标闪烁
+        /// 是否允许远端 DECSCUSR 请求光标闪烁
         /// </summary>
         public bool CursorBlink { get; set; } = true;
+
+        /// <summary>右键行为（ContextMenu / Remote）。</summary>
+        public string RightClickMode { get; set; } = "ContextMenu";
+
+        public bool HideMousePointerWhileTyping { get; set; }
+
+        public bool ShouldPasteOnRightClick(bool shiftPressed, bool connected)
+        {
+            return connected && !shiftPressed && string.Equals(RightClickMode, "Paste", StringComparison.OrdinalIgnoreCase);
+        }
+
+        public bool ShouldForwardRightClick(bool shiftPressed, bool mouseTrackingEnabled, bool connected)
+        {
+            if (!mouseTrackingEnabled || !connected) return false;
+            if (string.Equals(RightClickMode, "Remote", StringComparison.OrdinalIgnoreCase)) return !shiftPressed;
+            if (string.Equals(RightClickMode, "ContextMenu", StringComparison.OrdinalIgnoreCase)) return shiftPressed;
+            return false;
+        }
 
         /// <summary>
         /// 复制时去除尾部空白
@@ -144,6 +162,8 @@ namespace Gdterm.Core.Models
                     NewLineSequence = ExtractValue(json, "newLineSequence", "\n"),
                     CursorStyle = ExtractValue(json, "cursorStyle", "Block"),
                     CursorBlink = ExtractBool(json, "cursorBlink", true),
+                    RightClickMode = ExtractValue(json, "rightClickMode", "ContextMenu"),
+                    HideMousePointerWhileTyping = ExtractBool(json, "hideMousePointerWhileTyping", false),
                     TrimTrailingWhitespace = ExtractBool(json, "trimTrailingWhitespace", true),
                     CopyOnSelect = ExtractBool(json, "copyOnSelect", false),
                     Opacity = ExtractDouble(json, "opacity", 1.0),
@@ -205,6 +225,8 @@ namespace Gdterm.Core.Models
                 $"\"newLineSequence\":\"{Escape(NewLineSequence)}\"," +
                 $"\"cursorStyle\":\"{Escape(CursorStyle)}\"," +
                 $"\"cursorBlink\":{(CursorBlink ? "true" : "false")}," +
+                $"\"rightClickMode\":\"{Escape(RightClickMode)}\"," +
+                $"\"hideMousePointerWhileTyping\":{(HideMousePointerWhileTyping ? "true" : "false")}," +
                 $"\"trimTrailingWhitespace\":{(TrimTrailingWhitespace ? "true" : "false")}," +
                 $"\"copyOnSelect\":{(CopyOnSelect ? "true" : "false")}," +
                 $"\"opacity\":{Opacity:F2}," +

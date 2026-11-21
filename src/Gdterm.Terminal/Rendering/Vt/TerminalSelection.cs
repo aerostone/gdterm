@@ -54,6 +54,11 @@ namespace Gdterm.Terminal.Rendering.Vt
         /// </summary>
         public static string ComputeText(VtPageSnapshot page, int startCol, int startRow, int endCol, int endRow)
         {
+            return ComputeText(page, startCol, startRow, endCol, endRow, true);
+        }
+
+        public static string ComputeText(VtPageSnapshot page, int startCol, int startRow, int endCol, int endRow, bool trimTrailingWhitespace)
+        {
             if (page == null || page.Lines == null || page.Lines.Count == 0) return string.Empty;
             int sc = startCol, sr = startRow, ec = endCol, er = endRow;
             // 规范化：从上到下、左到右
@@ -74,10 +79,35 @@ namespace Gdterm.Terminal.Rendering.Vt
                 int startC = (r == sr) ? Math.Min(Math.Max(sc, 0), lineLen) : 0;
                 int endC = (r == er) ? Math.Min(ec + 1, lineLen) : lineLen;
                 if (endC > startC)
-                    sb.Append(ExtractSubstring(line, startC, endC - startC).TrimEnd());
+                {
+                    var text = ExtractSubstring(line, startC, endC - startC);
+                    sb.Append(trimTrailingWhitespace ? text.TrimEnd() : text);
+                }
                 if (r < er) sb.Append('\n');
             }
             return WideText.Strip(sb.ToString());
+        }
+
+        public static bool TryGetWordBounds(string text, int characterIndex, out int startIndex, out int endIndex)
+        {
+            startIndex = endIndex = -1;
+            if (string.IsNullOrEmpty(text) || characterIndex < 0 || characterIndex >= text.Length) return false;
+            if (!IsWordCharacter(text[characterIndex])) return false;
+            startIndex = endIndex = characterIndex;
+            while (startIndex > 0 && IsWordCharacter(text[startIndex - 1])) startIndex--;
+            while (endIndex + 1 < text.Length && IsWordCharacter(text[endIndex + 1])) endIndex++;
+            return true;
+        }
+
+        public static string ComputeLineText(string text, bool trimTrailingWhitespace = true)
+        {
+            if (text == null) return string.Empty;
+            return trimTrailingWhitespace ? text.TrimEnd() : text;
+        }
+
+        private static bool IsWordCharacter(char value)
+        {
+            return char.IsLetterOrDigit(value) || value == '_' || value == '.';
         }
 
         /// <summary>

@@ -69,6 +69,7 @@
     <Compile Include="XtermKeys.cs" />
     <Compile Include="HighlightEngine.cs" />
     <Compile Include="TerminalSearchEngine.cs" />
+    <Compile Include="TerminalInteraction.cs" />
     <Compile Include="TerminalAutoLogger.cs" />
     <Compile Include="LogonScriptEngine.cs" />
     <Compile Include="TerminalBufferExport.cs" />

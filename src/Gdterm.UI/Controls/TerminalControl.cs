@@ -2,8 +2,10 @@ using System;
 using System.Drawing;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Gdterm.UI.Forms;
 using Gdterm.Core.Enums;
 using Gdterm.Core.Models;
 using Gdterm.Logging;
@@ -56,6 +58,11 @@ namespace Gdterm.UI.Controls
         private bool _mouseDown;
         private int _mouseButton;
         private bool _selecting;
+        private readonly MouseWheelDeltaAccumulator _wheelDelta = new MouseWheelDeltaAccumulator();
+        private bool _mouseHidden;
+        private bool _sendingPaste;
+        private bool _sendingPasteInput;
+        private CancellationTokenSource _pasteCancellation;
 
         public CredentialPayload Credentials { get; set; }
         public ITerminalSession Session => _session;
@@ -227,6 +234,8 @@ namespace Gdterm.UI.Controls
                 };
                 _renderer = _cellRenderer;
                 try { _cellRenderer.ApplyFont(fontName, fontSize, cjkFontName); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+                try { _cellRenderer.ApplyCursorSettings(_profile.CursorStyle, _profile.CursorBlink); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+                _cellRenderer.TrimTrailingWhitespace = _profile.TrimTrailingWhitespace;
                 // TERM 名与 pty 请求保持一致（XTGETTCAP TN / XTVERSION 会回它）
                 try { if (_profile != null) _cellRenderer.ApplyTerminalType(_profile.TerminalType); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 LogFontMetrics("cell");
@@ -238,7 +247,11 @@ namespace Gdterm.UI.Controls
                 try
                 {
                     var light = _renderer as LightweightRenderer;
-                    if (light != null) light.ApplyFont(fontName, fontSize);
+                    if (light != null)
+                    {
+                        light.ApplyFont(fontName, fontSize);
+                        light.ApplyCursorSettings(_profile.CursorStyle, _profile.CursorBlink);
+                    }
                 }
                 catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 LogFontMetrics("light");
@@ -257,12 +270,16 @@ namespace Gdterm.UI.Controls
             canvas.GotFocus += (s, e) =>
             {
                 Focus();
+                try { _cellRenderer?.SetCanvasFocused(true); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Focus", exSwallowed); } catch { } }
+                RestoreMousePointer();
                 // ?1004：应用要求焦点事件时才发（vim/neovim/tmux 靠它判断窗口切换）
                 try { if (_cellRenderer != null) _cellRenderer.ReportFocus(true); }
                 catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
             };
             canvas.LostFocus += (s, e) =>
             {
+                try { _cellRenderer?.SetCanvasFocused(false); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Focus", exSwallowed); } catch { } }
+                RestoreMousePointer();
                 try { if (_cellRenderer != null) _cellRenderer.ReportFocus(false); }
                 catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
             };
@@ -284,8 +301,8 @@ namespace Gdterm.UI.Controls
 
         // ===== 终端右键菜单：复制 / 粘贴 / 清屏 / 查找 / 重连 / 导出 / 外观 =====
         // 行为定调：
-        //   - 右键直接弹菜单（SecureCRT / Windows Terminal 习惯）。
-        //   - Shift+右键 继续作为 VT 鼠标按钮 2 透传给 vim/less，保留 TUI 应用内右键。
+        //   - 默认右键弹菜单；profile 可切为远端优先，并用 Shift 召回本地菜单。
+        //   - 当前模式不适用或远端未启用鼠标上报时，右键回退到本地菜单。
         //   - 复制/粘贴用剪贴板；没有选中文本时「复制」按钮的 Enabled=false。
         private void BuildContextMenu()
         {
@@ -536,6 +553,23 @@ namespace Gdterm.UI.Controls
                     parts.Add("export LC_ALL=" + v);
                 }
                 var env = _profile != null ? _profile.EnvironmentVariables : null;
+                // opencode/neovim 等 TUI 以 COLORTERM 判断是否启用 24-bit 色。
+                // PTY 的 TERM 仍由 TerminalProfile 协商；这里补充标准真彩声明，
+                // 仅对 VtCell 生效，并允许用户在 EnvironmentVariables 中显式覆盖。
+                bool hasColorTerm = false;
+                if (env != null)
+                {
+                    foreach (var kv in env)
+                    {
+                        if (string.Equals(kv.Key, "COLORTERM", StringComparison.OrdinalIgnoreCase))
+                        {
+                            hasColorTerm = true;
+                            break;
+                        }
+                    }
+                }
+                if (_profile != null && _profile.UseVtCell && !hasColorTerm)
+                    parts.Add("export COLORTERM='truecolor'");
                 if (env != null)
                 {
                     foreach (var kv in env)
@@ -785,8 +819,20 @@ namespace Gdterm.UI.Controls
 
         private void OnCellMouseDown(object sender, MouseEventArgs e)
         {
-            // 右键：Shift+右键 → VT 鼠标按钮 2（vim/less 等应用内）；裸右键 → 弹菜单。
-            if (e.Button == MouseButtons.Right && (ModifierKeys & Keys.Shift) == 0)
+            if (_sendingPaste) return;
+            bool shift = (ModifierKeys & Keys.Shift) != 0;
+            if (e.Button == MouseButtons.Right && _profile != null
+                && _profile.ShouldPasteOnRightClick(shift, _session?.IsConnected == true))
+            {
+                PasteFromClipboard();
+                return;
+            }
+            bool remoteRightClick = e.Button == MouseButtons.Right
+                && _profile != null
+                && _profile.ShouldForwardRightClick(shift,
+                    _cellRenderer != null && _cellRenderer.IsMouseTrackingEnabled,
+                    _session?.IsConnected == true);
+            if (e.Button == MouseButtons.Right && !remoteRightClick)
             {
                 try
                 {
@@ -799,6 +845,12 @@ namespace Gdterm.UI.Controls
             }
 
             if (_cellRenderer == null) return;
+
+            if (e.Button == MouseButtons.Middle && _session?.IsConnected == true && !_cellRenderer.IsMouseTrackingEnabled)
+            {
+                PasteFromClipboard();
+                return;
+            }
 
             // Ctrl+左键：打开 URL / 本地路径 / 远端路径（同 Xshell、MobaXterm）；命中则不再拖选
             if (e.Button == MouseButtons.Left
@@ -813,6 +865,16 @@ namespace Gdterm.UI.Controls
             bool mouseTracking = _cellRenderer.IsMouseTrackingEnabled;
             if (e.Button == MouseButtons.Left && !mouseTracking)
             {
+                if (e.Clicks >= 3)
+                {
+                    if (_cellRenderer.SelectLineAt(e.X, e.Y)) CopySelectionIfEnabled();
+                    return;
+                }
+                if (e.Clicks == 2)
+                {
+                    if (_cellRenderer.SelectWordAt(e.X, e.Y)) CopySelectionIfEnabled();
+                    return;
+                }
                 try { _cellRenderer.ClearSelection(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } } // 新选区从空开始
                 _selecting = true;
                 try { _cellRenderer.BeginSelection(e.X, e.Y); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
@@ -848,6 +910,7 @@ namespace Gdterm.UI.Controls
         /// </summary>
         private void OnCellMouseWheel(object sender, MouseEventArgs e)
         {
+            if (_sendingPaste) return;
             if (_cellRenderer == null || e.Delta == 0) return;
             bool ctrl = (ModifierKeys & Keys.Control) != 0;
             bool shift = (ModifierKeys & Keys.Shift) != 0;
@@ -856,26 +919,30 @@ namespace Gdterm.UI.Controls
             try { tracking = _cellRenderer.IsMouseTrackingEnabled; }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
 
+            int detents = _wheelDelta.Add(e.Delta);
+            if (detents == 0) return;
+
             if (tracking && !shift && _session?.IsConnected == true)
             {
                 int col, row;
                 if (!_cellRenderer.TryHitTest(e.X, e.Y, out col, out row)) return;
-                // 滚轮一格 = 3 行，和 Windows Terminal 一致
-                for (int i = 0; i < 3; i++)
+                // 一格发送三次远端滚轮事件，兼容应用常见的三行滚动步长。
+                for (int i = 0; i < Math.Abs(detents) * 3; i++)
                 {
-                    try { _cellRenderer.MouseWheel(col, row, e.Delta > 0 ? 0 : 1, ctrl, shift); }
+                    try { _cellRenderer.MouseWheel(col, row, detents > 0 ? 0 : 1, ctrl, shift); }
                     catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
                 }
                 return;
             }
 
-            int lines = (e.Delta > 0 ? -3 : 3);
+            int lines = -detents * 3;
             try { _cellRenderer.ScrollViewport(lines); }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
         }
 
         private void OnCellMouseUp(object sender, MouseEventArgs e)
         {
+            if (_sendingPaste) return;
             if (_cellRenderer == null) return;
 
             // 拖选释放：选区已保留，不自动复制（右键复制 / Ctrl+C 复制）
@@ -883,6 +950,7 @@ namespace Gdterm.UI.Controls
             {
                 _selecting = false;
                 try { _cellRenderer.ExtendSelection(e.X, e.Y); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl", exSwallowed); } catch { } }
+                CopySelectionIfEnabled();
                 return;
             }
 
@@ -901,7 +969,13 @@ namespace Gdterm.UI.Controls
 
         private void OnCellMouseMove(object sender, MouseEventArgs e)
         {
+            if (_sendingPaste)
+            {
+                RestoreMousePointer();
+                return;
+            }
             if (_cellRenderer == null) return;
+            RestoreMousePointer();
             UpdateLinkCursor(e.X, e.Y);
             // 本地拖选扩展
             if (_selecting)
@@ -1254,17 +1328,34 @@ public async void Connect()
         /// </summary>
         public bool PasteFromClipboard()
         {
+            if (_sendingPaste) return false;
+            RestoreMousePointer();
             string text = null;
             try { text = Clipboard.ContainsText() ? Clipboard.GetText() : null; }
             catch (Exception ex) { DiagLog.Swallowed("TerminalControl.PasteRead", ex); }
             if (string.IsNullOrEmpty(text)) return false;
             if (!IsConnected) return false;
 
-            // 旁路 #1（审计发现）：粘贴此前完全不判危险——多行粘贴在未开 bracketed paste 的远端
-            // 就是逐行回车执行，比手敲危险得多。这里先整批判定（多行逐行预演，一次确认放全批），
-            // 用户点了取消就一个字都不发。
-            if (!ConfirmDangerousCommand(text, InputSource.Paste))
-                return false;
+            bool showPreview = TerminalPasteContent.RequiresPreview(text);
+            if (showPreview)
+            {
+                using (var dialog = new TerminalPasteDialog(text))
+                {
+                    var owner = FindForm();
+                    var result = owner != null ? dialog.ShowDialog(owner) : dialog.ShowDialog();
+                    if (result != DialogResult.OK) return false;
+                    text = dialog.PreparedText;
+                    if (string.IsNullOrEmpty(text)) return false;
+                    if (dialog.SendLineByLine)
+                    {
+                        var lines = TerminalPasteContent.SplitLines(text);
+                        StartSendLines(lines, dialog.SendIntervalMs);
+                        return true;
+                    }
+                }
+            }
+
+            if (!ConfirmDangerousCommand(text, InputSource.Paste)) return false;
 
             bool bracketed = false;
             try { bracketed = _cellRenderer != null && _cellRenderer.IsBracketedPasteEnabled; }
@@ -1277,8 +1368,110 @@ public async void Connect()
             return TrySendInput("\u001b[200~" + body + "\u001b[201~");
         }
 
+        private void StartSendLines(string[] lines, int intervalMs)
+        {
+            if (_sendingPaste || lines == null || lines.Length == 0) return;
+            int count = lines.Length;
+            if (count > 1 && lines[count - 1].Length == 0) count--;
+            if (count <= 0) return;
+
+            _sendingPaste = true;
+            _pasteCancellation = new CancellationTokenSource();
+            try
+            {
+                var progress = new TerminalPasteProgressDialog(count, () => _pasteCancellation?.Cancel());
+                var owner = FindForm();
+                if (owner != null) progress.Show(owner);
+                else progress.Show();
+                SendLinesAsync(lines, count, intervalMs, progress, _pasteCancellation.Token);
+            }
+            catch (Exception ex)
+            {
+                _sendingPaste = false;
+                _pasteCancellation.Dispose();
+                _pasteCancellation = null;
+                DiagLog.Swallowed("TerminalControl.PasteProgress", ex);
+            }
+        }
+
+        private async void SendLinesAsync(string[] lines, int count, int intervalMs,
+            TerminalPasteProgressDialog progress, CancellationToken cancellationToken)
+        {
+            bool failed = false;
+            bool completed = true;
+            int sent = 0;
+            try
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (_disposed || !IsConnected) { completed = false; break; }
+                    progress.UpdateProgress(i + 1, count);
+                    if (!ConfirmDangerousCommand(lines[i], InputSource.Paste)) { completed = false; break; }
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (!SendPasteLine(lines[i] + XtermKeys.Enter)) { completed = false; break; }
+                    sent++;
+                    if (intervalMs > 0 && i + 1 < count)
+                        await Task.Delay(intervalMs, cancellationToken);
+                    else if (i + 1 < count)
+                        await Task.Yield();
+                }
+            }
+            catch (OperationCanceledException) { completed = false; }
+            catch (Exception ex)
+            {
+                failed = true;
+                DiagLog.Swallowed("TerminalControl.PasteLines", ex);
+                try { progress.ShowFailure(ex.Message, sent, count); } catch { }
+            }
+            finally
+            {
+                _sendingPasteInput = false;
+                _sendingPaste = false;
+                if (_pasteCancellation != null)
+                {
+                    _pasteCancellation.Dispose();
+                    _pasteCancellation = null;
+                }
+                if (!failed)
+                    try { progress.ShowResult(sent, count, completed && sent == count); } catch { }
+            }
+        }
+
+        private bool SendPasteLine(string text)
+        {
+            _sendingPasteInput = true;
+            try { return TrySendInput(text); }
+            finally { _sendingPasteInput = false; }
+        }
+
+        private void CopySelectionIfEnabled()
+        {
+            if (_profile == null || !_profile.CopyOnSelect || _cellRenderer == null) return;
+            try
+            {
+                var text = _cellRenderer.GetSelection();
+                if (!string.IsNullOrEmpty(text)) Clipboard.SetText(text);
+            }
+            catch (Exception ex) { DiagLog.Swallowed("TerminalControl.CopyOnSelect", ex); }
+        }
+
+        private void HideMousePointerWhileTyping()
+        {
+            if (_profile == null || !_profile.HideMousePointerWhileTyping || _mouseHidden) return;
+            try { Cursor.Hide(); _mouseHidden = true; } catch { }
+        }
+
+        private void RestoreMousePointer()
+        {
+            if (!_mouseHidden) return;
+            try { Cursor.Show(); } catch { }
+            _mouseHidden = false;
+        }
+
         public bool TrySendInput(string text, bool isCommandLine = false)
         {
+            if (_sendingPaste && !_sendingPasteInput) return false;
             if (string.IsNullOrEmpty(text) || _session == null || !_session.IsConnected)
                 return false;
 
@@ -1370,6 +1563,7 @@ public async void Connect()
 
         private bool SafeSend(string text)
         {
+            if (_sendingPaste && !_sendingPasteInput) return false;
             try
             {
                 _session.SendInput(text);
@@ -1436,6 +1630,16 @@ public async void Connect()
         public string[] GetRecentLines(int count)
         {
             return _renderer?.GetRecentLines(count) ?? new string[0];
+        }
+
+        public string[] GetHistoryLines()
+        {
+            return _cellRenderer != null ? _cellRenderer.GetHistoryLines() : GetRecentLines(0);
+        }
+
+        public bool ScrollToHistoryLine(int line)
+        {
+            return _cellRenderer != null && _cellRenderer.ScrollToHistoryLine(line);
         }
 
         /// <summary>Zmodem 接收：选保存目录 → session 开始接收（仅 SSH 会话；串口/本地提示不支持）。</summary>
@@ -1529,6 +1733,7 @@ public async void Connect()
         {
             try
             {
+                if (_cellRenderer != null) { HideCompletionPopup(); return; }
                 EnsureCompletion();
                 if (_completion == null) { HideCompletionPopup(); return; }
                 string prefix;
@@ -1573,6 +1778,7 @@ public async void Connect()
         {
             try
             {
+                if (_cellRenderer != null) return false;
                 if (_popup == null || !_popup.IsShown) return false;
                 string selected = _popup.SelectedCandidate;
                 HideCompletionPopup();
@@ -1604,6 +1810,7 @@ public async void Connect()
         {
             try
             {
+                if (_cellRenderer != null) return false;
                 EnsureCompletion();
                 if (_completion == null) return false;
                 string line = _commandLine.ToString();
@@ -1705,6 +1912,8 @@ public async void Connect()
                 _disposed = true;
                 if (disposing)
                 {
+                    try { _pasteCancellation?.Cancel(); } catch { }
+                    RestoreMousePointer();
                     Credentials = null;
                     // P1-2：令牌/会话拆除前先收尾录制，否则尾部缺 end 行、缓冲丢最后几帧
                     DiagLog.Try("TerminalControl.Dispose.Recording", () => StopSessionRecording());

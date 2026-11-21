@@ -84,6 +84,12 @@ namespace Gdterm.UI.Forms
         private AntdUI.Select _termCombo;
         private AntdUI.Input _localeBox;
         private AntdUI.InputNumber _scrollbackBox; // 回滚行数（100..100000，缺省 10000）
+        private AntdUI.Select _cursorStyleCombo;
+        private AntdUI.Checkbox _cursorBlinkCheck;
+        private AntdUI.Select _rightClickModeCombo;
+        private AntdUI.Checkbox _hideMousePointerCheck;
+        private AntdUI.Checkbox _copyOnSelectCheck;
+        private AntdUI.Checkbox _trimTrailingWhitespaceCheck;
         private TableLayoutPanel _secRdp;
         private TableLayoutPanel _secSerial;
         private AntdUI.Input _notesBox;
@@ -399,18 +405,36 @@ namespace Gdterm.UI.Forms
                                          Maximum = Gdterm.Core.Constants.TerminalLimits.MaxScrollback,
                                          Increment = 1000,
                                          Value = Gdterm.Core.Constants.TerminalLimits.DefaultScrollback });
+            _cursorStyleCombo = AddRow(termLayout, 3, L10n.T("光标样式"), new AntdUI.Select());
+            _cursorStyleCombo.Items.Add(L10n.T("块"));
+            _cursorStyleCombo.Items.Add(L10n.T("下划线"));
+            _cursorStyleCombo.Items.Add(L10n.T("竖线"));
+            _cursorStyleCombo.SelectedIndex = 0;
+            _cursorBlinkCheck = new AntdUI.Checkbox { Text = L10n.T("允许光标闪烁"), AutoSize = true, Checked = true };
+            termLayout.Controls.Add(_cursorBlinkCheck, 1, 4);
+            _rightClickModeCombo = AddRow(termLayout, 5, L10n.T("右键行为"), new AntdUI.Select());
+            _rightClickModeCombo.Items.Add(L10n.T("本地菜单"));
+            _rightClickModeCombo.Items.Add(L10n.T("发送到远端"));
+            _rightClickModeCombo.Items.Add(L10n.T("粘贴剪贴板"));
+            _rightClickModeCombo.SelectedIndex = 0;
+            _hideMousePointerCheck = new AntdUI.Checkbox { Text = L10n.T("键入时隐藏鼠标指针"), AutoSize = true };
+            termLayout.Controls.Add(_hideMousePointerCheck, 1, 6);
+            _copyOnSelectCheck = new AntdUI.Checkbox { Text = L10n.T("选中后自动复制"), AutoSize = true };
+            termLayout.Controls.Add(_copyOnSelectCheck, 1, 7);
+            _trimTrailingWhitespaceCheck = new AntdUI.Checkbox { Text = L10n.T("复制时去除行尾空格"), AutoSize = true, Checked = true };
+            termLayout.Controls.Add(_trimTrailingWhitespaceCheck, 1, 8);
             // 提示行同样要 Dock=Fill：AutoSize=false 且无停靠时 AntdUI.Label 宽会是 0，
             // ui-tree-check 会把"零尺寸可见叶"判失败（0.1.364 实测）。
             var termHint = new AntdUI.Label
             {
-                Text = L10n.T("TERM 决定 pty 协商类型；Locale 登录后 export"),
+                Text = L10n.T("VtCell 默认启用真彩；TERM 决定 pty 协商类型；Locale 登录后 export"),
                 AutoSize = false,
                 Dock = DockStyle.Fill,
                 Height = DpiScale.V(this, 20),
                 ForeColor = GdtermColorTable.Muted,
                 Margin = new Padding(0, DpiScale.V(this, 2), 0, 0)
             };
-            termLayout.Controls.Add(termHint, 0, 2); termLayout.SetColumnSpan(termHint, 2);
+            termLayout.Controls.Add(termHint, 0, 9); termLayout.SetColumnSpan(termHint, 2);
             SectionContent(_secTerm, termLayout);
             _advFlow.Controls.Add(_secTerm);
 
@@ -717,6 +741,7 @@ namespace Gdterm.UI.Forms
                      || (_config.Metadata.ContainsKey("rdp_passline") && _config.Metadata["rdp_passline"] == "false")))
                 || _config.Serial != null
                 || (_config.Metadata != null && (_config.Metadata.ContainsKey("term") || _config.Metadata.ContainsKey("locale")))
+                || (_config.Metadata != null && _config.Metadata.ContainsKey("terminalProfile"))
                 || (_config.Metadata != null && _config.Metadata.ContainsKey("notes")
                     && !string.IsNullOrEmpty(_config.Metadata["notes"]));
             if (hasAdvanced && !_expanded) ToggleAdvanced();
@@ -837,6 +862,14 @@ namespace Gdterm.UI.Forms
                     if (!string.IsNullOrWhiteSpace(tp.TerminalType)) SelectTerm(tp.TerminalType.Trim());
                     if (!string.IsNullOrWhiteSpace(tp.Locale)) _localeBox.Text = tp.Locale;
                     _scrollbackBox.Value = Gdterm.Core.Constants.TerminalLimits.ClampScrollback(tp.ScrollbackLines, 0);
+                    _cursorStyleCombo.SelectedIndex = string.Equals(tp.CursorStyle, "Underline", System.StringComparison.OrdinalIgnoreCase) ? 1
+                        : string.Equals(tp.CursorStyle, "Bar", System.StringComparison.OrdinalIgnoreCase) ? 2 : 0;
+                    _cursorBlinkCheck.Checked = tp.CursorBlink;
+                    _rightClickModeCombo.SelectedIndex = string.Equals(tp.RightClickMode, "Remote", System.StringComparison.OrdinalIgnoreCase) ? 1 : 0;
+                    if (string.Equals(tp.RightClickMode, "Paste", System.StringComparison.OrdinalIgnoreCase)) _rightClickModeCombo.SelectedIndex = 2;
+                    _hideMousePointerCheck.Checked = tp.HideMousePointerWhileTyping;
+                    _copyOnSelectCheck.Checked = tp.CopyOnSelect;
+                    _trimTrailingWhitespaceCheck.Checked = tp.TrimTrailingWhitespace;
                 }
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionDialog.LoadTerm", exSwallowed); } catch { } }
@@ -1004,6 +1037,20 @@ namespace Gdterm.UI.Forms
                 var loc = (_localeBox.Text ?? "").Trim();
                 if (loc.Length > 0) _config.Metadata["locale"] = loc;
                 else _config.Metadata.Remove("locale");
+
+                var profile = TerminalProfile.FromMetadata(_config.Metadata);
+                profile.CursorStyle = _cursorStyleCombo.SelectedIndex == 1 ? "Underline"
+                    : _cursorStyleCombo.SelectedIndex == 2 ? "Bar" : "Block";
+                profile.CursorBlink = _cursorBlinkCheck.Checked;
+                profile.RightClickMode = _rightClickModeCombo.SelectedIndex == 1 ? "Remote"
+                    : _rightClickModeCombo.SelectedIndex == 2 ? "Paste" : "ContextMenu";
+                profile.HideMousePointerWhileTyping = _hideMousePointerCheck.Checked;
+                profile.CopyOnSelect = _copyOnSelectCheck.Checked;
+                profile.TrimTrailingWhitespace = _trimTrailingWhitespaceCheck.Checked;
+                if (_config.Metadata.ContainsKey("terminalProfile") || profile.CursorStyle != "Block" || !profile.CursorBlink
+                    || profile.RightClickMode != "ContextMenu" || profile.HideMousePointerWhileTyping
+                    || profile.CopyOnSelect || !profile.TrimTrailingWhitespace)
+                    _config.Metadata["terminalProfile"] = profile.ToJson();
             }
 
             // SSH 保活（0=关闭；30=缺省可不存，照存保持所见即所得）

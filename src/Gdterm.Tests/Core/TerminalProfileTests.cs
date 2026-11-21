@@ -15,6 +15,33 @@ namespace Gdterm.Tests.Core
             ScrollbackHardCapIsProfileSide();
             ScrollbackShorthandAndLimits();
             TermShorthandOverridesJson();
+            CursorSettingsRoundTrip();
+        }
+
+        private static void CursorSettingsRoundTrip()
+        {
+            var profile = new TerminalProfile { CursorStyle = "Bar", CursorBlink = false, RightClickMode = "Remote", HideMousePointerWhileTyping = true, CopyOnSelect = true, TrimTrailingWhitespace = false };
+            var metadata = new Dictionary<string, string> { { "terminalProfile", profile.ToJson() } };
+            var loaded = TerminalProfile.FromMetadata(metadata);
+            Assert.Equal("Bar", loaded.CursorStyle, "cursor style round-trip");
+            Assert.True(!loaded.CursorBlink, "cursor blink round-trip");
+            Assert.Equal("Remote", loaded.RightClickMode, "right-click mode round-trip");
+            Assert.True(loaded.HideMousePointerWhileTyping, "hide pointer round-trip");
+            Assert.True(loaded.CopyOnSelect, "copy-on-select round-trip");
+            Assert.True(!loaded.TrimTrailingWhitespace, "trim whitespace round-trip");
+            Assert.Equal("ContextMenu", new TerminalProfile().RightClickMode, "right-click defaults to local menu");
+
+            var localMenu = new TerminalProfile();
+            Assert.True(!localMenu.ShouldForwardRightClick(false, true, true), "default bare right-click opens local menu");
+            Assert.True(localMenu.ShouldForwardRightClick(true, true, true), "default Shift+right-click forwards when tracking");
+            Assert.True(!localMenu.ShouldForwardRightClick(true, false, true), "Shift+right-click falls back when tracking is off");
+            Assert.True(!localMenu.ShouldForwardRightClick(true, true, false), "disconnected Shift+right-click does not forward");
+            Assert.True(loaded.ShouldForwardRightClick(false, true, true), "remote mode forwards bare right-click");
+            Assert.True(!loaded.ShouldForwardRightClick(true, true, true), "remote mode reserves Shift+right-click for local menu");
+            var pasteMode = new TerminalProfile { RightClickMode = "Paste" };
+            Assert.True(pasteMode.ShouldPasteOnRightClick(false, true), "paste mode pastes on right-click");
+            Assert.True(!pasteMode.ShouldPasteOnRightClick(true, true), "Shift+right-click bypasses paste mode");
+            Assert.True(!pasteMode.ShouldForwardRightClick(true, true, true), "paste mode never forwards Shift+right-click");
         }
 
         /// <summary>

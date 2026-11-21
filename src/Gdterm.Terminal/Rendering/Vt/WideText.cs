@@ -12,8 +12,9 @@ namespace Gdterm.Terminal.Rendering.Vt
     /// 实测 “中文” + CSI 2D + “X” 得到 “X文”（正确应为 “中X”），
     /// 每多一个宽字符就多偏 1 列，且不可重编库。
     ///
-    /// 对策：喂给库之前给宽字符补一个“占位列”（<see cref="Filler"/>，PUA U+E000），
-    /// 让库的列号与真实显示列一致；所有对外出文本的地方再用 <see cref="Strip"/> 去掉占位列。
+    /// 对策：喂给库之前给 BMP 宽字符补一个“占位列”（<see cref="Filler"/>，PUA U+E000），
+    /// 让库的列号与真实显示列一致；补充平面的字符（如 emoji）由 UTF-16 代理对自然占两列，
+    /// 不再额外补占位；所有对外出文本的地方再用 <see cref="Strip"/> 去掉占位列。
     /// 渲染器遇到占位列不画、不推进 x（宽字符字形本身已占 2 格）。
     /// 组合字符（零宽）先在本地做 NFC 合成，合成不掉的直接丢弃——宁可少一个
     /// 重音符号，也不要整行文字右移（lib 会把它当 1 列）。
@@ -97,7 +98,10 @@ namespace Gdterm.Terminal.Rendering.Vt
                     cp = char.ConvertToUtf32(c, s[i + 1]);
                     i++;
                 }
-                n += Math.Max(1, Width(cp));
+                // VtNetCore consumes UTF-16 chars, so every supplementary-plane code
+                // point advances two model columns even when its Unicode east-asian
+                // width is reported as narrow.
+                n += cp > 0xFFFF ? 2 : Math.Max(1, Width(cp));
             }
             return n;
         }
@@ -113,7 +117,7 @@ namespace Gdterm.Terminal.Rendering.Vt
         }
 
         /// <summary>
-        /// 喂库前展开：NFC 合成组合字符 → 宽字符后补占位列 → 丢弃残余零宽字符。
+        /// 喂库前展开：NFC 合成组合字符 → BMP 宽字符后补占位列 → 丢弃残余零宽字符。
         /// 纯 ASCII 直接原样返回（热路径）。
         /// </summary>
         public static string Expand(string text)
@@ -152,10 +156,17 @@ namespace Gdterm.Terminal.Rendering.Vt
                 int w = Width(cp);
                 if (w <= 0) continue;   // 组合字符/零宽：NFC 没合成掉就丢弃
 
-                if (cp > 0xFFFF) sb.Append(char.ConvertFromUtf32(cp));
-                else sb.Append((char)cp);
-
-                if (w == 2) sb.Append(Filler);
+                if (cp > 0xFFFF)
+                {
+                    // VtNetCore 写入的是 UTF-16 char：补充平面的代理对会自然推进两列。
+                    // 这里不能再补 Filler，否则 emoji 会被当成三列，光标落在字符后一个空格。
+                    sb.Append(char.ConvertFromUtf32(cp));
+                }
+                else
+                {
+                    sb.Append((char)cp);
+                    if (w == 2) sb.Append(Filler);
+                }
             }
             return sb.ToString();
         }

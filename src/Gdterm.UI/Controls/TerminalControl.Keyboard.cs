@@ -14,6 +14,11 @@ namespace Gdterm.UI.Controls
     {
         private void OnKeyPress(object sender, KeyPressEventArgs e)
         {
+            if (_sendingPaste)
+            {
+                e.Handled = true;
+                return;
+            }
             if (_session?.IsConnected != true)
             {
                 try { DiagLog.Info("TerminalControl.OnKeyPress.GuardDrop",
@@ -22,6 +27,8 @@ namespace Gdterm.UI.Controls
                     " keyCharCode=0x" + (e.KeyChar == '\0' ? "0" : ((int)e.KeyChar).ToString("X"))); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Keyboard", exSwallowed); } catch { } }
                 return;
             }
+
+            HideMousePointerWhileTyping();
 
             if (!char.IsControl(e.KeyChar))
             {
@@ -120,6 +127,12 @@ namespace Gdterm.UI.Controls
 
         private void OnKeyDown(object sender, KeyEventArgs e)
         {
+            if (_sendingPaste)
+            {
+                e.Handled = true;
+                e.SuppressKeyPress = true;
+                return;
+            }
             if (_session?.IsConnected != true)
             {
                 if (e.KeyCode != Keys.ShiftKey && e.KeyCode != Keys.ControlKey && e.KeyCode != Keys.Menu)
@@ -130,6 +143,8 @@ namespace Gdterm.UI.Controls
                 }
                 return;
             }
+
+            HideMousePointerWhileTyping();
 
             var result = _keyResolver.Resolve(e);
             if (result != null)

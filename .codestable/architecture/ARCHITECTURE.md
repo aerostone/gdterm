@@ -138,7 +138,10 @@ ConnectionTree 双击
 | `TabActiveSessionQuery` | 活动标签/SSH 宿主查询 |
 | `SidePanelFactory` | 侧栏/终端工具面板创建 + 多通道同步/广播闸 |
 | `SidePanelHost` | 右侧工具宿主 Show/Hide |
-| `SessionStateCoordinator` | 窗口几何与打开标签的保存/恢复 |
+| `SessionStateCoordinator` | `session-state.json` 中打开标签、活动标签、视图模式和连接树宽度的保存/恢复 |
+| `SessionRecordingCoordinator` | 活动终端录制启停、录制中心打开、终端缓冲导出 |
+| `WelcomePanelCoordinator` | 欢迎页构建、动作路由、按标签数切换空态可见性 |
+| `MainWindowLifecycleCoordinator` | 托盘/退出确认、`appearance.ini` 窗口几何和侧栏宽度恢复/保存 |
 | `MainFormMenuBuilder` | 菜单树构建（回调由 MainForm 提供） |
 | `MainFormCommandRouter` | Ctrl+R/W/F/P、Esc 快捷键路由 |
 | `ViewModeController` | Standard/Focus/Compact 与连接树显隐 |
@@ -152,7 +155,7 @@ ConnectionTree 双击
 | `MasterPasswordPrompt` | 敏感操作主密码再验证 |
 | `ConnectionImportExportUi` | 连接导入/导出文件对话框与 merge |
 
-**约定**：新业务逻辑优先进 Services。`MainForm` ≈385 行仅组合根+布局；`TabContainerControl` ≈309 行仅会话字典 + Tab chrome 壳。finding-10 已 resolved。
+**约定**：新业务逻辑优先进 Services。`MainForm` 主要承担依赖组合、布局创建、事件接线和菜单命令路由；录制/缓冲导出、欢迎页路由、托盘与窗口几何由独立 coordinator 管理。`TabContainerControl` 负责标签/会话交互和 Tab chrome，并将关闭、重连、分屏、选中切换等流程委托给 Services。早期按固定行数描述职责的记录已过期。
 
 ### 3.3 凭据与安全边界
 

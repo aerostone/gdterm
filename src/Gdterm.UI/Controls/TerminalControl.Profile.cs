@@ -50,13 +50,16 @@ namespace Gdterm.UI.Controls
 
             if (_cellRenderer != null)
             {
+                _cellRenderer.TrimTrailingWhitespace = _profile?.TrimTrailingWhitespace ?? true;
                 try { _cellRenderer.ApplyFont(fontName, fontSize, cjkFontName); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Profile", exSwallowed); } catch { } }
+                try { _cellRenderer.ApplyCursorSettings(_profile?.CursorStyle, _profile?.CursorBlink ?? true); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Profile", exSwallowed); } catch { } }
                 try { if (_profile != null) _cellRenderer.ApplyTerminalType(_profile.TerminalType); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Profile", exSwallowed); } catch { } }
                 LogFontMetrics("cell");
             }
             else if (_renderer is LightweightRenderer light)
             {
                 try { light.ApplyFont(fontName, fontSize); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Profile", exSwallowed); } catch { } }
+                try { light.ApplyCursorSettings(_profile?.CursorStyle, _profile?.CursorBlink ?? true); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Profile", exSwallowed); } catch { } }
                 LogFontMetrics("light");
             }
             try { _renderer.GetControl()?.Invalidate(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TerminalControl.Profile", exSwallowed); } catch { } }

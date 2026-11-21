@@ -261,11 +261,13 @@ namespace Gdterm.UI.Services
             {
                 try
                 {
-                    var lines = tc.GetRecentLines(500);
+                    var lines = tc.GetHistoryLines();
                     engine = new Gdterm.Terminal.TerminalSearchEngine(new System.Collections.Generic.List<string>(lines));
                     int n = engine.Search(pattern, caseSensitive, useRegex, wholeWord);
                     int cur = engine.HasResults ? engine.CurrentIndex : -1;
                     bar.UpdateMatchCount(cur, n);
+                    var first = engine.Current;
+                    if (first != null) tc.ScrollToHistoryLine(first.LineIndex);
                 }
                 catch { bar.UpdateMatchCount(-1, 0); }
             };
@@ -277,15 +279,7 @@ namespace Gdterm.UI.Services
                     var m = next ? engine.Next() : engine.Previous();
                     if (m == null) return;
                     bar.UpdateMatchCount(engine.CurrentIndex, engine.TotalMatches);
-                    // 跳行：用匹配行文本锚滚动 Cell 视口（Lightweight 已可见，无操作）
-                    try
-                    {
-                        string anchor = m.LineText ?? "";
-                        anchor = anchor.Trim();
-                        if (anchor.Length > 40) anchor = anchor.Substring(0, 40);
-                        if (anchor.Length > 0) tc.ScrollToMatch(anchor, next);
-                    }
-                    catch { }
+                    tc.ScrollToHistoryLine(m.LineIndex);
                 }
                 catch { }
             };

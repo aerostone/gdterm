@@ -117,7 +117,7 @@
 
 ## 2. 完备性矩阵（按缺口排序，最烂的在最上面）
 
-46 个页面，其中 0 个存在未登记缺口。
+48 个页面，其中 0 个存在未登记缺口。
 
 | 页面 | 一级菜单 | 类型 | 完备度 | 缺口 | dump |
 |---|---|---|---|---|---|
@@ -162,6 +162,8 @@
 | SFTP 双栏 `page.SftpDualPanePanel` | 文件 > SFTP 浏览器 | list | 100% (4/4) | — | — |
 | SFTP 权限修改 `page.SftpPermissionForm` | SFTP > 右键 > 权限 | input | 100% (2/2) | — | sftp-permission | 唯一未进 dump 的窗体；建议补 Show 用例 |
 | SSH 密钥管理 `page.SshKeyManagerForm` | 工具 > SSH 密钥管理 | input | 100% (2/2) | — | sshkey-manager | |
+| 终端粘贴预览 `page.TerminalPasteDialog` | 终端 > 粘贴预览 | dialog | 100% (1/1) | — | — |
+| 终端逐行粘贴进度 `page.TerminalPasteProgressDialog` | 终端 > 逐行粘贴进度 | progress | 100% (2/2) | — | — |
 | 运维工具箱 `page.ToolboxPanel` | 工具 > 运维工具箱 | panel | 100% (0/0) | — | toolbox | 侧栏常驻（审计 C7-2 入 dump） |
 | 传输中心 `page.TransferCenterPanel` | 工具 > 传输中心 | list | 100% (4/4) | — | transfer-center | 侧栏常驻 |
 | 传输进度 `page.TransferProgressDialog` | SFTP > 上传/下载 | progress | 100% (2/2) | — | transfer-progress | |

@@ -21,6 +21,7 @@ namespace Gdterm.Tests.Terminal
             SelectAllSkipsTrailingBlankRows();
             SelectAllOnEmptyScreen();
             WideCharSpans();
+            WordAndLineSelection();
         }
 
         private static VtPageSnapshot MakePage(params string[] lines)
@@ -105,6 +106,17 @@ namespace Gdterm.Tests.Terminal
             Assert.Equal("中文abc", text, "宽字符行选全文");
             Assert.Equal(5, TerminalSelection.LineTextLength(page.Lines[0]), "行文本长度按字符算");
             Assert.Equal("abc", TerminalSelection.ComputeText(page, 2, 0, 4, 0), "宽字符行内偏移选择");
+        }
+
+        private static void WordAndLineSelection()
+        {
+            int start, end;
+            Assert.True(TerminalSelection.TryGetWordBounds("user@host:/var/log", 6, out start, out end), "word selection finds a token");
+            Assert.Equal(5, start, "word begins after punctuation delimiter");
+            Assert.Equal(8, end, "word ends before punctuation delimiter");
+            Assert.True(TerminalSelection.TryGetWordBounds("中文-目录/file.log", 3, out start, out end), "word selection handles Unicode");
+            Assert.Equal("目录", "中文-目录/file.log".Substring(start, end - start + 1), "Unicode token bounds remain in UTF-16 indices");
+            Assert.Equal("a command with spaces", TerminalSelection.ComputeLineText("a command with spaces   "), "line selection trims terminal cell padding");
         }
     }
 }

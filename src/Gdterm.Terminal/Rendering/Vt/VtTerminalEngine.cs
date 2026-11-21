@@ -376,12 +376,10 @@ namespace Gdterm.Terminal.Rendering.Vt
                     int rows = Rows;
                     int cols = Columns;
                     int curTop = _controller.ViewPort.TopRow;
-                    int maxTop = curTop;
-                    // 上限：MaximumHistoryLines 行对应的页数
-                    int maxPages = Math.Max(1, MaximumHistoryLines / Math.Max(1, rows) + 1);
+                    int maxTop = MaxTopRow;
                     if (searchDown)
                     {
-                        // 向下：当前页先找，未中则逐页往下（不超过当前 top）
+                        // 向下遍历到实时底部；之前终点误设为 curTop，导致循环只检查当前页。
                         for (int top = curTop; top <= maxTop; top += rows)
                         {
                             int hit = FindInPage(top, rows, cols, text);
@@ -395,9 +393,7 @@ namespace Gdterm.Terminal.Rendering.Vt
                     }
                     else
                     {
-                        // 向上：当前页先找，未中则逐页往上
-                        int pages = 0;
-                        for (int top = curTop; top >= 0 && pages < maxPages; top -= rows, pages++)
+                        for (int top = curTop; top >= 0; top -= rows)
                         {
                             int hit = FindInPage(top, rows, cols, text);
                             if (hit >= 0)
@@ -411,6 +407,54 @@ namespace Gdterm.Terminal.Rendering.Vt
                     return -1;
                 }
                 catch { return -1; }
+            }
+        }
+
+        public string[] GetHistoryLines()
+        {
+            lock (_lock)
+            {
+                if (_disposed) return new string[0];
+                int lastRow;
+                try { lastRow = _controller.BottomRow; }
+                catch { lastRow = Math.Max(0, Rows - 1); }
+                var lines = new List<string>(lastRow + 1);
+                const int pageSize = 256;
+                for (int start = 0; start <= lastRow; start += pageSize)
+                {
+                    int count = Math.Min(pageSize, lastRow - start + 1);
+                    var page = _controller.GetPageSpans(start, count, Columns, null);
+                    if (page == null) continue;
+                    foreach (var row in page)
+                    {
+                        var sb = new StringBuilder();
+                        if (row != null && row.Spans != null)
+                        {
+                            foreach (LayoutSpan span in row.Spans)
+                                if (span != null && !span.Hidden) sb.Append(span.Text ?? string.Empty);
+                        }
+                        lines.Add(WideText.Strip(sb.ToString()).TrimEnd());
+                    }
+                }
+                return lines.ToArray();
+            }
+        }
+
+        public bool ScrollToHistoryLine(int line)
+        {
+            if (_disposed) return false;
+            lock (_lock)
+            {
+                try
+                {
+                    int lastRow = _controller.BottomRow;
+                    if (line < 0 || line > lastRow) return false;
+                    int target = ClampTopRow(line - Math.Max(0, Rows / 2));
+                    SetTopRow(target);
+                    _pinnedTop = target >= MaxTopRow ? -1 : target;
+                    return true;
+                }
+                catch { return false; }
             }
         }
 
@@ -525,7 +569,13 @@ namespace Gdterm.Terminal.Rendering.Vt
         }
 
         /// <summary>光标形状（DECSCUSR）：0/1 闪烁块 2 稳态块 3/4 下划线 5/6 竖线。</summary>
-        public int CursorShape { get { return _pre.CursorShape; } }
+        public int CursorShape { get { lock (_lock) return _pre.CursorShape; } }
+
+        /// <summary>配置默认光标；远端 DECSCUSR 可覆盖形状，profile 可统一禁止闪烁。</summary>
+        public void SetCursorProfile(string style, bool blink)
+        {
+            lock (_lock) _pre.SetCursorProfile(style, blink);
+        }
 
         /// <summary>应用是否请求焦点事件上报（?1004）。</summary>
         public bool FocusReporting { get { return _pre.FocusReporting; } }

@@ -71,8 +71,32 @@ namespace Gdterm.Terminal.Rendering.Vt
         public int ModifyOtherKeys { get { return _modifyOtherKeys; } }
 
         /// <summary>光标形状（DECSCUSR CSI Ps SP q）：0/1 闪烁块 2 稳态块 3 闪烁下划线 4 稳态下划线 5 闪烁竖线 6 稳态竖线。</summary>
-        public int CursorShape { get { return _cursorShape; } }
+        public int CursorShape
+        {
+            get
+            {
+                int shape = _cursorStyleReceived ? _cursorShape : _defaultCursorShape;
+                if (shape == 0) shape = 1;
+                return !_cursorBlinkEnabled && IsBlinkingCursorShape(shape) ? shape + 1 : shape;
+            }
+        }
         private int _cursorShape;
+        private int _defaultCursorShape = 1;
+        private bool _cursorStyleReceived;
+        private bool _cursorBlinkEnabled = true;
+
+        public void SetCursorProfile(string style, bool blink)
+        {
+            string normalized = (style ?? "").Trim();
+            _defaultCursorShape = string.Equals(normalized, "Underline", StringComparison.OrdinalIgnoreCase) ? 3
+                : string.Equals(normalized, "Bar", StringComparison.OrdinalIgnoreCase) ? 5 : 1;
+            _cursorBlinkEnabled = blink;
+        }
+
+        private static bool IsBlinkingCursorShape(int shape)
+        {
+            return shape == 1 || shape == 3 || shape == 5;
+        }
 
         /// <summary>应用是否请求焦点事件上报（?1004）：UI 在获得/失去焦点时发 ESC[I / ESC[O。</summary>
         public bool FocusReporting { get { return _focusReporting; } }
@@ -180,6 +204,7 @@ namespace Gdterm.Terminal.Rendering.Vt
             _bracketedPaste = false;
             _focusReporting = false;
             _cursorShape = 0;
+            _cursorStyleReceived = false;
             _modifyOtherKeys = 0;
             _utf8PendLen = 0;
             _replies.Length = 0;
@@ -1008,6 +1033,7 @@ namespace Gdterm.Terminal.Rendering.Vt
                 int shape;
                 if (!int.TryParse(body.Substring(0, bodyLen - 1), out shape)) shape = 0;
                 _cursorShape = (shape < 0 || shape > 6) ? 0 : shape;
+                _cursorStyleReceived = true;
                 return true;
             }
 
