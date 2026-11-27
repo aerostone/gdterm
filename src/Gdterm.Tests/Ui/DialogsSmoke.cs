@@ -300,6 +300,7 @@ namespace Gdterm.Tests.Ui
                     Thread.Sleep(500);
                     Application.DoEvents();
                     if (after != null) after(f);
+                    UiSmokeRunner.AssertDialogActionStyle(f);
                     int n = Count(f);
                     check(n > 5, name + "-controls=" + n + " (>5)");
                     // R3 关闭绑定（change 2026-09-24）：免判清单——transfer-progress（进度窗无

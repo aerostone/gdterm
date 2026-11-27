@@ -420,6 +420,32 @@ namespace Gdterm.Tests.Ui
             if (bad == 0) Check(true, where + " DOCK_OK (0 overlaps)");
         }
 
+        internal static void AssertDialogActionStyle(Control root)
+        {
+            int buttons = 0;
+            var pending = new Stack<Control>();
+            pending.Push(root);
+            while (pending.Count > 0)
+            {
+                var parent = pending.Pop();
+                foreach (Control c in parent.Controls) pending.Push(c);
+                if (parent.Name != "DialogActions") continue;
+                AntdUI.Button previous = null;
+                foreach (Control child in parent.Controls)
+                {
+                    var b = child as AntdUI.Button;
+                    if (b == null || !b.Visible) continue;
+                    buttons++;
+                    Check(!b.AutoSize && b.Padding == Padding.Empty && b.WaveSize == 0, "dialog-action-visible-box:" + b.Text);
+                    if (previous != null)
+                        Check(b.Height == previous.Height && b.Margin == previous.Margin,
+                            "dialog-action-row-consistent:" + b.Text);
+                    previous = b;
+                }
+            }
+            if (buttons > 0) Check(true, "dialog-actions-checked=" + buttons);
+        }
+
         private static bool IsEdgeDock(DockStyle d)
         {
             return d == DockStyle.Top || d == DockStyle.Bottom || d == DockStyle.Left || d == DockStyle.Right;

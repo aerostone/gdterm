@@ -194,13 +194,15 @@ namespace Gdterm.UI.Services
                 if (b.IsDisposed) return;
                 int px = Math.Max(0, DpiScale.V(host, padX));
                 int py = Math.Max(0, DpiScale.V(host, padY));
-                b.Padding = new Padding(px, py, px, py);
+                // AntdUI 的 Padding 会缩进整个按钮绘制矩形，不是文字内边距。
+                // 页脚把内容留白计入尺寸，外部间隙由容器统一负责。
+                b.Padding = dialogAction ? Padding.Empty : new Padding(px, py, px, py);
+                if (dialogAction) b.WaveSize = 0;
                 var f = b.Font ?? UiFont();
                 string text = string.IsNullOrEmpty(b.Text) ? " " : b.Text;
                 Size measured = TextRenderer.MeasureText(text, f, new Size(int.MaxValue, int.MaxValue),
                     TextFormatFlags.NoPadding | TextFormatFlags.SingleLine);
-                // AntdUI 在 Padding 之外还扣除双侧 sps（字高 * .4）和 wave/描边。
-                // 使用真实 GDI+ 宽度补齐与库内文字量尺的差异，避免窄钮换行。
+                // 保留库内双侧 sps（字高 * .4）和文字量尺误差的空间。
                 int width = measured.Width + px * 2 + DpiScale.V(host, 2);
                 int height = designHeight > 0 ? Math.Max(DpiScale.V(host, designHeight), LineBox(f, host) + py * 2) : FieldHeight(host);
                 if (dialogAction)

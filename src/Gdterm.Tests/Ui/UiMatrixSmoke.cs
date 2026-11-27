@@ -227,6 +227,7 @@ namespace Gdterm.Tests.Ui
             int n = UiSmokeRunner.CountControls(f);
             if (n <= 3) throw new Exception("controls=" + n + " (<=3)");
 
+            UiSmokeRunner.AssertDialogActionStyle(f);
             File.WriteAllText(Path.Combine(dir, target + ".json"),
                 UiTreeDumper.Dump(f), System.Text.Encoding.UTF8);
             UiSmokeRunner.Shot(f, Path.Combine(dir, target + ".png"));
