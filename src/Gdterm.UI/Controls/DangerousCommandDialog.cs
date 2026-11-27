@@ -216,7 +216,7 @@ namespace Gdterm.UI.Controls
 
             _confirmButton = new AntdUI.Button {
                 Text = GetConfirmButtonText(),
-                Font = new Font(Font.FontFamily, Font.Size + 0.5f, FontStyle.Bold),
+                Font = FormFontPolicy.UiFont(),
                 Type = AccentToTType(accentColor)
             };
             Services.FormFontPolicy.SizeActionButton(this, _confirmButton, 12, 5);

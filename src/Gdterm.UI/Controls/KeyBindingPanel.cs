@@ -508,6 +508,7 @@ namespace Gdterm.UI.Controls
                 form.Controls.AddRange(new Control[] { lblName, txtName, lblCombo, chkCtrl, chkAlt, chkShift, cmbKey, lblType, cmbType, lblValue, txtValue, lblDesc, txtDesc, lblHint, btnOk, btnCancel });
                 Gdterm.UI.Services.FormFontPolicy.MountDialogActions(form, btnOk, btnCancel);
 
+                lblHint.Height = FormFontPolicy.LineBox(form) * 3 + DpiScale.V(form, 12);
                 lblHint.Width = Math.Max(lblHint.Width, FormFontPolicy.MeasureTextWidth("Action: copy/paste/clear/scroll_up/scroll_down/find", form.Font, form) + DpiScale.V(form, 20));
                 form.ClientSize = new Size(Math.Max(form.ClientSize.Width, lblHint.Width + DpiScale.V(form, 40)), form.ClientSize.Height);
                 FormFontPolicy.ArrangeDialogRows(form,

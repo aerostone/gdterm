@@ -277,11 +277,17 @@ namespace Gdterm.UI.Controls
             // 客户区高度随行高自适应（原先固定 350 在大字号下裁剪）
             form.ClientSize = new Size(DpiScale.V(this, 420), y + btnH + DpiScale.V(this, 16));
 
+            int colorWidth = FormFontPolicy.MeasureTextWidth("#FF4444", txtFg.Font, form) + DpiScale.V(form, 32);
+            txtFg.Width = Math.Max(txtFg.Width, colorWidth);
+            txtBg.Width = Math.Max(txtBg.Width, colorWidth);
+            var actionHelp = new Label { Text = hintAction.Text, AutoSize = true,
+                MaximumSize = new Size(form.ClientSize.Width - DpiScale.V(form, 40), 0),
+                ForeColor = GdtermColorTable.Muted, Font = hintAction.Font };
             FormFontPolicy.ArrangeDialogRows(form,
                 new Control[] { lblName, txtName }, new Control[] { lblPattern, txtPattern },
                 new Control[] { chkRegex, chkCase }, new Control[] { lblFg, txtFg }, new Control[] { lblBg, txtBg },
                 new Control[] { chkBold }, new Control[] { lblAction, cmbAction }, new Control[] { lblArg, txtArg },
-                new Control[] { lblCd, numCd });
+                new Control[] { lblCd, numCd }, new Control[] { actionHelp });
             hintAction.Visible = false;
             cmbAction.ToolTipText2(hintAction.Text);
             if (form.ShowDialog(this) != DialogResult.OK || string.IsNullOrWhiteSpace(txtName.Text)) return null;

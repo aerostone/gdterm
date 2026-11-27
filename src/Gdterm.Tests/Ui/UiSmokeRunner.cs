@@ -665,6 +665,11 @@ namespace Gdterm.Tests.Ui
 
         internal static void Shot(Form f, string path)
         {
+            // 鼠标停在上一窗口坐标会随机触发按钮/表格悬停色，截图统一采集静止态。
+            Cursor.Position = new Point(Screen.PrimaryScreen.WorkingArea.Right - 1, Screen.PrimaryScreen.WorkingArea.Bottom - 1);
+            Application.DoEvents();
+            Thread.Sleep(200);
+            Application.DoEvents();
             // AntdUI 自绘控件 DrawToBitmap 抓不到内容，必须用 Win32 PrintWindow 抓真实渲染。
             // PW_CLIENTONLY(0x1): 只抓客户区；失败时回退 DrawToBitmap（至少有窗口框架）。
             try
