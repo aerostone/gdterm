@@ -183,9 +183,9 @@ namespace Gdterm.UI.Controls
             Lbl(form, L10n.T("类型:"), 15, y); form.Controls.Add(cmbType); y += rowH;
             var txtName = Txt(form, 110, y, 250, fieldH); Lbl(form, L10n.T("名称:"), 15, y); y += rowH;
             var txtLocalHost = Txt(form, 110, y, 120, fieldH); txtLocalHost.Text = "127.0.0.1"; Lbl(form, L10n.T("本地地址:"), 15, y);
-            var txtLocalPort = Txt(form, 280, y, 80, fieldH); Lbl(form, L10n.T("端口:"), 245, y); y += rowH;
+            var txtLocalPort = Txt(form, 320, y, 80, fieldH); Lbl(form, L10n.T("端口:"), 245, y); y += rowH;
             var txtRemoteHost = Txt(form, 110, y, 120, fieldH); txtRemoteHost.Text = "127.0.0.1"; Lbl(form, L10n.T("远程地址:"), 15, y);
-            var txtRemotePort = Txt(form, 280, y, 80, fieldH); Lbl(form, L10n.T("端口:"), 245, y); y += rowH + DpiScale.V(this, 12);
+            var txtRemotePort = Txt(form, 320, y, 80, fieldH); Lbl(form, L10n.T("端口:"), 245, y); y += rowH + DpiScale.V(this, 12);
 
             int btnH = Math.Max(DpiScale.V(this, 30), fieldH);
             var btnOk = new AntdUI.Button { Text = L10n.T("保存"), Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 200, y), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary, };
@@ -194,7 +194,7 @@ namespace Gdterm.UI.Controls
             Gdterm.UI.Services.FormFontPolicy.MountDialogActions(form, btnOk, btnCancel);
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
             // 客户区高度随行高自适应（原先固定 320 在大字号下裁剪）
-            form.ClientSize = new Size(DpiScale.V(this, 400), y + btnH + DpiScale.V(this, 16));
+            form.ClientSize = new Size(DpiScale.V(this, 440), y + btnH + DpiScale.V(this, 16));
 
             if (form.ShowDialog(this) == DialogResult.OK)
             {

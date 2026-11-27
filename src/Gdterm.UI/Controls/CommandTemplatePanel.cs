@@ -127,7 +127,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Bottom,
                 AutoSize = true,
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
+                WrapContents = true,
                 BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(DpiScale.V(this, 4))
             };

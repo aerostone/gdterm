@@ -166,6 +166,8 @@ namespace Gdterm.Tools.Modules
             bar.Controls.Add(MakeButton(L10n.T("停止"), () => { StopCurrent(); SetStatus(status, L10n.T("已停止"), false); }));
             bar.Controls.Add(countBox);
 
+            ToolPanelHelper.WrapLabel(root, desc);
+            countBox.Width = ToolPanelHelper.V(root, 60);
             root.Controls.Add(output);
             root.Controls.Add(bar);
             root.Controls.Add(targetBox);
@@ -187,6 +189,7 @@ namespace Gdterm.Tools.Modules
                 Padding = new Padding(12, 5, 12, 5),
                 Margin = new Padding(4)
             };
+            ToolPanelHelper.StyleActionButton(btn);
             btn.Click += (s, e) => { try { onClick(); } catch (Exception) { /* 按钮回调内部已各自兜底，这里只防炸 UI 线程 */ } };
             return btn;
         }

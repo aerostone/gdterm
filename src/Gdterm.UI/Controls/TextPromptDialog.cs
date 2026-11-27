@@ -27,6 +27,7 @@ namespace Gdterm.UI.Controls
 
         public TextPromptDialog(string title, string label, string initialValue, string hint = null)
         {
+            Font = FormFontPolicy.UiFont();
             Value = initialValue ?? "";
             InitializeComponent(title, label, Value, hint);
             UiA11y.AutoName(this);
@@ -56,6 +57,7 @@ namespace Gdterm.UI.Controls
             _input = new AntdUI.Input
             {
                 Dock = DockStyle.Top,
+                Height = FormFontPolicy.FieldHeight(this),
                 Text = initial ?? "",
                 Margin = DpiScale.Pad(this, 12, 0, 12, 0)
             };

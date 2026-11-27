@@ -409,6 +409,9 @@ namespace Gdterm.UI.Controls
         {
             using (var form = new AntdUI.Window())
             {
+                form.BackColor = GdtermColorTable.Background;
+                form.ForeColor = GdtermColorTable.Foreground;
+                form.Font = FormFontPolicy.UiFont();
                 form.Text = existing == null ? L10n.T("添加快捷键") : L10n.T("编辑快捷键");
                 // ClientSize 在按钮行后按行高动态计算（见下方）
                 form.StartPosition = FormStartPosition.CenterParent;

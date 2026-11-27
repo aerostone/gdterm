@@ -14,7 +14,22 @@ namespace Gdterm.Tests.Ui
     {
         public static void Run(string directory, Action<bool, string> check)
         {
+            var previous = Gdterm.UI.Program.GlobalAppearance;
+            try
+            {
+                foreach (var font in new[] { 9f, 14f })
+                {
+                    Gdterm.UI.Program.GlobalAppearance = new Gdterm.UI.Forms.AppearanceSettings { UIFontSize = (int)font };
+                    RunFont(directory, check);
+                }
+            }
+            finally { Gdterm.UI.Program.GlobalAppearance = previous; }
+        }
+
+        private static void RunFont(string directory, Action<bool, string> check)
+        {
             foreach (var item in new[] {
+                new[] { "bookmarks", "OnAddBookmark", "bookmark" },
                 new[] { "port-forward", "AddRule", "forward" },
                 new[] { "highlight-rule", "ShowEditor", "highlight" },
                 new[] { "logon-script", "ShowEditor", "logon" },
@@ -29,6 +44,12 @@ namespace Gdterm.Tests.Ui
                 {
                     var page = UiPageCatalog.Panels().Single(p => p.Name == item[0]);
                     var panel = page.Create(scope);
+                    if (item[0] == "bookmarks")
+                    {
+                        var store = (Gdterm.Connections.IConnectionStore)panel.GetType()
+                            .GetField("_connectionStore", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(panel);
+                        store.Add(new Gdterm.Core.Models.ConnectionConfig { Name = "Layout", Host = "localhost" });
+                    }
                     host.Controls.Add(panel);
                     host.Show();
                     var method = panel.GetType().GetMethod(item[1], BindingFlags.NonPublic | BindingFlags.Instance);
@@ -36,7 +57,7 @@ namespace Gdterm.Tests.Ui
                     if (item[1] == "PromptFor") args = new object[] { "port", "Layout" };
                     else if (item[1] == "ShowVariableDialog") args = new object[] {
                         new Gdterm.Core.Models.QuickCommand { Name = "Layout", Command = "echo {value}" } };
-                    else args = method.GetParameters().Length == 0 ? new object[0] : new object[] { null };
+                    else args = new object[method.GetParameters().Length];
                     CaptureModal(host, "editor-" + item[2], directory,
                         () => method.Invoke(panel, args), check);
                 }
@@ -59,6 +80,7 @@ namespace Gdterm.Tests.Ui
 
         private static void CaptureModal(Form host, string name, string directory, Action open, Action<bool, string> check)
         {
+            if (FormFontPolicy.UiFontSize > 9) name += "-f14";
             UiSmokeRunner.Progress(name);
             bool captured = false;
             Exception failure = null;

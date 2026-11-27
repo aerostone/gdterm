@@ -10,6 +10,33 @@ namespace Gdterm.Tools
     /// </summary>
     public static class ToolPanelHelper
     {
+        public static Func<Control, float> DpiFactor { get; set; } = control =>
+        {
+            using (var g = control.CreateGraphics()) return g.DpiX / 96f;
+        };
+
+        internal static int V(Control control, int value) { return (int)Math.Round(value * DpiFactor(control)); }
+
+        internal static void StyleActionButton(Button button)
+        {
+            void Apply()
+            {
+                button.Padding = new Padding(V(button, 12), V(button, 5), V(button, 12), V(button, 5));
+                button.Margin = new Padding(V(button, 4));
+                button.MinimumSize = new Size(V(button, 64), V(button, 32));
+            }
+            button.ParentChanged += (s, e) => Apply();
+            Apply();
+        }
+
+        internal static void WrapLabel(Control host, Label label)
+        {
+            void Apply() { label.MaximumSize = new Size(Math.Max(1, host.ClientSize.Width - host.Padding.Horizontal), 0); }
+            host.SizeChanged += (s, e) => Apply();
+            label.AutoSize = true;
+            Apply();
+        }
+
         public static Control CreateActionPanel(
             string title,
             string description,
@@ -108,6 +135,8 @@ namespace Gdterm.Tools
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White
             };
+            StyleActionButton(runBtn);
+            WrapLabel(root, lblDesc);
             runBtn.Click += (s, e) =>
             {
                 try
@@ -129,6 +158,8 @@ namespace Gdterm.Tools
                 Padding = new Padding(4), WrapContents = true };
             bar.Controls.Add(runBtn);
 
+            root.Padding = new Padding(V(root, 10));
+            inputHost.Height = V(root, 90);
             root.Controls.Add(output);
             root.Controls.Add(status);
             root.Controls.Add(bar);

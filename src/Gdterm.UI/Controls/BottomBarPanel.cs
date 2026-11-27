@@ -245,7 +245,8 @@ namespace Gdterm.UI.Controls
         /// <summary>字体/行高变化后重算高度（由 MainForm.ApplyGlobalUIFont 调用）。</summary>
         public int GetPreferredHeight()
         {
-            return Math.Max(DpiScale.V(this, DesignHeight), FormFontPolicy.RowStep(this));
+            return Math.Max(DpiScale.V(this, DesignHeight),
+                FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this) + DpiScale.V(this, 16));
         }
 
         // ═══════════ UI 构建 ═══════════

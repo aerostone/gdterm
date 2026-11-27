@@ -111,6 +111,7 @@ namespace Gdterm.UI.Services
                 AccessibleName = accessibleName,
                 AccessibleDescription = string.IsNullOrEmpty(tooltip) ? accessibleName : tooltip
             };
+            FormFontPolicy.SizeActionButton(b, b, 6, 3, 32);
             if (!string.IsNullOrEmpty(tooltip))
             {
                 try { b.ToolTipText2(tooltip); } catch { }

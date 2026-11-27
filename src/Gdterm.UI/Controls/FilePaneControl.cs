@@ -54,7 +54,7 @@ namespace Gdterm.UI.Controls
             var top = new Panel
             {
                 Dock = DockStyle.Top,
-                AutoSize = true,
+                AutoSize = false,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 4), DpiScale.V(this, 6), DpiScale.V(this, 4))
@@ -97,6 +97,14 @@ namespace Gdterm.UI.Controls
 
             top.Controls.Add(buttons);
             top.Controls.Add(_pathBox);
+            Action fitToolbar = () =>
+            {
+                int height = _pathBox.Height + buttons.Height + top.Padding.Vertical;
+                if (top.Height != height) top.Height = height;
+            };
+            buttons.SizeChanged += (s, e) => fitToolbar();
+            _pathBox.SizeChanged += (s, e) => fitToolbar();
+            fitToolbar();
 
             _list = new ListView
             {

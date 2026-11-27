@@ -415,6 +415,23 @@ def main():
                   (n.get("name") or "?", n.get("text", ""), hx, vy))
         print("  info: 按钮绘制框受检=%d（包含禁用态）" % faces)
 
+        # R19: 同父按钮的可见底色之间至少 4 逻辑像素，不用 Margin 属性代替实际间隔。
+        for group in by_parent.values():
+            buttons = [n for n, _, _ in group if av.get(id(n), False) and n.get("type") == "AntdUI.Button"]
+            for i, a in enumerate(buttons):
+                for b in buttons[i + 1:]:
+                    ra, rb = a.get("drawRect", {}), b.get("drawRect", {})
+                    ax, ay = a["abs"]["x"] + ra.get("x", 0), a["abs"]["y"] + ra.get("y", 0)
+                    bx, by = b["abs"]["x"] + rb.get("x", 0), b["abs"]["y"] + rb.get("y", 0)
+                    aw, ah, bw, bh = ra.get("w", 0), ra.get("h", 0), rb.get("w", 0), rb.get("h", 0)
+                    if min(ay + ah, by + bh) - max(ay, by) > min(ah, bh) / 2:
+                        gap = max(ax, bx) - min(ax + aw, bx + bw)
+                    elif min(ax + aw, bx + bw) - max(ax, bx) > min(aw, bw) / 2:
+                        gap = max(ay, by) - min(ay + ah, by + bh)
+                    else:
+                        continue
+                    check(gap >= 4 * scale - 1, "按钮可见间隔 %s / %s = %.1f dev" % (a.get("text"), b.get("text"), gap))
+
         hit_min_d = 24.0 * scale
         hit_total = 0
         hit_nodes = 0
@@ -602,7 +619,7 @@ def main():
             if any(k in n.get("type", "") for k in NON_HIT):
                 continue  # 展示型控件无触击语义（CI 321 实测：Label 24x16/27x16/18x16 全属此类）
             # NumericUpDown 的内部箭头属于复合输入框；独立目标按宿主输入框量。
-            if n.get("type") == "System.Windows.Forms.UpDownBase+UpDownButtons":
+            if n.get("type") in ("System.Windows.Forms.UpDownBase+UpDownButtons", "System.Windows.Forms.UpDownBase+UpDownEdit"):
                 owner = next((p for c, _, _, p, _ in all_nodes if c is n), None)
                 a = (owner or n).get("abs", {})
             else:

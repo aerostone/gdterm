@@ -61,10 +61,10 @@ namespace Gdterm.UI.Forms
             };
             _expandTabs = new AntdUI.Checkbox { Text = L10n.T("将 Tab 展开为 4 个空格"), AutoSize = true };
             _sendLines = new AntdUI.Checkbox { Text = L10n.T("逐行发送并附加回车"), AutoSize = true };
-            _newLine = new AntdUI.Select { Width = DpiScale.V(this, 130) };
+            _newLine = new AntdUI.Select { Height = FormFontPolicy.FieldHeight(this), Width = DpiScale.V(this, 130) };
             _newLine.Items.AddRange(new object[] { L10n.T("保留换行"), "CR", "LF", "CRLF" });
             _newLine.SelectedIndex = 0;
-            _interval = new AntdUI.InputNumber { Minimum = 0, Maximum = 2000, Increment = 25, Value = 100, Width = DpiScale.V(this, 80) };
+            _interval = new AntdUI.InputNumber { Height = FormFontPolicy.FieldHeight(this), Minimum = 0, Maximum = 2000, Increment = 25, Value = 100, Width = DpiScale.V(this, 80) };
             _interval.Enabled = false;
             _sendLines.CheckedChanged += (s, e) => _interval.Enabled = _sendLines.Checked;
 

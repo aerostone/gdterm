@@ -220,7 +220,7 @@ namespace Gdterm.UI.Services
         /// <summary>普通对话框页脚：8px 按钮间隙，16px 两侧留白，8px 上下留白。</summary>
         public static void StyleDialogActions(Control host, Control strip)
         {
-            strip.Padding = DpiScale.Pad(host, 12, 8, 12, 8);
+            strip.Padding = DpiScale.Pad(host, 12, 6, 12, 6);
             strip.Margin = Padding.Empty;
             if (string.IsNullOrEmpty(strip.Name)) strip.Name = "DialogActions";
             var flow = strip as FlowLayoutPanel;
@@ -234,7 +234,7 @@ namespace Gdterm.UI.Services
             {
                 var button = c as AntdUI.Button;
                 if (button == null) continue;
-                button.Margin = DpiScale.Pad(host, 4, 0, 4, 0);
+                button.Margin = DpiScale.Pad(host, 4, 2, 4, 2);
                 SizeActionButton(host, button, 12, 5, dialogAction: true);
             }
         }

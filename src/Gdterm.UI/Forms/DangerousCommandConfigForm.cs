@@ -667,7 +667,8 @@ namespace Gdterm.UI.Forms
             // 字体驱动 + DPI 缩放布局（修复：固定像素步进在大字号/高 DPI 下控件重叠）
             int clientW = DpiScale.V(this, 470);
             int labelX = DpiScale.V(this, 18);
-            int boxX = DpiScale.V(this, 110);
+            int boxX = Math.Max(DpiScale.V(this, 110), labelX +
+                FormFontPolicy.MeasureTextWidth(L10n.T("规则名称"), Font, this) + DpiScale.V(this, 24));
             int boxW = clientW - boxX - labelX;
             int fieldH = FormFontPolicy.FieldHeight(this);
             int rowH = fieldH + DpiScale.V(this, 10);

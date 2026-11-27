@@ -35,6 +35,7 @@ namespace Gdterm.UI.Services
                 dialog.MaximizeBox = false;
                 dialog.MinimizeBox = false;
                 dialog.BackColor = GdtermColorTable.Surface;
+                dialog.Font = FormFontPolicy.UiFont();
 
                 var label = new AntdUI.Label {
                     Text = (action ?? L10n.T("操作")) + L10n.T("需要验证主密码："),
@@ -47,7 +48,7 @@ namespace Gdterm.UI.Services
                 int fieldH = FormFontPolicy.FieldHeight(dialog);
                 var pwdBox = new AntdUI.Input {
                     Location = DpiScale.P(dialog, 15, 45),
-                    Size = DpiScale.S(dialog, 335, fieldH),
+                    Size = new Size(DpiScale.V(dialog, 335), fieldH),
                     // 审计 C3：原先把 DPI 因子乘进 pt 字号（150% 下 11pt→16.5pt）；改走等宽策略
                     Font = FormFontPolicy.MonoFont(1.22f),
                     UseSystemPasswordChar = true,
@@ -58,13 +59,13 @@ namespace Gdterm.UI.Services
                     Text = "",
                     Font = Services.FormFontPolicy.UiFont(),
                     ForeColor = GdtermColorTable.Danger,
-                    Location = DpiScale.P(dialog, 15, 78),
-                    Size = DpiScale.S(dialog, 335, 20)
+                    Location = new Point(DpiScale.V(dialog, 15), pwdBox.Bottom + DpiScale.V(dialog, 6)),
+                    Size = new Size(DpiScale.V(dialog, 335), FormFontPolicy.LineBox(dialog))
                 };
                 var okBtn = new AntdUI.Button {
                     Text = L10n.T("验证"),
                     Size = DpiScale.S(dialog, 80, 32),
-                    Location = DpiScale.P(dialog, 270, 105),
+                    Location = new Point(DpiScale.V(dialog, 270), errorLabel.Bottom + DpiScale.V(dialog, 8)),
                     // 隐式 Default 钮忽略 BackColor（深字深底隐形，见 509df1b）→ 显式 Primary
                     Type = AntdUI.TTypeMini.Primary
                 };
@@ -85,7 +86,7 @@ namespace Gdterm.UI.Services
                 var cancelBtn = new AntdUI.Button {
                     Text = L10n.T("取消"),
                     Size = DpiScale.S(dialog, 80, 32),
-                    Location = DpiScale.P(dialog, 185, 105),
+                    Location = new Point(DpiScale.V(dialog, 185), errorLabel.Bottom + DpiScale.V(dialog, 8)),
                     DialogResult = DialogResult.Cancel,
                     BackColor = GdtermColorTable.Surface2,
                     ForeColor = GdtermColorTable.Foreground

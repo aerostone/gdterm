@@ -45,6 +45,7 @@ namespace Gdterm.UI
             // 不要再调用 SetProcessDPIAware —— 那会和 manifest 冲突，且让 WinForms 再做一次手工缩放。
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
+            Gdterm.Tools.ToolPanelHelper.DpiFactor = Gdterm.UI.Services.DpiScale.Factor;
 
             // AntdUI 全局初始化：暗色模式。主色在加载用户主题后设置，确保两套控件使用同一 token。
             // 新 UI 逐步接入 AntdUI 控件；存量原生窗体不受影响（两套体系分区共存）。

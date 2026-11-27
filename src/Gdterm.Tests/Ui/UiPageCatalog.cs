@@ -86,6 +86,7 @@ namespace Gdterm.Tests.Ui
         /// <summary>侧栏面板（宿主 360×480 侧栏几何）。</summary>
         public static List<UiPage> Panels()
         {
+            Gdterm.Tools.ToolPanelHelper.DpiFactor = Gdterm.UI.Services.DpiScale.Factor;
             var list = new List<UiPage>();
             Add(list, "command-history", "表格/空态", PanelEmptyExpect.Visible,
                 t => new Gdterm.UI.Controls.CommandHistoryPanel(
