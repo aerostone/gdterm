@@ -40,7 +40,7 @@ before_build:
 # build 阶段转 ps+Tee：原生 build 步骤的失败输出只进（已 404 的）控制台日志，
 # 转成脚本后 build.log 落盘、on_failure 推产物——证据先于宣判（与 smoke 同哲学）。
 # 单配置单平台，原 parallel:true 无实际收益，放弃无损失。
-build:
+build_script:
   - ps: |
       msbuild gdterm.sln /p:Configuration=$env:CONFIGURATION /p:Platform="Any CPU" /v:m *>&1 | Tee-Object -FilePath build.log
       if ($LASTEXITCODE -ne 0) { Push-AppveyorArtifact (Join-Path $PWD 'build.log') -FileName 'build.log' 2>$null; throw "Build failed exit=$LASTEXITCODE (build.log uploaded)" }
