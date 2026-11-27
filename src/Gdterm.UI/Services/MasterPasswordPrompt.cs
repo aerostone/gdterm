@@ -44,10 +44,11 @@ namespace Gdterm.UI.Services
                     Location = DpiScale.P(dialog, 15, 15),
                     Size = DpiScale.S(dialog, 340, 25)
                 };
+                label.Height = FormFontPolicy.LineBox(label.Font, dialog) + DpiScale.V(dialog, 8);
                 // 高度走 fieldH 口径（审计 F4：原 28px 硬编码既低于全仓 ≥38 地板，大字号下裁字）
                 int fieldH = FormFontPolicy.FieldHeight(dialog);
                 var pwdBox = new AntdUI.Input {
-                    Location = DpiScale.P(dialog, 15, 45),
+                    Location = new Point(DpiScale.V(dialog, 15), label.Bottom + DpiScale.V(dialog, 6)),
                     Size = new Size(DpiScale.V(dialog, 335), fieldH),
                     // 审计 C3：原先把 DPI 因子乘进 pt 字号（150% 下 11pt→16.5pt）；改走等宽策略
                     Font = FormFontPolicy.MonoFont(1.22f),

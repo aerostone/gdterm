@@ -668,8 +668,17 @@ namespace Gdterm.Tests.Ui
             // 鼠标停在上一窗口坐标会随机触发按钮/表格悬停色，截图统一采集静止态。
             Cursor.Position = new Point(Screen.PrimaryScreen.WorkingArea.Right - 1, Screen.PrimaryScreen.WorkingArea.Bottom - 1);
             Application.DoEvents();
+            var pending = new Stack<Control>();
+            pending.Push(f);
+            while (pending.Count > 0)
+            {
+                var control = pending.Pop();
+                if (control.IsHandleCreated) SendMessage(control.Handle, 0x02A3, IntPtr.Zero, IntPtr.Zero); // WM_MOUSELEAVE
+                foreach (Control child in control.Controls) pending.Push(child);
+            }
             Thread.Sleep(200);
             Application.DoEvents();
+            f.Refresh();
             // AntdUI 自绘控件 DrawToBitmap 抓不到内容，必须用 Win32 PrintWindow 抓真实渲染。
             // PW_CLIENTONLY(0x1): 只抓客户区；失败时回退 DrawToBitmap（至少有窗口框架）。
             try
@@ -696,6 +705,9 @@ namespace Gdterm.Tests.Ui
             }
             Console.WriteLine("  shot: " + path);
         }
+
+        [System.Runtime.InteropServices.DllImport("user32.dll")]
+        private static extern IntPtr SendMessage(IntPtr hwnd, uint message, IntPtr wParam, IntPtr lParam);
 
         [System.Runtime.InteropServices.DllImport("user32.dll")]
         private static extern bool PrintWindow(IntPtr hwnd, IntPtr hdcBlt, uint nFlags);

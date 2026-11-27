@@ -473,8 +473,9 @@ def r16(path, lines):
     for i, line in enumerate(lines):
         if AUTOSIZE_BTN_RE.search(line) and not is_comment(line):
             # 一行式（整块写在一行）
-            if "AutoSize = true" in line and "DpiScale" in line and "MinimumSize" not in line:
-                yield i + 1, snippet(line)
+            if "};" in line:
+                if "AutoSize = true" in line and "DpiScale" in line and "MinimumSize" not in line:
+                    yield i + 1, snippet(line)
                 block_start = None
             else:
                 block_start = i
