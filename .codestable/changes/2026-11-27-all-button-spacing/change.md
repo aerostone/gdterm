@@ -11,6 +11,7 @@ risk:
   reasons: [shared_empty_state]
 contract:
   include:
+  - .github/workflows/ci.yml
   - src/Gdterm.UI/**
   - src/Gdterm.Tools/**
   - src/Gdterm.Tests/**

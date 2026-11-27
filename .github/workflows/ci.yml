@@ -97,6 +97,7 @@ jobs:
 
       # UI 冒烟：起窗体截图 + 断言（要桌面会话，GHA windows-latest 有）
       - name: UI smoke
+        id: ui_smoke
         shell: pwsh
         # 看门狗在 Gdterm.Tests 里（120s 无进度即退出 3 并写 progress.log）；
         # 这层是兜底：进程被 Windows 弹窗/模态卡死时，PowerShell 这层也不能陪它等半小时。
@@ -123,6 +124,7 @@ jobs:
       # 阈值是按噪声实测定的（同镜像两次运行噪声 ≤0.002，真实外观变更 ≥0.13）。
       # 改了外观就跑 --write 更新基线并在 PR 里 review 那份 diff。
       - name: L3 pixel fingerprint gate
+        if: ${{ !cancelled() && steps.ui_smoke.outcome == 'success' }}
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Continue'
@@ -136,6 +138,7 @@ jobs:
       # （--dpi-factor 让逻辑阈值随该格系数走），再由 ui-matrix-check 做反空转比对：
       # 条件没生效（曲线全平）也判红——否则"跑了 8 格全绿"可能只是同一张图跑 8 遍。
       - name: UI matrix gate (DPI x font x theme)
+        if: ${{ !cancelled() && steps.ui_smoke.outcome == 'success' }}
         shell: pwsh
         timeout-minutes: 12
         run: |

@@ -312,6 +312,8 @@ namespace Gdterm.Tests.Ui
                 Console.WriteLine("  dialogs done");
             });
 
+            RunCase("ButtonEditors", () => ButtonEditorsSmoke.Run(outDir, Check));
+
             // 6) 状态轴（docs/UI-UX-VERIFICATION.md §4.1 遗留缺口①）：禁用/错误/忙碌/窄窗。
             // 此前全仓 dump 只有"满/默认态"，用户真报的 bug 全发生在其余状态。
             RunCase("StateAxis", () =>

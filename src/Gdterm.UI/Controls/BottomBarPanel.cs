@@ -448,6 +448,9 @@ namespace Gdterm.UI.Controls
         private void RefreshCommands()
         {
             _cmdHost.Controls.Clear();
+            // 先确定左右停靠区，再用真正剩余宽度安排快捷键。
+            _groupBtn.Text = _isTmux ? (_tmuxPinned ? "tmux 📌 ▾" : "tmux ▾") : (_activeGroup ?? L10n.T("全部")) + " ▾";
+            _pinBtn.Visible = _isTmux;
             int dpi = DpiScale.V(this, 1);
             int x = DpiScale.V(this, 6);
             int avail = Math.Max(0, _cmdHost.ClientSize.Width - DpiScale.V(this, 8));
@@ -481,10 +484,12 @@ namespace Gdterm.UI.Controls
                 foreach (var cmd in filtered)
                 {
                     var btn = CreateCommandButton(cmd);
-                    int need = x + FittedWidth(btn) + DpiScale.V(this, 8);
-                    if (need > avail && filtered.Count > 1)
+                    int reserve = FittedWidth("…", btn.Font, 10, Padding.Empty) + DpiScale.V(this, 12);
+                    int need = x + FittedWidth(btn) + reserve;
+                    if (need > avail)
                     {
                         // 溢出：收进「…」菜单（对齐原 QuickBarPanel 模式），不裁剪
+                        btn.Dispose();
                         x = PlaceMoreButton(x, dpi, filtered.SkipWhile(c => !ReferenceEquals(c, cmd)).ToList());
                         break;
                     }
@@ -512,11 +517,7 @@ namespace Gdterm.UI.Controls
                 }
             }
 
-            // 分组按钮：同样绕开 AntdUI AutoSize（它不看 Padding），显式按实测文字宽预留
-            _groupBtn.AutoSize = false;
-            int gw = FittedWidth(_groupBtn);
-            _groupBtn.MinimumSize = new Size(gw, 0);
-            _groupBtn.Width = gw;
+
         }
 
         private Padding AddButtonPadding()
@@ -716,7 +717,8 @@ namespace Gdterm.UI.Controls
                 if (slots[i] is TmuxKey)
                 {
                     var key = (TmuxKey)slots[i];
-                    if (x + FittedWidth(key.Label, keyFont, 6, TmuxKeyPadding()) > avail) break; // 从此键起溢出
+                    if (x + FittedWidth(key.Label, keyFont, 6, TmuxKeyPadding())
+                        + FittedWidth("…", keyFont, 10, Padding.Empty) + DpiScale.V(this, 12) > avail) break; // 从此键起溢出
                     x = PlaceControl(MakeTmuxKeyButton(key, pfx, keyFont), x, dpi, 6);
                 }
                 else
