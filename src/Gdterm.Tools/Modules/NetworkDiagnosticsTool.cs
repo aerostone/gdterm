@@ -24,7 +24,7 @@ namespace Gdterm.Tools.Modules
     /// </summary>
     public class NetworkDiagnosticsTool : IToolModule
     {
-        private NetworkDiagnosticsConfig _config;
+        private NetworkDiagnosticsConfig _config = new NetworkDiagnosticsConfig();
         private Process _current;
         private bool _running;
 
@@ -184,7 +184,8 @@ namespace Gdterm.Tools.Modules
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White,
-                Margin = new Padding(0)
+                Padding = new Padding(12, 5, 12, 5),
+                Margin = new Padding(4)
             };
             btn.Click += (s, e) => { try { onClick(); } catch (Exception) { /* 按钮回调内部已各自兜底，这里只防炸 UI 线程 */ } };
             return btn;

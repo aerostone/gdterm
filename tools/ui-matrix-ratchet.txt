@@ -42,3 +42,8 @@ sftp-permission
 setup-wizard
 setup-password
 connection-login
+bottom-bar-tmux
+file-pane
+ai-chat
+tool-network
+tool-action

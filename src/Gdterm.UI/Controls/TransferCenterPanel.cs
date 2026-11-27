@@ -150,8 +150,17 @@ namespace Gdterm.UI.Controls
 
             Controls.Add(_shell);
             Controls.Add(tip);
-            Controls.Add(deleteSel);
-            Controls.Add(clear);
+            var actions = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true,
+                Padding = DpiScale.Pad(this, 4, 4, 4, 4) };
+            foreach (var button in new[] { clear, deleteSel })
+            {
+                button.Dock = DockStyle.None;
+                button.Margin = DpiScale.Pad(this, 4, 2, 4, 2);
+                FormFontPolicy.SizeActionButton(this, button);
+                actions.Controls.Add(button);
+            }
+            Controls.Add(actions);
             Controls.Add(title);
             _empty = EmptyStateView.Attach(this, L10n.T("还没有传输记录"),
                 L10n.T("从 SFTP 面板上传/下载、Zmodem 收发的文件，完成后都会记在这里"),

@@ -76,6 +76,7 @@ namespace Gdterm.UI.Forms
                 Location = new Point(boxX + boxW - DpiScale.V(this, 90), y),
                 Size = new Size(DpiScale.V(this, 90), fieldH)
             };
+            browse.WaveSize = 0;
             browse.Click += (s, e) =>
             {
                 using (var dlg = new OpenFileDialog { Title = L10n.T("选择 PEM 私钥"), Filter = L10n.T("密钥文件|*.pem;*.key;id_rsa;id_ed25519;*.*|所有|*.*") })

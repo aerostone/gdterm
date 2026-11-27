@@ -54,7 +54,15 @@ namespace Gdterm.Tests.Ui
             sb.Append("\"bounds\":").Append(RectJson(c.Bounds)).Append(",");
             var button = c as AntdUI.Button;
             if (button != null)
+            {
                 sb.Append("\"drawRect\":").Append(RectJson(button.ReadRectangle)).Append(",");
+                using (var graphics = button.CreateGraphics())
+                {
+                    var text = graphics.MeasureString(button.Text ?? "", button.Font);
+                    sb.Append("\"faceTextW\":").Append((int)Math.Ceiling(text.Width)).Append(",");
+                    sb.Append("\"faceTextH\":").Append((int)Math.Ceiling(text.Height)).Append(",");
+                }
+            }
             // 绝对盒（屏幕坐标）
             Rectangle abs;
             try { abs = c.Parent == null ? c.Bounds : c.Parent.RectangleToScreen(c.Bounds); }

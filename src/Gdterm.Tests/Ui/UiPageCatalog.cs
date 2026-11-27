@@ -78,9 +78,8 @@ namespace Gdterm.Tests.Ui
     /// "矩阵里跑的分明是旧几何"这种假绿。目录化之后新增页面 = 加一条 <see cref="UiPage"/>。
     ///
     /// 不在这里登记的页面（附原因，便于将来补）：
-    ///   - sftp-dual-pane / file-pane：需要活的 SFTP 会话（ISftpClient），没有可用的轻量替身；
+    ///   - sftp-dual-pane：需要活的 SFTP 会话；file-pane 通过本地 provider 验证公共按钮。
     ///   - terminal：需要真实 PTY/渲染循环，属于 E2E（docs/UI-UX-VERIFICATION.md §5）；
-    ///   - ai-chat：需要 IAiAssistantService 完整替身（流式回调），成本高于本页布局价值。
     /// </summary>
     internal static class UiPageCatalog
     {
@@ -147,6 +146,21 @@ namespace Gdterm.Tests.Ui
                 t => new Gdterm.UI.Controls.ConnectionTreeControl(
                     t.Track(new Gdterm.Connections.ConnectionStoreJson(t.Path_("conns.json"))),
                     new FakeKeePassService(empty: true)));
+            Add(list, "bottom-bar-tmux", "终端快捷键/更多菜单", PanelEmptyExpect.Ignore, t =>
+            {
+                var bar = new Gdterm.UI.Controls.BottomBarPanel();
+                bar.SelectGroupExternal("__tmux__");
+                return bar;
+            });
+            Add(list, "file-pane", "文件操作按钮", PanelEmptyExpect.Ignore,
+                t => new Gdterm.UI.Controls.FilePaneControl(new Gdterm.UI.Controls.LocalFilePaneProvider()));
+            Add(list, "ai-chat", "发送/清空", PanelEmptyExpect.Ignore,
+                t => new Gdterm.UI.Controls.AiChatPanel(t.Track(new Gdterm.AI.AiAssistantService(
+                    new Gdterm.AI.Models.AiConfiguration())), null));
+            Add(list, "tool-network", "原生工具按钮", PanelEmptyExpect.Ignore,
+                t => t.Track(new Gdterm.Tools.Modules.NetworkDiagnosticsTool()).CreatePanel());
+            Add(list, "tool-action", "原生工具执行按钮", PanelEmptyExpect.Ignore,
+                t => Gdterm.Tools.ToolPanelHelper.CreateActionPanel("Button layout", "Offline layout fixture", null, null));
             Add(list, "terminal-search", "搜索条", PanelEmptyExpect.Ignore,
                 t => new Gdterm.UI.Controls.TerminalSearchBar());
             return list;

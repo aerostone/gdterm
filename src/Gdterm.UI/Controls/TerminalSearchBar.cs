@@ -124,6 +124,8 @@ namespace Gdterm.UI.Controls
                 (int)Math.Round(FormFontPolicy.LineBox(f, this, 1f) * 2.0));
             int w = Math.Max(DpiScale.V(this, 34),
                 FormFontPolicy.MeasureTextWidth(btn.Text, f, this) + DpiScale.V(this, 18));
+            btn.Padding = Padding.Empty;
+            btn.WaveSize = 0;
             btn.AutoSize = false;
             btn.Size = new Size(w, h);
             btn.Margin = new Padding(0, DpiScale.V(this, 2), DpiScale.V(this, 4), 0);

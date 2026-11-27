@@ -106,7 +106,7 @@ namespace Gdterm.UI.Forms
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
+                WrapContents = true,
                 BackColor = GdtermColorTable.Background,
                 Padding = new Padding(0, 0, 0, DpiScale.V(this, 4)),
                 Margin = new Padding(0)
@@ -190,7 +190,7 @@ namespace Gdterm.UI.Forms
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
+                WrapContents = true,
                 Padding = new Padding(0),
                 BackColor = GdtermColorTable.Background
             };
@@ -255,7 +255,7 @@ namespace Gdterm.UI.Forms
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.RightToLeft,
-                WrapContents = false,
+                WrapContents = true,
                 Padding = new Padding(0),
                 BackColor = GdtermColorTable.Background
             };

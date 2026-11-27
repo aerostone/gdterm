@@ -127,8 +127,17 @@ namespace Gdterm.UI.Controls
             deleteSel.Click += (s, e) => RemoveSelected();
 
             Controls.Add(_shell);
-            Controls.Add(deleteSel);
-            Controls.Add(_clear);
+            var actions = new FlowLayoutPanel { Dock = DockStyle.Bottom, AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true,
+                Padding = DpiScale.Pad(this, 4, 4, 4, 4) };
+            foreach (var button in new[] { _clear, deleteSel })
+            {
+                button.Dock = DockStyle.None;
+                button.Margin = DpiScale.Pad(this, 4, 2, 4, 2);
+                FormFontPolicy.SizeActionButton(this, button);
+                actions.Controls.Add(button);
+            }
+            Controls.Add(actions);
             Controls.Add(title);
 
             // 审计 C1：通知中心空态（“没有通知”和“没加载出来”此前长得一模一样）

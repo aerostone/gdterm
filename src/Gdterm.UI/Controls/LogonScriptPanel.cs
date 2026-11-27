@@ -212,7 +212,16 @@ namespace Gdterm.UI.Controls
             var btnAddStep = new AntdUI.Button { Text = "+", Location = DpiScale.P(form, 100, y), Size = new Size(DpiScale.V(this, 28), stepBtnH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Success };
             var btnDelStep = new AntdUI.Button { Text = "−", Location = DpiScale.P(form, 132, y), Size = new Size(DpiScale.V(this, 28), stepBtnH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Danger };
             var btnUp = new AntdUI.Button { Text = "↑", Location = DpiScale.P(form, 170, y), Size = new Size(DpiScale.V(this, 28), stepBtnH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
-            var btnDown = new AntdUI.Button { Text = "↓", Location = DpiScale.P(form, 202, y), Size = new Size(DpiScale.V(this, 28), stepBtnH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+            var btnDown = new AntdUI.Button { Text = "↓", Location = DpiScale.P(form, 208, y), Size = new Size(DpiScale.V(this, 32), stepBtnH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground };
+            int stepX = DpiScale.V(form, 100);
+            foreach (var button in new[] { btnAddStep, btnDelStep, btnUp, btnDown })
+            {
+                button.Padding = Padding.Empty;
+                button.WaveSize = 0;
+                button.Width = DpiScale.V(form, 32);
+                button.Left = stepX;
+                stepX += button.Width + DpiScale.V(form, 6);
+            }
             form.Controls.AddRange(new Control[] { btnAddStep, btnDelStep, btnUp, btnDown });
 
             var steps = new List<LogonStep>();

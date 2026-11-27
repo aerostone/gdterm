@@ -195,9 +195,9 @@ namespace Gdterm.UI.Services
                 int px = Math.Max(0, DpiScale.V(host, padX));
                 int py = Math.Max(0, DpiScale.V(host, padY));
                 // AntdUI 的 Padding 会缩进整个按钮绘制矩形，不是文字内边距。
-                // 页脚把内容留白计入尺寸，外部间隙由容器统一负责。
-                b.Padding = dialogAction ? Padding.Empty : new Padding(px, py, px, py);
-                if (dialogAction) b.WaveSize = 0;
+                // 所有角色均把内容留白计入尺寸，外部间隙由 Margin/容器负责。
+                b.Padding = Padding.Empty;
+                b.WaveSize = 0;
                 var f = b.Font ?? UiFont();
                 string text = string.IsNullOrEmpty(b.Text) ? " " : b.Text;
                 Size measured = TextRenderer.MeasureText(text, f, new Size(int.MaxValue, int.MaxValue),
@@ -205,11 +205,8 @@ namespace Gdterm.UI.Services
                 // 保留库内双侧 sps（字高 * .4）和文字量尺误差的空间。
                 int width = measured.Width + px * 2 + DpiScale.V(host, 2);
                 int height = designHeight > 0 ? Math.Max(DpiScale.V(host, designHeight), LineBox(f, host) + py * 2) : FieldHeight(host);
-                if (dialogAction)
-                {
-                    width += (int)Math.Ceiling(measured.Height * .8) + DpiScale.V(host, 8);
-                    height = Math.Max(height, measured.Height + py * 2 + DpiScale.V(host, 8));
-                }
+                width += (int)Math.Ceiling(measured.Height * .8) + DpiScale.V(host, 8);
+                height = Math.Max(height, measured.Height + py * 2 + DpiScale.V(host, designHeight > 0 ? 4 : 8));
                 b.Size = new Size(width, height);
             }
             EventHandler handler = (s, e) => Apply();

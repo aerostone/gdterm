@@ -52,6 +52,7 @@ namespace Gdterm.UI.Services
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground
             };
+            FormFontPolicy.SizeActionButton(host, sideClose);
             sideClose.Name = "SidePanelCloseButton";
             if (onCloseClick != null)
                 sideClose.Click += onCloseClick;

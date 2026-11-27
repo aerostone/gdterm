@@ -100,9 +100,10 @@ namespace Gdterm.Tools
             var runBtn = new Button
             {
                 Text = L10n.T("执行"),
-                Dock = DockStyle.Right,
-                Width = 80,
-                Height = 28,
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                Padding = new Padding(12, 5, 12, 5),
+                Margin = new Padding(4),
                 FlatStyle = FlatStyle.Flat,
                 BackColor = Color.FromArgb(0, 122, 204),
                 ForeColor = Color.White
@@ -123,7 +124,9 @@ namespace Gdterm.Tools
                 }
             };
 
-            var bar = new Panel { Dock = DockStyle.Top, Height = 32 };
+            var bar = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink, FlowDirection = FlowDirection.RightToLeft,
+                Padding = new Padding(4), WrapContents = true };
             bar.Controls.Add(runBtn);
 
             root.Controls.Add(output);

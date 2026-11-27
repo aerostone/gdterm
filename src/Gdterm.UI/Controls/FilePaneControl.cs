@@ -77,7 +77,7 @@ namespace Gdterm.UI.Controls
                 Dock = DockStyle.Fill,
                 AutoSize = true,
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
+                WrapContents = true,
                 Margin = new Padding(0)
             };
             buttons.Controls.AddRange(new Control[] { btnHome, btnUp, btnRefresh, btnMkdir, btnRename, btnDelete });

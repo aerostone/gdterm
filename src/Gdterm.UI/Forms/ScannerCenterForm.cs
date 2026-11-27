@@ -121,7 +121,7 @@ namespace Gdterm.UI.Forms
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 Padding = new Padding(pad, DpiScale.V(this, 6), pad, DpiScale.V(this, 6)),
-                WrapContents = false,
+                WrapContents = true,
                 BackColor = GdtermColorTable.Background
             };
             top.Controls.Add(FormFontPolicy.FitSingleLineLabel(new AntdUI.Label {
@@ -424,7 +424,7 @@ namespace Gdterm.UI.Forms
             int pad = DpiScale.V(this, 8);
             int wmiFieldH = FormFontPolicy.FieldHeight(this);
             _wmiPanel = new Panel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, Visible = false, BackColor = GdtermColorTable.Background };
-            var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, Padding = new Padding(pad, DpiScale.V(this, 4), pad, DpiScale.V(this, 4)), BackColor = GdtermColorTable.Background };
+            var flow = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Padding = new Padding(pad, DpiScale.V(this, 4), pad, DpiScale.V(this, 4)), BackColor = GdtermColorTable.Background };
             flow.Controls.Add(FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("主机:"),  ForeColor = GdtermColorTable.Muted, Anchor = AnchorStyles.Left, Margin = new Padding(DpiScale.V(this, 3), 0, DpiScale.V(this, 4), 0) }));
             _wmiHost = new AntdUI.Input { Width = DpiScale.V(this, 160), MinimumSize = new Size(0, wmiFieldH) };
             flow.Controls.Add(_wmiHost);

@@ -103,6 +103,7 @@ namespace Gdterm.UI.Services
                 dialog.AcceptButton = okBtn;
                 // ESC/取消双通道（审计 F4：原版只有 AcceptButton，安全验证框关不掉）
                 dialog.CancelButton = cancelBtn;
+                FormFontPolicy.MountDialogActions(dialog, okBtn, cancelBtn);
                 FormFontPolicy.Apply(dialog);
                 return dialog.ShowDialog(owner) == DialogResult.OK;
             }

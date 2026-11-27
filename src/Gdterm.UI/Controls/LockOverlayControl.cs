@@ -113,6 +113,7 @@ namespace Gdterm.UI.Controls
                 Size = new Size(DpiScale.V(this, 100), lockBtnH),
                 Type = AntdUI.TTypeMini.Primary,
             };
+            _unlockButton.WaveSize = 0;
             _unlockButton.Click += (s, e) => OnUnlock();
             _centerPanel.Controls.Add(_unlockButton);
 

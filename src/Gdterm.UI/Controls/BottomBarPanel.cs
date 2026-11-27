@@ -521,7 +521,7 @@ namespace Gdterm.UI.Controls
 
         private Padding AddButtonPadding()
         {
-            return new Padding(DpiScale.V(this, 7), DpiScale.V(this, 2), DpiScale.V(this, 7), DpiScale.V(this, 2));
+            return Padding.Empty;
         }
 
         /// <summary>溢出命令收进「…」弹出菜单（不裁剪不滚动）。</summary>
@@ -570,6 +570,8 @@ namespace Gdterm.UI.Controls
             // y 按宿主居中：_cmdHost 是 Fill 区，行高=栏高-两端留白，不再用整栏 Height 贴底算
             int hostH = _cmdHost.ClientSize.Height > 0 ? _cmdHost.ClientSize.Height : Height;
             int h = Math.Max(FittedHeight(c.Text, c.Font), DpiScale.V(this, 22));
+            var button = c as AntdUI.Button;
+            if (button != null) { button.WaveSize = 0; button.Padding = Padding.Empty; }
             c.AutoSize = false;
             c.MinimumSize = new Size(w, h);
             c.Size = new Size(w, h);
@@ -741,7 +743,7 @@ namespace Gdterm.UI.Controls
         /// <summary>tmux 键统一 Padding（放置与溢出判定同源）。</summary>
         private Padding TmuxKeyPadding()
         {
-            return new Padding(DpiScale.V(this, 6), DpiScale.V(this, 2), DpiScale.V(this, 6), DpiScale.V(this, 2));
+            return Padding.Empty;
         }
 
         private AntdUI.Button MakeTmuxKeyButton(TmuxKey k, string pfx, Font font)

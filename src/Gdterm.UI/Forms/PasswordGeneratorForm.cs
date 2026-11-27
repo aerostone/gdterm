@@ -107,6 +107,7 @@ namespace Gdterm.UI.Forms
                     Location = new Point(btnX, y),
                     Size = new Size(DpiScale.V(this, 48), fieldH)
                 };
+                btn.WaveSize = 0;
                 btn.Click += (s, e) => { _lengthSpinner.Value = lenCaptured; };
                 Controls.Add(btn);
                 btnX += DpiScale.V(this, 56);
@@ -157,6 +158,7 @@ namespace Gdterm.UI.Forms
                 Size = new Size(DpiScale.V(this, 150), resultH),
                 Type = AntdUI.TTypeMini.Primary
             };
+            generateBtn.WaveSize = 0;
             generateBtn.Click += (s, e) => GeneratePassword();
             Controls.Add(generateBtn);
 
@@ -165,6 +167,7 @@ namespace Gdterm.UI.Forms
                 Location = new Point(pad + DpiScale.V(this, 312), y + resultH + DpiScale.V(this, 8)),
                 Size = new Size(DpiScale.V(this, 150), fieldH)
             };
+            _copyBtn.WaveSize = 0;
             _copyBtn.Click += OnCopyClick;
             Controls.Add(_copyBtn);
             y += resultH + fieldH + DpiScale.V(this, 16);

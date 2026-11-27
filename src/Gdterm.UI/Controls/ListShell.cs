@@ -132,6 +132,8 @@ namespace Gdterm.UI.Controls
                 Margin = new Padding(0, 0, DpiScale.V(this, 6), 0),
                 Visible = false
             };
+            SortDirection.WaveSize = 0;
+            SortDirection.Padding = Padding.Empty;
             SortDirection.Click += (s, e) => { SortDirection.Text = SortDirection.Text == "↓" ? "↑" : "↓"; Apply(); };
             _bar.Controls.Add(SortDirection);
 

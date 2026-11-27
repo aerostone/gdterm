@@ -336,10 +336,13 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 Margin = new Padding(0, 0, 0, DpiScale.V(this, 6)),
-                Padding = new Padding(DpiScale.V(this, 12), 0, DpiScale.V(this, 12), 0),
+                Padding = Padding.Empty,
+                WaveSize = 0,
+                Name = "WelcomeConnectionRow",
                 Text = title + (string.IsNullOrEmpty(sub) ? "" : "   ·   " + sub),
                 Cursor = Cursors.Hand
             };
+            btn.ToolTipText2(btn.Text);
             btn.Click += (s, e) => { if (onClick != null) onClick(); };
             host.Controls.Add(btn);
             // F10 键盘导航行序：只收两个数据区的行（空态标签不是行）

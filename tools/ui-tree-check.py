@@ -397,6 +397,24 @@ def main():
         # 命中区（32 设备px）会假过 —— 高 dpi 只能要求更多设备像素，不能更少。
         dpi = tree.get("dpi", 96) or 96
         scale = (dpi / 96.0) * DPI_FACTOR
+        # R18: 检查实际绘制框与 GDI+ 文字，包含禁用按钮；不得把 Padding=0 当贴边。
+        # 6/2 是全按钮最低内容余量，页脚/主要入口另有更高的 C# 断言。
+        faces = 0
+        for n, _, _, _, _ in all_nodes:
+            if not av.get(id(n), False) or n.get("type") != "AntdUI.Button":
+                continue
+            face = n.get("drawRect")
+            if face is None or "faceTextW" not in n:
+                check(False, "按钮缺少绘制/文字度量: " + (n.get("text") or "?"))
+                continue
+            faces += 1
+            hx = (face["w"] - n["faceTextW"]) / 2.0
+            vy = (face["h"] - n["faceTextH"]) / 2.0
+            check(hx >= 6 * scale - 1 and vy >= 2 * scale - 1,
+                  "按钮绘制留白 %s[%s] 水平=%.1f 垂直=%.1f (每侧dev)" %
+                  (n.get("name") or "?", n.get("text", ""), hx, vy))
+        print("  info: 按钮绘制框受检=%d（包含禁用态）" % faces)
+
         hit_min_d = 24.0 * scale
         hit_total = 0
         hit_nodes = 0
@@ -567,17 +585,6 @@ def main():
                                                 int(24 * scale), int(34 * scale)))
                 except ValueError:
                     pass
-
-        # AntdUI.Button 全零 padding 告警
-        for n, _, _, _, _ in all_nodes:
-            t = n.get("type", "")
-            if "AntdUI" in t and "Button" in t:
-                # 固定尺寸钮靠库内 sps 居中（字高*0.4/侧），Padding=0 不贴边；只判 AutoSize 钮
-                if not sbool(n.get("autoSize")):
-                    continue
-                p = n.get("padding", {})
-                if p.get("l", 1) == 0 and p.get("r", 1) == 0:
-                    check(False, "按钮左右padding=0(贴边风险) %s[%s]" % (n.get("name") or "?", n.get("text", "")))
 
         # R1 最小触击目标：可见可交互控件 abs 宽高至少一维 >= 32 逻辑 px（按 dpi 换算设备像素）。
         # 口径：visible && enabled && 子节点为空（叶）&& 非线型（Divider h<=2 豁免沿用零尺寸口径）。

@@ -85,7 +85,7 @@ namespace Gdterm.UI.Forms
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
+                WrapContents = true,
                 Padding = new Padding(pad, DpiScale.V(this, 5), pad, DpiScale.V(this, 5)),
                 BackColor = GdtermColorTable.Background
             };
@@ -181,7 +181,7 @@ namespace Gdterm.UI.Forms
                 Dock = DockStyle.Fill,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                WrapContents = false,
+                WrapContents = true,
                 BackColor = GdtermColorTable.Background,
                 Margin = new Padding(0, 0, 0, DpiScale.V(this, 4))
             };
