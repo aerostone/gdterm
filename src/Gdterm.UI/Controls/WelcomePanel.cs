@@ -37,14 +37,16 @@ namespace Gdterm.UI.Controls
             BackColor = GdtermColorTable.Background;
             ForeColor = GdtermColorTable.Foreground;
             Font = Services.FormFontPolicy.UiFont(+0.5f);
+            AutoScroll = true;
 
             var root = new TableLayoutPanel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,
                 ColumnCount = 1,
                 RowCount = 5,
                 Padding = DpiScale.Pad(this, 40, 24, 40, 20)
             };
+            root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             // 动作行 AutoSize：改成可换行的 FlowLayoutPanel 后它自己报得出优选高
             //（旧的 AntdUI.StackPanel 优选高恒 0 → AutoSize 行压成 1px → 四个按钮画成 0 高）
@@ -136,7 +138,24 @@ namespace Gdterm.UI.Controls
             root.Controls.Add(MakeSection(L10n.T("最近连接"), out _recentHost), 0, 3);
             root.Controls.Add(MakeSection(L10n.T("收藏 / 书签"), out _favHost), 0, 4);
 
+            void FitPage()
+            {
+                int side = Math.Min(DpiScale.V(this, 40), Math.Max(DpiScale.V(this, 8),
+                    (ClientSize.Width - DpiScale.V(this, 280)) / 2));
+                var inset = DpiScale.Pad(this, 0, 24, 0, 20);
+                root.Padding = new Padding(side, inset.Top, side, inset.Bottom);
+                int width = Math.Max(1, root.ClientSize.Width - root.Padding.Horizontal);
+                int topRows = header.GetPreferredSize(new Size(width, 0)).Height
+                    + actions.GetPreferredSize(new Size(width, 0)).Height + (int)root.RowStyles[2].Height;
+                // 即使按钮折行，两个列表也至少各保留标题和一行内容；剩余部分由页面滚动。
+                int section = FormFontPolicy.LineBox(this) + FormFontPolicy.FieldHeight(this) + DpiScale.V(this, 16);
+                root.Height = Math.Max(ClientSize.Height, root.Padding.Vertical + topRows + section * 2);
+            }
             Controls.Add(root);
+            root.SizeChanged += (s, e) => FitPage();
+            SizeChanged += (s, e) => FitPage();
+            FontChanged += (s, e) => FitPage();
+            FitPage();
             // F10 键盘导航：↑/↓/Home/End 走可见行（环绕），Enter 打开连接；
             // 子控件未处理的键会沿父链冒泡到本面板（KeyPreview 仅 Form 有，UserControl 用冒泡）；
             // 焦点在过滤框内时只截 ↓（落入列表），不截输入与光标键
