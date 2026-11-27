@@ -74,11 +74,12 @@ namespace Gdterm.UI.Forms
             searchPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 40));
             _searchBox = new AntdUI.Input {
                 Dock = DockStyle.Fill,
+                MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this)),
                 PlaceholderText = L10n.T("搜索...")
             };
             _searchBox.TextChanged += (s, e) => ApplyFilter();
             // F10 排序列：标题/用户名/分组（会话级选择，不落盘——选择器是瞬态窗）
-            _sortCombo = new AntdUI.Select { Dock = DockStyle.Fill };
+            _sortCombo = new AntdUI.Select { Dock = DockStyle.Fill, MinimumSize = _searchBox.MinimumSize };
             _sortCombo.Items.Add(L10n.T("标题"));
             _sortCombo.Items.Add(L10n.T("用户名"));
             _sortCombo.Items.Add(L10n.T("分组"));
@@ -163,6 +164,11 @@ namespace Gdterm.UI.Forms
             Controls.Add(_emptyState);
             Controls.Add(btnPanel);
             Controls.Add(searchPanel);
+            // 继承窗体字体后再量：留白列没有空间时，四个按钮仍须完整可见。
+            int footerWidth = btnPanel.Padding.Horizontal + btnPanel.Controls.Cast<Control>()
+                .Sum(button => button.Width + button.Margin.Horizontal);
+            if (ClientSize.Width < footerWidth)
+                ClientSize = new Size(footerWidth, ClientSize.Height);
             AcceptButton = _selectButton;
             CancelButton = btnCancel;
         }

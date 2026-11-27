@@ -24,6 +24,7 @@ contract:
   - docs/FEATURE-MAP.md
   - docs/DESIGN-LANGUAGE.md
   - tools/ui-baseline/ui-smoke.json
+  - tools/ui-matrix-ratchet.txt
   - .codestable/tools/ui-coverage-registry.txt
   - .codestable/changes/2026-11-27-dialog-buttons-credentials/**
   exclude: []
@@ -81,6 +82,7 @@ contract:
 - Windows 51f53ba：构建、1017 单测、UI 冒烟、控件树全部通过。新增密码输入、凭据表单往返、连接创建/编辑/取消/写库失败断言通过。
 - 截图取回 /tmp/gdterm-ui-45957035074；核对向导欢迎/密码、凭据编辑、SSH 连接、AI/外观设置、OTP、凭据选择、SSH 密钥、SFTP 权限和主机密钥窗口。发现 AntdUI Padding 会缩进可见按钮，26156f1 改为尺寸留白、Padding=0、WaveSize=0；后续验证进行中。
 - UI 矩阵为 DpiScale 注入 + 真实字体轴，不等同真实跨屏 DPI 操作。
+- Windows 4b45f34：常规 UI 和 64 张像素基线通过。6 组矩阵产出 39 页 × 6 = 234 份；14pt 时凭据选择器表格中间的伸缩列挤到相邻按钮下。按按钮实测宽度设置最小客户宽度；搜索和排序输入也按实际字段高度撑开。
 
 ## 5. 验收结果
 进行中。Windows 冒烟和控件树通过，已人工审查更新后的按钮、密码页截图并更新对应基线；字体与布局比例矩阵待验证。

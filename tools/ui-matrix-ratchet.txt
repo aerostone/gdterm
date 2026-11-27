@@ -29,6 +29,7 @@ change-masterpwd
 dangerous-cmd
 keepass-picker
 keepass-unlock
+keepass-entry
 keepass-manager
 otp-manager
 add-otp
