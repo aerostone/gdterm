@@ -123,6 +123,7 @@ namespace Gdterm.UI.Forms
             Services.FormFontPolicy.SizeActionButton(this, closeButton, 10, 4);
             closeButton.Click += (s, e) => Close();
             bottomPanel.Controls.Add(closeButton);
+            Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(this, bottomPanel);
 
             Controls.Add(_tabControl);
             Controls.Add(bottomPanel);

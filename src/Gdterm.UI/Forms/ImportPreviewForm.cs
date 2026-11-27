@@ -117,6 +117,7 @@ namespace Gdterm.UI.Forms
             cancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
             bottom.Controls.Add(ok);
             bottom.Controls.Add(cancel);
+            Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(this, bottom);
 
             // 过滤后为空要给引导（列表型 UI 规则 R09）
             _empty = EmptyStateView.Attach(this, L10n.T("没有匹配的连接"),

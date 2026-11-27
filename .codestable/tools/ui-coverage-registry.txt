@@ -17,13 +17,13 @@ Forms/ChangeMasterPasswordForm.cs | dump:change-masterpwd |
 Forms/ConnectionDialog.cs | dump:connection-ssh,connection-rdp,connection-serial,fail-conn-emptyhost,fail-conn-recovered | 三协议 + 高级区展开 + 失败态（空主机拦截/改对后收回）
 Forms/DangerousCommandConfigForm.cs | dump:dangerous-cmd |
 Forms/KeePassEntryPicker.cs | dump:keepass-picker |
-Forms/KeePassManagerForm.cs | dump:keepass-manager,keepass-manager-empty | 有数据 / 空态两态
+Forms/KeePassManagerForm.cs | dump:keepass-manager,keepass-manager-empty,keepass-entry | 有数据 / 空态两态
 Forms/KeePassUnlockForm.cs | dump:keepass-unlock,fail-unlock-wrongpwd,fail-unlock-recovered | 密码错常驻提示（此前只有 2 秒 toast）
 Forms/PasswordGeneratorForm.cs | dump:pwd-generator |
 Forms/PasswordHealthForm.cs | dump:password-health |
 Forms/QuickCommandEditorForm.cs | dump:quickcmd-editor |
 Forms/ScannerCenterForm.cs | dump:scanner-center |
-Forms/SetupWizardForm.cs | dump:setup-wizard |
+Forms/SetupWizardForm.cs | dump:setup-wizard,setup-password |
 Forms/SshKeyManagerForm.cs | dump:sshkey-manager |
 Forms/SftpPermissionForm.cs | dump:sftp-permission | 唯一未进 dump 的窗体；建议补 Show 用例
 Forms/LogViewerForm.cs | dump:log-viewer | P1-3：文本+十六进制双视图；smoke 灌 tmp 日志目录锁文件列表/视图非空

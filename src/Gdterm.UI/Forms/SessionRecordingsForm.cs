@@ -244,6 +244,7 @@ namespace Gdterm.UI.Forms
             btnClose.Margin = new Padding(DpiScale.V(this, 8), 0, 0, 0);
             CancelButton = btnClose;   // ESC 关闭（与其它工具窗一致）
             rightFlow.Controls.Add(btnClose);
+            Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(this, rightFlow);
 
             bottom.Controls.Add(leftFlow);
             bottom.Controls.Add(rightFlow);

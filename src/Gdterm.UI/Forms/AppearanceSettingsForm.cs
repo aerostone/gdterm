@@ -251,6 +251,7 @@ namespace Gdterm.UI.Forms
 
             ClientSize = new Size(Math.Max(ClientSize.Width, clientW), Math.Max(ClientSize.Height, y + _fieldHeight + pad));
 
+            Gdterm.UI.Services.FormFontPolicy.MountDialogActions(this, _btnOk, _btnCancel, _btnReset, _btnImport, _btnExport);
             AcceptButton = _btnOk;
             CancelButton = _btnCancel;
             // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）

@@ -118,6 +118,7 @@ namespace Gdterm.UI.Forms
 
             ClientSize = new Size(clientW, y + fieldH + DpiScale.V(this, 24));
 
+            Gdterm.UI.Services.FormFontPolicy.MountDialogActions(this, _unlockButton, _cancelButton);
             AcceptButton = _unlockButton;
             CancelButton = _cancelButton;
             // 空密码时「解锁」置灰：原来点下去才弹「请输入密码」，属于事后报错

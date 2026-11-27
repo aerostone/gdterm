@@ -129,8 +129,10 @@ namespace Gdterm.UI.Forms
 
             leftFlow.Controls.Add(btnClose);
             leftFlow.Controls.Add(btnCopy);
+            Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(this, leftFlow);
             rightFlow.Controls.Add(btnAdd);
             rightFlow.Controls.Add(btnDelete);
+            FormFontPolicy.StyleDialogActions(this, rightFlow);
             bottom.Controls.Add(leftFlow);
             bottom.Controls.Add(rightFlow);
 

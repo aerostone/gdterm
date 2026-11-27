@@ -55,6 +55,7 @@ namespace Gdterm.UI.Forms
                 Padding = new Padding(DpiScale.V(this, 12), DpiScale.V(this, 4), DpiScale.V(this, 16), DpiScale.V(this, 12))
             };
             buttons.Controls.Add(_cancel);
+            Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(this, buttons);
             Controls.Add(buttons);
             Controls.Add(_status);
             CancelButton = _cancel;

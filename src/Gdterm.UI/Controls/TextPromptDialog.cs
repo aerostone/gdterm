@@ -98,6 +98,7 @@ namespace Gdterm.UI.Controls
             };
             footer.Controls.Add(ok);
             footer.Controls.Add(cancel);
+            Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(this, footer);
 
             Controls.Add(_input);
             Controls.Add(hintLabel);

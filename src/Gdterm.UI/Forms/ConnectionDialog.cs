@@ -30,6 +30,8 @@ namespace Gdterm.UI.Forms
         private AntdUI.Input _hostBox;
         private AntdUI.InputNumber _portBox;
         private AntdUI.Input _usernameBox;
+        private AntdUI.Input _loginPassword;
+        private Control _loginPasswordLabel;
         private AntdUI.Input _groupPathBox;
 
         // SSH 高级
@@ -257,7 +259,12 @@ namespace Gdterm.UI.Forms
             _hostBox.PlaceholderText = L10n.T("IP 或主机名，如 192.168.1.10");
             _portBox = AddRow(basicLayout, 3, L10n.T("端口"), new AntdUI.InputNumber { Minimum = 1, Maximum = 65535, Value = 22 });
             _usernameBox = AddRow(basicLayout, 4, L10n.T("用户名"), new AntdUI.Input());
-            _groupPathBox = AddRow(basicLayout, 5, L10n.T("分组"), new AntdUI.Input());
+            _loginPassword = AddRow(basicLayout, 5, L10n.T("登录密码"), new AntdUI.Input {
+                Name = "ConnectionLoginPassword", UseSystemPasswordChar = true,
+                PlaceholderText = L10n.T("可选；填写后存入密码库")
+            });
+            _loginPasswordLabel = basicLayout.GetControlFromPosition(0, 5);
+            _groupPathBox = AddRow(basicLayout, 6, L10n.T("分组"), new AntdUI.Input());
             _groupPathBox.PlaceholderText = L10n.T("如: Web/生产");
             topPanel.Controls.Add(basicLayout);
 
@@ -580,6 +587,7 @@ namespace Gdterm.UI.Forms
             btnPanel.Controls.Add(okBtn);      // RightToLeft：第一个在最右
             cancelBtn.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
             btnPanel.Controls.Add(cancelBtn);
+            Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(this, btnPanel);
 
             // Dock 顺序：后添加的先布局——Top 先钉住，Bottom 再钉住，Fill 吃剩余空间
             Controls.Add(_advancedHost);
@@ -782,6 +790,7 @@ namespace Gdterm.UI.Forms
             _secSerial.Visible = isSerial;
             if (_secProxy != null) _secProxy.Visible = isSsh;
             _domainBox.Enabled = isRdp;
+            RefreshLoginPasswordField();
             if (_advancedHost.Visible) _advancedHost.PerformLayout();
         }
 
@@ -934,7 +943,13 @@ namespace Gdterm.UI.Forms
         private bool CommitValidated()
         {
             string error = FirstValidationError(out Control culprit);
-            if (error == null) { SetError(null); return true; }
+            if (error == null)
+            {
+                SetError(null);
+                if (!SaveLoginCredential()) return false;
+                SaveToConfig();
+                return true;
+            }
 
             SetError(error);
             if (culprit != null && culprit.CanFocus) culprit.Focus();
@@ -1131,25 +1146,10 @@ namespace Gdterm.UI.Forms
 
         private void OnPickCredential(object sender, EventArgs e)
         {
-            if (_keepass == null)
-            {
-                AntdUI.Message.warn(this, L10n.T("密码库服务不可用。"));
-                return;
-            }
+            if (!EnsureVaultUnlocked()) return;
             // 一体化 change：未解锁不再死端警告“请先解锁密码库”（用户得自己去工具菜单解锁再回来），
             // 而是就地弹 KeePassUnlockForm（同 ProtocolTabOpener / ToolsDialogsLauncher 先例），
             // 解锁成功直接续开选择器。
-            if (!_keepass.IsUnlocked)
-            {
-                using (var unlock = new KeePassUnlockForm(_keepass))
-                {
-                    if (unlock.ShowDialog(this) != DialogResult.OK || !_keepass.IsUnlocked)
-                    {
-                        UpdateAutoMatchPreview(); // 解锁失败/取消后可能仍锁定，刷新提示文案
-                        return;
-                    }
-                }
-            }
             using (var picker = new KeePassEntryPicker(_keepass, BuildSeedEntryFromForm()))
             {
                 if (picker.ShowDialog(this) == DialogResult.OK && !string.IsNullOrEmpty(picker.SelectedEntryId))
@@ -1195,6 +1195,7 @@ namespace Gdterm.UI.Forms
         /// </summary>
         private void RefreshCredentialTitle()
         {
+            RefreshLoginPasswordField();
             var uuid = _credentialRefBox.Text;
             if (string.IsNullOrWhiteSpace(uuid))
             {
@@ -1226,6 +1227,48 @@ namespace Gdterm.UI.Forms
             {
                 _credentialTitleLabel.Text = L10n.T("已选 UUID: ") + (uuid.Length > 12 ? uuid.Substring(0, 12) + "…" : uuid);
                 _credentialTitleLabel.ForeColor = GdtermColorTable.Foreground;
+            }
+        }
+
+        private void RefreshLoginPasswordField()
+        {
+            string protocol = _protocolCombo.SelectedValue as string;
+            bool visible = protocol == "SSH" || protocol == "RDP";
+            bool bound = !string.IsNullOrEmpty(_credentialRefBox.Text);
+            _loginPassword.Visible = _loginPasswordLabel.Visible = visible;
+            _loginPassword.Enabled = !bound;
+            _loginPassword.PlaceholderText = bound ? L10n.T("使用所选凭据的密码") : L10n.T("可选；填写后存入密码库");
+            if (!visible || bound) _loginPassword.Text = string.Empty;
+        }
+
+        private bool EnsureVaultUnlocked()
+        {
+            if (_keepass == null) { SetError(L10n.T("密码库服务不可用。")); return false; }
+            if (_keepass.IsUnlocked) return true;
+            using (var unlock = new KeePassUnlockForm(_keepass))
+                return unlock.ShowDialog(this) == DialogResult.OK && _keepass.IsUnlocked;
+        }
+
+        private bool SaveLoginCredential()
+        {
+            if (string.IsNullOrEmpty(_loginPassword.Text) || !_loginPassword.Enabled) return true;
+            try
+            {
+                if (!EnsureVaultUnlocked()) return false;
+                var entry = BuildSeedEntryFromForm();
+                entry.Password = _loginPassword.Text;
+                if (!KeePassPasswordWarning.ConfirmSaveIfWeak(this, _keepass, entry.Password)) return false;
+                var created = _keepass.CreateEntry(entry);
+                if (created == null || string.IsNullOrEmpty(created.Id))
+                    throw new InvalidOperationException();
+                _credentialRefBox.Text = created.Id;
+                _loginPassword.Text = string.Empty;
+                return true;
+            }
+            catch (Exception)
+            {
+                SetError(L10n.T("凭据保存失败，请检查密码库后重试。"));
+                return false;
             }
         }
 

@@ -410,6 +410,7 @@ namespace Gdterm.UI.Controls
                 dlg.Controls.Add(lblConn);
                 dlg.Controls.Add(combo);
                 dlg.Controls.Add(ok);
+                Gdterm.UI.Services.FormFontPolicy.MountDialogActions(dlg, ok);
                 dlg.AcceptButton = ok;
                 dlg.ClientSize = new Size(pad * 2 + DpiScale.V(this, 310), y + btnH + DpiScale.V(this, 16));
 

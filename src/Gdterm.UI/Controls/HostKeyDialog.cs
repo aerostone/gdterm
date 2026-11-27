@@ -156,6 +156,7 @@ namespace Gdterm.UI.Controls
             strip.Controls.Add(reject);
             strip.Controls.Add(save);
             strip.Controls.Add(once);
+            Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(this, strip);
 
             // Dock=Top 的加入顺序：后加的在上面
             Controls.Add(prints);

@@ -270,6 +270,7 @@ namespace Gdterm.UI.Controls
             var btnOk = new AntdUI.Button { Text = L10n.T("保存"), Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(form, 340, y), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary, };
             var btnCancel = new AntdUI.Button { Text = L10n.T("取消"), Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(form, 430, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Surface2, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
+            Gdterm.UI.Services.FormFontPolicy.MountDialogActions(form, btnOk, btnCancel);
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
             // 客户区高度随行高自适应（原先固定 450 在大字号下裁剪）
             form.ClientSize = new Size(DpiScale.V(this, 550), y + btnH + DpiScale.V(this, 16));
@@ -319,6 +320,7 @@ namespace Gdterm.UI.Controls
             var btnOk = new AntdUI.Button { Text = L10n.T("添加"), Size = new Size(DpiScale.V(this, 70), stepBtnH), Location = new Point(DpiScale.V(this, 170), stepY), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary, };
             var btnCancel = new AntdUI.Button { Text = L10n.T("取消"), Size = new Size(DpiScale.V(this, 70), stepBtnH), Location = new Point(DpiScale.V(this, 250), stepY), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Surface2, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
+            Gdterm.UI.Services.FormFontPolicy.MountDialogActions(form, btnOk, btnCancel);
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
             form.ClientSize = new Size(DpiScale.V(this, 350), stepY + stepBtnH + DpiScale.V(this, 16));
 

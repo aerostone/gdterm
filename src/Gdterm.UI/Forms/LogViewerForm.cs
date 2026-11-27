@@ -265,6 +265,7 @@ namespace Gdterm.UI.Forms
             // 不绑 CancelButton 的话 Esc 什么都不做（冒烟门 R3 也是这么判的）。
             CancelButton = btnClose;
             rightFlow.Controls.Add(btnClose);
+            Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(this, rightFlow);
             bottom.Controls.Add(rightFlow);
 
             Controls.Add(split);

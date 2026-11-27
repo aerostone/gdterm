@@ -66,6 +66,9 @@ namespace Gdterm.UI.Services
             }
             return h;
         }
+        private static readonly ConditionalWeakTable<AntdUI.Button, EventHandler> ButtonSizeHooks =
+            new ConditionalWeakTable<AntdUI.Button, EventHandler>();
+
         private static readonly ConditionalWeakTable<Control, ControlEventHandler> AntdShapeHooks =
             new ConditionalWeakTable<Control, ControlEventHandler>();
 
@@ -175,49 +178,81 @@ namespace Gdterm.UI.Services
         /// 状态栏等紧凑场景传 22~24：仍然 DPI 感知，但不会被撑到输入框那么高。
         /// </param>
         public static void SizeActionButton(Control host, AntdUI.Button b, int padX = 10, int padY = 4,
-            int designHeight = 0)
+            int designHeight = 0, bool dialogAction = false)
         {
             if (b == null) return;
+            EventHandler old;
+            if (ButtonSizeHooks.TryGetValue(b, out old))
+            {
+                b.TextChanged -= old;
+                b.FontChanged -= old;
+                ButtonSizeHooks.Remove(b);
+            }
             b.AutoSize = false;
-            int px = Math.Max(0, DpiScale.V(host, padX));
-            int py = Math.Max(0, DpiScale.V(host, padY));
-            b.Padding = new Padding(px, py, px, py);
-
             void Apply()
             {
                 if (b.IsDisposed) return;
+                int px = Math.Max(0, DpiScale.V(host, padX));
+                int py = Math.Max(0, DpiScale.V(host, padY));
+                b.Padding = new Padding(px, py, px, py);
                 var f = b.Font ?? UiFont();
                 string text = string.IsNullOrEmpty(b.Text) ? " " : b.Text;
-                int tw;
-                try
+                Size measured = TextRenderer.MeasureText(text, f, new Size(int.MaxValue, int.MaxValue),
+                    TextFormatFlags.NoPadding | TextFormatFlags.SingleLine);
+                // AntdUI 在 Padding 之外还扣除双侧 sps（字高 * .4）和 wave/描边。
+                // 使用真实 GDI+ 宽度补齐与库内文字量尺的差异，避免窄钮换行。
+                int width = measured.Width + px * 2 + DpiScale.V(host, 2);
+                int height = designHeight > 0 ? Math.Max(DpiScale.V(host, designHeight), LineBox(f, host) + py * 2) : FieldHeight(host);
+                if (dialogAction)
                 {
-                    tw = TextRenderer.MeasureText(text, f, new Size(int.MaxValue, int.MaxValue),
-                        TextFormatFlags.NoPadding).Width;
+                    width += (int)Math.Ceiling(measured.Height * .8) + DpiScale.V(host, 8);
+                    height = Math.Max(height, measured.Height + py * 2 + DpiScale.V(host, 8));
                 }
-                catch { tw = text.Length * (int)Math.Ceiling(f.SizeInPoints * 96f / 72f); }
-                // +2 是字体 hinting 的余量：量出来的宽度与库内绘制宽度常差 1~2px，缺了会被判"文字被裁"
-                b.Width = tw + px * 2 + DpiScale.V(host, 2);
-                if (designHeight > 0)
-                {
-                    // 紧凑场景：设计高按 DPI 缩放，但不得小于"行高 + 上下留白"（否则文字被裁）
-                    int min = LineBox(f, host) + py * 2;
-                    b.Height = Math.Max(Math.Max(DpiScale.V(host, designHeight), min), 1);
-                }
-                else
-                {
-                    b.Height = FieldHeight(host);
-                }
+                b.Size = new Size(width, height);
             }
-
+            EventHandler handler = (s, e) => Apply();
+            ButtonSizeHooks.Add(b, handler);
+            b.TextChanged += handler;
+            b.FontChanged += handler;
             Apply();
-            // AutoSize 关掉后宽度是定值，文字后改（「显示/隐藏」「下一步 → 开始设置」
-            // 「⚠ 确认执行 ⚠」及倒计时）必须重量宽——否则长文案在固定宽里被裁。
-            b.TextChanged += (s, e) => Apply();
-            // 字体后改同理，而且更隐蔽：构造期按钮继承的还是父容器的当前字体，
-            // FormFontPolicy.Apply 在窗体末尾才把 14pt 落下来 —— 于是宽度是 9pt 量的、
-            // 画的时候是 14pt 的字。UI 字号调大到 14pt 后，这一族按钮整排被裁
-            //（CI 矩阵 f14 格实证：'打开终端' 需 88px 只有 81px）。
-            b.FontChanged += (s, e) => Apply();
+        }
+
+        /// <summary>普通对话框页脚：8px 按钮间隙，16px 两侧留白，8px 上下留白。</summary>
+        public static void StyleDialogActions(Control host, Control strip)
+        {
+            strip.Padding = DpiScale.Pad(host, 12, 8, 12, 8);
+            strip.Margin = Padding.Empty;
+            if (string.IsNullOrEmpty(strip.Name)) strip.Name = "DialogActions";
+            var flow = strip as FlowLayoutPanel;
+            if (flow != null)
+            {
+                flow.AutoSize = true;
+                flow.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+                flow.WrapContents = true;
+            }
+            foreach (Control c in strip.Controls)
+            {
+                var button = c as AntdUI.Button;
+                if (button == null) continue;
+                button.Margin = DpiScale.Pad(host, 4, 0, 4, 0);
+                SizeActionButton(host, button, 12, 5, dialogAction: true);
+            }
+        }
+
+        /// <summary>把旧绝对定位页脚迁到统一流式布局；参数按从右到左排列。</summary>
+        public static void MountDialogActions(Form form, params AntdUI.Button[] buttons)
+        {
+            int top = int.MaxValue;
+            foreach (var b in buttons) top = Math.Min(top, b.Top);
+            var strip = new FlowLayoutPanel { Dock = DockStyle.Bottom,
+                FlowDirection = FlowDirection.RightToLeft, BackColor = form.BackColor };
+            foreach (var b in buttons) strip.Controls.Add(b);
+            StyleDialogActions(form, strip);
+            form.Controls.Add(strip);
+            strip.PerformLayout();
+            if (top != int.MaxValue)
+                form.ClientSize = new Size(form.ClientSize.Width,
+                    Math.Max(form.ClientSize.Height, top + strip.PreferredSize.Height));
         }
 
         /// <summary>

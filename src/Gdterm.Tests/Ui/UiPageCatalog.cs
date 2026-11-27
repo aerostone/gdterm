@@ -175,6 +175,8 @@ namespace Gdterm.Tests.Ui
                 t => new Gdterm.UI.Forms.KeePassEntryPicker(new FakeKeePassService()));
             AddDialog(list, "keepass-unlock", "表单",
                 t => new Gdterm.UI.Forms.KeePassUnlockForm(new FakeKeePassService()));
+            AddDialog(list, "keepass-entry", "凭据表单/密码输入",
+                t => new Gdterm.UI.Forms.KeePassEntryEditForm());
             AddDialog(list, "keepass-manager", "表格/搜索",
                 t => new Gdterm.UI.Forms.KeePassManagerForm(new FakeKeePassService()));
             AddDialog(list, "otp-manager", "表格",

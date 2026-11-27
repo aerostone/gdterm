@@ -102,6 +102,7 @@ namespace Gdterm.UI.Controls
             // 底部行：RightToLeft 流序使先加入的靠右 —— 取消按钮在右、百分比在其左
             bottomFlow.Controls.Add(_percentLabel);
             bottomFlow.Controls.Add(_cancelButton);
+            Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(this, bottomFlow);
 
             // WinForms Dock z-order：先加 Fill，后加边缘（Top/Bottom）
             Controls.Add(barHost);

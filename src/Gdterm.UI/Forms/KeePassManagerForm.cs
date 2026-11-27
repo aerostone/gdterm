@@ -242,6 +242,7 @@ namespace Gdterm.UI.Forms
             };
             closeButton.Click += (s, e) => Close();
             bottomPanel.Controls.Add(closeButton);
+            Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(this, bottomPanel);
 
             // 空库引导：统一走 EmptyStateView（原来是手工 Panel+TLP+两按钮，≈80 行自绘空态；
             // 刷新在工具栏已有入口，这里只留「添加第一条」这一个下一步动作）
@@ -264,9 +265,10 @@ namespace Gdterm.UI.Forms
             CancelButton = closeButton;
         }
 
-        private static AntdUI.Button MakeToolBtn(string text, EventHandler onClick, Padding padding, Padding margin)
+        private AntdUI.Button MakeToolBtn(string text, EventHandler onClick, Padding padding, Padding margin)
         {
             var btn = new AntdUI.Button { Text = text, Type = AntdUI.TTypeMini.Default, Ghost = true, AutoSize = true, Padding = padding, Margin = margin };
+            FormFontPolicy.SizeActionButton(this, btn, 10, 4);
             btn.Click += onClick;
             return btn;
         }
@@ -414,15 +416,7 @@ namespace Gdterm.UI.Forms
                 {
                     try
                     {
-                        var entry = new KeePassEntry
-                        {
-                            Title = dlg.EntryTitle,
-                            Username = dlg.EntryUsername,
-                            Password = dlg.EntryPassword,
-                            Url = dlg.EntryUrl,
-                            Notes = dlg.EntryNotes,
-                            GroupPath = dlg.EntryGroupPath
-                        };
+                        var entry = dlg.CreateEntry();
                         if (!KeePassPasswordWarning.ConfirmSaveIfWeak(this, _keepassService, entry.Password))
                         {
                             _statusLabel.Text = L10n.T("已取消：密码强度警告未确认");
@@ -720,13 +714,24 @@ namespace Gdterm.UI.Forms
             if (_autoTypeBox != null) _autoTypeBox.Text = entry.AutoTypeSequence ?? "";
         }
 
+        internal KeePassEntry CreateEntry()
+        {
+            return new KeePassEntry {
+                Title = EntryTitle, Username = EntryUsername, Password = EntryPassword,
+                Url = EntryUrl, Notes = EntryNotes, GroupPath = EntryGroupPath,
+                Hostname = EntryHostname, Protocol = EntryProtocol, Port = EntryPort,
+                AutoTypeSequence = EntryAutoType
+            };
+        }
+
         private void InitializeComponent()
         {
             Text = L10n.T("添加密码条目");
             BackColor = GdtermColorTable.Background;
             ForeColor = GdtermColorTable.Foreground;
             Font = FormFontPolicy.UiFont(); // 布局前先设全局字体，RowStep 才能按真实字号算行距
-            ClientSize = DpiScale.S(this, 420, 470);
+            ClientSize = new Size(520, 640); // 窗体交给系统缩放；DpiScale 仅用于子控件。
+            AutoHandDpi = false;
             // 跟随字体/DPI 自动整体缩放（绝对定位在 11pt@144dpi 下会重叠/溢出）
             StartPosition = FormStartPosition.CenterParent;
             FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -776,11 +781,12 @@ namespace Gdterm.UI.Forms
             cancelButton.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
             btnPanel.Controls.Add(okButton);       // RightToLeft：第一个在最右
             btnPanel.Controls.Add(cancelButton);
+            Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(this, btnPanel);
 
             // ===== 字段表单 =====
             var grid = new TableLayoutPanel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,
                 ColumnCount = 2,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
@@ -796,7 +802,9 @@ namespace Gdterm.UI.Forms
             _passwordBox = new AntdUI.Input {
                 // 等宽语义（终端/密码字符对齐），字号跟随全局 UI 字号
                 Font = Services.FormFontPolicy.MonoFont(),
-                UseSystemPasswordChar = true
+                UseSystemPasswordChar = true,
+                Name = "CredentialPasswordInput", Dock = DockStyle.Fill,
+                MinimumSize = new Size(0, fieldH), Margin = Padding.Empty
             };
             var pwdCell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, AutoSize = true, Margin = new Padding(0) };
             pwdCell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -838,7 +846,9 @@ namespace Gdterm.UI.Forms
             grid.Controls.Add(_notesBox, 1, row);
             row++;
 
-            Controls.Add(grid);
+            var fields = new Panel { Name = "CredentialFields", Dock = DockStyle.Fill, AutoScroll = true };
+            fields.Controls.Add(grid);
+            Controls.Add(fields);
             Controls.Add(btnPanel);   // 后添加的先布局：Bottom 先钉住，Fill 吃剩余空间
 
             AcceptButton = okButton;

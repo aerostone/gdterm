@@ -103,6 +103,7 @@ namespace Gdterm.UI.Forms
             FormFontPolicy.SizeActionButton(this, btnClose, 12, 4);
             btnClose.Click += (s, e) => Close();
             rightFlow.Controls.Add(btnClose);
+            Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(this, rightFlow);
             bottom.Controls.Add(rightFlow);
 
             Controls.Add(_shell);

@@ -43,7 +43,34 @@ namespace Gdterm.Tests.Ui
             Show("add-otp", () => (Form)new AddOtpForm(), outDir, log, check);
             Show("pwd-generator", () => (Form)new PasswordGeneratorForm(), outDir, log, check);
             Show("quickcmd-editor", () => (Form)new QuickCommandEditorForm(), outDir, log, check);
-            Show("setup-wizard", () => (Form)new SetupWizardForm(security), outDir, log, check);
+            Show("setup-wizard", () => (Form)new SetupWizardForm(security), outDir, log, check, f => {
+                var next = GetField<AntdUI.Button>(f, "_nextButton");
+                var cancel = GetField<AntdUI.Button>(f, "_cancelButton");
+                check(next.Top == cancel.Top && next.Height == cancel.Height, "wizard-actions-aligned");
+                check(next.Padding == cancel.Padding && next.Margin == cancel.Margin, "wizard-actions-spacing");
+            });
+            Show("setup-password", () => {
+                var f = new SetupWizardForm(security);
+                f.GetType().GetMethod("ShowStep", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                    .Invoke(f, new object[] { 1 });
+                return f;
+            }, outDir, log, check);
+            Show("keepass-entry", () => new KeePassEntryEditForm(), outDir, log, check, f => {
+                var pwd = GetField<AntdUI.Input>(f, "_passwordBox");
+                var user = GetField<AntdUI.Input>(f, "_usernameBox");
+                check(pwd.Visible && pwd.Height >= FormFontPolicy.FieldHeight(f), "credential-password-visible-height");
+                check(pwd.Width >= user.Width / 2 && pwd.Parent.ClientRectangle.Contains(pwd.Bounds), "credential-password-usable-width");
+                check(pwd.UseSystemPasswordChar, "credential-password-masked");
+                var editor = (KeePassEntryEditForm)f;
+                var seed = new Gdterm.KeePass.Models.KeePassEntry { Title = "smoke", Hostname = "example.test", Port = 2222,
+                    Protocol = "SSH", Username = "tester", Password = "dummy-test-password", AutoTypeSequence = "{USERNAME}" };
+                editor.LoadFrom(seed);
+                var result = editor.CreateEntry();
+                check(result.Password == seed.Password && result.Hostname == seed.Hostname && result.Port == 2222
+                    && result.Protocol == "SSH" && result.AutoTypeSequence == seed.AutoTypeSequence, "credential-editor-roundtrip");
+                pwd.Text = string.Empty;
+            });
+            CheckConnectionPersistence(log, check);
             Show("sshkey-manager", () => (Form)new SshKeyManagerForm(keepass), outDir, log, check);
             Show("transfer-progress", () => (Form)new TransferProgressDialog("smoke"), outDir, log, check);
             // 回收站：先灌 2 条锁三列/按钮启用态，再开空态外的有数据态
@@ -153,6 +180,60 @@ namespace Gdterm.Tests.Ui
             try { Directory.Delete(tmp, true); } catch { }
             try { detector.Dispose(); } catch { }
             try { security.Dispose(); } catch { }
+        }
+
+        private static T GetField<T>(object instance, string name) where T : class
+        {
+            return instance.GetType().GetField(name, System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance).GetValue(instance) as T;
+        }
+
+        private static void CheckConnectionPersistence(Action<string> log, Action<bool, string> check)
+        {
+            foreach (bool fail in new[] { false, true })
+            {
+                var vault = new FakeKeePassService { FailCreate = fail };
+                using (var f = new ConnectionDialog((ConnectionConfig)null, vault))
+                {
+                    f.Show(); Application.DoEvents();
+                    GetField<AntdUI.Input>(f, "_hostBox").Text = "example.test";
+                    GetField<AntdUI.Input>(f, "_usernameBox").Text = "tester";
+                    var pwd = GetField<AntdUI.Input>(f, "_loginPassword");
+                    check(pwd.Visible && pwd.UseSystemPasswordChar && pwd.Width > 100, "ssh-login-password-discoverable");
+                    pwd.Text = "dummy-test-password";
+                    (f.AcceptButton as AntdUI.Button).PerformClick(); Application.DoEvents();
+                    if (fail)
+                    {
+                        check(f.Result == null && !f.IsDisposed && f.DialogResult != DialogResult.OK, "vault-failure-keeps-dialog-open");
+                        check(GetField<AntdUI.Label>(f, "_errorLabel").Visible, "vault-failure-visible");
+                    }
+                    else
+                    {
+                        check(f.Result != null && f.Result.Host == "example.test" && f.Result.Username == "tester", "connection-create-result");
+                        check(vault.CreatedEntry != null && vault.CreatedEntry.Password == "dummy-test-password"
+                            && f.Result != null && f.Result.CredentialRefId == vault.CreatedEntry.Id, "connection-password-vault-binding");
+                    }
+                }
+            }
+            var existing = new ConnectionConfig { Id = "existing", Host = "old.test", Protocol = ProtocolType.SSH,
+                Port = 22, CredentialRefId = "shared-credential" };
+            var service = new FakeKeePassService();
+            using (var f = new ConnectionDialog(existing, service))
+            {
+                f.Show(); Application.DoEvents();
+                check(!GetField<AntdUI.Input>(f, "_loginPassword").Enabled, "bound-password-not-overwritten");
+                GetField<AntdUI.Input>(f, "_hostBox").Text = "new.test";
+                (f.AcceptButton as AntdUI.Button).PerformClick(); Application.DoEvents();
+                check(f.Result != null && f.Result.Id == "existing" && f.Result.Host == "new.test"
+                    && f.Result.CredentialRefId == "shared-credential" && service.CreatedEntry == null, "connection-edit-keeps-credential");
+            }
+            using (var f = new ConnectionDialog((ConnectionConfig)null, service))
+            {
+                f.Show(); Application.DoEvents();
+                GetField<AntdUI.Input>(f, "_loginPassword").Text = "dummy-cancel-password";
+                (f.CancelButton as AntdUI.Button).PerformClick(); Application.DoEvents();
+                check(f.Result == null && service.CreatedEntry == null, "connection-cancel-no-write");
+            }
+            log("connection-persistence scenarios completed");
         }
 
         // 新建连接三协议各 dump 一次：反射展开高级区 + 切换协议（折叠态量不到 RDP/串口区真实尺寸）

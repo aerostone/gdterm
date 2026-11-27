@@ -156,6 +156,7 @@ namespace Gdterm.UI.Forms
             btnPanel.Controls.Add(btnManage, 1, 0);
             btnPanel.Controls.Add(btnCancel, 3, 0);
             btnPanel.Controls.Add(_selectButton, 4, 0);
+            Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(this, btnPanel);
 
             // Dock 顺序：后添加的先布局——Top 先钉住，Bottom 再钉住，Fill 吃剩余空间
             Controls.Add(_table);
@@ -285,19 +286,7 @@ namespace Gdterm.UI.Forms
                 if (_seed != null) dlg.LoadFrom(_seed);
                 if (dlg.ShowDialog(this) == DialogResult.OK)
                 {
-                    var entry = new KeePassEntry
-                    {
-                        Title = dlg.EntryTitle,
-                        Username = dlg.EntryUsername,
-                        Password = dlg.EntryPassword,
-                        Url = dlg.EntryUrl,
-                        GroupPath = dlg.EntryGroupPath,
-                        Hostname = dlg.EntryHostname,
-                        Port = dlg.EntryPort,
-                        Protocol = dlg.EntryProtocol,
-                        AutoTypeSequence = dlg.EntryAutoType,
-                        Notes = dlg.EntryNotes
-                    };
+                    var entry = dlg.CreateEntry();
                     try
                     {
                         if (!KeePassPasswordWarning.ConfirmSaveIfWeak(this, _keepass, entry.Password))

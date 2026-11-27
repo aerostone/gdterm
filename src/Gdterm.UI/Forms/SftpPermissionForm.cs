@@ -147,6 +147,7 @@ namespace Gdterm.UI.Forms
 
             int clientW = pad + labelW + DpiScale.V(this, 8) + 3 * (chkW + DpiScale.V(this, 8)) + pad;
             ClientSize = new Size(clientW, y + btnH + pad);
+            FormFontPolicy.MountDialogActions(this, btnOk, btnCancel);
 
             // 初值：rwx → 勾选 → octal 联动（initialOctal 是位值如 493，转十进制位 755 再存 OctalMode）
             FormFontPolicy.Apply(this);

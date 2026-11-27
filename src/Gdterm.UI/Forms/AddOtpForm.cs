@@ -117,6 +117,7 @@ namespace Gdterm.UI.Forms
             // RightToLeft 流：先加者在右，主操作（保存）居右，与 SetupWizard 一致
             bottom.Controls.Add(btnOk);
             bottom.Controls.Add(btnCancel);
+            Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(this, bottom);
             AcceptButton = btnOk;
             CancelButton = btnCancel;
 

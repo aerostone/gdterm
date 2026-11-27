@@ -272,6 +272,7 @@ namespace Gdterm.UI.Controls
 
             form.Controls.AddRange(new Control[] { lblName, txtName, lblPattern, txtPattern, chkRegex, chkCase, lblFg, txtFg, lblBg, txtBg, chkBold,
                 lblAction, cmbAction, lblArg, txtArg, lblCd, numCd, hintAction, btnOk, btnCancel });
+            Gdterm.UI.Services.FormFontPolicy.MountDialogActions(form, btnOk, btnCancel);
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
             // 客户区高度随行高自适应（原先固定 350 在大字号下裁剪）
             form.ClientSize = new Size(DpiScale.V(this, 420), y + btnH + DpiScale.V(this, 16));

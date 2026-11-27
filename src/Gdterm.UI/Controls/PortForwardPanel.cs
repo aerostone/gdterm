@@ -191,6 +191,7 @@ namespace Gdterm.UI.Controls
             var btnOk = new AntdUI.Button { Text = L10n.T("保存"), Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 200, y), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary, };
             var btnCancel = new AntdUI.Button { Text = L10n.T("取消"), Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 290, y), DialogResult = DialogResult.Cancel, BackColor = GdtermColorTable.Surface2, ForeColor = GdtermColorTable.Foreground };
             form.Controls.AddRange(new Control[] { btnOk, btnCancel });
+            Gdterm.UI.Services.FormFontPolicy.MountDialogActions(form, btnOk, btnCancel);
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
             // 客户区高度随行高自适应（原先固定 320 在大字号下裁剪）
             form.ClientSize = new Size(DpiScale.V(this, 400), y + btnH + DpiScale.V(this, 16));

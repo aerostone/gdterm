@@ -43,6 +43,7 @@ namespace Gdterm.UI.Forms
         public SetupWizardForm(ISecurityManager securityManager)
         {
             _securityManager = securityManager;
+            Font = FormFontPolicy.UiFont();
             InitializeComponent();
 
             // 全局 UI 字号（规范规则⑤）：向导在主窗体之前显示，直接接入 FormFontPolicy
@@ -68,8 +69,9 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = L10n.T("gdterm - 首次使用设置");
-            ClientSize = DpiScale.S(this, 560, 480);
-            MinimumSize = DpiScale.S(this, 520, 440);
+            ClientSize = new Size(560, 480); // 窗体交给系统缩放；DpiScale 仅用于子控件。
+            AutoHandDpi = false;
+            MinimumSize = new Size(520, 440);
             StartPosition = FormStartPosition.CenterScreen;
             FormBorderStyle = FormBorderStyle.FixedDialog;
             Resizable = false; // AntdUI 自绘边框忽略 FixedDialog 语义，显式禁边缘拉伸
@@ -166,6 +168,7 @@ namespace Gdterm.UI.Forms
             Services.FormFontPolicy.SizeActionButton(this, _cancelButton, 12, 5);
             _cancelButton.Click += (s, e) => Close();
             buttonPanel.Controls.Add(_cancelButton);
+            Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(this, buttonPanel);
             CancelButton = _cancelButton; // ESC 与按钮同路：均触发 FormClosing 确认，不绕过主密码未设防贪EXIT
 
             // —— 步骤内容区 ——

@@ -503,6 +503,7 @@ namespace Gdterm.UI.Controls
                 }
 
                 form.Controls.AddRange(new Control[] { lblName, txtName, lblCombo, chkCtrl, chkAlt, chkShift, cmbKey, lblType, cmbType, lblValue, txtValue, lblDesc, txtDesc, lblHint, btnOk, btnCancel });
+                Gdterm.UI.Services.FormFontPolicy.MountDialogActions(form, btnOk, btnCancel);
 
                 if (form.ShowDialog(this) != DialogResult.OK) return null;
 

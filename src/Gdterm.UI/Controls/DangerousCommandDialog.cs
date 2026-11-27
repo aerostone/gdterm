@@ -223,6 +223,7 @@ namespace Gdterm.UI.Controls
 
             buttonPanel.Controls.Add(_cancelButton);
             buttonPanel.Controls.Add(_confirmButton);
+            Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(this, buttonPanel);
 
             // 添加控件（Dock=Top 顺序：后加的在上，因此倒序加入）
             Controls.Add(_confirmLabel);

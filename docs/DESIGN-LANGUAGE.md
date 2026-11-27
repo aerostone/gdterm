@@ -167,7 +167,8 @@ SnippetSearchPanel）以及 TableLayoutPanel 表达不了的精确对齐；且�
 > 分支压根不读 `BackColor`，手写 `BackColor=Accent` 会画出「深字 + 暗底」的隐形按钮。
 
 - 按钮文字 2–6 字动词优先（"连接"、"解锁"、"删除"），禁止"确定/OK"类无语义文案做 Primary。
-- 按钮 `AutoSize` + 水平 Padding，高度由字体决定；`FlatStyle.Flat` + `BorderSize=0`。
+- 对话框底部操作用 `FormFontPolicy.StyleDialogActions`：按钮左右留白 12、上下 5，按钮间距 8、到窗体边缘 16，按 DPI 缩放。按钮随文字、字体重新量宽。旧绝对定位表单用 `MountDialogActions` 加入同一布局。
+- 工具栏动作使用 `SizeActionButton` 的紧凑尺寸；终端键条由自己的溢出菜单管理宽度，纯图标按钮保留独立点击区域。
 - 悬浮/按压用 `Hover/Pressed` token。
 
 ### 4.2 输入控件

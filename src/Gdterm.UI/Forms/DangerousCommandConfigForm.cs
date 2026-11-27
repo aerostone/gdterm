@@ -240,9 +240,10 @@ namespace Gdterm.UI.Forms
                 L10n.T("添加自定义规则"), (s2, e2) => OnAddRuleClick(s2, e2));
         }
 
-        private static AntdUI.Button MakeBtn(string text, EventHandler onClick, AntdUI.TTypeMini type, Padding padding, int margin)
+        private AntdUI.Button MakeBtn(string text, EventHandler onClick, AntdUI.TTypeMini type, Padding padding, int margin)
         {
             var btn = new AntdUI.Button { Text = text, Type = type, Ghost = type != AntdUI.TTypeMini.Primary, AutoSize = true, Padding = padding, Margin = new Padding(0, 0, margin, 0) };
+            FormFontPolicy.SizeActionButton(this, btn, 10, 4);
             btn.Click += onClick;
             return btn;
         }
@@ -763,6 +764,7 @@ namespace Gdterm.UI.Forms
 
             ClientSize = new Size(clientW, y + fieldH + DpiScale.V(this, 18));
 
+            Gdterm.UI.Services.FormFontPolicy.MountDialogActions(this, okButton, cancelButton);
             AcceptButton = okButton;
             CancelButton = cancelButton;
         }
@@ -851,6 +853,7 @@ namespace Gdterm.UI.Forms
 
             ClientSize = new Size(clientW, y + fieldH + pad);
 
+            Gdterm.UI.Services.FormFontPolicy.MountDialogActions(this, okButton, cancelButton);
             AcceptButton = okButton;
             CancelButton = cancelButton;
             Gdterm.UI.Services.FormFontPolicy.Apply(this);

@@ -75,7 +75,15 @@ namespace Gdterm.Tests.Ui
         public Task<bool> ChangeMasterPasswordAsync(string o, string n) => Task.FromResult(true);
         public void Lock() { }
         public CredentialPayload GetCredential(string id) => throw new NotSupportedException();
-        public KeePassEntry CreateEntry(KeePassEntry entry) => throw new NotSupportedException();
+        public KeePassEntry CreatedEntry { get; private set; }
+        public bool FailCreate { get; set; }
+        public KeePassEntry CreateEntry(KeePassEntry entry)
+        {
+            if (FailCreate) throw new System.IO.IOException("simulated vault write failure");
+            entry.Id = Guid.NewGuid().ToString("N");
+            CreatedEntry = entry;
+            return entry;
+        }
         public void UpdateEntry(KeePassEntry entry) => throw new NotSupportedException();
         public IList<string> ValidatePasswordStrength(string password) => new List<string>();
         public void DeleteEntry(string entryId) => throw new NotSupportedException();

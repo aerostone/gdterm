@@ -301,6 +301,7 @@ namespace Gdterm.UI.Controls
             var btnOk = new AntdUI.Button { Text = L10n.T("执行"), Type = AntdUI.TTypeMini.Primary, Size = new Size(DpiScale.V(form, 80), fieldH), Location = DpiScale.P(form, 190, 56), DialogResult = DialogResult.OK };
             var btnCancel = new AntdUI.Button { Text = L10n.T("取消"), Size = new Size(DpiScale.V(form, 80), fieldH), Location = DpiScale.P(form, 280, 56), DialogResult = DialogResult.Cancel };
             form.Controls.AddRange(new Control[] { lbl, txt, btnOk, btnCancel });
+            Gdterm.UI.Services.FormFontPolicy.MountDialogActions(form, btnOk, btnCancel);
             form.AcceptButton = btnOk;
             form.CancelButton = btnCancel;
             form.ClientSize = new Size(DpiScale.V(form, 400), DpiScale.V(form, 56) + fieldH + DpiScale.V(form, 16));

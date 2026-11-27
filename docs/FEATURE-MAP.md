@@ -140,7 +140,7 @@
 | 健康监控 `page.HealthMonitorPanel` | 终端 > 健康监控 | monitor | 100% (2/2) | — | health-monitor | 侧栏常驻 |
 | 高亮规则 `page.HighlightRulePanel` | 终端 > 高亮规则 | list | 100% (4/4) | — | highlight-rule | 侧栏常驻 |
 | 密码库条目选择 `page.KeePassEntryPicker` | 密码库 > 选择条目 | list | 100% (4/4) | — | keepass-picker | |
-| 密码库管理 `page.KeePassManagerForm` | 工具 > 密码库管理 | list | 100% (4/4) | — | keepass-manager,keepass-manager-empty | 有数据 / 空态两态 |
+| 密码库管理 `page.KeePassManagerForm` | 工具 > 密码库管理 | list | 100% (4/4) | — | keepass-manager,keepass-manager-empty,keepass-entry | 有数据 / 空态两态 |
 | 密码库解锁 `page.KeePassUnlockForm` | 密码库 > 解锁 | input | 100% (2/2) | — | keepass-unlock,fail-unlock-wrongpwd,fail-unlock-recovered | 密码错常驻提示（此前只有 2 秒 toast） |
 | 快捷键绑定 `page.KeyBindingPanel` | 工具 > 快捷键绑定 | list | 100% (3/3) | — | key-binding | 侧栏常驻（审计 C7-2 入 dump） |
 | 日志查看器 `page.LogViewerForm` | 帮助 > 日志查看器 | list | 100% (4/4) | — | log-viewer | P1-3：文本+十六进制双视图；smoke 灌 tmp 日志目录锁文件列表/视图非空 |
@@ -158,7 +158,7 @@
 | 敏感信息扫描 `page.SecretScanPanel` | 工具 > 敏感信息扫描 | list | 100% (4/4) | — | secret-scan,fail-scan-error | 侧栏常驻（审计 C7-2 入 dump）+ 扫描失败态（Danger 状态行） |
 | 书签 / 最近连接 `page.SessionBookmarksPanel` | 连接 > 书签 / 最近连接 | list | 100% (4/4) | — | bookmarks | 侧栏常驻 |
 | 会话录制中心 `page.SessionRecordingsForm` | 终端 > 会话录制中心… | list | 100% (4/4) | — | session-recordings | P1-2：smoke 灌一段 tmp 录制并驱动回放，断言重放字节真的画在网格上 |
-| 首次启动向导 `page.SetupWizardForm` | 首启 | wizard | 100% (3/3) | — | setup-wizard | |
+| 首次启动向导 `page.SetupWizardForm` | 首启 | wizard | 100% (3/3) | — | setup-wizard,setup-password | |
 | SFTP 双栏 `page.SftpDualPanePanel` | 文件 > SFTP 浏览器 | list | 100% (4/4) | — | — |
 | SFTP 权限修改 `page.SftpPermissionForm` | SFTP > 右键 > 权限 | input | 100% (2/2) | — | sftp-permission | 唯一未进 dump 的窗体；建议补 Show 用例 |
 | SSH 密钥管理 `page.SshKeyManagerForm` | 工具 > SSH 密钥管理 | input | 100% (2/2) | — | sshkey-manager | |

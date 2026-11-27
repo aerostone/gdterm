@@ -333,6 +333,7 @@ namespace Gdterm.UI.Services
                 form.Controls.Add(btnClose);
                 form.CancelButton = btnClose;
                 form.ClientSize = new Size(body.Right + pad, btnY + fieldH + pad);
+                FormFontPolicy.MountDialogActions(form, btnOpen, btnClose);
                 form.ShowDialog(_owner);
             }
         }

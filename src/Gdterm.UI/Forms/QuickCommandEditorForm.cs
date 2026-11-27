@@ -171,6 +171,7 @@ namespace Gdterm.UI.Forms
             // 客户区高度随内容自适应（修复：固定 560 在大字号/DPI 下裁剪底部按钮）
             ClientSize = new Size(clientW, y + fieldH + DpiScale.V(this, 20));
 
+            Gdterm.UI.Services.FormFontPolicy.MountDialogActions(this, btnOk, btnCancel);
             AcceptButton = btnOk;
             CancelButton = btnCancel;
             // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）

@@ -81,6 +81,7 @@ namespace Gdterm.UI.Forms
             var cancel = new AntdUI.Button { Text = L10n.T("取消"), Type = AntdUI.TTypeMini.Default, DialogResult = DialogResult.Cancel, AutoSize = true };
             buttons.Controls.Add(send);
             buttons.Controls.Add(cancel);
+            Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(this, buttons);
 
             var layout = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 3 };
             layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));

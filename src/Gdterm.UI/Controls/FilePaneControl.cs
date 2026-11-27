@@ -575,6 +575,7 @@ namespace Gdterm.UI.Controls
                 };
                 Services.FormFontPolicy.SizeActionButton(f, close, 12, 4);
                 flow.Controls.Add(close);
+                Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(f, flow);
                 f.Controls.Add(box);
                 f.Controls.Add(flow);
                 f.AcceptButton = close;
@@ -628,6 +629,7 @@ namespace Gdterm.UI.Controls
                 Services.FormFontPolicy.SizeActionButton(f, ok, 12, 4);
                 flow.Controls.Add(cancel); // RightToLeft 流序：先加靠右
                 flow.Controls.Add(ok);
+                Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(f, flow);
                 f.Controls.Add(box);
                 f.Controls.Add(lbl);
                 f.Controls.Add(flow);
