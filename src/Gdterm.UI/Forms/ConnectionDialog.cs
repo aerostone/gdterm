@@ -8,6 +8,7 @@ using Gdterm.Core.Models;
 using Gdterm.KeePass;
 using Gdterm.KeePass.Models;
 using Gdterm.UI.Services;
+using Gdterm.UI.Controls;
 using Gdterm.Core;
 
 namespace Gdterm.UI.Forms
@@ -224,7 +225,6 @@ namespace Gdterm.UI.Forms
         private void InitializeComponent()
         {
             Text = _isNew ? L10n.T("新建连接") : L10n.Tf("编辑连接 — {0}", _config.Name);
-            int labelW = DpiScale.V(this, 96);
             // 窗体自身由 PerMonitorV2 处理缩放，子控件才使用 DpiScale。
             ClientSize = new Size(560, 390);
             // 子控件固定值已统一走 DpiScale；不能再叠加 WinForms
@@ -238,6 +238,7 @@ namespace Gdterm.UI.Forms
             BackColor = GdtermColorTable.Background;
             // 布局铁律（skill C）：窗体字体必须在任何 AddRow/RowStep 布局计算之前确定。
             Font = Services.FormFontPolicy.UiFont();
+            int labelW = FormFontPolicy.LabelColumn(this, 96, L10n.T("登录密码"), L10n.T("用户名"), L10n.T("协议"));
 
             // ===== 顶部：基本信息 + 凭据 + 更多选项开关 =====
             var topPanel = new Panel { Dock = DockStyle.Top, AutoSize = true, BackColor = GdtermColorTable.Background, Padding = DpiScale.Pad(this, 12, 10, 12, 4) };
@@ -282,14 +283,23 @@ namespace Gdterm.UI.Forms
                 Padding = new Padding(0, 0, DpiScale.V(this, 8), 0)
             }), 0, 0);
             _credentialTitleLabel = new AntdUI.Label {
+                Name = "CredentialMatchHint",
                 Text = L10n.T("未选（按主机+用户名自动匹配）"),
                 ForeColor = GdtermColorTable.Muted,
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft
             };
             FormFontPolicy.FitSingleLineLabel(_credentialTitleLabel);
+            _credentialTitleLabel.AutoEllipsis = true;
+            void DescribeCredential()
+            {
+                _credentialTitleLabel.AccessibleDescription = _credentialTitleLabel.Text;
+                _credentialTitleLabel.ToolTipText2(_credentialTitleLabel.Text);
+            }
+            _credentialTitleLabel.TextChanged += (s, e) => DescribeCredential();
+            DescribeCredential();
             credRow.Controls.Add(_credentialTitleLabel, 1, 0);
-            var credBtns = new FlowLayoutPanel { FlowDirection = FlowDirection.LeftToRight, WrapContents = false, AutoSize = true };
+            var credBtns = new FlowLayoutPanel { Font = Font, FlowDirection = FlowDirection.LeftToRight, WrapContents = false, AutoSize = true };
             var btnPickCred = new AntdUI.Button {
                 Text = L10n.T("选择凭据..."),
                 Type = AntdUI.TTypeMini.Primary,
@@ -306,7 +316,16 @@ namespace Gdterm.UI.Forms
             btnClearCred.Click += OnClearCredential;
             credBtns.Controls.Add(btnPickCred);
             credBtns.Controls.Add(btnClearCred);
-            credRow.Controls.Add(credBtns, 2, 0);
+            int hintWidth = FormFontPolicy.MeasureTextWidth(_credentialTitleLabel.Text, Font, this);
+            if (labelW + hintWidth + credBtns.PreferredSize.Width + topPanel.Padding.Horizontal + DpiScale.V(this, 32) > ClientSize.Width)
+            {
+                // 大字号时让状态与按钮分行，保留完整的自动匹配提示。
+                credRow.SetColumnSpan(_credentialTitleLabel, 2);
+                _credentialTitleLabel.MinimumSize = new Size(0, FormFontPolicy.LineBox(this));
+                credRow.Controls.Add(credBtns, 1, 1);
+                credRow.SetColumnSpan(credBtns, 2);
+            }
+            else credRow.Controls.Add(credBtns, 2, 0);
             topPanel.Controls.Add(credRow);
 
             // ===== 更多选项 开关 =====

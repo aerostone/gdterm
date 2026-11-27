@@ -228,6 +228,12 @@ namespace Gdterm.Tests.Ui
             if (n <= 3) throw new Exception("controls=" + n + " (<=3)");
 
             UiSmokeRunner.AssertDialogActionStyle(f);
+            if (target == "connection-login")
+            {
+                var hint = UiSmokeRunner.FindByName(f, "CredentialMatchHint");
+                if (hint == null || !hint.Visible || hint.Width < Gdterm.UI.Services.FormFontPolicy.MeasureTextWidth(hint.Text, hint.Font, hint))
+                    throw new Exception("default credential hint clipped");
+            }
             File.WriteAllText(Path.Combine(dir, target + ".json"),
                 UiTreeDumper.Dump(f), System.Text.Encoding.UTF8);
             UiSmokeRunner.Shot(f, Path.Combine(dir, target + ".png"));
