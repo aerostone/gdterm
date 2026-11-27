@@ -318,7 +318,7 @@ namespace Gdterm.UI.Controls
             };
             // 侧栏宽度变化（拖分隔条 / 换字号）时，行宽跟着走，不会留半截
             var hostRef = host; // out 参数不能进 lambda
-            host.SizeChanged += delegate { FitRowWidths(hostRef); };
+            host.SizeChanged += delegate { FitRowWidths(hostRef); FitEmptyLabels(); };
             panel.Controls.Add(host);
             panel.Controls.Add(lbl);
             return panel;
