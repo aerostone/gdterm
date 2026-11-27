@@ -168,7 +168,8 @@ SnippetSearchPanel）以及 TableLayoutPanel 表达不了的精确对齐；且�
 
 - 按钮文字 2–6 字动词优先（"连接"、"解锁"、"删除"），禁止"确定/OK"类无语义文案做 Primary。
 - 对话框底部操作用 `FormFontPolicy.StyleDialogActions`：按钮左右留白 12、上下 5，按钮间距 8、到窗体边缘 16，按 DPI 缩放。按钮随文字、字体重新量宽。旧绝对定位表单用 `MountDialogActions` 加入同一布局。
-- 工具栏动作使用 `SizeActionButton` 的紧凑尺寸；终端键条由自己的溢出菜单管理宽度，纯图标按钮保留独立点击区域。
+- 所有 AntdUI 操作按钮用 `SizeActionButton` 按文字加内容留白定尺寸，`Padding=0`、`WaveSize=0`，不能再用 Padding 缩小按钮底色来模拟内边距。工具栏外间距每侧至少 3/2 逻辑像素；容器须换行并按内容增高。终端键条保留紧凑行高，并预留“更多”菜单位置；图标按钮同样检查点击区和文字留白。
+- 运行时校验遍历所有可见按钮（含禁用态和工具模块原生按钮），用 `ReadRectangle` / 原生 ClientRectangle 与 GDI+ 字形测量检查每侧至少 6/2 逻辑像素留白，实际按钮间隔至少 4。页脚和主要入口沿用更高标准。窗口 Bounds、Margin、Padding 属性不能代替可见绘制检查。
 - 欢迎页快捷操作和空状态主按钮按绘制框留白：文字两侧至少 12、上下至少 5 个逻辑像素；外边距各 4。验收用 AntdUI 的 `ReadRectangle` 与实际字体度量，按钮属性取值相同不能证明视觉留白相同。
 - 悬浮/按压用 `Hover/Pressed` token。
 

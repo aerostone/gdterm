@@ -56,12 +56,13 @@ namespace Gdterm.UI.Services
         {
             if (_host == null || _exitFocusButton != null) return;
             _exitFocusButton = new AntdUI.Button {
+                Name = "ExitFocusButton",
                 Text = L10n.T("退出专注 (Esc/F11)"),
                 // 隐式 Default 钮会忽略 BackColor（Accent 底画不出 + OnAccent 深字 = 隐形钮，见 509df1b 教训）→ 显式 Primary
                 Type = AntdUI.TTypeMini.Primary,
                 Font = Services.FormFontPolicy.UiFont(0f, FontStyle.Bold),
                 Visible = false,
-                TabStop = false,
+                TabStop = true,
                 Cursor = Cursors.Hand
             };
             Services.FormFontPolicy.SizeActionButton(_host, _exitFocusButton, 10, 4);

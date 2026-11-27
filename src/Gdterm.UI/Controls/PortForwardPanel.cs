@@ -183,9 +183,9 @@ namespace Gdterm.UI.Controls
             Lbl(form, L10n.T("类型:"), 15, y); form.Controls.Add(cmbType); y += rowH;
             var txtName = Txt(form, 140, y, 250, fieldH); Lbl(form, L10n.T("名称:"), 15, y); y += rowH;
             var txtLocalHost = Txt(form, 140, y, 120, fieldH); txtLocalHost.Text = "127.0.0.1"; Lbl(form, L10n.T("本地地址:"), 15, y);
-            var txtLocalPort = Txt(form, 320, y, 80, fieldH); Lbl(form, L10n.T("端口:"), 245, y); y += rowH;
+            var txtLocalPort = Txt(form, 350, y, 80, fieldH); Lbl(form, L10n.T("端口:"), 270, y); y += rowH;
             var txtRemoteHost = Txt(form, 140, y, 120, fieldH); txtRemoteHost.Text = "127.0.0.1"; Lbl(form, L10n.T("远程地址:"), 15, y);
-            var txtRemotePort = Txt(form, 320, y, 80, fieldH); Lbl(form, L10n.T("端口:"), 245, y); y += rowH + DpiScale.V(this, 12);
+            var txtRemotePort = Txt(form, 350, y, 80, fieldH); Lbl(form, L10n.T("端口:"), 270, y); y += rowH + DpiScale.V(this, 12);
 
             int btnH = Math.Max(DpiScale.V(this, 30), fieldH);
             var btnOk = new AntdUI.Button { Text = L10n.T("保存"), Size = new Size(DpiScale.V(this, 80), btnH), Location = DpiScale.P(this, 200, y), DialogResult = DialogResult.OK, Type = AntdUI.TTypeMini.Primary, };

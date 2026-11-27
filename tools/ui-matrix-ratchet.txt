@@ -56,3 +56,4 @@ session-recordings
 terminal-paste
 terminal-paste-progress
 ai-chat-commands
+dangerous-confirm

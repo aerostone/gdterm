@@ -244,6 +244,8 @@ namespace Gdterm.Tests.Ui
                 t => new Gdterm.UI.Forms.ConnectionDialog(
                     new Gdterm.Core.Models.ConnectionConfig { Protocol = Gdterm.Core.Enums.ProtocolType.SSH },
                     new FakeKeePassService()));
+            AddDialog(list, "dangerous-confirm", "命令确认按钮",
+                t => new Gdterm.UI.Controls.DangerousCommandDialog(new Gdterm.Security.GateDecision { Text = "layout fixture" }));
             AddDialog(list, "terminal-paste", "粘贴确认",
                 t => new Gdterm.UI.Forms.TerminalPasteDialog("echo button-layout"));
             AddDialog(list, "terminal-paste-progress", "发送取消",

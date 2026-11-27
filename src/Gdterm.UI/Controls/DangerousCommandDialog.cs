@@ -73,6 +73,7 @@ namespace Gdterm.UI.Controls
         public DangerousCommandDialog(GateDecision decision)
         {
             if (decision == null) throw new ArgumentNullException("decision");
+            Font = Services.FormFontPolicy.UiFont();
             _decision = decision;
             _command = decision.Text ?? "";
             _currentConfirm = 0;

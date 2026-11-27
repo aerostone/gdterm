@@ -69,6 +69,35 @@ namespace Gdterm.Tests.Ui
                     () => InputBox.Show(host, "Rename", "Name", "file.txt"), check);
                 CaptureModal(host, "editor-file-preview", directory,
                     () => PreviewBox.Show(host, "file.txt", "layout fixture"), check);
+                host.BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Background;
+                host.Font = FormFontPolicy.UiFont();
+                using (var side = SidePanelHost.CreateHost(null))
+                {
+                    host.Controls.Add(side);
+                    side.Visible = true;
+                    CaptureHost(host, "editor-side-close", directory);
+                }
+                var view = new ViewModeController(null, null, null, null, null, null, null, null, host);
+                view.SetViewMode(Gdterm.UI.Forms.ViewMode.Focus);
+                CaptureHost(host, "editor-focus-exit", directory);
+                view.SetViewMode(Gdterm.UI.Forms.ViewMode.Standard);
+                var launcher = new ToolsDialogsLauncher(host, null, new FakeKeePassService(), null);
+                CaptureModal(host, "editor-update", directory, () => launcher.GetType()
+                    .GetMethod("ShowUpdateResult", BindingFlags.NonPublic | BindingFlags.Instance)
+                    .Invoke(launcher, new object[] { new UpdateInfo { Version = "0.0.0", Name = "Offline layout", Body = "Layout fixture" } }), check);
+                using (var scanner = new Gdterm.Security.SecretScanner(new Gdterm.Security.SecretScanConfig()))
+                using (var panel = new SecretScanPanel(scanner))
+                {
+                    host.Controls.Add(panel);
+                    var list = (ListView)panel.GetType().GetField("_lvFindings", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(panel);
+                    var item = new ListViewItem("fixture") { Tag = new Gdterm.Security.SecretFinding {
+                        RuleName = "Layout", FilePath = "fixture.txt", MatchedContent = "layout", Description = "Layout fixture" } };
+                    list.Items.Add(item);
+                    item.Selected = true;
+                    CaptureModal(host, "editor-secret-details", directory, () => panel.GetType()
+                        .GetMethod("OnFindingDoubleClick", BindingFlags.NonPublic | BindingFlags.Instance)
+                        .Invoke(panel, new object[] { list, EventArgs.Empty }), check);
+                }
                 using (var security = new Gdterm.Security.SecurityManager())
                 {
                     security.Unlock("Layout-Smoke!2026-Button");
@@ -76,6 +105,14 @@ namespace Gdterm.Tests.Ui
                         () => MasterPasswordPrompt.Confirm(host, security, "layout"), check);
                 }
             }
+        }
+
+        private static void CaptureHost(Form form, string name, string directory)
+        {
+            if (FormFontPolicy.UiFontSize > 9) name += "-f14";
+            Application.DoEvents();
+            File.WriteAllText(Path.Combine(directory, name + ".json"), UiTreeDumper.Dump(form), System.Text.Encoding.UTF8);
+            UiSmokeRunner.Shot(form, Path.Combine(directory, name + ".png"));
         }
 
         private static void CaptureModal(Form host, string name, string directory, Action open, Action<bool, string> check)
@@ -104,6 +141,13 @@ namespace Gdterm.Tests.Ui
                 };
                 timer.Start();
                 open();
+                // 发现详情是非模态 Show，同样等待一次真实布局和截图后关闭。
+                var until = DateTime.UtcNow.AddSeconds(2);
+                while (!captured && failure == null && DateTime.UtcNow < until)
+                {
+                    Application.DoEvents();
+                    System.Threading.Thread.Sleep(20);
+                }
             }
             check(failure == null && captured, name + (failure == null ? " captured and cancelled" : " " + failure.Message));
         }
