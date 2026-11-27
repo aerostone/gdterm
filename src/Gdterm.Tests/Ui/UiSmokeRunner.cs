@@ -240,6 +240,15 @@ namespace Gdterm.Tests.Ui
                     Check(guide != null && guide.Visible, "空库时引导可见");
                     Check(FindByName(f, "KeePassEmptyGuideAddButton") != null, "引导主按钮可定位");
                     Check(FindByName(f, "KeePassEmptyGuideHint") != null, "引导说明可定位");
+                    var emptyGuide = (EmptyStateView)guide;
+                    Check(emptyGuide.ActionButton != null && emptyGuide.ActionButton.Visible, "empty-action-visible");
+                    AssertEntryActionSpacing(f);
+                    string originalAction = emptyGuide.ActionButton.Text;
+                    emptyGuide.SetAction("Add first credential");
+                    Application.DoEvents();
+                    AssertEntryActionSpacing(f);
+                    emptyGuide.SetAction(originalAction);
+                    Application.DoEvents();
                     Shot(f, Path.Combine(outDir, "keepass-manager-empty.png"));
                     File.WriteAllText(Path.Combine(outDir, "keepass-manager-empty.json"), UiTreeDumper.Dump(f), System.Text.Encoding.UTF8);
                     Console.WriteLine("  dump: keepass-manager-empty.json");
@@ -421,6 +430,53 @@ namespace Gdterm.Tests.Ui
             if (bad == 0) Check(true, where + " DOCK_OK (0 overlaps)");
         }
 
+        internal static void AssertEntryActionSpacing(Control root)
+        {
+            var pending = new Stack<Control>();
+            pending.Push(root);
+            int checkedButtons = 0;
+            while (pending.Count > 0)
+            {
+                var node = pending.Pop();
+                foreach (Control child in node.Controls) pending.Push(child);
+                var empty = node as EmptyStateView;
+                var action = empty != null ? empty.ActionButton : null;
+                if (action != null && action.Visible)
+                {
+                    AssertActionFace(action);
+                    checkedButtons++;
+                }
+                if (!(node is WelcomePanel) || !node.Visible) continue;
+                var strip = FindByName(node, "WelcomeActions");
+                Check(strip != null && strip.Controls.Count == 4, "welcome-four-actions-present");
+                foreach (Control child in strip.Controls)
+                {
+                    var button = child as AntdUI.Button;
+                    Check(button != null && button.Visible, "welcome-action-visible");
+                    AssertActionFace(button);
+                    checkedButtons++;
+                }
+            }
+            if (checkedButtons > 0) Check(true, "entry-action-spacing-checked=" + checkedButtons);
+        }
+
+        private static void AssertActionFace(AntdUI.Button button)
+        {
+            var face = button.ReadRectangle;
+            using (var graphics = button.CreateGraphics())
+            {
+                // AntdUI 使用 GDI+ 绘字；直接比较其绘制框，不把 Bounds 或 Padding 当成可见留白。
+                var textSize = graphics.MeasureString(button.Text, button.Font);
+                float horizontal = (face.Width - textSize.Width) / 2f;
+                float vertical = (face.Height - textSize.Height) / 2f;
+                Check(horizontal >= DpiScale.V(button, 12) - 1,
+                    "action-face-horizontal:" + button.Text + "=" + horizontal.ToString("0.0"));
+                Check(vertical >= DpiScale.V(button, 5) - 1,
+                    "action-face-vertical:" + button.Text + "=" + vertical.ToString("0.0"));
+            }
+            Check(button.Parent.ClientRectangle.Contains(button.Bounds), "entry-action-inside-parent:" + button.Text);
+        }
+
         internal static void AssertDialogActionStyle(Control root)
         {
             int buttons = 0;
@@ -530,6 +586,7 @@ namespace Gdterm.Tests.Ui
                 Application.DoEvents();
 
                 Progress("panel:" + name + ":pumped");
+                AssertEntryActionSpacing(host);
                 AssertNoDockOverlap(host, name);
                 Check(CountControls(panel) > 3, name + " TOO_FEW_CONTROLS=" + CountControls(panel) + " (>3)");
 

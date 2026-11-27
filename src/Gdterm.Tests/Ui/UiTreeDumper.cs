@@ -52,6 +52,9 @@ namespace Gdterm.Tests.Ui
             sb.Append("\"text\":\"").Append(Esc(ShortText(c.Text))).Append("\",");
             // 相对盒（相对父容器）
             sb.Append("\"bounds\":").Append(RectJson(c.Bounds)).Append(",");
+            var button = c as AntdUI.Button;
+            if (button != null)
+                sb.Append("\"drawRect\":").Append(RectJson(button.ReadRectangle)).Append(",");
             // 绝对盒（屏幕坐标）
             Rectangle abs;
             try { abs = c.Parent == null ? c.Bounds : c.Parent.RectangleToScreen(c.Bounds); }

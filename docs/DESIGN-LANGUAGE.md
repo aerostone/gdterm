@@ -169,6 +169,7 @@ SnippetSearchPanel）以及 TableLayoutPanel 表达不了的精确对齐；且�
 - 按钮文字 2–6 字动词优先（"连接"、"解锁"、"删除"），禁止"确定/OK"类无语义文案做 Primary。
 - 对话框底部操作用 `FormFontPolicy.StyleDialogActions`：按钮左右留白 12、上下 5，按钮间距 8、到窗体边缘 16，按 DPI 缩放。按钮随文字、字体重新量宽。旧绝对定位表单用 `MountDialogActions` 加入同一布局。
 - 工具栏动作使用 `SizeActionButton` 的紧凑尺寸；终端键条由自己的溢出菜单管理宽度，纯图标按钮保留独立点击区域。
+- 欢迎页快捷操作和空状态主按钮按绘制框留白：文字两侧至少 12、上下至少 5 个逻辑像素；外边距各 4。验收用 AntdUI 的 `ReadRectangle` 与实际字体度量，按钮属性取值相同不能证明视觉留白相同。
 - 悬浮/按压用 `Hover/Pressed` token。
 
 ### 4.2 输入控件

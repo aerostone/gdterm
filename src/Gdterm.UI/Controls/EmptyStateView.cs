@@ -108,9 +108,9 @@ namespace Gdterm.UI.Controls
                     Text = actionText,
                     Type = AntdUI.TTypeMini.Primary,
                     Cursor = Cursors.Hand,
-                    Margin = new Padding(0)
+                    Margin = DpiScale.Pad(this, 4, 4, 4, 4)
                 };
-                FormFontPolicy.SizeActionButton(this, _action, 12, 4);
+                FormFontPolicy.SizeActionButton(this, _action, 12, 5, dialogAction: true);
                 _action.AccessibleName = actionText;
                 _action.Click += (s, e) =>
                 {
@@ -149,8 +149,7 @@ namespace Gdterm.UI.Controls
             if (_action.Text == text) return;
             _action.Text = text;
             _action.AccessibleName = text;
-            // 文案变长会超出按钮宽（SizeActionButton 是按当时文案算的）——这里按新文案重量一次
-            try { FormFontPolicy.SizeActionButton(this, _action, 12, 4); } catch (Exception) { }
+            // SizeActionButton 的 TextChanged 订阅会重新量宽，保持入口按钮的内容留白。
         }
 
         /// <summary>切换显示：数据源为空时 true。加载中请用 BusyScope，不要复用本组件。</summary>

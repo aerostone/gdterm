@@ -73,48 +73,47 @@ namespace Gdterm.UI.Forms
             int btnPad = DpiScale.V(this, 10);
             int btnMargin = DpiScale.V(this, 4);
             var btnPadding = new Padding(btnPad, DpiScale.V(this, 4), btnPad, DpiScale.V(this, 4));
-            var btnMarginR = new Padding(0, 0, DpiScale.V(this, 6), 0);
 
-            // 工具行（左：操作按钮；右：搜索框。与凭据选择器同构，消除“选择器能搜、管理器不能搜”的割裂）
+            // 搜索独占一行，操作按可用宽度换行，窄窗也能看到最后一个按钮。
             var toolbarHost = new TableLayoutPanel
             {
                 Dock = DockStyle.Top,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                ColumnCount = 2,
+                ColumnCount = 1,
                 BackColor = GdtermColorTable.Background,
                 Padding = new Padding(0)
             };
-            toolbarHost.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             toolbarHost.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
 
             var toolbar = new FlowLayoutPanel
             {
+                Name = "KeePassActions",
                 Dock = DockStyle.Fill,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = false,
+                WrapContents = true,
                 Padding = new Padding(pad, DpiScale.V(this, 5), 0, DpiScale.V(this, 5)),
                 BackColor = GdtermColorTable.Background
             };
 
-            toolbar.Controls.Add(MakeToolBtn(L10n.T("添加"), OnAddClick, btnPadding, btnMarginR));
-            toolbar.Controls.Add(MakeToolBtn(L10n.T("编辑"), OnEditClick, btnPadding, btnMarginR));
-            toolbar.Controls.Add(MakeToolBtn(L10n.T("删除"), OnDeleteClick, btnPadding, btnMarginR));
+            toolbar.Controls.Add(MakeToolBtn(L10n.T("添加"), OnAddClick));
+            toolbar.Controls.Add(MakeToolBtn(L10n.T("编辑"), OnEditClick));
+            toolbar.Controls.Add(MakeToolBtn(L10n.T("删除"), OnDeleteClick));
             // 批量：AntdUI.Table 本身单选，多选层见 TableShell.EnableMultiSelect（Ctrl/Shift+点击）
-            _btnDeleteSel = MakeToolBtn(L10n.T("删除选中"), OnDeleteSelectedClick, btnPadding, btnMarginR);
+            _btnDeleteSel = MakeToolBtn(L10n.T("删除选中"), OnDeleteSelectedClick);
             _btnDeleteSel.Enabled = false;
             _btnDeleteSel.Name = "KeePassDeleteSelButton";
             toolbar.Controls.Add(_btnDeleteSel);
             toolbar.Controls.Add(new AntdUI.Divider { Orientation = AntdUI.TOrientation.Left, Thickness = 1f, Margin = new Padding(btnMargin) });
-            toolbar.Controls.Add(MakeToolBtn(L10n.T("复制密码"), OnCopyPasswordClick, btnPadding, btnMarginR));
-            toolbar.Controls.Add(MakeToolBtn(L10n.T("复制用户名"), OnCopyUsernameClick, btnPadding, btnMarginR));
+            toolbar.Controls.Add(MakeToolBtn(L10n.T("复制密码"), OnCopyPasswordClick));
+            toolbar.Controls.Add(MakeToolBtn(L10n.T("复制用户名"), OnCopyUsernameClick));
             toolbar.Controls.Add(new AntdUI.Divider { Orientation = AntdUI.TOrientation.Left, Thickness = 1f, Margin = new Padding(btnMargin) });
-            _btnNewConnection = MakeToolBtn(L10n.T("新建连接"), OnNewConnectionFromEntry, btnPadding, btnMarginR);
+            _btnNewConnection = MakeToolBtn(L10n.T("新建连接"), OnNewConnectionFromEntry);
             _btnNewConnection.Enabled = _connectionStore != null; // 无连接库时禁用（冒烟/内嵌场景）
             toolbar.Controls.Add(_btnNewConnection);
-            toolbar.Controls.Add(MakeToolBtn(L10n.T("刷新"), (s, e) => LoadEntries(), btnPadding, btnMarginR));
+            toolbar.Controls.Add(MakeToolBtn(L10n.T("刷新"), (s, e) => LoadEntries()));
 
             // 搜索框：标题/用户名/分组/URL 即时过滤（同选择器体验）
             _searchBox = new AntdUI.Input
@@ -128,7 +127,7 @@ namespace Gdterm.UI.Forms
             _searchBox.TextChanged += (s, e) => ApplyFilter();
 
             toolbarHost.Controls.Add(toolbar, 0, 0);
-            toolbarHost.Controls.Add(_searchBox, 1, 0);
+            toolbarHost.Controls.Add(_searchBox, 0, 1);
 
             // 条目表（AntdUI.Table）
             _entryTable = new AntdUI.Table
@@ -265,10 +264,11 @@ namespace Gdterm.UI.Forms
             CancelButton = closeButton;
         }
 
-        private AntdUI.Button MakeToolBtn(string text, EventHandler onClick, Padding padding, Padding margin)
+        private AntdUI.Button MakeToolBtn(string text, EventHandler onClick)
         {
-            var btn = new AntdUI.Button { Text = text, Type = AntdUI.TTypeMini.Default, Ghost = true, AutoSize = true, Padding = padding, Margin = margin };
-            FormFontPolicy.SizeActionButton(this, btn, 10, 4);
+            var btn = new AntdUI.Button { Text = text, Type = AntdUI.TTypeMini.Default,
+                Margin = DpiScale.Pad(this, 3, 3, 3, 3) };
+            FormFontPolicy.SizeActionButton(this, btn, 8, 4, dialogAction: true);
             btn.Click += onClick;
             return btn;
         }

@@ -99,9 +99,10 @@ namespace Gdterm.UI.Controls
 
             // 横向按钮行：侧栏只有 234–274px，四个按钮（约 430px）必然放不下一行，
             // 所以用可换行的 FlowLayoutPanel（AntdUI.StackPanel 不换行，宽了就画到面板外）。
-            // 间距按 Margin=(0,0,10,6) 给：末列留 10px 透明尾隙，视觉上不可见，换来窄栏不溢出。
+            // 对称外边距提供行内与换行间隙，文字留白由按钮尺寸负责。
             var actions = new FlowLayoutPanel
             {
+                Name = "WelcomeActions",
                 Dock = DockStyle.Fill,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
@@ -380,15 +381,12 @@ namespace Gdterm.UI.Controls
         {
             var b = new AntdUI.Button {
                 Text = text,
-                BackColor = GdtermColorTable.Surface,
-                ForeColor = GdtermColorTable.Foreground,
+                Type = AntdUI.TTypeMini.Default,
                 Cursor = Cursors.Hand,
-                Margin = new Padding(0, 0, DpiScale.V(this, 10), DpiScale.V(this, 6))
+                Margin = DpiScale.Pad(this, 4, 4, 4, 4)
             };
-            // AutoSize + 不给 Padding 时 AntdUI 只按库内 sps 算宽，左右内边距是 0
-            // （ui-tree-check「按钮左右padding=0(贴边风险)」实证：文字直接贴边框）。
-            // SizeActionButton 用 GDI 实测文字宽 + 显式 Padding，DPI/字号两个方向都对。
-            FormFontPolicy.SizeActionButton(this, b, 16, 6, Math.Max(32, FormFontPolicy.RowStep(this)));
+            // Padding 会缩进底色，入口按钮通过显式尺寸保留文字四周的空间。
+            FormFontPolicy.SizeActionButton(this, b, 12, 5, dialogAction: true);
             b.Click += (s, e) => { if (onClick != null) onClick(); };
             return b;
         }

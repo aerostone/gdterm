@@ -228,6 +228,7 @@ namespace Gdterm.Tests.Ui
             if (n <= 3) throw new Exception("controls=" + n + " (<=3)");
 
             UiSmokeRunner.AssertDialogActionStyle(f);
+            UiSmokeRunner.AssertEntryActionSpacing(f);
             if (target == "connection-login")
             {
                 var hint = UiSmokeRunner.FindByName(f, "CredentialMatchHint");
