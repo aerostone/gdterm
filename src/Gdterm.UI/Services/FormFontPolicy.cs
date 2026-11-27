@@ -228,7 +228,7 @@ namespace Gdterm.UI.Services
             {
                 flow.AutoSize = true;
                 flow.AutoSizeMode = AutoSizeMode.GrowAndShrink;
-                flow.WrapContents = true;
+                flow.WrapContents = flow.Dock != DockStyle.Left && flow.Dock != DockStyle.Right;
             }
             foreach (Control c in strip.Controls)
             {
@@ -242,6 +242,8 @@ namespace Gdterm.UI.Services
         /// <summary>把旧绝对定位页脚迁到统一流式布局；参数按从右到左排列。</summary>
         public static void MountDialogActions(Form form, params AntdUI.Button[] buttons)
         {
+            var accept = form.AcceptButton;
+            var cancel = form.CancelButton;
             int top = int.MaxValue;
             foreach (var b in buttons) top = Math.Min(top, b.Top);
             var strip = new FlowLayoutPanel { Dock = DockStyle.Bottom,
@@ -249,6 +251,9 @@ namespace Gdterm.UI.Services
             foreach (var b in buttons) strip.Controls.Add(b);
             StyleDialogActions(form, strip);
             form.Controls.Add(strip);
+            // 从 Form 移除按钮时 WinForms 会清除 AcceptButton/CancelButton。
+            if (accept != null) form.AcceptButton = accept;
+            if (cancel != null) form.CancelButton = cancel;
             strip.PerformLayout();
             if (top != int.MaxValue)
                 form.ClientSize = new Size(form.ClientSize.Width,

@@ -273,26 +273,19 @@ namespace Gdterm.UI.Forms
 
         private void CreatePasswordPanel()
         {
-            _passwordPanel = new Panel { Dock = DockStyle.Fill };
+            _passwordPanel = new Panel { Dock = DockStyle.Fill, AutoScroll = true };
 
             var layout = new TableLayoutPanel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top, AutoSize = true,
                 ColumnCount = 2,
-                RowCount = 7,
+                RowCount = 6,
                 BackColor = Color.Transparent,
                 Padding = DpiScale.Pad(this, 0, 4, 0, 0)
             };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, DpiScale.V(this, 64)));
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            // 行高：标题 / 密码 / 确认 / 强度 / 错误 / 显示密码 / 弹性空白（DPI 缩放，规范规则④）
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, DpiScale.V(this, 36)));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, DpiScale.V(this, 40)));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, DpiScale.V(this, 40)));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, DpiScale.V(this, 28)));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, DpiScale.V(this, 72)));
-            layout.RowStyles.Add(new RowStyle(SizeType.Absolute, DpiScale.V(this, 32)));
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
+            for (int i = 0; i < 6; i++) layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
             var promptLabel = new AntdUI.Label {
                 Text = L10n.T("请设置主密码"),
@@ -301,6 +294,7 @@ namespace Gdterm.UI.Forms
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.MiddleLeft
             };
+            promptLabel.MinimumSize = new Size(0, FormFontPolicy.LineBox(promptLabel.Font, this));
             layout.SetColumnSpan(promptLabel, 2);
             layout.Controls.Add(promptLabel, 0, 0);
 
@@ -313,6 +307,7 @@ namespace Gdterm.UI.Forms
             _passwordBox = new AntdUI.Input {
                 Dock = DockStyle.Fill,
                 Font = Services.FormFontPolicy.MonoFont(),
+                MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this)),
                 UseSystemPasswordChar = true,
                 Margin = DpiScale.Pad(this, 0, 6, 0, 6)
             };
@@ -329,6 +324,7 @@ namespace Gdterm.UI.Forms
             _confirmBox = new AntdUI.Input {
                 Dock = DockStyle.Fill,
                 Font = Services.FormFontPolicy.MonoFont(),
+                MinimumSize = new Size(0, FormFontPolicy.FieldHeight(this)),
                 UseSystemPasswordChar = true,
                 Margin = DpiScale.Pad(this, 0, 6, 0, 6)
             };
@@ -351,13 +347,13 @@ namespace Gdterm.UI.Forms
                 Dock = DockStyle.Fill,
                 TextAlign = ContentAlignment.TopLeft
             };
-            FormFontPolicy.FitSingleLineLabel(_errorLabel);
+            _errorLabel.MinimumSize = new Size(0, FormFontPolicy.LineBox(this) * 3);
             layout.SetColumnSpan(_errorLabel, 2);
             layout.Controls.Add(_errorLabel, 0, 4);
 
             var showPwdCheck = new AntdUI.Checkbox {
                 Text = L10n.T("显示密码"),
-                Dock = DockStyle.Left,
+                Anchor = AnchorStyles.Left,
                 AutoSize = true,
                 Margin = new Padding(0, DpiScale.V(this, 4), 0, 0)
             };
@@ -370,7 +366,7 @@ namespace Gdterm.UI.Forms
             layout.Controls.Add(showPwdCheck, 0, 5);
 
             // 底部弹性空白，把表单内容留在上半但有均匀行距，不再叠成一团
-            layout.Controls.Add(new Panel { Dock = DockStyle.Fill }, 0, 6);
+
 
             _passwordPanel.Controls.Add(layout);
         }

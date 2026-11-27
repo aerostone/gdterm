@@ -320,6 +320,8 @@ namespace Gdterm.UI.Forms
             _moreLink.Click += (s, e) => ToggleAdvanced();
             linkRow.Controls.Add(_moreLink);
             topPanel.Controls.Add(linkRow);
+            // Top 停靠按反向子序布局：基本信息先于凭据与高级开关。
+            topPanel.Controls.SetChildIndex(basicLayout, 2);
 
             // ===== 高级区：协议专属选项 + 备注（默认折叠）=====
             // AutoScroll：内容超过剩余空间时出滚动条，保证保存/取消按钮永远可见

@@ -21,6 +21,7 @@ contract:
   - src/Gdterm.Tests/Ui/*.cs
   - src/Gdterm.Tests/Gdterm.Tests.csproj
   - src/Gdterm.UI/Gdterm.UI.csproj
+  - docs/FEATURE-MAP.md
   - docs/DESIGN-LANGUAGE.md
   - tools/ui-baseline/ui-smoke.json
   - .codestable/tools/ui-coverage-registry.txt
