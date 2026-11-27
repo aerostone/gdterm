@@ -47,3 +47,11 @@ file-pane
 ai-chat
 tool-network
 tool-action
+welcome-populated
+dangerous-rule-editor
+text-input
+text-prompt
+log-viewer
+session-recordings
+terminal-paste
+terminal-paste-progress

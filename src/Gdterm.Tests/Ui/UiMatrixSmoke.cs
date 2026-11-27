@@ -179,7 +179,8 @@ namespace Gdterm.Tests.Ui
                     }
                     using (var host = PanelHost())
                     {
-                        root.Dock = DockStyle.Fill;
+                        if (page.Name.StartsWith("bottom-bar")) host.ClientSize = new Size(1200, 100);
+                        root.Dock = page.Name.StartsWith("bottom-bar") ? DockStyle.Bottom : DockStyle.Fill;
                         host.Controls.Add(root);
                         root.Visible = true;
                         ShowAndDump(host, dir, page.Name, font, dpi);

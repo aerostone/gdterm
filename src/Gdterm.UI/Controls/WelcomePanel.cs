@@ -335,18 +335,40 @@ namespace Gdterm.UI.Controls
                 TextAlign = ContentAlignment.MiddleLeft,
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
-                Margin = new Padding(0, 0, 0, DpiScale.V(this, 6)),
+                Margin = DpiScale.Pad(this, 4, 2, 4, 6),
                 Padding = Padding.Empty,
                 WaveSize = 0,
                 Name = "WelcomeConnectionRow",
                 Text = title + (string.IsNullOrEmpty(sub) ? "" : "   ·   " + sub),
                 Cursor = Cursors.Hand
             };
+            btn.AccessibleDescription = btn.Text;
             btn.ToolTipText2(btn.Text);
+            btn.SizeChanged += (s, e) => FitRowText(btn);
+            btn.FontChanged += (s, e) => FitRowText(btn);
+            FitRowText(btn);
             btn.Click += (s, e) => { if (onClick != null) onClick(); };
             host.Controls.Add(btn);
             // F10 键盘导航行序：只收两个数据区的行（空态标签不是行）
             if (host == _recentHost || host == _favHost) _navRows.Add(btn);
+        }
+
+        private void FitRowText(AntdUI.Button button)
+        {
+            string full = button.AccessibleDescription ?? "";
+            int available = Math.Max(0, button.Width - DpiScale.V(this, 24) - FormFontPolicy.LineBox(button));
+            string display = full;
+            using (var graphics = button.CreateGraphics())
+            {
+                if (graphics.MeasureString(display, button.Font).Width > available)
+                {
+                    int length = full.Length;
+                    while (length > 0 && graphics.MeasureString(full.Substring(0, length) + "…", button.Font).Width > available)
+                        length--;
+                    display = full.Substring(0, length) + "…";
+                }
+            }
+            button.Text = display;
         }
 
         private void AddEmpty(FlowLayoutPanel host, string text)
@@ -368,7 +390,7 @@ namespace Gdterm.UI.Controls
         {
             if (host == null || host.ClientSize.Width <= 0) return DpiScale.V(this, 320);
             return Math.Max(DpiScale.V(this, 160),
-                host.ClientSize.Width - host.Padding.Horizontal - SystemInformation.VerticalScrollBarWidth);
+                host.ClientSize.Width - host.Padding.Horizontal - SystemInformation.VerticalScrollBarWidth - DpiScale.V(this, 8));
         }
 
         /// <summary>宿主变宽/变窄时把行按钮跟着改宽（只动数据行按钮，不动空态文本）。</summary>

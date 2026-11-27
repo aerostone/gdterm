@@ -570,7 +570,7 @@ namespace Gdterm.Tests.Ui
             using (var host = new Form())
             {
                 host.Text = name + "-host";
-                host.ClientSize = new Size(360, 480);
+                host.ClientSize = name.StartsWith("bottom-bar") ? new Size(1200, 100) : new Size(360, 480);
                 host.BackColor = Gdterm.UI.Diagnostics.GdtermColorTable.Background;
                 host.StartPosition = FormStartPosition.Manual;
                 host.Location = new Point(0, 0);
@@ -585,7 +585,7 @@ namespace Gdterm.Tests.Ui
                 Check(panel != null, name + " PANEL_NULL");
                 if (panel == null) return;
 
-                panel.Dock = DockStyle.Fill;
+                panel.Dock = name.StartsWith("bottom-bar") ? DockStyle.Bottom : DockStyle.Fill;
                 host.Controls.Add(panel);
                 // 覆盖式面板（SnippetSearch 等浮层）出厂 Visible=false，靠 ShowAndFocus 才现身；
                 // 不显式点亮的话它整棵子树都是"不可见"，空态断言会假红/假绿。

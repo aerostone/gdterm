@@ -161,18 +161,14 @@ namespace Gdterm.UI.Services
         /// <summary>
         /// 把「工具条动作钮」按 DPI/字号真实量出来（AutoSize + Padding 的写法量不出来）。
         ///
-        /// 背景（2026-11-13 状态轴矩阵实证）：AntdUI.Button 的 AutoSize 只用**库内固定 sps**
-        /// 算尺寸，赋给它的 Padding 只影响绘制、不进测量。于是 `AutoSize=true; Padding=DpiScale(8,3)`
-        /// 的钮在 96dpi 是 46x30，在 150dpi 仍是 46x30——逻辑尺寸反而缩到 30.6x20，
-        /// ui-tree-check R1（触击 ≥32 逻辑 px）在 d150 全红（HistoryExportButton/ForwardExportButton...）。
-        ///
-        /// 改法：关掉 AutoSize，宽度按真实 GDI 文字宽 + 两侧内边距，高度取 <see cref="FieldHeight"/>
-        /// （与输入框同高，DPI 感知且 ≥ 触击下限）。
+        /// AntdUI 的 Padding 缩小绘制底色，AutoSize 也不把 Padding 纳入尺寸。
+        /// 各类操作统一以文字 + 内容留白 + 库内 sps 定尺寸；外部间隙用 Margin。
+        /// designHeight 保留终端键条的紧凑行高，仍保证文字四周可见。
         /// </summary>
         /// <param name="host">宿主控件（取 DPI 换算比例）。</param>
         /// <param name="b">要定尺寸的钮；null 直接返回。</param>
         /// <param name="padX">左右内边距（设计 px，会被 DPI 缩放）。</param>
-        /// <param name="padY">上下内边距（设计 px，仅影响绘制留白）。</param>
+        /// <param name="padY">上下内容留白（设计 px，计入按钮尺寸）。</param>
         /// <param name="designHeight">
         /// 显式高度（设计 px）。0 = 取 <see cref="FieldHeight"/>（与输入框同高，适合工具条/页脚）。
         /// 状态栏等紧凑场景传 22~24：仍然 DPI 感知，但不会被撑到输入框那么高。
@@ -189,6 +185,11 @@ namespace Gdterm.UI.Services
                 ButtonSizeHooks.Remove(b);
             }
             b.AutoSize = false;
+            if (!dialogAction)
+                b.Margin = new Padding(Math.Max(b.Margin.Left, DpiScale.V(host, 3)),
+                    Math.Max(b.Margin.Top, DpiScale.V(host, 2)),
+                    Math.Max(b.Margin.Right, DpiScale.V(host, 3)),
+                    Math.Max(b.Margin.Bottom, DpiScale.V(host, 2)));
             void Apply()
             {
                 if (b.IsDisposed) return;

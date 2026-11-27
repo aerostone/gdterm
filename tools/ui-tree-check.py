@@ -601,7 +601,12 @@ def main():
                 continue
             if any(k in n.get("type", "") for k in NON_HIT):
                 continue  # 展示型控件无触击语义（CI 321 实测：Label 24x16/27x16/18x16 全属此类）
-            a = n.get("abs", {})
+            # NumericUpDown 的内部箭头属于复合输入框；独立目标按宿主输入框量。
+            if n.get("type") == "System.Windows.Forms.UpDownBase+UpDownButtons":
+                owner = next((p for c, _, _, p, _ in all_nodes if c is n), None)
+                a = (owner or n).get("abs", {})
+            else:
+                a = n.get("abs", {})
             if a.get("w", 0) <= 0 or a.get("h", 0) <= 0:
                 continue  # 零尺寸规则已判，不重复
             if "Divider" in n.get("type", "") and a.get("h", 99) <= 2:
@@ -631,7 +636,7 @@ def main():
                               # 2026-11 补的 6 个"以前从没进过 dump"的页 + 失败态宿主（同为面板）
                               "remote-monitor", "bottom-bar", "lock-overlay", "welcome",
                               "connection-tree", "terminal-search", "fail-history-load",
-                              "fail-scan-error")):
+                              "fail-scan-error", "file-pane", "ai-chat", "tool-network", "tool-action")):
             check(True, "关闭绑定免判(" + fname + ")")
         else:
             closelike = [n for (n, _, _, _, _) in all_nodes

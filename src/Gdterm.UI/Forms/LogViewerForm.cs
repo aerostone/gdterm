@@ -178,15 +178,18 @@ namespace Gdterm.UI.Forms
             split.Panel2.Controls.Add(viewerPanel);
 
             // ── 底部：查找 + 状态 + 关闭 ──
-            var bottom = new Panel
+            var bottom = new TableLayoutPanel
             {
                 Dock = DockStyle.Bottom,
-                Height = fieldH + DpiScale.V(this, 16),
+                AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink,
+                ColumnCount = 1,
+                RowCount = 2,
                 BackColor = GdtermColorTable.Background
             };
             var leftFlow = new FlowLayoutPanel
             {
-                Dock = DockStyle.Left,
+                Dock = DockStyle.Top,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.LeftToRight,
@@ -239,19 +242,18 @@ namespace Gdterm.UI.Forms
             _status = new AntdUI.Label
             {
                 Name = "LogViewerStatus",
-                Dock = DockStyle.Right,
+                Anchor = AnchorStyles.Right,
+                Margin = DpiScale.Pad(this, 8, 8, 8, 0),
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleRight,
                 Padding = new Padding(0, DpiScale.V(this, 6), 0, 0)
             };
             FormFontPolicy.FitSingleLineLabel(_status);
 
-            bottom.Controls.Add(leftFlow);
-            bottom.Controls.Add(_status);
 
             var rightFlow = new FlowLayoutPanel
             {
-                Dock = DockStyle.Right,
+                Dock = DockStyle.Top,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 FlowDirection = FlowDirection.RightToLeft,
@@ -266,7 +268,12 @@ namespace Gdterm.UI.Forms
             CancelButton = btnClose;
             rightFlow.Controls.Add(btnClose);
             Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(this, rightFlow);
-            bottom.Controls.Add(rightFlow);
+            rightFlow.Controls.Add(_status);
+            bottom.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            bottom.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            bottom.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            bottom.Controls.Add(leftFlow, 0, 0);
+            bottom.Controls.Add(rightFlow, 0, 1);
 
             Controls.Add(split);
             Controls.Add(bottom);

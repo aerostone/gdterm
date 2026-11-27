@@ -146,6 +146,17 @@ namespace Gdterm.Tests.Ui
                 t => new Gdterm.UI.Controls.ConnectionTreeControl(
                     t.Track(new Gdterm.Connections.ConnectionStoreJson(t.Path_("conns.json"))),
                     new FakeKeePassService(empty: true)));
+            Add(list, "welcome-populated", "有数据的连接行按钮", PanelEmptyExpect.Ignore, t =>
+            {
+                var store = t.Track(new Gdterm.Connections.ConnectionStoreJson(t.Path_("connections.json")));
+                var bookmarks = t.Track(new Gdterm.Connections.BookmarkStoreJson(t.Path_("bookmarks")));
+                bookmarks.AddRecentConnection(new Gdterm.Core.Models.RecentConnection {
+                    ConnectionId = "layout", Host = "production-database.example.internal", Protocol = "SSH",
+                    ConnectedAt = DateTime.Now, Success = true });
+                bookmarks.Add(new Gdterm.Core.Models.SessionBookmark { Name = "Production database long title",
+                    ConnectionId = "layout", IsFavorite = true });
+                return new Gdterm.UI.Controls.WelcomePanel(store, bookmarks);
+            });
             Add(list, "bottom-bar-tmux", "终端快捷键/更多菜单", PanelEmptyExpect.Ignore, t =>
             {
                 var bar = new Gdterm.UI.Controls.BottomBarPanel();
@@ -223,6 +234,20 @@ namespace Gdterm.Tests.Ui
                 t => new Gdterm.UI.Forms.ConnectionDialog(
                     new Gdterm.Core.Models.ConnectionConfig { Protocol = Gdterm.Core.Enums.ProtocolType.SSH },
                     new FakeKeePassService()));
+            AddDialog(list, "terminal-paste", "粘贴确认",
+                t => new Gdterm.UI.Forms.TerminalPasteDialog("echo button-layout"));
+            AddDialog(list, "terminal-paste-progress", "发送取消",
+                t => new Gdterm.UI.Forms.TerminalPasteProgressDialog(10, () => { }));
+            AddDialog(list, "dangerous-rule-editor", "规则编辑页脚",
+                t => new Gdterm.UI.Forms.DangerousCommandRuleEditForm());
+            AddDialog(list, "text-input", "输入页脚",
+                t => new Gdterm.UI.Forms.TextInputForm("Input", "Value"));
+            AddDialog(list, "text-prompt", "输入页脚",
+                t => new Gdterm.UI.Controls.TextPromptDialog("Input", "Value", ""));
+            AddDialog(list, "log-viewer", "日志工具栏",
+                t => new Gdterm.UI.Forms.LogViewerForm(t.Path_("logs")));
+            AddDialog(list, "session-recordings", "回放工具栏",
+                t => new Gdterm.UI.Forms.SessionRecordingsForm(t.Path_("recordings")));
             return list;
         }
 

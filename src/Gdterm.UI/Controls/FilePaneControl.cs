@@ -51,19 +51,15 @@ namespace Gdterm.UI.Controls
             Dock = DockStyle.Fill;
             BackColor = GdtermColorTable.Background;
 
-            var top = new TableLayoutPanel
+            var top = new Panel
             {
                 Dock = DockStyle.Top,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                ColumnCount = 2,
-                RowCount = 1,
                 BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 4), DpiScale.V(this, 6), DpiScale.V(this, 4))
             };
-            top.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            top.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
-            top.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
 
             var btnHome = MakeBtn("⌂", L10n.T("主目录"), (s, e) => Navigate(_provider.HomePath));
             var btnUp = MakeBtn("↑", L10n.T("上级目录 (Backspace)"), (s, e) => NavigateUp());
@@ -74,7 +70,7 @@ namespace Gdterm.UI.Controls
 
             var buttons = new FlowLayoutPanel
             {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,
                 AutoSize = true,
                 FlowDirection = FlowDirection.LeftToRight,
                 WrapContents = true,
@@ -83,7 +79,8 @@ namespace Gdterm.UI.Controls
             buttons.Controls.AddRange(new Control[] { btnHome, btnUp, btnRefresh, btnMkdir, btnRename, btnDelete });
 
             _pathBox = new AntdUI.Input {
-                Dock = DockStyle.Fill,
+                Dock = DockStyle.Top,
+                Height = Services.FormFontPolicy.FieldHeight(this),
                 BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground,
                 Font = Services.FormFontPolicy.MonoFont()
@@ -98,8 +95,8 @@ namespace Gdterm.UI.Controls
                 }
             };
 
-            top.Controls.Add(_pathBox, 0, 0);
-            top.Controls.Add(buttons, 1, 0);
+            top.Controls.Add(buttons);
+            top.Controls.Add(_pathBox);
 
             _list = new ListView
             {
@@ -235,10 +232,11 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Surface,
                 ForeColor = GdtermColorTable.Foreground,
                 Margin = DpiScale.Pad(this, 1, 0, 1, 0),
-                TabStop = false
+                TabStop = true
             };
             Services.FormFontPolicy.SizeActionButton(this, b, 5, 2);
             b.Click += onClick;
+            b.AccessibleName = tip;
             _tips.SetToolTip(b, tip);
             return b;
         }

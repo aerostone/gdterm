@@ -87,7 +87,7 @@ namespace Gdterm.UI.Services
             {
                 var close = _host.Controls["SidePanelCloseButton"];
                 if (close != null)
-                    close.Height = Math.Max(28, FormFontPolicy.RowStep(_host));
+                    FormFontPolicy.SizeActionButton(_host, close as AntdUI.Button);
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SidePanelHost", exSwallowed); } catch { } }
         }

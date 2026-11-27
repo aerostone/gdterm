@@ -242,7 +242,7 @@ namespace Gdterm.UI.Forms
 
         private AntdUI.Button MakeBtn(string text, EventHandler onClick, AntdUI.TTypeMini type, Padding padding, int margin)
         {
-            var btn = new AntdUI.Button { Text = text, Type = type, Ghost = type != AntdUI.TTypeMini.Primary, AutoSize = true, Padding = padding, Margin = new Padding(0, 0, margin, 0) };
+            var btn = new AntdUI.Button { Text = text, Type = type, AutoSize = true, Padding = padding, Margin = new Padding(0, 0, margin, 0) };
             FormFontPolicy.SizeActionButton(this, btn, 10, 4);
             btn.Click += onClick;
             return btn;
