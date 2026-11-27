@@ -9,6 +9,7 @@ using System.Windows.Forms;
 using Gdterm.Security;
 using Gdterm.UI.Controls;
 using Gdterm.UI.Forms;
+using Gdterm.UI.Services;
 
 namespace Gdterm.Tests.Ui
 {
@@ -438,8 +439,15 @@ namespace Gdterm.Tests.Ui
                     buttons++;
                     Check(!b.AutoSize && b.Padding == Padding.Empty && b.WaveSize == 0, "dialog-action-visible-box:" + b.Text);
                     if (previous != null)
+                    {
                         Check(b.Height == previous.Height && b.Margin == previous.Margin,
                             "dialog-action-row-consistent:" + b.Text);
+                        if (parent is FlowLayoutPanel && b.Top == previous.Top)
+                        {
+                            int gap = b.Left > previous.Left ? b.Left - previous.Right : previous.Left - b.Right;
+                            Check(Math.Abs(gap - DpiScale.V(root, 8)) <= 1, "dialog-action-visible-gap:" + gap);
+                        }
+                    }
                     previous = b;
                 }
             }

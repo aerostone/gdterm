@@ -1,7 +1,7 @@
 ---
 doc_type: change
 kind: issue
-status: approved
+status: in-progress
 phase: analyzed
 mode: standard
 slug: 2026-11-27-dialog-buttons-credentials
@@ -62,6 +62,7 @@ contract:
 - ConnectionDialog.CommitValidated 成功分支未调用 SaveToConfig，Result 一直为 null。保存前调用并覆盖创建/编辑往返。
 - 新建 SSH/RDP 可输入密码，非空时创建独立 KeePass 条目后绑定；空值保留现有引用/自动匹配，不覆盖共享凭据；锁库需就地解锁，失败保持表单，取消不写库；密码不进入 ConnectionConfig/Metadata/日志。
 - KeePassManagerForm.OnAddClick 漏传 Hostname/Port/Protocol/AutoTypeSequence；统一读取表单结果，避免 picker/manager 两条创建路径分叉。
+- ConnectionDialog 加载无端口的配置时一律回填 22，覆盖协议切换事件设置的默认值；改为按 RDP/SSH/Telnet/Serial 分别取 3389/22/23/9600，已有端口不变。
 
 比较：逐页修散值会继续漂移；全局覆盖所有 Button 会破坏终端键条和图标密度。采用显式页脚策略+既有尺寸入口，按调用点核对。
 
@@ -74,7 +75,12 @@ contract:
 3. 补真实表单状态及保存回归，执行编译、规范门和 Windows CI，取回截图/控件树核对。
 
 ## 4. 执行证据
-待补充。
+- 全量扫描 UI Button 创建点：151 处（包含按钮工厂，运行时实例数不等于此计数）。统一页脚策略接入 39 处。
+- 普通窗口/模态表单页脚统一；终端键条、文件工具栏、复选选项旁按钮、图标按钮保留既有密度；新页脚规则用真实布局验证同排高度、margin 和可见间隙。
+- 本地 csc-check（369 文件）、csproj 列表、编码、UI lint、i18n、安全闸门和 feature-map 检查通过。
+- Windows 51f53ba：构建、1017 单测、UI 冒烟、控件树全部通过。新增密码输入、凭据表单往返、连接创建/编辑/取消/写库失败断言通过。
+- 截图取回 /tmp/gdterm-ui-45957035074；核对向导欢迎/密码、凭据编辑、SSH 连接、AI/外观设置、OTP、凭据选择、SSH 密钥、SFTP 权限和主机密钥窗口。发现 AntdUI Padding 会缩进可见按钮，26156f1 改为尺寸留白、Padding=0、WaveSize=0；后续验证进行中。
+- UI 矩阵为 DpiScale 注入 + 真实字体轴，不等同真实跨屏 DPI 操作。
 
 ## 5. 验收结果
-进行中。源码证据已确认，Windows 布局尚未验证。
+进行中。Windows 冒烟和控件树通过，已人工审查更新后的按钮、密码页截图并更新对应基线；字体与布局比例矩阵待验证。

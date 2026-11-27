@@ -195,6 +195,7 @@ namespace Gdterm.Tests.Ui
                 using (var f = new ConnectionDialog((ConnectionConfig)null, vault))
                 {
                     f.Show(); Application.DoEvents();
+                    GetField<AntdUI.Select>(f, "_protocolCombo").SelectedValue = "SSH";
                     GetField<AntdUI.Input>(f, "_hostBox").Text = "example.test";
                     GetField<AntdUI.Input>(f, "_usernameBox").Text = "tester";
                     var pwd = GetField<AntdUI.Input>(f, "_loginPassword");
@@ -208,7 +209,7 @@ namespace Gdterm.Tests.Ui
                     }
                     else
                     {
-                        check(f.Result != null && f.Result.Host == "example.test" && f.Result.Username == "tester", "connection-create-result");
+                        check(f.Result != null && f.Result.Host == "example.test" && f.Result.Username == "tester" && f.Result.Protocol == ProtocolType.SSH, "connection-create-result");
                         check(vault.CreatedEntry != null && vault.CreatedEntry.Password == "dummy-test-password"
                             && f.Result != null && f.Result.CredentialRefId == vault.CreatedEntry.Id, "connection-password-vault-binding");
                     }
@@ -262,6 +263,7 @@ namespace Gdterm.Tests.Ui
                         Application.DoEvents();
                         Thread.Sleep(500);
                         Application.DoEvents();
+                        check(GetField<AntdUI.InputNumber>(f, "_portBox").Value == (proto == "RDP" ? 3389 : proto == "SSH" ? 22 : 9600), name + "-default-port");
                         int n = Count(f);
                         check(n > 5, name + "-controls=" + n + " (>5)");
                         check(f.ClientSize.Width > 200 && f.ClientSize.Height > 150,

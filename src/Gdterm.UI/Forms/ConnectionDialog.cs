@@ -322,6 +322,7 @@ namespace Gdterm.UI.Forms
             topPanel.Controls.Add(linkRow);
             // Top 停靠按反向子序布局：基本信息先于凭据与高级开关。
             topPanel.Controls.SetChildIndex(basicLayout, 2);
+            topPanel.Controls.SetChildIndex(linkRow, 0);
 
             // ===== 高级区：协议专属选项 + 备注（默认折叠）=====
             // AutoScroll：内容超过剩余空间时出滚动条，保证保存/取消按钮永远可见
@@ -845,7 +846,10 @@ namespace Gdterm.UI.Forms
                                           _config.Protocol == ProtocolType.Serial ? "Serial" :
                                           _config.Protocol == ProtocolType.Telnet ? "Telnet" : "SSH";
             _hostBox.Text = _config.Host ?? "";
-            _portBox.Value = _config.Port > 0 ? _config.Port : 22;
+            _portBox.Value = _config.Port > 0 ? _config.Port :
+                _config.Protocol == ProtocolType.RDP ? 3389 :
+                _config.Protocol == ProtocolType.Telnet ? 23 :
+                _config.Protocol == ProtocolType.Serial ? 9600 : 22;
             _usernameBox.Text = _config.Username ?? "";
             _groupPathBox.Text = _config.GroupPath ?? "";
             _credentialRefBox.Text = _config.CredentialRefId ?? "";
