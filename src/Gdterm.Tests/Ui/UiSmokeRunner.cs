@@ -446,6 +446,20 @@ namespace Gdterm.Tests.Ui
                     AssertActionFace(action);
                     checkedButtons++;
                 }
+                if (node.Name == "KeePassActions" && node.Visible)
+                {
+                    var actions = node.Controls.OfType<AntdUI.Button>().ToArray();
+                    Check(actions.Length == 8, "keepass-eight-actions-present");
+                    foreach (var button in actions)
+                    {
+                        Check(button.Visible, "keepass-toolbar-action-visible:" + button.Text);
+                        AssertActionFace(button, 8, 4);
+                        checkedButtons++;
+                    }
+                    var search = FindByName(root, "KeePassSearchBox");
+                    Check(search != null && search.Visible && search.Parent.ClientRectangle.Contains(search.Bounds),
+                        "keepass-search-inside-toolbar");
+                }
                 if (!(node is WelcomePanel) || !node.Visible) continue;
                 var strip = FindByName(node, "WelcomeActions");
                 Check(strip != null && strip.Controls.Count == 4, "welcome-four-actions-present");
@@ -460,7 +474,7 @@ namespace Gdterm.Tests.Ui
             if (checkedButtons > 0) Check(true, "entry-action-spacing-checked=" + checkedButtons);
         }
 
-        private static void AssertActionFace(AntdUI.Button button)
+        private static void AssertActionFace(AntdUI.Button button, int padX = 12, int padY = 5)
         {
             var face = button.ReadRectangle;
             using (var graphics = button.CreateGraphics())
@@ -469,9 +483,9 @@ namespace Gdterm.Tests.Ui
                 var textSize = graphics.MeasureString(button.Text, button.Font);
                 float horizontal = (face.Width - textSize.Width) / 2f;
                 float vertical = (face.Height - textSize.Height) / 2f;
-                Check(horizontal >= DpiScale.V(button, 12) - 1,
+                Check(horizontal >= DpiScale.V(button, padX) - 1,
                     "action-face-horizontal:" + button.Text + "=" + horizontal.ToString("0.0"));
-                Check(vertical >= DpiScale.V(button, 5) - 1,
+                Check(vertical >= DpiScale.V(button, padY) - 1,
                     "action-face-vertical:" + button.Text + "=" + vertical.ToString("0.0"));
             }
             Check(button.Parent.ClientRectangle.Contains(button.Bounds), "entry-action-inside-parent:" + button.Text);
