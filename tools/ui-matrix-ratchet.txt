@@ -40,3 +40,5 @@ transfer-progress
 trash
 sftp-permission
 setup-wizard
+setup-password
+connection-login

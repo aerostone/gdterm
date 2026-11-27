@@ -198,6 +198,17 @@ namespace Gdterm.Tests.Ui
                 t => new Gdterm.UI.Forms.SftpPermissionForm("report.csv", "rw-r--r--", 644));
             AddDialog(list, "setup-wizard", "向导/步骤条",
                 t => new Gdterm.UI.Forms.SetupWizardForm(t.Track(new Gdterm.Security.SecurityManager())));
+            AddDialog(list, "setup-password", "向导/密码输入", t =>
+            {
+                var form = new Gdterm.UI.Forms.SetupWizardForm(t.Track(new Gdterm.Security.SecurityManager()));
+                form.GetType().GetMethod("ShowStep", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                    .Invoke(form, new object[] { 1 });
+                return form;
+            });
+            AddDialog(list, "connection-login", "连接表单/密码输入",
+                t => new Gdterm.UI.Forms.ConnectionDialog(
+                    new Gdterm.Core.Models.ConnectionConfig { Protocol = Gdterm.Core.Enums.ProtocolType.SSH },
+                    new FakeKeePassService()));
             return list;
         }
 

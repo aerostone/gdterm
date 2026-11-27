@@ -401,17 +401,18 @@
   "whiteShare": 0.0022
  },
  "keepass-picker": {
-  "blackShare": 0.9663,
+  "blackShare": 0.9552,
   "dominant": {
-   "#001010": 0.788,
-   "#101010": 0.116,
+   "#001010": 0.724,
+   "#101010": 0.169,
    "#101020": 0.063,
+   "#202020": 0.009,
    "#202030": 0.013
   },
   "h": 420,
-  "meanLum": 0.0824,
+  "meanLum": 0.0846,
   "w": 520,
-  "whiteShare": 0.0045
+  "whiteShare": 0.0047
  },
  "keepass-unlock": {
   "blackShare": 0.9178,
