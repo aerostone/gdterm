@@ -1,14 +1,14 @@
 ---
 doc_type: change
 kind: issue
-status: in-progress
+status: accepted
 phase: analyzed
 mode: standard
 slug: 2026-11-27-all-button-spacing
 severity: P2
 risk:
   level: low
-  reasons: [shared_empty_state]
+  reasons: [shared_button_measurement]
 contract:
   include:
   - .github/workflows/ci.yml
@@ -50,3 +50,11 @@ MODIFIED：所有按钮的文字与可见绘制边界保留空间，工具栏在
 
 ## 执行计划
 盘点创建点与工厂，修公共算法和特例，扩 Windows 采集与全按钮绘制框断言，审查实际截图后更新受影响基线，通过本地编译和 Windows CI 后推送主分支。
+
+## 执行证据
+
+完成 59 个源文件、153 个按钮创建点的源码盘点，清单见 docs/BUTTON-SPACING-REVIEW.md。覆盖公共按钮工厂、绝对布局按钮、原生工具按钮、动态 AI/欢迎行、tmux 溢出和嵌套弹窗。修复内容留白、可见间距、换行高度、取消路径与相关大字号布局问题。
+
+## 验收结果
+
+[Windows 验证 46009705271](https://github.com/aerostone/gdterm/actions/runs/46009705271) 对提交 80f578d 全部通过：构建、单元测试、UI smoke、控件树、像素基线、56 页 × 6 格矩阵、性能与静态门禁。R18/R19 检查所有可见 AntdUI/原生按钮的实际绘制空间与相邻间距，包含禁用态；嵌套编辑入口以 9/14pt 打开并取消。截图逐图复核后更新基线，未调松像素阈值。DPI 轴仍是注入比例；实体屏幕跨屏切换未验证。
