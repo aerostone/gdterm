@@ -257,7 +257,7 @@ namespace Gdterm.UI.Controls
                 // 标签垂直居中：用已知的 UiFont 行高代替受保护的 FontHeight
                 int lblOff = Math.Max(4, (fieldH - Services.FormFontPolicy.RowStep(form)) / 2);
                 var lbl = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = ph + ":", Location = new Point(15, y + lblOff), Font = Services.FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Foreground });
-                var txt = new AntdUI.Input { Location = DpiScale.P(form, 100, y), Size = new Size(DpiScale.V(form, 260), fieldH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.MonoFont()};
+                var txt = new AntdUI.Input { Location = new Point(Math.Max(DpiScale.V(form, 100), lbl.Right + DpiScale.V(form, 12)), DpiScale.V(form, y)), Size = new Size(DpiScale.V(form, 260), fieldH), BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = Services.FormFontPolicy.MonoFont()};
                 form.Controls.AddRange(new Control[] { lbl, txt });
                 inputs[ph] = txt;
                 y += rowH;
@@ -271,7 +271,7 @@ namespace Gdterm.UI.Controls
             Gdterm.UI.Services.FormFontPolicy.MountDialogActions(form, btnOk, btnCancel);
             form.AcceptButton = btnOk; form.CancelButton = btnCancel;
             // 客户区高度随行数自适应（原先 40+n*40+60 写死行高 40，大字号下裁剪）
-            form.ClientSize = new Size(DpiScale.V(form, 400), y + btnH + DpiScale.V(form, 16));
+            form.ClientSize = new Size(DpiScale.V(form, 440), y + btnH + DpiScale.V(form, 16));
 
             if (form.ShowDialog(this) != DialogResult.OK) return null;
 

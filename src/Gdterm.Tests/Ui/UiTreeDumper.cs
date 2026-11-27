@@ -53,12 +53,12 @@ namespace Gdterm.Tests.Ui
             // 相对盒（相对父容器）
             sb.Append("\"bounds\":").Append(RectJson(c.Bounds)).Append(",");
             var button = c as AntdUI.Button;
-            if (button != null)
+            if (button != null || c is System.Windows.Forms.Button)
             {
-                sb.Append("\"drawRect\":").Append(RectJson(button.ReadRectangle)).Append(",");
-                using (var graphics = button.CreateGraphics())
+                sb.Append("\"drawRect\":").Append(RectJson(button != null ? button.ReadRectangle : c.ClientRectangle)).Append(",");
+                using (var graphics = c.CreateGraphics())
                 {
-                    var text = graphics.MeasureString(button.Text ?? "", button.Font);
+                    var text = graphics.MeasureString(c.Text ?? "", c.Font);
                     sb.Append("\"faceTextW\":").Append((int)Math.Ceiling(text.Width)).Append(",");
                     sb.Append("\"faceTextH\":").Append((int)Math.Ceiling(text.Height)).Append(",");
                 }

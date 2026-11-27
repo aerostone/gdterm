@@ -217,6 +217,23 @@ namespace Gdterm.UI.Services
             Apply();
         }
 
+        internal static string FitButtonCaption(AntdUI.Button button, string full, int available)
+        {
+            using (var g = button.CreateGraphics())
+            {
+                if (g.MeasureString(full, button.Font).Width <= available) return full;
+                int lo = 0, hi = full.Length;
+                while (lo < hi)
+                {
+                    int mid = lo + (hi - lo + 1) / 2;
+                    if (g.MeasureString(full.Substring(0, mid) + "…", button.Font).Width <= available) lo = mid;
+                    else hi = mid - 1;
+                }
+                if (lo > 0 && char.IsHighSurrogate(full[lo - 1])) lo--;
+                return full.Substring(0, lo) + "…";
+            }
+        }
+
         /// <summary>普通对话框页脚：8px 按钮间隙，16px 两侧留白，8px 上下留白。</summary>
         public static void StyleDialogActions(Control host, Control strip)
         {
@@ -237,6 +254,37 @@ namespace Gdterm.UI.Services
                 button.Margin = DpiScale.Pad(host, 4, 2, 4, 2);
                 SizeActionButton(host, button, 12, 5, dialogAction: true);
             }
+        }
+
+        /// <summary>编辑器内容行按实际控件高度排布，避免大字号复选框/标签盖住下一行。</summary>
+        public static void ArrangeDialogRows(Form form, params Control[][] rows)
+        {
+            form.Font = UiFont();
+            var content = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true,
+                AutoSizeMode = AutoSizeMode.GrowAndShrink, ColumnCount = 1,
+                Padding = DpiScale.Pad(form, 12, 8, 12, 8), BackColor = form.BackColor };
+            content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            foreach (var controls in rows)
+            {
+                var row = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true,
+                    AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Margin = Padding.Empty };
+                foreach (var control in controls)
+                {
+                    control.Dock = DockStyle.None;
+                    control.Margin = DpiScale.Pad(form, 4, 4, 4, 4);
+                    row.Controls.Add(control);
+                }
+                content.Controls.Add(row);
+            }
+            var scroll = new Panel { Dock = DockStyle.Fill, AutoScroll = true, BackColor = form.BackColor };
+            scroll.Controls.Add(content);
+            form.Controls.Add(scroll);
+            scroll.BringToFront();
+            form.PerformLayout();
+            int footer = 0;
+            foreach (Control c in form.Controls) if (c.Dock == DockStyle.Bottom) footer += c.Height;
+            form.ClientSize = new Size(form.ClientSize.Width, Math.Min(Screen.FromControl(form).WorkingArea.Height - DpiScale.V(form, 80),
+                content.GetPreferredSize(new Size(scroll.ClientSize.Width, 0)).Height + footer + DpiScale.V(form, 8)));
         }
 
         /// <summary>把旧绝对定位页脚迁到统一流式布局；参数按从右到左排列。</summary>

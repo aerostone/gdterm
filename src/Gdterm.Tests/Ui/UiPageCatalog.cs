@@ -169,6 +169,15 @@ namespace Gdterm.Tests.Ui
             Add(list, "ai-chat", "发送/清空", PanelEmptyExpect.Ignore,
                 t => new Gdterm.UI.Controls.AiChatPanel(t.Track(new Gdterm.AI.AiAssistantService(
                     new Gdterm.AI.Models.AiConfiguration())), null));
+            Add(list, "ai-chat-commands", "动态命令按钮", PanelEmptyExpect.Ignore, t =>
+            {
+                var panel = new Gdterm.UI.Controls.AiChatPanel(t.Track(new Gdterm.AI.AiAssistantService(
+                    new Gdterm.AI.Models.AiConfiguration())), null);
+                panel.GetType().GetMethod("OnSendDone", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                    .Invoke(panel, new object[] { new Gdterm.AI.Models.AiResponse { IsSuccess = true,
+                        SuggestedCommands = new List<string> { "printf 'long command with arguments and readable labels'", "pwd" } } });
+                return panel;
+            });
             Add(list, "tool-network", "原生工具按钮", PanelEmptyExpect.Ignore,
                 t => t.Track(new Gdterm.Tools.Modules.NetworkDiagnosticsTool()).CreatePanel());
             Add(list, "tool-action", "原生工具执行按钮", PanelEmptyExpect.Ignore,

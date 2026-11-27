@@ -146,7 +146,7 @@ namespace Gdterm.Tools.Modules
                 Minimum = 1,
                 Maximum = 30,
                 Value = _config.PingCount > 0 ? _config.PingCount : 4,
-                Dock = DockStyle.Left,
+                Anchor = AnchorStyles.Left,
                 Width = 60,
                 BackColor = Color.FromArgb(45, 45, 48),
                 ForeColor = Color.White,

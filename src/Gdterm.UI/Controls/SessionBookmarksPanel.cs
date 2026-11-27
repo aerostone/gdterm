@@ -376,7 +376,7 @@ namespace Gdterm.UI.Controls
                 int pad = DpiScale.V(this, 15);
                 int y = DpiScale.V(this, 18);
                 var lblName = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("名称"), ForeColor = GdtermColorTable.Muted, Location = new Point(pad, y) });
-                y += Services.FormFontPolicy.RowStep(this);
+                y += Math.Max(Services.FormFontPolicy.RowStep(this), Services.FormFontPolicy.LineBox(Services.FormFontPolicy.UiFont(), this) + DpiScale.V(this, 8));
                 var nameBox = new AntdUI.Input {
                     Location = new Point(pad, y),
                     Size = new Size(DpiScale.V(this, 310), fieldH),
@@ -385,7 +385,7 @@ namespace Gdterm.UI.Controls
                 };
                 y += rowH;
                 var lblConn = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("连接"), ForeColor = GdtermColorTable.Muted, Location = new Point(pad, y) });
-                y += Services.FormFontPolicy.RowStep(this);
+                y += Math.Max(Services.FormFontPolicy.RowStep(this), Services.FormFontPolicy.LineBox(Services.FormFontPolicy.UiFont(), this) + DpiScale.V(this, 8));
                 var combo = new AntdUI.Select {
                     Location = new Point(pad, y),
                     Size = new Size(DpiScale.V(this, 310), fieldH),
@@ -410,8 +410,11 @@ namespace Gdterm.UI.Controls
                 dlg.Controls.Add(lblConn);
                 dlg.Controls.Add(combo);
                 dlg.Controls.Add(ok);
-                Gdterm.UI.Services.FormFontPolicy.MountDialogActions(dlg, ok);
+                var cancel = new AntdUI.Button { Text = L10n.T("取消"), DialogResult = DialogResult.Cancel, Location = ok.Location };
+                dlg.Controls.Add(cancel);
+                Gdterm.UI.Services.FormFontPolicy.MountDialogActions(dlg, ok, cancel);
                 dlg.AcceptButton = ok;
+                dlg.CancelButton = cancel;
                 dlg.ClientSize = new Size(pad * 2 + DpiScale.V(this, 310), y + btnH + DpiScale.V(this, 16));
 
                 if (dlg.ShowDialog(this) != DialogResult.OK) return;

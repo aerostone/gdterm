@@ -245,7 +245,7 @@ namespace Gdterm.UI.Controls
         /// <summary>字体/行高变化后重算高度（由 MainForm.ApplyGlobalUIFont 调用）。</summary>
         public int GetPreferredHeight()
         {
-            return Math.Max(DpiScale.V(this, DesignHeight),
+            return Math.Max(DpiScale.V(this, Math.Max(DesignHeight, (int)Math.Ceiling(FormFontPolicy.UiFontSize * 2 + 16))),
                 FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this) + DpiScale.V(this, 16));
         }
 
@@ -255,6 +255,7 @@ namespace Gdterm.UI.Controls
         {
             Dock = DockStyle.Bottom;
             BackColor = GdtermColorTable.Background;
+            Name = "TerminalQuickBar";
             Height = GetPreferredHeight();
 
             // 左：分组下拉按钮

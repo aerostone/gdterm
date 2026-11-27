@@ -182,7 +182,7 @@ namespace Gdterm.UI.Controls
             var font = Services.FormFontPolicy.UiFont();
             // P0-1：固定 y 步进→字体驱动行高（原先 30/3/210/40 在大字号下重叠）
             int fieldH = FormFontPolicy.FieldHeight(this);
-            int rowH = fieldH + DpiScale.V(this, 6);
+            int rowH = Math.Max(fieldH, FormFontPolicy.LineBox(Services.FormFontPolicy.UiFont(), this) + DpiScale.V(this, 20)) + DpiScale.V(this, 8);
             int stepBtnH = Math.Max(DpiScale.V(this, 24), fieldH - DpiScale.V(this, 6));
             int y = 12;
 

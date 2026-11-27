@@ -53,6 +53,8 @@ namespace Gdterm.UI.Controls
             Dock = DockStyle.Fill;
             BackColor = GdtermColorTable.Background;
             BuildUI();
+            _cmdBar.SizeChanged += (s, e) => FitCommandButtons();
+            _cmdBar.FontChanged += (s, e) => FitCommandButtons();
             // F13：初始对齐到当前活动终端的连接键（无终端 → global），再回显该键历史
             _currentKey = ResolveConversationKey();
             try { _aiService.SetActiveConversation(_currentKey); } catch { }
@@ -314,6 +316,8 @@ namespace Gdterm.UI.Controls
                     Text = c.Length > 42 ? c.Substring(0, 42) + "…" : c,
                     Margin = new Padding(0, 0, DpiScale.V(this, 4), 0)
                 };
+                b.AccessibleDescription = c;
+                b.ToolTipText2(c);
                 FormFontPolicy.SizeActionButton(this, b, 8, 3);
                 b.Click += (s, e) =>
                 {
@@ -330,6 +334,21 @@ namespace Gdterm.UI.Controls
                 _cmdBar.Controls.Add(b);
             }
             _cmdBar.Visible = _cmdBar.Controls.Count > 0;
+            FitCommandButtons();
+        }
+
+        private void FitCommandButtons()
+        {
+            if (_cmdBar == null || _cmdBar.ClientSize.Width <= 0) return;
+            foreach (Control child in _cmdBar.Controls)
+            {
+                var button = child as AntdUI.Button;
+                if (button == null) continue;
+                int width = _cmdBar.ClientSize.Width - _cmdBar.Padding.Horizontal - button.Margin.Horizontal;
+                int available = Math.Max(0, width - DpiScale.V(this, 40) - FormFontPolicy.LineBox(button));
+                string full = button.AccessibleDescription ?? "";
+                button.Text = FormFontPolicy.FitButtonCaption(button, full, available);
+            }
         }
 
         private void AppendUser(string text)

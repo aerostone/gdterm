@@ -277,6 +277,13 @@ namespace Gdterm.UI.Controls
             // 客户区高度随行高自适应（原先固定 350 在大字号下裁剪）
             form.ClientSize = new Size(DpiScale.V(this, 420), y + btnH + DpiScale.V(this, 16));
 
+            FormFontPolicy.ArrangeDialogRows(form,
+                new Control[] { lblName, txtName }, new Control[] { lblPattern, txtPattern },
+                new Control[] { chkRegex, chkCase }, new Control[] { lblFg, txtFg }, new Control[] { lblBg, txtBg },
+                new Control[] { chkBold }, new Control[] { lblAction, cmbAction }, new Control[] { lblArg, txtArg },
+                new Control[] { lblCd, numCd });
+            hintAction.Visible = false;
+            cmbAction.ToolTipText2(hintAction.Text);
             if (form.ShowDialog(this) != DialogResult.OK || string.IsNullOrWhiteSpace(txtName.Text)) return null;
             return new HighlightRule
             {

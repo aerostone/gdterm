@@ -401,7 +401,7 @@ def main():
         # 6/2 是全按钮最低内容余量，页脚/主要入口另有更高的 C# 断言。
         faces = 0
         for n, _, _, _, _ in all_nodes:
-            if not av.get(id(n), False) or n.get("type") != "AntdUI.Button":
+            if not av.get(id(n), False) or n.get("type") not in ("AntdUI.Button", "System.Windows.Forms.Button"):
                 continue
             face = n.get("drawRect")
             if face is None or "faceTextW" not in n:
@@ -417,7 +417,7 @@ def main():
 
         # R19: 同父按钮的可见底色之间至少 4 逻辑像素，不用 Margin 属性代替实际间隔。
         for group in by_parent.values():
-            buttons = [n for n, _, _ in group if av.get(id(n), False) and n.get("type") == "AntdUI.Button"]
+            buttons = [n for n, _, _ in group if av.get(id(n), False) and n.get("type") in ("AntdUI.Button", "System.Windows.Forms.Button")]
             for i, a in enumerate(buttons):
                 for b in buttons[i + 1:]:
                     ra, rb = a.get("drawRect", {}), b.get("drawRect", {})

@@ -357,18 +357,7 @@ namespace Gdterm.UI.Controls
         {
             string full = button.AccessibleDescription ?? "";
             int available = Math.Max(0, button.Width - DpiScale.V(this, 24) - FormFontPolicy.LineBox(button));
-            string display = full;
-            using (var graphics = button.CreateGraphics())
-            {
-                if (graphics.MeasureString(display, button.Font).Width > available)
-                {
-                    int length = full.Length;
-                    while (length > 0 && graphics.MeasureString(full.Substring(0, length) + "…", button.Font).Width > available)
-                        length--;
-                    display = full.Substring(0, length) + "…";
-                }
-            }
-            button.Text = display;
+            button.Text = FormFontPolicy.FitButtonCaption(button, full, available);
         }
 
         private void AddEmpty(FlowLayoutPanel host, string text)
