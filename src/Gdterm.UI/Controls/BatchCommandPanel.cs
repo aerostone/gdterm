@@ -142,6 +142,7 @@ namespace Gdterm.UI.Controls
         }
         public void SetSessions(Dictionary<string, ITerminalSession> sessions)
         {
+            Console.WriteLine("[batch-trace] SetSessions enter");
             var next = sessions ?? new Dictionary<string, ITerminalSession>();
             bool changed = next.Count != _sessions.Count || next.Any(kv => !_sessions.ContainsKey(kv.Key) || !ReferenceEquals(_sessions[kv.Key], kv.Value));
             _sessions = new Dictionary<string, ITerminalSession>(next);
@@ -157,7 +158,13 @@ namespace Gdterm.UI.Controls
                     item.SubItems.Add(L10n.T("就绪")); _rows[kv.Key] = item;
                 }
             }
-            _shell.SetItems(_rows.Values); _empty.SetEmpty(next.Count == 0); UpdateTargets();
+            Console.WriteLine("[batch-trace] rows ready");
+            _shell.SetItems(_rows.Values);
+            Console.WriteLine("[batch-trace] shell ready");
+            _empty.SetEmpty(next.Count == 0);
+            Console.WriteLine("[batch-trace] empty ready");
+            UpdateTargets();
+            Console.WriteLine("[batch-trace] targets ready");
         }
         private void SelectAll(bool selected)
         { if (_busy) return; foreach (ListViewItem item in _list.Items) item.Checked = selected; UpdateTargets(); }

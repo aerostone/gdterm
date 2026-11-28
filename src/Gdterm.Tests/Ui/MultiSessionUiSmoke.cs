@@ -16,7 +16,9 @@ namespace Gdterm.Tests.Ui
     {
         internal static BatchCommandPanel Batch(UiTempScope scope)
         {
+            Console.WriteLine("[batch-trace] fixture construct");
             var panel = new BatchCommandPanel();
+            Console.WriteLine("[batch-trace] fixture constructed");
             panel.SetSessions(new Dictionary<string, ITerminalSession> {
                 ["server-a"] = new MultiSessionFake { Hostname = "Production / 数据库 A" },
                 ["server-b"] = new MultiSessionFake { Hostname = "Production / 数据库 B" }
