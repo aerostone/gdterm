@@ -179,11 +179,14 @@ namespace Gdterm.UI.Services
                 {
                     var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "config", "port-forwards.json");
                     var store = new PortForwardRuleStore(path);
-                    // Validate the file before allocating a manager with a live timer.
-                    store.Load();
-                    _portForwards = new PortForwardWorkspace(store, new PortForwardManager(),
-                        id => _bridge != null ? _bridge.GetPortForwardHost(id) : _tabs?.GetPortForwardHost(id),
-                        GetPortForwardConnections, TrashStore.Default);
+                    var manager = new PortForwardManager();
+                    try
+                    {
+                        _portForwards = new PortForwardWorkspace(store, manager,
+                            id => _bridge != null ? _bridge.GetPortForwardHost(id) : _tabs?.GetPortForwardHost(id),
+                            GetPortForwardConnections, TrashStore.Default);
+                    }
+                    catch { manager.Dispose(); throw; }
                 }
                 return new PortForwardPanel(_portForwards);
             }

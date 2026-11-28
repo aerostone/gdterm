@@ -32,34 +32,29 @@ namespace Gdterm.UI.Controls
         {
             _workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             Dock = DockStyle.Fill; BackColor = GdtermColorTable.Background;
-            System.Console.WriteLine("forward-trace:build-begin");
             BuildUI();
-            System.Console.WriteLine("forward-trace:build-end");
             _workspace.Changed += OnWorkspaceChanged;
             RefreshList();
         }
         private void BuildUI()
         {
-            System.Console.WriteLine("forward-trace:toolbar");
             var toolbar = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
                 WrapContents = true, BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 6), DpiScale.V(this, 8), 0)
             };
-            var add = Button(L10n.T("添加规则"), "ForwardAdd");
+            var add = Button(L10n.T("添加规则"), "ForwardAdd", true);
             _edit = Button(L10n.T("编辑"), "ForwardEdit");
             _start = Button(L10n.T("启动"), "ForwardStart");
             _stop = Button(L10n.T("停止"), "ForwardStop");
             _delete = Button(L10n.T("删除"), "ForwardDelete");
-            add.Type = AntdUI.TTypeMini.Primary;
             add.Click += (s, e) => AddRule();
             _edit.Click += (s, e) => EditSelected();
             _start.Click += async (s, e) => await RunSelected("start");
             _stop.Click += async (s, e) => await RunSelected("stop");
             _delete.Click += async (s, e) => await DeleteSelected();
             toolbar.Controls.AddRange(new Control[] { add, _edit, _start, _stop, _delete });
-            System.Console.WriteLine("forward-trace:list");
             _lvRules = new ListView
             {
                 Name = "ForwardRules", Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true,
@@ -69,6 +64,15 @@ namespace Gdterm.UI.Controls
             };
             foreach (var col in new[] { L10n.T("名称"), L10n.T("状态"), L10n.T("所属 SSH 连接"), L10n.T("类型"), L10n.T("本地地址"), L10n.T("远程地址"), L10n.T("说明"), L10n.T("错误原因") })
                 _lvRules.Columns.Add(col, DpiScale.V(this, col == L10n.T("名称") ? 130 : 150));
+            _lvRules.OwnerDraw = true;
+            _lvRules.DrawColumnHeader += (s, e) =>
+            {
+                using (var brush = new SolidBrush(GdtermColorTable.Surface)) e.Graphics.FillRectangle(brush, e.Bounds);
+                TextRenderer.DrawText(e.Graphics, e.Header.Text, _lvRules.Font, e.Bounds,
+                    GdtermColorTable.Muted, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+            };
+            _lvRules.DrawItem += (s, e) => e.DrawDefault = true;
+            _lvRules.DrawSubItem += (s, e) => e.DrawDefault = true;
             _lvRules.SelectedIndexChanged += (s, e) => UpdateActions();
             _lvRules.ItemChecked += (s, e) => UpdateActions();
             _lvRules.KeyDown += async (s, e) =>
@@ -76,34 +80,31 @@ namespace Gdterm.UI.Controls
                 if (e.KeyCode == Keys.Delete) { e.SuppressKeyPress = true; await DeleteSelected(); }
                 else if (e.KeyCode == Keys.F2) { e.SuppressKeyPress = true; EditSelected(); }
             };
-            System.Console.WriteLine("forward-trace:shell");
             _shell = new ListShell(_lvRules, L10n.T("过滤名称/地址/说明…"));
             _shell.AddAction(L10n.T("导出"), (s, e) => _shell.ExportCsv(FindForm(), "port-forward")).Name = "ForwardExportButton";
             // ListShell owns Enter/DoubleClick dispatch; one activation opens one editor.
             _shell.ItemActivated += (s, item) => EditSelected();
             _lvRules.Layout += (s, e) => UpdateActions();
-            System.Console.WriteLine("forward-trace:result");
             _result = new AntdUI.Label
             {
                 Name = "ForwardResult", Dock = DockStyle.Bottom,
-                Height = FormFontPolicy.LineBox(this) + DpiScale.V(this, 12),
+                Height = FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this) * 2 + DpiScale.V(this, 12),
                 Padding = new Padding(DpiScale.V(this, 8), DpiScale.V(this, 6), DpiScale.V(this, 8), DpiScale.V(this, 6)),
                 Font = FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Muted, AutoEllipsis = true,
-                Text = L10n.T("勾选优先；双击编辑。关闭面板不会停止转发。")
+                Text = L10n.T("勾选优先；双击编辑。\n关闭面板不会停止转发。")
             };
-            System.Console.WriteLine("forward-trace:mount");
             Controls.Add(_shell); Controls.Add(_result); Controls.Add(toolbar);
-            System.Console.WriteLine("forward-trace:empty");
             _empty = EmptyStateView.Attach(this, L10n.T("还没有端口转发规则"),
                 L10n.T("创建本地、远程或 SOCKS5 转发，保存后手动启动。"), L10n.T("新建规则"), (s, e) => AddRule());
-            System.Console.WriteLine("forward-trace:a11y");
             UiA11y.AutoName(this);
         }
-        private AntdUI.Button Button(string text, string name)
+        private AntdUI.Button Button(string text, string name, bool primary = false)
         {
             var button = new AntdUI.Button { Text = text, Name = name,
                 Margin = new Padding(0, 0, DpiScale.V(this, 8), DpiScale.V(this, 6)),
-                BackColor = GdtermColorTable.Surface, ForeColor = GdtermColorTable.Foreground, Font = FormFontPolicy.UiFont(-0.5f) };
+                Font = FormFontPolicy.UiFont() };
+            if (primary) button.Type = AntdUI.TTypeMini.Primary;
+            else { button.BackColor = GdtermColorTable.Surface; button.ForeColor = GdtermColorTable.Foreground; }
             FormFontPolicy.SizeActionButton(this, button, 10, 4); return button;
         }
         private void OnWorkspaceChanged(object sender, EventArgs e)
@@ -119,12 +120,11 @@ namespace Gdterm.UI.Controls
         protected override void OnLoad(EventArgs e)
         {
             base.OnLoad(e);
-            System.Console.WriteLine("forward-trace:load list=" + (_lvRules != null) + " shell=" + (_shell != null));
+            // Font measurement can create the handle and raise Load while BuildUI is still running.
             if (_shell != null) RefreshList();
         }
         private void RefreshList()
         {
-            System.Console.WriteLine("forward-trace:refresh");
             if (_refreshing || IsDisposed) return;
             _refreshing = true;
             try
@@ -150,7 +150,6 @@ namespace Gdterm.UI.Controls
                     else if (state.State == PortForwardState.Running) item.ForeColor = GdtermColorTable.Success;
                     _rows.Add(item);
                 }
-            System.Console.WriteLine("forward-trace:set-items");
                 _shell.SetItems(_rows);
                 foreach (var item in _rows)
                     if (item.ListView != null) item.Selected = selected.Contains(((PortForwardRule)item.Tag).Id);

@@ -40,6 +40,13 @@ PermitRootLogin prohibit-password
 Subsystem sftp internal-sftp
 LogLevel VERBOSE
 """)
+        # OpenSSH 9.8+ penalizes banner-only probes. This loopback fixture intentionally
+        # opens many short connections; disable the penalty only in its private config.
+        probe = subprocess.run([SSHD, "-t", "-f", str(config), "-o", "PerSourcePenalties=no"],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        if probe.returncode == 0:
+            with config.open("a") as output:
+                output.write("PerSourcePenalties no\n")
         prefix = ["sudo", "-n"] if os.environ.get("GDT_SSHD_SUDO") == "1" else []
         with (folder / "sshd.log").open("w+") as log:
             server = subprocess.Popen(prefix + [SSHD, "-D", "-e", "-f", str(config)], stdout=log, stderr=log)

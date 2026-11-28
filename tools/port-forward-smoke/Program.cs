@@ -55,6 +55,32 @@ class Program
         using (var a = Connect(port, args[1])) using (var b = Connect(port, args[1]))
         using (var m = new PortForwardManager())
         {
+            var tabA = new System.Windows.Forms.TabPage(); var tabB = new System.Windows.Forms.TabPage();
+            var active = tabA;
+            var sessionA = new Gdterm.Terminal.QuerySession(); var sessionB = new Gdterm.Terminal.QuerySession { Client = b };
+            var tcA = new Gdterm.UI.Controls.TerminalControl { Config = new ConnectionConfig { Id = "A" }, Session = sessionA };
+            var tcB = new Gdterm.UI.Controls.TerminalControl { Config = new ConnectionConfig { Id = "B" }, Session = sessionB };
+            var states = new System.Collections.Generic.Dictionary<System.Windows.Forms.TabPage, Gdterm.UI.Services.TabSessionState>();
+            var query = new Gdterm.UI.Services.TabActiveSessionQuery(() => active, states);
+            Check(query.GetPortForwardHost("A") == null, "resolver supports panel opened before SSH tabs exist");
+            states[tabA] = new Gdterm.UI.Services.TabSessionState { Config = tcA.Config, Control = tcA };
+            states[tabB] = new Gdterm.UI.Services.TabSessionState { Config = tcB.Config, Control = tcB };
+            sessionA.Client = a;
+            Check(ReferenceEquals(query.GetPortForwardHost("A").GetUnderlyingClient(), a), "late SSH connection resolves without rebuilding panel");
+            active = tabB;
+            Check(ReferenceEquals(query.GetPortForwardHost("A").GetUnderlyingClient(), a), "switching active tab B still resolves rule assigned to A");
+            Check(query.GetPortForwardHost("missing") == null, "unknown connection never falls back to active B");
+            using (var replacement = Connect(port, args[1]))
+            {
+                sessionA.Client = replacement;
+                Check(ReferenceEquals(query.GetPortForwardHost("A").GetUnderlyingClient(), replacement), "replacement SSH client resolves on every start");
+                states[tabA].Control = new System.Collections.Generic.List<Gdterm.UI.Controls.TerminalControl> { tcB, tcA };
+                states[tabA].PrimaryTerminal = tcB;
+                Check(ReferenceEquals(query.GetPortForwardHost("A").GetUnderlyingClient(), replacement), "split pane resolves matching leaf rather than primary terminal");
+                replacement.Disconnect();
+                Check(query.GetPortForwardHost("A") == null, "disconnected A is not replaced by connected B");
+            }
+            sessionA.Client = a;
             var local = Rule("local", Free(), port);
             Check(await m.StartClientAsync(a, local), "local start");
             Check(Banner(local.LocalPort), "local carries real SSH bytes");

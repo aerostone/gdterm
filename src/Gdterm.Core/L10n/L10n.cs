@@ -1395,7 +1395,7 @@ namespace Gdterm.Core
             ["请编辑规则并选择所属 SSH 连接"] = "Edit the rule and select its SSH connection",
             ["所属 SSH 连接"] = "SSH connection",
             ["错误原因"] = "Error details",
-            ["勾选优先；双击编辑。关闭面板不会停止转发。"] = "Checked rows take priority. Double-click to edit. Closing this panel keeps forwards running.",
+            ["勾选优先；双击编辑。\n关闭面板不会停止转发。"] = "Checked rows first; double-click to edit.\nClosing this panel keeps forwards running.",
             ["创建本地、远程或 SOCKS5 转发，保存后手动启动。"] = "Create a local, remote or SOCKS5 rule, then start it manually.",
             ["未选择连接"] = "No connection selected",
             ["启动中…"] = "Starting…",

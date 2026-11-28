@@ -2,6 +2,9 @@
   <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems><NuGetAudit>false</NuGetAudit><LangVersion>7.3</LangVersion></PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
+    <Compile Include="SessionQueryFixture.cs" />
+    <Compile Include="../../src/Gdterm.UI/Services/TabActiveSessionQuery.cs" />
+    <Compile Include="../../src/Gdterm.Terminal/SshPortForwardHost.cs" />
     <Compile Include="../../src/Gdterm.Tunnel/PortForwardManager.cs" />
     <Compile Include="../../src/Gdterm.Tunnel/ISshPortForwardHost.cs" />
     <Compile Include="../../src/Gdterm.Core/Models/PortForwardRule.cs" />

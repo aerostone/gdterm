@@ -118,6 +118,8 @@ namespace Gdterm.Tunnel
                         if (publish) _statuses[entry.Id] = new PortForwardStatus(PortForwardState.Running);
                     }
                     if (publish) { Notify(entry.Id); return true; }
+                    lock (_sync)
+                        if (!entry.StopRequested && !_disposed) error = L10n.T("SSH 已断开或转发已停止，请重新连接后启动");
                 }
                 catch (Exception ex) { error = ex.Message; }
                 return Finish(entry, error);
