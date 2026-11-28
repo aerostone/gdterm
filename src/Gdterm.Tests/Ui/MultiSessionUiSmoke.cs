@@ -60,6 +60,7 @@ namespace Gdterm.Tests.Ui
                 check(recorder.EntryCount == 2, "records actual target output and accepted input");
                 Find<AntdUI.Button>(panel, "BroadcastRecord").PerformClick();
                 check(a.OutputHandlers == 0 && !recorder.IsRecording, "stop recording unsubscribes output");
+                Find<AntdUI.Tabs>(panel, "BroadcastPages").SelectedIndex = 0;
                 var shell = UiSmokeRunner.AllControls(panel).OfType<ListShell>().Single();
                 shell.FilterText = "b"; Application.DoEvents();
                 Find<AntdUI.Button>(panel, "BroadcastDeselect").PerformClick();

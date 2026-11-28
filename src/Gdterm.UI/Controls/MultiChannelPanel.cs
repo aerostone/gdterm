@@ -33,6 +33,7 @@ namespace Gdterm.UI.Controls
         private AntdUI.Button _send, _record, _replay, _cancel;
         private CancellationTokenSource _run;
         private bool _busy, _refreshing;
+        private AntdUI.Tabs _pages;
         private string _fingerprint;
         private EventHandler<CommandSentEventArgs> _recordInput;
         public Action SyncSessions { get; set; }
@@ -53,26 +54,20 @@ namespace Gdterm.UI.Controls
         private void BuildUI()
         {
             AutoScroll = true;
-            var layout = new TableLayoutPanel { Dock = DockStyle.Top, Height = DpiScale.V(this, 680), ColumnCount = 1, RowCount = 6,
+            var layout = new TableLayoutPanel { Dock = DockStyle.Top, Height = DpiScale.V(this, 520), ColumnCount = 1, RowCount = 5,
                 Padding = new Padding(DpiScale.V(this, 8)) };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 55));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 45));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             var actions = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, Margin = Padding.Empty };
             _send = Button(L10n.T("广播"), "BroadcastSend", async () => await SendAsync(), true);
             _record = Button(L10n.T("停止录制"), "BroadcastRecord", ToggleRecord);
             _replay = Button(L10n.T("查看回放"), "BroadcastReplay", async () => await ReplayAsync());
             _cancel = Button(L10n.T("取消任务"), "BroadcastCancel", () => { _run?.Cancel(); _cancel.Enabled = false; });
-            actions.Controls.AddRange(new Control[] {
-                Button(L10n.T("全选就绪"), "BroadcastSelectAll", () => SelectVisible(true)),
-                Button(L10n.T("清空选择"), "BroadcastDeselect", () => SelectVisible(false)),
-                _send, _cancel, _record, _replay,
-                Button(L10n.T("导出录制"), "BroadcastExport", ExportRecording),
-                Button(L10n.T("打开录制"), "BroadcastOpen", OpenRecording) });
+            actions.Controls.AddRange(new Control[] { _send, _cancel, _record });
             layout.Controls.Add(actions, 0, 0);
             _targets = Hint("", "BroadcastTargets"); layout.Controls.Add(_targets, 0, 1);
             _list = new ListView { Name = "BroadcastSessions", Dock = DockStyle.Fill, View = View.Details,
@@ -80,10 +75,27 @@ namespace Gdterm.UI.Controls
                 Font = Font, BackColor = GdtermColorTable.Background, ForeColor = GdtermColorTable.Foreground };
             foreach (var name in new[] { L10n.T("目标主机"), L10n.T("状态"), L10n.T("已发送") })
                 _list.Columns.Add(name, DpiScale.V(this, name == L10n.T("目标主机") ? 200 : 120));
+            _list.OwnerDraw = true;
+            _list.DrawColumnHeader += (sender, e) => {
+                using (var brush = new SolidBrush(GdtermColorTable.Surface)) e.Graphics.FillRectangle(brush, e.Bounds);
+                TextRenderer.DrawText(e.Graphics, e.Header.Text, _list.Font, e.Bounds, GdtermColorTable.Muted,
+                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+            };
+            _list.DrawItem += (sender, e) => e.DrawDefault = true;
+            _list.DrawSubItem += (sender, e) => e.DrawDefault = true;
             _list.ItemCheck += OnItemCheck;
             _shell = new ListShell(_list, L10n.T("按主机过滤…"));
             _list.Layout += (s, e) => UpdateActions();
-            layout.Controls.Add(_shell, 0, 2);
+            _pages = new AntdUI.Tabs { Name = "BroadcastPages", Dock = DockStyle.Fill, Font = Font };
+            var targetPage = new AntdUI.TabPage { Text = L10n.T("选择目标") };
+            var resultPage = new AntdUI.TabPage { Text = L10n.T("执行结果") };
+            _pages.Pages.Add(targetPage); _pages.Pages.Add(resultPage);
+            var selectionActions = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true };
+            selectionActions.Controls.AddRange(new Control[] {
+                Button(L10n.T("全选就绪"), "BroadcastSelectAll", () => SelectVisible(true)),
+                Button(L10n.T("清空选择"), "BroadcastDeselect", () => SelectVisible(false)) });
+            targetPage.Controls.Add(_shell); targetPage.Controls.Add(selectionActions);
+            layout.Controls.Add(_pages, 0, 3);
             _empty = EmptyStateView.Attach(_shell, L10n.T("还没有可广播的会话"),
                 L10n.T("打开终端连接后自动显示；只向就绪终端发送。"));
             _command = new AntdUI.Input { Name = "BroadcastCommand", Dock = DockStyle.Top, Multiline = true,
@@ -92,15 +104,19 @@ namespace Gdterm.UI.Controls
             _command.KeyDown += (s, e) => {
                 if (e.KeyCode == Keys.Enter && !e.Shift) { e.SuppressKeyPress = true; _ = SendAsync(); }
             };
-            layout.Controls.Add(_command, 0, 3);
+            layout.Controls.Add(_command, 0, 2);
             _results = new RichTextBox { Name = "BroadcastResults", Dock = DockStyle.Fill, ReadOnly = true,
                 WordWrap = false, DetectUrls = false, Font = FormFontPolicy.MonoFont(),
                 BackColor = GdtermColorTable.Background, ForeColor = GdtermColorTable.Foreground };
-            layout.Controls.Add(_results, 0, 4);
+            var resultActions = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true };
+            resultActions.Controls.AddRange(new Control[] { _replay,
+                Button(L10n.T("导出录制"), "BroadcastExport", ExportRecording),
+                Button(L10n.T("打开录制"), "BroadcastOpen", OpenRecording) });
+            resultPage.Controls.Add(_results); resultPage.Controls.Add(resultActions);
             _status = Hint(L10n.T("就绪；回放仅查看录制，不执行命令。"), "BroadcastStatus");
-            layout.Controls.Add(_status, 0, 5);
+            layout.Controls.Add(_status, 0, 4);
             Controls.Add(layout);
-            SizeChanged += (s, e) => layout.Height = Math.Max(ClientSize.Height, DpiScale.V(this, 680));
+            SizeChanged += (s, e) => layout.Height = Math.Max(ClientSize.Height, DpiScale.V(this, 520));
         }
         private AntdUI.Label Hint(string text, string name)
         {
@@ -180,7 +196,6 @@ namespace Gdterm.UI.Controls
             _replay.Enabled = !_busy && _recorder != null && !_recorder.IsRecording && _recorder.EntryCount > 0;
             _cancel.Enabled = _busy && _run != null && !_run.IsCancellationRequested;
             _record.Text = _recorder?.IsRecording == true ? L10n.T("停止录制") : L10n.T("录制");
-            FormFontPolicy.SizeActionButton(this, _record, 10, 4);
         }
         internal async Task SendAsync()
         {
@@ -197,7 +212,7 @@ namespace Gdterm.UI.Controls
                     DangerousCommandPrompt.Confirm(FindForm(), CommandGate, command, InputSource.Broadcast, AuditLogger, names);
                 if (!allowed) { _status.Text = L10n.T("已取消危险命令"); return; }
                 _run = new CancellationTokenSource(); _list.Enabled = _command.Enabled = false; UpdateActions();
-                _results.Clear(); _results.AppendText(L10n.Tf("目标：{0}\n", names));
+                _pages.SelectedIndex = 1; _results.Clear(); _results.AppendText(L10n.Tf("目标：{0}\n", names));
                 var results = await _manager.BroadcastCommandAsync(command, targets, _run.Token);
                 if (IsDisposed || Disposing) return;
                 foreach (var result in results)
@@ -254,7 +269,7 @@ namespace Gdterm.UI.Controls
         private async Task ReplayAsync()
         {
             if (_recorder == null || _busy || _recorder.IsRecording || _recorder.EntryCount == 0) return;
-            _busy = true; _run = new CancellationTokenSource(); UpdateActions(); _results.Clear();
+            _busy = true; _run = new CancellationTokenSource(); UpdateActions(); _pages.SelectedIndex = 1; _results.Clear();
             try
             {
                 var progress = new Progress<ReplayEvent>(ev => {

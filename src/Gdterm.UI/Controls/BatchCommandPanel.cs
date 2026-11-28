@@ -37,7 +37,8 @@ namespace Gdterm.UI.Controls
         private RichTextBox _results;
         private AntdUI.Button _execute, _cancel;
         private AntdUI.Label _status, _targets;
-        private bool _busy, _displayTruncated;
+        private bool _busy, _displayTruncated, _refreshing;
+        private AntdUI.Tabs _pages;
         public Func<Dictionary<string, ITerminalSession>> SessionProvider { get; set; }
         public IAuditLogger AuditLogger { get; set; }
         // Injectable confirmation only for native interaction fixtures; production always uses the unified prompt.
@@ -62,13 +63,12 @@ namespace Gdterm.UI.Controls
         private void BuildUI()
         {
             AutoScroll = true;
-            var layout = new TableLayoutPanel { Dock = DockStyle.Top, Height = DpiScale.V(this, 680), ColumnCount = 1, RowCount = 7,
+            var layout = new TableLayoutPanel { Dock = DockStyle.Top, Height = DpiScale.V(this, 520), ColumnCount = 1, RowCount = 6,
                 Padding = new Padding(DpiScale.V(this, 8)) };
             layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             for (int i = 0; i < 3; i++) layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 40));
-            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 60));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
             layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
             var hint = Hint(L10n.T("SSH 独立命令，不继承终端目录/变量。\nEnter 换行；Ctrl+Enter 执行；Alt+↑/↓ 历史。"), "BatchHint");
             layout.Controls.Add(hint, 0, 0);
@@ -89,11 +89,9 @@ namespace Gdterm.UI.Controls
             var timeoutLabel = FormFontPolicy.FitSingleLineLabel(new AntdUI.Label { Text = L10n.T("超时（秒）"), Font = Font });
             _timeout = new AntdUI.InputNumber { Name = "BatchTimeout", Width = DpiScale.V(this, 86),
                 Height = FormFontPolicy.FieldHeight(this), Minimum = 1, Maximum = 3600, Value = 30 };
-            actions.Controls.AddRange(new Control[] { _execute, _cancel, timeoutLabel, _timeout,
-                Button(L10n.T("全选"), "BatchSelectAll", () => SelectAll(true)),
-                Button(L10n.T("清空选择"), "BatchDeselect", () => SelectAll(false)),
-                Button(L10n.T("复制结果"), "BatchCopy", CopyResults),
-                Button(L10n.T("导出结果"), "BatchExport", ExportResults) });
+            var timeoutRow = new FlowLayoutPanel { AutoSize = true, WrapContents = false, Margin = Padding.Empty };
+            timeoutRow.Controls.AddRange(new Control[] { timeoutLabel, _timeout });
+            actions.Controls.AddRange(new Control[] { _execute, _cancel, timeoutRow });
             layout.Controls.Add(actions, 0, 2);
             _targets = Hint(L10n.T("请勾选至少一个 SSH 会话"), "BatchTargets");
             layout.Controls.Add(_targets, 0, 3);
@@ -102,19 +100,39 @@ namespace Gdterm.UI.Controls
                 BackColor = GdtermColorTable.Background, ForeColor = GdtermColorTable.Foreground, Font = Font };
             _list.Columns.Add(L10n.T("目标主机"), DpiScale.V(this, 210));
             _list.Columns.Add(L10n.T("状态"), DpiScale.V(this, 130));
-            _list.ItemChecked += (s, e) => UpdateTargets();
+            _list.OwnerDraw = true;
+            _list.DrawColumnHeader += (sender, e) => {
+                using (var brush = new SolidBrush(GdtermColorTable.Surface)) e.Graphics.FillRectangle(brush, e.Bounds);
+                TextRenderer.DrawText(e.Graphics, e.Header.Text, _list.Font, e.Bounds, GdtermColorTable.Muted,
+                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+            };
+            _list.DrawItem += (sender, e) => e.DrawDefault = true;
+            _list.DrawSubItem += (sender, e) => e.DrawDefault = true;
+            _list.ItemChecked += (s, e) => { if (!_refreshing) UpdateTargets(); };
             _shell = new ListShell(_list, showFilter: false);
-            layout.Controls.Add(_shell, 0, 4);
+            _pages = new AntdUI.Tabs { Name = "BatchPages", Dock = DockStyle.Fill, Font = Font };
+            var targetPage = new AntdUI.TabPage { Text = L10n.T("选择目标") };
+            var resultPage = new AntdUI.TabPage { Text = L10n.T("执行结果") };
+            _pages.Pages.Add(targetPage); _pages.Pages.Add(resultPage);
+            var selectionActions = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true };
+            selectionActions.Controls.AddRange(new Control[] {
+                Button(L10n.T("全选"), "BatchSelectAll", () => SelectAll(true)),
+                Button(L10n.T("清空选择"), "BatchDeselect", () => SelectAll(false)) });
+            targetPage.Controls.Add(_shell); targetPage.Controls.Add(selectionActions);
+            layout.Controls.Add(_pages, 0, 4);
             _empty = EmptyStateView.Attach(_shell, L10n.T("还没有 SSH 会话"), L10n.T("连接 SSH 后会自动出现在这里。"));
             _empty.SetEmpty(true);
             _results = new RichTextBox { Name = "BatchResults", Dock = DockStyle.Fill, ReadOnly = true,
                 WordWrap = false, Font = FormFontPolicy.MonoFont(), BackColor = GdtermColorTable.Background,
                 ForeColor = GdtermColorTable.Foreground, DetectUrls = false };
-            layout.Controls.Add(_results, 0, 5);
+            var resultActions = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true };
+            resultActions.Controls.AddRange(new Control[] {
+                Button(L10n.T("复制结果"), "BatchCopy", CopyResults), Button(L10n.T("导出结果"), "BatchExport", ExportResults) });
+            resultPage.Controls.Add(_results); resultPage.Controls.Add(resultActions);
             _status = Hint(L10n.T("就绪"), "BatchStatus");
-            layout.Controls.Add(_status, 0, 6);
+            layout.Controls.Add(_status, 0, 5);
             Controls.Add(layout);
-            SizeChanged += (s, e) => layout.Height = Math.Max(ClientSize.Height, DpiScale.V(this, 680));
+            SizeChanged += (s, e) => layout.Height = Math.Max(ClientSize.Height, DpiScale.V(this, 520));
         }
         private AntdUI.Label Hint(string text, string name)
         {
@@ -159,7 +177,9 @@ namespace Gdterm.UI.Controls
                 }
             }
             Console.WriteLine("[batch-trace] rows ready");
-            _shell.SetItems(_rows.Values);
+            _refreshing = true;
+            try { _shell.SetItems(_rows.Values); }
+            finally { _refreshing = false; }
             Console.WriteLine("[batch-trace] shell ready");
             _empty.SetEmpty(next.Count == 0);
             Console.WriteLine("[batch-trace] empty ready");
@@ -172,8 +192,9 @@ namespace Gdterm.UI.Controls
         {
             if (_targets == null || _list == null) return;
             var names = _rows.Values.Where(r => r.Checked).Select(r => r.Text).ToArray();
-            _targets.Text = names.Length == 0 ? L10n.T("请勾选至少一个 SSH 会话") :
+            string text = names.Length == 0 ? L10n.T("请勾选至少一个 SSH 会话") :
                 L10n.Tf("目标 {0} 台：{1}", names.Length, string.Join(", ", names.Take(3))) + (names.Length > 3 ? " …" : "");
+            if (_targets.Text != text) _targets.Text = text;
         }
         internal async Task ExecuteCommandAsync()
         {
@@ -192,7 +213,7 @@ namespace Gdterm.UI.Controls
                 if (!allowed) { _status.Text = L10n.T("已取消危险命令"); return; }
                 _run = new CancellationTokenSource();
                 _execute.Enabled = _command.Enabled = _timeout.Enabled = _list.Enabled = false; _cancel.Enabled = true;
-                _results.Clear(); _displayTruncated = false;
+                _results.Clear(); _displayTruncated = false; _pages.SelectedIndex = 1;
                 AppendResult(L10n.Tf("目标：{0}\n命令：\n{1}\n\n", names, command));
                 RememberCommand(command);
                 _status.Text = L10n.Tf("正在向 {0} 个会话发送...", selected.Count);

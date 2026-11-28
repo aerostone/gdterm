@@ -54,6 +54,8 @@ namespace Gdterm.Core
         public static readonly Dictionary<string, string> En =
             new Dictionary<string, string>(StringComparer.Ordinal)
         {
+                ["选择目标"] = "Select targets",
+                ["执行结果"] = "Results",
                 ["查看回放"] = "View replay",
                 ["取消任务"] = "Cancel task",
                 ["清空选择"] = "Clear selection",
