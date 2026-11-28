@@ -263,6 +263,8 @@
     <Compile Include="Services\TabSessionState.cs" />
     <Compile Include="Services\SessionStateCoordinator.cs" />
     <Compile Include="Services\SidePanelFactory.cs" />
+    <Compile Include="Services\PortForwardWorkspace.cs" />
+    <Compile Include="Forms\PortForwardRuleForm.cs" />
     <Compile Include="Services\TabSplitService.cs" />
     <Compile Include="Services\TabChromePainter.cs" />
     <Compile Include="Services\TabSelectionCoordinator.cs" />

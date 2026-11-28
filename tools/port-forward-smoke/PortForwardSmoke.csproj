@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems><NuGetAudit>false</NuGetAudit><LangVersion>7.3</LangVersion></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="../../src/Gdterm.Tunnel/PortForwardManager.cs" />
+    <Compile Include="../../src/Gdterm.Tunnel/ISshPortForwardHost.cs" />
+    <Compile Include="../../src/Gdterm.Core/Models/PortForwardRule.cs" />
+    <Compile Include="../../src/Gdterm.Core/L10n/L10n.cs" />
+    <Compile Include="../../src/Gdterm.Connections/PortForwardRuleStore.cs" />
+    <PackageReference Include="SSH.NET" Version="2026.0.0" />
+  </ItemGroup>
+</Project>

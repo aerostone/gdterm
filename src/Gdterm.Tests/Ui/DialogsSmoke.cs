@@ -84,6 +84,7 @@ namespace Gdterm.Tests.Ui
             JumpChainSmoke.Run(tmp, check);
             JumpRoutingSmoke.Run(check);
             SftpUiSmoke.Run(tmp, outDir, check);
+            PortForwardUiSmoke.Run(tmp, outDir, check);
             Show("jump-hop", () => new JumpHopEditForm(new FakeKeePassService(empty: true)), outDir, log, check);
             Show("jump-chain", () => JumpChainSmoke.Scene(), outDir, log, check);
             Show("jump-chain-empty", () => JumpChainSmoke.Scene(empty: true), outDir, log, check);

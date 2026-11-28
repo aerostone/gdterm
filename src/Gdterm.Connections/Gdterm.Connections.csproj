@@ -32,6 +32,8 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Gdterm.Core\Gdterm.Core.csproj">
@@ -55,6 +57,7 @@
     <Compile Include="TerminalKeyBindingStore.cs" />
     <Compile Include="HighlightStore.cs" />
     <Compile Include="LogonScriptStore.cs" />
+    <Compile Include="PortForwardRuleStore.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

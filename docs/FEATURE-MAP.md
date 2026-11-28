@@ -181,4 +181,5 @@
 | 页面 | 已有/总数 | 缺口 |
 |---|---|---|
 | 日志查看器 `page.LogViewerForm` | 8/9 | 撤销/回收站 |
+| 端口转发 `page.PortForwardPanel` | 8/9 | 撤销/回收站 |
 

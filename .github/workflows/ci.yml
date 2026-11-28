@@ -42,6 +42,10 @@ jobs:
         run: |
           set -o pipefail
           python3 tools/sftp-smoke/run.py 2>&1 | tee sftp-smoke.log
+      - name: Port forwarding integration regression
+        run: |
+          set -o pipefail
+          python3 tools/port-forward-smoke/run.py 2>&1 | tee port-forward-smoke.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -49,6 +53,7 @@ jobs:
           path: |
             ssh-jump.log
             sftp-smoke.log
+            port-forward-smoke.log
   verify:
     runs-on: windows-latest   # VS2022（msbuild 17）+ Python 3 + NuGet CLI，均有
     timeout-minutes: 60

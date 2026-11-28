@@ -23,9 +23,10 @@ namespace Gdterm.UI.Services
     /// 侧栏/终端工具面板工厂——从 MainForm 抽出 Create*Panel 逻辑（finding-10）。
     /// MainForm 只负责宿主布局与菜单触发。
     /// </summary>
-    public sealed class SidePanelFactory
+    public sealed class SidePanelFactory : IDisposable
     {
         private readonly TabContainerControl _tabs;
+        private PortForwardWorkspace _portForwards;
         private readonly ActiveSessionBridge _bridge;
         private readonly ToolRegistry _toolRegistry;
         private readonly SecretScanner _secretScanner;
@@ -174,21 +175,36 @@ namespace Gdterm.UI.Services
         {
             try
             {
-                var mgr = new PortForwardManager();
-                var panel = new PortForwardPanel(mgr);
-                if (_bridge != null) _bridge.BindPortForward(panel);
-                else
+                if (_portForwards == null)
                 {
-                    var host = _tabs?.GetActivePortForwardHost();
-                    if (host != null) panel.SetPortForwardHost(host);
+                    var path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "config", "port-forwards.json");
+                    var store = new PortForwardRuleStore(path);
+                    // Validate the file before allocating a manager with a live timer.
+                    store.Load();
+                    _portForwards = new PortForwardWorkspace(store, new PortForwardManager(),
+                        id => _bridge != null ? _bridge.GetPortForwardHost(id) : _tabs?.GetPortForwardHost(id),
+                        GetPortForwardConnections, TrashStore.Default);
                 }
-                return panel;
+                return new PortForwardPanel(_portForwards);
             }
             catch (Exception ex)
             {
                 return Unavailable(L10n.T("端口转发不可用: ") + ex.Message);
             }
         }
+
+        private IList<ConnectionConfig> GetPortForwardConnections()
+        {
+            var configs = new Dictionary<string, ConnectionConfig>();
+            foreach (var config in _connectionStore?.LoadAll() ?? new List<ConnectionConfig>())
+                if (config.Protocol == Gdterm.Core.Enums.ProtocolType.SSH && !string.IsNullOrEmpty(config.Id))
+                    configs[config.Id] = config;
+            foreach (var config in _tabs?.GetPortForwardConnections() ?? new List<ConnectionConfig>())
+                configs[config.Id] = config;
+            return new List<ConnectionConfig>(configs.Values);
+        }
+
+        public void Dispose() { _portForwards?.Dispose(); }
 
         public Control CreateHighlightPanel()
         {

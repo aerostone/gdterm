@@ -93,6 +93,7 @@ namespace Gdterm.Tests.Ui
                     t.Track(new Gdterm.Logging.CommandHistoryStore(t.Path_("cmdhist")))));
             Add(list, "port-forward", "表格/空态", PanelEmptyExpect.Visible,
                 t => new Gdterm.UI.Controls.PortForwardPanel(t.Track(new Gdterm.Tunnel.PortForwardManager())));
+            Add(list, "port-forward-populated", "表格/规则与连接", PanelEmptyExpect.Hidden, PortForwardUiSmoke.Populated);
             Add(list, "secret-scan", "进度/多按钮", PanelEmptyExpect.Ignore,
                 t => new Gdterm.UI.Controls.SecretScanPanel(
                     t.Track(new Gdterm.Security.SecretScanner(Gdterm.Security.SecretScanConfig.GetDefault())), null));
@@ -198,6 +199,9 @@ namespace Gdterm.Tests.Ui
         public static List<UiPage> Dialogs()
         {
             var list = new List<UiPage>();
+            AddDialog(list, "port-forward-local", "本地转发表单", t => PortForwardUiSmoke.Editor(Gdterm.Core.Models.PortForwardType.Local));
+            AddDialog(list, "port-forward-remote", "远程转发表单", t => PortForwardUiSmoke.Editor(Gdterm.Core.Models.PortForwardType.Remote));
+            AddDialog(list, "port-forward-socks", "SOCKS5 表单", t => PortForwardUiSmoke.Editor(Gdterm.Core.Models.PortForwardType.Dynamic));
             AddDialog(list, "ai-settings", "表单",
                 t => new Gdterm.UI.Forms.AiSettingsForm(
                     t.Track(new Gdterm.AI.AiModelStore(t.Path_("ai.json")))));

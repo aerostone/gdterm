@@ -43,7 +43,7 @@ done
 # 参考程序集（按需全拉，csc 只解析实际用到的）
 FRAME_REFS=""
 for a in mscorlib System System.Core System.Data System.Drawing System.Windows.Forms \
-         System.Web.Extensions System.IO.Compression System.IO.Compression.FileSystem \
+         System.Runtime.Serialization System.Web.Extensions System.IO.Compression System.IO.Compression.FileSystem \
          System.Xml System.Xml.Linq System.Net.Http System.Management Microsoft.CSharp; do
   [ -f "$REF/$a.dll" ] && FRAME_REFS="$FRAME_REFS -r:$REF/$a.dll"
 done

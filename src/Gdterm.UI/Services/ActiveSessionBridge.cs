@@ -51,14 +51,9 @@ namespace Gdterm.UI.Services
             try { panel.SetRemoteSession(GetRemoteSession()); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ActiveSessionBridge", exSwallowed); } catch { } }
         }
 
-        public void BindPortForward(PortForwardPanel panel)
+        public ISshPortForwardHost GetPortForwardHost(string connectionId)
         {
-            if (panel == null) return;
-            var host = GetPortForwardHost();
-            if (host != null)
-            {
-                try { panel.SetPortForwardHost(host); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ActiveSessionBridge", exSwallowed); } catch { } }
-            }
+            return _tabs?.GetPortForwardHost(connectionId);
         }
     }
 }

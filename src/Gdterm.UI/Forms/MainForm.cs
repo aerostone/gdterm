@@ -402,6 +402,7 @@ namespace Gdterm.UI.Forms
                 (t, lvl) => _statusBar?.UpdateConnectionStatus(t, lvl));
             FormClosed += (s, e) =>
             {
+                _sidePanels?.Dispose();
                 try { _connectionStateNotifier?.Dispose(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("MainForm", exSwallowed); } catch { } }
             };
             List<QuickCommand> cmds = null;
@@ -788,7 +789,7 @@ namespace Gdterm.UI.Forms
             _shutdown = new AppShutdownCoordinator(
                 _sessionState, _hotkeys, _tabContainer,
                 _tunnelManager, _keepassService, _securityManager,
-                _scanPluginStore);
+                _scanPluginStore, _sidePanels);
             FormClosing += _windowLifecycle.ConfirmClose;
             FormClosing += _shutdown.OnFormClosing;
             // 视图状态落盘：放在关闭链最后（用户取消退出时也照记——他当时确实把窗口摆在那儿了）

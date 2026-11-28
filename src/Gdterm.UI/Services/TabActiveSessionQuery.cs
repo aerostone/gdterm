@@ -48,6 +48,49 @@ namespace Gdterm.UI.Services
             return SshPortForwardHost.FromClientObject(session.TryGetSshClient());
         }
 
+        public IList<Gdterm.Core.Models.ConnectionConfig> GetPortForwardConnections()
+        {
+            var configs = new Dictionary<string, Gdterm.Core.Models.ConnectionConfig>();
+            if (_sessions == null) return new List<Gdterm.Core.Models.ConnectionConfig>();
+            foreach (var state in _sessions.Values)
+            {
+                var terminals = new List<TerminalControl>();
+                CollectSessionTerminals(state, terminals);
+                foreach (var tc in terminals)
+                    if (tc?.Config != null && !string.IsNullOrEmpty(tc.Config.Id) &&
+                        tc.Config.Protocol == Gdterm.Core.Enums.ProtocolType.SSH && tc.Session?.TryGetSshClient() != null)
+                        configs[tc.Config.Id] = tc.Config;
+            }
+            return new List<Gdterm.Core.Models.ConnectionConfig>(configs.Values);
+        }
+
+        public ISshPortForwardHost GetPortForwardHost(string connectionId)
+        {
+            if (string.IsNullOrEmpty(connectionId)) return null;
+            var active = GetActiveTerminalControl();
+            var host = MatchPortForwardHost(active, connectionId);
+            if (host != null) return host;
+            if (_sessions == null) return null;
+            foreach (var state in _sessions.Values)
+            {
+                var terminals = new List<TerminalControl>();
+                CollectSessionTerminals(state, terminals);
+                foreach (var terminal in terminals)
+                {
+                    host = MatchPortForwardHost(terminal, connectionId);
+                    if (host != null) return host;
+                }
+            }
+            return null;
+        }
+
+        private static ISshPortForwardHost MatchPortForwardHost(TerminalControl terminal, string id)
+        {
+            if (terminal == null || terminal.IsDisposed || terminal.Config?.Id != id || !terminal.IsConnected) return null;
+            var host = SshPortForwardHost.FromClientObject(terminal.Session?.TryGetSshClient());
+            return host != null && host.IsConnected ? host : null;
+        }
+
         public ISshRemoteSession GetActiveRemoteSession()
         {
             var session = GetActiveSession();

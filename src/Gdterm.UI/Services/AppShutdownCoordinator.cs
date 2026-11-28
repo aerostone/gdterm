@@ -15,6 +15,7 @@ namespace Gdterm.UI.Services
     public sealed class AppShutdownCoordinator
     {
         private readonly SessionStateCoordinator _sessionState;
+        private readonly SidePanelFactory _sidePanels;
         private readonly GlobalHotkeyController _hotkeys;
         private readonly TabContainerControl _tabs;
         private readonly ITunnelManager _tunnels;
@@ -29,9 +30,11 @@ namespace Gdterm.UI.Services
             ITunnelManager tunnels,
             IKeePassService keepass,
             ISecurityManager security,
-            Gdterm.Tools.Scanning.ScanPluginStore scanPlugins = null)
+            Gdterm.Tools.Scanning.ScanPluginStore scanPlugins = null,
+            SidePanelFactory sidePanels = null)
         {
             _sessionState = sessionState;
+            _sidePanels = sidePanels;
             _hotkeys = hotkeys;
             _tabs = tabs;
             _tunnels = tunnels;
@@ -48,6 +51,7 @@ namespace Gdterm.UI.Services
 
             DiagLog.Try("AppShutdown.SaveSession", () => _sessionState?.Save());
             DiagLog.Try("AppShutdown.Hotkeys", () => _hotkeys?.Dispose());
+            DiagLog.Try("AppShutdown.PortForwards", () => _sidePanels?.Dispose());
             DiagLog.Try("AppShutdown.CloseTabs", () => _tabs?.CloseAllTabs());
             DiagLog.Try("AppShutdown.Tunnels", () => _tunnels?.Dispose());
             DiagLog.Try("AppShutdown.KeePass", () => _keepass?.Dispose());

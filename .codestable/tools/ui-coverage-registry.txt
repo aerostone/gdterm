@@ -86,3 +86,5 @@ Controls/TableMultiSelect.cs | dump:随宿主 | 表格多选层（控件单选�
 Controls/ListPager.cs | dump:随宿主 | 分页条（AntdUI.Pagination 包装，ListShell/TableShell 共用），随宿主 dump
 Forms/JumpHopEditForm.cs | dump:jump-hop | 每跳主机/用户名/密码或私钥入口
 Controls/JumpChainEditorControl.cs | dump:jump-chain,jump-chain-empty,jump-chain-rdp | 多跳顺序/凭据/空态
+
+Forms/PortForwardRuleForm.cs | dump:port-forward-local | 创建/编辑/取消/校验/三种类型矩阵

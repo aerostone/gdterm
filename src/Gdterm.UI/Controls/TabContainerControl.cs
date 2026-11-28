@@ -1130,6 +1130,8 @@ namespace Gdterm.UI.Controls
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainerControl", exSwallowed); } catch { } return false; }
         }
+        public ISshPortForwardHost GetPortForwardHost(string connectionId) => _activeQuery.GetPortForwardHost(connectionId);
+        public IList<ConnectionConfig> GetPortForwardConnections() => _activeQuery.GetPortForwardConnections();
         public ISshPortForwardHost GetActivePortForwardHost() => _activeQuery.GetActivePortForwardHost();
         public ISshRemoteSession GetActiveRemoteSession() => _activeQuery.GetActiveRemoteSession();
         public ISshPortForwardHost GetActiveSshClient() => GetActivePortForwardHost();

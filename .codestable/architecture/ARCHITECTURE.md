@@ -77,7 +77,7 @@ gdterm 是 **Windows 绿色便携** 运维客户端，目标环境含 **Win7 / S
 |------|------|--------------|------|
 | **Gdterm.Core** | 纯数据模型与枚举 | `ConnectionConfig`, `CredentialPayload`, `ProtocolType`, `TerminalProfile`, `HighlightRule`, … | 无 |
 | **Gdterm.Connections** | 连接/书签/模板/高亮/键位/登录脚本 持久化 | `IConnectionStore`, `IBookmarkStore`, `*Store` JSON 手写（转义统一走 `Core.JsonText`） | Core |
-| **Gdterm.Tunnel** | SSH 跳板与本地转发；SSH.NET `ConnectionInfo` 构建 | `TunnelManager`, `TunnelSession`, `PortForwardManager`, `SshConnectionInfoFactory`（唯一实现） | Core, SSH.NET |
+| **Gdterm.Tunnel** | SSH 跳板、本地/远程/SOCKS5 转发；SSH.NET `ConnectionInfo` 构建 | `TunnelManager`, `TunnelSession`, `PortForwardManager`, `SshConnectionInfoFactory`（唯一实现） | Core, SSH.NET |
 | **Gdterm.Terminal** | 会话、渲染、多通道、健康、重连、宏 | `ITerminalSession`, `TerminalSessionFactory`, `MultiChannelManager`, `AutoReconnectWatchdog`, `LightweightRenderer` | Core, Tunnel（`SshConnectionInfoFactory` 在 Tunnel） |
 | **Gdterm.Sftp** | SFTP 传输与增强 | `ISftpService`, `SftpServiceFactory`, `SftpEnhancements` | Core, Tunnel |
 | **Gdterm.Rdp** | RDP ActiveX 封装 | `IRdpClient`, `RdpClient`, `RdpOptions` | Core, Tunnel |
@@ -102,7 +102,7 @@ gdterm 是 **Windows 绿色便携** 运维客户端，目标环境含 **Win7 / S
 
 **约定**：新服务优先在 `Program` 构造并注入；加一个服务 = 在 `UiDependencies` 加一个属性 + Program.cs 一行，
 **不要**给 MainForm/TabContainer 追加位置参数，也**不要**用 `SetXxx` 事后补注（那是 F4 之前的两种形态并存问题）。
-避免在控件里 `new` 长生命周期单例（`PortForwardManager` 等历史问题除外，见已知债）。
+长生命周期服务由应用持有：`SidePanelFactory` 创建一个 `PortForwardWorkspace`，持有 `PortForwardRuleStore` 和 `PortForwardManager`；面板只订阅。规则原子保存到 `data/config/port-forwards.json`，重启不自动启动。应用关闭时先撤销转发，再关闭 SSH 标签。
 
 ### 3.2 会话与标签生命周期
 
@@ -147,7 +147,7 @@ ConnectionTree 双击
 | `ViewModeController` | Standard/Focus/Compact 与连接树显隐 |
 | `ToolsDialogsLauncher` | KeePass/AI/密码健康等对话框 |
 | `GlobalHotkeyController` | Ctrl+` 全局显隐 |
-| `ActiveSessionBridge` | 活动会话 → Toolbox / PortForward 绑定 |
+| `ActiveSessionBridge` | 活动会话 → Toolbox 绑定；按规则 ConnectionId 查询当前 SSH 转发宿主 |
 | `AiCommandGateBinder` | AI Run-this → 危险命令确认 |
 | `ConnectionOpenCoordinator` | 双击打开/新建连接/SFTP + 最近记录 |
 | `LockStateCoordinator` | 锁屏遮罩 + KeePass 锁库/解锁 |
@@ -230,7 +230,7 @@ ConnectionTree 双击
 | 重连 UI 死锁 / 健康监控单次 lost | **已修** | ConnectAsyncIfNeeded + 异步 Wait；ConnectionHealthMonitor 边沿+Rearm；ResumeAll 重触发 |
 | 隧道并发 / 跳板私钥 | **已修** | TunnelManager 单飞 inflight；ConnectHop 支持 hop 私钥 |
 | 审计 IO / 锁屏审计 / RDP 凭据持久化 | **已修** | AuditLogger fallback jsonl；IdleLock/Unlock 审计；CRED_PERSIST_SESSION |
-| PortForward / Toolbox 活动会话注入 | **已修** | `ISshPortForwardHost` + `ISshRemoteSession` + ActiveSessionBridge |
+| PortForward / Toolbox 会话注入 | **已修** | `ISshPortForwardHost` 按规则连接 ID 解析，`PortForwardManager` 异步起停/清理原 owner；Toolbox 沿用活动 `ISshRemoteSession` |
 | `IRemoteToolModule` SSH.NET 泄漏 | **已修** | `SetSshSession(ISshRemoteSession)` |
 | AI history 无上限、ApiKey 明文 JSON | **已修** | MaxHistoryMessages=40；ApiKey gdk2 主密码 AES（gdk1 兼容） |
 | 剪贴板密码无 TTL | **已修** | ClipboardProtector 30s |

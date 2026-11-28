@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using System.Net;
 
 namespace Gdterm.Core.Models
 {
@@ -16,8 +16,28 @@ namespace Gdterm.Core.Models
         public string RemoteHost { get; set; } = "127.0.0.1";
         public int RemotePort { get; set; }
         public string ConnectionId { get; set; }
+        public string ConnectionName { get; set; }
         public bool Enabled { get; set; } = true;
         public string Description { get; set; }
+
+        public string EndpointError()
+        {
+            if (!Enum.IsDefined(typeof(PortForwardType), Type)) return L10n.T("转发类型无效");
+            if (!ValidHost(LocalHost)) return L10n.T("请填写有效的本地地址");
+            if (LocalPort < 1 || LocalPort > 65535) return L10n.T("本地端口必须在 1–65535 之间");
+            if (Type != PortForwardType.Dynamic)
+            {
+                if (!ValidHost(RemoteHost)) return L10n.T("请填写有效的远程地址");
+                if (RemotePort < 1 || RemotePort > 65535) return L10n.T("远程端口必须在 1–65535 之间");
+            }
+            return null;
+        }
+
+        private static bool ValidHost(string host)
+        {
+            return !string.IsNullOrWhiteSpace(host) &&
+                (IPAddress.TryParse(host, out _) || Uri.CheckHostName(host) == UriHostNameType.Dns);
+        }
     }
 
     public enum PortForwardType
