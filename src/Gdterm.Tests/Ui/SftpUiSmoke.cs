@@ -60,7 +60,8 @@ namespace Gdterm.Tests.Ui
                 PumpUntil(() => Field<FilePaneControl>(panel, "_remote")?.CurrentPath == "/");
                 var remote = Field<FilePaneControl>(panel, "_remote");
                 var local = Field<FilePaneControl>(panel, "_local");
-                local.Navigate(temp); PumpUntil(() => !local.IsBusy && local.CurrentPath == temp);
+                string localPath = Path.Combine(temp, "sftp-local"); Directory.CreateDirectory(localPath);
+                local.Navigate(localPath); PumpUntil(() => !local.IsBusy && local.CurrentPath == localPath);
                 var entries = new[] { new FileEntry { Name = "report.txt", FullPath = "/report.txt" } };
                 check(local.CanAcceptDrop(new FilePaneDrag(remote.Provider, entries)), "sftp accepts actual opposite pane drag");
                 check(!local.CanAcceptDrop(new FilePaneDrag(new SftpFilePaneProvider(new Fake(), "other server"), entries)), "sftp rejects other server drag");
@@ -72,6 +73,9 @@ namespace Gdterm.Tests.Ui
                 typeof(Control).GetMethod("OnDragDrop", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(empty,
                     new object[] { new DragEventArgs(data, 0, 0, 0, DragDropEffects.Copy, DragDropEffects.Copy) });
                 check(empty.AllowDrop && drops == 1, "sftp empty pane receives valid drop");
+                PumpUntil(() => Field<int>(panel, "_activeTransfers") == 0 && !local.IsBusy);
+                check(File.Exists(Path.Combine(localPath, "report.txt")), "actual drop downloads into captured local directory");
+                foreach (var transfer in Application.OpenForms.OfType<TransferProgressDialog>().ToArray()) { transfer.Close(); transfer.Dispose(); }
                 var otherConfig = Config(); otherConfig.Id = "other-credential";
                 check(!panel.MatchesConnection(otherConfig), "sftp follow rejects same host different connection");
                 otherConfig = Config(); otherConfig.Port = 2222;
@@ -135,7 +139,9 @@ namespace Gdterm.Tests.Ui
                     new SftpFileInfo { Name = "report.txt", FullPath = "/report.txt", SizeBytes = 4096, Permissions = "rw-r-----", LastModified = new DateTime(2026, 11, 28) }
                 });
             }
-            public Task<SftpFileInfo> GetEntryAsync(string path, CancellationToken ct) => Task.FromResult(path == "/" ? new SftpFileInfo { FullPath = path, IsDirectory = true } : null);
+            public Task<SftpFileInfo> GetEntryAsync(string path, CancellationToken ct) => Task.FromResult(path == "/"
+                ? new SftpFileInfo { FullPath = path, IsDirectory = true }
+                : path == "/report.txt" ? new SftpFileInfo { Name = "report.txt", FullPath = path, SizeBytes = 4 } : null);
             public Task<byte[]> ReadFilePrefixAsync(string p, int max, CancellationToken ct) => Task.FromResult(new byte[0]);
             public async Task UploadAsync(string local, string remote, IProgress<FileTransferProgress> progress, CancellationToken ct)
             {
@@ -144,7 +150,13 @@ namespace Gdterm.Tests.Ui
                 try { if (HoldUpload) await Task.Delay(10000, ct); }
                 catch (OperationCanceledException) { UploadCanceled = true; Connected = false; throw; }
             }
-            public Task DownloadAsync(string a, string b, IProgress<FileTransferProgress> p, CancellationToken t) => throw new NotSupportedException();
+            public Task DownloadAsync(string a, string b, IProgress<FileTransferProgress> p, CancellationToken t)
+            {
+                t.ThrowIfCancellationRequested();
+                File.WriteAllText(b, "data");
+                p?.Report(new FileTransferProgress { BytesTransferred = 4, TotalBytes = 4 });
+                return Task.CompletedTask;
+            }
             public Task<bool> UploadResumeAsync(string a, string b, IProgress<FileTransferProgress> p, CancellationToken t) => throw new NotSupportedException();
             public Task<bool> DownloadResumeAsync(string a, string b, IProgress<FileTransferProgress> p, CancellationToken t) => throw new NotSupportedException();
             public Task DeleteAsync(string p, bool recursive, CancellationToken t) => Task.CompletedTask;
