@@ -43,7 +43,8 @@ namespace Gdterm.UI.Controls
             _enabledCheck = new AntdUI.Checkbox { Text = L10n.T("使用 SSH 隧道（跳板机）"), Name = "EnableJumpChain",
                 AutoSize = true, Margin = DpiScale.Pad(this, 0, 4, 0, 4) };
             _table = new AntdUI.Table { Name = "JumpChainTable", Dock = DockStyle.Top,
-                Height = FormFontPolicy.RowStep(this) * 4, RowHeight = FormFontPolicy.RowStep(this), BorderWidth = 0,
+                Height = Math.Max(DpiScale.V(this, 24), FormFontPolicy.RowStep(this)) * 3,
+                RowHeight = Math.Max(DpiScale.V(this, 24), FormFontPolicy.RowStep(this)), BorderWidth = 0,
                 Margin = DpiScale.Pad(this, 0, 4, 0, 4) };
             _table.Columns.Add(new AntdUI.Column("Order", L10n.T("顺序")) { Width = "12%" });
             _table.Columns.Add(new AntdUI.Column("Host", L10n.T("跳板主机")) { Width = "34%" });
@@ -65,8 +66,8 @@ namespace Gdterm.UI.Controls
             _table.Dock = DockStyle.Fill;
             _listHost.Controls.Add(_table);
             _emptyState = EmptyStateView.Attach(_listHost, L10n.T("尚未添加跳板，请点击“添加跳板”。"));
-            layout.Controls.Add(_listHost, 0, 1);
-            layout.Controls.Add(_actions, 0, 2);
+            layout.Controls.Add(_actions, 0, 1);
+            layout.Controls.Add(_listHost, 0, 2);
             layout.Controls.Add(_hint, 0, 3);
             _hint.MaximumSize = DpiScale.S(this, 480, 0);
             layout.SizeChanged += (s, e) => _hint.MaximumSize = new Size(Math.Max(100, layout.ClientSize.Width - 8), 0);
@@ -146,7 +147,14 @@ namespace Gdterm.UI.Controls
                 foreach (var entry in created)
                 {
                     try { _vault.DeleteEntry(entry.Value); }
-                    catch (Exception ex) { DiagLog.Swallowed("JumpChain.RollbackCredential", ex); }
+                    catch (Exception ex)
+                    {
+                        // The entry remains saved: retain its binding so retry cannot duplicate it.
+                        entry.Key.Hop.CredentialRefId = entry.Value;
+                        JumpHopEditForm.ClearEntry(entry.Key.Pending);
+                        entry.Key.Pending = null;
+                        DiagLog.Swallowed("JumpChain.RollbackCredential", ex);
+                    }
                 }
                 throw;
             }
@@ -190,7 +198,7 @@ namespace Gdterm.UI.Controls
         }
         private void RefreshRows(int selected = -1)
         {
-            var rows = new AntdUI.AntList<Row>();
+            var rows = new List<Row>();
             for (int i = 0; i < _drafts.Count; i++)
             {
                 var d = _drafts[i];
@@ -214,6 +222,7 @@ namespace Gdterm.UI.Controls
                 finally { if (!ReferenceEquals(entry, d.Pending)) JumpHopEditForm.ClearEntry(entry); }
             }
             _table.DataSource = rows;
+            _listHost.Height = (_table.RowHeight ?? FormFontPolicy.RowStep(this)) * Math.Max(2, Math.Min(5, rows.Count + 1));
             _table.SelectedIndex = selected >= 0 ? selected + 1 : -1;
             _listHost.Visible = _actions.Visible = UseJumpChain;
             _table.Visible = UseJumpChain && _drafts.Count > 0;

@@ -38,7 +38,7 @@ AllowUsers {pwd.getpwuid(os.getuid()).pw_name}
 AllowTcpForwarding yes
 PermitRootLogin prohibit-password
 Subsystem sftp internal-sftp
-LogLevel ERROR
+LogLevel VERBOSE
 """)
         prefix = ["sudo", "-n"] if os.environ.get("GDT_SSHD_SUDO") == "1" else []
         with (folder / "sshd.log").open("w+") as log:
@@ -58,6 +58,11 @@ LogLevel ERROR
                 subprocess.run([DOTNET, str(ROOT / "tools/ssh-jump-smoke/bin/Debug/net8.0/JumpSmoke.dll"),
                                 str(port), str(folder / "client_key"), str(folder / "known_hosts"),
                                 str(folder / "host_key.pub")], check=True, timeout=90)
+            except Exception:
+                log.flush()
+                log.seek(0)
+                print("Isolated sshd diagnostic:\n" + log.read(), flush=True)
+                raise
             finally:
                 if prefix and (folder / "sshd.pid").exists():
                     subprocess.run(prefix + ["kill", "-TERM", (folder / "sshd.pid").read_text().strip()], check=False)

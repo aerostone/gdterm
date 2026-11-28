@@ -37,7 +37,7 @@ namespace Gdterm.Core.Models
         public Dictionary<string, string> HopUsernamesByRefId { get; set; }
 
         /// <summary>
-        /// 跳板 hop.CredentialRefId → 私钥 PEM（go-live P1-10）。
+        /// 跳板 hop.CredentialRefId → 私钥内容（OpenSSH / PEM）。
         /// </summary>
         public Dictionary<string, byte[]> HopPrivateKeysByRefId { get; set; }
 

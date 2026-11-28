@@ -35,8 +35,6 @@ jobs:
           sudo apt-get install -y openssh-server
           sudo mkdir -p /run/sshd
       - name: SSH jump integration regression
-        env:
-          GDT_SSHD_SUDO: '1'
         run: |
           set -o pipefail
           python3 tools/ssh-jump-smoke/run.py 2>&1 | tee ssh-jump.log

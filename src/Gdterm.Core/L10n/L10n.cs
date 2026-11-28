@@ -54,6 +54,8 @@ namespace Gdterm.Core
         public static readonly Dictionary<string, string> En =
             new Dictionary<string, string>(StringComparer.Ordinal)
         {
+            ["命令行传密码（自动登录）"] = "Pass password on command line (auto login)",
+            ["启用后，任务管理器可见密码。"] = "When enabled, the password is visible in Task Manager.",
             ["顺序"] = "Order",
             ["认证凭据"] = "Credential",
             ["添加跳板"] = "Add jump host",

@@ -54,6 +54,7 @@ namespace Gdterm.Tests.Ui
                     AddHop(form, chain, "first.test", false, path, check);
                     AddHop(form, chain, "second.test", true, path, check);
                     check(vault.CreatedCount == 0 && chain.GetChain().Hops.Count == 2, "hop credentials remain drafts until connection save");
+                    check(Field<AntdUI.Table>(chain, "_table").RowCount == 2, "two hop rows actually render in table");
                     Field<AntdUI.Table>(chain, "_table").SelectedIndex = 2;
                     Field<AntdUI.Button>(chain, "_upButton").PerformClick();
                     check(chain.GetChain().Hops[0].Host == "second.test", "move-up changes hop order");
@@ -67,7 +68,8 @@ namespace Gdterm.Tests.Ui
                     AddHop(form, chain, "second.test", true, path, check);
                     if (save)
                     {
-                        vault.FailCreateAt = 2;
+                        Field<AntdUI.Input>(form, "_loginPassword").Text = "TargetPassword!5839";
+                        vault.FailCreateAt = 3;
                         (form.AcceptButton as AntdUI.Button).PerformClick();
                         check(form.Result == null && vault.CreatedCount == 0 && chain.GetChain().Hops.Count == 2,
                             "partial hop write failure rolls back created entries and retains drafts");
@@ -79,7 +81,8 @@ namespace Gdterm.Tests.Ui
                     if (!save) check(result == null && vault.CreatedCount == 0, "cancel outer connection discards all hop credentials");
                     else
                     {
-                        check(result?.JumpChain?.Hops.Count == 2 && vault.CreatedCount == 2, "retry saves both credentials exactly once");
+                        check(result?.JumpChain?.Hops.Count == 2 && vault.CreatedCount == 3, "retry saves target and both hop credentials exactly once");
+                        check(vault.GetEntry(result.CredentialRefId).Password == "TargetPassword!5839", "failed hop save restores target password draft");
                         var hops = result.JumpChain.Hops;
                         check(vault.GetEntry(hops[0].CredentialRefId).Password == "JumpPassword!5839", "password hop binds its own credential");
                         check(Encoding.UTF8.GetString(vault.GetEntry(hops[1].CredentialRefId).SshPrivateKeyData) == Security.SshKeyFixtures.EncryptedOpenSsh,

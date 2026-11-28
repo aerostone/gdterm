@@ -407,7 +407,7 @@ namespace Gdterm.UI.Forms
             _proxyUserBox = AddRow(proxyLayout, 3, L10n.T("代理用户"), new AntdUI.Input());
             _proxyUserBox.PlaceholderText = L10n.T("可选");
             _proxyPassBox = AddRow(proxyLayout, 4, L10n.T("代理密码"), new AntdUI.Input { UseSystemPasswordChar = true });
-            var proxyHint = new AntdUI.Label
+            var proxyHint = new Label
             {
                 Text = L10n.T("先连代理再握手；SOCKS5 支持用户名/密码。密码与主机一样由主密码保护落盘。"),
                 AutoSize = false,
@@ -416,6 +416,8 @@ namespace Gdterm.UI.Forms
                 ForeColor = GdtermColorTable.Muted,
                 Margin = new Padding(0, DpiScale.V(this, 2), 0, 0)
             };
+            proxyHint.SizeChanged += (sender, args) => FitWrappedHint(proxyHint);
+            proxyHint.FontChanged += (sender, args) => FitWrappedHint(proxyHint);
             proxyLayout.Controls.Add(proxyHint, 0, 5); proxyLayout.SetColumnSpan(proxyHint, 2);
             SectionContent(_secProxy, proxyLayout);
             _advFlow.Controls.Add(_secProxy);
@@ -461,7 +463,7 @@ namespace Gdterm.UI.Forms
             termLayout.Controls.Add(_trimTrailingWhitespaceCheck, 1, 8);
             // 提示行同样要 Dock=Fill：AutoSize=false 且无停靠时 AntdUI.Label 宽会是 0，
             // ui-tree-check 会把"零尺寸可见叶"判失败（0.1.364 实测）。
-            var termHint = new AntdUI.Label
+            var termHint = new Label
             {
                 Text = L10n.T("VtCell 默认启用真彩；TERM 决定 pty 协商类型；Locale 登录后 export"),
                 AutoSize = false,
@@ -470,6 +472,8 @@ namespace Gdterm.UI.Forms
                 ForeColor = GdtermColorTable.Muted,
                 Margin = new Padding(0, DpiScale.V(this, 2), 0, 0)
             };
+            termHint.SizeChanged += (sender, args) => FitWrappedHint(termHint);
+            termHint.FontChanged += (sender, args) => FitWrappedHint(termHint);
             termLayout.Controls.Add(termHint, 0, 9); termLayout.SetColumnSpan(termHint, 2);
             SectionContent(_secTerm, termLayout);
             _advFlow.Controls.Add(_secTerm);
@@ -493,7 +497,7 @@ namespace Gdterm.UI.Forms
             _rdpForceNlaCheck = new AntdUI.Checkbox { Text = L10n.T("强制 NLA"), AutoSize = true, Checked = false };
             _rdpTcpDumpCheck = new AntdUI.Checkbox { Text = L10n.T("抓包（TCP dump）"), AutoSize = true, Checked = false,
                 Visible = Program.DebugConfig != null && Program.DebugConfig.Enabled };
-            _rdpPasslineCheck = new AntdUI.Checkbox { Text = L10n.T("命令行传密码（自动登录；任务管理器可见）"), AutoSize = true, Checked = true };
+            _rdpPasslineCheck = new AntdUI.Checkbox { Text = L10n.T("命令行传密码（自动登录）"), AutoSize = true, Checked = true };
             var rdpCheckList = new Control[] { _rdpDriveCheck, _rdpClipboardCheck, _rdpPrinterCheck, _rdpFullScreenCheck, _rdpNlaCheck, _rdpForceNlaCheck, _rdpTcpDumpCheck, _rdpPasslineCheck };
             for (int ci = 0; ci < rdpCheckList.Length; ci++)
             {
@@ -501,7 +505,13 @@ namespace Gdterm.UI.Forms
                 rdpChecks.Controls.Add(rdpCheckList[ci], ci % 2, ci / 2);
             }
             // 长文本复选框（命令行传密码说明）独占一行，避免把同行挤成两行
+            rdpChecks.SetCellPosition(_rdpPasslineCheck, new TableLayoutPanelCellPosition(0, 4));
             rdpChecks.SetColumnSpan(_rdpPasslineCheck, 2);
+            var passlineHint = new Label { Text = L10n.T("启用后，任务管理器可见密码。"), Dock = DockStyle.Fill,
+                ForeColor = GdtermColorTable.Muted, Margin = DpiScale.Pad(this, 0, 2, 0, 4) };
+            passlineHint.SizeChanged += (sender, args) => FitWrappedHint(passlineHint);
+            passlineHint.FontChanged += (sender, args) => FitWrappedHint(passlineHint);
+            rdpChecks.Controls.Add(passlineHint, 0, 5); rdpChecks.SetColumnSpan(passlineHint, 2);
             var depthPanel = new TableLayoutPanel { ColumnCount = 2, AutoSize = true, Dock = DockStyle.Fill, Margin = new Padding(0, 0, 0, DpiScale.V(this, 4)) };
             depthPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
             depthPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -569,6 +579,8 @@ namespace Gdterm.UI.Forms
             _advFlow.Controls.Add(notesSec);
 
             _advancedHost.Controls.Add(_advFlow);
+            _advFlow.SizeChanged += (sender, args) => FitAdvancedSections();
+            _advancedHost.SizeChanged += (sender, args) => FitAdvancedSections();
 
             // ===== 底部按钮 =====
             var btnPanel = new FlowLayoutPanel
@@ -637,8 +649,7 @@ namespace Gdterm.UI.Forms
         }
 
         /// <summary>高级区小节：标题行 + 内容行（TableLayoutPanel 避免绝对定位重叠）。
-        /// 宽度必须显式定死 516：AutoSize 只按内容收缩，RDP/SSH/串口三区会量出 176~472 不等宽，
-        /// 导致高级区忽窄忽宽（CI 318 实测）。</summary>
+        /// 各节统一跟随滚动视口宽度，避免 AutoSize 的内容宽度在大字体/DPI 下越界。</summary>
         /// <summary>UI 下拉索引 ↔ ProxyKind。</summary>
         private ProxyKind SelectedProxyKind()
         {
@@ -670,8 +681,8 @@ namespace Gdterm.UI.Forms
                 RowCount = 2,
                 AutoSize = true,
                 Width = DpiScale.V(this, 516),
-                // 只锁宽度下限：AutoSize 高度仍随内容撑高，宽度不因内容窄而收缩（CI 318 实测三区 176~472 不等宽）
-                MinimumSize = new Size(DpiScale.V(this, 516), 0),
+                // Actual width follows the scroll viewport in FitAdvancedSections.
+                MinimumSize = new Size(0, 0),
                 Margin = DpiScale.Pad(this, 0, 0, 0, 10)
             };
             t.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -683,6 +694,28 @@ namespace Gdterm.UI.Forms
                 Margin = DpiScale.Pad(this, 0, 0, 0, 3)
             }), 0, 0);
             return t;
+        }
+
+        private void FitAdvancedSections()
+        {
+            if (_advFlow == null || _advFlow.ClientSize.Width < 100) return;
+            int width = Math.Max(100, _advFlow.ClientSize.Width - _advFlow.Padding.Horizontal);
+            foreach (Control section in _advFlow.Controls)
+            {
+                int available = Math.Max(100, width - section.Margin.Horizontal);
+                if (section.MinimumSize.Width == available && section.MaximumSize.Width == available) continue;
+                section.MinimumSize = new Size(available, 0);
+                section.MaximumSize = new Size(available, 0);
+                section.Width = available;
+            }
+        }
+
+        private static void FitWrappedHint(Label label)
+        {
+            if (label.Width < 1) return;
+            int height = TextRenderer.MeasureText(label.Text, label.Font, new Size(label.Width, int.MaxValue),
+                TextFormatFlags.WordBreak | TextFormatFlags.TextBoxControl).Height + 4;
+            if (label.MinimumSize.Height != height) label.MinimumSize = new Size(0, height);
         }
 
         /// <summary>把内容控件放进小节第 1 行。</summary>
@@ -971,14 +1004,35 @@ namespace Gdterm.UI.Forms
             if (error == null)
             {
                 SetError(null);
-                if (!SaveLoginCredential()) return false;
-                try { if (!IsSerialProtocol()) _jumpChainEditor.CommitPendingCredentials(); }
-                catch (Exception ex)
+                // Keep the target draft until all hop writes succeed, so a failed save can be cancelled or retried.
+                var targetDraft = JumpHopEditForm.CloneEntry(_pendingKeyCredential);
+                var targetPassword = _loginPassword.Text;
+                var previousRef = _credentialRefBox.Text;
+                try
                 {
-                    DiagLog.Swallowed("ConnectionDialog.JumpCredentials", ex);
-                    SetError(L10n.T("跳板凭据保存失败，草稿已保留，请解锁密码库后重试。"));
-                    return false;
+                    if (!SaveLoginCredential()) return false;
+                    try { if (!IsSerialProtocol()) _jumpChainEditor.CommitPendingCredentials(); }
+                    catch (Exception ex)
+                    {
+                        DiagLog.Swallowed("ConnectionDialog.JumpCredentials", ex);
+                        var newRef = _credentialRefBox.Text;
+                        if (newRef != previousRef && !string.IsNullOrEmpty(newRef))
+                        {
+                            try
+                            {
+                                _keepass.DeleteEntry(newRef);
+                                _credentialRefBox.Text = previousRef;
+                                _pendingKeyCredential = targetDraft; targetDraft = null;
+                                RefreshCredentialTitle();
+                                _loginPassword.Text = targetPassword;
+                            }
+                            catch (Exception rollback) { DiagLog.Swallowed("ConnectionDialog.TargetRollback", rollback); }
+                        }
+                        SetError(L10n.T("跳板凭据保存失败，草稿已保留，请解锁密码库后重试。"));
+                        return false;
+                    }
                 }
+                finally { JumpHopEditForm.ClearEntry(targetDraft); }
                 SaveToConfig();
                 return true;
             }
