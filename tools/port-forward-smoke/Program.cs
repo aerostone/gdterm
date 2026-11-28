@@ -98,6 +98,23 @@ class Program
             Check(await m.StartClientAsync(b, local), "same rule retries on reconnected/replacement client");
             Check(Banner(local.LocalPort), "retry transfers real data");
             await m.StopAsync(local.Id);
+            a.Connect();
+            Check(await m.StartClientAsync(a, local), "forward starts on original reconnected client");
+            a.Disconnect(); a.Connect();
+            m.GetStatus(local.Id); await Until(() => !m.GetStatus(local.Id).Busy);
+            Check(await m.StartClientAsync(a, local) && Banner(local.LocalPort), "same SSH object reconnect reaps old port and accepts retry");
+            await m.StopAsync(local.Id);
+            for (int round = 0; round < 3; round++)
+            {
+                var ports = new System.Collections.Generic.HashSet<int>();
+                while (ports.Count < 12) ports.Add(Free());
+                var rules = ports.Select((p, i) => Rule("batch-" + i, p, port)).ToArray();
+                var starts = await Task.WhenAll(rules.Select(r => m.StartClientAsync(b, r)));
+                Check(starts.All(x => x) && b.ForwardedPorts.Count() == rules.Length, "parallel batch registers every forward " + round);
+                Check(rules.All(r => Banner(r.LocalPort)), "parallel batch transmits every listener " + round);
+                var stops = await Task.WhenAll(rules.Select(r => m.StopAsync(r.Id)));
+                Check(stops.All(x => x) && !b.ForwardedPorts.Any(), "parallel batch removes every registration " + round);
+            }
             int pid = int.Parse(b.RunCommand("echo $PPID").Result.Trim());
             Signal(pid, "-STOP");
             Task<bool> slowStart = null, slowStop = null;

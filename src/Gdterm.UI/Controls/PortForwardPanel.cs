@@ -32,12 +32,15 @@ namespace Gdterm.UI.Controls
         {
             _workspace = workspace ?? throw new ArgumentNullException(nameof(workspace));
             Dock = DockStyle.Fill; BackColor = GdtermColorTable.Background;
+            System.Console.WriteLine("forward-trace:build-begin");
             BuildUI();
+            System.Console.WriteLine("forward-trace:build-end");
             _workspace.Changed += OnWorkspaceChanged;
             RefreshList();
         }
         private void BuildUI()
         {
+            System.Console.WriteLine("forward-trace:toolbar");
             var toolbar = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink,
@@ -56,6 +59,7 @@ namespace Gdterm.UI.Controls
             _stop.Click += async (s, e) => await RunSelected("stop");
             _delete.Click += async (s, e) => await DeleteSelected();
             toolbar.Controls.AddRange(new Control[] { add, _edit, _start, _stop, _delete });
+            System.Console.WriteLine("forward-trace:list");
             _lvRules = new ListView
             {
                 Name = "ForwardRules", Dock = DockStyle.Fill, View = View.Details, FullRowSelect = true,
@@ -72,11 +76,13 @@ namespace Gdterm.UI.Controls
                 if (e.KeyCode == Keys.Delete) { e.SuppressKeyPress = true; await DeleteSelected(); }
                 else if (e.KeyCode == Keys.F2) { e.SuppressKeyPress = true; EditSelected(); }
             };
+            System.Console.WriteLine("forward-trace:shell");
             _shell = new ListShell(_lvRules, L10n.T("过滤名称/地址/说明…"));
             _shell.AddAction(L10n.T("导出"), (s, e) => _shell.ExportCsv(FindForm(), "port-forward")).Name = "ForwardExportButton";
             // ListShell owns Enter/DoubleClick dispatch; one activation opens one editor.
             _shell.ItemActivated += (s, item) => EditSelected();
             _lvRules.Layout += (s, e) => UpdateActions();
+            System.Console.WriteLine("forward-trace:result");
             _result = new AntdUI.Label
             {
                 Name = "ForwardResult", Dock = DockStyle.Bottom,
@@ -85,9 +91,12 @@ namespace Gdterm.UI.Controls
                 Font = FormFontPolicy.UiFont(), ForeColor = GdtermColorTable.Muted, AutoEllipsis = true,
                 Text = L10n.T("勾选优先；双击编辑。关闭面板不会停止转发。")
             };
+            System.Console.WriteLine("forward-trace:mount");
             Controls.Add(_shell); Controls.Add(_result); Controls.Add(toolbar);
+            System.Console.WriteLine("forward-trace:empty");
             _empty = EmptyStateView.Attach(this, L10n.T("还没有端口转发规则"),
                 L10n.T("创建本地、远程或 SOCKS5 转发，保存后手动启动。"), L10n.T("新建规则"), (s, e) => AddRule());
+            System.Console.WriteLine("forward-trace:a11y");
             UiA11y.AutoName(this);
         }
         private AntdUI.Button Button(string text, string name)
@@ -107,9 +116,15 @@ namespace Gdterm.UI.Controls
             }
             else RefreshList();
         }
-        protected override void OnLoad(EventArgs e) { base.OnLoad(e); RefreshList(); }
+        protected override void OnLoad(EventArgs e)
+        {
+            base.OnLoad(e);
+            System.Console.WriteLine("forward-trace:load list=" + (_lvRules != null) + " shell=" + (_shell != null));
+            if (_shell != null) RefreshList();
+        }
         private void RefreshList()
         {
+            System.Console.WriteLine("forward-trace:refresh");
             if (_refreshing || IsDisposed) return;
             _refreshing = true;
             try
@@ -135,6 +150,7 @@ namespace Gdterm.UI.Controls
                     else if (state.State == PortForwardState.Running) item.ForeColor = GdtermColorTable.Success;
                     _rows.Add(item);
                 }
+            System.Console.WriteLine("forward-trace:set-items");
                 _shell.SetItems(_rows);
                 foreach (var item in _rows)
                     if (item.ListView != null) item.Selected = selected.Contains(((PortForwardRule)item.Tag).Id);

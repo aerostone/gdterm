@@ -98,6 +98,10 @@ namespace Gdterm.Tests.Ui
                     check(resolved.SequenceEqual(new[] { "ssh-a" }) && workspace.Error("second").Length > 0, "batch start targets checked rule and displays offline reason");
                     check(list.Items[1].Checked && list.Items[0].Selected, "state refresh preserves checked and selected rows");
                     Capture(host, directory, "forward-offline");
+                    var shell = (ListShell)typeof(PortForwardPanel).GetField("_shell", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(panel);
+                    shell.FilterText = "Real form submit"; Application.DoEvents();
+                    check(((List<PortForwardRule>)Call(panel, "Targets")).All(r => r.Id != "second"), "filtered-out checked rule is not acted on invisibly");
+                    shell.FilterText = ""; Application.DoEvents();
                     list.Items[1].Checked = false; list.Items[0].Selected = false;
                     check(((List<PortForwardRule>)Call(panel, "Targets")).Count == 0, "no selection never falls back to all rules");
                     list.Items[1].Selected = true;
@@ -120,8 +124,19 @@ namespace Gdterm.Tests.Ui
                     var replacement = new PortForwardPanel(workspace); host.Controls.Add(replacement); Application.DoEvents();
                     check(replacement.Controls.Find("ForwardRules", true).OfType<ListView>().Single().Items.Count == 2, "closing and replacing panel preserves rules");
                     replacement.Dispose();
+                    using (var locked = new FileStream(Path.Combine(temp, "port-forwards.json"), FileMode.Open, FileAccess.Read, FileShare.Read))
+                    {
+                        var changed = Rule("second"); changed.Name = "must not publish";
+                        bool failed = false;
+                        try { workspace.Save(changed); } catch (IOException) { failed = true; }
+                        check(failed && workspace.Rules.Single(r => r.Id == "second").Name != "must not publish", "real disk sharing failure does not publish unsaved edit");
+                        var deletion = workspace.DeleteAsync("second"); Pump(deletion);
+                        check(!deletion.Result && workspace.Rules.Count == 2 && trash.Count == 0, "failed durable deletion keeps rule and creates no trash item");
+                    }
                     Pump(workspace.DeleteAsync("second"));
                     string error; var entry = trash.List().Single();
+                    using (var locked = new FileStream(Path.Combine(temp, "port-forwards.json"), FileMode.Open, FileAccess.Read, FileShare.Read))
+                        check(!trash.TryRestore(entry.Id, out error) && trash.Count == 1 && workspace.Rules.Count == 1, "failed durable restore keeps recoverable trash entry");
                     check(trash.TryRestore(entry.Id, out error) && store.Load().Any(r => r.Id == "second"), "trash restores into persistent workspace after all panels were disposed");
                     using (var reopened = new PortForwardPanel(workspace))
                     {
