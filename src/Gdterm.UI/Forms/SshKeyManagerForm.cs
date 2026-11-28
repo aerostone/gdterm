@@ -79,7 +79,7 @@ namespace Gdterm.UI.Forms
             browse.WaveSize = 0;
             browse.Click += (s, e) =>
             {
-                using (var dlg = new OpenFileDialog { Title = L10n.T("选择 PEM 私钥"), Filter = L10n.T("密钥文件|*.pem;*.key;id_rsa;id_ed25519;*.*|所有|*.*") })
+                using (var dlg = new OpenFileDialog { Title = L10n.T("选择 SSH 私钥"), Filter = L10n.T("密钥文件|*.pem;*.key;id_rsa;id_ed25519;*.*|所有|*.*") })
                 {
                     if (dlg.ShowDialog(this) == DialogResult.OK)
                     {
@@ -165,6 +165,12 @@ namespace Gdterm.UI.Forms
             try
             {
                 var data = File.ReadAllBytes(_keyPath.Text);
+                string error;
+                if (!Gdterm.Tunnel.SshPrivateKeyValidator.TryValidate(data, _passphrase.Text, out error))
+                {
+                    AntdUI.Message.warn(this, error);
+                    return;
+                }
                 var entry = new KeePassEntry
                 {
                     Title = string.IsNullOrWhiteSpace(_title.Text) ? Path.GetFileName(_keyPath.Text) : _title.Text.Trim(),

@@ -81,13 +81,15 @@ namespace Gdterm.Tests.Ui
         {
             if (FailCreate) throw new System.IO.IOException("simulated vault write failure");
             entry.Id = Guid.NewGuid().ToString("N");
-            CreatedEntry = entry;
+            CreatedEntry = new KeePassEntry { Id = entry.Id, Username = entry.Username, Title = entry.Title, Hostname = entry.Hostname,
+                Password = entry.Password, Protocol = entry.Protocol, Port = entry.Port, AutoTypeSequence = entry.AutoTypeSequence,
+                SshPrivateKeyData = (byte[])entry.SshPrivateKeyData?.Clone(), SshPrivateKeyPassphrase = entry.SshPrivateKeyPassphrase };
             return entry;
         }
         public void UpdateEntry(KeePassEntry entry) => throw new NotSupportedException();
         public IList<string> ValidatePasswordStrength(string password) => new List<string>();
         public void DeleteEntry(string entryId) => throw new NotSupportedException();
-        public KeePassEntry GetEntry(string entryId) => throw new NotSupportedException();
+        public KeePassEntry GetEntry(string entryId) => CreatedEntry?.Id == entryId ? CreatedEntry : null;
         public KeePassEntry FindEntryByConnection(ConnectionConfig config) => throw new NotSupportedException();
         public byte[] GetSshPrivateKey(string entryId) => throw new NotSupportedException();
         public string GetSshPrivateKeyPassphrase(string entryId) => throw new NotSupportedException();

@@ -417,7 +417,7 @@ namespace Gdterm.UI.Forms
                     try
                     {
                         var entry = dlg.CreateEntry();
-                        if (!KeePassPasswordWarning.ConfirmSaveIfWeak(this, _keepassService, entry.Password))
+                        if (!KeePassPasswordWarning.ConfirmSaveIfWeak(this, _keepassService, dlg.SecretForStrengthCheck))
                         {
                             _statusLabel.Text = L10n.T("已取消：密码强度警告未确认");
                             return;
@@ -454,17 +454,9 @@ namespace Gdterm.UI.Forms
                     dlg.LoadFrom(full);
                     if (dlg.ShowDialog(this) == DialogResult.OK)
                     {
-                        full.Title = dlg.EntryTitle;
-                        full.Username = dlg.EntryUsername;
-                        full.Password = dlg.EntryPassword;
-                        full.Url = dlg.EntryUrl;
-                        full.Notes = dlg.EntryNotes;
-                        full.GroupPath = dlg.EntryGroupPath;
-                        full.Hostname = dlg.EntryHostname;
-                        full.Port = dlg.EntryPort;
-                        full.Protocol = dlg.EntryProtocol;
-                        full.AutoTypeSequence = dlg.EntryAutoType;
-                        if (!KeePassPasswordWarning.ConfirmSaveIfWeak(this, _keepassService, full.Password))
+                        full = dlg.CreateEntry();
+                        full.Id = entryId;
+                        if (!KeePassPasswordWarning.ConfirmSaveIfWeak(this, _keepassService, dlg.SecretForStrengthCheck))
                         {
                             _statusLabel.Text = L10n.T("已取消：密码强度警告未确认");
                             return;
@@ -674,6 +666,15 @@ namespace Gdterm.UI.Forms
         private AntdUI.Input _urlBox;
         private AntdUI.Input _notesBox;
         private AntdUI.Input _groupBox;
+        private AntdUI.Select _authTypeBox;
+        private AntdUI.Input _keyPathBox;
+        private AntdUI.Input _keyPassphraseBox;
+        private byte[] _keyData;
+        private TableLayoutPanel _fieldsGrid;
+        private int _passwordRow, _keyRow, _keyPassphraseRow;
+
+        internal bool UsesPrivateKey => _authTypeBox.SelectedIndex == 1;
+        internal string SecretForStrengthCheck => UsesPrivateKey ? _keyPassphraseBox.Text : EntryPassword;
 
         private AntdUI.Input _hostBox;
         private AntdUI.InputNumber _portBox;
@@ -712,6 +713,32 @@ namespace Gdterm.UI.Forms
             if (_portBox != null) _portBox.Value = entry.Port > 0 && entry.Port <= 65535 ? entry.Port : 22;
             if (_protocolBox != null) _protocolBox.Text = string.IsNullOrEmpty(entry.Protocol) ? "SSH" : entry.Protocol;
             if (_autoTypeBox != null) _autoTypeBox.Text = entry.AutoTypeSequence ?? "";
+            SetPrivateKey(entry.SshPrivateKeyData, L10n.T("已保存在密码库中"));
+            _keyPassphraseBox.Text = entry.SshPrivateKeyPassphrase ?? "";
+            _authTypeBox.SelectedIndex = _keyData != null && _keyData.Length > 0 ? 1 : 0;
+        }
+
+        internal void SelectPrivateKeyAuthentication() { _authTypeBox.SelectedIndex = 1; }
+
+        internal void RequirePrivateKeyAuthentication()
+        {
+            SelectPrivateKeyAuthentication();
+            _authTypeBox.Enabled = false;
+        }
+
+        internal void ImportPrivateKey(string path)
+        {
+            var data = System.IO.File.ReadAllBytes(path);
+            try { SetPrivateKey(data, path); }
+            finally { Array.Clear(data, 0, data.Length); }
+            SelectPrivateKeyAuthentication();
+        }
+
+        private void SetPrivateKey(byte[] data, string display)
+        {
+            if (_keyData != null) Array.Clear(_keyData, 0, _keyData.Length);
+            _keyData = data == null ? null : (byte[])data.Clone();
+            _keyPathBox.Text = _keyData != null && _keyData.Length > 0 ? display : "";
         }
 
         internal KeePassEntry CreateEntry()
@@ -719,9 +746,24 @@ namespace Gdterm.UI.Forms
             return new KeePassEntry {
                 Title = EntryTitle, Username = EntryUsername, Password = EntryPassword,
                 Url = EntryUrl, Notes = EntryNotes, GroupPath = EntryGroupPath,
-                Hostname = EntryHostname, Protocol = EntryProtocol, Port = EntryPort,
-                AutoTypeSequence = EntryAutoType
+                Hostname = EntryHostname, Protocol = UsesPrivateKey ? "SSH" : EntryProtocol, Port = EntryPort,
+                AutoTypeSequence = EntryAutoType,
+                SshPrivateKeyData = UsesPrivateKey ? (byte[])_keyData.Clone() : new byte[0],
+                SshPrivateKeyPassphrase = UsesPrivateKey ? _keyPassphraseBox.Text : ""
             };
+        }
+
+        private void RefreshAuthenticationFields()
+        {
+            if (_fieldsGrid == null || _keyPathBox == null) return;
+            foreach (Control control in _fieldsGrid.Controls)
+            {
+                int row = _fieldsGrid.GetRow(control);
+                if (row == _passwordRow) control.Visible = !UsesPrivateKey;
+                if (row == _keyRow || row == _keyPassphraseRow) control.Visible = UsesPrivateKey;
+            }
+            if (UsesPrivateKey) _protocolBox.Text = "SSH";
+            _protocolBox.Enabled = !UsesPrivateKey;
         }
 
         private void InitializeComponent()
@@ -771,7 +813,19 @@ namespace Gdterm.UI.Forms
                 Type = AntdUI.TTypeMini.Primary,
                 Margin = new Padding(0)
             };
-            okButton.Click += (s, e) => { DialogResult = DialogResult.OK; Close(); };
+            okButton.Click += (s, e) => {
+                if (UsesPrivateKey)
+                {
+                    string error;
+                    if (!Gdterm.Tunnel.SshPrivateKeyValidator.TryValidate(_keyData, _keyPassphraseBox.Text, out error))
+                    {
+                        AntdUI.Message.warn(this, error);
+                        return;
+                    }
+                }
+                DialogResult = DialogResult.OK;
+                Close();
+            };
             var cancelButton = new AntdUI.Button {
                 Text = L10n.T("取消"),
                 AutoSize = true,
@@ -795,9 +849,13 @@ namespace Gdterm.UI.Forms
             };
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));   // 标签列按文字宽度自适应
             grid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            _fieldsGrid = grid;
             int row = 0;
             _titleBox = AddField(grid, ref row, L10n.T("标题："), new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
             _usernameBox = AddField(grid, ref row, L10n.T("用户名："), new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
+            _authTypeBox = AddField(grid, ref row, L10n.T("认证方式"), new AntdUI.Select { Name = "CredentialAuthType" }, fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
+            _authTypeBox.Items.AddRange(new object[] { L10n.T("密码"), L10n.T("SSH 私钥") });
+            _authTypeBox.SelectedIndex = 0;
 
             _passwordBox = new AntdUI.Input {
                 // 等宽语义（终端/密码字符对齐），字号跟随全局 UI 字号
@@ -822,7 +880,34 @@ namespace Gdterm.UI.Forms
                 btnShowPwd.Text = _passwordBox.UseSystemPasswordChar ? L10n.T("显示") : L10n.T("隐藏");
             };
             pwdCell.Controls.Add(btnShowPwd, 1, 0);
+            _passwordRow = row;
             AddField(grid, ref row, L10n.T("密码："), pwdCell, fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
+
+            var keyCell = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, AutoSize = true, Margin = Padding.Empty };
+            keyCell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            keyCell.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            _keyPathBox = new AntdUI.Input { Name = "CredentialKeyFile", ReadOnly = true, Dock = DockStyle.Fill,
+                MinimumSize = new Size(0, fieldH), Margin = Padding.Empty, PlaceholderText = "OpenSSH / PEM" };
+            var browseKey = new AntdUI.Button { Text = L10n.T("浏览…"), Name = "CredentialBrowseKey",
+                Margin = DpiScale.Pad(this, 6, 1, 0, 1) };
+            FormFontPolicy.SizeActionButton(this, browseKey, 6, 3);
+            browseKey.Click += (s, e) => {
+                using (var picker = new OpenFileDialog { Title = L10n.T("选择 SSH 私钥"), Filter = L10n.T("所有文件|*.*") })
+                {
+                    if (picker.ShowDialog(this) != DialogResult.OK) return;
+                    try { ImportPrivateKey(picker.FileName); }
+                    catch (Exception) { AntdUI.Message.error(this, L10n.T("读取私钥文件失败，请检查文件是否存在及访问权限。")); }
+                }
+            };
+            keyCell.Controls.Add(_keyPathBox, 0, 0);
+            keyCell.Controls.Add(browseKey, 1, 0);
+            _keyRow = row;
+            AddField(grid, ref row, L10n.T("私钥文件"), keyCell, fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
+            _keyPassphraseRow = row;
+            _keyPassphraseBox = AddField(grid, ref row, L10n.T("密钥口令"), new AntdUI.Input {
+                Name = "CredentialKeyPassphrase", UseSystemPasswordChar = true,
+                PlaceholderText = L10n.T("仅加密私钥需要；不是服务器密码")
+            }, fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
 
             _urlBox = AddField(grid, ref row, "URL：", new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
             _groupBox = AddField(grid, ref row, L10n.T("分组："), new AntdUI.Input(), fieldH, ctrlPad, labelPadL, labelPadTop, labelPadR);
@@ -850,6 +935,10 @@ namespace Gdterm.UI.Forms
             fields.Controls.Add(grid);
             Controls.Add(fields);
             Controls.Add(btnPanel);   // 后添加的先布局：Bottom 先钉住，Fill 吃剩余空间
+
+            _authTypeBox.SelectedIndexChanged += (s, e) => RefreshAuthenticationFields();
+            RefreshAuthenticationFields();
+            Disposed += (s, e) => { if (_keyData != null) Array.Clear(_keyData, 0, _keyData.Length); };
 
             AcceptButton = okButton;
             CancelButton = cancelButton;

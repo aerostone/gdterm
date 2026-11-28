@@ -71,6 +71,16 @@ namespace Gdterm.Tests.Ui
                 pwd.Text = string.Empty;
             });
             CheckConnectionPersistence(log, check);
+            Show("credential-ssh-key", () => {
+                var editor = new KeePassEntryEditForm();
+                editor.SelectPrivateKeyAuthentication();
+                return editor;
+            }, outDir, log, check, f => {
+                check(GetField<AntdUI.Input>(f, "_keyPathBox").Visible && GetField<AntdUI.Input>(f, "_keyPassphraseBox").Visible
+                    && GetField<AntdUI.Input>(f, "_keyPassphraseBox").UseSystemPasswordChar && !GetField<AntdUI.Input>(f, "_passwordBox").Visible,
+                    "credential-editor-key-fields-visible");
+            });
+            CheckPrivateKeyConnection(tmp, check);
             Show("sshkey-manager", () => (Form)new SshKeyManagerForm(keepass), outDir, log, check);
             Show("transfer-progress", () => (Form)new TransferProgressDialog("smoke"), outDir, log, check);
             // 回收站：先灌 2 条锁三列/按钮启用态，再开空态外的有数据态
@@ -235,6 +245,44 @@ namespace Gdterm.Tests.Ui
                 check(f.Result == null && service.CreatedEntry == null, "connection-cancel-no-write");
             }
             log("connection-persistence scenarios completed");
+        }
+
+        private static void CheckPrivateKeyConnection(string dir, Action<bool, string> check)
+        {
+            string path = Path.Combine(dir, "test_id_ed25519");
+            var vault = new FakeKeePassService();
+            foreach (bool save in new[] { false, true })
+            using (var f = new ConnectionDialog((ConnectionConfig)null, vault))
+            {
+                File.WriteAllText(path, Gdterm.Tests.Security.SshKeyFixtures.EncryptedOpenSsh, new System.Text.UTF8Encoding(false));
+                f.Show(); Application.DoEvents();
+                GetField<AntdUI.Input>(f, "_hostBox").Text = "key.test";
+                GetField<AntdUI.Input>(f, "_usernameBox").Text = "keyuser";
+                var button = GetField<AntdUI.Button>(f, "_importKeyButton");
+                check(button.Visible && button.Enabled, "key-entry-on-ssh-connection");
+                f.BeginInvoke((Action)(() => {
+                    var editor = Form.ActiveForm as KeePassEntryEditForm;
+                    if (editor == null) foreach (Form form in Application.OpenForms) if (form is KeePassEntryEditForm) editor = (KeePassEntryEditForm)form;
+                    if (editor == null) throw new InvalidOperationException("key editor did not open");
+                    try
+                    {
+                        check(editor.UsesPrivateKey && editor.EntryHostname == "key.test" && editor.EntryUsername == "keyuser", "key-editor-seeded");
+                        editor.ImportPrivateKey(path);
+                        GetField<AntdUI.Input>(editor, "_keyPassphraseBox").Text = Gdterm.Tests.Security.SshKeyFixtures.Passphrase;
+                        (editor.AcceptButton as AntdUI.Button).PerformClick();
+                    }
+                    finally { if (editor.DialogResult != DialogResult.OK) editor.Close(); }
+                }));
+                button.PerformClick();
+                File.Delete(path);
+                check(vault.CreatedEntry == null && !GetField<AntdUI.Input>(f, "_loginPassword").Visible, "pending-key-not-yet-saved");
+                ((save ? f.AcceptButton : f.CancelButton) as AntdUI.Button).PerformClick();
+                Application.DoEvents();
+                if (!save) check(vault.CreatedEntry == null && f.Result == null, "cancel-key-connection-no-vault-write");
+                else check(vault.CreatedEntry != null && System.Text.Encoding.UTF8.GetString(vault.CreatedEntry.SshPrivateKeyData) == Gdterm.Tests.Security.SshKeyFixtures.EncryptedOpenSsh
+                    && vault.CreatedEntry.SshPrivateKeyPassphrase == Gdterm.Tests.Security.SshKeyFixtures.Passphrase
+                    && f.Result?.CredentialRefId == vault.CreatedEntry.Id, "save-key-connection-persists-and-binds-key");
+            }
         }
 
         // 新建连接三协议各 dump 一次：反射展开高级区 + 切换协议（折叠态量不到 RDP/串口区真实尺寸）

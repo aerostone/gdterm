@@ -53,6 +53,7 @@
     <Compile Include="SshKeepAlive.cs" />
     <Compile Include="SshHostKeyGuard.cs" />
     <Compile Include="SshConnectionInfoFactory.cs" />
+    <Compile Include="SshPrivateKeyValidator.cs" />
     <Compile Include="Models\TunnelStatus.cs" />
     <Compile Include="ITunnelManager.cs" />
     <Compile Include="TunnelManager.cs" />

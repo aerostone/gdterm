@@ -207,7 +207,7 @@ namespace Gdterm.UI.Forms
                 _rows.Add(e);
                 rows.Add(new EntryRow
                 {
-                    Title = e.Title ?? "",
+                    Title = (e.Title ?? "") + (e.HasSshPrivateKey ? L10n.T("（SSH 私钥）") : ""),
                     Username = e.Username ?? "",
                     GroupPath = e.GroupPath ?? ""
                 });
@@ -295,7 +295,7 @@ namespace Gdterm.UI.Forms
                     var entry = dlg.CreateEntry();
                     try
                     {
-                        if (!KeePassPasswordWarning.ConfirmSaveIfWeak(this, _keepass, entry.Password))
+                        if (!KeePassPasswordWarning.ConfirmSaveIfWeak(this, _keepass, dlg.SecretForStrengthCheck))
                             return; // 用户取消，保持在 picker 界面
                         var created = _keepass.CreateEntry(entry);
                         if (created != null)

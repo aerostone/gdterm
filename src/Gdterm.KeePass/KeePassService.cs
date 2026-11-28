@@ -229,12 +229,24 @@ namespace Gdterm.KeePass
             if (entry.AutoTypeSequence != null) pwEntry.Strings.Set(AutoTypeFieldName, new ProtectedString(false, entry.AutoTypeSequence));
 
             // 更新 SSH 密钥
-            if (entry.SshPrivateKeyData != null && entry.SshPrivateKeyData.Length > 0)
+            // null = 未修改；空数组 = 用户明确切回密码认证并移除私钥。
+            if (entry.SshPrivateKeyData != null)
             {
-                pwEntry.Binaries.Set("id_rsa", new ProtectedBinary(true, entry.SshPrivateKeyData));
+                if (entry.SshPrivateKeyData.Length > 0)
+                {
+                    pwEntry.Binaries.Set("id_rsa", new ProtectedBinary(true, entry.SshPrivateKeyData));
+                    if (entry.SshPrivateKeyPassphrase != null)
+                    {
+                        if (entry.SshPrivateKeyPassphrase.Length == 0) pwEntry.Strings.Remove(SshKeyPassFieldName);
+                        else pwEntry.Strings.Set(SshKeyPassFieldName, new ProtectedString(true, entry.SshPrivateKeyPassphrase));
+                    }
+                }
+                else
+                {
+                    pwEntry.Binaries.Remove("id_rsa");
+                    pwEntry.Strings.Remove(SshKeyPassFieldName);
+                }
             }
-            if (entry.SshPrivateKeyPassphrase != null)
-                pwEntry.Strings.Set(SshKeyPassFieldName, new ProtectedString(true, entry.SshPrivateKeyPassphrase));
 
             // 分组移动：编辑对话框改了分组路径时，把条目搬到目标组（不存在则创建）
             if (entry.GroupPath != null)
@@ -357,6 +369,7 @@ namespace Gdterm.KeePass
         {
             var pwEntry = FindEntryByUuid(entryId);
             if (pwEntry == null) return null;
+            var key = pwEntry.Binaries.Get("id_rsa");
 
             return new KeePassEntry
             {
@@ -371,6 +384,7 @@ namespace Gdterm.KeePass
                 Hostname = pwEntry.Strings.ReadSafe(HostnameFieldName),
                 Port = int.TryParse(pwEntry.Strings.ReadSafe(PortFieldName), out int p) ? p : 0,
                 AutoTypeSequence = pwEntry.Strings.ReadSafe(AutoTypeFieldName),
+                SshPrivateKeyData = key != null ? key.ReadData() : null,
                 SshPrivateKeyPassphrase = pwEntry.Strings.ReadSafe(SshKeyPassFieldName)
             };
         }

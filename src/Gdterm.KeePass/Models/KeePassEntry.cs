@@ -50,7 +50,7 @@ namespace Gdterm.KeePass.Models
         public string SshPrivateKeyPath { get; set; }
 
         /// <summary>
-        /// SSH 私钥内容（PEM 格式，存储为 KeePass 附件）
+        /// SSH 私钥内容（OpenSSH / PEM，存储为 KeePass 附件）。更新时 null 保留，空数组移除。
         /// </summary>
         public byte[] SshPrivateKeyData { get; set; }
 

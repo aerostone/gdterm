@@ -33,6 +33,9 @@ namespace Gdterm.UI.Forms
         private AntdUI.Input _usernameBox;
         private AntdUI.Input _loginPassword;
         private Control _loginPasswordLabel;
+        private AntdUI.Button _importKeyButton;
+        private KeePassEntry _pendingKeyCredential;
+        private bool _autoMatchHasPrivateKey;
         private AntdUI.Input _groupPathBox;
 
         // SSH 高级
@@ -329,7 +332,15 @@ namespace Gdterm.UI.Forms
             topPanel.Controls.Add(credRow);
 
             // ===== 更多选项 开关 =====
-            var linkRow = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = false, Padding = new Padding(0, DpiScale.V(this, 6), 0, 0) };
+            var linkRow = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, WrapContents = true, Padding = new Padding(0, DpiScale.V(this, 6), 0, 0) };
+            _importKeyButton = new AntdUI.Button {
+                Name = "ConnectionUsePrivateKey", Text = L10n.T("使用 SSH 私钥…"),
+                Margin = DpiScale.Pad(this, 0, 2, 8, 2)
+            };
+            FormFontPolicy.SizeActionButton(this, _importKeyButton, 10, 4);
+            _importKeyButton.Click += OnCreateKeyCredential;
+            Disposed += (s, e) => ClearPendingKey();
+            linkRow.Controls.Add(_importKeyButton);
             _moreLink = new AntdUI.HyperlinkLabel
             {
                 Text = L10n.T("更多选项 ▾"),
@@ -804,6 +815,7 @@ namespace Gdterm.UI.Forms
         {
             var proto = (string)_protocolCombo.SelectedValue;
             _portBox.Value = proto == "SSH" ? 22 : proto == "RDP" ? 3389 : proto == "Telnet" ? 23 : 9600;
+            if (proto != "SSH") ClearPendingKey();
             // 高级区只显示当前协议相关的分节（Telnet 无专属分节，与 SSH 同走跳板/保活区）
             bool isSsh = proto == "SSH" || proto == "Telnet", isRdp = proto == "RDP", isSerial = proto == "Serial";
             _secSsh.Visible = isSsh;
@@ -812,7 +824,7 @@ namespace Gdterm.UI.Forms
             _secSerial.Visible = isSerial;
             if (_secProxy != null) _secProxy.Visible = isSsh;
             _domainBox.Enabled = isRdp;
-            RefreshLoginPasswordField();
+            RefreshCredentialTitle();
             if (_advancedHost.Visible) _advancedHost.PerformLayout();
         }
 
@@ -1179,10 +1191,45 @@ namespace Gdterm.UI.Forms
             {
                 if (picker.ShowDialog(this) == DialogResult.OK && !string.IsNullOrEmpty(picker.SelectedEntryId))
                 {
+                    ClearPendingKey();
                     _credentialRefBox.Text = picker.SelectedEntryId;
                     RefreshCredentialTitle();
                 }
             }
+        }
+
+        private void OnCreateKeyCredential(object sender, EventArgs e)
+        {
+            if (!EnsureVaultUnlocked()) return;
+            using (var editor = new KeePassEntryEditForm())
+            {
+                editor.LoadFrom(_pendingKeyCredential ?? BuildSeedEntryFromForm());
+                editor.RequirePrivateKeyAuthentication();
+                if (editor.ShowDialog(this) != DialogResult.OK) return;
+                try
+                {
+                    if (!KeePassPasswordWarning.ConfirmSaveIfWeak(this, _keepass, editor.SecretForStrengthCheck)) return;
+                    ClearPendingKey();
+                    _pendingKeyCredential = editor.CreateEntry();
+                    RefreshCredentialTitle();
+                }
+                catch (Exception) { SetError(L10n.T("凭据保存失败，请检查密码库后重试。")); }
+            }
+        }
+
+        private void ClearPendingKey()
+        {
+            if (_pendingKeyCredential?.SshPrivateKeyData != null)
+                Array.Clear(_pendingKeyCredential.SshPrivateKeyData, 0, _pendingKeyCredential.SshPrivateKeyData.Length);
+            _pendingKeyCredential = null;
+        }
+
+        private void SaveAndBindCredential(KeePassEntry entry)
+        {
+            var created = _keepass.CreateEntry(entry);
+            if (created == null || string.IsNullOrEmpty(created.Id)) throw new InvalidOperationException();
+            _credentialRefBox.Text = created.Id;
+            RefreshCredentialTitle();
         }
 
         /// <summary>当前表单值 → 新建凭据种子（主机/用户名/协议/端口/分组/URL 预填，避免二次录入）。</summary>
@@ -1211,6 +1258,7 @@ namespace Gdterm.UI.Forms
 
         private void OnClearCredential(object sender, EventArgs e)
         {
+            ClearPendingKey();
             _credentialRefBox.Text = "";
             RefreshCredentialTitle();
         }
@@ -1221,6 +1269,14 @@ namespace Gdterm.UI.Forms
         private void RefreshCredentialTitle()
         {
             RefreshLoginPasswordField();
+            if (_pendingKeyCredential != null)
+            {
+                _loginPassword.Text = "";
+                _loginPassword.Visible = _loginPasswordLabel.Visible = false;
+                _credentialTitleLabel.Text = L10n.T("待保存: ") + _pendingKeyCredential.Title + L10n.T("（SSH 私钥）");
+                _credentialTitleLabel.ForeColor = GdtermColorTable.Success;
+                return;
+            }
             var uuid = _credentialRefBox.Text;
             if (string.IsNullOrWhiteSpace(uuid))
             {
@@ -1245,8 +1301,12 @@ namespace Gdterm.UI.Forms
                 }
                 var title = string.IsNullOrWhiteSpace(entry.Title) ? L10n.T("(无标题)") : entry.Title;
                 var user = string.IsNullOrWhiteSpace(entry.Username) ? "" : " — " + entry.Username;
-                _credentialTitleLabel.Text = L10n.T("已选: ") + title + user;
+                bool hasKey = (_protocolCombo.SelectedValue as string) == "SSH" && entry.SshPrivateKeyData != null && entry.SshPrivateKeyData.Length > 0;
+                if (entry.SshPrivateKeyData != null) Array.Clear(entry.SshPrivateKeyData, 0, entry.SshPrivateKeyData.Length);
+                _credentialTitleLabel.Text = L10n.T("已选: ") + title + user + (hasKey ? L10n.T("（SSH 私钥）") : L10n.T("（密码）"));
                 _credentialTitleLabel.ForeColor = GdtermColorTable.Success;
+                if (hasKey && (_protocolCombo.SelectedValue as string) == "SSH")
+                    _loginPassword.Visible = _loginPasswordLabel.Visible = false;
             }
             catch
             {
@@ -1257,12 +1317,14 @@ namespace Gdterm.UI.Forms
 
         private void RefreshLoginPasswordField()
         {
+            _autoMatchHasPrivateKey = false;
             string protocol = _protocolCombo.SelectedValue as string;
             bool visible = protocol == "SSH" || protocol == "RDP";
             bool bound = !string.IsNullOrEmpty(_credentialRefBox.Text);
+            if (_importKeyButton != null) _importKeyButton.Visible = protocol == "SSH";
             _loginPassword.Visible = _loginPasswordLabel.Visible = visible;
             _loginPassword.Enabled = !bound;
-            _loginPassword.PlaceholderText = bound ? L10n.T("使用所选凭据的密码") : L10n.T("可选；填写后存入密码库");
+            _loginPassword.PlaceholderText = bound ? L10n.T("使用所选凭据认证") : L10n.T("可选；填写后存入密码库");
             if (!visible || bound) _loginPassword.Text = string.Empty;
         }
 
@@ -1276,17 +1338,22 @@ namespace Gdterm.UI.Forms
 
         private bool SaveLoginCredential()
         {
-            if (string.IsNullOrEmpty(_loginPassword.Text) || !_loginPassword.Enabled) return true;
+            if (_autoMatchHasPrivateKey) return true;
+            if (_pendingKeyCredential == null && (string.IsNullOrEmpty(_loginPassword.Text) || !_loginPassword.Enabled)) return true;
             try
             {
                 if (!EnsureVaultUnlocked()) return false;
+                if (_pendingKeyCredential != null)
+                {
+                    SaveAndBindCredential(_pendingKeyCredential);
+                    ClearPendingKey();
+                    RefreshCredentialTitle();
+                    return true;
+                }
                 var entry = BuildSeedEntryFromForm();
                 entry.Password = _loginPassword.Text;
                 if (!KeePassPasswordWarning.ConfirmSaveIfWeak(this, _keepass, entry.Password)) return false;
-                var created = _keepass.CreateEntry(entry);
-                if (created == null || string.IsNullOrEmpty(created.Id))
-                    throw new InvalidOperationException();
-                _credentialRefBox.Text = created.Id;
+                SaveAndBindCredential(entry);
                 _loginPassword.Text = string.Empty;
                 return true;
             }
@@ -1305,7 +1372,10 @@ namespace Gdterm.UI.Forms
         private void UpdateAutoMatchPreview()
         {
             if (_credentialTitleLabel == null || _credentialRefBox == null) return;
+            if (_pendingKeyCredential != null) return;
             if (!string.IsNullOrWhiteSpace(_credentialRefBox.Text)) return; // 已显式选择，展示由 RefreshCredentialTitle 负责
+            _autoMatchHasPrivateKey = false;
+            RefreshLoginPasswordField();
             if (_keepass == null || !_keepass.IsUnlocked)
             {
                 _credentialTitleLabel.Text = L10n.T("未选（解锁密码库后按主机+用户名自动匹配）");
@@ -1333,7 +1403,11 @@ namespace Gdterm.UI.Forms
                 {
                     var t = string.IsNullOrWhiteSpace(hit.Title) ? L10n.T("(无标题)") : hit.Title;
                     var u = string.IsNullOrWhiteSpace(hit.Username) ? "" : " — " + hit.Username;
-                    _credentialTitleLabel.Text = L10n.T("自动匹配: ") + t + u;
+                    bool hasKey = (_protocolCombo.SelectedValue as string) == "SSH" && hit.SshPrivateKeyData != null && hit.SshPrivateKeyData.Length > 0;
+                    if (hit.SshPrivateKeyData != null) Array.Clear(hit.SshPrivateKeyData, 0, hit.SshPrivateKeyData.Length);
+                    _autoMatchHasPrivateKey = hasKey && (_protocolCombo.SelectedValue as string) == "SSH";
+                    _loginPassword.Visible = _loginPasswordLabel.Visible = !_autoMatchHasPrivateKey;
+                    _credentialTitleLabel.Text = L10n.T("自动匹配: ") + t + u + (hasKey ? L10n.T("（SSH 私钥）") : L10n.T("（密码）"));
                     _credentialTitleLabel.ForeColor = GdtermColorTable.Success;
                 }
                 else

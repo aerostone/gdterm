@@ -84,6 +84,7 @@ namespace Gdterm.Tests
             RunTest("CommandHistoryQuery", CommandHistoryQueryTests.Run);
             RunTest("ExternalFormatImporter", ExternalFormatImporterTests.Run);
             RunTest("SshConnectionInfoFactory", Gdterm.Tests.Tunnel.SshConnectionInfoFactoryTests.Run);
+            RunTest("SshKeyAuthentication", SshKeyAuthenticationTests.Run);
             RunTest("NetworkDiagnosticsTool", Gdterm.Tests.Tools.NetworkDiagnosticsToolTests.Run);
             RunTest("OnlineLinks", OnlineLinksTests.Run);
             RunTest("Otp", OtpTests.Run);

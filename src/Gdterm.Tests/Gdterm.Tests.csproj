@@ -123,6 +123,8 @@
     <Compile Include="Core\ConnectionConfigCopyTests.cs" />
     <Compile Include="Core\OnlineLinksTests.cs" />
     <Compile Include="Security\SecretFindingTests.cs" />
+    <Compile Include="Security\SshKeyFixtures.cs" />
+    <Compile Include="Security\SshKeyAuthenticationTests.cs" />
     <Compile Include="Security\SecurityManagerHashTests.cs" />
     <Compile Include="Security\CommandGateTests.cs" />
     <Compile Include="Security\HostKeyVerificationTests.cs" />
