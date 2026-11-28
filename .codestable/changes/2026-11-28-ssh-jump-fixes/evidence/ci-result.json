@@ -1,0 +1,18 @@
+{
+  "verified_commit": "1b2f6208a8eefd954bf52aaabd147460f4d7f892",
+  "github": {
+    "run": 46115098539,
+    "url": "https://github.com/aerostone/gdterm/actions/runs/46115098539",
+    "conclusion": "success"
+  },
+  "appveyor": {
+    "build": 55182982,
+    "version": "0.1.556",
+    "status": "success",
+    "url": "https://ci.appveyor.com/project/aerostone/gdterm/build/0.1.556"
+  },
+  "unit_assertions_passed": 1080,
+  "ui_matrix_pages": 62,
+  "ui_matrix_combinations": 6,
+  "pixel_baseline_images": 105
+}
