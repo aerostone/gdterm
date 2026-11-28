@@ -89,7 +89,13 @@ namespace Gdterm.Tests.Ui
         public void UpdateEntry(KeePassEntry entry) => throw new NotSupportedException();
         public IList<string> ValidatePasswordStrength(string password) => new List<string>();
         public void DeleteEntry(string entryId) => throw new NotSupportedException();
-        public KeePassEntry GetEntry(string entryId) => CreatedEntry?.Id == entryId ? CreatedEntry : null;
+        public KeePassEntry GetEntry(string entryId)
+        {
+            var e = CreatedEntry?.Id == entryId ? CreatedEntry : null;
+            return e == null ? null : new KeePassEntry { Id = e.Id, Title = e.Title, Username = e.Username,
+                Hostname = e.Hostname, Port = e.Port, Protocol = e.Protocol, Password = e.Password,
+                SshPrivateKeyData = (byte[])e.SshPrivateKeyData?.Clone(), SshPrivateKeyPassphrase = e.SshPrivateKeyPassphrase };
+        }
         public KeePassEntry FindEntryByConnection(ConnectionConfig config) => throw new NotSupportedException();
         public byte[] GetSshPrivateKey(string entryId) => throw new NotSupportedException();
         public string GetSshPrivateKeyPassphrase(string entryId) => throw new NotSupportedException();

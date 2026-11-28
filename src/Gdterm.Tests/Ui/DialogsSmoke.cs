@@ -256,6 +256,7 @@ namespace Gdterm.Tests.Ui
             {
                 File.WriteAllText(path, Gdterm.Tests.Security.SshKeyFixtures.EncryptedOpenSsh, new System.Text.UTF8Encoding(false));
                 f.Show(); Application.DoEvents();
+                GetField<AntdUI.Select>(f, "_protocolCombo").SelectedValue = "SSH";
                 GetField<AntdUI.Input>(f, "_hostBox").Text = "key.test";
                 GetField<AntdUI.Input>(f, "_usernameBox").Text = "keyuser";
                 var button = GetField<AntdUI.Button>(f, "_importKeyButton");
@@ -276,12 +277,41 @@ namespace Gdterm.Tests.Ui
                 button.PerformClick();
                 File.Delete(path);
                 check(vault.CreatedEntry == null && !GetField<AntdUI.Input>(f, "_loginPassword").Visible, "pending-key-not-yet-saved");
+                if (save)
+                {
+                    vault.FailCreate = true;
+                    (f.AcceptButton as AntdUI.Button).PerformClick();
+                    check(f.Result == null && !f.IsDisposed && GetField<AntdUI.Label>(f, "_errorLabel").Visible,
+                        "key-vault-write-failure-keeps-draft-for-retry");
+                    vault.FailCreate = false;
+                }
                 ((save ? f.AcceptButton : f.CancelButton) as AntdUI.Button).PerformClick();
                 Application.DoEvents();
                 if (!save) check(vault.CreatedEntry == null && f.Result == null, "cancel-key-connection-no-vault-write");
                 else check(vault.CreatedEntry != null && System.Text.Encoding.UTF8.GetString(vault.CreatedEntry.SshPrivateKeyData) == Gdterm.Tests.Security.SshKeyFixtures.EncryptedOpenSsh
                     && vault.CreatedEntry.SshPrivateKeyPassphrase == Gdterm.Tests.Security.SshKeyFixtures.Passphrase
                     && f.Result?.CredentialRefId == vault.CreatedEntry.Id, "save-key-connection-persists-and-binds-key");
+            }
+            using (var editor = new KeePassEntryEditForm())
+            {
+                editor.LoadFrom(vault.CreatedEntry);
+                editor.Show(); Application.DoEvents();
+                check(editor.UsesPrivateKey && GetField<AntdUI.Input>(editor, "_keyPathBox").Visible, "edit-existing-key-without-source-file");
+                var saved = editor.CreateEntry();
+                check(System.Linq.Enumerable.SequenceEqual(saved.SshPrivateKeyData, vault.CreatedEntry.SshPrivateKeyData)
+                    && saved.SshPrivateKeyPassphrase == vault.CreatedEntry.SshPrivateKeyPassphrase, "key-editor-preserves-key-and-passphrase");
+                GetField<AntdUI.Select>(editor, "_authTypeBox").SelectedIndex = 0;
+                GetField<AntdUI.Input>(editor, "_passwordBox").Text = "test-password";
+                saved = editor.CreateEntry();
+                check(saved.SshPrivateKeyData.Length == 0 && saved.SshPrivateKeyPassphrase == "" && saved.Password == "test-password",
+                    "key-editor-switch-to-password");
+            }
+            using (var f = new ConnectionDialog(new ConnectionConfig { Host = "key.test", Protocol = ProtocolType.SSH,
+                Port = 22, CredentialRefId = vault.CreatedEntry.Id }, vault))
+            {
+                f.Show(); Application.DoEvents();
+                check(!GetField<AntdUI.Input>(f, "_loginPassword").Visible
+                    && GetField<AntdUI.Label>(f, "_credentialTitleLabel").Text.Contains("SSH"), "reopened-connection-shows-key-authentication");
             }
         }
 

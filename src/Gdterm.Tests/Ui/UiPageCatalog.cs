@@ -212,6 +212,8 @@ namespace Gdterm.Tests.Ui
                 t => new Gdterm.UI.Forms.KeePassUnlockForm(new FakeKeePassService()));
             AddDialog(list, "keepass-entry", "凭据表单/密码输入",
                 t => new Gdterm.UI.Forms.KeePassEntryEditForm());
+            AddDialog(list, "credential-ssh-key", "凭据表单/私钥输入",
+                t => { var f = new Gdterm.UI.Forms.KeePassEntryEditForm(); f.SelectPrivateKeyAuthentication(); return f; });
             AddDialog(list, "keepass-manager", "表格/搜索",
                 t => new Gdterm.UI.Forms.KeePassManagerForm(new FakeKeePassService()));
             AddDialog(list, "otp-manager", "表格",

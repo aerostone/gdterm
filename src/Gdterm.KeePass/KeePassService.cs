@@ -235,17 +235,17 @@ namespace Gdterm.KeePass
                 if (entry.SshPrivateKeyData.Length > 0)
                 {
                     pwEntry.Binaries.Set("id_rsa", new ProtectedBinary(true, entry.SshPrivateKeyData));
-                    if (entry.SshPrivateKeyPassphrase != null)
-                    {
-                        if (entry.SshPrivateKeyPassphrase.Length == 0) pwEntry.Strings.Remove(SshKeyPassFieldName);
-                        else pwEntry.Strings.Set(SshKeyPassFieldName, new ProtectedString(true, entry.SshPrivateKeyPassphrase));
-                    }
                 }
                 else
                 {
                     pwEntry.Binaries.Remove("id_rsa");
                     pwEntry.Strings.Remove(SshKeyPassFieldName);
                 }
+            }
+            if (entry.SshPrivateKeyPassphrase != null && (entry.SshPrivateKeyData == null || entry.SshPrivateKeyData.Length > 0))
+            {
+                if (entry.SshPrivateKeyPassphrase.Length == 0) pwEntry.Strings.Remove(SshKeyPassFieldName);
+                else pwEntry.Strings.Set(SshKeyPassFieldName, new ProtectedString(true, entry.SshPrivateKeyPassphrase));
             }
 
             // 分组移动：编辑对话框改了分组路径时，把条目搬到目标组（不存在则创建）

@@ -30,6 +30,7 @@ dangerous-cmd
 keepass-picker
 keepass-unlock
 keepass-entry
+credential-ssh-key
 keepass-manager
 otp-manager
 add-otp

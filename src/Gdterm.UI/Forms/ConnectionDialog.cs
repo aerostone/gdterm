@@ -1406,7 +1406,7 @@ namespace Gdterm.UI.Forms
                     bool hasKey = (_protocolCombo.SelectedValue as string) == "SSH" && hit.SshPrivateKeyData != null && hit.SshPrivateKeyData.Length > 0;
                     if (hit.SshPrivateKeyData != null) Array.Clear(hit.SshPrivateKeyData, 0, hit.SshPrivateKeyData.Length);
                     _autoMatchHasPrivateKey = hasKey && (_protocolCombo.SelectedValue as string) == "SSH";
-                    _loginPassword.Visible = _loginPasswordLabel.Visible = !_autoMatchHasPrivateKey;
+                    if (_autoMatchHasPrivateKey) _loginPassword.Visible = _loginPasswordLabel.Visible = false;
                     _credentialTitleLabel.Text = L10n.T("自动匹配: ") + t + u + (hasKey ? L10n.T("（SSH 私钥）") : L10n.T("（密码）"));
                     _credentialTitleLabel.ForeColor = GdtermColorTable.Success;
                 }
