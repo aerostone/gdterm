@@ -27,10 +27,22 @@ namespace Gdterm.Tests.Ui
                 Protocol = protocol, JumpChain = new JumpChainConfig { Hops = new List<JumpHop>() } };
             if (!empty)
             {
-                cfg.JumpChain.Hops.Add(new JumpHop { Host = "bastion.example.internal", CredentialRefId = key.Id });
-                cfg.JumpChain.Hops.Add(new JumpHop { Host = "inner.example.internal", CredentialRefId = key.Id, Username = "admin" });
+                cfg.JumpChain.Hops.Add(new JumpHop { Host = "bastion.example.internal", Port = 22, CredentialRefId = key.Id });
+                cfg.JumpChain.Hops.Add(new JumpHop { Host = "inner.example.internal", Port = 22, CredentialRefId = key.Id, Username = "admin" });
             }
             var form = new ConnectionDialog(cfg, vault);
+            form.Shown += (sender, args) => {
+                Application.DoEvents();
+                var chain = Field<JumpChainEditorControl>(form, "_jumpChainEditor");
+                var body = Field<Panel>(form, "_bodyScroll");
+                body.ScrollControlIntoView(chain);
+                Application.DoEvents();
+                var add = Field<AntdUI.Button>(chain, "_addButton");
+                if (!body.RectangleToScreen(body.ClientRectangle).Contains(add.RectangleToScreen(add.ClientRectangle)))
+                    throw new InvalidOperationException("Jump actions must be reachable inside the scrolling body");
+                if (!empty && Field<AntdUI.Table>(chain, "_table").RowCount != 2)
+                    throw new InvalidOperationException("Configured jump rows did not render");
+            };
             return form;
         }
 
@@ -49,6 +61,8 @@ namespace Gdterm.Tests.Ui
                     form.GetType().GetMethod("ToggleAdvanced", BindingFlags.NonPublic | BindingFlags.Instance).Invoke(form, null);
                     var chain = Field<JumpChainEditorControl>(form, "_jumpChainEditor");
                     chain.UseJumpChain = true; Application.DoEvents();
+                    Field<Panel>(form, "_bodyScroll").ScrollControlIntoView(chain);
+                    Application.DoEvents();
                     (form.AcceptButton as AntdUI.Button).PerformClick();
                     check(form.Result == null && Field<AntdUI.Label>(form, "_errorLabel").Visible, "enabled-empty-chain-blocks-save");
                     AddHop(form, chain, "first.test", false, path, check);

@@ -105,6 +105,7 @@ namespace Gdterm.UI.Forms
         /// 主机留空也能“创建”成功，回到列表里是一条点不开的连接——失败态必须当场可见。</summary>
         private AntdUI.Label _errorLabel;
         private Panel _topPanel;
+        private Panel _bodyScroll;
 
         private readonly IKeePassService _keepass;
 
@@ -354,7 +355,7 @@ namespace Gdterm.UI.Forms
 
             // ===== 高级区：协议专属选项 + 备注（默认折叠）=====
             // AutoScroll：内容超过剩余空间时出滚动条，保证保存/取消按钮永远可见
-            _advancedHost = new Panel { Dock = DockStyle.Fill, Visible = false, AutoScroll = true, BackColor = GdtermColorTable.Background, Padding = DpiScale.Pad(this, 12, 4, 12, 4) };
+            _advancedHost = new Panel { Dock = DockStyle.Top, Visible = false, AutoSize = true, AutoSizeMode = AutoSizeMode.GrowAndShrink, AutoScroll = false, BackColor = GdtermColorTable.Background, Padding = DpiScale.Pad(this, 12, 4, 12, 4) };
             _advFlow = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
@@ -630,11 +631,22 @@ namespace Gdterm.UI.Forms
             btnPanel.Controls.Add(cancelBtn);
             Gdterm.UI.Services.FormFontPolicy.StyleDialogActions(this, btnPanel);
 
-            // Dock 顺序：后添加的先布局——Top 先钉住，Bottom 再钉住，Fill 吃剩余空间
-            Controls.Add(_advancedHost);
+            // Scroll the entire form body: at large font/DPI the basic fields must not consume
+            // the whole viewport and leave an unusable one-line advanced-options scroller.
+            _bodyScroll = new Panel { Name = "ConnectionBody", Dock = DockStyle.Fill, AutoScroll = true,
+                BackColor = GdtermColorTable.Background };
+            var bodyContent = new TableLayoutPanel { Dock = DockStyle.Top, AutoSize = true, ColumnCount = 1,
+                Margin = Padding.Empty, Padding = Padding.Empty };
+            bodyContent.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            bodyContent.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            bodyContent.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            topPanel.Margin = _advancedHost.Margin = Padding.Empty;
+            bodyContent.Controls.Add(topPanel, 0, 0);
+            bodyContent.Controls.Add(_advancedHost, 0, 1);
+            _bodyScroll.Controls.Add(bodyContent);
+            Controls.Add(_bodyScroll);
             Controls.Add(_errorLabel);
             Controls.Add(btnPanel);
-            Controls.Add(topPanel);
 
             // 自动匹配实时预览：主机/用户名/协议/端口任一变化即重算（一体化 change：让黑盒匹配可见）
             _hostBox.TextChanged += (s, e) => UpdateAutoMatchPreview();
@@ -757,6 +769,8 @@ namespace Gdterm.UI.Forms
                 Height -= _expandedDelta > 0 ? _expandedDelta : Math.Max(_advFlow.Height, _advFlow.PreferredSize.Height) + 16;
                 if (Height < MinimumTrackingHeight()) Height = MinimumTrackingHeight();
                 _advancedHost.Visible = false;
+                EnsureCollapsedClientHeight();
+                _bodyScroll.AutoScrollPosition = Point.Empty;
                 _moreLink.Text = L10n.T("更多选项 ▾");
             }
             _expanded = expand;
@@ -790,6 +804,8 @@ namespace Gdterm.UI.Forms
             _topPanel.PerformLayout();
             _btnPanel.PerformLayout();
             int required = _topPanel.PreferredSize.Height + _btnPanel.PreferredSize.Height + DpiScale.V(this, 16);
+            int limit = Screen.FromControl(this).WorkingArea.Height - (Height - ClientSize.Height) - 32;
+            required = Math.Min(required, Math.Max(MinimumTrackingHeight(), limit));
             if (ClientSize.Height < required)
                 ClientSize = new Size(ClientSize.Width, required);
         }

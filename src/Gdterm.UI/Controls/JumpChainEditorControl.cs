@@ -212,8 +212,8 @@ namespace Gdterm.UI.Controls
                         if (_vault?.IsUnlocked == true) entry = _vault.GetEntry(d.Hop.CredentialRefId);
                         if (_vault?.IsUnlocked == true && entry == null) title = L10n.T("凭据已失效");
                     }
-                    if (entry != null) title = (d.Pending != null ? L10n.T("待保存: ") : "") + entry.Title
-                        + (entry.SshPrivateKeyData?.Length > 0 ? L10n.T("（SSH 私钥）") : L10n.T("（密码）"));
+                    if (entry != null) title = (d.Pending != null ? L10n.T("待保存: ") : "")
+                        + (entry.SshPrivateKeyData?.Length > 0 ? L10n.T("SSH 私钥") : L10n.T("密码")) + " · " + entry.Title;
                     rows.Add(new Row { Order = (i + 1).ToString(), Host = d.Hop.Host + ":" + d.Hop.Port,
                         User = string.IsNullOrWhiteSpace(d.Hop.Username) ? (entry?.Username ?? L10n.T("使用凭据用户名")) : d.Hop.Username,
                         Credential = title });
