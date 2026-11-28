@@ -71,6 +71,16 @@ namespace Gdterm.Tests.Ui
                 check(SynchronizationContext.Current is WindowsFormsSynchronizationContext,
                     "sftp navigation retains UI synchronization context after pumping messages");
                 Capture(host, outDir, "sftp-dual-pane-wide");
+                host.ClientSize = new System.Drawing.Size(360, 600); Application.DoEvents();
+                var more = local.Controls.Find("FilePaneMoreActions", true).OfType<AntdUI.Button>().Single();
+                check(more.Visible, "narrow file pane exposes overflow actions");
+                more.PerformClick(); Application.DoEvents();
+                var menu = Field<ContextMenuStrip>(local, "_toolbarOverflowMenu");
+                var refresh = menu.Items.OfType<ToolStripMenuItem>().Single(item => item.Text.Contains("F5"));
+                check(menu.Visible && refresh.Available, "narrow overflow retains refresh action");
+                refresh.PerformClick(); menu.Close();
+                PumpUntil(() => !local.IsBusy && local.CurrentPath == localPath);
+                host.ClientSize = new System.Drawing.Size(1000, 600); Application.DoEvents();
                 var entries = new[] { new FileEntry { Name = "report.txt", FullPath = "/report.txt" } };
                 check(local.CanAcceptDrop(new FilePaneDrag(remote.Provider, entries)), "sftp accepts actual opposite pane drag");
                 check(!local.CanAcceptDrop(new FilePaneDrag(new SftpFilePaneProvider(new Fake(), "other server"), entries)), "sftp rejects other server drag");
@@ -110,7 +120,8 @@ namespace Gdterm.Tests.Ui
                 Call(panel, "OnTransfer", new[] { new FileEntry { Name = "upload.txt", FullPath = file } }, true, false);
                 PumpUntil(() => factory.Last.UploadStarted);
                 var dialog = Application.OpenForms.OfType<TransferProgressDialog>().Single();
-                check(Field<AntdUI.Label>(dialog, "_detailLabel").Text.Contains("upload.txt"), "production transfer dialog displays current file");
+                check(Field<AntdUI.Label>(dialog, "_detailLabel").Text.StartsWith("0/1  upload.txt"),
+                    "production transfer dialog puts current filename before long path");
                 Capture(dialog, outDir, "transfer-progress-active");
                 CheckTransferText(dialog, outDir, "transfer-progress-active", check);
                 Field<AntdUI.Button>(dialog, "_cancelButton").PerformClick();

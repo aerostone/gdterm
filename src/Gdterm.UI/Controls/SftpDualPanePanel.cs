@@ -328,7 +328,9 @@ namespace Gdterm.UI.Controls
                 {
                     if (_closed) return;
                     completed = value.Completed;
-                    var detail = string.Format("{0}/{1}  {2}", value.Completed, value.Count, value.Path);
+                    // 长路径省略时先保留文件名，用户仍能识别当前正在传输哪一个文件。
+                    var detail = string.Format("{0}/{1}  {2}  ·  {3}", value.Completed, value.Count,
+                        Path.GetFileName(value.Path), value.Path);
                     dialog.Report(value.Bytes, value.Total, detail);
                     _queueLabel.Text = direction + "  " + detail;
                 });
