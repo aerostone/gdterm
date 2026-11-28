@@ -23,6 +23,7 @@ namespace Gdterm.UI.Controls
         private ListView _list;
         private ListShell _shell;
         private EmptyStateView _empty;
+        private ContextMenuStrip _toolbarOverflowMenu;
         private AntdUI.Label _status;
         private string _currentPath;
         private string _requestedPath;
@@ -78,12 +79,28 @@ namespace Gdterm.UI.Controls
             var buttons = new FlowLayoutPanel
             {
                 Dock = DockStyle.Top,
-                AutoSize = true,
+                AutoSize = false,
                 FlowDirection = FlowDirection.LeftToRight,
-                WrapContents = true,
+                WrapContents = false,
                 Margin = new Padding(0)
             };
-            buttons.Controls.AddRange(new Control[] { btnHome, btnUp, btnRefresh, btnMkdir, btnRename, btnDelete });
+            var toolbarButtons = new[] { btnHome, btnUp, btnRefresh, btnMkdir, btnRename, btnDelete };
+            Action[] toolbarActions = { () => Navigate(_provider.HomePath), NavigateUp, Refresh, Mkdir, RenameSelected, DeleteSelected };
+            _toolbarOverflowMenu = new ContextMenuStrip();
+            var overflowItems = new ToolStripMenuItem[toolbarButtons.Length];
+            for (int i = 0; i < toolbarButtons.Length; i++)
+            {
+                var action = toolbarActions[i];
+                var item = new ToolStripMenuItem(toolbarButtons[i].AccessibleName);
+                item.Click += (sender, args) => action();
+                overflowItems[i] = item;
+                _toolbarOverflowMenu.Items.Add(item);
+            }
+            var overflow = MakeBtn("…", L10n.T("更多"), (sender, args) =>
+                _toolbarOverflowMenu.Show((Control)sender, new Point(0, ((Control)sender).Height)));
+            overflow.Name = "FilePaneMoreActions";
+            buttons.Controls.AddRange(toolbarButtons);
+            buttons.Controls.Add(overflow);
 
             _pathBox = new AntdUI.Input {
                 Dock = DockStyle.Top,
@@ -104,12 +121,34 @@ namespace Gdterm.UI.Controls
 
             top.Controls.Add(buttons);
             top.Controls.Add(_pathBox);
+            bool fittingToolbar = false;
             Action fitToolbar = () =>
             {
-                int height = _pathBox.Height + buttons.Height + top.Padding.Vertical;
-                if (top.Height != height) top.Height = height;
+                if (fittingToolbar) return;
+                fittingToolbar = true;
+                try
+                {
+                    int available = buttons.ClientSize.Width;
+                    bool more = toolbarButtons.Sum(button => button.Width + button.Margin.Horizontal) > available;
+                    int used = more ? overflow.Width + overflow.Margin.Horizontal : 0;
+                    for (int i = 0; i < toolbarButtons.Length; i++)
+                    {
+                        var button = toolbarButtons[i];
+                        bool show = !more || used + button.Width + button.Margin.Horizontal <= available;
+                        button.Visible = show;
+                        overflowItems[i].Available = !show;
+                        if (show) used += button.Width + button.Margin.Horizontal;
+                    }
+                    overflow.Visible = more;
+                    buttons.Height = Math.Max(overflow.Height, toolbarButtons.Max(button => button.Height));
+                    int height = _pathBox.Height + buttons.Height + top.Padding.Vertical;
+                    if (top.Height != height) top.Height = height;
+                }
+                finally { fittingToolbar = false; }
             };
             buttons.SizeChanged += (s, e) => fitToolbar();
+            foreach (var button in toolbarButtons) button.SizeChanged += (s, e) => fitToolbar();
+            overflow.SizeChanged += (s, e) => fitToolbar();
             _pathBox.SizeChanged += (s, e) => fitToolbar();
             fitToolbar();
 
@@ -569,6 +608,7 @@ namespace Gdterm.UI.Controls
             {
                 _closed = true;
                 _lifetime.Cancel();
+                _toolbarOverflowMenu?.Dispose();
                 _lifetime.Dispose();
                 _tips.Dispose();
                 _list.ContextMenuStrip?.Dispose();
