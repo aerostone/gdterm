@@ -1,479 +1,184 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Gdterm.Core;
 
 namespace Gdterm.Terminal
 {
-    /// <summary>
-    /// 多通道输入管理器——WindTerm 风格，支持将同一命令同时发送到多个终端会话
-    /// 运维场景：批量执行命令、对比多台服务器输出
-    /// 
-    /// 安全策略：只有终端处于就绪状态（命令提示符 $、#、> 等）的会话才允许加入
-    /// 正在执行 top/vim/编译/交互式程序的终端会被拒绝
-    /// </summary>
+    public sealed class BroadcastTarget
+    {
+        public string SessionId { get; private set; }
+        public string DisplayName { get; private set; }
+        public ITerminalSession Session { get; private set; }
+        internal BroadcastTarget(string id, string name, ITerminalSession session)
+        { SessionId = id; DisplayName = name; Session = session; }
+    }
+
+    /// <summary>Registry and explicit selections. Snapshot references never follow a reconnect.</summary>
     public class MultiChannelManager : IDisposable
     {
-        private readonly Dictionary<string, ChannelSession> _sessions = new Dictionary<string, ChannelSession>();
-        private readonly List<string> _activeGroupIds = new List<string>();
-        private readonly object _lock = new object();
-        private bool _isBroadcastMode;
-
-        /// <summary>
-        /// 会话注册事件
-        /// </summary>
-        public event EventHandler<ChannelSessionEventArgs> SessionRegistered;
-
-        /// <summary>
-        /// 会话注销事件
-        /// </summary>
-        public event EventHandler<ChannelSessionEventArgs> SessionUnregistered;
-
-        /// <summary>
-        /// 广播状态变化事件
-        /// </summary>
-        public event EventHandler<BroadcastStateChangedEventArgs> BroadcastStateChanged;
-
-        /// <summary>
-        /// 命令发送事件（用于命令日志记录）
-        /// </summary>
-        public event EventHandler<CommandSentEventArgs> CommandSent;
-
-        /// <summary>
-        /// 是否处于广播模式
-        /// </summary>
-        public bool IsBroadcastMode
+        private sealed class Channel
         {
-            get => _isBroadcastMode;
-            private set
-            {
-                if (_isBroadcastMode != value)
-                {
-                    _isBroadcastMode = value;
-                    BroadcastStateChanged?.Invoke(this, new BroadcastStateChangedEventArgs(value));
-                }
-            }
+            public ITerminalSession Session;
+            public string Name, Group;
+            public bool Selected;
+            public int Count;
+            public DateTime? LastCommand;
         }
+        private readonly Dictionary<string, Channel> _sessions = new Dictionary<string, Channel>();
+        private readonly object _lock = new object();
+        public event EventHandler<ChannelSessionEventArgs> SessionRegistered;
+        public event EventHandler<ChannelSessionEventArgs> SessionUnregistered;
+        public event EventHandler<BroadcastStateChangedEventArgs> BroadcastStateChanged;
+        public event EventHandler<CommandSentEventArgs> CommandSent;
+        public bool IsBroadcastMode { get { return SelectedCount > 0; } }
 
-        /// <summary>
-        /// 注册终端会话到多通道管理
-        /// </summary>
-        /// <param name="sessionId">会话唯一标识（通常是标签页 ID）</param>
-        /// <param name="session">终端会话实例</param>
-        /// <param name="displayName">显示名称（主机名等）</param>
-        /// <param name="group">分组名（可选，用于批量操作）</param>
         public void Register(string sessionId, ITerminalSession session, string displayName, string group = null)
         {
             if (string.IsNullOrEmpty(sessionId)) throw new ArgumentNullException(nameof(sessionId));
             if (session == null) throw new ArgumentNullException(nameof(session));
-
+            bool changed;
             lock (_lock)
             {
-                // 幂等：重连/刷新时更新会话引用，避免 InvalidOperationException
-                if (_sessions.TryGetValue(sessionId, out var existing))
-                {
-                    existing.Session = session;
-                    existing.DisplayName = displayName ?? existing.DisplayName ?? sessionId;
-                    if (!string.IsNullOrEmpty(group))
-                        existing.Group = group;
-                    return;
-                }
-
-                _sessions[sessionId] = new ChannelSession
-                {
-                    SessionId = sessionId,
-                    Session = session,
-                    DisplayName = displayName ?? sessionId,
-                    Group = group ?? L10n.T("默认"),
-                    IsSelected = false,
-                    RegisteredAt = DateTime.UtcNow
-                };
-
-                SessionRegistered?.Invoke(this, new ChannelSessionEventArgs(sessionId, displayName, group));
+                Channel current;
+                changed = !_sessions.TryGetValue(sessionId, out current) ||
+                    !ReferenceEquals(current.Session, session) || current.Name != displayName;
+                if (current == null || !ReferenceEquals(current.Session, session))
+                    _sessions[sessionId] = current = new Channel { Session = session };
+                current.Name = displayName ?? sessionId;
+                current.Group = group ?? L10n.T("默认");
             }
+            if (changed) SessionRegistered?.Invoke(this, new ChannelSessionEventArgs(sessionId, displayName, group));
         }
 
-        /// <summary>
-        /// 注销终端会话
-        /// </summary>
         public void Unregister(string sessionId)
         {
-            lock (_lock)
+            bool removed;
+            lock (_lock) removed = _sessions.Remove(sessionId);
+            if (removed)
             {
-                if (_sessions.Remove(sessionId))
-                {
-                    _activeGroupIds.Remove(sessionId);
-                    SessionUnregistered?.Invoke(this, new ChannelSessionEventArgs(sessionId, null, null));
-                }
+                SessionUnregistered?.Invoke(this, new ChannelSessionEventArgs(sessionId, null, null));
+                NotifySelection();
             }
         }
 
-        /// <summary>
-        /// 选择/取消选择会话用于多通道输入（选择时检测终端就绪状态）
-        /// </summary>
-        public SelectResult ToggleSelection(string sessionId)
-        {
-            lock (_lock)
-            {
-                if (!_sessions.TryGetValue(sessionId, out var session))
-                    return new SelectResult(false, L10n.T("会话不存在"));
-
-                // 如果已选中，取消选择
-                if (session.IsSelected)
-                {
-                    session.IsSelected = false;
-                    _activeGroupIds.Remove(sessionId);
-                    IsBroadcastMode = _activeGroupIds.Count > 1;
-                    return new SelectResult(true, L10n.T("已移出多通道"));
-                }
-
-                // 未选中，尝试选择——检测终端就绪
-                if (!session.Session.IsConnected)
-                    return new SelectResult(false, L10n.T("会话未连接"));
-
-                var readyState = CheckTerminalReady(session.Session);
-                session.LastReadyState = readyState;
-
-                if (!readyState.IsReady)
-                    return new SelectResult(false, readyState.Description);
-
-                session.IsSelected = true;
-                if (!_activeGroupIds.Contains(sessionId))
-                    _activeGroupIds.Add(sessionId);
-                IsBroadcastMode = _activeGroupIds.Count > 1;
-
-                return new SelectResult(true, L10n.T("已加入多通道"));
-            }
-        }
-
-        /// <summary>
-        /// 选择会话——只有终端就绪（命令提示符状态）的会话才允许加入
-        /// </summary>
         public SelectResult Select(string sessionId)
         {
+            SelectResult result;
             lock (_lock)
             {
-                if (!_sessions.TryGetValue(sessionId, out var session))
-                    return new SelectResult(false, L10n.T("会话不存在"));
-
-                if (!session.Session.IsConnected)
-                    return new SelectResult(false, L10n.T("会话未连接"));
-
-                // 检测终端是否就绪
-                var readyState = CheckTerminalReady(session.Session);
-                session.LastReadyState = readyState;
-
-                if (!readyState.IsReady)
-                    return new SelectResult(false, readyState.Description);
-
-                session.IsSelected = true;
-                if (!_activeGroupIds.Contains(sessionId))
-                    _activeGroupIds.Add(sessionId);
-                IsBroadcastMode = _activeGroupIds.Count > 1;
-
-                return new SelectResult(true, L10n.T("已加入多通道"));
+                Channel current;
+                if (!_sessions.TryGetValue(sessionId, out current)) return new SelectResult(false, L10n.T("会话不存在"));
+                var state = CheckTerminalReady(current.Session);
+                current.Selected = state.IsReady;
+                result = new SelectResult(state.IsReady, state.IsReady ? L10n.T("已加入多通道") : state.Description);
             }
+            NotifySelection();
+            return result;
         }
 
-        /// <summary>
-        /// 取消选择会话
-        /// </summary>
+        public SelectResult ToggleSelection(string sessionId)
+        {
+            bool selected;
+            lock (_lock) { Channel c; selected = _sessions.TryGetValue(sessionId, out c) && c.Selected; }
+            if (!selected) return Select(sessionId);
+            Deselect(sessionId);
+            return new SelectResult(true, L10n.T("已移出多通道"));
+        }
+
         public void Deselect(string sessionId)
         {
-            lock (_lock)
-            {
-                if (_sessions.TryGetValue(sessionId, out var session))
-                {
-                    session.IsSelected = false;
-                    _activeGroupIds.Remove(sessionId);
-                    IsBroadcastMode = _activeGroupIds.Count > 1;
-                }
-            }
+            lock (_lock) { Channel c; if (_sessions.TryGetValue(sessionId, out c)) c.Selected = false; }
+            NotifySelection();
         }
-
-        /// <summary>
-        /// 全选某分组（只选择终端就绪的会话）
-        /// </summary>
+        public List<SelectResult> SelectAll() { return SelectIds(GetAllSessions().Select(s => s.SessionId)); }
         public List<SelectResult> SelectGroup(string group)
-        {
-            var results = new List<SelectResult>();
-            lock (_lock)
-            {
-                foreach (var kvp in _sessions)
-                {
-                    if (kvp.Value.Group != group) continue;
-
-                    if (!kvp.Value.Session.IsConnected)
-                    {
-                        results.Add(new SelectResult(false, kvp.Value.DisplayName + L10n.T(": 未连接")));
-                        continue;
-                    }
-
-                    var readyState = CheckTerminalReady(kvp.Value.Session);
-                    kvp.Value.LastReadyState = readyState;
-
-                    if (!readyState.IsReady)
-                    {
-                        results.Add(new SelectResult(false, $"{kvp.Value.DisplayName}: {readyState.Description}"));
-                        continue;
-                    }
-
-                    kvp.Value.IsSelected = true;
-                    if (!_activeGroupIds.Contains(kvp.Key))
-                        _activeGroupIds.Add(kvp.Key);
-                    results.Add(new SelectResult(true, kvp.Value.DisplayName + L10n.T(": 已加入")));
-                }
-                IsBroadcastMode = _activeGroupIds.Count > 1;
-            }
-            return results;
-        }
-
-        /// <summary>
-        /// 全选所有就绪会话
-        /// </summary>
-        public List<SelectResult> SelectAll()
-        {
-            var results = new List<SelectResult>();
-            lock (_lock)
-            {
-                foreach (var kvp in _sessions)
-                {
-                    if (!kvp.Value.Session.IsConnected)
-                    {
-                        results.Add(new SelectResult(false, kvp.Value.DisplayName + L10n.T(": 未连接")));
-                        continue;
-                    }
-
-                    var readyState = CheckTerminalReady(kvp.Value.Session);
-                    kvp.Value.LastReadyState = readyState;
-
-                    if (!readyState.IsReady)
-                    {
-                        results.Add(new SelectResult(false, $"{kvp.Value.DisplayName}: {readyState.Description}"));
-                        continue;
-                    }
-
-                    kvp.Value.IsSelected = true;
-                    if (!_activeGroupIds.Contains(kvp.Key))
-                        _activeGroupIds.Add(kvp.Key);
-                    results.Add(new SelectResult(true, kvp.Value.DisplayName + L10n.T(": 已加入")));
-                }
-                IsBroadcastMode = _activeGroupIds.Count > 1;
-            }
-            return results;
-        }
-
-        /// <summary>
-        /// 取消所有选择
-        /// </summary>
+        { return SelectIds(GetAllSessions().Where(s => s.Group == group).Select(s => s.SessionId)); }
+        private List<SelectResult> SelectIds(IEnumerable<string> ids) { return ids.Select(Select).ToList(); }
         public void DeselectAll()
         {
-            lock (_lock)
-            {
-                foreach (var kvp in _sessions)
-                    kvp.Value.IsSelected = false;
-                _activeGroupIds.Clear();
-                IsBroadcastMode = false;
-            }
+            lock (_lock) foreach (var c in _sessions.Values) c.Selected = false;
+            NotifySelection();
         }
 
-        /// <summary>
-        /// 广播前自动移除已非就绪的会话（如用户在某终端启动了 top）
-        /// </summary>
-        private void AutoRemoveNonReadySessions()
+        public IReadOnlyList<BroadcastTarget> GetSelectedTargets()
         {
-            var toRemove = new List<string>();
-            foreach (var id in _activeGroupIds)
-            {
-                if (_sessions.TryGetValue(id, out var session))
-                {
-                    var readyState = CheckTerminalReady(session.Session);
-                    session.LastReadyState = readyState;
-                    if (!readyState.IsReady)
-                        toRemove.Add(id);
-                }
-            }
-            foreach (var id in toRemove)
-            {
-                if (_sessions.TryGetValue(id, out var session))
-                    session.IsSelected = false;
-                _activeGroupIds.Remove(id);
-            }
+            lock (_lock) return _sessions.Where(kv => kv.Value.Selected)
+                .Select(kv => new BroadcastTarget(kv.Key, kv.Value.Name, kv.Value.Session)).ToList();
         }
 
-        /// <summary>
-        /// 将命令发送到所有选中的会话（广播前自动剔除非就绪终端）
-        /// </summary>
-        /// <param name="command">要发送的命令</param>
-        /// <param name="sourceSessionId">来源会话 ID（不发送给自己）</param>
-        public List<BroadcastResult> BroadcastCommand(string command, string sourceSessionId = null)
+        public async Task<List<BroadcastResult>> BroadcastCommandAsync(string command,
+            IReadOnlyList<BroadcastTarget> targets, CancellationToken ct = default(CancellationToken))
         {
-            if (string.IsNullOrEmpty(command)) return new List<BroadcastResult>();
-
-            // 广播前再次检测：移除已变为非就绪的会话
-            AutoRemoveNonReadySessions();
-
-            List<ChannelSession> targets;
-            var results = new List<BroadcastResult>();
-
-            lock (_lock)
-            {
-                targets = _activeGroupIds
-                    .Where(id => id != sourceSessionId && _sessions.ContainsKey(id))
-                    .Select(id => _sessions[id])
-                    .Where(s => s.Session.IsConnected)
-                    .ToList();
-            }
-
-            // 记录命令发送事件
-            CommandSent?.Invoke(this, new CommandSentEventArgs
-            {
-                Command = command,
-                SourceSessionId = sourceSessionId,
-                TargetSessionIds = targets.Select(t => t.SessionId).ToList(),
-                Timestamp = DateTime.UtcNow,
-                IsBroadcast = targets.Count > 1
-            });
-
-            // 并行发送到所有目标会话
+            if (string.IsNullOrEmpty(command) || targets == null) return new List<BroadcastResult>();
+            // Submit one normalized command, retaining embedded newlines and control characters.
+            var payload = command.Replace("\r\n", "\n").Replace('\r', '\n').TrimEnd('\n').Replace('\n', '\r') + "\r";
             var tasks = targets.Select(target => Task.Run(() =>
             {
                 try
                 {
-                    target.Session.SendInput(command);
-                    target.LastCommandAt = DateTime.UtcNow;
-                    target.CommandCount++;
-                    lock (results) { results.Add(new BroadcastResult(target.SessionId, target.DisplayName, true, null)); }
+                    ct.ThrowIfCancellationRequested();
+                    lock (_lock)
+                    {
+                        Channel current;
+                        if (!_sessions.TryGetValue(target.SessionId, out current) ||
+                            !ReferenceEquals(current.Session, target.Session))
+                            return new BroadcastResult(target.SessionId, target.DisplayName, false, L10n.T("会话已更换，请重新选择"));
+                    }
+                    var ready = CheckTerminalReady(target.Session);
+                    if (!ready.IsReady) return new BroadcastResult(target.SessionId, target.DisplayName, false, ready.Description);
+                    ct.ThrowIfCancellationRequested();
+                    target.Session.SendInput(payload);
+                    lock (_lock)
+                    {
+                        Channel current;
+                        if (_sessions.TryGetValue(target.SessionId, out current) && ReferenceEquals(current.Session, target.Session))
+                        { current.Count++; current.LastCommand = DateTime.UtcNow; }
+                    }
+                    return new BroadcastResult(target.SessionId, target.DisplayName, true, null);
                 }
+                catch (OperationCanceledException)
+                { return new BroadcastResult(target.SessionId, target.DisplayName, false, L10n.T("已取消")); }
                 catch (Exception ex)
-                {
-                    lock (results) { results.Add(new BroadcastResult(target.SessionId, target.DisplayName, false, ex.Message)); }
-                }
+                { return new BroadcastResult(target.SessionId, target.DisplayName, false, ex.Message); }
             })).ToArray();
-
-            Task.WaitAll(tasks, TimeSpan.FromSeconds(5));
+            var results = (await Task.WhenAll(tasks).ConfigureAwait(false)).ToList();
+            var sent = results.Where(r => r.Success).Select(r => r.SessionId).ToList();
+            if (sent.Count > 0) CommandSent?.Invoke(this, new CommandSentEventArgs {
+                Command = payload, TargetSessionIds = sent, Timestamp = DateTime.UtcNow, IsBroadcast = true
+            });
             return results;
         }
 
-        /// <summary>
-        /// 检查指定会话的终端就绪状态
-        /// </summary>
-        public ReadyState CheckSessionReady(string sessionId)
-        {
-            lock (_lock)
-            {
-                if (_sessions.TryGetValue(sessionId, out var session) && session.Session.IsConnected)
-                {
-                    var state = CheckTerminalReady(session.Session);
-                    session.LastReadyState = state;
-                    return state;
-                }
-                return new ReadyState(false, L10n.T("会话不存在或未连接"), ReadyReason.NoOutput);
-            }
-        }
-
-        /// <summary>
-        /// 获取所有注册的会话
-        /// </summary>
-        public IReadOnlyList<ChannelSessionInfo> GetAllSessions()
-        {
-            lock (_lock)
-            {
-                return _sessions.Values.Select(s => new ChannelSessionInfo
-                {
-                    SessionId = s.SessionId,
-                    DisplayName = s.DisplayName,
-                    Group = s.Group,
-                    IsSelected = s.IsSelected,
-                    IsConnected = s.Session?.IsConnected ?? false,
-                    CommandCount = s.CommandCount,
-                    LastCommandAt = s.LastCommandAt,
-                    ReadyState = s.LastReadyState
-                }).ToList();
-            }
-        }
-
-        /// <summary>
-        /// 获取已注册会话实例（回放映射用；未注册/已注销返回 null）。
-        /// </summary>
-        public ITerminalSession GetSession(string sessionId)
-        {
-            lock (_lock)
-            {
-                ChannelSession s;
-                if (_sessions.TryGetValue(sessionId, out s)) return s.Session;
-                return null;
-            }
-        }
-
-        /// <summary>
-        /// 获取所有分组名
-        /// </summary>
-        public IReadOnlyList<string> GetGroups()
-        {
-            lock (_lock)
-            {
-                return _sessions.Values
-                    .Select(s => s.Group)
-                    .Distinct()
-                    .OrderBy(g => g)
-                    .ToList();
-            }
-        }
-
-        /// <summary>
-        /// 获取选中的会话数
-        /// </summary>
-        public int SelectedCount
-        {
-            get
-            {
-                lock (_lock) { return _activeGroupIds.Count; }
-            }
-        }
-
-        /// <summary>
-        /// 检测终端就绪状态
-        /// </summary>
+        public ReadyState CheckSessionReady(string sessionId) { return CheckTerminalReady(GetSession(sessionId)); }
         private static ReadyState CheckTerminalReady(ITerminalSession session)
         {
             try
             {
-                var recentOutput = session.GetRecentOutput(5);
-                return TerminalReadyDetector.Detect(recentOutput);
+                if (session == null || !session.IsConnected) return new ReadyState(false, L10n.T("会话未连接"), ReadyReason.NoOutput);
+                if (session.IsZmodemReceiving) return new ReadyState(false, L10n.T("终端正在传输文件"), ReadyReason.BusyProgram);
+                return TerminalReadyDetector.Detect(session.GetRecentOutput(5));
             }
-            catch
-            {
-                return new ReadyState(false, L10n.T("无法获取终端状态"), ReadyReason.NoOutput);
-            }
+            catch { return new ReadyState(false, L10n.T("无法获取终端状态"), ReadyReason.NoOutput); }
         }
 
-        public void Dispose()
+        public IReadOnlyList<ChannelSessionInfo> GetAllSessions()
         {
-            lock (_lock)
-            {
-                _sessions.Clear();
-                _activeGroupIds.Clear();
-                IsBroadcastMode = false;
-            }
+            lock (_lock) return _sessions.Select(kv => new ChannelSessionInfo {
+                SessionId = kv.Key, DisplayName = kv.Value.Name, Group = kv.Value.Group,
+                IsConnected = kv.Value.Session.IsConnected, IsSelected = kv.Value.Selected,
+                CommandCount = kv.Value.Count, LastCommandAt = kv.Value.LastCommand,
+                ReadyState = CheckTerminalReady(kv.Value.Session)
+            }).ToList();
         }
-
-        /// <summary>
-        /// 内部会话信息
-        /// </summary>
-        private class ChannelSession
-        {
-            public string SessionId { get; set; }
-            public ITerminalSession Session { get; set; }
-            public string DisplayName { get; set; }
-            public string Group { get; set; }
-            public bool IsSelected { get; set; }
-            public DateTime RegisteredAt { get; set; }
-            public DateTime? LastCommandAt { get; set; }
-            public int CommandCount { get; set; }
-            public ReadyState LastReadyState { get; set; }
-        }
+        public ITerminalSession GetSession(string id)
+        { lock (_lock) { Channel c; return _sessions.TryGetValue(id, out c) ? c.Session : null; } }
+        public IReadOnlyList<string> GetGroups() { return GetAllSessions().Select(s => s.Group).Distinct().OrderBy(s => s).ToList(); }
+        public int SelectedCount { get { lock (_lock) return _sessions.Values.Count(s => s.Selected); } }
+        private void NotifySelection() { BroadcastStateChanged?.Invoke(this, new BroadcastStateChangedEventArgs(IsBroadcastMode)); }
+        public void Dispose() { lock (_lock) _sessions.Clear(); NotifySelection(); }
     }
 
     /// <summary>

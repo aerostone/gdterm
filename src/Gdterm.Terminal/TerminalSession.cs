@@ -129,12 +129,13 @@ namespace Gdterm.Terminal
         {
             lock (_lock)
             {
-                var start = Math.Max(0, _outputBuffer.Count - lineCount);
+                var start = Math.Max(0, _outputBuffer.Count - Math.Max(0, lineCount - (_lineBuilder.Length > 0 ? 1 : 0)));
                 var result = new List<string>();
                 for (int i = start; i < _outputBuffer.Count; i++)
                 {
                     result.Add(_outputBuffer[i]);
                 }
+                if (_lineBuilder.Length > 0 && lineCount > 0) result.Add(_lineBuilder.ToString());
                 return result;
             }
         }

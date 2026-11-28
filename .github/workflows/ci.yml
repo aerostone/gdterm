@@ -46,6 +46,10 @@ jobs:
         run: |
           set -o pipefail
           python3 tools/port-forward-smoke/run.py 2>&1 | tee port-forward-smoke.log
+      - name: Multi-session command integration regression
+        run: |
+          set -o pipefail
+          python3 tools/multi-session-smoke/run.py 2>&1 | tee multi-session-smoke.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -54,6 +58,7 @@ jobs:
             ssh-jump.log
             sftp-smoke.log
             port-forward-smoke.log
+            multi-session-smoke.log
   verify:
     runs-on: windows-latest   # VS2022（msbuild 17）+ Python 3 + NuGet CLI，均有
     timeout-minutes: 60

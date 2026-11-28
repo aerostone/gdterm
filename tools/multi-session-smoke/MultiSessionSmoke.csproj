@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><EnableDefaultCompileItems>false</EnableDefaultCompileItems><NuGetAudit>false</NuGetAudit><LangVersion>7.3</LangVersion></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="ModelFixture.cs" />
+    <Compile Include="../../src/Gdterm.Tests/Assert.cs" />
+    <Compile Include="../../src/Gdterm.Tests/Terminal/MultiSessionTests.cs" />
+    <Compile Include="../../src/Gdterm.Terminal/BatchCommandExecutor.cs" />
+    <Compile Include="../../src/Gdterm.Terminal/MultiChannelManager.cs" />
+    <Compile Include="../../src/Gdterm.Terminal/MultiChannelRecorder.cs" />
+    <Compile Include="../../src/Gdterm.Terminal/TerminalReadyDetector.cs" />
+    <Compile Include="../../src/Gdterm.Terminal/ITerminalSession.cs" />
+    <Compile Include="../../src/Gdterm.Terminal/Models/TerminalOutputEventArgs.cs" />
+    
+    <Compile Include="../../src/Gdterm.Core/Models/TunnelEndpoint.cs" />
+    <Compile Include="../../src/Gdterm.Core/L10n/L10n.cs" />
+    <PackageReference Include="SSH.NET" Version="2026.0.0" />
+  </ItemGroup>
+</Project>

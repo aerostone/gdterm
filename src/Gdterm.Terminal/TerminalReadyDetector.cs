@@ -36,7 +36,7 @@ namespace Gdterm.Terminal
             // Cisco/网络设备: hostname> 或 hostname#
             new Regex(@"^[A-Za-z0-9_-]+[>#]\s?$", RegexOptions.Compiled),
             // 纯提示符（保守匹配）
-            new Regex(@"[#$>%]\s?$", RegexOptions.Compiled),
+            new Regex(@"^[#$%]\s?$", RegexOptions.Compiled),
         };
 
         // ===== 非就绪状态特征（正在运行的程序） =====
@@ -46,18 +46,16 @@ namespace Gdterm.Terminal
             "KiB Mem", "load average:",                         // top
             "-- INSERT --", "-- VISUAL --", "-- NORMAL --",     // vim/neovim
             "-- REPLACE --", "-- COMMAND --",                   // vim
-            ":",                                                // vim 底行模式（需结合行首）
             "(END)",                                            // less/man
             "(lines ",                                          // tail -f
             "Press [Enter]", "Press any key",                   // 交互提示
             "password:", "Password:",                           // 密码输入
-            "sudo",                                             // sudo 密码
             "y/n", "Y/n", "[Y/n]", "[y/N]",                    // 确认提示
             "continue?", "Continue?",                           // 确认
             "(q)uit",                                           // 各种交互
             ">>>",                                              // Python REPL
             "irb(main):",                                       // Ruby REPL
-            "node >", ">",                                      // Node REPL（需结合上下文）
+            "node >",                                           // Node REPL
             "mysql>", "MariaDB",                                // MySQL REPL
             "redis>",                                           // Redis REPL
             "postgres=#",                                       // PostgreSQL REPL
@@ -95,7 +93,7 @@ namespace Gdterm.Terminal
             var lastLine = "";
             for (int i = recentOutput.Count - 1; i >= 0; i--)
             {
-                var trimmed = (recentOutput[i] ?? "").TrimEnd();
+                var trimmed = StripAnsi(recentOutput[i] ?? "").TrimEnd();
                 if (!string.IsNullOrWhiteSpace(trimmed))
                 {
                     lastLine = trimmed;
@@ -105,6 +103,9 @@ namespace Gdterm.Terminal
 
             if (string.IsNullOrEmpty(lastLine))
                 return new ReadyState(false, L10n.T("无输出"), ReadyReason.NoOutput);
+
+            if (lastLine == ":" || lastLine == ">" || lastLine.StartsWith(">>>"))
+                return new ReadyState(false, L10n.T("未检测到提示符"), ReadyReason.BusyProgram);
 
             // 检查是否匹配非就绪状态
             var lastLineLower = lastLine.ToLowerInvariant();
@@ -146,6 +147,11 @@ namespace Gdterm.Terminal
 
             // 默认：无法确定，视为未就绪（保守策略）
             return new ReadyState(false, L10n.T("未检测到提示符"), ReadyReason.NoPrompt);
+        }
+
+        private static string StripAnsi(string text)
+        {
+            return Regex.Replace(text, @"\x1b(?:\][^\x07\x1b]*(?:\x07|\x1b\\)|\[[0-?]*[ -/]*[@-~])", "");
         }
 
         /// <summary>

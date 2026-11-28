@@ -2,6 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Runtime.Serialization;
+using System.Runtime.Serialization.Json;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,308 +12,165 @@ using Gdterm.Core;
 
 namespace Gdterm.Terminal
 {
-    /// <summary>
-    /// 多通道同步录制器——同步录制多会话输入输出，支持时间线回放
-    /// </summary>
+    /// <summary>Thread-safe recording data. Playback only emits timeline events and never sends input.</summary>
     public class MultiChannelRecorder : IDisposable
     {
-        private readonly List<RecordingEntry> _entries = new List<RecordingEntry>();
-        private readonly Dictionary<string, string> _sessionNames = new Dictionary<string, string>();
+        private readonly object _sync = new object();
+        private List<RecordingEntry> _entries = new List<RecordingEntry>();
+        private Dictionary<string, string> _names = new Dictionary<string, string>();
         private Stopwatch _timer;
-        private bool _isRecording;
-
-        public bool IsRecording { get { return _isRecording; } }
-        public int EntryCount { get { return _entries.Count; } }
-        public TimeSpan Duration { get; private set; }
-
-        /// <summary>开始录制（标记所有已注册会话）</summary>
+        private bool _recording;
+        private int _characters;
+        private TimeSpan _duration;
+        public bool IsRecording { get { lock (_sync) return _recording; } }
+        public int EntryCount { get { lock (_sync) return _entries.Count; } }
+        public bool LimitReached { get; private set; }
+        public TimeSpan Duration { get { lock (_sync) return _recording ? _timer.Elapsed : _duration; } }
         public void StartRecording()
         {
-            _entries.Clear();
-            _timer = Stopwatch.StartNew();
-            _isRecording = true;
-        }
-
-        /// <summary>注册会话名称</summary>
-        public void RegisterSession(string sessionId, string displayName)
-        {
-            _sessionNames[sessionId] = displayName;
-        }
-
-        /// <summary>记录输入事件</summary>
-        public void RecordInput(string sessionId, string input)
-        {
-            if (!_isRecording) return;
-            _entries.Add(new RecordingEntry
+            lock (_sync)
             {
-                TimestampMs = _timer.ElapsedMilliseconds,
-                SessionId = sessionId,
-                SessionName = GetSessionName(sessionId),
-                Direction = EntryDirection.Input,
-                Content = input
-            });
+                _entries.Clear(); _names.Clear(); _characters = 0; LimitReached = false;
+                _duration = TimeSpan.Zero; _timer = Stopwatch.StartNew(); _recording = true;
+            }
         }
-
-        /// <summary>记录输出事件</summary>
-        public void RecordOutput(string sessionId, string output)
+        public void RegisterSession(string id, string name) { lock (_sync) _names[id] = name ?? id; }
+        public void RecordInput(string id, string text) { Record(id, text, EntryDirection.Input); }
+        public void RecordOutput(string id, string text) { Record(id, text, EntryDirection.Output); }
+        private void Record(string id, string text, EntryDirection direction)
         {
-            if (!_isRecording) return;
-            _entries.Add(new RecordingEntry
+            lock (_sync)
             {
-                TimestampMs = _timer.ElapsedMilliseconds,
-                SessionId = sessionId,
-                SessionName = GetSessionName(sessionId),
-                Direction = EntryDirection.Output,
-                Content = output
-            });
+                if (!_recording || string.IsNullOrEmpty(text)) return;
+                if (_entries.Count >= 50000 || text.Length > 16 * 1024 * 1024 - _characters)
+                { LimitReached = true; StopRecording(); return; }
+                string name; _names.TryGetValue(id, out name);
+                _entries.Add(new RecordingEntry {
+                    TimestampMs = _timer.ElapsedMilliseconds, SessionId = id,
+                    SessionName = name ?? id, Direction = direction, Content = text
+                });
+                _characters += text.Length;
+            }
         }
-
-        /// <summary>停止录制</summary>
         public void StopRecording()
         {
-            if (!_isRecording) return;
-            _timer.Stop();
-            Duration = _timer.Elapsed;
-            _isRecording = false;
+            lock (_sync)
+            {
+                if (!_recording) return;
+                _timer.Stop(); _duration = _timer.Elapsed; _recording = false;
+            }
         }
-
-        /// <summary>时间线回放——按时间戳将事件回调给对应会话</summary>
-        public async Task ReplayAsync(Dictionary<string, ITerminalSession> sessions, double speed = 1.0,
-            Action<ReplayEvent> onEvent = null, CancellationToken ct = default)
+        public async Task ReplayAsync(double speed = 1, Action<ReplayEvent> onEvent = null,
+            CancellationToken ct = default(CancellationToken))
         {
-            if (_entries.Count == 0) return;
-
-            long lastTimestamp = 0;
-            foreach (var entry in _entries)
+            if (speed <= 0 || double.IsNaN(speed) || double.IsInfinity(speed)) throw new ArgumentOutOfRangeException(nameof(speed));
+            var entries = Snapshot().Entries;
+            long last = 0;
+            for (int i = 0; i < entries.Count; i++)
             {
                 ct.ThrowIfCancellationRequested();
-
-                var delay = entry.TimestampMs - lastTimestamp;
-                if (delay > 0)
-                {
-                    var actualDelay = (int)(delay / speed);
-                    if (actualDelay > 0) await Task.Delay(actualDelay, ct);
-                }
-                lastTimestamp = entry.TimestampMs;
-
-                if (entry.Direction == EntryDirection.Input && sessions.ContainsKey(entry.SessionId))
-                {
-                    sessions[entry.SessionId].SendInput(entry.Content);
-                }
-
-                onEvent?.Invoke(new ReplayEvent
-                {
-                    Entry = entry,
-                    Progress = (double)_entries.IndexOf(entry) / _entries.Count
-                });
+                var entry = entries[i];
+                long delay = (long)Math.Min(int.MaxValue, Math.Max(0, entry.TimestampMs - last) / speed);
+                if (delay > 0) await Task.Delay((int)delay, ct).ConfigureAwait(false);
+                ct.ThrowIfCancellationRequested();
+                last = entry.TimestampMs;
+                onEvent?.Invoke(new ReplayEvent { Entry = entry, Progress = (i + 1.0) / entries.Count });
             }
         }
-
-        /// <summary>导出为纯文本报告</summary>
         public string ExportAsText()
         {
-            var sb = new StringBuilder();
-            sb.AppendLine(L10n.T("gdterm 多通道录制报告"));
-            sb.AppendLine("====================");
-            sb.AppendLine(string.Format(L10n.T("时长: {0}"), Duration));
-            sb.AppendLine(string.Format(L10n.T("条目: {0}"), _entries.Count));
-            sb.AppendLine(L10n.T("会话: ") + _sessionNames.Count);
-            sb.AppendLine();
-
-            foreach (var entry in _entries)
-            {
-                sb.AppendLine(string.Format("[{0:00}:{1:00}.{2:000}] {3} {4}: {5}",
-                    entry.TimestampMs / 60000,
-                    (entry.TimestampMs / 1000) % 60,
-                    entry.TimestampMs % 1000,
-                    entry.Direction == EntryDirection.Input ? "←" : "→",
-                    entry.SessionName,
-                    entry.Content));
-            }
-            return sb.ToString();
+            var recording = Snapshot();
+            var text = new StringBuilder();
+            text.AppendLine(L10n.T("gdterm 多通道录制报告"));
+            foreach (var entry in recording.Entries)
+                text.AppendLine(string.Format("[{0:0.000}s] {1} {2}: {3}", entry.TimestampMs / 1000.0,
+                    entry.SessionName, entry.Direction == EntryDirection.Input ? "←" : "→", entry.Content));
+            return text.ToString();
         }
-
-        /// <summary>导出为HTML报告</summary>
         public string ExportAsHtml()
         {
-            var sb = new StringBuilder();
-            sb.AppendLine("<!DOCTYPE html><html><head><meta charset='utf-8'>");
-            sb.AppendLine(L10n.T("<title>gdterm 录制报告</title>"));
-            sb.AppendLine("<style>body{font-family:monospace;background:#1e1e1e;color:#d4d4d4;padding:20px}");
-            sb.AppendLine(".entry{margin:2px 0;padding:4px 8px;border-radius:3px}");
-            sb.AppendLine(".input{background:#264f78}.output{background:#1e3a1e}");
-            sb.AppendLine(".time{color:#888;margin-right:10px}.session{color:#569cd6;margin-right:10px}</style></head><body>");
-            sb.AppendLine(L10n.T("<h2>gdterm 多通道录制报告</h2>"));
-            sb.AppendLine(string.Format(L10n.T("<p>时长: {0} | 条目: {1} | 会话: {2}</p>"), Duration, _entries.Count, _sessionNames.Count));
-            sb.AppendLine("<pre>");
-
-            foreach (var entry in _entries)
-            {
-                var cssClass = entry.Direction == EntryDirection.Input ? "input" : "output";
-                var arrow = entry.Direction == EntryDirection.Input ? "←" : "→";
-                sb.AppendLine(string.Format("<div class='entry {0}'><span class='time'>[{1:00}:{2:00}.{3:000}]</span><span class='session'>{4} {5}</span>{6}</div>",
-                    cssClass,
-                    entry.TimestampMs / 60000,
-                    (entry.TimestampMs / 1000) % 60,
-                    entry.TimestampMs % 1000,
-                    arrow,
-                    entry.SessionName,
-                    System.Net.WebUtility.HtmlEncode(entry.Content)));
-            }
-
-            sb.AppendLine("</pre></body></html>");
-            return sb.ToString();
+            var recording = Snapshot();
+            var text = new StringBuilder("<!DOCTYPE html><html><head><meta charset='utf-8'></head><body><pre>");
+            foreach (var entry in recording.Entries)
+                text.AppendFormat("[{0:0.000}s] {1} {2}: {3}\n", entry.TimestampMs / 1000.0,
+                    System.Net.WebUtility.HtmlEncode(entry.SessionName), entry.Direction == EntryDirection.Input ? "←" : "→",
+                    System.Net.WebUtility.HtmlEncode(entry.Content));
+            return text.Append("</pre></body></html>").ToString();
         }
 
-        /// <summary>保存录制文件</summary>
-        public void SaveToFile(string filePath)
+        [DataContract]
+        private sealed class Recording
         {
-            var dir = Path.GetDirectoryName(filePath);
-            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-
-            var sb = new StringBuilder();
-            sb.Append("{\"version\":1,\"duration\":").Append((long)Duration.TotalMilliseconds);
-            sb.Append(",\"sessions\":{");
-            bool first = true;
-            foreach (var kvp in _sessionNames)
-            {
-                if (!first) sb.Append(',');
-                sb.Append('"').Append(Esc(kvp.Key)).Append("\":\"").Append(Esc(kvp.Value)).Append('"');
-                first = false;
-            }
-            sb.Append("},\"entries\":[");
-            for (int i = 0; i < _entries.Count; i++)
-            {
-                if (i > 0) sb.Append(',');
-                var e = _entries[i];
-                sb.Append("{\"t\":").Append(e.TimestampMs);
-                sb.Append(",\"s\":\"").Append(Esc(e.SessionId)).Append('"');
-                sb.Append(",\"d\":").Append((int)e.Direction);
-                sb.Append(",\"c\":\"").Append(Esc(e.Content)).Append("\"}");
-            }
-            sb.Append("]}");
-            File.WriteAllText(filePath, sb.ToString(), Encoding.UTF8);
+            [DataMember(Name = "version")] public int Version = 1;
+            [DataMember(Name = "duration")] public long Duration;
+            [DataMember(Name = "sessions")] public Dictionary<string, string> Names;
+            [DataMember(Name = "entries")] public List<RecordingEntry> Entries;
         }
-
-        /// <summary>从文件加载录制</summary>
-        public void LoadFromFile(string filePath)
+        private Recording Snapshot()
         {
-            if (!File.Exists(filePath)) throw new FileNotFoundException(L10n.T("录制文件不存在"), filePath);
-
-            _entries.Clear();
-            _sessionNames.Clear();
-            var json = File.ReadAllText(filePath, Encoding.UTF8);
-
-            // 解析 sessions 对象
-            var sessionsIdx = json.IndexOf("\"sessions\"");
-            if (sessionsIdx >= 0)
+            lock (_sync) return new Recording {
+                Duration = (long)Duration.TotalMilliseconds, Names = new Dictionary<string, string>(_names),
+                Entries = _entries.Select(e => new RecordingEntry {
+                    TimestampMs = e.TimestampMs, SessionId = e.SessionId, SessionName = e.SessionName,
+                    Direction = e.Direction, Content = e.Content
+                }).ToList()
+            };
+        }
+        private static DataContractJsonSerializer Serializer()
+        { return new DataContractJsonSerializer(typeof(Recording), new DataContractJsonSerializerSettings { UseSimpleDictionaryFormat = true }); }
+        public void SaveToFile(string path)
+        {
+            var recording = Snapshot();
+            var dir = Path.GetDirectoryName(Path.GetFullPath(path));
+            Directory.CreateDirectory(dir);
+            var temp = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+            try
             {
-                var objStart = json.IndexOf('{', sessionsIdx);
-                var objEnd = json.IndexOf('}', objStart);
-                if (objStart >= 0 && objEnd >= 0)
-                {
-                    var content = json.Substring(objStart + 1, objEnd - objStart - 1);
-                    // 简单解析 key:value
-                    int i = 0;
-                    while (i < content.Length)
-                    {
-                        if (content[i] == '"')
-                        {
-                            var keyEnd = content.IndexOf('"', i + 1);
-                            var colon = content.IndexOf(':', keyEnd + 1);
-                            var valStart = content.IndexOf('"', colon + 1);
-                            var valEnd = content.IndexOf('"', valStart + 1);
-                            if (keyEnd > 0 && valEnd > 0)
-                            {
-                                _sessionNames[content.Substring(i + 1, keyEnd - i - 1)] =
-                                    content.Substring(valStart + 1, valEnd - valStart - 1);
-                                i = valEnd + 1;
-                            }
-                            else break;
-                        }
-                        else i++;
-                    }
-                }
+                using (var stream = File.Create(temp)) Serializer().WriteObject(stream, recording);
+                if (File.Exists(path)) File.Replace(temp, path, null);
+                else File.Move(temp, path);
             }
-
-            // 解析 entries 数组
-            var entriesIdx = json.IndexOf("\"entries\"");
-            if (entriesIdx >= 0)
+            finally { if (File.Exists(temp)) File.Delete(temp); }
+        }
+        public void LoadFromFile(string path)
+        {
+            if (new FileInfo(path).Length > 64 * 1024 * 1024) throw new InvalidDataException(L10n.T("录制文件过大"));
+            Recording data;
+            using (var stream = File.OpenRead(path)) data = (Recording)Serializer().ReadObject(stream);
+            if (data == null || data.Version != 1 || data.Names == null || data.Entries == null ||
+                data.Duration < 0 || data.Entries.Count > 50000)
+                throw new InvalidDataException(L10n.T("录制文件无效"));
+            int characters = 0;
+            long last = 0;
+            foreach (var entry in data.Entries)
             {
-                var arrStart = json.IndexOf('[', entriesIdx);
-                var arrEnd = json.IndexOf(']', arrStart);
-                if (arrStart >= 0 && arrEnd >= 0)
-                {
-                    var content = json.Substring(arrStart + 1, arrEnd - arrStart - 1);
-                    var objects = SplitJsonObjects(content);
-                    foreach (var obj in objects)
-                    {
-                        _entries.Add(new RecordingEntry
-                        {
-                            TimestampMs = ExtractLong(obj, "t"),
-                            SessionId = ExtractString(obj, "s") ?? "",
-                            Direction = (EntryDirection)ExtractInt(obj, "d"),
-                            Content = ExtractString(obj, "c") ?? ""
-                        });
-                    }
-                }
+                if (entry == null || entry.SessionId == null || entry.Content == null || entry.TimestampMs < last ||
+                    (entry.Direction != EntryDirection.Input && entry.Direction != EntryDirection.Output) ||
+                    entry.Content.Length > 16 * 1024 * 1024 - characters)
+                    throw new InvalidDataException(L10n.T("录制文件无效"));
+                characters += entry.Content.Length; last = entry.TimestampMs;
+                string name; data.Names.TryGetValue(entry.SessionId, out name); entry.SessionName = name ?? entry.SessionId;
+            }
+            lock (_sync)
+            {
+                if (_recording) throw new InvalidOperationException(L10n.T("请先停止录制"));
+                _entries = data.Entries; _names = data.Names; _characters = characters;
+                _duration = TimeSpan.FromMilliseconds(Math.Max(data.Duration, last)); LimitReached = false;
             }
         }
-
-        private string GetSessionName(string sessionId)
-        {
-            return _sessionNames.ContainsKey(sessionId) ? _sessionNames[sessionId] : sessionId;
-        }
-
-        private static string Esc(string s) { return Gdterm.Core.JsonText.Escape(s); } // 审计 F1：统一转义契约
-
-        private static string ExtractString(string json, string key)
-        {
-            return Gdterm.Core.JsonText.ExtractString(json, key); // 审计 F1：统一反转义
-        }
-
-        private static long ExtractLong(string json, string key)
-        {
-            var p = "\"" + key + "\""; var idx = json.IndexOf(p); if (idx < 0) return 0;
-            var c = json.IndexOf(':', idx + p.Length); if (c < 0) return 0;
-            var s = c + 1; while (s < json.Length && json[s] == ' ') s++; var e = s;
-            while (e < json.Length && (char.IsDigit(json[e]) || json[e] == '-')) e++;
-            long v; long.TryParse(json.Substring(s, e - s), out v); return v;
-        }
-
-        private static int ExtractInt(string json, string key) { return (int)ExtractLong(json, key); }
-
-        private static List<string> SplitJsonObjects(string content)
-        {
-            // 审计 F1：统一走 JsonText（旧实现自数括号，内容里的括号会切坏对象）
-            return Gdterm.Core.JsonText.SplitObjects(content);
-        }
-
-        public void Dispose()
-        {
-            _timer?.Stop();
-            _entries.Clear();
-            _sessionNames.Clear();
-        }
+        public void Dispose() { StopRecording(); }
     }
 
-    /// <summary>录制条目</summary>
+    [DataContract]
     public class RecordingEntry
     {
-        public long TimestampMs { get; set; }
-        public string SessionId { get; set; }
+        [DataMember(Name = "t")] public long TimestampMs { get; set; }
+        [DataMember(Name = "s")] public string SessionId { get; set; }
         public string SessionName { get; set; }
-        public EntryDirection Direction { get; set; }
-        public string Content { get; set; }
+        [DataMember(Name = "d")] public EntryDirection Direction { get; set; }
+        [DataMember(Name = "c")] public string Content { get; set; }
     }
-
-    public enum EntryDirection
-    {
-        Input = 0,
-        Output = 1
-    }
-
-    /// <summary>回放事件</summary>
+    public enum EntryDirection { Input = 0, Output = 1 }
     public class ReplayEvent
     {
         public RecordingEntry Entry { get; set; }

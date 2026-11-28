@@ -1,0 +1,87 @@
+#!/usr/bin/env python3
+"""Isolated OpenSSH fixture. Never edits system sshd, authorized_keys or known_hosts."""
+import os
+import pathlib
+import pwd
+import shutil
+import socket
+import subprocess
+import tempfile
+import time
+
+ROOT = pathlib.Path(__file__).resolve().parent
+DOTNET = os.environ.get("GDT_DOTNET") or shutil.which("dotnet") or str(pathlib.Path.home() / "dotnet/dotnet")
+SSHD = shutil.which("sshd") or "/usr/sbin/sshd"
+
+
+def main():
+    subprocess.run([DOTNET, "build", str(ROOT / "MultiSessionSmoke.csproj"), "--nologo", "-v:q"] + (["--source", os.environ["GDT_NUGET_SOURCE"]] if os.environ.get("GDT_NUGET_SOURCE") else []), check=True)
+    with tempfile.TemporaryDirectory(prefix="gdterm-multi-fixture-") as temp:
+        folder = pathlib.Path(temp)
+        folder.chmod(0o755)
+        for name in ("host_key", "client_key"):
+            subprocess.run(["ssh-keygen", "-q", "-t", "ed25519", "-N", "", "-f", str(folder / name)], check=True)
+        with socket.socket() as reservation:
+            reservation.bind(("127.0.0.1", 0))
+            port = reservation.getsockname()[1]
+        config = folder / "sshd_config"
+        config.write_text(f"""ListenAddress 127.0.0.1
+Port {port}
+HostKey {folder / 'host_key'}
+PidFile {folder / 'sshd.pid'}
+AuthorizedKeysFile {folder / 'client_key.pub'}
+PasswordAuthentication no
+ChallengeResponseAuthentication no
+UsePAM no
+StrictModes no
+AllowUsers {pwd.getpwuid(os.getuid()).pw_name}
+AllowTcpForwarding yes
+PermitRootLogin prohibit-password
+Subsystem sftp internal-sftp
+LogLevel VERBOSE
+""")
+        # OpenSSH 9.8+ penalizes banner-only probes. This loopback fixture intentionally
+        # opens many short connections; disable the penalty only in its private config.
+        probe = subprocess.run([SSHD, "-t", "-f", str(config), "-o", "PerSourcePenalties=no"],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+        if probe.returncode == 0:
+            with config.open("a") as output:
+                output.write("PerSourcePenalties no\n")
+        prefix = ["sudo", "-n"] if os.environ.get("GDT_SSHD_SUDO") == "1" else []
+        with (folder / "sshd.log").open("w+") as log:
+            server = subprocess.Popen(prefix + [SSHD, "-D", "-e", "-f", str(config)], stdout=log, stderr=log)
+            try:
+                for attempt in range(100):
+                    if server.poll() is not None:
+                        log.seek(0)
+                        raise RuntimeError("sshd fixture exited: " + log.read())
+                    try:
+                        with socket.create_connection(("127.0.0.1", port), timeout=.1):
+                            break
+                    except OSError:
+                        time.sleep(.05)
+                else:
+                    raise TimeoutError("sshd fixture did not listen")
+                subprocess.run([DOTNET, str(ROOT / "bin/Debug/net8.0/MultiSessionSmoke.dll"),
+                                str(port), str(folder / "client_key"), str(folder / "known_hosts"),
+                                str(folder / "host_key.pub"), str(folder)], check=True, timeout=120)
+            except Exception:
+                log.flush()
+                log.seek(0)
+                print("Isolated sshd diagnostic:\n" + log.read(), flush=True)
+                raise
+            finally:
+                if prefix and (folder / "sshd.pid").exists():
+                    subprocess.run(prefix + ["kill", "-TERM", (folder / "sshd.pid").read_text().strip()], check=False)
+                else:
+                    server.terminate()
+                try:
+                    server.wait(timeout=10)
+                except subprocess.TimeoutExpired:
+                    server.kill()
+                    server.wait(timeout=5)
+        print("Fixture stopped; temporary SSH keys removed on scope exit", flush=True)
+
+
+if __name__ == "__main__":
+    main()

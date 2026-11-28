@@ -127,6 +127,8 @@ namespace Gdterm.Tests.Ui
                 t => new Gdterm.UI.Controls.MultiChannelPanel(t.Track(new Gdterm.Terminal.MultiChannelManager())));
             Add(list, "batch-command", "多行输入", PanelEmptyExpect.Visible,
                 t => new Gdterm.UI.Controls.BatchCommandPanel());
+            Add(list, "multi-channel-populated", "广播会话与就绪状态", PanelEmptyExpect.Hidden, MultiSessionUiSmoke.Broadcast);
+            Add(list, "batch-command-populated", "批量SSH会话", PanelEmptyExpect.Hidden, MultiSessionUiSmoke.Batch);
             Add(list, "health-monitor", "纯展示", PanelEmptyExpect.Ignore,
                 t => new Gdterm.UI.Controls.HealthMonitorPanel());
             Add(list, "snippet-search", "搜索框+结果列表/覆盖式", PanelEmptyExpect.Visible,

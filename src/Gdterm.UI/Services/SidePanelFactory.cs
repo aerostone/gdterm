@@ -80,6 +80,7 @@ namespace Gdterm.UI.Services
             _dialogOwner = dialogOwner;
             _securityManager = securityManager;
             _syncRecorder = syncRecorder;
+            if (_multiChannelManager != null) _multiChannelManager.CommandSent += OnBroadcastSent;
         }
 
         public Control CreateToolboxPanel()
@@ -106,7 +107,9 @@ namespace Gdterm.UI.Services
         {
             SyncMultiChannelRegistrations();
             var panel = new MultiChannelPanel(_multiChannelManager, _syncRecorder);
-            panel.BroadcastCommandRequested += OnBroadcastCommandRequested;
+            panel.SyncSessions = SyncMultiChannelRegistrations;
+            panel.CommandGate = _commandGate;
+            panel.AuditLogger = _auditLogger;
             return panel;
         }
 
@@ -121,8 +124,19 @@ namespace Gdterm.UI.Services
             var panel = new BatchCommandPanel();
             panel.SetDangerousDetector(_dangerousDetector);
             panel.SetCommandGate(_commandGate);
+            panel.AuditLogger = _auditLogger;
             if (_tabs != null)
-                panel.SetSessions(_tabs.GetConnectedSessions());
+            {
+                panel.SessionProvider = () =>
+                {
+                    var connected = _tabs.GetConnectedSessions();
+                    var ssh = new Dictionary<string, ITerminalSession>();
+                    foreach (var kv in connected)
+                        if (kv.Value.TryGetSshClient() != null) ssh[kv.Key] = kv.Value;
+                    return ssh;
+                };
+                panel.SetSessions(panel.SessionProvider());
+            }
             return panel;
         }
 
@@ -207,7 +221,22 @@ namespace Gdterm.UI.Services
             return new List<ConnectionConfig>(configs.Values);
         }
 
-        public void Dispose() { _portForwards?.Dispose(); }
+        private void OnBroadcastSent(object sender, CommandSentEventArgs e)
+        {
+            try
+            {
+                _commandHistoryStore?.RecordCommand(new CommandHistoryEntry {
+                    Id = Guid.NewGuid().ToString("N"), Command = e.Command.TrimEnd('\r', '\n'),
+                    ExecutedAt = e.Timestamp, IsBroadcast = true
+                });
+            }
+            catch (Exception ex) { DiagLog.Swallowed("Broadcast.History", ex); }
+        }
+        public void Dispose()
+        {
+            if (_multiChannelManager != null) _multiChannelManager.CommandSent -= OnBroadcastSent;
+            _portForwards?.Dispose();
+        }
 
         public Control CreateHighlightPanel()
         {
@@ -335,29 +364,6 @@ namespace Gdterm.UI.Services
                     catch { displayName = kv.Key; }
                     _multiChannelManager.Register(kv.Key, kv.Value, displayName, null);
                 }
-            }
-            catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SidePanelFactory", exSwallowed); } catch { } }
-        }
-
-        private void OnBroadcastCommandRequested(object sender, string cmd)
-        {
-            if (string.IsNullOrEmpty(cmd) || _multiChannelManager == null) return;
-            // 广播 = 一次打到 N 个会话，一次手滑放大 N 倍；判定必须走统一闸门并留痕
-            if (!DangerousCommandPrompt.Confirm(
-                    _dialogOwner, _commandGate, cmd, InputSource.Broadcast, _auditLogger, "broadcast"))
-            {
-                return;
-            }
-            _multiChannelManager.BroadcastCommand(cmd + "\r");
-            try
-            {
-                _commandHistoryStore?.RecordCommand(new CommandHistoryEntry
-                {
-                    Id = Guid.NewGuid().ToString("N"),
-                    Command = cmd,
-                    ExecutedAt = DateTime.UtcNow,
-                    IsBroadcast = true
-                });
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SidePanelFactory", exSwallowed); } catch { } }
         }

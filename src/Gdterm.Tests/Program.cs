@@ -122,6 +122,7 @@ namespace Gdterm.Tests
             RunTest("SftpPermission", SftpPermissionTests.Run);
             RunTest("TerminalProfile", TerminalProfileTests.Run);
             RunTest("VtTerminalEngine", VtTerminalEngineTests.Run);
+            RunTest("MultiSession", MultiSessionTests.Run);
             RunTest("ReverseVideo", ReverseVideoTests.Run);
             RunTest("TerminalSelection", TerminalSelectionTests.Run);
             RunTest("TerminalSearchEngine", TerminalSearchEngineTests.Run);

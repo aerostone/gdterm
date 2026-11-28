@@ -1,462 +1,302 @@
 using System;
+using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Gdterm.Core;
+using Gdterm.Logging;
+using Gdterm.Security;
 using Gdterm.Terminal;
+using Gdterm.Terminal.Models;
 using Gdterm.UI.Services;
-
 using Gdterm.UI.Diagnostics;
 using GdtermColorTable = Gdterm.UI.Diagnostics.GdtermColorTable;
-using Gdterm.Core;
 
 namespace Gdterm.UI.Controls
 {
-    /// <summary>
-    /// 多通道输入面板——WindTerm 风格，显示所有会话列表，支持勾选/全选/广播输入
-    /// 带终端就绪状态检测：只有命令提示符状态的终端才允许加入
-    /// </summary>
     public class MultiChannelPanel : UserControl
     {
         private readonly MultiChannelManager _manager;
         private readonly MultiChannelRecorder _recorder;
-        private CancellationTokenSource _replayCts;
-        private ListView _sessionList;
+        private readonly System.Windows.Forms.Timer _refresh = new System.Windows.Forms.Timer { Interval = 1000 };
+        private readonly Dictionary<ITerminalSession, EventHandler<TerminalOutputEventArgs>> _recordHandlers =
+            new Dictionary<ITerminalSession, EventHandler<TerminalOutputEventArgs>>();
+        private ListView _list;
         private ListShell _shell;
-        private AntdUI.Button _btnSelectAll;
-        private AntdUI.Button _btnDeselectAll;
-        private AntdUI.Button _btnBroadcast;
-        private AntdUI.Button _btnRecord;
-        private AntdUI.Button _btnReplay;
-        private bool _busy; // 回放忙碌态：长时操作期间禁按钮防重复触发
-        private AntdUI.Button _btnExport;
-        private AntdUI.Label _statusLabel;
-        private AntdUI.Input _commandInput;
-        private EventHandler<ChannelSessionEventArgs> _onSessionRegistered;
-        private EventHandler<ChannelSessionEventArgs> _onSessionUnregistered;
-        private EventHandler<BroadcastStateChangedEventArgs> _onBroadcastStateChanged;
         private EmptyStateView _empty;
+        private AntdUI.Input _command;
+        private AntdUI.Label _status, _targets;
+        private RichTextBox _results;
+        private AntdUI.Button _send, _record, _replay, _cancel;
+        private CancellationTokenSource _run;
+        private bool _busy, _refreshing;
+        private string _fingerprint;
+        private EventHandler<CommandSentEventArgs> _recordInput;
+        public Action SyncSessions { get; set; }
+        public CommandGate CommandGate { get; set; }
+        public IAuditLogger AuditLogger { get; set; }
+        internal Func<string, bool> ConfirmForTest { get; set; }
 
-        /// <summary>
-        /// 广播命令事件（用户在输入框输入命令后触发）
-        /// </summary>
-        public event EventHandler<string> BroadcastCommandRequested;
-
-        public MultiChannelPanel(MultiChannelManager manager)
-            : this(manager, null)
-        {
-        }
-
-        /// <summary>录制器由持有人注入（MainForm 单例）；null 时录制按钮置灰，广播不受影响。</summary>
+        public MultiChannelPanel(MultiChannelManager manager) : this(manager, null) { }
         public MultiChannelPanel(MultiChannelManager manager, MultiChannelRecorder recorder)
         {
-            _manager = manager ?? throw new ArgumentNullException(nameof(manager));
-            _recorder = recorder;
-            InitializeComponent();
-            WireEvents();
-            // 首帧刷新：已有会话/空列表都要立刻可见（否则打开侧栏 = 空白列表 + 隐藏空态）
+            _manager = manager ?? throw new ArgumentNullException(nameof(manager)); _recorder = recorder;
+            Font = FormFontPolicy.UiFont(); Dock = DockStyle.Fill; BackColor = GdtermColorTable.Background;
+            BuildUI(); RefreshList();
+            _refresh.Tick += (s, e) => { SyncSessions?.Invoke(); RefreshList(); };
+            _refresh.Start(); UiA11y.AutoName(this);
+        }
+
+        private void BuildUI()
+        {
+            AutoScroll = true;
+            var layout = new TableLayoutPanel { Dock = DockStyle.Top, Height = DpiScale.V(this, 680), ColumnCount = 1, RowCount = 6,
+                Padding = new Padding(DpiScale.V(this, 8)) };
+            layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 55));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            layout.RowStyles.Add(new RowStyle(SizeType.Percent, 45));
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+            var actions = new FlowLayoutPanel { Dock = DockStyle.Top, AutoSize = true, WrapContents = true, Margin = Padding.Empty };
+            _send = Button(L10n.T("广播"), "BroadcastSend", async () => await SendAsync(), true);
+            _record = Button(L10n.T("停止录制"), "BroadcastRecord", ToggleRecord);
+            _replay = Button(L10n.T("查看回放"), "BroadcastReplay", async () => await ReplayAsync());
+            _cancel = Button(L10n.T("取消任务"), "BroadcastCancel", () => { _run?.Cancel(); _cancel.Enabled = false; });
+            actions.Controls.AddRange(new Control[] {
+                Button(L10n.T("全选就绪"), "BroadcastSelectAll", () => SelectVisible(true)),
+                Button(L10n.T("清空选择"), "BroadcastDeselect", () => SelectVisible(false)),
+                _send, _cancel, _record, _replay,
+                Button(L10n.T("导出录制"), "BroadcastExport", ExportRecording),
+                Button(L10n.T("打开录制"), "BroadcastOpen", OpenRecording) });
+            layout.Controls.Add(actions, 0, 0);
+            _targets = Hint("", "BroadcastTargets"); layout.Controls.Add(_targets, 0, 1);
+            _list = new ListView { Name = "BroadcastSessions", Dock = DockStyle.Fill, View = View.Details,
+                CheckBoxes = true, FullRowSelect = true, HideSelection = false, ShowItemToolTips = true,
+                Font = Font, BackColor = GdtermColorTable.Background, ForeColor = GdtermColorTable.Foreground };
+            foreach (var name in new[] { L10n.T("目标主机"), L10n.T("状态"), L10n.T("已发送") })
+                _list.Columns.Add(name, DpiScale.V(this, name == L10n.T("目标主机") ? 200 : 120));
+            _list.ItemCheck += OnItemCheck;
+            _shell = new ListShell(_list, L10n.T("按主机过滤…"));
+            _list.Layout += (s, e) => UpdateActions();
+            layout.Controls.Add(_shell, 0, 2);
+            _empty = EmptyStateView.Attach(_shell, L10n.T("还没有可广播的会话"),
+                L10n.T("打开终端连接后自动显示；只向就绪终端发送。"));
+            _command = new AntdUI.Input { Name = "BroadcastCommand", Dock = DockStyle.Top, Multiline = true,
+                Font = FormFontPolicy.MonoFont(), Height = FormFontPolicy.LineBox(FormFontPolicy.MonoFont(), this) * 2 + DpiScale.V(this, 18),
+                PlaceholderText = L10n.T("Enter 广播；Shift+Enter 换行") };
+            _command.KeyDown += (s, e) => {
+                if (e.KeyCode == Keys.Enter && !e.Shift) { e.SuppressKeyPress = true; _ = SendAsync(); }
+            };
+            layout.Controls.Add(_command, 0, 3);
+            _results = new RichTextBox { Name = "BroadcastResults", Dock = DockStyle.Fill, ReadOnly = true,
+                WordWrap = false, DetectUrls = false, Font = FormFontPolicy.MonoFont(),
+                BackColor = GdtermColorTable.Background, ForeColor = GdtermColorTable.Foreground };
+            layout.Controls.Add(_results, 0, 4);
+            _status = Hint(L10n.T("就绪；回放仅查看录制，不执行命令。"), "BroadcastStatus");
+            layout.Controls.Add(_status, 0, 5);
+            Controls.Add(layout);
+            SizeChanged += (s, e) => layout.Height = Math.Max(ClientSize.Height, DpiScale.V(this, 680));
+        }
+        private AntdUI.Label Hint(string text, string name)
+        {
+            var label = new AntdUI.Label { Name = name, Text = text, Font = Font, Dock = DockStyle.Top,
+                ForeColor = GdtermColorTable.Muted, Margin = new Padding(0, DpiScale.V(this, 4), 0, DpiScale.V(this, 4)) };
+            Action fit = () => {
+                int height = FormFontPolicy.MeasureWrappedHeight(label.Text, Math.Max(DpiScale.V(this, 180), label.Width), Font, this) + DpiScale.V(this, 4);
+                if (label.Height != height) label.Height = height;
+            };
+            label.SizeChanged += (s, e) => fit(); label.TextChanged += (s, e) => fit(); fit(); return label;
+        }
+        private AntdUI.Button Button(string text, string name, Action click, bool primary = false)
+        {
+            var button = new AntdUI.Button { Name = name, Text = text, Font = Font, Margin = new Padding(DpiScale.V(this, 3)) };
+            if (primary) button.Type = AntdUI.TTypeMini.Primary;
+            FormFontPolicy.SizeActionButton(this, button, 10, 4); button.Click += (s, e) => click(); return button;
+        }
+        private void SelectVisible(bool select)
+        {
+            if (_busy) return;
+            var ids = _list.Items.Cast<ListViewItem>().Select(r => (string)r.Tag).ToArray();
+            int rejected = 0;
+            foreach (var id in ids)
+                if (select) { if (!_manager.Select(id).Success) rejected++; }
+                else _manager.Deselect(id);
             RefreshList();
-            // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
-            UiA11y.AutoName(this);
+            if (rejected > 0) _status.Text = L10n.Tf("✗ {0} 个会话未就绪", rejected);
         }
-
-        private void InitializeComponent()
+        private void OnItemCheck(object sender, ItemCheckEventArgs e)
         {
-            Size = DpiScale.S(this, 300, 400);
-            BackColor = GdtermColorTable.Background;
-
-            // 工具栏
-            var toolbar = new FlowLayoutPanel
+            if (_refreshing || _busy || e.Index < 0 || e.Index >= _list.Items.Count) return;
+            // Resolve the stable ID synchronously; sorting/filtering cannot redirect a queued index.
+            var item = _list.Items[e.Index];
+            var id = (string)item.Tag;
+            if (e.NewValue == CheckState.Checked)
             {
-                Dock = DockStyle.Top,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                FlowDirection = FlowDirection.LeftToRight,
-                // 6 个按钮在 360px 侧栏里一行放不下（14pt 实测 479px）→ 折行，
-                // 否则后两个按钮整块画到面板外（矩阵门 越界 ×2）
-                WrapContents = true,
-                Padding = new Padding(DpiScale.V(this, 3))
-            };
-
-            _btnSelectAll = CreateToolbarButton(L10n.T("全选就绪"));
-            _btnDeselectAll = CreateToolbarButton(L10n.T("取消"));
-            _btnBroadcast = CreateToolbarButton(L10n.T("广播"));
-            _btnBroadcast.Enabled = false;
-            _btnRecord = CreateToolbarButton(L10n.T("录制"));
-            _btnReplay = CreateToolbarButton(L10n.T("回放"));
-            _btnExport = CreateToolbarButton(L10n.T("导出"));
-            // 录制器未注入时录制链置灰（广播不受影响；SidePanelFactory 正常注入单例故常态可用）。
-            bool recOk = _recorder != null;
-            _btnRecord.Enabled = recOk;
-            _btnReplay.Enabled = recOk;
-            _btnExport.Enabled = recOk;
-
-            toolbar.Controls.AddRange(new Control[] { _btnSelectAll, _btnDeselectAll, _btnBroadcast, _btnRecord, _btnReplay, _btnExport });
-
-            // 会话列表
-            _sessionList = new ListView
-            {
-                Dock = DockStyle.Fill,
-                View = View.Details,
-                CheckBoxes = true,
-                FullRowSelect = true,
-                GridLines = true,
-                HeaderStyle = ColumnHeaderStyle.Nonclickable
-            };
-            _sessionList.Columns.Add(L10n.T("主机"), 100);
-            _sessionList.Columns.Add(L10n.T("分组"), 50);
-            _sessionList.Columns.Add(L10n.T("状态"), 60);
-            _sessionList.Columns.Add(L10n.T("终端"), 55);
-            _sessionList.Columns.Add(L10n.T("命令数"), 45);
-
-            // 表壳：过滤 + 排序（连接多了按主机/分组找会话）。不出「导出」——工具栏已有录制导出，
-            // 会话列表是实时状态，再放一个 CSV 导出只会让人分不清导的是哪个。
-
-            // 命令输入框
-            var inputPanel = new TableLayoutPanel
-            {
-                Dock = DockStyle.Bottom,
-                AutoSize = true,
-                AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                ColumnCount = 1,
-                RowCount = 2,
-                Padding = new Padding(DpiScale.V(this, 3))
-            };
-            inputPanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            inputPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-            inputPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-
-            _commandInput = new AntdUI.Input {
-                Dock = DockStyle.Top,
-                // 原 28 在大字号下裁字 → 38 地板（用户点名的"多通道没做完"区）
-                Height = FormFontPolicy.FieldHeight(this),
-                Font = Services.FormFontPolicy.MonoFont()
-            };
-
-            // 原生 Label + Dock=Top + AutoSize：宽度由单元格给定、高度随折行增长。
-            // AntdUI.Label 的 AutoSize 只按单行量宽，14pt 下这句需 356px 而栏宽 348px → 尾部被裁
-            var inputHint = new Label {
-                Dock = DockStyle.Top,
-                AutoSize = true,
-                Text = L10n.T("输入命令后按 Enter 广播到所有选中会话"),
-                ForeColor = GdtermColorTable.Muted,
-                BackColor = Color.Transparent,
-                Font = Services.FormFontPolicy.UiFont(),
-                TextAlign = ContentAlignment.MiddleLeft
-            };
-
-            inputPanel.Controls.Add(_commandInput, 0, 0);
-            inputPanel.Controls.Add(inputHint, 0, 1);
-
-            // 状态栏
-            _statusLabel = new AntdUI.Label {
-                Dock = DockStyle.Bottom,
-                Text = L10n.T("就绪"),
-                TextAlign = ContentAlignment.MiddleLeft,
-                Padding = new Padding(DpiScale.V(this, 3), 0, 0, 0),
-                BackColor = GdtermColorTable.Surface
-            };
-            FormFontPolicy.FitSingleLineLabel(_statusLabel);
-
-            // 空态：一个终端都没打开时列表是纯空白 + 一排灰按钮，等于让用户猜「先干什么」
-            _empty = EmptyStateView.Attach(this, L10n.T("还没有可广播的会话"),
-                L10n.T("打开任意 SSH/串口标签后会自动出现在这里；只有停在命令提示符的会话可加入"),
-                L10n.T("刷新列表"), (s2, e2) => { RefreshList(); ToastNotifier.Info(L10n.T("已刷新会话列表"), 1500); });
-            _shell = new ListShell(_sessionList, L10n.T("按主机/分组过滤会话…"));
-            Controls.Add(_shell);
-            Controls.Add(toolbar);
-            Controls.Add(inputPanel);
-            Controls.Add(_statusLabel);
-        }
-
-        private AntdUI.Button CreateToolbarButton(string text)
-        {
-            var btn = new AntdUI.Button {
-                Text = text,
-                Margin = new Padding(DpiScale.V(this, 2))
-            };
-            Services.FormFontPolicy.SizeActionButton(this, btn, 8, 3);
-            return btn;
-        }
-
-        private void WireEvents()
-        {
-            _btnSelectAll.Click += (s, e) =>
-            {
-                var results = _manager.SelectAll();
-                ShowSelectionResults(results);
-                RefreshList();
-            };
-
-            _btnDeselectAll.Click += (s, e) =>
-            {
-                _manager.DeselectAll();
-                RefreshList();
-            };
-
-            _btnBroadcast.Click += (s, e) => ExecuteBroadcast();
-            _btnRecord.Click += (s, e) => ToggleRecord();
-            _btnReplay.Click += (s, e) => ReplayRecording();
-            _btnExport.Click += (s, e) => ExportRecording();
-
-            _sessionList.ItemCheck += OnSessionItemCheck;
-
-            _commandInput.KeyDown += (s, e) =>
-            {
-                if (e.KeyCode == Keys.Enter)
-                {
-                    ExecuteBroadcast();
-                    e.SuppressKeyPress = true;
-                }
-            };
-
-            _onSessionRegistered = (s, e) => RefreshList();
-            _onSessionUnregistered = (s, e) => RefreshList();
-            _onBroadcastStateChanged = (s, e) =>
-            {
-                if (_btnBroadcast != null)
-                    _btnBroadcast.Enabled = e.IsBroadcasting;
-                UpdateStatus();
-            };
-            _manager.SessionRegistered += _onSessionRegistered;
-            _manager.SessionUnregistered += _onSessionUnregistered;
-            _manager.BroadcastStateChanged += _onBroadcastStateChanged;
-        }
-
-        protected override void Dispose(bool disposing)
-        {
-            if (disposing && _manager != null)
-            {
-                if (_onSessionRegistered != null)
-                    _manager.SessionRegistered -= _onSessionRegistered;
-                if (_onSessionUnregistered != null)
-                    _manager.SessionUnregistered -= _onSessionUnregistered;
-                if (_onBroadcastStateChanged != null)
-                    _manager.BroadcastStateChanged -= _onBroadcastStateChanged;
+                var result = _manager.Select(id);
+                if (!result.Success) { e.NewValue = CheckState.Unchecked; _status.Text = result.Message; }
             }
-            base.Dispose(disposing);
+            else _manager.Deselect(id);
+            UpdateActions();
         }
-
-        private void OnSessionItemCheck(object sender, ItemCheckEventArgs e)
-        {
-            // 延迟处理，因为事件在状态改变前触发
-            BeginInvoke(new Action(() =>
-            {
-                var item = _sessionList.Items[e.Index];
-                var sessionId = item.Tag as string;
-                if (sessionId != null)
-                {
-                    if (e.NewValue == CheckState.Checked)
-                    {
-                        // 尝试选择——有就绪检测
-                        var result = _manager.Select(sessionId);
-                        if (!result.Success)
-                        {
-                            // 选择失败，恢复未勾选状态
-                            item.Checked = false;
-                            _statusLabel.Text = $"✗ {item.SubItems[0].Text}: {result.Message}";
-                            _statusLabel.ForeColor = GdtermColorTable.Danger;
-                            return;
-                        }
-                    }
-                    else
-                    {
-                        _manager.Deselect(sessionId);
-                    }
-                    UpdateStatus();
-                }
-            }));
-        }
-
-        private void ExecuteBroadcast()
-        {
-            var command = _commandInput.Text;
-            if (string.IsNullOrWhiteSpace(command)) return;
-
-            try { if (_recorder != null && _recorder.IsRecording) _recorder.RecordInput("broadcast", command); }
-            catch (System.Exception exSwallowed) { try { Gdterm.UI.Diagnostics.DiagLog.Swallowed("MultiChannel", exSwallowed); } catch { } }
-            BroadcastCommandRequested?.Invoke(this, command);
-            _commandInput.Clear();
-        }
-
-        private string RecordDir
-        {
-            get { return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "data", "sync-recordings"); }
-        }
-
-        /// <summary>录制开关：开始时注册当前全部会话名并记一条输入锚点；再按停止。</summary>
-        private void ToggleRecord()
-        {
-            if (_recorder == null) return;
-            try
-            {
-                if (_recorder.IsRecording)
-                {
-                    _recorder.StopRecording();
-                    _btnRecord.Text = L10n.T("录制");
-                    _statusLabel.Text = L10n.T("录制停止（") + _recorder.EntryCount + L10n.T(" 条）");
-                    return;
-                }
-                _recorder.StartRecording();
-                try
-                {
-                    foreach (var s in _manager.GetAllSessions())
-                        _recorder.RegisterSession(s.SessionId, s.DisplayName ?? s.SessionId);
-                }
-                catch (System.Exception exSwallowed) { try { Gdterm.UI.Diagnostics.DiagLog.Swallowed("MultiChannel", exSwallowed); } catch { } }
-                _btnRecord.Text = L10n.T("停止");
-                _statusLabel.Text = L10n.T("录制中…（广播输入记入时间线）");
-            }
-            catch (System.Exception ex)
-            {
-                _statusLabel.Text = L10n.T("录制失败: ") + ex.Message;
-                try { DiagLog.Error("MultiChannel.Record", ex); } catch { }
-                ToastNotifier.Error(L10n.T("录制失败：") + ex.Message);
-            }
-        }
-
-        /// <summary>回放：输入事件按原时间线重发到同名会话（1x）。输出事件仅记时间线不回显——远端状态已变，重放输出无意义。</summary>
-        private void ReplayRecording()
-        {
-            if (_recorder == null || _recorder.IsRecording || _busy) return;
-            if (_recorder.EntryCount == 0) { _statusLabel.Text = L10n.T("无录制内容"); return; }
-            try
-            {
-                if (_replayCts != null) { try { _replayCts.Cancel(); } catch { } }
-                _replayCts = new CancellationTokenSource();
-                var token = _replayCts.Token;
-                // 忙碌态：回放期间禁按钮防重复触发（重放是长时操作，双击=取消旧的重启新的）
-                _busy = true;
-                _btnReplay.Enabled = false;
-                _statusLabel.Text = L10n.T("回放中…");
-                Task.Run(async () =>
-                {
-                    try
-                    {
-                        // 同名会话映射：录制 sessionId → 当前同显示名会话；找不到则跳过该条。
-                        var map = new System.Collections.Generic.Dictionary<string, ITerminalSession>();
-                        foreach (var s in _manager.GetAllSessions())
-                        {
-                            try
-                            {
-                                var sess = _manager.GetSession(s.SessionId);
-                                if (sess != null) map[s.SessionId] = sess;
-                            }
-                            catch { }
-                        }
-                        await _recorder.ReplayAsync(map, 1.0, null, token);
-                        BeginInvoke(new Action(() => FinishReplay(L10n.T("回放完成"))));
-                    }
-                    catch (OperationCanceledException) { BeginInvoke(new Action(() => FinishReplay(L10n.T("回放已取消")))); }
-                    catch (System.Exception ex) { BeginInvoke(new Action(() => FinishReplay(L10n.T("回放失败: ") + ex.Message))); }
-                }, token);
-            }
-            catch (System.Exception ex)
-            {
-                _busy = false;
-                _btnReplay.Enabled = true;
-                _statusLabel.Text = L10n.T("回放失败: ") + ex.Message;
-            }
-        }
-
-        /// <summary>回放收尾（UI 线程）：恢复按钮 + 状态行。</summary>
-        private void FinishReplay(string status)
-        {
-            _statusLabel.Text = status;
-            _busy = false;
-            _btnReplay.Enabled = true;
-        }
-
-        /// <summary>导出：落盘 JSON 录制 + 同名 HTML 时间线报告（与宏录制 data/macros 分目录）。</summary>
-        private void ExportRecording()
-        {
-            if (_recorder == null || _recorder.IsRecording) return;
-            if (_recorder.EntryCount == 0) { _statusLabel.Text = L10n.T("无录制内容"); return; }
-            try
-            {
-                Directory.CreateDirectory(RecordDir);
-                var stamp = DateTime.Now.ToString("yyyyMMdd-HHmmss");
-                var jsonPath = Path.Combine(RecordDir, "sync-" + stamp + ".gdrec");
-                var htmlPath = Path.Combine(RecordDir, "sync-" + stamp + ".html");
-                _recorder.SaveToFile(jsonPath);
-                File.WriteAllText(htmlPath, _recorder.ExportAsHtml(), System.Text.Encoding.UTF8);
-                _statusLabel.Text = L10n.T("已导出 ") + Path.GetFileName(jsonPath);
-            }
-            catch (System.Exception ex) { _statusLabel.Text = L10n.T("导出失败: ") + ex.Message; }
-        }
-
-        /// <summary>
-        /// 刷新会话列表
-        /// </summary>
         public void RefreshList()
         {
-            if (InvokeRequired)
+            if (IsDisposed || Disposing) return;
+            if (InvokeRequired) { try { BeginInvoke((Action)RefreshList); } catch (InvalidOperationException) { } return; }
+            var all = _manager.GetAllSessions();
+            var fingerprint = string.Join("|", all.Select(s => s.SessionId + ":" + s.DisplayName + ":" + s.IsConnected + ":" +
+                s.IsSelected + ":" + s.ReadyState.Description + ":" + s.CommandCount));
+            if (fingerprint != _fingerprint)
             {
-                Invoke(new Action(RefreshList));
-                return;
-            }
-
-            var sessions = _manager.GetAllSessions();
-            var items = new System.Collections.Generic.List<ListViewItem>();
-            foreach (var session in sessions)
-            {
-                var item = new ListViewItem(session.DisplayName);
-                item.SubItems.Add(session.Group);
-
-                // 连接状态
-                item.SubItems.Add(session.IsConnected ? L10n.T("● 已连接") : L10n.T("○ 断开"));
-
-                // 终端就绪状态
-                var readyText = "—";
-                if (session.IsConnected && session.ReadyState != null)
+                _fingerprint = fingerprint; _refreshing = true;
+                try
                 {
-                    readyText = session.ReadyState.IsReady ? L10n.T("✓ 就绪") : L10n.T("✗ 忙");
+                    var rows = all.Select(s => {
+                        var item = new ListViewItem(s.DisplayName + " [" + s.SessionId.Substring(0, Math.Min(8, s.SessionId.Length)) + "]") {
+                            Tag = s.SessionId, Checked = s.IsSelected, ToolTipText = s.DisplayName + "\n" + s.SessionId + "\n" + s.ReadyState.Description
+                        };
+                        item.SubItems.Add(s.ReadyState.Description); item.SubItems.Add(s.CommandCount.ToString()); return item;
+                    }).ToList();
+                    _shell.SetItems(rows); _empty.SetEmpty(all.Count == 0);
                 }
-                item.SubItems.Add(readyText);
-
-                item.SubItems.Add(session.CommandCount.ToString());
-                item.Tag = session.SessionId;
-                item.Checked = session.IsSelected;
-
-                // 未连接或非就绪的终端灰色显示
-                if (!session.IsConnected)
-                    item.ForeColor = GdtermColorTable.Muted;
-                else if (session.ReadyState != null && !session.ReadyState.IsReady)
-                    item.ForeColor = GdtermColorTable.Warning;
-
-                items.Add(item);
+                finally { _refreshing = false; }
             }
-
-            // 壳重建可见集：勾选/选中按对象身份保留（Apply 内做），状态列变化不丢用户的勾选
-            _shell.SetItems(items);
-            if (_empty != null) _empty.SetEmpty(sessions.Count == 0);
-            UpdateStatus();
+            if (_recorder?.LimitReached == true) { StopRecording(); _status.Text = L10n.T("录制已达到上限并停止，请导出。"); }
+            UpdateActions();
         }
-
-        private void ShowSelectionResults(System.Collections.Generic.List<SelectResult> results)
+        private void UpdateActions()
         {
-            var rejected = results.FindAll(r => !r.Success);
-            if (rejected.Count > 0)
+            if (_targets == null || _list == null || _send == null) return;
+            var targets = _manager.GetSelectedTargets();
+            var visible = new HashSet<string>(_list.Items.Cast<ListViewItem>().Select(r => (string)r.Tag));
+            var hidden = targets.Count(t => !visible.Contains(t.SessionId));
+            _targets.Text = L10n.Tf("已选 {0} 台（隐藏 {1} 台）。全选/清空仅作用于可见行。", targets.Count, hidden);
+            _send.Enabled = !_busy && targets.Count > 0;
+            _record.Enabled = !_busy && _recorder != null;
+            _replay.Enabled = !_busy && _recorder != null && !_recorder.IsRecording && _recorder.EntryCount > 0;
+            _cancel.Enabled = _busy && _run != null && !_run.IsCancellationRequested;
+            _record.Text = _recorder?.IsRecording == true ? L10n.T("停止录制") : L10n.T("录制");
+            FormFontPolicy.SizeActionButton(this, _record, 10, 4);
+        }
+        internal async Task SendAsync()
+        {
+            if (_busy || IsDisposed || string.IsNullOrWhiteSpace(_command.Text)) return;
+            _busy = true;
+            try
             {
-                var msg = string.Join("\n", rejected.ConvertAll(r => $"• {r.Message}"));
-                _statusLabel.Text = L10n.Tf("✗ {0} 个会话未就绪", rejected.Count);
-                _statusLabel.ForeColor = GdtermColorTable.Danger;
+                SyncSessions?.Invoke(); RefreshList();
+                var targets = _manager.GetSelectedTargets();
+                if (targets.Count == 0) { _status.Text = L10n.T("请勾选至少一个会话"); return; }
+                var command = _command.Text;
+                var names = string.Join(", ", targets.Select(t => t.DisplayName + " [" + t.SessionId.Substring(0, Math.Min(8, t.SessionId.Length)) + "]"));
+                bool allowed = ConfirmForTest != null ? ConfirmForTest(command) :
+                    DangerousCommandPrompt.Confirm(FindForm(), CommandGate, command, InputSource.Broadcast, AuditLogger, names);
+                if (!allowed) { _status.Text = L10n.T("已取消危险命令"); return; }
+                _run = new CancellationTokenSource(); _list.Enabled = _command.Enabled = false; UpdateActions();
+                _results.Clear(); _results.AppendText(L10n.Tf("目标：{0}\n", names));
+                var results = await _manager.BroadcastCommandAsync(command, targets, _run.Token);
+                if (IsDisposed || Disposing) return;
+                foreach (var result in results)
+                {
+                    _results.AppendText(result.DisplayName + ": " + (result.Success ? L10n.T("已发送") : result.Error) + "\n");
+                }
+                int sent = results.Count(r => r.Success);
+                _status.Text = L10n.Tf("已发送 {0}/{1} 台；命令执行结果请查看各终端。", sent, results.Count);
+                if (sent == results.Count && sent > 0) _command.Clear();
             }
+            catch (Exception ex) { DiagLog.Error("Broadcast.Send", ex); if (!IsDisposed) _status.Text = L10n.T("发送失败：") + ex.Message; }
+            finally
+            {
+                _run?.Dispose(); _run = null; _busy = false;
+                if (!IsDisposed && !Disposing) { _list.Enabled = _command.Enabled = true; RefreshList(); }
+            }
+        }
+        private void ToggleRecord()
+        {
+            if (_recorder == null || _busy) return;
+            if (_recorder.IsRecording) { StopRecording(); _status.Text = L10n.Tf("录制停止：{0} 条", _recorder.EntryCount); }
             else
             {
-                _statusLabel.ForeColor = GdtermColorTable.Foreground;
+                var targets = _manager.GetSelectedTargets();
+                if (targets.Count == 0) { _status.Text = L10n.T("请先选择要录制的会话"); return; }
+                StopRecording(); _recorder.StartRecording();
+                foreach (var target in targets)
+                {
+                    _recorder.RegisterSession(target.SessionId, target.DisplayName);
+                    EventHandler<TerminalOutputEventArgs> handler = (s, e) => _recorder.RecordOutput(target.SessionId, e?.Text);
+                    target.Session.OutputReceived += handler; _recordHandlers[target.Session] = handler;
+                }
+                var recorded = targets.ToDictionary(t => t.SessionId, t => t.Session);
+                _recordInput = (sender, ev) => {
+                    foreach (var id in ev.TargetSessionIds)
+                    {
+                        ITerminalSession original;
+                        if (recorded.TryGetValue(id, out original) && ReferenceEquals(original, _manager.GetSession(id)))
+                            _recorder.RecordInput(id, ev.Command);
+                    }
+                };
+                _manager.CommandSent += _recordInput;
+                _status.Text = L10n.T("正在录制选中会话的广播输入与终端输出。");
             }
+            UpdateActions();
         }
-
-        private void UpdateStatus()
+        private void StopRecording()
         {
-            var total = _manager.GetAllSessions().Count;
-            var selected = _manager.SelectedCount;
-            _statusLabel.ForeColor = GdtermColorTable.Foreground;
-            _statusLabel.Text = selected > 0
-                ? L10n.Tf("已选中 {0}/{1} 个就绪会话，广播模式已激活", selected, total)
-                : L10n.Tf("共 {0} 个会话，未选择广播目标", total);
+            if (_recordInput != null) _manager.CommandSent -= _recordInput;
+            _recordInput = null;
+            foreach (var kv in _recordHandlers) kv.Key.OutputReceived -= kv.Value;
+            _recordHandlers.Clear(); _recorder?.StopRecording();
+        }
+        private async Task ReplayAsync()
+        {
+            if (_recorder == null || _busy || _recorder.IsRecording || _recorder.EntryCount == 0) return;
+            _busy = true; _run = new CancellationTokenSource(); UpdateActions(); _results.Clear();
+            try
+            {
+                var progress = new Progress<ReplayEvent>(ev => {
+                    if (IsDisposed || Disposing) return;
+                    var entry = ev.Entry;
+                    if (_results.TextLength < 2 * 1024 * 1024)
+                        _results.AppendText(string.Format("[{0:0.000}s] {1} {2}: {3}\n", entry.TimestampMs / 1000.0,
+                            entry.SessionName, entry.Direction == EntryDirection.Input ? "←" : "→", entry.Content));
+                });
+                await _recorder.ReplayAsync(1, ev => ((IProgress<ReplayEvent>)progress).Report(ev), _run.Token);
+                if (!IsDisposed) _status.Text = L10n.T("回放完成");
+            }
+            catch (OperationCanceledException) { if (!IsDisposed) _status.Text = L10n.T("回放已取消"); }
+            catch (Exception ex) { if (!IsDisposed) _status.Text = L10n.T("回放失败: ") + ex.Message; }
+            finally { _run.Dispose(); _run = null; _busy = false; if (!IsDisposed) UpdateActions(); }
+        }
+        private void ExportRecording()
+        {
+            if (_recorder == null || _busy || _recorder.IsRecording || _recorder.EntryCount == 0) return;
+            using (var dialog = new SaveFileDialog { Filter = "Recording (*.gdrec)|*.gdrec|HTML (*.html)|*.html|Text (*.txt)|*.txt",
+                FileName = "sync-" + DateTime.Now.ToString("yyyyMMdd-HHmmss") })
+                if (dialog.ShowDialog(FindForm()) == DialogResult.OK)
+                    try
+                    {
+                        if (dialog.FilterIndex == 1) _recorder.SaveToFile(dialog.FileName);
+                        else File.WriteAllText(dialog.FileName, dialog.FilterIndex == 2 ? _recorder.ExportAsHtml() : _recorder.ExportAsText(), System.Text.Encoding.UTF8);
+                        _status.Text = L10n.T("已导出 ") + Path.GetFileName(dialog.FileName);
+                    }
+                    catch (Exception ex) { _status.Text = L10n.T("导出失败: ") + ex.Message; }
+        }
+        private void OpenRecording()
+        {
+            if (_recorder == null || _busy || _recorder.IsRecording) return;
+            using (var dialog = new OpenFileDialog { Filter = "Recording (*.gdrec)|*.gdrec" })
+                if (dialog.ShowDialog(FindForm()) == DialogResult.OK)
+                    try { _recorder.LoadFromFile(dialog.FileName); _status.Text = L10n.Tf("已加载录制：{0} 条", _recorder.EntryCount); UpdateActions(); }
+                    catch (Exception ex) { _status.Text = L10n.T("加载失败：") + ex.Message; }
+        }
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) { _refresh.Dispose(); _run?.Cancel(); StopRecording(); }
+            base.Dispose(disposing);
         }
     }
 }

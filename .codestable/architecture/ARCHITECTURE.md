@@ -271,3 +271,11 @@ ConnectionTree 双击
 - 接线内存评审：`.codestable/reviews/p0-p2-wiring-memory-review.md`
 - 运行时审计：`.codestable/audits/2026-07-25-wiring-runtime/`
 - 启动必读碎片：`.codestable/attention.md`
+
+## 多主机命令（2026-11-29）
+
+- TabActiveSessionQuery.GetConnectedSessions 为每个终端会话对象分配稳定标识；分屏/排序不改变身份，重连对象不继承选择。
+- MultiChannelManager 管理交互终端与明确勾选，BroadcastCommandAsync 对确认前的对象快照异步发送；结果表示已提交输入，非远端命令成功。
+- BatchCommandExecutor 在已有 SSH client 上创建独立 exec 通道，以退出码/stdout/stderr 判结果；并发8，支持超时/取消，仅释放命令通道，不关闭共享连接。独立shell不继承交互目录/环境。
+- SidePanelFactory 注入会话提供器、统一 CommandGate 与审计，两个面板存活期间刷新列表；关闭取消任务，重复提交受保护。
+- MultiChannelRecorder 保存实际目标广播输入与终端输出；回放仅回调时间线，不执行远程输入。面板关闭摘除录制订阅，录制数据由应用单例保留；v1 JSON 经框架序列化往返，读取失败保留旧数据。

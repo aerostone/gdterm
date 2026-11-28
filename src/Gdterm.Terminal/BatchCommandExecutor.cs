@@ -1,114 +1,123 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Gdterm.Core;
+using Renci.SshNet;
+using Renci.SshNet.Common;
 
 namespace Gdterm.Terminal
 {
-    /// <summary>
-    /// 批量命令执行结果
-    /// </summary>
+    public enum BatchCommandStatus { Succeeded, Failed, TimedOut, Cancelled }
+
     public class BatchCommandResult
     {
         public string SessionId { get; set; }
         public string HostName { get; set; }
         public string Command { get; set; }
         public List<string> Output { get; set; } = new List<string>();
-        public bool IsSuccess { get; set; }
+        public string StandardError { get; set; }
+        public int? ExitCode { get; set; }
+        public BatchCommandStatus Status { get; set; } = BatchCommandStatus.Failed;
+        public bool IsSuccess { get { return Status == BatchCommandStatus.Succeeded; } }
+        public bool OutputTruncated { get; set; }
         public string ErrorMessage { get; set; }
         public double DurationMs { get; set; }
     }
 
-    /// <summary>
-    /// 批量命令执行器——选中多个会话同时执行同一命令，结果对比
-    /// </summary>
+    /// <summary>Shared SSH clients, independent exec channels. Never writes into the interactive shell.</summary>
     public class BatchCommandExecutor
     {
-        /// <summary>单个会话执行进度</summary>
-        public event Action<string, string> SessionProgress; // sessionId, status
-
-        /// <summary>全部执行完成</summary>
+        public const int MaxOutputChars = 128 * 1024;
+        public event Action<string, string> SessionProgress;
+        public event Action<BatchCommandResult> SessionCompleted;
         public event Action<List<BatchCommandResult>> AllCompleted;
 
-        /// <summary>对多个会话执行同一命令</summary>
         public async Task<List<BatchCommandResult>> ExecuteAsync(
-            Dictionary<string, ITerminalSession> sessions,
-            string command,
-            int timeoutMs = 30000)
+            Dictionary<string, ITerminalSession> sessions, string command,
+            int timeoutMs = 30000, CancellationToken cancellationToken = default(CancellationToken))
         {
-            var results = new List<BatchCommandResult>();
-            var tasks = new List<Task<BatchCommandResult>>();
-
-            foreach (var kvp in sessions)
+            if (sessions == null) throw new ArgumentNullException(nameof(sessions));
+            if (string.IsNullOrWhiteSpace(command)) throw new ArgumentException(nameof(command));
+            if (timeoutMs <= 0) throw new ArgumentOutOfRangeException(nameof(timeoutMs));
+            // Freeze object references before the first await. Reconnect must never redirect a queued command.
+            var targets = sessions.ToArray();
+            using (var slots = new SemaphoreSlim(8))
             {
-                tasks.Add(ExecuteOnSession(kvp.Key, kvp.Value, command, timeoutMs));
+                var tasks = targets.Select(target => Task.Run(async () =>
+                {
+                    var result = new BatchCommandResult {
+                        SessionId = target.Key, HostName = target.Value?.Hostname ?? target.Key, Command = command
+                    };
+                    var elapsed = Stopwatch.StartNew();
+                    bool entered = false;
+                    try
+                    {
+                        await slots.WaitAsync(cancellationToken).ConfigureAwait(false);
+                        entered = true;
+                        cancellationToken.ThrowIfCancellationRequested();
+                        var session = target.Value;
+                        var client = session?.TryGetSshClient() as SshClient;
+                        if (session == null || !session.IsConnected || client == null || !client.IsConnected)
+                            throw new InvalidOperationException(L10n.T("需要已连接的 SSH 会话"));
+                        SessionProgress?.Invoke(target.Key, L10n.T("执行中..."));
+                        using (var scoped = client.CreateCommand(command.Replace("\r\n", "\n").Replace('\r', '\n')))
+                        using (var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken))
+                        {
+                            scoped.CommandTimeout = TimeSpan.FromMilliseconds(timeoutMs);
+                            deadline.CancelAfter(timeoutMs);
+                            try
+                            {
+                                await scoped.ExecuteAsync(deadline.Token).ConfigureAwait(false);
+                                result.ExitCode = scoped.ExitStatus;
+                                result.Status = scoped.ExitStatus == 0 ? BatchCommandStatus.Succeeded : BatchCommandStatus.Failed;
+                                if (!result.IsSuccess)
+                                    result.ErrorMessage = scoped.ExitStatus.HasValue
+                                        ? L10n.Tf("命令退出码：{0}", scoped.ExitStatus.Value)
+                                        : L10n.T("服务器未返回退出码");
+                            }
+                            catch (OperationCanceledException)
+                            {
+                                result.Status = cancellationToken.IsCancellationRequested
+                                    ? BatchCommandStatus.Cancelled : BatchCommandStatus.TimedOut;
+                            }
+                            catch (SshOperationTimeoutException) { result.Status = BatchCommandStatus.TimedOut; }
+                            finally
+                            {
+                                var stdout = Limit(scoped.Result, result);
+                                result.Output = stdout.Replace("\r\n", "\n").Split('\n').ToList();
+                                result.StandardError = Limit(scoped.Error, result);
+                            }
+                        }
+                    }
+                    catch (OperationCanceledException) { result.Status = BatchCommandStatus.Cancelled; }
+                    catch (Exception ex) { result.ErrorMessage = ex.Message; }
+                    finally
+                    {
+                        result.DurationMs = elapsed.Elapsed.TotalMilliseconds;
+                        if (entered) slots.Release();
+                    }
+                    if (result.Status == BatchCommandStatus.Cancelled)
+                        result.ErrorMessage = L10n.T("已取消；远端进程是否停止取决于服务器");
+                    if (result.Status == BatchCommandStatus.TimedOut)
+                        result.ErrorMessage = L10n.T("执行超时；远端进程是否停止取决于服务器");
+                    SessionCompleted?.Invoke(result);
+                    return result;
+                })).ToArray();
+                var results = (await Task.WhenAll(tasks).ConfigureAwait(false)).ToList();
+                AllCompleted?.Invoke(results);
+                return results;
             }
-
-            var completed = await Task.WhenAll(tasks);
-            results.AddRange(completed);
-            AllCompleted?.Invoke(results);
-            return results;
         }
 
-        private async Task<BatchCommandResult> ExecuteOnSession(string sessionId, ITerminalSession session, string command, int timeoutMs)
+        private static string Limit(string value, BatchCommandResult result)
         {
-            var result = new BatchCommandResult
-            {
-                SessionId = sessionId,
-                HostName = sessionId,
-                Command = command
-            };
-
-            try
-            {
-                if (session == null || !session.IsConnected)
-                {
-                    result.IsSuccess = false;
-                    result.ErrorMessage = L10n.T("会话未连接");
-                    SessionProgress?.Invoke(sessionId, L10n.T("跳过"));
-                    return result;
-                }
-
-                SessionProgress?.Invoke(sessionId, L10n.T("执行中..."));
-
-                var output = new List<string>();
-                var tcs = new TaskCompletionSource<bool>();
-
-                EventHandler<Models.TerminalOutputEventArgs> handler = null;
-                handler = (s, e) =>
-                {
-                    var line = e != null ? e.Text : null;
-                    if (line == null) return;
-                    output.Add(line);
-                    // 检测命令结束（简单策略：等待 prompt 返回）
-                    if (output.Count > 2 && string.IsNullOrEmpty(line))
-                        tcs.TrySetResult(true);
-                };
-
-                session.OutputReceived += handler;
-                session.SendInput(command + "\r");
-
-                // 等待超时或完成
-                var timeoutTask = Task.Delay(timeoutMs);
-                var completedTask = await Task.WhenAny(tcs.Task, timeoutTask);
-
-                session.OutputReceived -= handler;
-
-                result.Output = output;
-                result.IsSuccess = completedTask == tcs.Task;
-                if (!result.IsSuccess) result.ErrorMessage = L10n.T("执行超时");
-                result.DurationMs = timeoutMs;
-
-                SessionProgress?.Invoke(sessionId, result.IsSuccess ? L10n.T("完成") : L10n.T("超时"));
-            }
-            catch (Exception ex)
-            {
-                result.IsSuccess = false;
-                result.ErrorMessage = ex.Message;
-                SessionProgress?.Invoke(sessionId, L10n.T("失败"));
-            }
-
-            return result;
+            value = value ?? "";
+            if (value.Length <= MaxOutputChars) return value;
+            result.OutputTruncated = true;
+            return value.Substring(0, MaxOutputChars);
         }
     }
 }

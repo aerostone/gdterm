@@ -16,6 +16,9 @@ namespace Gdterm.UI.Services
     /// </summary>
     public sealed class TabActiveSessionQuery
     {
+        private sealed class SessionIdentity { public readonly string Id = Guid.NewGuid().ToString("N"); }
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<ITerminalSession, SessionIdentity>
+            SessionIds = new System.Runtime.CompilerServices.ConditionalWeakTable<ITerminalSession, SessionIdentity>();
         private readonly Func<TabPage> _getSelectedTab;
         private readonly IDictionary<TabPage, TabSessionState> _sessions;
 
@@ -110,10 +113,7 @@ namespace Gdterm.UI.Services
                 foreach (var tc in terminals)
                 {
                     if (tc == null || tc.Session == null || !tc.IsConnected) continue;
-                    var id = kvp.Value.SessionId ?? kvp.Value.Config?.Id ?? Guid.NewGuid().ToString("N");
-                    // 分屏多终端：用 connectionId + 控件 hash 区分
-                    if (terminals.Count > 1)
-                        id = id + "-" + tc.GetHashCode().ToString("X");
+                    var id = SessionIds.GetValue(tc.Session, unused => new SessionIdentity()).Id;
                     map[id] = tc.Session;
                 }
             }

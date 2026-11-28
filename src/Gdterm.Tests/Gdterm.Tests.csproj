@@ -139,6 +139,7 @@
     <Compile Include="Terminal\MouseWheelDeltaAccumulatorTests.cs" />
     <Compile Include="Terminal\ZmodemReceiverTests.cs" />
     <Compile Include="Terminal\MacroRecorderTests.cs" />
+    <Compile Include="Terminal\MultiSessionTests.cs" />
     <Compile Include="Terminal\TerminalNotificationTests.cs" />
     <Compile Include="Terminal\TriggerAndLimitsTests.cs" />
     <Compile Include="Terminal\PerfBench.cs" />
@@ -164,6 +165,7 @@
     <Compile Include="Ui\JumpRoutingSmoke.cs" />
     <Compile Include="Ui\SftpUiSmoke.cs" />
     <Compile Include="Ui\PortForwardUiSmoke.cs" />
+    <Compile Include="Ui\MultiSessionUiSmoke.cs" />
     <Compile Include="Ui\AppearanceSettingsTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
