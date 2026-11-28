@@ -125,6 +125,15 @@ namespace Gdterm.UI.Controls
                 Font = Services.FormFontPolicy.MonoFont(),
                 AllowDrop = true
             };
+            _list.OwnerDraw = true;
+            _list.DrawColumnHeader += (sender, args) =>
+            {
+                using (var brush = new SolidBrush(GdtermColorTable.Surface)) args.Graphics.FillRectangle(brush, args.Bounds);
+                TextRenderer.DrawText(args.Graphics, args.Header.Text, _list.Font, args.Bounds,
+                    GdtermColorTable.Muted, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+            };
+            _list.DrawItem += (sender, args) => args.DrawDefault = true;
+            _list.DrawSubItem += (sender, args) => args.DrawDefault = true;
             _list.Columns.Add(L10n.T("名称"), DpiScale.V(this, 240));
             _list.Columns.Add(L10n.T("大小"), DpiScale.V(this, 80));
             _list.Columns.Add(L10n.T("修改时间"), DpiScale.V(this, 130));
@@ -159,7 +168,7 @@ namespace Gdterm.UI.Controls
 
             // 列表壳：过滤 + 排序 + 导出（目录文件多时按名称/大小/修改时间找某个文件；
             // 勾选批量走右键/拖拽，不受过滤影响，故 showFilter:true 安全）
-            _shell = new ListShell(_list, L10n.T("过滤文件名…"));
+            _shell = new ListShell(_list, L10n.T("过滤文件名…"), minimumListHeight: 96);
             _shell.AddAction(L10n.T("导出"), (s, e) => _shell.ExportCsv(FindForm(), "file-list")).Name = "FileListExportButton";
 
             Controls.Add(_shell);

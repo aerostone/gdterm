@@ -42,6 +42,7 @@ namespace Gdterm.UI.Controls
         private readonly AntdUI.Label _countLabel;
         private readonly BarFit _barFit;
         private bool _fittingBar;
+        private readonly int _minimumListHeight;
 
         public ListView List { get; private set; }
         public AntdUI.Input FilterBox { get; private set; }
@@ -58,10 +59,11 @@ namespace Gdterm.UI.Controls
         /// 不再塞第二个过滤框（两套过滤同时生效是负数体验）。
         /// </param>
         public ListShell(ListView list, string filterHint = null, Func<ListViewItem, string> textOf = null,
-            bool showFilter = true)
+            bool showFilter = true, int minimumListHeight = 40)
         {
             if (list == null) throw new ArgumentNullException("list");
             List = list;
+            _minimumListHeight = Math.Max(40, minimumListHeight);
             _textOf = textOf;
             _filterHint = filterHint ?? L10n.T("过滤当前列表…");
 
@@ -237,7 +239,7 @@ namespace Gdterm.UI.Controls
         private int FitBar(out bool showBar)
         {
             int w = ClientSize.Width;
-            int minTable = DpiScale.V(this, 40);
+            int minTable = DpiScale.V(this, _minimumListHeight);
             _barFit.RestoreOptional();
             int need = _barFit.Measure(w);
             // 逐个收起可省子件（过滤/排序/方向/计数），直到"装得下且没有子件比工具条宽"

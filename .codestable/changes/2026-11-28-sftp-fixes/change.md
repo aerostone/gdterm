@@ -14,6 +14,7 @@ contract:
   - src/Gdterm.Sftp/**
   - src/Gdterm.Core/L10n/**
   - src/Gdterm.UI/Controls/SftpDualPanePanel.cs
+  - src/Gdterm.UI/Controls/ListShell.cs
   - src/Gdterm.UI/Controls/FilePaneControl.cs
   - src/Gdterm.UI/Controls/FilePaneModel.cs
   - src/Gdterm.UI/Controls/TransferProgressDialog.cs
@@ -26,6 +27,7 @@ contract:
   - tools/sftp-smoke/**
   - tools/ui-baseline/**
   - tools/ui-matrix-ratchet.txt
+  - tools/ui-tree-check.py
   - .github/workflows/ci.yml
   - docs/FEATURE-MAP.md
   - .codestable/tools/ui-coverage-registry.txt

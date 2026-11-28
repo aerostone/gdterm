@@ -52,10 +52,14 @@ namespace Gdterm.Tests.Ui
             using (var form = new SftpPermissionForm("fallback", null, 493)) check(form.OctalMode == 755, "sftp missing rwx uses bit value");
             using (var form = new SftpPermissionForm("special", "rwSr--r-T", 0)) check(form.OctalMode == 644, "uppercase S/T do not imply execute");
 
+            UiSmokeRunner.Progress("sftp:create-panel");
             var factory = new Factory();
             using (var host = new Form { ClientSize = new System.Drawing.Size(1000, 600) })
             using (var panel = new SftpDualPanePanel(Config(), new CredentialPayload(), factory, null))
             {
+                try
+                {
+                UiSmokeRunner.Progress("sftp:show-panel");
                 host.Controls.Add(panel); host.Show();
                 PumpUntil(() => Field<FilePaneControl>(panel, "_remote")?.CurrentPath == "/");
                 var remote = Field<FilePaneControl>(panel, "_remote");
@@ -80,11 +84,13 @@ namespace Gdterm.Tests.Ui
                 check(!panel.MatchesConnection(otherConfig), "sftp follow rejects same host different connection");
                 otherConfig = Config(); otherConfig.Port = 2222;
                 check(!panel.MatchesConnection(otherConfig) && panel.MatchesConnection(Config()), "sftp follow checks port and identity");
+                UiSmokeRunner.Progress("sftp:queued-navigation");
                 factory.Last.ListGate = new TaskCompletionSource<IList<SftpFileInfo>>();
                 remote.Navigate("/slow"); panel.FollowTo("/latest");
                 factory.Last.ListGate.SetResult(new List<SftpFileInfo>());
                 PumpUntil(() => remote.CurrentPath == "/latest" && !remote.IsBusy);
                 check(remote.CurrentPath == "/latest", "sftp busy navigation retains latest followed path");
+                UiSmokeRunner.Progress("sftp:reconnect");
                 factory.Last.Connected = false;
                 Call(panel, "CheckConnection");
                 check(!remote.Enabled && Field<AntdUI.Button>(panel, "_reconnect").Enabled, "sftp disconnect disables stale pane and offers reconnect");
@@ -93,6 +99,7 @@ namespace Gdterm.Tests.Ui
                 check(factory.Last.Connected && remote.IsDisposed, "sftp reconnect replaces old pane and service");
                 remote = Field<FilePaneControl>(panel, "_remote");
                 remote.Navigate("/"); PumpUntil(() => !remote.IsBusy);
+                UiSmokeRunner.Progress("sftp:active-transfer-cancel");
                 string file = Path.Combine(temp, "upload.txt"); File.WriteAllText(file, "upload fixture");
                 factory.Last.HoldUpload = true;
                 Call(panel, "OnTransfer", new[] { new FileEntry { Name = "upload.txt", FullPath = file } }, true, false);
@@ -103,6 +110,8 @@ namespace Gdterm.Tests.Ui
                 PumpUntil(() => factory.Last.UploadCanceled && Field<int>(panel, "_activeTransfers") == 0);
                 check(dialog.IsCancelled && Field<AntdUI.Button>(panel, "_reconnect").Enabled, "production cancel reaches active transfer and allows reconnect");
                 dialog.Close(); dialog.Dispose();
+                }
+                catch (Exception ex) { Console.WriteLine("SFTP UI detail: " + ex); throw; }
             }
             var delayed = new Factory { DelayConnect = true };
             var closed = new SftpDualPanePanel(Config(), new CredentialPayload(), delayed, null);

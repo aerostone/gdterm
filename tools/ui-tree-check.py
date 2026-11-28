@@ -653,7 +653,7 @@ def main():
                               # 2026-11 补的 6 个"以前从没进过 dump"的页 + 失败态宿主（同为面板）
                               "remote-monitor", "bottom-bar", "lock-overlay", "welcome",
                               "connection-tree", "terminal-search", "fail-history-load",
-                              "fail-scan-error", "file-pane", "ai-chat", "tool-network", "tool-action", "editor-secret-details", "editor-focus-exit")):
+                              "fail-scan-error", "file-pane", "sftp-dual-pane", "sftp-disconnected", "ai-chat", "tool-network", "tool-action", "editor-secret-details", "editor-focus-exit")):
             check(True, "关闭绑定免判(" + fname + ")")
         else:
             closelike = [n for (n, _, _, _, _) in all_nodes

@@ -349,6 +349,7 @@ namespace Gdterm.Tests.Ui
                 string msg = "[FAIL] " + name + ": " + FlatEx(ex);
                 _messages.Add(msg);
                 Console.WriteLine(msg);
+                Console.WriteLine(ex.ToString());
             }
         }
 

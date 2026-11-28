@@ -113,7 +113,9 @@ namespace Gdterm.UI.Controls
                 TextAlign = ContentAlignment.MiddleLeft,
                 BackColor = GdtermColorTable.Surface
             };
-            FormFontPolicy.FitSingleLineLabel(_connStatus);
+            _connStatus.Font = FormFontPolicy.UiFont();
+            _connStatus.Height = FormFontPolicy.LineBox(_connStatus.Font, this) + _connStatus.Padding.Vertical;
+            _connStatus.FontChanged += (sender, args) => _connStatus.Height = FormFontPolicy.LineBox(_connStatus.Font, this) + _connStatus.Padding.Vertical;
 
             _split = new SplitContainer
             {
