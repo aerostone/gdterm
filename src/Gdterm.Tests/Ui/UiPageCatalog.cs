@@ -93,6 +93,7 @@ namespace Gdterm.Tests.Ui
                     t.Track(new Gdterm.Logging.CommandHistoryStore(t.Path_("cmdhist")))));
             Add(list, "port-forward", "表格/空态", PanelEmptyExpect.Visible,
                 t => new Gdterm.UI.Controls.PortForwardPanel(t.Track(new Gdterm.Tunnel.PortForwardManager())));
+            Add(list, "port-forward-statuses", "运行/启动/失败状态", PanelEmptyExpect.Hidden, PortForwardUiSmoke.Statuses);
             Add(list, "port-forward-populated", "表格/规则与连接", PanelEmptyExpect.Hidden, PortForwardUiSmoke.Populated);
             Add(list, "secret-scan", "进度/多按钮", PanelEmptyExpect.Ignore,
                 t => new Gdterm.UI.Controls.SecretScanPanel(

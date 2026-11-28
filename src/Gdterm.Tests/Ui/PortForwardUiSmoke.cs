@@ -33,6 +33,19 @@ namespace Gdterm.Tests.Ui
             workspace.Save(Rule()); workspace.Save(Rule("socks", PortForwardType.Dynamic));
             return new PortForwardPanel(workspace);
         }
+        internal static PortForwardPanel Statuses(UiTempScope scope)
+        {
+            var workspace = scope.Track(new PortForwardWorkspace(null, new PortForwardManager(), null, Connections, null));
+            workspace.Save(Rule("running")); workspace.Save(Rule("starting", PortForwardType.Remote));
+            workspace.Save(Rule("failed", PortForwardType.Dynamic));
+            // Display fixtures only. Real network states are verified by port-forward-smoke.
+            var statuses = (Dictionary<string, PortForwardStatus>)typeof(PortForwardManager)
+                .GetField("_statuses", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(workspace.Manager);
+            statuses["running"] = new PortForwardStatus(PortForwardState.Running);
+            statuses["starting"] = new PortForwardStatus(PortForwardState.Starting);
+            statuses["failed"] = new PortForwardStatus(PortForwardState.Failed, "Address already in use: 127.0.0.1:15432");
+            return new PortForwardPanel(workspace);
+        }
         internal static PortForwardRuleForm Editor(PortForwardType type)
         {
             return new PortForwardRuleForm(Connections(), Rule("edit", type));
@@ -40,6 +53,23 @@ namespace Gdterm.Tests.Ui
         public static void Run(string temp, string directory, Action<bool, string> check)
         {
             UiSmokeRunner.Progress("port-forward:forms");
+            using (var scope = new UiTempScope("forward-states"))
+            using (var host = new Form { ClientSize = new Size(820, 500) })
+            using (var panel = Statuses(scope))
+            {
+                host.Controls.Add(panel); host.Show(); Application.DoEvents();
+                var list = panel.Controls.Find("ForwardRules", true).OfType<ListView>().Single();
+                list.Items[0].Selected = true;
+                check(!Button(panel, "ForwardEdit").Enabled && !Button(panel, "ForwardStart").Enabled && Button(panel, "ForwardStop").Enabled,
+                    "running rule exposes stop and prevents edits/repeated start");
+                list.Items[0].Selected = false; list.Items[1].Selected = true;
+                check(!Button(panel, "ForwardEdit").Enabled && !Button(panel, "ForwardStart").Enabled && Button(panel, "ForwardStop").Enabled,
+                    "pending start exposes cancellation and prevents edits");
+                list.Items[1].Selected = false; list.Items[2].Selected = true;
+                check(Button(panel, "ForwardEdit").Enabled && Button(panel, "ForwardStart").Enabled && !Button(panel, "ForwardStop").Enabled,
+                    "failed rule exposes edit and retry with reason");
+                Capture(host, directory, "port-forward-statuses");
+            }
             var store = new PortForwardRuleStore(Path.Combine(temp, "port-forwards.json"));
             var trash = new TrashStore();
             var resolved = new List<string>();
@@ -97,7 +127,7 @@ namespace Gdterm.Tests.Ui
                     var task = (Task)Call(panel, "RunSelected", "start"); Pump(task);
                     check(resolved.SequenceEqual(new[] { "ssh-a" }) && workspace.Error("second").Length > 0, "batch start targets checked rule and displays offline reason");
                     check(list.Items[1].Checked && list.Items[0].Selected, "state refresh preserves checked and selected rows");
-                    Capture(host, directory, "forward-offline");
+                    Capture(host, directory, "port-forward-offline");
                     var shell = (ListShell)typeof(PortForwardPanel).GetField("_shell", BindingFlags.NonPublic | BindingFlags.Instance).GetValue(panel);
                     shell.FilterText = "Real form submit"; Application.DoEvents();
                     check(((List<PortForwardRule>)Call(panel, "Targets")).All(r => r.Id != "second"), "filtered-out checked rule is not acted on invisibly");
@@ -142,7 +172,7 @@ namespace Gdterm.Tests.Ui
                     {
                         host.Controls.Add(reopened); Application.DoEvents();
                         check(reopened.Controls.Find("ForwardRules", true).OfType<ListView>().Single().Items.Count == 2, "reopened panel renders restored rule");
-                        Capture(host, directory, "forward-restored");
+                        Capture(host, directory, "port-forward-restored");
                     }
                 }
                 check(store.Load().Count == 2, "rules survive store reload");

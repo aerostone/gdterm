@@ -70,3 +70,4 @@ port-forward-populated
 port-forward-local
 port-forward-remote
 port-forward-socks
+port-forward-statuses

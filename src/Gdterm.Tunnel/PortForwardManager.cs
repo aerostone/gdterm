@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Gdterm.Core;
@@ -36,6 +37,9 @@ namespace Gdterm.Tunnel
             public EventHandler<Renci.SshNet.Common.ExceptionEventArgs> ErrorHandler;
         }
 
+        // SSH.NET's client registry must not be mutated concurrently by batch workers.
+        // Weak keys preserve the lifetime of shared clients; do not lock this during network start.
+        private static readonly ConditionalWeakTable<SshClient, object> ClientRegistryLocks = new ConditionalWeakTable<SshClient, object>();
         private readonly object _sync = new object();
         private readonly Dictionary<string, Entry> _entries = new Dictionary<string, Entry>();
         private readonly Dictionary<string, PortForwardStatus> _statuses = new Dictionary<string, PortForwardStatus>();
@@ -109,7 +113,7 @@ namespace Gdterm.Tunnel
                             : (ForwardedPort)new ForwardedPortLocal(rule.LocalHost, (uint)rule.LocalPort, rule.RemoteHost, (uint)rule.RemotePort);
                     entry.ErrorHandler = (s, e) => RecordChannelError(entry, e.Exception.Message);
                     entry.Port.Exception += entry.ErrorHandler;
-                    entry.Owner.AddForwardedPort(entry.Port);
+                    lock (ClientRegistryLocks.GetOrCreateValue(entry.Owner)) entry.Owner.AddForwardedPort(entry.Port);
                     entry.Port.Start();
                     bool publish;
                     lock (_sync)
@@ -173,7 +177,7 @@ namespace Gdterm.Tunnel
             {
                 port.Exception -= entry.ErrorHandler;
                 try { port.Stop(); } catch (Exception ex) { entry.CleanupError = entry.CleanupError ?? ex.Message; error = error ?? ex.Message; }
-                try { entry.Owner.RemoveForwardedPort(port); } catch (ObjectDisposedException) { }
+                try { lock (ClientRegistryLocks.GetOrCreateValue(entry.Owner)) entry.Owner.RemoveForwardedPort(port); } catch (ObjectDisposedException) { }
                 catch (Exception ex) { entry.CleanupError = entry.CleanupError ?? ex.Message; error = error ?? ex.Message; }
                 try { port.Dispose(); } catch (Exception ex) { entry.CleanupError = entry.CleanupError ?? ex.Message; error = error ?? ex.Message; }
             }
