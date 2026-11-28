@@ -98,6 +98,7 @@ namespace Gdterm.Tests.Ui
             string outDir = args.Length > 0 ? args[0] : Path.Combine(
                 AppDomain.CurrentDomain.BaseDirectory, "ui-smoke");
             Directory.CreateDirectory(outDir);
+            Gdterm.UI.Diagnostics.CrashLog.Initialize(outDir);
             _smokeOutDir = outDir;
             StartWatchdog(outDir);
             Progress("start");

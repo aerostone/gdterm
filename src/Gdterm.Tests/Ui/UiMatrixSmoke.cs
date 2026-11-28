@@ -43,6 +43,7 @@ namespace Gdterm.Tests.Ui
         {
             string outDir = args.Length > 0 && !args[0].StartsWith("--") ? args[0] : "ui-matrix";
             Directory.CreateDirectory(outDir);
+            Gdterm.UI.Diagnostics.CrashLog.Initialize(outDir);
             UiSmokeRunner.StartWatchdog(outDir);
             UiSmokeRunner.Progress("matrix:start");
             Console.WriteLine("=== gdterm L2 matrix (geometry + theme axis) -> " + outDir + " ===");

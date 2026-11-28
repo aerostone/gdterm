@@ -33,6 +33,8 @@ namespace Gdterm.Tests.Ui
         }
         internal static void Run(string temp, string outDir, Action<bool, string> check)
         {
+            check(Application.MessageLoop && SynchronizationContext.Current is WindowsFormsSynchronizationContext,
+                "sftp runs within production WinForms message loop");
             foreach (var mode in new[] { 600, 640, 644, 755 })
             {
                 var bits = Convert.ToInt32(mode.ToString(), 8);
@@ -66,6 +68,8 @@ namespace Gdterm.Tests.Ui
                 var local = Field<FilePaneControl>(panel, "_local");
                 string localPath = Path.Combine(temp, "sftp-local"); Directory.CreateDirectory(localPath);
                 local.Navigate(localPath); PumpUntil(() => !local.IsBusy && local.CurrentPath == localPath);
+                check(SynchronizationContext.Current is WindowsFormsSynchronizationContext,
+                    "sftp navigation retains UI synchronization context after pumping messages");
                 Capture(host, outDir, "sftp-dual-pane-wide");
                 var entries = new[] { new FileEntry { Name = "report.txt", FullPath = "/report.txt" } };
                 check(local.CanAcceptDrop(new FilePaneDrag(remote.Provider, entries)), "sftp accepts actual opposite pane drag");
@@ -114,7 +118,21 @@ namespace Gdterm.Tests.Ui
                 Capture(dialog, outDir, "transfer-progress-canceled");
                 dialog.Close(); dialog.Dispose();
                 }
-                catch (Exception ex) { Console.WriteLine("SFTP UI detail: " + ex); throw; }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("SFTP UI detail: thread=" + Thread.CurrentThread.ManagedThreadId
+                        + " context=" + SynchronizationContext.Current?.GetType().Name + " " + ex);
+                    foreach (var name in new[] { "_local", "_remote" })
+                    {
+                        var pane = Field<FilePaneControl>(panel, name);
+                        if (pane != null) Console.WriteLine(name + ": path=" + pane.CurrentPath
+                            + " busy=" + pane.IsBusy + " handle=" + pane.IsHandleCreated
+                            + " invokeRequired=" + pane.InvokeRequired
+                            + " status=" + Field<AntdUI.Label>(pane, "_status").Text);
+                    }
+                    Gdterm.UI.Diagnostics.CrashLog.FlushSync();
+                    throw;
+                }
             }
             var delayed = new Factory { DelayConnect = true };
             using (var host = new Form())

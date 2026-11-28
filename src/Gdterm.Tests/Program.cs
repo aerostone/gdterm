@@ -34,6 +34,31 @@ namespace Gdterm.Tests
             try { AntdUI.Config.IsDark = true; } catch { }
             try { ToolStripManager.Renderer = new Gdterm.UI.Diagnostics.GdtermToolStripRenderer(); } catch { }
         }
+
+        private static int RunUiHost(Func<int> run)
+        {
+            // DoEvents 的临时消息循环结束后会卸载 WinForms 同步上下文。
+            // 在它之后直接启动 await 会落到线程池，隐藏空态首次显示时甚至会在
+            // MTA 线程创建拖放句柄。使用与产品一致的持久消息循环执行所有 UI 用例。
+            int result = 1;
+            using (var context = new ApplicationContext())
+            using (var dispatcher = new Control())
+            {
+                var handle = dispatcher.Handle;
+                dispatcher.BeginInvoke(new Action(() =>
+                {
+                    try { result = run(); }
+                    catch (Exception ex) { Console.WriteLine("UI host failed: " + ex); }
+                    finally
+                    {
+                        Gdterm.UI.Diagnostics.CrashLog.FlushSync();
+                        context.ExitThread();
+                    }
+                }));
+                Application.Run(context);
+            }
+            return result;
+        }
         // [STAThread] 不是可选装饰：WinForms 原生控件（TreeView 的拖放注册、剪贴板、
         // OLE 相关消息）在 MTA 线程上会卡死在句柄创建里。CI 实证（2026-11-12）：
         // ui-smoke 主线程一直跑在 MTA 上，connection-tree 这一页在
@@ -124,7 +149,7 @@ namespace Gdterm.Tests
             {
                 string[] mxArgs = new string[args.Length - mxIdx - 1];
                 Array.Copy(args, mxIdx + 1, mxArgs, 0, mxArgs.Length);
-                return UiMatrixSmoke.Run(mxArgs);
+                return RunUiHost(() => UiMatrixSmoke.Run(mxArgs));
             }
 
             // UI 冒烟：--ui-smoke [outDir] 才跑（要桌面会话，默认单元测试不跑）
@@ -133,7 +158,7 @@ namespace Gdterm.Tests
             {
                 string[] smokeArgs = new string[args.Length - uiIdx - 1];
                 Array.Copy(args, uiIdx + 1, smokeArgs, 0, smokeArgs.Length);
-                return UiSmokeRunner.Run(smokeArgs);
+                return RunUiHost(() => UiSmokeRunner.Run(smokeArgs));
             }
 
             Console.WriteLine();
