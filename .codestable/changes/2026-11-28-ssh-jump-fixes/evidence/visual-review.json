@@ -1,0 +1,47 @@
+{
+  "source_commit": "24c8ffa",
+  "github_run": 46113892779,
+  "appveyor_build": 55182938,
+  "reviewed": [
+    {
+      "file": "ui-smoke/connection-ssh.png",
+      "sha256": "a226b84886bfd2c99f0bf34503d240a35aeb6b9a933a6239a5be6d5583dfa27f"
+    },
+    {
+      "file": "ui-smoke/connection-rdp.png",
+      "sha256": "15060d3451bdcf83f303f30171bd3c9d3634133d44fbad153de3b04e281500f1"
+    },
+    {
+      "file": "ui-smoke/connection-serial.png",
+      "sha256": "34da77dc972714a9d100c222af76627bd350289c32eb726a5bdf656382160996"
+    },
+    {
+      "file": "ui-smoke/jump-hop.png",
+      "sha256": "1794555cca8e0cda297792371e4a04e8e1b51707733a1c24732fa8103a785bfe"
+    },
+    {
+      "file": "ui-smoke/jump-chain.png",
+      "sha256": "843ef497d9858a38df5b706780945aa520c996ed7b6a05d90147d444523014e6"
+    },
+    {
+      "file": "ui-smoke/jump-chain-empty.png",
+      "sha256": "dfa24019b7cbdcf6e51024d62909df45f365cc23f3b4911a9598c51796935be4"
+    },
+    {
+      "file": "ui-smoke/jump-chain-rdp.png",
+      "sha256": "5e1ea19770ce403479d25b3f42babd2826cd8a673e1fd402c1519f4b2d49b7f7"
+    },
+    {
+      "file": "ui-smoke/jump-picker-empty.png",
+      "sha256": "0b739928b2f8cbb43a5c8e59b91b02c098278d0a6c15246ebea68ae1fca1ca26"
+    },
+    {
+      "file": "ui-matrix/Dark-d150-f14/jump-chain.png",
+      "sha256": "50b7a7fba858a8fd01be051e0c964a46ae36ab05ea6c55dfe5ea6bb3b3c1eafd"
+    },
+    {
+      "file": "ui-matrix/Dark-d150-f14/jump-hop.png",
+      "sha256": "e171d8933d29289489f333f23bcbca3bc777ce27c9c6c834d9cf397c52e3af89"
+    }
+  ]
+}
