@@ -162,6 +162,7 @@
     <Compile Include="Ui\DialogsSmoke.cs" />
     <Compile Include="Ui\JumpChainSmoke.cs" />
     <Compile Include="Ui\JumpRoutingSmoke.cs" />
+    <Compile Include="Ui\SftpUiSmoke.cs" />
     <Compile Include="Ui\AppearanceSettingsTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

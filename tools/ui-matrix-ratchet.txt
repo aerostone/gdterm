@@ -63,3 +63,5 @@ jump-chain
 jump-chain-empty
 jump-chain-rdp
 jump-picker-empty
+sftp-dual-pane
+sftp-disconnected

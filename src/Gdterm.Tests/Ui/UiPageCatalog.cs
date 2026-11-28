@@ -78,7 +78,7 @@ namespace Gdterm.Tests.Ui
     /// "矩阵里跑的分明是旧几何"这种假绿。目录化之后新增页面 = 加一条 <see cref="UiPage"/>。
     ///
     /// 不在这里登记的页面（附原因，便于将来补）：
-    ///   - sftp-dual-pane：需要活的 SFTP 会话；file-pane 通过本地 provider 验证公共按钮。
+    ///   - sftp-dual-pane：由可控 SFTP 替身覆盖双栏、连接状态和按钮。
     ///   - terminal：需要真实 PTY/渲染循环，属于 E2E（docs/UI-UX-VERIFICATION.md §5）；
     /// </summary>
     internal static class UiPageCatalog
@@ -164,6 +164,8 @@ namespace Gdterm.Tests.Ui
                 bar.SelectGroupExternal("__tmux__");
                 return bar;
             });
+            Add(list, "sftp-dual-pane", "SFTP 双栏/文件操作", PanelEmptyExpect.Ignore, t => SftpUiSmoke.Scene());
+            Add(list, "sftp-disconnected", "SFTP 断线/重连", PanelEmptyExpect.Ignore, t => SftpUiSmoke.Scene(true));
             Add(list, "file-pane", "文件操作按钮", PanelEmptyExpect.Ignore,
                 t => new Gdterm.UI.Controls.FilePaneControl(new Gdterm.UI.Controls.LocalFilePaneProvider()));
             Add(list, "ai-chat", "发送/清空", PanelEmptyExpect.Ignore,

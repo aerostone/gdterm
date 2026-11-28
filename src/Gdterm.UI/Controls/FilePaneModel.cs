@@ -16,9 +16,17 @@ namespace Gdterm.UI.Controls
         public string Name;
         public string FullPath;
         public bool IsDirectory;
+        public bool IsSymbolicLink;
         public long SizeBytes;
         public DateTime LastModified;
         public string Permissions;
+    }
+
+    internal sealed class FilePaneDrag
+    {
+        internal readonly IFilePaneProvider Source;
+        internal readonly FileEntry[] Entries;
+        internal FilePaneDrag(IFilePaneProvider source, FileEntry[] entries) { Source = source; Entries = entries; }
     }
 
     /// <summary>
@@ -35,19 +43,19 @@ namespace Gdterm.UI.Controls
         string HomePath { get; }
 
         /// <summary>列出目录（目录优先 + 名称排序；空 path=本地盘符伪根）</summary>
-        List<FileEntry> List(string path);
+        List<FileEntry> List(string path, CancellationToken ct = default);
 
         /// <summary>父目录；null=已在根</summary>
         string ParentOf(string path);
 
         /// <summary>删除（目录递归）</summary>
-        void Delete(string path, bool isDirectory);
+        void Delete(string path, bool isDirectory, CancellationToken ct = default);
 
         /// <summary>新建目录</summary>
-        void Mkdir(string path);
+        void Mkdir(string path, CancellationToken ct = default);
 
         /// <summary>重命名/移动（同侧）</summary>
-        void Rename(string oldPath, string newPath, bool isDirectory);
+        void Rename(string oldPath, string newPath, bool isDirectory, CancellationToken ct = default);
 
         /// <summary>拼接子路径（处理两侧分隔符差异）</summary>
         string Combine(string basePath, string name);
@@ -67,7 +75,7 @@ namespace Gdterm.UI.Controls
             }
         }
 
-        public List<FileEntry> List(string path)
+        public List<FileEntry> List(string path, CancellationToken ct = default)
         {
             var result = new List<FileEntry>();
             if (string.IsNullOrEmpty(path))
@@ -94,6 +102,7 @@ namespace Gdterm.UI.Controls
             var dir = new DirectoryInfo(path);
             foreach (var e in dir.EnumerateFileSystemInfos())
             {
+                ct.ThrowIfCancellationRequested();
                 try
                 {
                     var isDir = (e.Attributes & FileAttributes.Directory) != 0;
@@ -102,6 +111,7 @@ namespace Gdterm.UI.Controls
                         Name = e.Name,
                         FullPath = e.FullName,
                         IsDirectory = isDir,
+                        IsSymbolicLink = (e.Attributes & FileAttributes.ReparsePoint) != 0,
                         SizeBytes = isDir ? 0 : ((FileInfo)e).Length,
                         LastModified = e.LastWriteTime,
                         Permissions = ""
@@ -121,18 +131,18 @@ namespace Gdterm.UI.Controls
             return parent == null ? "" : parent.FullName;    // 盘符根的父=伪根
         }
 
-        public void Delete(string path, bool isDirectory)
+        public void Delete(string path, bool isDirectory, CancellationToken ct = default)
         {
             if (isDirectory) Directory.Delete(path, true);
             else File.Delete(path);
         }
 
-        public void Mkdir(string path)
+        public void Mkdir(string path, CancellationToken ct = default)
         {
             Directory.CreateDirectory(path);
         }
 
-        public void Rename(string oldPath, string newPath, bool isDirectory)
+        public void Rename(string oldPath, string newPath, bool isDirectory, CancellationToken ct = default)
         {
             if (isDirectory) Directory.Move(oldPath, newPath);
             else File.Move(oldPath, newPath);
@@ -140,6 +150,7 @@ namespace Gdterm.UI.Controls
 
         public string Combine(string basePath, string name)
         {
+            Gdterm.Sftp.SftpPathSafety.ValidateName(name);
             return Path.Combine(basePath, name);
         }
 
@@ -168,9 +179,9 @@ namespace Gdterm.UI.Controls
 
         public string HomePath { get { return "/"; } }
 
-        public List<FileEntry> List(string path)
+        public List<FileEntry> List(string path, CancellationToken ct = default)
         {
-            var items = _sftp.ListDirectoryAsync(path, CancellationToken.None).GetAwaiter().GetResult();
+            var items = _sftp.ListDirectoryAsync(path, ct).GetAwaiter().GetResult();
             var result = new List<FileEntry>();
             foreach (var f in items)
             {
@@ -180,6 +191,7 @@ namespace Gdterm.UI.Controls
                     Name = f.Name,
                     FullPath = f.FullPath,
                     IsDirectory = f.IsDirectory,
+                    IsSymbolicLink = f.IsSymbolicLink,
                     SizeBytes = f.SizeBytes,
                     LastModified = f.LastModified,
                     Permissions = f.Permissions ?? ""
@@ -197,23 +209,25 @@ namespace Gdterm.UI.Controls
             return idx <= 0 ? "/" : p.Substring(0, idx);
         }
 
-        public void Delete(string path, bool isDirectory)
+        public void Delete(string path, bool isDirectory, CancellationToken ct = default)
         {
-            _sftp.DeleteAsync(path, isDirectory, CancellationToken.None).GetAwaiter().GetResult();
+            _sftp.DeleteAsync(path, isDirectory, ct).GetAwaiter().GetResult();
         }
 
-        public void Mkdir(string path)
+        public void Mkdir(string path, CancellationToken ct = default)
         {
-            _sftp.CreateDirectoryAsync(path, CancellationToken.None).GetAwaiter().GetResult();
+            _sftp.CreateDirectoryAsync(path, ct).GetAwaiter().GetResult();
         }
 
-        public void Rename(string oldPath, string newPath, bool isDirectory)
+        public void Rename(string oldPath, string newPath, bool isDirectory, CancellationToken ct = default)
         {
-            _sftp.RenameAsync(oldPath, newPath, CancellationToken.None).GetAwaiter().GetResult();
+            _sftp.RenameAsync(oldPath, newPath, ct).GetAwaiter().GetResult();
         }
 
         public string Combine(string basePath, string name)
         {
+            if (string.IsNullOrWhiteSpace(name) || name == "." || name == ".." || name.IndexOf('/') >= 0 || name.IndexOf('\0') >= 0)
+                throw new ArgumentException(L10n.T("请输入单个文件名。"));
             if (string.IsNullOrEmpty(basePath) || basePath == "/") return "/" + name.TrimStart('/');
             return basePath.TrimEnd('/') + "/" + name.TrimStart('/');
         }

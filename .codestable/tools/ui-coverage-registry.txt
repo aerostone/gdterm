@@ -25,7 +25,7 @@ Forms/QuickCommandEditorForm.cs | dump:quickcmd-editor |
 Forms/ScannerCenterForm.cs | dump:scanner-center |
 Forms/SetupWizardForm.cs | dump:setup-wizard,setup-password |
 Forms/SshKeyManagerForm.cs | dump:sshkey-manager |
-Forms/SftpPermissionForm.cs | dump:sftp-permission | 唯一未进 dump 的窗体；建议补 Show 用例
+Forms/SftpPermissionForm.cs | dump:sftp-permission | 权限回填与双向联动 + 应用验证
 Forms/LogViewerForm.cs | dump:log-viewer | P1-3：文本+十六进制双视图；smoke 灌 tmp 日志目录锁文件列表/视图非空
 Forms/SessionRecordingsForm.cs | dump:session-recordings | P1-2：smoke 灌一段 tmp 录制并驱动回放，断言重放字节真的画在网格上
 Forms/TrashForm.cs | dump:trash | 回收站（F16 加分项撤销/回收站）；smoke 灌 2 条锁三列/按钮启用态
@@ -54,7 +54,7 @@ Controls/NotificationCenterPanel.cs | dump:notification-center | 侧栏常驻
 Controls/PortForwardPanel.cs | dump:port-forward | 侧栏常驻（审计 C7-2 入 dump）
 Controls/SecretScanPanel.cs | dump:secret-scan,fail-scan-error | 侧栏常驻（审计 C7-2 入 dump）+ 扫描失败态（Danger 状态行）
 Controls/SessionBookmarksPanel.cs | dump:bookmarks | 侧栏常驻
-Controls/SftpDualPanePanel.cs | none | 标签页常驻
+Controls/SftpDualPanePanel.cs | dump:sftp-dual-pane | 双栏/断线/重连/传输取消
 Controls/SnippetSearchPanel.cs | dump:snippet-search | 模态浮层
 Controls/SplitPaneControl.cs | none | 分屏容器
 Controls/TabContainerControl.cs | none | 主壳常驻（mainform dump 内含节点）

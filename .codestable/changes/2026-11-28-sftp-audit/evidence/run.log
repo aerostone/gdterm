@@ -1,0 +1,48 @@
+/tmp/gdterm-sftp-audit-20261128/Program.cs(87,125): warning CA1416: This call site is reachable on all platforms. 'File.GetUnixFileMode(string)' is unsupported on: 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [/tmp/gdterm-sftp-audit-20261128/Audit.csproj]
+/tmp/gdterm-sftp-audit-20261128/Program.cs(93,41): warning CA1416: This call site is reachable on all platforms. 'File.GetUnixFileMode(string)' is unsupported on: 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [/tmp/gdterm-sftp-audit-20261128/Audit.csproj]
+/tmp/gdterm-sftp-audit-20261128/Program.cs(80,129): warning CA1416: This call site is reachable on all platforms. 'File.GetUnixFileMode(string)' is unsupported on: 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [/tmp/gdterm-sftp-audit-20261128/Audit.csproj]
+
+Build succeeded.
+
+/tmp/gdterm-sftp-audit-20261128/Program.cs(87,125): warning CA1416: This call site is reachable on all platforms. 'File.GetUnixFileMode(string)' is unsupported on: 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [/tmp/gdterm-sftp-audit-20261128/Audit.csproj]
+/tmp/gdterm-sftp-audit-20261128/Program.cs(93,41): warning CA1416: This call site is reachable on all platforms. 'File.GetUnixFileMode(string)' is unsupported on: 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [/tmp/gdterm-sftp-audit-20261128/Audit.csproj]
+/tmp/gdterm-sftp-audit-20261128/Program.cs(80,129): warning CA1416: This call site is reachable on all platforms. 'File.GetUnixFileMode(string)' is unsupported on: 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [/tmp/gdterm-sftp-audit-20261128/Audit.csproj]
+    3 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:19.20
+CONFIRMED fresh upload writes exact bytes
+CONFIRMED fresh download writes exact bytes
+CONFIRMED DEFECT equal-length upload silently retains OLD instead of NEW
+CONFIRMED DEFECT shorter destination upload corrupts result to XYZdef instead of abcdef
+CONFIRMED DEFECT equal-length download silently retains OLD instead of NEW
+CONFIRMED DEFECT shorter destination download corrupts result to XYZdef instead of abcdef
+CONFIRMED DEFECT recursive delete reports success but selected root directory remains
+CONFIRMED DEFECT retry deleting now-empty directory still leaves it present
+CONFIRMED rename moves selected file
+OBSERVED requested chmod 640 -> r----xrw-; actual octal=416
+CONFIRMED DEFECT chmod 640 grants different permissions than requested
+OBSERVED requested chmod 600 throws ArgumentOutOfRangeException: Specified argument was out of the range of valid values. (Parameter 'mode')
+OBSERVED requested chmod 644 -> actual octal=420
+OBSERVED requested chmod 700 throws ArgumentOutOfRangeException: Specified argument was out of the range of valid values. (Parameter 'mode')
+OBSERVED requested chmod 755 throws ArgumentOutOfRangeException: Specified argument was out of the range of valid values. (Parameter 'mode')
+OBSERVED requested chmod 777 -> actual octal=511
+CONFIRMED control: SSH.NET ChangePermissions accepts decimal digits 640 directly
+CONFIRMED default UI OctalMode=0 reaches real server as chmod 000
+CONFIRMED single-file deletion removes the file
+CONFIRMED remote POSIX filename containing Windows parent traversal reaches model unchanged
+OBSERVED directory symlink IsDirectory=False
+OBSERVED directory symlink delete throws SftpException
+CONFIRMED non-recursive directory symlink deletion did not remove target content
+OBSERVED file symlink delete: targetExists=False; linkEntryExists=True
+CONFIRMED DEFECT deleting file symlink removes its target and leaves a dangling link
+OBSERVED file symlink rename: targetExists=False; originalLinkEntryExists=True; renamedEntryIsLink=False
+CONFIRMED DEFECT simultaneous basename previews share temp path; one deletes the other's input
+CONFIRMED DEFECT 100-line preview downloads full 8388608-byte file before displaying under 7000 chars
+CONFIRMED DEFECT already-cancelled ConnectAsync still establishes connection
+CONFIRMED DEFECT connect after dispose resurrects session; second dispose fails to close it
+OBSERVED ConnectAsync synchronous exception=SshConnectionException; caller blocked ms=706
+CONFIRMED DEFECT ConnectAsync blocks caller during SSH handshake instead of returning pending Task
+EXISTING_TEST_COUNTS passed=28 failed=0
+CONFIRMED existing SFTP pure-function assertions pass despite above defects
+Fixture stopped; temporary SSH keys removed on scope exit

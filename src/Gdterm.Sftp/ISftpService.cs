@@ -31,6 +31,12 @@ namespace Gdterm.Sftp
         /// </summary>
         Task<IList<SftpFileInfo>> ListDirectoryAsync(string remotePath, CancellationToken ct);
 
+        /// <summary>原始目录项（不追随链接），不存在时返回 null。</summary>
+        Task<SftpFileInfo> GetEntryAsync(string remotePath, CancellationToken ct);
+
+        /// <summary>有限读取，最多 maxBytes 字节。</summary>
+        Task<byte[]> ReadFilePrefixAsync(string remotePath, int maxBytes, CancellationToken ct);
+
         /// <summary>
         /// 上传文件
         /// </summary>
@@ -42,14 +48,14 @@ namespace Gdterm.Sftp
         Task DownloadAsync(string remotePath, string localPath, IProgress<FileTransferProgress> progress, CancellationToken ct);
 
         /// <summary>
-        /// 上传文件（断点续传）：远端存在半截文件则从断点追加；大小一致视为已是最新返回 false；
-        /// 远端更大（脏文件）或不存在则整传覆盖。返回 true=实际传输，false=跳过。
+        /// 上传文件（断点续传）：验证目标完整内容是源文件前缀后追加；内容完全一致返回 false；
+        /// 内容不一致或目标更大时报错，不能默默拼接或覆盖。
         /// </summary>
         Task<bool> UploadResumeAsync(string localPath, string remotePath, IProgress<FileTransferProgress> progress, CancellationToken ct);
 
         /// <summary>
-        /// 下载文件（断点续传）：本地存在半截文件则从断点追加；大小一致视为已是最新返回 false；
-        /// 本地更大（脏文件）则整传覆盖。返回 true=实际传输，false=跳过。
+        /// 下载文件（断点续传）：验证目标完整内容是源文件前缀后追加；内容完全一致返回 false；
+        /// 内容不一致或目标更大时报错，不能默默拼接或覆盖。
         /// </summary>
         Task<bool> DownloadResumeAsync(string remotePath, string localPath, IProgress<FileTransferProgress> progress, CancellationToken ct);
 

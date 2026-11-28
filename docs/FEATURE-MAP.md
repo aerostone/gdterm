@@ -159,8 +159,8 @@
 | 书签 / 最近连接 `page.SessionBookmarksPanel` | 连接 > 书签 / 最近连接 | list | 100% (4/4) | — | bookmarks | 侧栏常驻 |
 | 会话录制中心 `page.SessionRecordingsForm` | 终端 > 会话录制中心… | list | 100% (4/4) | — | session-recordings | P1-2：smoke 灌一段 tmp 录制并驱动回放，断言重放字节真的画在网格上 |
 | 首次启动向导 `page.SetupWizardForm` | 首启 | wizard | 100% (3/3) | — | setup-wizard,setup-password | |
-| SFTP 双栏 `page.SftpDualPanePanel` | 文件 > SFTP 浏览器 | list | 100% (4/4) | — | — |
-| SFTP 权限修改 `page.SftpPermissionForm` | SFTP > 右键 > 权限 | input | 100% (2/2) | — | sftp-permission | 唯一未进 dump 的窗体；建议补 Show 用例 |
+| SFTP 双栏 `page.SftpDualPanePanel` | 文件 > SFTP 浏览器 | list | 100% (4/4) | — | sftp-dual-pane | 双栏/断线/重连/传输取消 |
+| SFTP 权限修改 `page.SftpPermissionForm` | SFTP > 右键 > 权限 | input | 100% (2/2) | — | sftp-permission | 权限回填与双向联动 + 应用验证 |
 | SSH 密钥管理 `page.SshKeyManagerForm` | 工具 > SSH 密钥管理 | input | 100% (2/2) | — | sshkey-manager | |
 | 终端粘贴预览 `page.TerminalPasteDialog` | 终端 > 粘贴预览 | dialog | 100% (1/1) | — | — |
 | 终端逐行粘贴进度 `page.TerminalPasteProgressDialog` | 终端 > 逐行粘贴进度 | progress | 100% (2/2) | — | — |

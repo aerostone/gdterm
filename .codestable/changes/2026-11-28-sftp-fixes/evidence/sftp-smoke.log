@@ -1,0 +1,86 @@
+/data/develop/dotnet/gdterm/tools/sftp-smoke/Program.cs(82,45): warning CA1416: This call site is reachable on all platforms. 'File.GetUnixFileMode(string)' is unsupported on: 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [/data/develop/dotnet/gdterm/tools/sftp-smoke/SftpSmoke.csproj]
+
+Build succeeded.
+
+/data/develop/dotnet/gdterm/tools/sftp-smoke/Program.cs(82,45): warning CA1416: This call site is reachable on all platforms. 'File.GetUnixFileMode(string)' is unsupported on: 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [/data/develop/dotnet/gdterm/tools/sftp-smoke/SftpSmoke.csproj]
+    1 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:01:39.87
+PASS real key authentication
+PASS ordinary upload replaces equal-length stale contents
+PASS ordinary download replaces equal-length stale contents
+PASS upload rejects unverified prefix 3
+PASS rejected upload leaves destination intact
+PASS upload rejects unverified prefix 6
+PASS rejected upload leaves destination intact
+PASS upload rejects unverified prefix 9
+PASS rejected upload leaves destination intact
+PASS verified upload resumes
+PASS resumed upload bytes
+PASS identical upload skips only after comparison
+PASS download rejects unverified prefix 3
+PASS rejected download leaves destination intact
+PASS download rejects unverified prefix 6
+PASS rejected download leaves destination intact
+PASS download rejects unverified prefix 9
+PASS rejected download leaves destination intact
+PASS verified download resumes
+PASS identical download skips only after comparison
+PASS chmod exact octal 600
+PASS chmod exact octal 640
+PASS chmod exact octal 644
+PASS chmod exact octal 700
+PASS chmod exact octal 755
+PASS chmod exact octal 777
+PASS chmod exact octal 0
+PASS reject invalid chmod -1
+PASS reject invalid chmod 778
+PASS reject invalid chmod 789
+PASS reject invalid chmod 1755
+PASS metadata preserves link identity
+PASS upload refuses destination link
+PASS download refuses source link
+PASS chmod refuses link
+PASS delete removes link and preserves target
+PASS rename original link, dangling=False
+PASS rename original link, dangling=True
+PASS recursive delete removes selected root without following directory link
+PASS delete empty directory
+PASS concurrent basename previews remain independent
+PASS preview reads bounded bytes
+PASS single-line preview has byte bound
+PASS preview caps lines and marks truncation
+PASS planner counts overwrite conflicts before writing
+PASS production transfer runner overwrites without implicit resume
+PASS sync runner uses overwrite for changed content
+PASS download sync overwrites changed content
+PASS production recursive upload preserves empty directories and bytes
+PASS production recursive download preserves empty directories and bytes
+PASS planner rejects Windows case collisions
+PASS planner rejects unsafe name ..\outside.txt
+PASS planner rejects unsafe name ../outside.txt
+PASS planner rejects unsafe name C:evil
+PASS planner rejects unsafe name CON
+PASS planner rejects unsafe name COM1.txt
+PASS planner rejects unsafe name NUL.txt
+PASS planner rejects unsafe name tail.
+PASS planner rejects unsafe name tail
+PASS planner rejects unsafe name a:b
+PASS planner rejects unsafe name bad\nname
+PASS planner refuses destination reparse point
+PASS planner rejects local recursive symlink
+PASS pre-canceled upload cannot change bytes
+PASS pre-canceled upload preserves destination
+PASS active upload cancellation propagates
+PASS real transfer emits progress
+PASS reconnect after cancellation
+PASS pre-canceled connect rejected
+PASS disposed service cannot resurrect
+PASS disposed service stays disconnected
+PASS handshake returns pending task without blocking caller
+PASS dispose interrupts pending handshake promptly
+PASS disposed pending connection never published
+PASS existing permission and sync planner tests
+SFTP integration: 75 passed; pure assertions: 28
+Fixture stopped; temporary SSH keys removed on scope exit

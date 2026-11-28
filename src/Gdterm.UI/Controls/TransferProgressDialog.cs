@@ -22,6 +22,8 @@ namespace Gdterm.UI.Controls
         private bool _lastSuccess;
         private bool _loading = true;   // 总大小未知 = 还在算/还在建链，进度条该跑马灯而不是钉在 0%
 
+        public event EventHandler CancelRequested;
+
         public bool IsCancelled { get { return _cancelled; } }
 
         public TransferProgressDialog(string title)
@@ -52,6 +54,7 @@ namespace Gdterm.UI.Controls
             FormFontPolicy.FitSingleLineLabel(_titleLabel);
             _detailLabel = new AntdUI.Label {
                 Text = L10n.T("准备中…"),
+                AutoEllipsis = true,
                 Dock = DockStyle.Top,
                 Padding = new Padding(padH, DpiScale.V(this, 8), padH, 0),
                 ForeColor = GdtermColorTable.Muted
@@ -121,7 +124,7 @@ namespace Gdterm.UI.Controls
         /// <summary>更新进度（可从任意线程调用）。</summary>
         public void Report(long transferred, long total, string detail = null)
         {
-            if (IsDisposed) return;
+            if (IsDisposed || _completed) return;
             if (InvokeRequired)
             {
                 try { BeginInvoke(new Action(() => Report(transferred, total, detail))); }
@@ -150,23 +153,26 @@ namespace Gdterm.UI.Controls
                 _percentLabel.Text = total > 0
                     ? string.Format("{0}%  ({1} / {2})", pct, FormatBytes(transferred), FormatBytes(total))
                     : FormatBytes(transferred);
+                FormFontPolicy.FitSingleLineLabel(_percentLabel);
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TransferProgressDialog", exSwallowed); } catch { } }
         }
 
-        public void Complete(bool success, string message = null)
+        public void Complete(bool success, string message = null, bool canceled = false)
         {
             if (IsDisposed) return;
             if (InvokeRequired)
             {
-                try { BeginInvoke(new Action(() => Complete(success, message))); }
+                try { BeginInvoke(new Action(() => Complete(success, message, canceled))); }
                 catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TransferProgressDialog", exSwallowed); } catch { } }
                 return;
             }
 
             _completed = true;
+            _cancelled |= canceled;
             _lastSuccess = success;
             _loading = false;
+            _bar.Style = ProgressBarStyle.Continuous;
             _cancelButton.Text = L10n.T("关闭");
             _cancelButton.Enabled = true;
             // 此前这里是每次 Complete 都再挂一个 Click lambda（累积）+ 一句 `Click -= null` 的无效代码，
@@ -182,11 +188,14 @@ namespace Gdterm.UI.Controls
             {
                 _bar.Style = ProgressBarStyle.Continuous;
                 _detailLabel.Text = message ?? L10n.T("失败");
-                _detailLabel.ForeColor = GdtermColorTable.Danger;
-                _percentLabel.Text = L10n.T("已中断");
+                _detailLabel.ForeColor = _cancelled ? GdtermColorTable.Muted : GdtermColorTable.Danger;
+                _percentLabel.Text = _cancelled ? L10n.T("已取消") : L10n.T("已中断");
                 // 失败要么是网络断、要么是权限/磁盘满：必须留痕并主动说一声（对话框可能已经不在前台）
-                try { DiagLog.Error("TransferProgressDialog.Complete", message ?? L10n.T("传输失败")); } catch (Exception) { }
-                ToastNotifier.Error(message ?? L10n.T("传输失败"));
+                if (!_cancelled)
+                {
+                    try { DiagLog.Error("TransferProgressDialog.Complete", message ?? L10n.T("传输失败")); } catch (Exception) { }
+                    ToastNotifier.Error(message ?? L10n.T("传输失败"));
+                }
             }
         }
 
@@ -202,6 +211,7 @@ namespace Gdterm.UI.Controls
                     return;
                 }
                 _cancelled = true;
+                CancelRequested?.Invoke(this, EventArgs.Empty);
                 _detailLabel.Text = L10n.T("正在取消…");
                 _cancelButton.Enabled = false;
             }
@@ -211,7 +221,10 @@ namespace Gdterm.UI.Controls
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
             if (!_completed && !_cancelled)
+            {
                 _cancelled = true;
+                CancelRequested?.Invoke(this, EventArgs.Empty);
+            }
             base.OnFormClosing(e);
         }
 

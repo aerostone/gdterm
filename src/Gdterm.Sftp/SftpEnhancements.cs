@@ -21,37 +21,32 @@ namespace Gdterm.Sftp
         /// <summary>预览文本文件内容（前 maxLines 行）</summary>
         public static async Task<string> PreviewTextFileAsync(ISftpService sftp, string remotePath, int maxLines = 100, CancellationToken ct = default)
         {
-            // 下载到临时文件
-            var tempPath = Path.Combine(Path.GetTempPath(), "gdterm_preview_" + Path.GetFileName(remotePath));
-            try
+            if (maxLines < 1 || maxLines > 1000) throw new ArgumentOutOfRangeException(nameof(maxLines));
+            const int maxBytes = 256 * 1024;
+            var data = await sftp.ReadFilePrefixAsync(remotePath, maxBytes + 1, ct).ConfigureAwait(false);
+            ct.ThrowIfCancellationRequested();
+            var lines = new List<string>();
+            using (var memory = new MemoryStream(data, 0, Math.Min(data.Length, maxBytes)))
+            using (var reader = new StreamReader(memory, Encoding.UTF8, true))
             {
-                await sftp.DownloadAsync(remotePath, tempPath, null, ct);
-                var lines = new List<string>();
-                using (var reader = new StreamReader(tempPath, Encoding.UTF8, true))
+                for (int i = 0; i < maxLines; i++)
                 {
-                    string line;
-                    int count = 0;
-                    while ((line = await reader.ReadLineAsync()) != null && count < maxLines)
-                    {
-                        lines.Add(line);
-                        count++;
-                    }
-                    if (!reader.EndOfStream)
-                        lines.Add(string.Format(L10n.T("... (共{0}行以上，仅显示前{1}行)"), maxLines, maxLines));
+                    ct.ThrowIfCancellationRequested();
+                    var line = reader.ReadLine();
+                    if (line == null) break;
+                    lines.Add(line);
                 }
-                return string.Join("\n", lines);
+                if (!reader.EndOfStream || data.Length > maxBytes)
+                    lines.Add(L10n.T("...（预览已截断，最多显示指定行数和 256 KiB）"));
             }
-            finally
-            {
-                try { File.Delete(tempPath); } catch { }
-            }
+            return string.Join("\n", lines);
         }
 
         /// <summary>检测文件是否为可预览的图片类型</summary>
         public static bool IsImageFile(string fileName)
         {
             var ext = Path.GetExtension(fileName).ToLower();
-            return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".bmp" || ext == ".ico" || ext == ".svg";
+            return ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" || ext == ".bmp" || ext == ".ico";
         }
 
         /// <summary>检测文件是否为文本类型</summary>
@@ -59,7 +54,7 @@ namespace Gdterm.Sftp
         {
             var ext = Path.GetExtension(fileName).ToLower();
             return ext == ".txt" || ext == ".log" || ext == ".conf" || ext == ".cfg" || ext == ".ini" || ext == ".xml" ||
-                   ext == ".json" || ext == ".yaml" || ext == ".yml" || ext == ".sh" || ext == ".bash" || ext == ".py" ||
+                   ext == ".svg" || ext == ".json" || ext == ".yaml" || ext == ".yml" || ext == ".sh" || ext == ".bash" || ext == ".py" ||
                    ext == ".rb" || ext == ".pl" || ext == ".js" || ext == ".ts" || ext == ".java" || ext == ".c" ||
                    ext == ".cpp" || ext == ".h" || ext == ".cs" || ext == ".go" || ext == ".rs" || ext == ".md" ||
                    ext == ".csv" || ext == ".sql" || ext == ".properties" || ext == ".env" || ext == ".toml" ||

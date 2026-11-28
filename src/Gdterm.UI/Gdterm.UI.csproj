@@ -187,6 +187,7 @@
     <Compile Include="Controls\JumpChainEditorControl.cs" />
     <Compile Include="Forms\JumpHopEditForm.cs" />
     <Compile Include="Controls\SftpDualPanePanel.cs" />
+    <Compile Include="Services\SftpTransferRunner.cs" />
     <Compile Include="Controls\FilePaneModel.cs" />
     <Compile Include="Controls\FilePaneControl.cs" />
     <Compile Include="Controls\SessionBookmarksPanel.cs" />

@@ -35,6 +35,12 @@ namespace Gdterm.UI.Controls
         private AntdUI.Label _connStatus;
         private AntdUI.Label _queueLabel;
         private int _activeTransfers;
+        private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
+        private readonly System.Windows.Forms.Timer _healthTimer = new System.Windows.Forms.Timer { Interval = 1000 };
+        private AntdUI.Button _reconnect;
+        private bool _connecting;
+        private bool _closed;
+        private bool _reportedConnected;
         private bool _followCwd = true;
         private string _pendingFollow;
 
@@ -45,12 +51,13 @@ namespace Gdterm.UI.Controls
             set { _followCwd = value; }
         }
 
-        /// <summary>本面板连的是不是这台主机（终端的 cwd 只该跟到同主机面板）。</summary>
-        public bool MatchesHost(string host)
+        /// <summary>终端的 cwd 仅跟随同一连接配置和端点。</summary>
+        public bool MatchesConnection(ConnectionConfig config)
         {
-            if (string.IsNullOrEmpty(host)) return false;
-            var h = _config != null ? _config.Host : null;
-            return !string.IsNullOrEmpty(h) && string.Equals(h, host, StringComparison.OrdinalIgnoreCase);
+            return config != null && _config != null && !string.IsNullOrEmpty(config.Id)
+                && config.Id == _config.Id && config.Port == _config.Port
+                && string.Equals(config.Host, _config.Host, StringComparison.OrdinalIgnoreCase)
+                && string.Equals(config.Username, _config.Username, StringComparison.Ordinal);
         }
 
         /// <summary>
@@ -59,7 +66,7 @@ namespace Gdterm.UI.Controls
         /// </summary>
         public void FollowTo(string remotePath, bool force = false)
         {
-            if (string.IsNullOrEmpty(remotePath)) return;
+            if (_closed || string.IsNullOrEmpty(remotePath)) return;
             if (!force && !_followCwd) return;
             var pane = _remote;
             if (pane == null) { _pendingFollow = remotePath; return; }
@@ -87,6 +94,8 @@ namespace Gdterm.UI.Controls
             _tunnelManager = tunnelManager;
             BuildUI();
             _local.Navigate(null); // 本地盘符伪根立即初始化，不等远端连接
+            _healthTimer.Tick += (sender, args) => CheckConnection();
+            _healthTimer.Start();
             BeginConnect();
         }
 
@@ -116,6 +125,7 @@ namespace Gdterm.UI.Controls
 
             _local = new FilePaneControl(new LocalFilePaneProvider());
             _local.EntriesDropped += entries => OnTransfer(entries, targetIsRemote: false); // 拖到本地=下载
+            _local.ResumeToPeerRequested += entries => OnTransfer(entries, true, true);
             _local.TransferToPeerRequested += entries => OnTransfer(entries, targetIsRemote: true); // 本地→对侧=上传
             AddPane(_split.Panel1, _local, L10n.T("本地"), GdtermColorTable.Info);
 
@@ -140,13 +150,21 @@ namespace Gdterm.UI.Controls
                 TextAlign = ContentAlignment.MiddleLeft
             };
             FormFontPolicy.FitSingleLineLabel(_queueLabel);
+            _reconnect = new AntdUI.Button { Text = L10n.T("重新连接"), Name = "SftpReconnectButton", Enabled = false };
+            FormFontPolicy.SizeActionButton(this, _reconnect, 12, 4);
+            _reconnect.Click += (sender, args) => BeginConnect();
+            queueBar.Controls.Add(_reconnect);
             queueBar.Controls.Add(_queueLabel);
+            _queueLabel.AutoEllipsis = true;
+            queueBar.SizeChanged += (sender, args) => _queueLabel.Width = Math.Max(DpiScale.V(this, 60),
+                queueBar.ClientSize.Width - queueBar.Padding.Horizontal - _reconnect.Width - _reconnect.Margin.Horizontal - _queueLabel.Margin.Horizontal);
+            _connStatus.AutoEllipsis = true;
 
             Controls.Add(_split);
             Controls.Add(queueBar);
             Controls.Add(_connStatus);
 
-            HandleCreated += (s, e) =>
+            _split.SizeChanged += (s, e) =>
             {
                 try { _split.SplitterDistance = Math.Max(100, _split.Width / 2); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SftpDualPanePanel", exSwallowed); } catch { } }
             };
@@ -175,132 +193,172 @@ namespace Gdterm.UI.Controls
         // ── 连接 ──────────────────────────────────────────
         private async void BeginConnect()
         {
+            if (_closed || _connecting || _activeTransfers > 0) return;
+            _connecting = true;
+            _reconnect.Enabled = false;
+            _reportedConnected = false;
+            _connStatus.Text = L10n.T("正在连接 ") + _config.Host + " …";
+            var ct = _lifetime.Token;
+            ISftpService service = null;
             try
             {
-                _sftp = _factory.Create();
-                if (_config.RequiresTunnel && _tunnelManager != null)
+                if (_remote != null) { _pendingFollow = _remote.CurrentPath; _remote.Enabled = false; }
+                _sftp?.Dispose();
+                service = _factory.Create();
+                _sftp = service;
+                if (_config.RequiresTunnel)
                 {
-                    var ep = await _tunnelManager.EstablishAsync(_config, _credential, CancellationToken.None);
-                    await _sftp.ConnectViaTunnelAsync(_config, _credential, ep, CancellationToken.None);
+                    if (_tunnelManager == null) throw new InvalidOperationException(L10n.T("隧道服务不可用"));
+                    var ep = await _tunnelManager.EstablishAsync(_config, _credential, ct);
+                    ct.ThrowIfCancellationRequested();
+                    await service.ConnectViaTunnelAsync(_config, _credential, ep, ct);
                 }
-                else
-                {
-                    await _sftp.ConnectAsync(_config, _credential, CancellationToken.None);
-                }
-
-                _connStatus.Text = L10n.T("  已连接 ") + _config.Host + "  ·  " + (_config.Username ?? "");
+                else await service.ConnectAsync(_config, _credential, ct);
+                ct.ThrowIfCancellationRequested();
+                if (_closed) return;
+                _connStatus.Text = L10n.T("  已连接 ") + _config.Host + "  ·  " + (_credential.Username ?? _config.Username ?? "");
                 _connStatus.ForeColor = GdtermColorTable.Accent;
-
-                // 连接成功：用远端栏替换占位
-                _split.Panel2.Controls.Clear();
-                _remote = new FilePaneControl(new SftpFilePaneProvider(_sftp, _config.Host));
-                _remote.EntriesDropped += entries => OnTransfer(entries, targetIsRemote: true); // 拖到远程=上传
-                _remote.TransferToPeerRequested += entries => OnTransfer(entries, targetIsRemote: false); // 远程→对侧=下载
+                _reportedConnected = true;
+                foreach (Control child in _split.Panel2.Controls.Cast<Control>().ToArray()) child.Dispose();
+                _remotePlaceholder = null;
+                _remote = new FilePaneControl(new SftpFilePaneProvider(service, _config.Host));
+                _remote.AcceptedDragSource = _local.Provider;
+                _local.AcceptedDragSource = _remote.Provider;
+                _remote.EntriesDropped += entries => OnTransfer(entries, true);
+                _remote.TransferToPeerRequested += entries => OnTransfer(entries, false);
+                _remote.ResumeToPeerRequested += entries => OnTransfer(entries, false, true);
                 var follow = new AntdUI.Checkbox
                 {
-                    Text = L10n.T("跟随终端目录"),
-                    Checked = _followCwd,
-                    AutoSize = true,
-                    Dock = DockStyle.Top,
-                    Padding = new Padding(DpiScale.V(this, 6), 0, 0, 0),
-                    BackColor = GdtermColorTable.Surface,
-                    ForeColor = GdtermColorTable.Muted,
-                    Font = Services.FormFontPolicy.UiFont()
+                    Text = L10n.T("跟随终端目录"), Checked = _followCwd, AutoSize = true, Dock = DockStyle.Top,
+                    Padding = new Padding(DpiScale.V(this, 6), 0, 0, 0), BackColor = GdtermColorTable.Surface,
+                    ForeColor = GdtermColorTable.Muted, Font = FormFontPolicy.UiFont()
                 };
-                follow.CheckedChanged += (s2, e2) => { _followCwd = follow.Checked; };
+                follow.CheckedChanged += (sender, args) => { _followCwd = follow.Checked; };
                 AddPane(_split.Panel2, _remote, L10n.T("远程 ") + _config.Host, GdtermColorTable.Accent, follow);
                 _remote.Navigate(string.IsNullOrEmpty(_pendingFollow) ? "/" : _pendingFollow);
             }
+            catch (OperationCanceledException) { service?.Dispose(); }
             catch (Exception ex)
             {
-                _connStatus.Text = L10n.T("  连接失败: ") + ex.Message + L10n.T("  （关闭此标签页后重试）");
+                service?.Dispose();
+                if (_closed) return;
+                _connStatus.Text = L10n.T("  连接失败: ") + ex.Message;
                 _connStatus.ForeColor = GdtermColorTable.Danger;
-                if (_remotePlaceholder != null)
-                    _remotePlaceholder.SetEmpty(true, L10n.T("连接失败"), ex.Message + L10n.T("；关闭此标签页后重新打开即可重连"));
-                try { ToastNotifier.Error(L10n.T("SFTP 连接失败：") + ex.Message); } catch (Exception) { }
-                try { DiagLog.Info("SftpDualPane.Connect", "failed: " + ex.Message); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SftpDualPanePanel", exSwallowed); } catch { } }
+                _remotePlaceholder?.SetEmpty(true, L10n.T("连接失败"), L10n.T("请点击重新连接后重试。"));
+                DiagLog.Info("SftpDualPane.Connect", "failed: " + ex.Message);
             }
+            finally
+            {
+                _connecting = false;
+                if (!_closed) _reconnect.Enabled = !_reportedConnected;
+            }
+        }
+
+        private void CheckConnection()
+        {
+            if (_closed || _connecting) return;
+            bool connected = _sftp != null && _sftp.IsConnected;
+            if (_reportedConnected && !connected)
+            {
+                _reportedConnected = false;
+                _connStatus.Text = L10n.T("连接已断开，请重新连接。");
+                _connStatus.ForeColor = GdtermColorTable.Danger;
+                if (_remote != null) _remote.Enabled = false;
+                _local.AcceptedDragSource = null;
+            }
+            _reconnect.Enabled = !connected && _activeTransfers == 0;
         }
 
         // ── 跨面板传输 ────────────────────────────────────
-        private void OnTransfer(FileEntry[] entries, bool targetIsRemote)
+        private async void OnTransfer(FileEntry[] entries, bool targetIsRemote, bool resume = false)
         {
-            if (_sftp == null || !_sftp.IsConnected) return;
-            var targetPane = targetIsRemote ? _remote : _local;
-            if (targetPane == null) return;
-            var targetPath = targetPane.CurrentPath;
-            if (string.IsNullOrEmpty(targetPath)) return; // 伪根（此电脑）不可作传输目标（无真实路径）
-            var upload = targetIsRemote;
-            var direction = upload ? L10n.T("上传") : L10n.T("下载");
-
-            _activeTransfers++;
-            UpdateQueueStatus();
-            TransferCenterPanel.Record(L10n.T("双栏") + direction + L10n.T("开始  ") + entries.Length + L10n.T(" 项  → ") + targetPath);
-
-            Task.Run(async () =>
+            if (_closed || _activeTransfers > 0 || entries == null || entries.Length == 0) return;
+            if (_sftp == null || !_sftp.IsConnected)
             {
-                int ok = 0, fail = 0;
-                var errors = new List<string>();
-                foreach (var e in entries)
-                {
-                    var name = e.Name;
-                    try
-                    {
-                        ReportQueue(L10n.T("正在") + direction + " " + name + " …");
-                        if (upload)
-                        {
-                            if (e.IsDirectory)
-                                await UploadDirectoryRecursive(e.FullPath, targetPath, name);
-                            else
-                                await _sftp.UploadResumeAsync(e.FullPath, CombineRemote(targetPath, name), null, CancellationToken.None);
-                        }
-                        else
-                        {
-                            if (e.IsDirectory)
-                                await DownloadDirectoryRecursive(e.FullPath, targetPath, name);
-                            else
-                                await _sftp.DownloadResumeAsync(e.FullPath, Path.Combine(targetPath, name), null, CancellationToken.None);
-                        }
-                        ok++;
-                    }
-                    catch (Exception ex)
-                    {
-                        fail++;
-                        errors.Add(name + ": " + ex.Message);
-                    }
-                }
-                return new { ok, fail, errors };
-            }).ContinueWith(t =>
-            {
-                _activeTransfers--;
-                if (t.IsFaulted)
-                {
-                    UpdateQueueStatus();
-                    MessageBox.Show(this, L10n.T("传输失败:\n") + t.Exception.GetBaseException().Message,
-                        L10n.T("SFTP 传输"), MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-                var r = t.Result;
-                var msg = L10n.T("传输完成: ") + r.ok + L10n.T(" 成功") + (r.fail > 0 ? "，" + r.fail + L10n.T(" 失败") : "");
-                UpdateQueueStatus(msg);
-                TransferCenterPanel.Record(L10n.T("双栏") + direction + L10n.T("完成  ") + msg + "  → " + targetPath);
-                if (r.fail > 0)
-                {
-                    MessageBox.Show(this, L10n.T("部分传输失败:\n") + string.Join("\n", r.errors.Take(10).ToArray()),
-                        L10n.T("SFTP 传输"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-                targetPane.Refresh();
-            }, TaskScheduler.FromCurrentSynchronizationContext());
-        }
-
-        private void ReportQueue(string text)
-        {
-            if (InvokeRequired)
-            {
-                try { BeginInvoke(new Action(() => ReportQueue(text))); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SftpDualPanePanel", exSwallowed); } catch { } }
+                CheckConnection();
+                ToastNotifier.Error(L10n.T("连接已断开，请重新连接。"));
                 return;
             }
-            _queueLabel.Text = "  " + text;
+            var targetPane = targetIsRemote ? _remote : _local;
+            var targetPath = targetPane?.CurrentPath;
+            if (string.IsNullOrEmpty(targetPath) || targetPane.IsBusy)
+            {
+                ToastNotifier.Error(L10n.T("请先打开一个可写入的目标目录。"));
+                return;
+            }
+            var service = _sftp;
+            var direction = targetIsRemote ? L10n.T("上传") : L10n.T("下载");
+            var dialog = new TransferProgressDialog(direction);
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token);
+            EventHandler cancel = (sender, args) => cts.Cancel();
+            dialog.CancelRequested += cancel;
+            _activeTransfers++;
+            UpdateQueueStatus();
+            dialog.Show(FindForm());
+            int completed = 0, count = 0;
+            try
+            {
+                var runner = new SftpTransferRunner(service);
+                var plan = await Task.Run(() => runner.PlanAsync(entries, targetIsRemote, targetPath, cts.Token), cts.Token);
+                cts.Token.ThrowIfCancellationRequested();
+                count = plan.Files.Count;
+                if (!resume && plan.Conflicts > 0)
+                {
+                    var answer = MessageBox.Show(dialog, string.Format(L10n.T("目标中已有 {0} 个文件。覆盖这些文件？"), plan.Conflicts),
+                        L10n.T("确认覆盖"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                    if (answer != DialogResult.Yes) { cts.Cancel(); cts.Token.ThrowIfCancellationRequested(); }
+                }
+                var progress = new Progress<SftpTransferProgress>(value =>
+                {
+                    if (_closed) return;
+                    completed = value.Completed;
+                    var detail = string.Format("{0}/{1}  {2}", value.Completed, value.Count, value.Path);
+                    dialog.Report(value.Bytes, value.Total, detail);
+                    _queueLabel.Text = direction + "  " + detail;
+                });
+                TransferCenterPanel.Record(direction + " → " + targetPath);
+                await runner.ExecuteAsync(plan, resume, progress, cts.Token);
+                cts.Token.ThrowIfCancellationRequested();
+                completed = count;
+                if (!_closed)
+                {
+                    var message = string.Format(L10n.T("传输完成：{0} 个文件"), completed);
+                    dialog.Complete(true, message);
+                    TransferCenterPanel.Record(message + " → " + targetPath);
+                    UpdateQueueStatus(message);
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                if (!_closed)
+                {
+                    var message = string.Format(L10n.T("已取消，已完成 {0}/{1} 个文件；未完成文件可校验后续传。"), completed, count);
+                    dialog.Complete(false, message, true);
+                    TransferCenterPanel.Record(message);
+                }
+            }
+            catch (Exception ex)
+            {
+                if (!_closed)
+                {
+                    var message = string.Format(L10n.T("传输中断，已完成 {0}/{1} 个文件："), completed, count) + ex.Message;
+                    dialog.Complete(false, message);
+                    TransferCenterPanel.Record(message);
+                }
+            }
+            finally
+            {
+                dialog.CancelRequested -= cancel;
+                cts.Dispose();
+                _activeTransfers--;
+                if (_closed) dialog.Dispose();
+                else
+                {
+                    UpdateQueueStatus();
+                    CheckConnection();
+                    if (!targetPane.IsDisposed && (!targetIsRemote || service.IsConnected)) targetPane.Refresh();
+                }
+            }
         }
 
         private void UpdateQueueStatus(string idleText = null)
@@ -311,63 +369,16 @@ namespace Gdterm.UI.Controls
                 _queueLabel.Text = "  " + (idleText ?? L10n.T("传输队列空闲"));
         }
 
-        // ── 递归目录传输 ──────────────────────────────────
-        // 目标目录已存在时不中断（重传/增量场景）：CreateDirectoryAsync 失败时先确认目录确实存在，
-        // 存在则继续写入子项（SSH.NET CreateDirectory 对已存在路径抛异常）。
-        private async Task EnsureRemoteDir(string remoteDir)
-        {
-            try
-            {
-                await _sftp.CreateDirectoryAsync(remoteDir, CancellationToken.None);
-            }
-            catch
-            {
-                try { await _sftp.ListDirectoryAsync(remoteDir, CancellationToken.None); }
-                catch (Exception ex2)
-                {
-                    throw new Exception(L10n.T("无法创建远程目录 ") + remoteDir + ": " + ex2.Message, ex2);
-                }
-            }
-        }
-
-        private async Task UploadDirectoryRecursive(string localDir, string remoteBase, string name)
-        {
-            var remoteDir = CombineRemote(remoteBase, name);
-            await EnsureRemoteDir(remoteDir);
-            foreach (var file in Directory.EnumerateFiles(localDir))
-                await _sftp.UploadResumeAsync(file, CombineRemote(remoteDir, Path.GetFileName(file)), null, CancellationToken.None);
-            foreach (var dir in Directory.EnumerateDirectories(localDir))
-                await UploadDirectoryRecursive(dir, remoteDir, Path.GetFileName(dir));
-        }
-
-        private async Task DownloadDirectoryRecursive(string remoteDir, string localBase, string name)
-        {
-            var localDir = Path.Combine(localBase, name);
-            Directory.CreateDirectory(localDir);
-            var items = await _sftp.ListDirectoryAsync(remoteDir, CancellationToken.None);
-            foreach (var f in items)
-            {
-                if (f.Name == "." || f.Name == "..") continue;
-                if (f.IsDirectory)
-                    await DownloadDirectoryRecursive(f.FullPath, localDir, f.Name);
-                else
-                    await _sftp.DownloadResumeAsync(f.FullPath, Path.Combine(localDir, f.Name), null, CancellationToken.None);
-            }
-        }
-
-        private static string CombineRemote(string basePath, string name)
-        {
-            if (string.IsNullOrEmpty(basePath) || basePath == "/") return "/" + name.TrimStart('/');
-            return basePath.TrimEnd('/') + "/" + name.TrimStart('/');
-        }
-
         // ── 生命周期 ──────────────────────────────────────
         protected override void Dispose(bool disposing)
         {
-            if (disposing)
+            if (disposing && !_closed)
             {
-                try { _sftp?.Disconnect(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SftpDualPanePanel", exSwallowed); } catch { } }
-                try { _sftp?.Dispose(); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("SftpDualPanePanel", exSwallowed); } catch { } }
+                _closed = true;
+                _healthTimer.Dispose();
+                _lifetime.Cancel();
+                _sftp?.Dispose();
+                _lifetime.Dispose();
             }
             base.Dispose(disposing);
         }

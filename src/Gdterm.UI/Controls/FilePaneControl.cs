@@ -25,7 +25,14 @@ namespace Gdterm.UI.Controls
         private EmptyStateView _empty;
         private AntdUI.Label _status;
         private string _currentPath;
+        private string _requestedPath;
         private bool _busy;
+        private bool _closed;
+        private bool _hasPendingNavigation;
+        private string _pendingNavigation;
+        private readonly CancellationTokenSource _lifetime = new CancellationTokenSource();
+        internal IFilePaneProvider AcceptedDragSource { get; set; }
+        public event Action<FileEntry[]> ResumeToPeerRequested;
 
         /// <summary>另一面板的条目被拖到本面板放下（本面板是传输目标）。</summary>
         public event Action<FileEntry[]> EntriesDropped;
@@ -132,22 +139,11 @@ namespace Gdterm.UI.Controls
                 var entries = SelectedEntries();
                 if (entries.Length == 0) return;
                 var data = new DataObject();
-                data.SetData("GdtermFileEntries", false, entries);
+                data.SetData("GdtermFileEntries", false, new FilePaneDrag(_provider, entries));
                 try { _list.DoDragDrop(data, DragDropEffects.Copy); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("FilePaneControl", exSwallowed); } catch { } }
             };
 
-            // 拖拽目标：接收另一面板的条目（上传/下载）
-            _list.DragEnter += (s, e) =>
-            {
-                if (e.Data.GetDataPresent("GdtermFileEntries"))
-                    e.Effect = DragDropEffects.Copy;
-            };
-            _list.DragDrop += (s, e) =>
-            {
-                var entries = e.Data.GetData("GdtermFileEntries") as FileEntry[];
-                if (entries == null || entries.Length == 0) return;
-                EntriesDropped?.Invoke(entries);
-            };
+            WireDropTarget(_list);
 
             _status = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
@@ -171,10 +167,34 @@ namespace Gdterm.UI.Controls
             Controls.Add(top);
 
             // 审计 C1：空目录/读取失败此前都只是一片空列表（状态栏那行字容易被忽略）
-            _empty = EmptyStateView.Attach(this, L10n.T("这个目录是空的"),
-                L10n.T("拖文件到这里可直接上传；点「刷新」重新读取"), L10n.T("刷新"), (s2, e2) => Refresh());
+            _empty = EmptyStateView.Attach(_shell, L10n.T("这个目录是空的"),
+                L10n.T("可从对侧拖入文件；点「刷新」重新读取"), L10n.T("刷新"), (s2, e2) => Refresh());
+            WireDropTarget(_empty);
             // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
             UiA11y.AutoName(this);
+        }
+
+        internal bool CanAcceptDrop(FilePaneDrag drag)
+        {
+            return !_closed && Enabled && !_busy && !string.IsNullOrEmpty(_currentPath)
+                && drag != null && drag.Entries != null && drag.Entries.Length > 0
+                && AcceptedDragSource != null && ReferenceEquals(drag.Source, AcceptedDragSource)
+                && !ReferenceEquals(drag.Source, _provider);
+        }
+
+        private void WireDropTarget(Control control)
+        {
+            control.AllowDrop = true;
+            control.DragEnter += (sender, args) =>
+                args.Effect = CanAcceptDrop(args.Data.GetData("GdtermFileEntries") as FilePaneDrag) ? DragDropEffects.Copy : DragDropEffects.None;
+            control.DragOver += (sender, args) =>
+                args.Effect = CanAcceptDrop(args.Data.GetData("GdtermFileEntries") as FilePaneDrag) ? DragDropEffects.Copy : DragDropEffects.None;
+            control.DragDrop += (sender, args) =>
+            {
+                var drag = args.Data.GetData("GdtermFileEntries") as FilePaneDrag;
+                if (CanAcceptDrop(drag)) EntriesDropped?.Invoke(drag.Entries);
+            };
+            foreach (Control child in control.Controls) WireDropTarget(child);
         }
 
         private ContextMenuStrip BuildContextMenu()
@@ -185,6 +205,8 @@ namespace Gdterm.UI.Controls
 
             var miTransfer = new ToolStripMenuItem(L10n.T("传输到对侧")) { Enabled = false };
             miTransfer.Click += (s, e) => RequestTransferToPeer();
+            var miResume = new ToolStripMenuItem(L10n.T("校验后续传到对侧")) { Enabled = false };
+            miResume.Click += (sender, args) => ResumeToPeerRequested?.Invoke(SelectedEntries());
             var miRename = new ToolStripMenuItem(L10n.T("重命名")) { Enabled = false };
             miRename.Click += (s, e) => RenameSelected();
             var miMkdir = new ToolStripMenuItem(L10n.T("新建目录"));
@@ -202,6 +224,7 @@ namespace Gdterm.UI.Controls
             {
                 var has = _list.SelectedItems.Count > 0;
                 miTransfer.Enabled = has;
+                miResume.Enabled = has;
                 miRename.Enabled = has;
                 miDelete.Enabled = has;
                 miPreview.Enabled = has;
@@ -210,6 +233,7 @@ namespace Gdterm.UI.Controls
             };
 
             ctx.Items.Add(miTransfer);
+            ctx.Items.Add(miResume);
             ctx.Items.Add(miRename);
             ctx.Items.Add(miPreview);
             ctx.Items.Add(miProps);
@@ -279,47 +303,58 @@ namespace Gdterm.UI.Controls
         }
 
         // ── 导航 ──────────────────────────────────────────
-        public void Navigate(string path)
+        public async void Navigate(string path)
         {
-            if (_busy) return;
+            if (_closed) return;
+            if (_busy) { _pendingNavigation = path; _hasPendingNavigation = true; return; }
             _busy = true;
+            _requestedPath = path;
+            _list.Enabled = false;
             _status.Text = L10n.T("加载 ") + (string.IsNullOrEmpty(path) ? L10n.T("此电脑") : path) + L10n.T(" …");
-            var captured = path;
-            Task.Run(() => _provider.List(captured)).ContinueWith(t =>
+            var ct = _lifetime.Token;
+            try
+            {
+                var entries = await Task.Run(() => _provider.List(path, ct), ct);
+                if (_closed) return;
+                _currentPath = path ?? "";
+                _pathBox.Text = string.IsNullOrEmpty(path) ? L10n.T("此电脑") : path;
+                RenderList(entries);
+                _status.Text = _pathBox.Text + L10n.T("  (") + entries.Count + L10n.T(" 项)");
+                _empty.SetEmpty(entries.Count == 0, L10n.T("这个目录是空的"), L10n.T("可从对侧拖入文件；点「刷新」重新读取"));
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                if (_closed) return;
+                _currentPath = null;
+                RenderList(new List<FileEntry>());
+                _status.Text = L10n.T("读取失败: ") + ex.Message;
+                _empty.SetEmpty(true, L10n.T("读取失败"), ex.Message);
+                DiagLog.Error("FilePaneControl.Navigate", ex);
+            }
+            finally
             {
                 _busy = false;
-                if (t.IsFaulted)
+                if (!_closed)
                 {
-                    var msg = t.Exception.GetBaseException().Message;
-                    _status.Text = L10n.T("读取失败: ") + msg;
-                    try { DiagLog.Error("FilePaneControl.Navigate", t.Exception); } catch (Exception) { }
-                    // 失败不能只留状态栏一行：目录读不出来时列表是空的，正好和"空目录"长得一样
-                    if (_empty != null)
-                    {
-                        _empty.SetEmpty(true, L10n.T("读取失败"), msg);
-                        if (_empty.ActionButton != null) _empty.ActionButton.Visible = true;
-                    }
-                    ToastNotifier.Error(L10n.T("目录读取失败：") + msg);
-                    return;
+                    _list.Enabled = true;
+                    DrainNavigation();
                 }
-                var entries = t.Result;
-                _currentPath = captured ?? "";   // null→""（本地盘符伪根），便于 Refresh 原地重列
-                _pathBox.Text = string.IsNullOrEmpty(captured) ? L10n.T("此电脑") : captured;
-                RenderList(entries);
-                _status.Text = (string.IsNullOrEmpty(captured) ? L10n.T("此电脑") : captured) + L10n.T("  (") + entries.Count + L10n.T(" 项)");
-                if (_empty != null)
-                {
-                    _empty.SetEmpty(entries.Count == 0, L10n.T("这个目录是空的"),
-                        L10n.T("拖文件到这里可直接上传；点「刷新」重新读取"));
-                    if (_empty.ActionButton != null) _empty.ActionButton.Visible = true;
-                }
-            }, TaskScheduler.FromCurrentSynchronizationContext());
+            }
+        }
+
+        private void DrainNavigation()
+        {
+            if (!_hasPendingNavigation || _closed) return;
+            var path = _pendingNavigation;
+            _hasPendingNavigation = false;
+            Navigate(path);
         }
 
         public void Refresh()
         {
             if (_currentPath != null) Navigate(_currentPath);
-            else Navigate(_provider.HomePath);
+            else Navigate(_requestedPath ?? _provider.HomePath);
         }
 
         public void NavigateUp()
@@ -335,7 +370,7 @@ namespace Gdterm.UI.Controls
             foreach (var f in entries)
             {
                 var item = new ListViewItem(f.Name);
-                item.SubItems.Add(f.IsDirectory ? "<DIR>" : FormatSize(f.SizeBytes));
+                item.SubItems.Add(f.IsSymbolicLink ? "<LINK>" : f.IsDirectory ? "<DIR>" : FormatSize(f.SizeBytes));
                 item.SubItems.Add(f.LastModified == DateTime.MinValue ? "" : f.LastModified.ToString("yyyy-MM-dd HH:mm"));
                 item.SubItems.Add(f.Permissions ?? "");
                 item.ForeColor = f.IsDirectory ? GdtermColorTable.Info : GdtermColorTable.Foreground;
@@ -355,12 +390,12 @@ namespace Gdterm.UI.Controls
         // ── 文件管理操作（同侧）──────────────────────────────
         private void Mkdir()
         {
-            if (_currentPath == null) return;
+            if (_busy || string.IsNullOrEmpty(_currentPath)) return;
             var name = InputBox.Show(FindForm(), L10n.T("新建目录"), L10n.T("目录名:"));
             if (string.IsNullOrWhiteSpace(name)) return;
-            RunFsOp(L10n.T("新建目录"), () =>
+            RunFsOp(L10n.T("新建目录"), ct =>
             {
-                _provider.Mkdir(_provider.Combine(_currentPath, name.Trim()));
+                _provider.Mkdir(_provider.Combine(_currentPath, name.Trim()), ct);
             }, refresh: true);
         }
 
@@ -370,9 +405,9 @@ namespace Gdterm.UI.Controls
             if (entries.Length == 0) return;
             if (MessageBox.Show(FindForm(), L10n.T("确认删除 ") + DescribeEntries(entries) + L10n.T(" ?"), L10n.T("文件操作"),
                 MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
-            RunFsOp(L10n.T("删除"), () =>
+            RunFsOp(L10n.T("删除"), ct =>
             {
-                foreach (var e in entries) _provider.Delete(e.FullPath, e.IsDirectory);
+                foreach (var e in entries) { ct.ThrowIfCancellationRequested(); _provider.Delete(e.FullPath, e.IsDirectory, ct); }
             }, refresh: true);
         }
 
@@ -383,70 +418,49 @@ namespace Gdterm.UI.Controls
             if (entry == null) return;
             var newName = InputBox.Show(FindForm(), L10n.T("重命名 ") + entry.Name, L10n.T("新名称:"), entry.Name);
             if (string.IsNullOrWhiteSpace(newName) || newName == entry.Name) return;
-            RunFsOp(L10n.T("重命名"), () =>
+            RunFsOp(L10n.T("重命名"), ct =>
             {
-                _provider.Rename(entry.FullPath, _provider.Combine(_currentPath, newName.Trim()), entry.IsDirectory);
+                _provider.Rename(entry.FullPath, _provider.Combine(_currentPath, newName.Trim()), entry.IsDirectory, ct);
             }, refresh: true);
         }
 
         /// <summary>预览选中文件：远端文本→下载预览，远端图片→外部打开；本地文本→直接读，本地其他→外部打开。</summary>
-        private void PreviewSelected()
+        private async void PreviewSelected()
         {
-            if (_list.SelectedItems.Count == 0) return;
+            if (_closed || _list.SelectedItems.Count == 0) return;
             var entry = _list.SelectedItems[0].Tag as FileEntry;
             if (entry == null || entry.IsDirectory) return;
             var sftpProvider = _provider as SftpFilePaneProvider;
             if (sftpProvider != null)
             {
-                var sftp = sftpProvider.Sftp;
-                if (sftp == null || !sftp.IsConnected) return;
-                if (Gdterm.Sftp.SftpEnhancements.IsImageFile(entry.Name))
+                using (var cts = CancellationTokenSource.CreateLinkedTokenSource(_lifetime.Token))
                 {
-                    // 图片：下载到 temp，外部打开（WinSCP 行为）。
-                    // A2：下载/打开移后台 + 30s 超时，禁止 UI 线程 GetResult（对齐下方文本预览路径）。
-                    var tmp = Path.Combine(Path.GetTempPath(), "gdterm_img_" + Guid.NewGuid().ToString("N") + Path.GetExtension(entry.Name));
-                    var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                    _status.Text = L10n.T("预览加载图片 ") + entry.Name + L10n.T(" …");
-                    Task.Run(async () =>
-                    {
-                        try
-                        {
-                            await sftp.DownloadAsync(entry.FullPath, tmp, null, cts.Token).ConfigureAwait(false);
-                            try { System.Diagnostics.Process.Start(tmp); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("FilePaneControl", exSwallowed); } catch { } }
-                            return (string)null;
-                        }
-                        catch (OperationCanceledException) { return L10n.T("下载超时（30s）"); }
-                        catch (Exception ex) { return ex.Message; }
-                    }).ContinueWith(t =>
-                    {
-                        if (IsDisposed) return;
-                        _status.Text = entry.FullPath;
-                        if (t.Result != null)
-                            MessageBox.Show(FindForm(), L10n.T("图片打开失败:\n") + t.Result,
-                                L10n.T("预览"), MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }, TaskScheduler.FromCurrentSynchronizationContext());
-                    return;
-                }
-                if (!Gdterm.Sftp.SftpEnhancements.IsTextFile(entry.Name))
-                {
-                    MessageBox.Show(FindForm(), L10n.T("该类型暂不支持预览（仅文本/图片）。"), L10n.T("预览"),
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    return;
-                }
-                _status.Text = L10n.T("预览加载 ") + entry.Name + L10n.T(" …");
-                Task.Run(async () =>
-                {
+                    cts.CancelAfter(TimeSpan.FromSeconds(30));
                     try
                     {
-                        return await Gdterm.Sftp.SftpEnhancements.PreviewTextFileAsync(
-                            sftp, entry.FullPath, 100, CancellationToken.None);
+                        _status.Text = L10n.T("预览加载 ") + entry.Name + L10n.T(" …");
+                        if (Gdterm.Sftp.SftpEnhancements.IsImageFile(entry.Name))
+                        {
+                            const int limit = 8 * 1024 * 1024;
+                            if (entry.SizeBytes > limit) throw new IOException(L10n.T("图片预览最大支持 8 MiB，请下载后打开。"));
+                            var bytes = await sftpProvider.Sftp.ReadFilePrefixAsync(entry.FullPath, limit + 1, cts.Token);
+                            if (bytes.Length > limit) throw new IOException(L10n.T("图片预览最大支持 8 MiB，请下载后打开。"));
+                            if (!_closed) PreviewBox.ShowImage(FindForm(), entry.Name, bytes);
+                        }
+                        else if (Gdterm.Sftp.SftpEnhancements.IsTextFile(entry.Name))
+                        {
+                            var text = await Gdterm.Sftp.SftpEnhancements.PreviewTextFileAsync(sftpProvider.Sftp, entry.FullPath, 100, cts.Token);
+                            if (!_closed) PreviewBox.Show(FindForm(), entry.Name, text);
+                        }
+                        else if (!_closed) MessageBox.Show(FindForm(), L10n.T("该类型暂不支持预览（仅文本/图片）。"), L10n.T("预览"));
                     }
-                    catch (Exception ex) { return L10n.T("预览失败: ") + ex.Message; }
-                }).ContinueWith(t =>
-                {
-                    _status.Text = entry.FullPath;
-                    PreviewBox.Show(FindForm(), entry.Name, t.Result ?? "");
-                }, TaskScheduler.FromCurrentSynchronizationContext());
+                    catch (Exception ex)
+                    {
+                        if (!_closed) MessageBox.Show(FindForm(), ex is OperationCanceledException ? L10n.T("下载超时（30s）") : ex.Message,
+                            L10n.T("预览"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                    finally { if (!_closed) _status.Text = entry.FullPath; }
+                }
                 return;
             }
             // 本地
@@ -491,9 +505,10 @@ namespace Gdterm.UI.Controls
                 using (var dlg = new Gdterm.UI.Forms.SftpPermissionForm(entry.Name, entry.Permissions, octal))
                 {
                     if (dlg.ShowDialog(FindForm()) != DialogResult.OK) return;
-                    RunFsOp(L10n.T("修改权限"), () =>
+                    int mode = dlg.OctalMode;
+                    RunFsOp(L10n.T("修改权限"), ct =>
                     {
-                        sftp.ChmodAsync(entry.FullPath, dlg.OctalMode, CancellationToken.None).GetAwaiter().GetResult();
+                        sftp.ChmodAsync(entry.FullPath, mode, ct).GetAwaiter().GetResult();
                     }, refresh: true);
                 }
                 return;
@@ -504,26 +519,45 @@ namespace Gdterm.UI.Controls
                 L10n.T("属性"), MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        private void RunFsOp(string opName, Action op, bool refresh)
+        private async void RunFsOp(string opName, Action<CancellationToken> op, bool refresh)
         {
-            if (_busy || _currentPath == null) return;
+            if (_closed || _busy || _currentPath == null) return;
             _busy = true;
             _status.Text = opName + " …";
-            Task.Run(op).ContinueWith(t =>
+            var ct = _lifetime.Token;
+            try
+            {
+                await Task.Run(() => op(ct), ct);
+                if (!_closed) _status.Text = opName + L10n.T("完成");
+            }
+            catch (OperationCanceledException) { }
+            catch (Exception ex)
+            {
+                if (!_closed) MessageBox.Show(FindForm(), opName + L10n.T("失败:\n") + ex.Message,
+                    L10n.T("文件操作"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            finally
             {
                 _busy = false;
-                if (t.IsFaulted)
+                if (!_closed)
                 {
-                    _status.Text = opName + L10n.T("失败: ") + t.Exception.GetBaseException().Message;
-                    MessageBox.Show(FindForm(), opName + L10n.T("失败:\n") + t.Exception.GetBaseException().Message,
-                        L10n.T("文件操作"), MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    if (_hasPendingNavigation) DrainNavigation();
+                    else if (refresh) Refresh();
                 }
-                else
-                {
-                    _status.Text = opName + L10n.T("完成");
-                    if (refresh) Refresh();
-                }
-            }, TaskScheduler.FromCurrentSynchronizationContext());
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && !_closed)
+            {
+                _closed = true;
+                _lifetime.Cancel();
+                _lifetime.Dispose();
+                _tips.Dispose();
+                _list.ContextMenuStrip?.Dispose();
+            }
+            base.Dispose(disposing);
         }
 
         private static string DescribeEntries(FileEntry[] entries)
@@ -547,6 +581,22 @@ namespace Gdterm.UI.Controls
 
     internal static class PreviewBox
     {
+        public static void ShowImage(IWin32Window owner, string title, byte[] bytes)
+        {
+            using (var memory = new MemoryStream(bytes))
+            using (var image = Image.FromStream(memory, true, true))
+            using (var form = new Form { Text = L10n.T("预览：") + title, StartPosition = FormStartPosition.CenterParent,
+                BackColor = GdtermColorTable.Background, ShowInTaskbar = false })
+            using (var picture = new PictureBox { Dock = DockStyle.Fill, SizeMode = PictureBoxSizeMode.Zoom, Image = image })
+            {
+                form.ClientSize = DpiScale.S(form, 640, 480);
+                form.KeyPreview = true;
+                form.KeyDown += (sender, args) => { if (args.KeyCode == Keys.Escape) form.Close(); };
+                form.Controls.Add(picture);
+                form.ShowDialog(owner);
+            }
+        }
+
         public static void Show(IWin32Window owner, string title, string text)
         {
             using (var f = new Form

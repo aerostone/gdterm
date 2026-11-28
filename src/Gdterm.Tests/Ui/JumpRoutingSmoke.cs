@@ -83,6 +83,8 @@ namespace Gdterm.Tests.Ui
             public Task ConnectAsync(ConnectionConfig c, CredentialPayload p, CancellationToken t) { Connected = true; return Task.CompletedTask; }
             public Task ConnectViaTunnelAsync(ConnectionConfig c, CredentialPayload p, TunnelEndpoint ep, CancellationToken t) { Endpoint = ep; ViaTunnel = Connected = true; return Task.CompletedTask; }
             public Task<IList<SftpFileInfo>> ListDirectoryAsync(string p, CancellationToken t) => Task.FromResult<IList<SftpFileInfo>>(new List<SftpFileInfo>());
+            public Task<SftpFileInfo> GetEntryAsync(string p, CancellationToken t) => Task.FromResult<SftpFileInfo>(null);
+            public Task<byte[]> ReadFilePrefixAsync(string p, int max, CancellationToken t) => Task.FromResult(new byte[0]);
             public Task UploadAsync(string a, string b, IProgress<FileTransferProgress> p, CancellationToken t) => throw new NotSupportedException();
             public Task DownloadAsync(string a, string b, IProgress<FileTransferProgress> p, CancellationToken t) => throw new NotSupportedException();
             public Task<bool> UploadResumeAsync(string a, string b, IProgress<FileTransferProgress> p, CancellationToken t) => throw new NotSupportedException();

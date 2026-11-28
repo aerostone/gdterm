@@ -38,11 +38,17 @@ jobs:
         run: |
           set -o pipefail
           python3 tools/ssh-jump-smoke/run.py 2>&1 | tee ssh-jump.log
+      - name: SFTP integration regression
+        run: |
+          set -o pipefail
+          python3 tools/sftp-smoke/run.py 2>&1 | tee sftp-smoke.log
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ssh-jump-evidence
-          path: ssh-jump.log
+          path: |
+            ssh-jump.log
+            sftp-smoke.log
   verify:
     runs-on: windows-latest   # VS2022（msbuild 17）+ Python 3 + NuGet CLI，均有
     timeout-minutes: 60

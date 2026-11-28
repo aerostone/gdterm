@@ -22,6 +22,8 @@ namespace Gdterm.Sftp.Models
         /// </summary>
         public bool IsDirectory { get; set; }
 
+        public bool IsSymbolicLink { get; set; }
+
         /// <summary>
         /// 文件大小（字节），目录为 0
         /// </summary>

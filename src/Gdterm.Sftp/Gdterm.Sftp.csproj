@@ -54,6 +54,7 @@
     <Compile Include="Models\SftpFileInfo.cs" />
     <Compile Include="Models\FileTransferProgress.cs" />
     <Compile Include="SftpService.cs" />
+    <Compile Include="SftpPathSafety.cs" />
     <Compile Include="SftpSyncPlanner.cs" />
     <Compile Include="SftpSyncRunner.cs" />
     <Compile Include="SftpEnhancements.cs" />

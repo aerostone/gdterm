@@ -22,7 +22,7 @@ namespace Gdterm.Sftp
 
     /// <summary>
     /// SFTP 文件夹同步编排——只用 ISftpService 已验证 API
-    /// （ListDirectoryAsync/CreateDirectoryAsync/UploadResumeAsync/DownloadResumeAsync），
+    /// （ListDirectoryAsync/CreateDirectoryAsync/UploadAsync/DownloadAsync），
     /// 不赌 SynchronizeDirectories 签名。目录只建不删。
     /// </summary>
     public static class SftpSyncRunner
@@ -31,7 +31,7 @@ namespace Gdterm.Sftp
         public static async Task<Dictionary<string, SftpFileInfo>> ListRemoteTreeAsync(ISftpService sftp, string remoteBase, CancellationToken ct)
         {
             var map = new Dictionary<string, SftpFileInfo>(StringComparer.Ordinal);
-            await CollectRemoteAsync(sftp, remoteBase.TrimEnd('/'), "", map, ct);
+            await CollectRemoteAsync(sftp, remoteBase == "/" ? "/" : remoteBase.TrimEnd('/'), "", map, ct);
             return map;
         }
 
@@ -40,7 +40,7 @@ namespace Gdterm.Sftp
             string dir = string.IsNullOrEmpty(rel) ? remoteBase : remoteBase + "/" + rel;
             IList<SftpFileInfo> items;
             try { items = await sftp.ListDirectoryAsync(dir, ct); }
-            catch { return; } // 目录不存在→视为空（调用方建目录）
+            catch (Renci.SshNet.Common.SftpPathNotFoundException) { return; }
             if (items == null) return;
             foreach (var f in items)
             {
@@ -48,6 +48,7 @@ namespace Gdterm.Sftp
                 if (f == null || f.Name == "." || f.Name == "..") continue;
                 string child = string.IsNullOrEmpty(rel) ? f.Name : rel + "/" + f.Name;
                 map[child] = f;
+                if (f.IsSymbolicLink) throw new IOException(L10n.T("传输不能跟随符号链接：") + f.FullPath);
                 if (f.IsDirectory) await CollectRemoteAsync(sftp, remoteBase, child, map, ct);
             }
         }
@@ -56,6 +57,7 @@ namespace Gdterm.Sftp
         public static async Task EnsureRemoteDirAsync(ISftpService sftp, string remoteDir, CancellationToken ct)
         {
             try { await sftp.CreateDirectoryAsync(remoteDir, ct); }
+            catch (OperationCanceledException) { throw; }
             catch
             {
                 try { await sftp.ListDirectoryAsync(remoteDir, ct); }
@@ -63,7 +65,7 @@ namespace Gdterm.Sftp
             }
         }
 
-        /// <summary>执行上传同步计划（目录先建，再逐文件续传）。</summary>
+        /// <summary>执行上传同步计划（目录先建，再逐文件覆盖）。</summary>
         public static async Task<SyncRunResult> RunUploadAsync(ISftpService sftp, List<SyncPlanItem> plan, IProgress<FileTransferProgress> perFile, CancellationToken ct)
         {
             var result = new SyncRunResult { Total = plan != null ? plan.Count : 0 };
@@ -83,15 +85,16 @@ namespace Gdterm.Sftp
                         string parent = dir.Substring(0, slash);
                         if (madeDirs.Add(parent)) await EnsureRemoteDirAsync(sftp, parent, ct);
                     }
-                    bool done = await sftp.UploadResumeAsync(item.LocalFullPath, item.RemoteFullPath, perFile, ct);
-                    if (done) result.Transferred++; else result.Skipped++;
+                    await sftp.UploadAsync(item.LocalFullPath, item.RemoteFullPath, perFile, ct);
+                    result.Transferred++;
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex) { result.Failed++; result.Errors.Add(item.RelativePath + ": " + ex.Message); }
             }
             return result;
         }
 
-        /// <summary>执行下载同步计划（本地目录先建，再逐文件续传）。</summary>
+        /// <summary>执行下载同步计划（本地目录先建，再逐文件覆盖）。</summary>
         public static async Task<SyncRunResult> RunDownloadAsync(ISftpService sftp, List<SyncPlanItem> plan, IProgress<FileTransferProgress> perFile, CancellationToken ct)
         {
             var result = new SyncRunResult { Total = plan != null ? plan.Count : 0 };
@@ -104,10 +107,12 @@ namespace Gdterm.Sftp
                 try
                 {
                     string parent = Path.GetDirectoryName(item.LocalFullPath);
+                    SftpPathSafety.EnsureNoReparsePoints(item.LocalFullPath);
                     if (!string.IsNullOrEmpty(parent)) Directory.CreateDirectory(parent);
-                    bool done = await sftp.DownloadResumeAsync(item.RemoteFullPath, item.LocalFullPath, perFile, ct);
-                    if (done) result.Transferred++; else result.Skipped++;
+                    await sftp.DownloadAsync(item.RemoteFullPath, item.LocalFullPath, perFile, ct);
+                    result.Transferred++;
                 }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex) { result.Failed++; result.Errors.Add(item.RelativePath + ": " + ex.Message); }
             }
             return result;

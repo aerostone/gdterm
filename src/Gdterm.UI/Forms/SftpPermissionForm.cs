@@ -149,6 +149,7 @@ namespace Gdterm.UI.Forms
             ClientSize = new Size(clientW, y + btnH + pad);
             FormFontPolicy.MountDialogActions(this, btnOk, btnCancel);
 
+            ApplyRwx(rwx, initialOctal);
             // 初值：rwx → 勾选 → octal 联动（initialOctal 是位值如 493，转十进制位 755 再存 OctalMode）
             FormFontPolicy.Apply(this);
             // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）
@@ -164,7 +165,7 @@ namespace Gdterm.UI.Forms
                 {
                     for (int r = 0; r < 3; r++)
                         for (int c = 0; c < 3; c++)
-                            _chk[r, c].Checked = rwx[r * 3 + c] != '-';
+                            _chk[r, c].Checked = c == 2 ? "xst".IndexOf(rwx[r * 3 + c]) >= 0 : rwx[r * 3 + c] == (c == 0 ? 'r' : 'w');
                 }
                 else
                 {
@@ -177,9 +178,9 @@ namespace Gdterm.UI.Forms
                         _chk[r, 2].Checked = (ds[r] & 1) != 0;
                     }
                 }
-                SyncFromChecks(); // 复选→OctalMode（十进制位）+ octalBox 联动，单点换算
             }
             finally { _syncing = false; }
+            SyncFromChecks();
         }
 
         private void SyncFromChecks()

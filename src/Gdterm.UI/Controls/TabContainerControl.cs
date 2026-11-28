@@ -418,16 +418,14 @@ namespace Gdterm.UI.Controls
         private void FollowSftpTo(TerminalControl source, string path, bool force)
         {
             if (source == null || string.IsNullOrEmpty(path)) return;
-            string host = null;
-            try { host = source.Config != null ? source.Config.Host : null; } catch { }
-            if (string.IsNullOrEmpty(host)) return;
+            if (source.Config == null) return;
             PruneSftpPanels();
             for (int i = 0; i < _sftpPanels.Count; i++)
             {
                 var panel = _sftpPanels[i];
                 try
                 {
-                    if (panel == null || !panel.MatchesHost(host)) continue;
+                    if (panel == null || !panel.MatchesConnection(source.Config)) continue;
                     panel.FollowTo(path, force);
                 }
                 catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainer.FollowSftp", exSwallowed); } catch { } }
@@ -443,18 +441,16 @@ namespace Gdterm.UI.Controls
             }
         }
 
-        /// <summary>Ctrl+Click 到远端路径：已有同主机 SFTP 就跳，否则新开一个 SFTP 标签并落位。</summary>
+        /// <summary>Ctrl+Click 到远端路径：已有同一连接的 SFTP 就跳，否则新开一个 SFTP 标签并落位。</summary>
         private void HandleRemotePathOpen(TerminalControl source, string path)
         {
             if (source == null || string.IsNullOrEmpty(path)) return;
             PruneSftpPanels();
-            string host = null;
-            try { host = source.Config != null ? source.Config.Host : null; } catch { }
             bool any = false;
             for (int i = 0; i < _sftpPanels.Count; i++)
             {
                 var panel = _sftpPanels[i];
-                if (panel == null || !panel.MatchesHost(host)) continue;
+                if (panel == null || !panel.MatchesConnection(source.Config)) continue;
                 any = true;
                 try { panel.FollowTo(path, true); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainer.RemotePathOpen", exSwallowed); } catch { } }
             }
@@ -468,7 +464,7 @@ namespace Gdterm.UI.Controls
                 for (int i = 0; i < _sftpPanels.Count; i++)
                 {
                     var panel = _sftpPanels[i];
-                    if (panel == null || !panel.MatchesHost(host)) continue;
+                    if (panel == null || !panel.MatchesConnection(source.Config)) continue;
                     try { panel.FollowTo(path, true); } catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("TabContainer.RemotePathOpen", exSwallowed); } catch { } }
                 }
             }
