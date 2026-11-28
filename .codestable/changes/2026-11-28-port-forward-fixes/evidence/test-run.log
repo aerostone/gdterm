@@ -1,0 +1,31 @@
+=== gdterm unit tests (zero-NuGet runner) ===
+[test] DefaultPorts
+[test] LogSanitizer
+[test] ConnectionStoreJson
+[test] JsonRoundTrip
+-- ConnectionConfigCopy --
+[test] ChatHistoryStore
+[test] AiAssistantService (conversation keys)
+[test] CommandHistoryStore.DeleteByIds
+[test] CommandHistoryStore.Query filter semantics
+[test] ExternalFormatImporter
+[test] SshConnectionInfoFactory
+[test] NetworkDiagnosticsTool
+-- TerminalProfile dual-track --
+-- VtTerminalEngine (Phase 0) --
+   truecolor spans: R@255,0,0 | G@0,255,0 | B@0,0,255
+   256-color X fg=255,0,0
+   DA response: <esc>[?64;1;2;4;6;9;15;18;21;22c
+-- ReverseVideo (SGR 7) --
+-- TerminalSelection --
+-- OSC 7 cwd / OSC 9-777-99 notifications --
+-- triggers / scrollback clamp / proxy config --
+-- ScanPluginStripFindings
+-- ScanPluginSeverity
+-- ScanPluginStore
+[test] HexDump
+[test] SessionRecording
+[test] AppearanceSettings
+
+Passed: 1089  Failed: 0
+ALL OK

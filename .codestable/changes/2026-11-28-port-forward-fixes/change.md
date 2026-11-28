@@ -2,7 +2,7 @@
 doc_type: change
 kind: issue
 slug: 2026-11-28-port-forward-fixes
-status: in-progress
+status: accepted
 phase: analyzed
 mode: standard
 severity: P1
@@ -81,10 +81,10 @@ MODIFIED：PF01–PF09 全部修正，新增明确编辑入口及原有 SOCKS5 �
 
 ## 执行计划
 
-- [ ] manager 状态、异步起停、SOCKS5、原 owner 清理及真实 SSH 回归。
-- [ ] 持久化 workspace、连接解析、回收站、应用退出接线。
-- [ ] 规则表单、批量目标与错误/忙碌界面，Windows 行为和缩放矩阵。
-- [ ] 本地编译与静态检查、推送、GitHub/AppVeyor、截图审阅及逐项验收。
+- [x] manager 状态、异步起停、SOCKS5、原 owner 清理及真实 SSH 回归。
+- [x] 持久化 workspace、连接解析、回收站、应用退出接线。
+- [x] 规则表单、批量目标与错误/忙碌界面，Windows 行为和缩放矩阵。
+- [x] 本地编译与静态检查、推送、GitHub/AppVeyor、截图审阅及逐项验收。
 
 ## 验证计划
 
@@ -95,11 +95,40 @@ MODIFIED：PF01–PF09 全部修正，新增明确编辑入口及原有 SOCKS5 �
 - 生产 manager 已实现三种转发、原 owner 清理、异步状态、断线探测及关闭撤销。
 - 应用 workspace 持久化规则、按连接 ID 解析当前宿主；侧栏销毁仅退订。回收站恢复与表单保存均先成功写盘再发布内存状态。
 - 表单添加连接/说明/校验/编辑；动态类型隐藏目标字段；列表目标集合统一且保留勾选和选择。
-- `bash tools/csc-check.sh` 退出 0：384 个源码、13 工程清单；`tools/port-forward-smoke/run.py` 退出 0：45 项真实 SSH/持久化断言。
+- `bash tools/csc-check.sh` 退出 0：384 个源码、13 工程清单；`tools/port-forward-smoke/run.py` 退出 0：84 项真实 SSH/持久化及生产连接解析断言。命令：`GDT_NUGET_SOURCE=/home/aerostone/.nuget/packages python3 tools/port-forward-smoke/run.py`。
 - 编码、UI lint、i18n、tokens、feature-map、sec-gate 和 impl checker 均退出 0。
-- Windows 表单和面板行为冒烟、三类编辑器及有数据列表的 6 组矩阵已接入；推送后等待两套 CI 和像素证据。
+- GitHub [46152072567](https://github.com/aerostone/gdterm/actions/runs/46152072567) success，AppVeyor [0.1.570 / 55184134](https://ci.appveyor.com/project/aerostone/gdterm/build/0.1.570) success，均为源码 fdb79dc。
+- Windows：1089 单元断言、10 组 UI 冒烟、69 页×6 组=414 次矩阵采集、布局门和性能/静态门全通过。CI 像素基线 114 张通过；最终人工审图补入 offline/statuses 两页后，本地对同批 artifact 检查 116 张通过。
+- 人工检查最终普通/窄栏、错误/状态、14pt/150% 三种规则表单和 OLED 图像；规则字段、说明、错误和按钮留白可见。见 evidence/README.md、verification.json 和选定 PNG/JSON。
 
 
 ## 验收结果
 
-待验收。
+PF01–PF09 全部修复并通过验收。源码 fdb79dc 已通过两套 CI；最后的记录提交仅包含本验收证据及两条已审图像素基线，不改变业务或测试源码。
+
+| 审计项 | 修复与证据 |
+|---|---|
+| PF01 | 真实 SOCKS5 无认证协商、CONNECT、SSH banner 数据，动态表单隐藏固定目标。 |
+| PF02 | 应用 workspace 持有规则和运行任务；Windows 销毁/重建面板保持规则，跨面板回收站恢复和重载写盘通过。 |
+| PF03 | 链接生产 TabActiveSessionQuery，以真实 SSH 客户端验证迟连接、切标签、替换客户端、分屏及无匹配不回退。WinForms 容器在 Linux 使用替身，范围仅解析逻辑。 |
+| PF04 | 断线立即不报告运行，500ms 后台探测归位；原客户端重连、替换客户端均能重试。 |
+| PF05 | 隔离 sshd 会话暂停时启动调用立即返回，Starting/Stopping 可观察；停止与退出竞态不复活、不关闭共享 SSH。Windows 状态夹具检查禁用编辑/重复启动及可停止。 |
+| PF06 | 类型、主机、1–65535 范围；真实表单非法输入不关闭且显示原因；占用端口返回错误。 |
+| PF07 | 失败回滚、原 owner、Stop/Dispose、10 轮×12 条批量清理；CI 曾暴露 SSH.NET 注册列表并发删除遗留，现以 client 弱引用锁保护注册表变更。 |
+| PF08 | 当前可见勾选优先，否则当前选择，无目标不回退全部；过滤隐藏勾选排除；刷新保留选择；双击仅一次编辑。 |
+| PF09 | 实际保存/取消及编辑保留 ID/说明/连接；磁盘拒写时不发布修改，删除/恢复失败保持原规则/回收站条目。 |
+
+## CI 修复记录
+
+- 471e8a2：UI 面板构造挂起。d4e0c06 运行时日志确认 SizeActionButton 字体量尺创建 handle，提前触发 OnLoad（list=False/shell=False）。只在构造完成后刷新列表，删除临时追踪输出。
+- d4e0c06：新版 OpenSSH 对 banner-only 探针触发 PerSourcePenalties；隔离配置探测支持后禁用，仅测试进程有效，不改系统 sshd。
+- af6c116：Windows 冒烟及 68 页×6 组矩阵通过；数据探针排除限流后，CI 确认同一 SSH client 注册表并发移除遗留，fdb79dc 定点同步 Add/Remove；本地 84 项断言退出 0。
+- 新增面板状态 dump 使用 port-forward 前缀复用既有面板关闭路径规则，不改判据。相关像素基线仅在人工审查 af6c116 的原图后更新，保留其余页面基线。
+
+## 收尾
+
+`check-compliance.py --phase accept --converge` 退出 0，无失败/警告。规则所有权与弱引用注册表同步事实已回写当前架构；本次时序/CI 经验保留在本包，无额外独立知识条目。
+
+## 遗留事项
+
+远程非回环监听仍受 sshd GatewayPorts 控制，表单给出说明。关闭面板继续运行，退出应用停止，重启规则保留但不自动启动。真实鼠标/键盘系统输入未纳入自动化；Windows 测试调用真实控件的保存按钮与激活事件并采集真实绘制截图。

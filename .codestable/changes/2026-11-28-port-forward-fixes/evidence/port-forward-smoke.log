@@ -1,0 +1,92 @@
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:00.73
+PASS resolver supports panel opened before SSH tabs exist
+PASS late SSH connection resolves without rebuilding panel
+PASS switching active tab B still resolves rule assigned to A
+PASS unknown connection never falls back to active B
+PASS replacement SSH client resolves on every start
+PASS split pane resolves matching leaf rather than primary terminal
+PASS disconnected A is not replaced by connected B
+PASS local start
+PASS local carries real SSH bytes
+PASS duplicate live rule cannot silently switch owner
+PASS live rule remains on SSH A
+PASS stop with different caller client still cleans original owner
+PASS stop unregisters A without disconnecting shared clients
+PASS remote start
+PASS remote carries real SSH bytes
+PASS remote stop unregisters
+PASS SOCKS5 starts without fixed destination
+PASS SOCKS5 no-auth negotiation
+PASS SOCKS5 CONNECT succeeds
+PASS SOCKS5 carries real SSH bytes
+PASS SOCKS5 stop unregisters
+PASS occupied listener rejected 0
+PASS failed start rolls back registration and reports cause 0
+PASS occupied listener rejected 1
+PASS failed start rolls back registration and reports cause 1
+PASS occupied listener rejected 2
+PASS failed start rolls back registration and reports cause 2
+PASS invalid port rejects before registration 0
+PASS invalid port rejects before registration -1
+PASS invalid port rejects before registration 65536
+PASS blank listen address rejected
+PASS URL is not accepted as host
+PASS restart after stop
+PASS disconnected forward never reports running
+PASS disconnected port unregistered from original owner
+PASS same rule retries on reconnected/replacement client
+PASS retry transfers real data
+PASS forward starts on original reconnected client
+PASS same SSH object reconnect reaps old port and accepts retry
+PASS parallel batch registers every forward 0 registered=12
+PASS parallel batch transmits every listener 0
+PASS parallel batch removes every registration 0 remaining=0
+PASS parallel batch registers every forward 1 registered=12
+PASS parallel batch transmits every listener 1
+PASS parallel batch removes every registration 1 remaining=0
+PASS parallel batch registers every forward 2 registered=12
+PASS parallel batch transmits every listener 2
+PASS parallel batch removes every registration 2 remaining=0
+PASS parallel batch registers every forward 3 registered=12
+PASS parallel batch transmits every listener 3
+PASS parallel batch removes every registration 3 remaining=0
+PASS parallel batch registers every forward 4 registered=12
+PASS parallel batch transmits every listener 4
+PASS parallel batch removes every registration 4 remaining=0
+PASS parallel batch registers every forward 5 registered=12
+PASS parallel batch transmits every listener 5
+PASS parallel batch removes every registration 5 remaining=0
+PASS parallel batch registers every forward 6 registered=12
+PASS parallel batch transmits every listener 6
+PASS parallel batch removes every registration 6 remaining=0
+PASS parallel batch registers every forward 7 registered=12
+PASS parallel batch transmits every listener 7
+PASS parallel batch removes every registration 7 remaining=0
+PASS parallel batch registers every forward 8 registered=12
+PASS parallel batch transmits every listener 8
+PASS parallel batch removes every registration 8 remaining=0
+PASS parallel batch registers every forward 9 registered=12
+PASS parallel batch transmits every listener 9
+PASS parallel batch removes every registration 9 remaining=0
+PASS delayed remote start returns immediately to caller
+PASS pending server reply exposes Starting state
+PASS cancel pending start is nonblocking and visible
+PASS cancelled slow start cannot publish Running
+PASS pending cancellation removes forward and preserves SSH
+PASS running instance before shutdown
+PASS shutdown cleans running registration
+PASS disposed manager rejects restart without disposing shared SSH
+PASS shutdown tracks pending startup cleanup
+PASS shutdown racing handshake never resurrects port
+PASS portable rule roundtrip preserves Unicode, quotes, newlines, ownership
+PASS atomic replacement persists edits
+PASS invalid save rejected
+PASS invalid save preserves previous valid file
+PASS corrupt file surfaced instead of silently overwriting rules
+checks=84 failures=0
+Fixture stopped; temporary SSH keys removed on scope exit

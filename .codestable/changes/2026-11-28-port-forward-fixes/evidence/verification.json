@@ -1,0 +1,67 @@
+{
+  "source_commit": "fdb79dcdcfee1680a8dcd9ad31c3c0aa7a2f3afa",
+  "result": "passed",
+  "ci": {
+    "github": {
+      "run_id": 46152072567,
+      "status": "success",
+      "url": "https://github.com/aerostone/gdterm/actions/runs/46152072567"
+    },
+    "appveyor": {
+      "build_id": 55184134,
+      "version": "0.1.570",
+      "status": "success",
+      "url": "https://ci.appveyor.com/project/aerostone/gdterm/build/0.1.570"
+    }
+  },
+  "local": {
+    "compile": {
+      "exit_code": 0,
+      "sources": 384,
+      "projects": 13
+    },
+    "port_forward_integration": {
+      "exit_code": 0,
+      "assertions": 84
+    }
+  },
+  "coverage": {
+    "PF01": "SOCKS5 handshake and real data",
+    "PF02": "persistent workspace, panel replacement, trash restore",
+    "PF03": "actual resolver with real SSH clients; Linux WinForms container adapters",
+    "PF04": "disconnect, reconnect, replacement client retry",
+    "PF05": "paused isolated SSH process; async start, cancellation, shutdown race",
+    "PF06": "endpoint validation and real form error submission",
+    "PF07": "rollback, original owner and 10 batches of 12 forwards",
+    "PF08": "checked precedence, visible targets, no selection, one activation",
+    "PF09": "save/cancel/edit and real disk sharing failure"
+  },
+  "limitations": [
+    "Linux session resolver tests replace only desktop containers; they are not Windows UI execution.",
+    "Windows UI tests invoke real controls and collect rendered images; OS-level mouse/keyboard input is not automated.",
+    "Public remote listeners depend on the SSH server GatewayPorts configuration."
+  ],
+  "windows": {
+    "unit_assertions": 1089,
+    "unit_failures": 0,
+    "ui_smoke_groups": 10,
+    "ui_smoke_failures": 0,
+    "matrix_pages": 69,
+    "matrix_groups": 6,
+    "matrix_dumps": 414,
+    "pixel_baseline_checked_in_ci": 114,
+    "pixel_baseline_after_review": 116,
+    "reviewed_screenshots": [
+      "port-forward-narrow",
+      "port-forward-statuses",
+      "port-forward-offline",
+      "forward-validation",
+      "editor-forward-f14",
+      "port-forward-remote-d150-f14",
+      "port-forward-socks-d150-f14",
+      "port-forward-statuses-d150-f14",
+      "port-forward-local-oled"
+    ],
+    "pixel_review": "passed; readable fields, spacing, narrow panel, error text, high DPI/font and OLED inspected"
+  }
+}
