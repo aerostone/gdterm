@@ -315,7 +315,7 @@ namespace Gdterm.UI.Controls
         public async void Navigate(string path)
         {
             if (_closed) return;
-            if (_busy) { _pendingNavigation = path; _hasPendingNavigation = true; return; }
+            if (!IsHandleCreated || _busy) { _pendingNavigation = path; _hasPendingNavigation = true; return; }
             _busy = true;
             _requestedPath = path;
             _list.Enabled = false;
@@ -350,6 +350,12 @@ namespace Gdterm.UI.Controls
                     DrainNavigation();
                 }
             }
+        }
+
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            BeginInvoke(new Action(() => { if (!_closed) DrainNavigation(); }));
         }
 
         private void DrainNavigation()

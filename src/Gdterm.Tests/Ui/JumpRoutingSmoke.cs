@@ -28,8 +28,10 @@ namespace Gdterm.Tests.Ui
                 bool tunneled = mode != "direct";
                 var manager = new TunnelFake();
                 var sftp = new SftpFake();
+                using (var host = new Form())
                 using (var panel = new SftpDualPanePanel(cfg, new CredentialPayload(), sftp, manager))
                 {
+                    host.Controls.Add(panel); host.Show();
                     Application.DoEvents();
                     check(sftp.Connected && sftp.ViaTunnel == tunneled && manager.Calls == (tunneled ? 1 : 0), "SFTP real UI entry routes " + mode);
                     check(!tunneled || ReferenceEquals(manager.Endpoint, sftp.Endpoint), "SFTP receives manager endpoint " + mode);

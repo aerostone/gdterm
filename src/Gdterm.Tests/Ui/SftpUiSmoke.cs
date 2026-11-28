@@ -31,7 +31,7 @@ namespace Gdterm.Tests.Ui
         {
             return new SftpDualPanePanel(Config(), new CredentialPayload { Username = "operator" }, new Factory { Fail = disconnected }, null);
         }
-        internal static void Run(string temp, Action<bool, string> check)
+        internal static void Run(string temp, string outDir, Action<bool, string> check)
         {
             foreach (var mode in new[] { 600, 640, 644, 755 })
             {
@@ -66,6 +66,7 @@ namespace Gdterm.Tests.Ui
                 var local = Field<FilePaneControl>(panel, "_local");
                 string localPath = Path.Combine(temp, "sftp-local"); Directory.CreateDirectory(localPath);
                 local.Navigate(localPath); PumpUntil(() => !local.IsBusy && local.CurrentPath == localPath);
+                Capture(host, outDir, "sftp-dual-pane-wide");
                 var entries = new[] { new FileEntry { Name = "report.txt", FullPath = "/report.txt" } };
                 check(local.CanAcceptDrop(new FilePaneDrag(remote.Provider, entries)), "sftp accepts actual opposite pane drag");
                 check(!local.CanAcceptDrop(new FilePaneDrag(new SftpFilePaneProvider(new Fake(), "other server"), entries)), "sftp rejects other server drag");
@@ -106,18 +107,34 @@ namespace Gdterm.Tests.Ui
                 PumpUntil(() => factory.Last.UploadStarted);
                 var dialog = Application.OpenForms.OfType<TransferProgressDialog>().Single();
                 check(Field<AntdUI.Label>(dialog, "_detailLabel").Text.Contains("upload.txt"), "production transfer dialog displays current file");
+                Capture(dialog, outDir, "transfer-progress-active");
                 Field<AntdUI.Button>(dialog, "_cancelButton").PerformClick();
                 PumpUntil(() => factory.Last.UploadCanceled && Field<int>(panel, "_activeTransfers") == 0);
                 check(dialog.IsCancelled && Field<AntdUI.Button>(panel, "_reconnect").Enabled, "production cancel reaches active transfer and allows reconnect");
+                Capture(dialog, outDir, "transfer-progress-canceled");
                 dialog.Close(); dialog.Dispose();
                 }
                 catch (Exception ex) { Console.WriteLine("SFTP UI detail: " + ex); throw; }
             }
             var delayed = new Factory { DelayConnect = true };
-            var closed = new SftpDualPanePanel(Config(), new CredentialPayload(), delayed, null);
-            closed.Dispose();
-            PumpUntil(() => delayed.Last.Disposed);
-            check(delayed.Last.Disposed && !delayed.Last.Connected, "sftp panel close cancels connection without resurrection");
+            using (var host = new Form())
+            {
+                var closed = new SftpDualPanePanel(Config(), new CredentialPayload(), delayed, null);
+                host.Controls.Add(closed); host.Show();
+                PumpUntil(() => delayed.Last != null);
+                closed.Dispose();
+                PumpUntil(() => delayed.Last.Disposed);
+                check(delayed.Last.Disposed && !delayed.Last.Connected, "sftp panel close cancels connection without resurrection");
+            }
+            var neverShown = new Factory();
+            new SftpDualPanePanel(Config(), new CredentialPayload(), neverShown, null).Dispose();
+            check(neverShown.Created == 0, "unshown panel does not start background connection");
+        }
+        private static void Capture(Form form, string directory, string name)
+        {
+            form.Refresh(); Application.DoEvents();
+            File.WriteAllText(Path.Combine(directory, name + ".json"), UiTreeDumper.Dump(form), System.Text.Encoding.UTF8);
+            UiSmokeRunner.Shot(form, Path.Combine(directory, name + ".png"));
         }
         private sealed class Factory : ISftpServiceFactory
         {

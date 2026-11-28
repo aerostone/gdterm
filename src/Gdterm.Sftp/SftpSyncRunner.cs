@@ -61,6 +61,7 @@ namespace Gdterm.Sftp
             catch
             {
                 try { await sftp.ListDirectoryAsync(remoteDir, ct); }
+                catch (OperationCanceledException) { throw; }
                 catch (Exception ex) { throw new Exception(L10n.T("无法创建远程目录 ") + remoteDir + ": " + ex.Message, ex); }
             }
         }

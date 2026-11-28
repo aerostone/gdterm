@@ -39,6 +39,7 @@ namespace Gdterm.UI.Controls
         private readonly System.Windows.Forms.Timer _healthTimer = new System.Windows.Forms.Timer { Interval = 1000 };
         private AntdUI.Button _reconnect;
         private bool _connecting;
+        private bool _connectRequested;
         private bool _closed;
         private bool _reportedConnected;
         private bool _followCwd = true;
@@ -137,29 +138,33 @@ namespace Gdterm.UI.Controls
                 L10n.T("连接成功后这里显示远端目录，可拖拽或双击在两栏间传输"));
             _split.Panel2.Controls.Add(_remotePlaceholder);
 
-            var queueBar = new FlowLayoutPanel
+            var queueBar = new TableLayoutPanel
             {
                 Dock = DockStyle.Bottom,
                 AutoSize = true,
                 AutoSizeMode = AutoSizeMode.GrowAndShrink,
-                WrapContents = false,
+                ColumnCount = 2,
+                RowCount = 1,
                 BackColor = GdtermColorTable.Surface,
                 Padding = new Padding(DpiScale.V(this, 6), DpiScale.V(this, 3), DpiScale.V(this, 6), DpiScale.V(this, 3))
             };
+            queueBar.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+            queueBar.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             _queueLabel = new AntdUI.Label {
+                Dock = DockStyle.Fill,
                 Text = L10n.T("传输队列空闲"),
                 ForeColor = GdtermColorTable.Muted,
                 TextAlign = ContentAlignment.MiddleLeft
             };
-            FormFontPolicy.FitSingleLineLabel(_queueLabel);
+            _queueLabel.Font = FormFontPolicy.UiFont();
+            _queueLabel.Height = FormFontPolicy.LineBox(_queueLabel.Font, this);
             _reconnect = new AntdUI.Button { Text = L10n.T("重新连接"), Name = "SftpReconnectButton", Enabled = false };
             FormFontPolicy.SizeActionButton(this, _reconnect, 12, 4);
             _reconnect.Click += (sender, args) => BeginConnect();
             queueBar.Controls.Add(_reconnect);
             queueBar.Controls.Add(_queueLabel);
             _queueLabel.AutoEllipsis = true;
-            queueBar.SizeChanged += (sender, args) => _queueLabel.Width = Math.Max(DpiScale.V(this, 60),
-                queueBar.ClientSize.Width - queueBar.Padding.Horizontal - _reconnect.Width - _reconnect.Margin.Horizontal - _queueLabel.Margin.Horizontal);
+
             _connStatus.AutoEllipsis = true;
 
             Controls.Add(_split);
@@ -193,9 +198,17 @@ namespace Gdterm.UI.Controls
         }
 
         // ── 连接 ──────────────────────────────────────────
+        protected override void OnHandleCreated(EventArgs e)
+        {
+            base.OnHandleCreated(e);
+            BeginInvoke(new Action(() => { if (!_closed && _connectRequested) BeginConnect(); }));
+        }
+
         private async void BeginConnect()
         {
             if (_closed || _connecting || _activeTransfers > 0) return;
+            if (!IsHandleCreated) { _connectRequested = true; return; }
+            _connectRequested = false;
             _connecting = true;
             _reconnect.Enabled = false;
             _reportedConnected = false;

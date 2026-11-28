@@ -6,7 +6,7 @@ Build succeeded.
     1 Warning(s)
     0 Error(s)
 
-Time Elapsed 00:01:39.87
+Time Elapsed 00:00:15.59
 PASS real key authentication
 PASS ordinary upload replaces equal-length stale contents
 PASS ordinary download replaces equal-length stale contents
@@ -82,5 +82,5 @@ PASS handshake returns pending task without blocking caller
 PASS dispose interrupts pending handshake promptly
 PASS disposed pending connection never published
 PASS existing permission and sync planner tests
-SFTP integration: 75 passed; pure assertions: 28
+SFTP integration: 75 passed; pure assertions: 37
 Fixture stopped; temporary SSH keys removed on scope exit

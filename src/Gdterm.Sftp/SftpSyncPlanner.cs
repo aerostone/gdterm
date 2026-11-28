@@ -55,7 +55,7 @@ namespace Gdterm.Sftp
         {
             var plan = new List<SyncPlanItem>();
             if (string.IsNullOrEmpty(localDir) || !Directory.Exists(localDir)) return plan;
-            foreach (var file in Directory.EnumerateFiles(localDir, "*", SearchOption.AllDirectories))
+            foreach (var file in EnumerateRegularFiles(localDir, 0))
             {
                 string rel = RelPath(localDir, file);
                 if (rel == null) continue;
@@ -82,12 +82,17 @@ namespace Gdterm.Sftp
         {
             var plan = new List<SyncPlanItem>();
             if (remoteByRel == null) return plan;
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             foreach (var kv in remoteByRel)
             {
                 var remote = kv.Value;
-                if (remote == null || remote.IsDirectory) continue;
+                if (remote == null) continue;
+                if (remote.IsSymbolicLink) throw new IOException(L10n.T("传输不能跟随符号链接：") + remote.FullPath);
                 string rel = kv.Key;
-                string local = Path.Combine(localDir, rel.Replace('/', Path.DirectorySeparatorChar));
+                string local = localDir;
+                foreach (var segment in rel.Split('/')) local = SftpPathSafety.LocalChild(localDir, local, segment);
+                if (!names.Add(local)) throw new IOException(L10n.T("目标文件名冲突：") + local);
+                if (remote.IsDirectory) continue;
                 bool exists = File.Exists(local);
                 var fi = exists ? new FileInfo(local) : null;
                 string reason;
@@ -103,6 +108,21 @@ namespace Gdterm.Sftp
                 });
             }
             return plan;
+        }
+
+        private static IEnumerable<string> EnumerateRegularFiles(string directory, int depth)
+        {
+            if (depth > 128) throw new IOException(L10n.T("目录层级过深。"));
+            SftpPathSafety.EnsureNoReparsePoints(directory);
+            foreach (var item in new DirectoryInfo(directory).EnumerateFileSystemInfos())
+            {
+                SftpPathSafety.EnsureNoReparsePoints(item.FullName);
+                if ((item.Attributes & FileAttributes.Directory) != 0)
+                {
+                    foreach (var file in EnumerateRegularFiles(item.FullName, depth + 1)) yield return file;
+                }
+                else yield return item.FullName;
+            }
         }
 
         internal static string Norm(string rel)

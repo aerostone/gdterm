@@ -19,6 +19,24 @@ namespace Gdterm.Tests.Sftp
             DecideSame();
             DecideMtimeTolerance();
             PlanUploadDownload();
+            RejectUnsafeDownload();
+        }
+
+        private static void RejectUnsafeDownload()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "gdterm-sync-boundary-" + Guid.NewGuid().ToString("N"));
+            foreach (var relative in new[] { "../escape.txt", "..\\escape.txt", "/rooted", "C:drive", "CON.txt", "dir/NUL", "tail.", "tail " })
+            {
+                bool rejected = false;
+                try { SftpSyncPlanner.PlanDownload(new Dictionary<string, SftpFileInfo> { [relative] = new SftpFileInfo() }, root, "/remote"); }
+                catch (IOException) { rejected = true; }
+                Assert.True(rejected, "sync path rejects " + relative);
+            }
+            bool collision = false;
+            try { SftpSyncPlanner.PlanDownload(new Dictionary<string, SftpFileInfo> {
+                ["Report.txt"] = new SftpFileInfo(), ["report.txt"] = new SftpFileInfo() }, root, "/remote"); }
+            catch (IOException) { collision = true; }
+            Assert.True(collision, "sync rejects case-insensitive target collisions");
         }
 
         private static void DecideMissing()
