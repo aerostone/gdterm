@@ -25,6 +25,10 @@ namespace Gdterm.Tests.Ui
             };
         }
 
+        private readonly Dictionary<string, KeePassEntry> _created = new Dictionary<string, KeePassEntry>();
+        public int CreatedCount => _created.Count;
+        public int CreateAttempts { get; private set; }
+        public int FailCreateAt { get; set; }
         public bool IsUnlocked => true;
 
         public IList<KeePassEntrySummary> ListEntries()
@@ -79,19 +83,22 @@ namespace Gdterm.Tests.Ui
         public bool FailCreate { get; set; }
         public KeePassEntry CreateEntry(KeePassEntry entry)
         {
-            if (FailCreate) throw new System.IO.IOException("simulated vault write failure");
+            CreateAttempts++;
+            if (FailCreate || CreateAttempts == FailCreateAt) throw new System.IO.IOException("simulated vault write failure");
             entry.Id = Guid.NewGuid().ToString("N");
             CreatedEntry = new KeePassEntry { Id = entry.Id, Username = entry.Username, Title = entry.Title, Hostname = entry.Hostname,
                 Password = entry.Password, Protocol = entry.Protocol, Port = entry.Port, AutoTypeSequence = entry.AutoTypeSequence,
                 SshPrivateKeyData = (byte[])entry.SshPrivateKeyData?.Clone(), SshPrivateKeyPassphrase = entry.SshPrivateKeyPassphrase };
+            _created[entry.Id] = CreatedEntry;
             return entry;
         }
         public void UpdateEntry(KeePassEntry entry) => throw new NotSupportedException();
         public IList<string> ValidatePasswordStrength(string password) => new List<string>();
-        public void DeleteEntry(string entryId) => throw new NotSupportedException();
+        public void DeleteEntry(string entryId) { _created.Remove(entryId); if (CreatedEntry?.Id == entryId) CreatedEntry = null; }
         public KeePassEntry GetEntry(string entryId)
         {
-            var e = CreatedEntry?.Id == entryId ? CreatedEntry : null;
+            KeePassEntry e;
+            _created.TryGetValue(entryId, out e);
             return e == null ? null : new KeePassEntry { Id = e.Id, Title = e.Title, Username = e.Username,
                 Hostname = e.Hostname, Port = e.Port, Protocol = e.Protocol, Password = e.Password,
                 SshPrivateKeyData = (byte[])e.SshPrivateKeyData?.Clone(), SshPrivateKeyPassphrase = e.SshPrivateKeyPassphrase };

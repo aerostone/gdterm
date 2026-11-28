@@ -52,17 +52,20 @@ namespace Gdterm.UI.Services
                 }
 
                 if (entry == null)
-                    entry = _keepass.FindEntryByConnection(config);
+                {
+                    try { entry = _keepass.FindEntryByConnection(config); }
+                    catch (Exception ex) { DiagLog.Swallowed("CredentialResolver.Target", ex); }
+                }
 
-                if (entry == null) return null;
+                if (entry == null && (config.JumpChain?.Hops == null || config.JumpChain.Hops.Count == 0)) return null;
 
                 var credential = new CredentialPayload
                 {
-                    Username = !string.IsNullOrEmpty(entry.Username) ? entry.Username : config.Username,
-                    Password = entry.Password ?? ""
+                    Username = !string.IsNullOrEmpty(entry?.Username) ? entry.Username : config.Username,
+                    Password = entry?.Password
                 };
 
-                if (config.Protocol == ProtocolType.SSH && entry.SshPrivateKeyData != null)
+                if (config.Protocol == ProtocolType.SSH && entry?.SshPrivateKeyData != null)
                 {
                     credential.SshPrivateKey = entry.SshPrivateKeyData;
                     credential.SshPrivateKeyPassphrase = entry.SshPrivateKeyPassphrase;
@@ -85,18 +88,18 @@ namespace Gdterm.UI.Services
             Dictionary<string, string> pwdMap = null;
             Dictionary<string, byte[]> keyMap = null;
             Dictionary<string, string> ppMap = null;
+            var userMap = new Dictionary<string, string>();
             foreach (var hop in config.JumpChain.Hops)
             {
                 if (hop == null || string.IsNullOrEmpty(hop.CredentialRefId)) continue;
+                if (userMap.ContainsKey(hop.CredentialRefId)) continue;
                 try
                 {
                     var hopEntry = GetKeePassEntry(hop.CredentialRefId);
                     if (hopEntry == null) continue;
-                    if (!string.IsNullOrEmpty(hopEntry.Password))
-                    {
-                        if (pwdMap == null) pwdMap = new Dictionary<string, string>();
-                        pwdMap[hop.CredentialRefId] = hopEntry.Password;
-                    }
+                    userMap[hop.CredentialRefId] = hopEntry.Username;
+                    if (pwdMap == null) pwdMap = new Dictionary<string, string>();
+                    pwdMap[hop.CredentialRefId] = hopEntry.Password ?? "";
                     if (hopEntry.SshPrivateKeyData != null && hopEntry.SshPrivateKeyData.Length > 0)
                     {
                         if (keyMap == null) keyMap = new Dictionary<string, byte[]>();
@@ -112,6 +115,7 @@ namespace Gdterm.UI.Services
             }
             if (pwdMap != null)
                 credential.HopPasswordsByRefId = pwdMap;
+            credential.HopUsernamesByRefId = userMap;
             if (keyMap != null)
                 credential.HopPrivateKeysByRefId = keyMap;
             if (ppMap != null)
@@ -121,22 +125,7 @@ namespace Gdterm.UI.Services
         private KeePassEntry GetKeePassEntry(string entryId)
         {
             if (_keepass == null || string.IsNullOrEmpty(entryId)) return null;
-            var entries = _keepass.ListEntries();
-            foreach (var summary in entries)
-            {
-                if (summary.Id != entryId) continue;
-                var cred = _keepass.GetCredential(entryId);
-                return new KeePassEntry
-                {
-                    Id = summary.Id,
-                    Title = summary.Title,
-                    Username = cred != null ? cred.Username : null,
-                    Password = cred != null ? cred.Password : null,
-                    SshPrivateKeyData = _keepass.GetSshPrivateKey(entryId),
-                    SshPrivateKeyPassphrase = _keepass.GetSshPrivateKeyPassphrase(entryId)
-                };
-            }
-            return null;
+            return _keepass.GetEntry(entryId);
         }
     }
 }

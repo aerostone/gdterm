@@ -57,6 +57,7 @@ namespace Gdterm.Tests.Security
                     CheckAuth(new CredentialResolver(vault, folders).Resolve(config), "folder inheritance");
                     var wire = Encoding.UTF8.GetString(File.ReadAllBytes(path));
                     Assert.True(!wire.Contains("BEGIN OPENSSH PRIVATE KEY") && !wire.Contains(SshKeyFixtures.Passphrase), "vault does not expose plaintext secrets");
+                    CheckJumpCredentials(vault, resolver, entry.Id);
                     // null update preserves key; explicit empty array removes it, including after reload.
                     vault.UpdateEntry(new KeePassEntry { Id = entry.Id, Title = "renamed" });
                     Assert.True(vault.GetEntry(entry.Id).SshPrivateKeyData.SequenceEqual(encrypted), "unrelated update preserves private key");
@@ -74,6 +75,36 @@ namespace Gdterm.Tests.Security
                 }
             }
             finally { Directory.Delete(dir, true); }
+        }
+
+        private static void CheckJumpCredentials(KeePassService vault, CredentialResolver resolver, string keyId)
+        {
+            var password = vault.CreateEntry(new KeePassEntry { Title = "hop-password", Hostname = "hop.test",
+                Protocol = "SSH", Username = "jump-user", Password = "JumpPassword!5839" });
+            var cfg = new ConnectionConfig { Host = "unmatched-target.invalid", Protocol = ProtocolType.SSH,
+                Username = "target-user", JumpChain = new JumpChainConfig { Hops = new System.Collections.Generic.List<JumpHop> {
+                    new JumpHop { Host = "hop.test", CredentialRefId = password.Id },
+                    new JumpHop { Host = "key.test", CredentialRefId = keyId, Username = "override" } } } };
+            var p = resolver.Resolve(cfg);
+            Assert.True(p != null && p.Password == null && p.SshPrivateKey == null, "target with no credential still resolves hop credentials");
+            Assert.Equal("JumpPassword!5839", CredentialPayload.ResolveHopPassword(cfg.JumpChain.Hops[0], p), "hop password independent from target");
+            Assert.Equal("jump-user", CredentialPayload.ResolveHopUsername(cfg.JumpChain.Hops[0], p), "hop inherits credential username");
+            Assert.Equal("override", CredentialPayload.ResolveHopUsername(cfg.JumpChain.Hops[1], p), "hop overrides credential username");
+            Assert.True(CredentialPayload.ResolveHopPrivateKey(cfg.JumpChain.Hops[1], p).SequenceEqual(Encoding.UTF8.GetBytes(SshKeyFixtures.EncryptedOpenSsh)), "hop encrypted key resolves without target entry");
+            Assert.Equal(SshKeyFixtures.Passphrase, CredentialPayload.ResolveHopPrivateKeyPassphrase(cfg.JumpChain.Hops[1], p), "hop key passphrase resolves");
+            var bytes = CredentialPayload.ResolveHopPrivateKey(cfg.JumpChain.Hops[1], p);
+            p.ClearSecrets();
+            Assert.True(bytes.All(b => b == 0), "resolved hop key is cleared");
+            Assert.True(vault.GetSshPrivateKey(keyId).Any(b => b != 0), "clearing payload cannot mutate vault key");
+            vault.DeleteEntry(password.Id);
+            cfg.CredentialRefId = keyId;
+            p = resolver.Resolve(cfg);
+            Assert.True(p.SshPrivateKey != null && CredentialPayload.ResolveHopPassword(cfg.JumpChain.Hops[0], p) == null
+                && CredentialPayload.ResolveHopPrivateKey(cfg.JumpChain.Hops[0], p) == null, "deleted hop does not fall back to target key or password");
+            p.ClearSecrets();
+            vault.Lock();
+            Assert.True(resolver.Resolve(cfg) == null, "locked vault exposes no hop secrets");
+            Assert.True(vault.UnlockAsync("TestVault!5839-private-key").GetAwaiter().GetResult(), "reopen vault after hop regression");
         }
 
         private static void CheckAuth(CredentialPayload credential, string scenario)

@@ -31,14 +31,16 @@ namespace Gdterm.UI.Forms
         private System.Collections.Generic.List<KeePassEntrySummary> _rows = new System.Collections.Generic.List<KeePassEntrySummary>();
         private IList<KeePassEntrySummary> _entries;
         private readonly KeePassEntry _seed;
+        private readonly bool _selectionOnly;
 
         /// <summary>选中的条目 UUID，未选择返回 null</summary>
         public string SelectedEntryId { get; private set; }
 
-        public KeePassEntryPicker(IKeePassService keepass, KeePassEntry seed = null)
+        public KeePassEntryPicker(IKeePassService keepass, KeePassEntry seed = null, bool selectionOnly = false)
         {
             _keepass = keepass ?? throw new ArgumentNullException(nameof(keepass));
             _seed = seed;
+            _selectionOnly = selectionOnly;
             InitializeComponent();
             Gdterm.UI.Services.FormFontPolicy.Apply(this);
             LoadEntries();
@@ -106,7 +108,7 @@ namespace Gdterm.UI.Forms
             // 统一到 EmptyStateView：原来的手工 Panel + 单行居中标签既没有标题层级，
             // 也不带“去管理密码库”的下一步动作。
             _emptyState = EmptyStateView.Attach(this, L10n.T("密码库中没有可选凭据"),
-                L10n.T("在「管理…」里新建一条，或取消本次选择"), L10n.T("管理密码库…"), (s2, e2) => OpenManager());
+                (_selectionOnly ? L10n.T("返回跳板设置，点击“新建凭据…”添加密码或 SSH 私钥。") : L10n.T("在「管理…」里新建一条，或取消本次选择")), (_selectionOnly ? L10n.T("返回") : L10n.T("管理密码库…")), (s2, e2) => { if (_selectionOnly) { DialogResult = DialogResult.Cancel; Close(); } else OpenManager(); });
 
             // 停靠子控件不会可靠撑开 Panel.AutoSize；按钮栏改为表格，取消按钮始终占据可点击空间。
             var btnPanel = new TableLayoutPanel
@@ -153,6 +155,7 @@ namespace Gdterm.UI.Forms
             };
             Services.FormFontPolicy.SizeActionButton(this, btnCancel, 10, 4);
             btnCancel.Click += (s, e) => { DialogResult = DialogResult.Cancel; Close(); };
+            btnNew.Visible = btnManage.Visible = !_selectionOnly;
             btnPanel.Controls.Add(btnNew, 0, 0);
             btnPanel.Controls.Add(btnManage, 1, 0);
             btnPanel.Controls.Add(btnCancel, 3, 0);
@@ -220,7 +223,7 @@ namespace Gdterm.UI.Forms
                 if (isEmpty && !string.IsNullOrWhiteSpace(_searchBox.Text))
                     _emptyState.SetEmpty(true, L10n.T("没有匹配的凭据"), L10n.T("调整搜索词，或清空后重试"));
                 else if (isEmpty)
-                    _emptyState.SetEmpty(true, L10n.T("密码库中没有可选凭据"), L10n.T("在「管理…」里新建一条，或取消本次选择"));
+                    _emptyState.SetEmpty(true, L10n.T("密码库中没有可选凭据"), (_selectionOnly ? L10n.T("返回跳板设置，点击“新建凭据…”添加密码或 SSH 私钥。") : L10n.T("在「管理…」里新建一条，或取消本次选择")));
                 else
                     _emptyState.SetEmpty(false);
             }

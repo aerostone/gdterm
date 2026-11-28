@@ -39,10 +39,7 @@ namespace Gdterm.UI.Forms
         private AntdUI.Input _groupPathBox;
 
         // SSH 高级
-        private AntdUI.Checkbox _tunnelCheck;
-        private AntdUI.Input _tunnelHostBox;
-        private AntdUI.InputNumber _tunnelPortBox;
-        private AntdUI.Input _tunnelUserBox;
+        private JumpChainEditorControl _jumpChainEditor;
         private AntdUI.InputNumber _keepaliveBox; // SSH 保活秒数（0=关闭，缺省 30）
         // 代理（P0-2：企业内网刚需，SSH.NET 原生 ProxyTypes）
         private TableLayoutPanel _secProxy;
@@ -115,7 +112,8 @@ namespace Gdterm.UI.Forms
 
         public ConnectionDialog(ConnectionConfig existing = null, IKeePassService keepass = null)
         {
-            _config = existing ?? new ConnectionConfig();
+            _config = existing == null ? new ConnectionConfig() : ConnectionConfigCopy.Clone(existing, existing.Name);
+            if (existing != null) _config.Id = existing.Id;
             _keepass = keepass;
             _isNew = existing == null;
             InitializeComponent();
@@ -371,12 +369,10 @@ namespace Gdterm.UI.Forms
             var sshLayout = new TableLayoutPanel { Dock = DockStyle.Top, ColumnCount = 2, AutoSize = true };
             sshLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, labelW));
             sshLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
-            _tunnelCheck = new AntdUI.Checkbox { Text = L10n.T("使用 SSH 隧道（跳板机）"), AutoSize = true };
-            sshLayout.Controls.Add(_tunnelCheck, 0, 0); sshLayout.SetColumnSpan(_tunnelCheck, 2);
-            _tunnelHostBox = AddRow(sshLayout, 1, L10n.T("跳板主机"), new AntdUI.Input());
-            _tunnelPortBox = AddRow(sshLayout, 2, L10n.T("跳板端口"), new AntdUI.InputNumber { Minimum = 1, Maximum = 65535, Value = 22 });
-            _tunnelUserBox = AddRow(sshLayout, 3, L10n.T("跳板用户"), new AntdUI.Input());
-            _keepaliveBox = AddRow(sshLayout, 4, L10n.T("保活秒数"), new AntdUI.InputNumber { Minimum = 0, Maximum = 3600, Value = 30 });
+            _jumpChainEditor = new JumpChainEditorControl(_keepass) { Dock = DockStyle.Top, Margin = Padding.Empty };
+            sshLayout.Controls.Add(_jumpChainEditor, 0, 0); sshLayout.SetColumnSpan(_jumpChainEditor, 2);
+            _jumpChainEditor.Changed += (s, e) => ClearErrorIfResolved();
+            _keepaliveBox = AddRow(sshLayout, 1, L10n.T("保活秒数"), new AntdUI.InputNumber { Minimum = 0, Maximum = 3600, Value = 30 });
             SectionContent(_secSsh, sshLayout);
             _advFlow.Controls.Add(_secSsh);
 
@@ -769,7 +765,7 @@ namespace Gdterm.UI.Forms
         private void MaybeAutoExpand()
         {
             bool hasAdvanced =
-                ((_config.JumpChain != null && _config.JumpChain.Hops != null && _config.JumpChain.Hops.Count > 0)
+                ((_config.JumpChain != null)
                  || (_config.Metadata != null && _config.Metadata.ContainsKey("ssh_keepalive") && _config.Metadata["ssh_keepalive"] != "30"))
                 || (_config.Metadata != null &&
                     (_config.Metadata.ContainsKey("rdp_drives") || _config.Metadata.ContainsKey("rdp_fullscreen")
@@ -818,7 +814,7 @@ namespace Gdterm.UI.Forms
             if (proto != "SSH") ClearPendingKey();
             // 高级区只显示当前协议相关的分节（Telnet 无专属分节，与 SSH 同走跳板/保活区）
             bool isSsh = proto == "SSH" || proto == "Telnet", isRdp = proto == "RDP", isSerial = proto == "Serial";
-            _secSsh.Visible = isSsh;
+            _secSsh.Visible = isSsh || isRdp;
             if (_secTerm != null) _secTerm.Visible = proto != "RDP";
             _secRdp.Visible = isRdp;
             _secSerial.Visible = isSerial;
@@ -920,15 +916,7 @@ namespace Gdterm.UI.Forms
             }
             catch (System.Exception exSwallowed) { try { DiagLog.Swallowed("ConnectionDialog.LoadTerm", exSwallowed); } catch { } }
 
-            // SSH 跳板（JumpChain 首跳）
-            if (_config.JumpChain != null && _config.JumpChain.Hops != null && _config.JumpChain.Hops.Count > 0)
-            {
-                var hop = _config.JumpChain.Hops[0];
-                _tunnelCheck.Checked = true;
-                _tunnelHostBox.Text = hop.Host ?? "";
-                _tunnelPortBox.Value = hop.Port > 0 ? hop.Port : 22;
-                _tunnelUserBox.Text = hop.Username ?? "";
-            }
+            _jumpChainEditor.LoadChain(_config.JumpChain);
 
             // 代理
             if (_config.Proxy != null && _config.Proxy.Kind != ProxyKind.None)
@@ -984,6 +972,13 @@ namespace Gdterm.UI.Forms
             {
                 SetError(null);
                 if (!SaveLoginCredential()) return false;
+                try { if (!IsSerialProtocol()) _jumpChainEditor.CommitPendingCredentials(); }
+                catch (Exception ex)
+                {
+                    DiagLog.Swallowed("ConnectionDialog.JumpCredentials", ex);
+                    SetError(L10n.T("跳板凭据保存失败，草稿已保留，请解锁密码库后重试。"));
+                    return false;
+                }
                 SaveToConfig();
                 return true;
             }
@@ -1015,6 +1010,11 @@ namespace Gdterm.UI.Forms
             {
                 culprit = _portBox;
                 return L10n.Tf("端口必须在 1-65535 之间，当前 {0}", port);
+            }
+            if (!serial)
+            {
+                string jumpError = _jumpChainEditor.ValidationError();
+                if (jumpError != null) { culprit = _jumpChainEditor; return jumpError; }
             }
             return null;
         }
@@ -1109,26 +1109,7 @@ namespace Gdterm.UI.Forms
             if (_config.Metadata == null) _config.Metadata = new System.Collections.Generic.Dictionary<string, string>();
             _config.Metadata["ssh_keepalive"] = ((int)_keepaliveBox.Value).ToString();
 
-            // JumpChain hop (SSH jump host UI)
-            if (_tunnelCheck.Checked && !string.IsNullOrWhiteSpace(_tunnelHostBox.Text))
-            {
-                _config.JumpChain = new JumpChainConfig
-                {
-                    Hops = new System.Collections.Generic.List<JumpHop>
-                    {
-                        new JumpHop
-                        {
-                            Host = _tunnelHostBox.Text.Trim(),
-                            Port = (int)_tunnelPortBox.Value,
-                            Username = _tunnelUserBox.Text.Trim()
-                        }
-                    }
-                };
-            }
-            else
-            {
-                _config.JumpChain = null;
-            }
+            _config.JumpChain = _config.Protocol == ProtocolType.Serial ? null : _jumpChainEditor.GetChain();
 
             // 代理（未启用则清空，避免残留旧值）
             {

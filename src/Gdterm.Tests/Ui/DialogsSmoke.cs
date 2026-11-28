@@ -81,6 +81,13 @@ namespace Gdterm.Tests.Ui
                     "credential-editor-key-fields-visible");
             });
             CheckPrivateKeyConnection(tmp, check);
+            JumpChainSmoke.Run(tmp, check);
+            JumpRoutingSmoke.Run(check);
+            Show("jump-hop", () => new JumpHopEditForm(new FakeKeePassService(empty: true)), outDir, log, check);
+            Show("jump-chain", () => JumpChainSmoke.Scene(), outDir, log, check);
+            Show("jump-chain-empty", () => JumpChainSmoke.Scene(empty: true), outDir, log, check);
+            Show("jump-chain-rdp", () => JumpChainSmoke.Scene(protocol: ProtocolType.RDP), outDir, log, check);
+            Show("jump-picker-empty", () => new KeePassEntryPicker(new FakeKeePassService(empty: true), selectionOnly: true), outDir, log, check);
             Show("sshkey-manager", () => (Form)new SshKeyManagerForm(keepass), outDir, log, check);
             Show("transfer-progress", () => (Form)new TransferProgressDialog("smoke"), outDir, log, check);
             // 回收站：先灌 2 条锁三列/按钮启用态，再开空态外的有数据态

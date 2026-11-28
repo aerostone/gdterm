@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Gdterm.Core.Models;
@@ -16,157 +16,138 @@ namespace Gdterm.Tunnel
     /// </summary>
     public class TunnelManager : ITunnelManager
     {
-        private readonly ConcurrentDictionary<string, TunnelSession> _sessions
-            = new ConcurrentDictionary<string, TunnelSession>();
+        private readonly object _sync = new object();
+        private readonly Dictionary<string, TunnelSession> _sessions = new Dictionary<string, TunnelSession>();
+        private readonly Dictionary<string, PendingTunnel> _pending = new Dictionary<string, PendingTunnel>();
+        private bool _disposed;
 
-        /// <summary>connectionId → 进行中的建立任务（单飞）。</summary>
-        private readonly ConcurrentDictionary<string, Task<TunnelEndpoint>> _inflight
-            = new ConcurrentDictionary<string, Task<TunnelEndpoint>>();
+        private sealed class PendingTunnel
+        {
+            public CancellationTokenSource Cancellation;
+            public Task<TunnelEndpoint> Task;
+        }
 
         public Task<TunnelEndpoint> EstablishAsync(ConnectionConfig config, CredentialPayload credential, CancellationToken ct)
         {
             if (config == null) throw new ArgumentNullException(nameof(config));
-
-            var connectionId = config.Id ?? Guid.NewGuid().ToString("N");
-
-            // 复用活跃隧道
-            if (!string.IsNullOrEmpty(connectionId)
-                && _sessions.TryGetValue(connectionId, out var existing)
-                && existing != null
-                && existing.IsActive)
+            ct.ThrowIfCancellationRequested();
+            if (config.JumpChain != null && (config.JumpChain.Hops == null || config.JumpChain.Hops.Count == 0))
+                throw new InvalidOperationException(L10n.T("已启用跳板，请至少添加一台跳板机。"));
+            var id = string.IsNullOrEmpty(config.Id) ? Guid.NewGuid().ToString("N") : config.Id;
+            lock (_sync)
             {
-                return Task.FromResult(new TunnelEndpoint
-                {
-                    LocalHost = existing.LocalHost,
-                    LocalPort = existing.LocalPort,
-                    ConnectionId = connectionId
-                });
+                if (_disposed) throw new ObjectDisposedException(nameof(TunnelManager));
+                TunnelSession existing;
+                if (_sessions.TryGetValue(id, out existing) && existing.IsActive)
+                    return Task.FromResult(Endpoint(existing));
+                PendingTunnel pending;
+                if (_pending.TryGetValue(id, out pending)) return pending.Task;
+                pending = new PendingTunnel { Cancellation = CancellationTokenSource.CreateLinkedTokenSource(ct) };
+                // Register before running any connection work. GetOrAdd factories can run more than once.
+                _pending.Add(id, pending);
+                pending.Task = Task.Run(() => EstablishCore(config, credential, id, pending));
+                return pending.Task;
             }
-
-            // P1-04：并发同 connectionId 只建一次
-            Task<TunnelEndpoint> created = null;
-            var task = _inflight.GetOrAdd(connectionId, id =>
-            {
-                created = EstablishCoreAsync(config, credential, ct);
-                // 无论成败都从 inflight 移除，允许后续重试
-                created.ContinueWith(_ =>
-                {
-                    Task<TunnelEndpoint> removed;
-                    _inflight.TryRemove(id, out removed);
-                }, TaskContinuationOptions.ExecuteSynchronously);
-                return created;
-            });
-
-            return task;
         }
 
-        private async Task<TunnelEndpoint> EstablishCoreAsync(
-            ConnectionConfig config, CredentialPayload credential, CancellationToken ct)
+        private TunnelEndpoint EstablishCore(ConnectionConfig config, CredentialPayload credential, string id, PendingTunnel pending)
         {
-            var connectionId = config.Id;
-
-            // 双检：可能在排队期间已有活跃隧道
-            if (!string.IsNullOrEmpty(connectionId)
-                && _sessions.TryGetValue(connectionId, out var existing)
-                && existing != null
-                && existing.IsActive)
-            {
-                return new TunnelEndpoint
-                {
-                    LocalHost = existing.LocalHost,
-                    LocalPort = existing.LocalPort,
-                    ConnectionId = connectionId
-                };
-            }
-
-            if (!string.IsNullOrEmpty(connectionId)
-                && _sessions.TryRemove(connectionId, out var oldSession))
-            {
-                try { oldSession.Dispose(); } catch { /* best-effort */ }
-            }
-
-            var session = new TunnelSession(connectionId);
-
+            var ct = pending.Cancellation.Token;
+            var session = new TunnelSession(id);
+            TunnelSession old = null;
+            bool published = false;
             try
             {
-                await Task.Run(() =>
+                lock (_sync)
                 {
                     ct.ThrowIfCancellationRequested();
-
-                    if (config.JumpChain?.Hops == null || config.JumpChain.Hops.Count == 0)
-                        EstablishDirect(session, config, credential, ct);
-                    else
-                        EstablishWithJumpChain(session, config, credential, ct);
-                }, ct).ConfigureAwait(false);
-
-                _sessions[connectionId] = session;
-
-                return new TunnelEndpoint
+                    if (_sessions.TryGetValue(id, out old)) _sessions.Remove(id);
+                }
+                old?.Dispose();
+                ct.ThrowIfCancellationRequested();
+                if (config.JumpChain == null) EstablishDirect(session, config, credential, ct);
+                else EstablishWithJumpChain(session, config, credential, ct);
+                lock (_sync)
                 {
-                    LocalHost = session.LocalHost,
-                    LocalPort = session.LocalPort,
-                    ConnectionId = connectionId
-                };
+                    ct.ThrowIfCancellationRequested();
+                    PendingTunnel current;
+                    if (_disposed || !_pending.TryGetValue(id, out current) || !ReferenceEquals(current, pending))
+                        throw new OperationCanceledException(ct);
+                    if (!session.IsActive) throw new InvalidOperationException(session.LastError);
+                    _sessions[id] = session;
+                    published = true;
+                    return Endpoint(session);
+                }
             }
-            catch (OperationCanceledException)
-            {
-                session.Dispose();
-                throw;
-            }
-            catch (TunnelException)
-            {
-                session.Dispose();
-                throw;
-            }
+            catch (OperationCanceledException) { throw; }
+            catch (TunnelException) { throw; }
             catch (Exception ex)
             {
-                session.Dispose();
-                throw new TunnelException(
-                    L10n.T("隧道建立失败: ") + ex.Message,
-                    hopIndex: -1,
-                    host: config.Host,
-                    port: config.Port,
-                    innerException: ex);
+                throw new TunnelException(L10n.T("隧道建立失败: ") + ex.Message, -1, config.Host, config.Port, ex);
             }
+            finally
+            {
+                if (!published) session.Dispose();
+                lock (_sync)
+                {
+                    PendingTunnel current;
+                    if (_pending.TryGetValue(id, out current) && ReferenceEquals(current, pending)) _pending.Remove(id);
+                    pending.Cancellation.Dispose();
+                }
+            }
+        }
+
+        private static TunnelEndpoint Endpoint(TunnelSession session)
+        {
+            return new TunnelEndpoint { LocalHost = session.LocalHost, LocalPort = session.LocalPort, ConnectionId = session.ConnectionId };
         }
 
         public Task CloseAsync(string connectionId)
         {
-            if (_sessions.TryRemove(connectionId, out var session))
+            TunnelSession session = null;
+            lock (_sync)
             {
-                session.Dispose();
+                if (connectionId == null) return Task.CompletedTask;
+                if (_sessions.TryGetValue(connectionId, out session)) _sessions.Remove(connectionId);
+                PendingTunnel pending;
+                if (_pending.TryGetValue(connectionId, out pending))
+                {
+                    _pending.Remove(connectionId);
+                    pending.Cancellation.Cancel();
+                }
             }
+            session?.Dispose();
             return Task.CompletedTask;
         }
 
         public TunnelStatus GetStatus(string connectionId)
         {
-            if (_sessions.TryGetValue(connectionId, out var session))
+            lock (_sync)
             {
-                return new TunnelStatus
+                TunnelSession session;
+                if (connectionId != null && _sessions.TryGetValue(connectionId, out session))
                 {
-                    IsActive = session.IsActive,
-                    LastError = session.LastError,
-                    Uptime = session.IsActive ? DateTime.UtcNow - session.EstablishedAt : TimeSpan.Zero
-                };
+                    bool active = session.IsActive;
+                    return new TunnelStatus { IsActive = active, LastError = session.LastError,
+                        Uptime = active ? DateTime.UtcNow - session.EstablishedAt : TimeSpan.Zero };
+                }
+                return new TunnelStatus { IsActive = false, LastError = L10n.T("隧道不存在"), Uptime = TimeSpan.Zero };
             }
-
-            return new TunnelStatus
-            {
-                IsActive = false,
-                LastError = L10n.T("隧道不存在"),
-                Uptime = TimeSpan.Zero
-            };
         }
 
         public void Dispose()
         {
-            foreach (var kvp in _sessions)
+            List<TunnelSession> sessions;
+            lock (_sync)
             {
-                try { kvp.Value.Dispose(); } catch { /* best-effort */ }
+                if (_disposed) return;
+                _disposed = true;
+                sessions = new List<TunnelSession>(_sessions.Values);
+                _sessions.Clear();
+                foreach (var pending in _pending.Values) pending.Cancellation.Cancel();
+                _pending.Clear();
             }
-            _sessions.Clear();
-            _inflight.Clear();
+            foreach (var session in sessions) session.Dispose();
         }
 
         private void EstablishDirect(TunnelSession session, ConnectionConfig config, CredentialPayload credential, CancellationToken ct)
@@ -217,15 +198,15 @@ namespace Gdterm.Tunnel
                 // P1-10：优先 hop 映射的完整凭据（含私钥），否则密码
                 try
                 {
-                    session.ConnectHop(hop, credential, lastClient);
+                    session.ConnectHop(hop, credential, lastClient, i == 0 ? config.Proxy : null);
                 }
                 catch (Exception ex)
                 {
                     throw new TunnelException(
-                        L10n.Tf("跳板 Hop[{0}] {1}:{2} 连接失败: {3}", i, hop.Host, hop.Port, ex.Message),
+                        L10n.Tf("跳板 Hop[{0}] {1}:{2} 连接失败: {3}", i + 1, hop?.Host, hop?.Port ?? 0, ex.Message),
                         hopIndex: i,
-                        host: hop.Host,
-                        port: hop.Port,
+                        host: hop?.Host,
+                        port: hop?.Port ?? 0,
                         innerException: ex);
                 }
 

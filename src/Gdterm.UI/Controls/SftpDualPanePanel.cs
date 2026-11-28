@@ -178,7 +178,7 @@ namespace Gdterm.UI.Controls
             try
             {
                 _sftp = _factory.Create();
-                if (_config.Tunnel != null && _tunnelManager != null)
+                if (_config.RequiresTunnel && _tunnelManager != null)
                 {
                     var ep = await _tunnelManager.EstablishAsync(_config, _credential, CancellationToken.None);
                     await _sftp.ConnectViaTunnelAsync(_config, _credential, ep, CancellationToken.None);

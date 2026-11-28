@@ -21,6 +21,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  ssh-jump:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Install isolated SSH test prerequisites
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y openssh-server
+          sudo mkdir -p /run/sshd
+      - name: SSH jump integration regression
+        env:
+          GDT_SSHD_SUDO: '1'
+        run: |
+          set -o pipefail
+          python3 tools/ssh-jump-smoke/run.py 2>&1 | tee ssh-jump.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ssh-jump-evidence
+          path: ssh-jump.log
   verify:
     runs-on: windows-latest   # VS2022（msbuild 17）+ Python 3 + NuGet CLI，均有
     timeout-minutes: 60

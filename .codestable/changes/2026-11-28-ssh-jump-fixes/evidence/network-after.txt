@@ -1,0 +1,27 @@
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:07.56
+PASS two-hop tunnel active
+PASS forwarded target executes command
+PASS SFTP lists directory through two hops
+PASS disconnected hop reports inactive
+PASS retry replaces dead session
+PASS forwarded target executes command
+PASS close removes active session
+PASS forwarded target executes command
+PASS only first hop traverses HTTP CONNECT proxy
+PASS unavailable proxy cannot silently connect directly
+PASS empty jump chain fails validation instead of direct connection
+PASS missing hop credential cannot use target key
+PASS eight concurrent callers establish exactly one SSH client
+PASS forwarded target executes command
+PASS pending connection reached handshake
+PASS close cancels pending publication
+PASS forwarded target executes command
+PASS pending connection reached handshake
+PASS dispose cancels pending publication
+SSH jump regression complete
+Fixture stopped; temporary SSH keys removed on scope exit

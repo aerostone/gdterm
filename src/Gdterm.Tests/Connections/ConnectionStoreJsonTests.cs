@@ -65,6 +65,10 @@ namespace Gdterm.Tests.Connections
                     StopBits = System.IO.Ports.StopBits.One,
                     Parity = System.IO.Ports.Parity.None
                 };
+                added.JumpChain = new JumpChainConfig { Hops = new List<JumpHop> {
+                    new JumpHop { Host = "jump-one", Port = 2222, Username = "jump-user", CredentialRefId = "hop-key" },
+                    new JumpHop { Host = "jump-two", Port = 2200, Username = "", CredentialRefId = "hop-password" }
+                } };
                 store.Update(added);
 
                 var reloaded = store.GetById(added.Id);
@@ -74,6 +78,11 @@ namespace Gdterm.Tests.Connections
                 Assert.True(reloaded.Serial != null && reloaded.Serial.PortName == "COM3"
                     && reloaded.Serial.BaudRate == 115200, "serial config survives save/load");
 
+                Assert.Equal(2, reloaded.JumpChain.Hops.Count, "all jump hops survive disk round-trip");
+                Assert.Equal("hop-key", reloaded.JumpChain.Hops[0].CredentialRefId, "first hop private-key reference survives");
+                Assert.Equal("hop-password", reloaded.JumpChain.Hops[1].CredentialRefId, "second hop password reference survives");
+                Assert.Equal("jump-two", reloaded.JumpChain.Hops[1].Host, "hop order survives");
+                Assert.True(reloaded.RequiresTunnel && reloaded.Tunnel == null, "jump-only disk config keeps routing");
                 store.Delete(added.Id);
                 Assert.Equal(0, store.LoadAll().Count, "Delete removes connection");
             }

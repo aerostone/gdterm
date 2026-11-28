@@ -58,6 +58,9 @@ namespace Gdterm.Core.Models
         /// </summary>
         public TunnelConfig Tunnel { get; set; }
 
+        /// <summary>SSH、SFTP、RDP 共用的跳板/隧道路由判定。</summary>
+        public bool RequiresTunnel => Tunnel != null || JumpChain != null;
+
         /// <summary>连接前先过的 HTTP/SOCKS 代理；null 或 Kind=None 表示直连。</summary>
         public ProxyConfig Proxy { get; set; }
 

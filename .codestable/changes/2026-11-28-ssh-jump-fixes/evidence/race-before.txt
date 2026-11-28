@@ -1,0 +1,8 @@
+NETWORK first hop command=hop-one
+NETWORK second hop ConnectHop returned ms=157 IsConnected=False
+NETWORK second hop failed ms=166 type=SshConnectionException message=Client not connected.
+NETWORK tunnel established despite configured unreachable HTTP proxy=True
+NETWORK forwarded target command=forwarded-target
+NETWORK after hop disconnect actual=False reported-active=True
+NETWORK retry reused dead endpoint=True hop-connected=False
+NETWORK concurrent 8 EstablishAsync calls created SSH clients=8

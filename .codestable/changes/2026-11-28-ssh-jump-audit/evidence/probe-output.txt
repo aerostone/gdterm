@@ -1,0 +1,15 @@
+CONFIRMED valid references resolve independent hop password, key and passphrase
+CONFIRMED missing target entry discards valid hop credentials before lookup
+CONFIRMED missing explicit hop reference falls back to target password
+CONFIRMED target password reaches hop SSH authentication object
+CONFIRMED explicit empty hop password also falls back to target password
+CONFIRMED target private key does not silently become jump private key
+CONFIRMED runtime payload cleanup clears target key and password
+NETWORK first hop command=hop-one
+NETWORK second hop ConnectHop returned ms=271 IsConnected=False
+NETWORK second hop failed ms=289 type=SshConnectionException message=Client not connected.
+NETWORK tunnel established despite configured unreachable HTTP proxy=True
+NETWORK forwarded target command=forwarded-target
+NETWORK after hop disconnect actual=False reported-active=True
+NETWORK retry reused dead endpoint=True hop-connected=False
+NETWORK concurrent 8 EstablishAsync calls created SSH clients=1

@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems><NuGetAudit>false</NuGetAudit>
+    <LangVersion>7.3</LangVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../src/Gdterm.Core/Models/ConnectionConfig.cs" />
+    <Compile Include="../../src/Gdterm.Core/Models/CredentialPayload.cs" />
+    <Compile Include="../../src/Gdterm.Core/Models/JumpHop.cs" />
+    <Compile Include="../../src/Gdterm.Core/Models/JumpChainConfig.cs" />
+    <Compile Include="../../src/Gdterm.Core/Models/TunnelConfig.cs" />
+    <Compile Include="../../src/Gdterm.Core/Models/TunnelEndpoint.cs" />
+    <Compile Include="../../src/Gdterm.Core/Models/ProxyConfig.cs" />
+    <Compile Include="../../src/Gdterm.Core/Enums/ProtocolType.cs" />
+    <Compile Include="../../src/Gdterm.Core/Enums/TunnelType.cs" />
+    <Compile Include="../../src/Gdterm.Tunnel/SshConnectionInfoFactory.cs" />
+    <Compile Include="../../src/Gdterm.Tunnel/Models/TunnelSession.cs" />
+    <Compile Include="../../src/Gdterm.Tunnel/Models/TunnelStatus.cs" />
+    <Compile Include="../../src/Gdterm.Tunnel/TunnelManager.cs" />
+    <Compile Include="../../src/Gdterm.Tunnel/ITunnelManager.cs" />
+    <Compile Include="../../src/Gdterm.Tunnel/Exceptions/TunnelException.cs" />
+    <Compile Include="../../src/Gdterm.Tunnel/SshKeepAlive.cs" />
+    <Compile Include="../../src/Gdterm.Tunnel/SshHostKeyGuard.cs" />
+    <Compile Include="../../src/Gdterm.Core/Security/KnownHostsStore.cs" />
+    <Compile Include="../../src/Gdterm.Core/Security/HostKeyVerification.cs" />
+    <Compile Include="../../src/Gdterm.Core/L10n/L10n.cs" />
+    <Compile Include="../../src/Gdterm.Core/Models/SerialConfig.cs" />
+    <Compile Include="Program.cs" />
+    <PackageReference Include="System.IO.Ports" Version="8.0.0" />
+    <PackageReference Include="SSH.NET" Version="2026.0.0" />
+  </ItemGroup>
+</Project>

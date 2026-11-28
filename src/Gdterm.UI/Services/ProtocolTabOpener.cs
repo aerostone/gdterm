@@ -190,7 +190,7 @@ namespace Gdterm.UI.Services
             bool tcpDump = config != null && config.Metadata != null
                 && config.Metadata.TryGetValue("rdp_tcp_dump", out var dumpVal)
                 && dumpVal == "true";
-            if (tcpDump && config.Tunnel != null)
+            if (tcpDump && config.RequiresTunnel)
             {
                 DiagLog.Info("RdpTab.Proxy", "连接使用隧道，跳过抓包代理");
                 tcpDump = false;
@@ -320,8 +320,8 @@ namespace Gdterm.UI.Services
             {
                 try
                 {
-                    DiagLog.Info("RdpTab.Connect", "host=" + config.Host + " tunnel=" + (config.Tunnel != null) + " useFreeRdp=" + (rdp is FreeRdpClient));
-                    if (config.Tunnel != null && _tunnelManager != null)
+                    DiagLog.Info("RdpTab.Connect", "host=" + config.Host + " tunnel=" + config.RequiresTunnel + " useFreeRdp=" + (rdp is FreeRdpClient));
+                    if (config.RequiresTunnel && _tunnelManager != null)
                     {
                         var tunnel = _tunnelManager.EstablishAsync(config, credential,
                             System.Threading.CancellationToken.None).GetAwaiter().GetResult();

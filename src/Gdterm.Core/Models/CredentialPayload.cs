@@ -33,6 +33,9 @@ namespace Gdterm.Core.Models
         /// </summary>
         public Dictionary<string, string> HopPasswordsByRefId { get; set; }
 
+        /// <summary>每跳条目中的用户名；显式 hop.Username 优先。</summary>
+        public Dictionary<string, string> HopUsernamesByRefId { get; set; }
+
         /// <summary>
         /// 跳板 hop.CredentialRefId → 私钥 PEM（go-live P1-10）。
         /// </summary>
@@ -44,7 +47,7 @@ namespace Gdterm.Core.Models
         public Dictionary<string, string> HopPrivateKeyPassphrasesByRefId { get; set; }
 
         /// <summary>
-        /// 解析跳板密码：优先 hop.CredentialRefId 映射，否则回落叶子 Password。
+        /// 仅解析显式绑定的跳板密码；缺失与空密码必须区分，绝不回落目标密码。
         /// </summary>
         public static string ResolveHopPassword(JumpHop hop, CredentialPayload credential)
         {
@@ -54,11 +57,20 @@ namespace Gdterm.Core.Models
                 credential.HopPasswordsByRefId != null)
             {
                 string pwd;
-                if (credential.HopPasswordsByRefId.TryGetValue(hop.CredentialRefId, out pwd) &&
-                    !string.IsNullOrEmpty(pwd))
+                if (credential.HopPasswordsByRefId.TryGetValue(hop.CredentialRefId, out pwd))
                     return pwd;
             }
-            return credential != null ? credential.Password : null;
+            return null;
+        }
+
+        public static string ResolveHopUsername(JumpHop hop, CredentialPayload credential)
+        {
+            if (!string.IsNullOrWhiteSpace(hop?.Username)) return hop.Username;
+            string user;
+            if (!string.IsNullOrEmpty(hop?.CredentialRefId) && credential?.HopUsernamesByRefId != null &&
+                credential.HopUsernamesByRefId.TryGetValue(hop.CredentialRefId, out user) && !string.IsNullOrWhiteSpace(user))
+                return user;
+            return "root";
         }
 
         /// <summary>解析跳板私钥；无映射返回 null（非叶子私钥）。</summary>
@@ -91,6 +103,8 @@ namespace Gdterm.Core.Models
         {
             Password = null;
             SshPrivateKeyPassphrase = null;
+            HopUsernamesByRefId?.Clear();
+            HopUsernamesByRefId = null;
             if (SshPrivateKey != null)
             {
                 for (int i = 0; i < SshPrivateKey.Length; i++)

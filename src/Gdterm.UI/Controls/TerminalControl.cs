@@ -1120,8 +1120,7 @@ public async void Connect()
                         throw new InvalidOperationException(L10n.T("ITerminalSessionFactory 未注入，无法创建 Telnet 会话"));
                     session = _terminalFactory.CreateTelnet();
                     bool needTunnelTelnet = _tunnelManager != null && (
-                        (_config.JumpChain != null && _config.JumpChain.Hops != null && _config.JumpChain.Hops.Count > 0)
-                        || _config.Tunnel != null);
+                        _config.RequiresTunnel);
                     if (needTunnelTelnet)
                     {
                         var tunnelEndpoint = await _tunnelManager.EstablishAsync(
@@ -1142,8 +1141,7 @@ public async void Connect()
 
                     // 跳板在 JumpChain；Tunnel 仅端口转发参数。任一存在且有隧道管理器则走隧道。
                     bool needTunnel = _tunnelManager != null && (
-                        (_config.JumpChain != null && _config.JumpChain.Hops != null && _config.JumpChain.Hops.Count > 0)
-                        || _config.Tunnel != null);
+                        _config.RequiresTunnel);
                     if (needTunnel)
                     {
                         DiagLog.Info("TerminalControl.ConnectAsyncCore", "establish tunnel hops=" +

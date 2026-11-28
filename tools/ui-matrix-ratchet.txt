@@ -58,3 +58,8 @@ terminal-paste
 terminal-paste-progress
 ai-chat-commands
 dangerous-confirm
+jump-hop
+jump-chain
+jump-chain-empty
+jump-chain-rdp
+jump-picker-empty

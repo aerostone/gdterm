@@ -242,6 +242,11 @@ namespace Gdterm.Tests.Ui
                     .Invoke(form, new object[] { 1 });
                 return form;
             });
+            AddDialog(list, "jump-hop", "跳板表单/凭据按钮", t => new Gdterm.UI.Forms.JumpHopEditForm(new FakeKeePassService(empty: true)));
+            AddDialog(list, "jump-chain", "跳板列表/按钮条", t => JumpChainSmoke.Scene());
+            AddDialog(list, "jump-chain-empty", "启用跳板/空列表", t => JumpChainSmoke.Scene(empty: true));
+            AddDialog(list, "jump-chain-rdp", "RDP跳板列表", t => JumpChainSmoke.Scene(protocol: Gdterm.Core.Enums.ProtocolType.RDP));
+            AddDialog(list, "jump-picker-empty", "凭据选择空态", t => new Gdterm.UI.Forms.KeePassEntryPicker(new FakeKeePassService(empty: true), selectionOnly: true));
             AddDialog(list, "connection-login", "连接表单/密码输入",
                 t => new Gdterm.UI.Forms.ConnectionDialog(
                     new Gdterm.Core.Models.ConnectionConfig { Protocol = Gdterm.Core.Enums.ProtocolType.SSH },
