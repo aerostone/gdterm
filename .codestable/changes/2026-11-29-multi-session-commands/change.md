@@ -106,3 +106,5 @@ bash tools/csc-check.sh 退出 0：386 源码/13 工程；编码、i18n、sec-ga
 ## 验收结果
 
 待验证，不宣称完成。
+
+Windows 首轮 46170247301：新增框架 JSON 序列化后经典 csproj 缺 System.Xml 引用，构建 CS0012；补 Terminal 与 UI 两项目引用。Linux 四组 SSH 集成均成功。
