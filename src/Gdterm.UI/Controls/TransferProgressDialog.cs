@@ -45,21 +45,26 @@ namespace Gdterm.UI.Controls
             int fieldH = FormFontPolicy.FieldHeight(this);
 
             _titleLabel = new AntdUI.Label {
+                Name = "TransferTitle",
                 Text = title ?? L10n.T("传输中…"),
                 Dock = DockStyle.Top,
                 Padding = new Padding(padH, DpiScale.V(this, 14), padH, 0),
                 Font = new Font(Font.FontFamily, Font.Size + 1f, FontStyle.Bold),
+                TextAlign = ContentAlignment.MiddleLeft,
                 ForeColor = GdtermColorTable.Foreground
             };
-            FormFontPolicy.FitSingleLineLabel(_titleLabel);
+            _titleLabel.Height = FormFontPolicy.LineBox(_titleLabel.Font, this) + _titleLabel.Padding.Vertical;
             _detailLabel = new AntdUI.Label {
+                Name = "TransferDetail",
                 Text = L10n.T("准备中…"),
                 AutoEllipsis = true,
                 Dock = DockStyle.Top,
+                Font = Font,
+                TextAlign = ContentAlignment.MiddleLeft,
                 Padding = new Padding(padH, DpiScale.V(this, 8), padH, 0),
                 ForeColor = GdtermColorTable.Muted
             };
-            FormFontPolicy.FitSingleLineLabel(_detailLabel);
+            _detailLabel.Height = FormFontPolicy.LineBox(_detailLabel.Font, this) + _detailLabel.Padding.Vertical;
             var barHost = new Panel
             {
                 Dock = DockStyle.Top,
@@ -114,7 +119,7 @@ namespace Gdterm.UI.Controls
             Controls.Add(_titleLabel);
 
             ClientSize = new Size(DpiScale.V(this, 420),
-                _titleLabel.PreferredSize.Height + _detailLabel.PreferredSize.Height
+                _titleLabel.Height + _detailLabel.Height
                 + barHost.Height + bottomFlow.Height + DpiScale.V(this, 4));
             Gdterm.UI.Services.FormFontPolicy.Apply(this);
             // A11y：自绘/符号控件回填无障碍名（UiA11y 统一入口，幂等——只填空名）

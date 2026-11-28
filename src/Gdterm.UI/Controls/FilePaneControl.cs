@@ -156,6 +156,7 @@ namespace Gdterm.UI.Controls
 
             _status = new AntdUI.Label {
                 Dock = DockStyle.Bottom,
+                AutoEllipsis = true,
                 // 固定 22 在大字号下裁字 → 行盒跟随（其余 Dock 标题同）
                 Height = Math.Max(DpiScale.V(this, 22), FormFontPolicy.LineBox(FormFontPolicy.UiFont(), this)),
                 ForeColor = GdtermColorTable.Muted,

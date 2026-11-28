@@ -112,10 +112,12 @@ namespace Gdterm.Tests.Ui
                 var dialog = Application.OpenForms.OfType<TransferProgressDialog>().Single();
                 check(Field<AntdUI.Label>(dialog, "_detailLabel").Text.Contains("upload.txt"), "production transfer dialog displays current file");
                 Capture(dialog, outDir, "transfer-progress-active");
+                CheckTransferText(dialog, outDir, "transfer-progress-active", check);
                 Field<AntdUI.Button>(dialog, "_cancelButton").PerformClick();
                 PumpUntil(() => factory.Last.UploadCanceled && Field<int>(panel, "_activeTransfers") == 0);
                 check(dialog.IsCancelled && Field<AntdUI.Button>(panel, "_reconnect").Enabled, "production cancel reaches active transfer and allows reconnect");
                 Capture(dialog, outDir, "transfer-progress-canceled");
+                CheckTransferText(dialog, outDir, "transfer-progress-canceled", check);
                 dialog.Close(); dialog.Dispose();
                 }
                 catch (Exception ex)
@@ -153,6 +155,16 @@ namespace Gdterm.Tests.Ui
             form.Refresh(); Application.DoEvents();
             File.WriteAllText(Path.Combine(directory, name + ".json"), UiTreeDumper.Dump(form), System.Text.Encoding.UTF8);
             UiSmokeRunner.Shot(form, Path.Combine(directory, name + ".png"));
+        }
+        private static void CheckTransferText(TransferProgressDialog form, string directory, string name, Action<bool, string> check)
+        {
+            foreach (var field in new[] { "_titleLabel", "_detailLabel" })
+            {
+                var label = Field<AntdUI.Label>(form, field);
+                var bounds = form.RectangleToClient(label.RectangleToScreen(label.ClientRectangle));
+                int ink = UiStateSmoke.CountColorPixels(Path.Combine(directory, name + ".png"), bounds, label.ForeColor, 40);
+                check(ink >= 20, name + " renders " + field + " text (pixels=" + ink + ")");
+            }
         }
         private sealed class Factory : ISftpServiceFactory
         {

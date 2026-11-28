@@ -39,7 +39,7 @@ namespace Gdterm.UI.Controls
         private readonly System.Windows.Forms.Timer _healthTimer = new System.Windows.Forms.Timer { Interval = 1000 };
         private AntdUI.Button _reconnect;
         private bool _connecting;
-        private bool _connectRequested;
+        private bool _connectRequested = true;
         private bool _closed;
         private bool _reportedConnected;
         private bool _followCwd = true;
@@ -97,7 +97,6 @@ namespace Gdterm.UI.Controls
             _local.Navigate(null); // 本地盘符伪根立即初始化，不等远端连接
             _healthTimer.Tick += (sender, args) => CheckConnection();
             _healthTimer.Start();
-            BeginConnect();
         }
 
         // ── UI ──────────────────────────────────────────────
@@ -198,9 +197,10 @@ namespace Gdterm.UI.Controls
         }
 
         // ── 连接 ──────────────────────────────────────────
-        protected override void OnHandleCreated(EventArgs e)
+        protected override void OnLoad(EventArgs e)
         {
-            base.OnHandleCreated(e);
+            // 字体度量可能在构造期间创建句柄；真正装入宿主后才排队连接。
+            base.OnLoad(e);
             BeginInvoke(new Action(() => { if (!_closed && _connectRequested) BeginConnect(); }));
         }
 
