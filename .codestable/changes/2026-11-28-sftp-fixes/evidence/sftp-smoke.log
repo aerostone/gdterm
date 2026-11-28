@@ -1,12 +1,12 @@
-/data/develop/dotnet/gdterm/tools/sftp-smoke/Program.cs(82,45): warning CA1416: This call site is reachable on all platforms. 'File.GetUnixFileMode(string)' is unsupported on: 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [/data/develop/dotnet/gdterm/tools/sftp-smoke/SftpSmoke.csproj]
+/home/runner/work/gdterm/gdterm/tools/sftp-smoke/Program.cs(82,45): warning CA1416: This call site is reachable on all platforms. 'File.GetUnixFileMode(string)' is unsupported on: 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [/home/runner/work/gdterm/gdterm/tools/sftp-smoke/SftpSmoke.csproj]
 
 Build succeeded.
 
-/data/develop/dotnet/gdterm/tools/sftp-smoke/Program.cs(82,45): warning CA1416: This call site is reachable on all platforms. 'File.GetUnixFileMode(string)' is unsupported on: 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [/data/develop/dotnet/gdterm/tools/sftp-smoke/SftpSmoke.csproj]
+/home/runner/work/gdterm/gdterm/tools/sftp-smoke/Program.cs(82,45): warning CA1416: This call site is reachable on all platforms. 'File.GetUnixFileMode(string)' is unsupported on: 'windows'. (https://learn.microsoft.com/dotnet/fundamentals/code-analysis/quality-rules/ca1416) [/home/runner/work/gdterm/gdterm/tools/sftp-smoke/SftpSmoke.csproj]
     1 Warning(s)
     0 Error(s)
 
-Time Elapsed 00:00:15.59
+Time Elapsed 00:00:01.56
 PASS real key authentication
 PASS ordinary upload replaces equal-length stale contents
 PASS ordinary download replaces equal-length stale contents
@@ -65,7 +65,7 @@ PASS planner rejects unsafe name CON
 PASS planner rejects unsafe name COM1.txt
 PASS planner rejects unsafe name NUL.txt
 PASS planner rejects unsafe name tail.
-PASS planner rejects unsafe name tail
+PASS planner rejects unsafe name tail [trailing space]
 PASS planner rejects unsafe name a:b
 PASS planner rejects unsafe name bad\nname
 PASS planner refuses destination reparse point

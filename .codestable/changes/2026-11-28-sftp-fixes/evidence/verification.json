@@ -1,0 +1,61 @@
+{
+  "verified_commit": "4bcf79fd9b9217c78e8079564b4c072bce31c450",
+  "github": {
+    "run": 46141368771,
+    "url": "https://github.com/aerostone/gdterm/actions/runs/46141368771",
+    "conclusion": "success"
+  },
+  "appveyor": {
+    "build": 55183706,
+    "version": "0.1.566",
+    "status": "success",
+    "url": "https://ci.appveyor.com/project/aerostone/gdterm/build/0.1.566"
+  },
+  "unit_assertions_passed": 1089,
+  "sftp_network_assertions": 75,
+  "sftp_pure_assertions": 37,
+  "ui_cases_passed": 10,
+  "ui_cases_failed": 0,
+  "ui_matrix_pages": 64,
+  "ui_matrix_combinations": 6,
+  "ui_matrix_dumps": 384,
+  "pixel_baseline_images": 110,
+  "visual_review": {
+    "reviewer": "Codex",
+    "recorded_at": "2026-11-28T12:05:11.695231+00:00",
+    "source_screenshots": [
+      "ui-smoke/sftp-dual-pane.png",
+      "ui-smoke/sftp-dual-pane-wide.png",
+      "ui-smoke/sftp-disconnected.png",
+      "ui-smoke/sftp-permission.png",
+      "ui-smoke/transfer-progress-active.png",
+      "ui-smoke/transfer-progress-canceled.png",
+      "ui-matrix/Dark-d150-f14/sftp-dual-pane.png",
+      "ui-matrix/Dark-d150-f14/sftp-permission.png",
+      "ui-matrix/Dark-d150-f14/transfer-progress.png",
+      "ui-matrix/OLED-d100-f9/sftp-disconnected.png"
+    ],
+    "conclusion": "Titles, permission 644, file names, active and canceled progress, reconnect, and narrow large-font pane remain visible. Overflow refresh actually invoked in UI test.",
+    "limits": "DPI matrix injects application scaling factor; not physical PerMonitorV2 monitor transitions. Narrow columns retain native horizontal scrolling."
+  },
+  "limitations": [
+    "No user production server or credentials tested",
+    "Linux integration links production sources into net8.0; Windows build targets net462",
+    "Physical mouse drag and real high-DPI monitor transition were not performed; drag handler and UI event paths exercised in Windows CI"
+  ],
+  "findings": {
+    "S01": "verified",
+    "S02": "verified",
+    "S03": "verified",
+    "S04": "verified",
+    "S05": "verified",
+    "S06": "verified",
+    "S07": "verified",
+    "S08": "verified",
+    "S09": "verified",
+    "S10": "verified",
+    "S11": "verified",
+    "S12": "verified",
+    "S13": "verified"
+  }
+}

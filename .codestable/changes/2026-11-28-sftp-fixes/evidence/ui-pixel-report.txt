@@ -1,0 +1,4 @@
+  info: 新页面 editor-master-password（基线里没有，--write 后纳入）
+  info: 新页面 editor-master-password-f14（基线里没有，--write 后纳入）
+
+UI-PIXEL-FINGERPRINT: ALL OK (110 张，阈值 亮度0.01 白0.01 黑0.01 色0.03)

@@ -1,0 +1,1196 @@
+=== gdterm unit tests (zero-NuGet runner) ===
+[test] DefaultPorts
+[test] LogSanitizer
+[test] ConnectionStoreJson
+[test] JsonRoundTrip
+-- ConnectionConfigCopy --
+[test] ChatHistoryStore
+[test] AiAssistantService (conversation keys)
+[test] CommandHistoryStore.DeleteByIds
+[test] CommandHistoryStore.Query filter semantics
+[test] ExternalFormatImporter
+[test] SshConnectionInfoFactory
+[test] NetworkDiagnosticsTool
+-- TerminalProfile dual-track --
+-- VtTerminalEngine (Phase 0) --
+   truecolor spans: R@255,0,0 | G@0,255,0 | B@0,0,255
+   256-color X fg=255,0,0
+   DA response: <esc>[?64;1;2;4;6;9;15;18;21;22c
+-- ReverseVideo (SGR 7) --
+-- TerminalSelection --
+-- OSC 7 cwd / OSC 9-777-99 notifications --
+-- triggers / scrollback clamp / proxy config --
+-- ScanPluginStripFindings
+-- ScanPluginSeverity
+-- ScanPluginStore
+[test] HexDump
+[test] SessionRecording
+[test] AppearanceSettings
+=== gdterm UI smoke (screenshots to ui-smoke) ===
+  ok: KeePassManager DOCK_OK (0 overlaps)
+  ok: KeePassEntryTable 可定位
+  ok: 表行=2（实际2)
+  ok: 表客户区=700x231
+  ok: 表 RowHeight=30 在 24-34
+  ok: 表列=5（实际5)
+  shot: ui-smoke\keepass-manager.png
+  dump: keepass-manager.json
+  ok: 关闭按钮可定位
+  ok: ESC(CancelButton)已绑
+[PASS] KeePassManager
+  ok: 关闭按钮可定位
+  ok: ESC(CancelButton)已绑
+  ok: PasswordHealth DOCK_OK (0 overlaps)
+  ok: HealthScanStateLabel 可定位
+  ok: 状态行已填充=上次扫描：11:46:47 · 2 个条目
+  shot: ui-smoke\password-health.png
+  dump: password-health.json
+[PASS] PasswordHealth
+  ok: 插件表可定位
+  ok: 结果表可定位
+  ok: ScannerCenter DOCK_OK (0 overlaps)
+  ok: ScannerFindingEmptyHint 空状态可见
+  ok: ScannerRawEmptyHint 空状态可见
+  ok: ScannerPluginEmpty 空状态可见
+  ok: 右列左缘对齐 gutter=8/8 (≤2px 容差:壳边框)
+  ok: KeyPreview 已开（ESC 可达）
+  shot: ui-smoke\scanner-center.png
+  dump: scanner-center.json
+[PASS] ScannerCenter
+  ok: KeePassManagerEmpty DOCK_OK (0 overlaps)
+  ok: KeePassEmptyGuide 可定位
+  ok: 空库时引导可见
+  ok: 引导主按钮可定位
+  ok: 引导说明可定位
+  ok: empty-action-visible
+  ok: keepass-eight-actions-present
+  ok: keepass-toolbar-action-visible:添加
+  ok: action-face-horizontal:添加=21.6
+  ok: action-face-vertical:添加=10.6
+  ok: entry-action-inside-parent:添加
+  ok: keepass-toolbar-action-visible:编辑
+  ok: action-face-horizontal:编辑=21.6
+  ok: action-face-vertical:编辑=10.6
+  ok: entry-action-inside-parent:编辑
+  ok: keepass-toolbar-action-visible:删除
+  ok: action-face-horizontal:删除=21.6
+  ok: action-face-vertical:删除=10.6
+  ok: entry-action-inside-parent:删除
+  ok: keepass-toolbar-action-visible:删除选中
+  ok: action-face-horizontal:删除选中=21.3
+  ok: action-face-vertical:删除选中=10.6
+  ok: entry-action-inside-parent:删除选中
+  ok: keepass-toolbar-action-visible:复制密码
+  ok: action-face-horizontal:复制密码=21.3
+  ok: action-face-vertical:复制密码=10.6
+  ok: entry-action-inside-parent:复制密码
+  ok: keepass-toolbar-action-visible:复制用户名
+  ok: action-face-horizontal:复制用户名=21.1
+  ok: action-face-vertical:复制用户名=10.6
+  ok: entry-action-inside-parent:复制用户名
+  ok: keepass-toolbar-action-visible:新建连接
+  ok: action-face-horizontal:新建连接=21.3
+  ok: action-face-vertical:新建连接=10.6
+  ok: entry-action-inside-parent:新建连接
+  ok: keepass-toolbar-action-visible:刷新
+  ok: action-face-horizontal:刷新=21.6
+  ok: action-face-vertical:刷新=10.6
+  ok: entry-action-inside-parent:刷新
+  ok: keepass-search-inside-toolbar
+  ok: action-face-horizontal:添加第一条=25.1
+  ok: action-face-vertical:添加第一条=10.6
+  ok: entry-action-inside-parent:添加第一条
+  ok: entry-action-spacing-checked=9
+  ok: keepass-eight-actions-present
+  ok: keepass-toolbar-action-visible:添加
+  ok: action-face-horizontal:添加=21.6
+  ok: action-face-vertical:添加=10.6
+  ok: entry-action-inside-parent:添加
+  ok: keepass-toolbar-action-visible:编辑
+  ok: action-face-horizontal:编辑=21.6
+  ok: action-face-vertical:编辑=10.6
+  ok: entry-action-inside-parent:编辑
+  ok: keepass-toolbar-action-visible:删除
+  ok: action-face-horizontal:删除=21.6
+  ok: action-face-vertical:删除=10.6
+  ok: entry-action-inside-parent:删除
+  ok: keepass-toolbar-action-visible:删除选中
+  ok: action-face-horizontal:删除选中=21.3
+  ok: action-face-vertical:删除选中=10.6
+  ok: entry-action-inside-parent:删除选中
+  ok: keepass-toolbar-action-visible:复制密码
+  ok: action-face-horizontal:复制密码=21.3
+  ok: action-face-vertical:复制密码=10.6
+  ok: entry-action-inside-parent:复制密码
+  ok: keepass-toolbar-action-visible:复制用户名
+  ok: action-face-horizontal:复制用户名=21.1
+  ok: action-face-vertical:复制用户名=10.6
+  ok: entry-action-inside-parent:复制用户名
+  ok: keepass-toolbar-action-visible:新建连接
+  ok: action-face-horizontal:新建连接=21.3
+  ok: action-face-vertical:新建连接=10.6
+  ok: entry-action-inside-parent:新建连接
+  ok: keepass-toolbar-action-visible:刷新
+  ok: action-face-horizontal:刷新=21.6
+  ok: action-face-vertical:刷新=10.6
+  ok: entry-action-inside-parent:刷新
+  ok: keepass-search-inside-toolbar
+  ok: action-face-horizontal:Add first credential=25.0
+  ok: action-face-vertical:Add first credential=10.6
+  ok: entry-action-inside-parent:Add first credential
+  ok: entry-action-spacing-checked=9
+  shot: ui-smoke\keepass-manager-empty.png
+  dump: keepass-manager-empty.json
+  ok: 非空库引导层仍在树上
+  ok: 有行时引导隐藏
+[PASS] KeePassManagerEmpty
+  ok: command-history PANEL_NULL
+  ok: action-face-horizontal:刷新=23.7
+  ok: action-face-vertical:刷新=12.1
+  ok: entry-action-inside-parent:刷新
+  ok: entry-action-spacing-checked=1
+  ok: command-history DOCK_OK (0 overlaps)
+  ok: command-history TOO_FEW_CONTROLS=29 (>3)
+  ok: command-history EMPTY_MISSING (no EmptyStateView)
+  ok: command-history EMPTY_HIDDEN (empty source but layer invisible)
+  shot: ui-smoke\command-history.png
+  dump: command-history.json
+  ok: port-forward PANEL_NULL
+  ok: action-face-horizontal:新建规则=23.2
+  ok: action-face-vertical:新建规则=12.1
+  ok: entry-action-inside-parent:新建规则
+  ok: entry-action-spacing-checked=1
+  ok: port-forward DOCK_OK (0 overlaps)
+  ok: port-forward TOO_FEW_CONTROLS=28 (>3)
+  ok: port-forward EMPTY_MISSING (no EmptyStateView)
+  ok: port-forward EMPTY_HIDDEN (empty source but layer invisible)
+  shot: ui-smoke\port-forward.png
+  dump: port-forward.json
+  ok: secret-scan PANEL_NULL
+  ok: action-face-horizontal:开始扫描=23.2
+  ok: action-face-vertical:开始扫描=12.1
+  ok: entry-action-inside-parent:开始扫描
+  ok: entry-action-spacing-checked=1
+  ok: secret-scan DOCK_OK (0 overlaps)
+  ok: secret-scan TOO_FEW_CONTROLS=32 (>3)
+  shot: ui-smoke\secret-scan.png
+  dump: secret-scan.json
+  ok: key-binding PANEL_NULL
+  ok: key-binding DOCK_OK (0 overlaps)
+  ok: key-binding TOO_FEW_CONTROLS=28 (>3)
+  ok: key-binding EMPTY_MISSING (no EmptyStateView)
+  ok: key-binding EMPTY_SHOWN (data present but layer still visible)
+  shot: ui-smoke\key-binding.png
+  dump: key-binding.json
+  ok: toolbox PANEL_NULL
+  ok: toolbox DOCK_OK (0 overlaps)
+  ok: toolbox TOO_FEW_CONTROLS=17 (>3)
+  ok: toolbox EMPTY_MISSING (no EmptyStateView)
+  ok: toolbox EMPTY_HIDDEN (empty source but layer invisible)
+  shot: ui-smoke\toolbox.png
+  dump: toolbox.json
+  ok: logon-script PANEL_NULL
+  ok: action-face-horizontal:新建脚本=23.2
+  ok: action-face-vertical:新建脚本=12.1
+  ok: entry-action-inside-parent:新建脚本
+  ok: entry-action-spacing-checked=1
+  ok: logon-script DOCK_OK (0 overlaps)
+  ok: logon-script TOO_FEW_CONTROLS=27 (>3)
+  ok: logon-script EMPTY_MISSING (no EmptyStateView)
+  ok: logon-script EMPTY_HIDDEN (empty source but layer invisible)
+  shot: ui-smoke\logon-script.png
+  dump: logon-script.json
+  ok: macro PANEL_NULL
+  ok: action-face-horizontal:开始录制=23.2
+  ok: action-face-vertical:开始录制=12.1
+  ok: entry-action-inside-parent:开始录制
+  ok: entry-action-spacing-checked=1
+  ok: macro DOCK_OK (0 overlaps)
+  ok: macro TOO_FEW_CONTROLS=32 (>3)
+  ok: macro EMPTY_MISSING (no EmptyStateView)
+  ok: macro EMPTY_HIDDEN (empty source but layer invisible)
+  shot: ui-smoke\macro.png
+  dump: macro.json
+  ok: bookmarks PANEL_NULL
+  ok: action-face-horizontal:添加书签=23.2
+  ok: action-face-vertical:添加书签=12.1
+  ok: entry-action-inside-parent:添加书签
+  ok: entry-action-spacing-checked=1
+  ok: bookmarks DOCK_OK (0 overlaps)
+  ok: bookmarks TOO_FEW_CONTROLS=58 (>3)
+  ok: bookmarks EMPTY_MISSING (no EmptyStateView)
+  ok: bookmarks EMPTY_HIDDEN (empty source but layer invisible)
+  shot: ui-smoke\bookmarks.png
+  dump: bookmarks.json
+  ok: command-template PANEL_NULL
+  ok: command-template DOCK_OK (0 overlaps)
+  ok: command-template TOO_FEW_CONTROLS=29 (>3)
+  ok: command-template EMPTY_MISSING (no EmptyStateView)
+  ok: command-template EMPTY_HIDDEN (empty source but layer invisible)
+  shot: ui-smoke\command-template.png
+  dump: command-template.json
+  ok: highlight-rule PANEL_NULL
+  ok: highlight-rule DOCK_OK (0 overlaps)
+  ok: highlight-rule TOO_FEW_CONTROLS=28 (>3)
+  ok: highlight-rule EMPTY_MISSING (no EmptyStateView)
+  ok: highlight-rule EMPTY_SHOWN (data present but layer still visible)
+  shot: ui-smoke\highlight-rule.png
+  dump: highlight-rule.json
+  ok: transfer-center PANEL_NULL
+  ok: action-face-horizontal:打开传输日志目录=22.3
+  ok: action-face-vertical:打开传输日志目录=12.1
+  ok: entry-action-inside-parent:打开传输日志目录
+  ok: entry-action-spacing-checked=1
+  ok: transfer-center DOCK_OK (0 overlaps)
+  ok: transfer-center TOO_FEW_CONTROLS=28 (>3)
+  ok: transfer-center EMPTY_MISSING (no EmptyStateView)
+  ok: transfer-center EMPTY_HIDDEN (empty source but layer invisible)
+  shot: ui-smoke\transfer-center.png
+  dump: transfer-center.json
+  ok: notification-center PANEL_NULL
+  ok: notification-center DOCK_OK (0 overlaps)
+  ok: notification-center TOO_FEW_CONTROLS=26 (>3)
+  shot: ui-smoke\notification-center.png
+  dump: notification-center.json
+  ok: multi-channel PANEL_NULL
+  ok: action-face-horizontal:刷新列表=23.2
+  ok: action-face-vertical:刷新列表=12.1
+  ok: entry-action-inside-parent:刷新列表
+  ok: entry-action-spacing-checked=1
+  ok: multi-channel DOCK_OK (0 overlaps)
+  ok: multi-channel TOO_FEW_CONTROLS=33 (>3)
+  ok: multi-channel EMPTY_MISSING (no EmptyStateView)
+  ok: multi-channel EMPTY_HIDDEN (empty source but layer invisible)
+  shot: ui-smoke\multi-channel.png
+  dump: multi-channel.json
+  ok: batch-command PANEL_NULL
+  ok: batch-command DOCK_OK (0 overlaps)
+  ok: batch-command TOO_FEW_CONTROLS=30 (>3)
+  ok: batch-command EMPTY_MISSING (no EmptyStateView)
+  ok: batch-command EMPTY_HIDDEN (empty source but layer invisible)
+  shot: ui-smoke\batch-command.png
+  dump: batch-command.json
+  ok: health-monitor PANEL_NULL
+  ok: health-monitor DOCK_OK (0 overlaps)
+  ok: health-monitor TOO_FEW_CONTROLS=9 (>3)
+  shot: ui-smoke\health-monitor.png
+  dump: health-monitor.json
+  ok: snippet-search PANEL_NULL
+  ok: snippet-search DOCK_OK (0 overlaps)
+  ok: snippet-search TOO_FEW_CONTROLS=9 (>3)
+  ok: snippet-search EMPTY_MISSING (no EmptyStateView)
+  ok: snippet-search EMPTY_HIDDEN (empty source but layer invisible)
+  shot: ui-smoke\snippet-search.png
+  dump: snippet-search.json
+  ok: remote-monitor PANEL_NULL
+  ok: remote-monitor DOCK_OK (0 overlaps)
+  ok: remote-monitor TOO_FEW_CONTROLS=13 (>3)
+  shot: ui-smoke\remote-monitor.png
+  dump: remote-monitor.json
+  ok: bottom-bar PANEL_NULL
+  ok: bottom-bar DOCK_OK (0 overlaps)
+  ok: bottom-bar TOO_FEW_CONTROLS=6 (>3)
+  shot: ui-smoke\bottom-bar.png
+  dump: bottom-bar.json
+  ok: lock-overlay PANEL_NULL
+  ok: lock-overlay DOCK_OK (0 overlaps)
+  ok: lock-overlay TOO_FEW_CONTROLS=6 (>3)
+  shot: ui-smoke\lock-overlay.png
+  dump: lock-overlay.json
+  ok: welcome PANEL_NULL
+  ok: welcome-four-actions-present
+  ok: welcome-action-visible
+  ok: action-face-horizontal:新建连接=27.3
+  ok: action-face-vertical:新建连接=10.2
+  ok: entry-action-inside-parent:新建连接
+  ok: welcome-action-visible
+  ok: action-face-horizontal:本地终端=27.3
+  ok: action-face-vertical:本地终端=10.2
+  ok: entry-action-inside-parent:本地终端
+  ok: welcome-action-visible
+  ok: action-face-horizontal:书签=27.3
+  ok: action-face-vertical:书签=10.2
+  ok: entry-action-inside-parent:书签
+  ok: welcome-action-visible
+  ok: action-face-horizontal:密码库=27.3
+  ok: action-face-vertical:密码库=10.2
+  ok: entry-action-inside-parent:密码库
+  ok: entry-action-spacing-checked=4
+  ok: welcome DOCK_OK (0 overlaps)
+  ok: welcome TOO_FEW_CONTROLS=20 (>3)
+  shot: ui-smoke\welcome.png
+  dump: welcome.json
+  ok: connection-tree PANEL_NULL
+  ok: action-face-horizontal:新建连接=23.2
+  ok: action-face-vertical:新建连接=12.1
+  ok: entry-action-inside-parent:新建连接
+  ok: entry-action-spacing-checked=1
+  ok: connection-tree DOCK_OK (0 overlaps)
+  ok: connection-tree TOO_FEW_CONTROLS=10 (>3)
+  ok: connection-tree EMPTY_MISSING (no EmptyStateView)
+  ok: connection-tree EMPTY_HIDDEN (empty source but layer invisible)
+  shot: ui-smoke\connection-tree.png
+  dump: connection-tree.json
+  ok: welcome-populated PANEL_NULL
+  ok: welcome-four-actions-present
+  ok: welcome-action-visible
+  ok: action-face-horizontal:新建连接=27.3
+  ok: action-face-vertical:新建连接=10.2
+  ok: entry-action-inside-parent:新建连接
+  ok: welcome-action-visible
+  ok: action-face-horizontal:本地终端=27.3
+  ok: action-face-vertical:本地终端=10.2
+  ok: entry-action-inside-parent:本地终端
+  ok: welcome-action-visible
+  ok: action-face-horizontal:书签=27.3
+  ok: action-face-vertical:书签=10.2
+  ok: entry-action-inside-parent:书签
+  ok: welcome-action-visible
+  ok: action-face-horizontal:密码库=27.3
+  ok: action-face-vertical:密码库=10.2
+  ok: entry-action-inside-parent:密码库
+  ok: entry-action-spacing-checked=4
+  ok: welcome-populated DOCK_OK (0 overlaps)
+  ok: welcome-populated TOO_FEW_CONTROLS=20 (>3)
+  shot: ui-smoke\welcome-populated.png
+  dump: welcome-populated.json
+  ok: bottom-bar-tmux PANEL_NULL
+  ok: bottom-bar-tmux DOCK_OK (0 overlaps)
+  ok: bottom-bar-tmux TOO_FEW_CONTROLS=18 (>3)
+  shot: ui-smoke\bottom-bar-tmux.png
+  dump: bottom-bar-tmux.json
+  ok: sftp-dual-pane PANEL_NULL
+  ok: sftp-dual-pane DOCK_OK (0 overlaps)
+  ok: sftp-dual-pane TOO_FEW_CONTROLS=79 (>3)
+  shot: ui-smoke\sftp-dual-pane.png
+  dump: sftp-dual-pane.json
+  ok: sftp-disconnected PANEL_NULL
+  ok: sftp-disconnected DOCK_OK (0 overlaps)
+  ok: sftp-disconnected TOO_FEW_CONTROLS=48 (>3)
+  shot: ui-smoke\sftp-disconnected.png
+  dump: sftp-disconnected.json
+  ok: file-pane PANEL_NULL
+  ok: file-pane DOCK_OK (0 overlaps)
+  ok: file-pane TOO_FEW_CONTROLS=34 (>3)
+  shot: ui-smoke\file-pane.png
+  dump: file-pane.json
+  ok: ai-chat PANEL_NULL
+  ok: action-face-horizontal:试一个示例问题=24.8
+  ok: action-face-vertical:试一个示例问题=10.6
+  ok: entry-action-inside-parent:试一个示例问题
+  ok: entry-action-spacing-checked=1
+  ok: ai-chat DOCK_OK (0 overlaps)
+  ok: ai-chat TOO_FEW_CONTROLS=14 (>3)
+  shot: ui-smoke\ai-chat.png
+  dump: ai-chat.json
+  ok: ai-chat-commands PANEL_NULL
+  ok: action-face-horizontal:试一个示例问题=24.8
+  ok: action-face-vertical:试一个示例问题=10.6
+  ok: entry-action-inside-parent:试一个示例问题
+  ok: entry-action-spacing-checked=1
+  ok: ai-chat-commands DOCK_OK (0 overlaps)
+  ok: ai-chat-commands TOO_FEW_CONTROLS=16 (>3)
+  shot: ui-smoke\ai-chat-commands.png
+  dump: ai-chat-commands.json
+  ok: tool-network PANEL_NULL
+  ok: tool-network DOCK_OK (0 overlaps)
+  ok: tool-network TOO_FEW_CONTROLS=14 (>3)
+  shot: ui-smoke\tool-network.png
+  dump: tool-network.json
+  ok: tool-action PANEL_NULL
+  ok: tool-action DOCK_OK (0 overlaps)
+  ok: tool-action TOO_FEW_CONTROLS=9 (>3)
+  shot: ui-smoke\tool-action.png
+  dump: tool-action.json
+  ok: terminal-search PANEL_NULL
+  ok: terminal-search DOCK_OK (0 overlaps)
+  ok: terminal-search TOO_FEW_CONTROLS=10 (>3)
+  shot: ui-smoke\terminal-search.png
+  dump: terminal-search.json
+  ok: 侧栏面板失败 0/31:
+  side-panels done
+[PASS] SidePanels
+  STEP mainform-construct
+  STEP mainform-show
+  STEP mainform-assert
+  ok: mainform-controls=59 (>40)
+  ok: tree-found
+  ok: tabs-found
+  ok: welcome-visible-with-no-tabs
+  ok: tabs-instance
+C:\Users\runneradmin>C:\Users\runneradmin>C:\Users\runneradmin>  ok: welcome-hidden-after-open-tab
+  ok: hitregions>0 after open-tab (label close target must exist)
+  ok: session-recording-started
+  ok: session-recording-stopped-and-saved
+  ok: bottombar-found
+  ok: status-found
+  ok: menu-found
+  ok: session-recording-menu-found
+  shot: ui-smoke\mainform.png
+  STEP mainform-dump
+[PASS] MainForm
+  ok: dialog-action-visible-box:保存
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-action-visible-box:导出…
+  ok: dialog-action-row-consistent:导出…
+  ok: dialog-action-visible-gap:8
+  ok: dialog-action-visible-box:导入…
+  ok: dialog-action-row-consistent:导入…
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=4
+  ok: ai-settings-controls=22 (>5)
+  ok: ai-settings-cancelbtn(ESC绑定)
+  ok: ai-settings-client=516x508
+  shot: ui-smoke\ai-settings.png
+  dump: ai-settings.json
+  ok: ai-settings DOCK_OK (0 overlaps)
+  [PASS] ai-settings
+  ok: dialog-action-visible-box:保存
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-action-visible-box:恢复默认
+  ok: dialog-action-row-consistent:恢复默认
+  ok: dialog-action-visible-gap:8
+  ok: dialog-action-visible-box:导入…
+  ok: dialog-action-row-consistent:导入…
+  ok: dialog-action-visible-gap:8
+  ok: dialog-action-visible-box:导出…
+  ok: dialog-action-row-consistent:导出…
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=5
+  ok: appearance-settings-controls=28 (>5)
+  ok: appearance-settings-cancelbtn(ESC绑定)
+  ok: appearance-settings-client=536x637
+  shot: ui-smoke\appearance-settings.png
+  dump: appearance-settings.json
+  ok: appearance-settings DOCK_OK (0 overlaps)
+  [PASS] appearance-settings
+  ok: dialog-action-visible-box:确认修改
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: change-masterpwd-controls=12 (>5)
+  ok: change-masterpwd-cancelbtn(ESC绑定)
+  ok: change-masterpwd-client=516x507
+  shot: ui-smoke\change-masterpwd.png
+  dump: change-masterpwd.json
+  ok: change-masterpwd DOCK_OK (0 overlaps)
+  [PASS] change-masterpwd
+  ok: connection-ssh-default-port
+  ok: connection-ssh-controls=127 (>5)
+  ok: connection-ssh-client=576x688
+  shot: ui-smoke\connection-ssh.png
+  dump: connection-ssh.json
+  ok: connection-ssh DOCK_OK (0 overlaps)
+  [PASS] connection-ssh
+  ok: connection-rdp-default-port
+  ok: connection-rdp-controls=127 (>5)
+  ok: connection-rdp-client=576x688
+  shot: ui-smoke\connection-rdp.png
+  dump: connection-rdp.json
+  ok: connection-rdp DOCK_OK (0 overlaps)
+  [PASS] connection-rdp
+  ok: connection-serial-default-port
+  ok: connection-serial-controls=127 (>5)
+  ok: connection-serial-client=576x688
+  shot: ui-smoke\connection-serial.png
+  dump: connection-serial.json
+  ok: connection-serial DOCK_OK (0 overlaps)
+  [PASS] connection-serial
+  ok: dangerous-cmd-controls=31 (>5)
+  ok: dangerous-cmd-client=800x520
+  shot: ui-smoke\dangerous-cmd.png
+  dump: dangerous-cmd.json
+  ok: dangerous-cmd DOCK_OK (0 overlaps)
+  [PASS] dangerous-cmd
+  ok: dialog-action-visible-box:新建凭据
+  ok: dialog-action-visible-box:管理凭据…
+  ok: dialog-action-row-consistent:管理凭据…
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-box:选择
+  ok: dialog-action-row-consistent:选择
+  ok: dialog-actions-checked=4
+  ok: keepass-picker-controls=16 (>5)
+  ok: keepass-picker-cancelbtn(ESC绑定)
+  ok: keepass-picker-client=520x420
+  shot: ui-smoke\keepass-picker.png
+  dump: keepass-picker.json
+  ok: keepass-picker DOCK_OK (0 overlaps)
+  [PASS] keepass-picker
+  ok: dialog-action-visible-box:解锁
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: keepass-unlock-controls=7 (>5)
+  ok: keepass-unlock-cancelbtn(ESC绑定)
+  ok: keepass-unlock-client=456x263
+  shot: ui-smoke\keepass-unlock.png
+  dump: keepass-unlock.json
+  ok: keepass-unlock DOCK_OK (0 overlaps)
+  [PASS] keepass-unlock
+  ok: dialog-action-visible-box:添加
+  ok: dialog-action-visible-box:删除
+  ok: dialog-action-row-consistent:删除
+  ok: dialog-action-visible-gap:8
+  ok: dialog-action-visible-box:关闭
+  ok: dialog-action-visible-box:复制代码
+  ok: dialog-action-row-consistent:复制代码
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=4
+  ok: otp-manager-controls=30 (>5)
+  ok: otp-manager-cancelbtn(ESC绑定)
+  ok: otp-manager-client=656x459
+  shot: ui-smoke\otp-manager.png
+  dump: otp-manager.json
+  ok: otp-manager DOCK_OK (0 overlaps)
+  [PASS] otp-manager
+  ok: dialog-action-visible-box:保存
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: add-otp-controls=16 (>5)
+  ok: add-otp-cancelbtn(ESC绑定)
+  ok: add-otp-client=496x439
+  shot: ui-smoke\add-otp.png
+  dump: add-otp.json
+  ok: add-otp DOCK_OK (0 overlaps)
+  [PASS] add-otp
+  ok: pwd-generator-controls=19 (>5)
+  ok: pwd-generator-client=536x639
+  shot: ui-smoke\pwd-generator.png
+  dump: pwd-generator.json
+  ok: pwd-generator DOCK_OK (0 overlaps)
+  [PASS] pwd-generator
+  ok: dialog-action-visible-box:保存
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: quickcmd-editor-controls=22 (>5)
+  ok: quickcmd-editor-cancelbtn(ESC绑定)
+  ok: quickcmd-editor-client=536x561
+  shot: ui-smoke\quickcmd-editor.png
+  dump: quickcmd-editor.json
+  ok: quickcmd-editor DOCK_OK (0 overlaps)
+  [PASS] quickcmd-editor
+  ok: wizard-actions-aligned
+  ok: wizard-actions-spacing
+  ok: dialog-action-visible-box:开始设置 →
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: setup-wizard-controls=16 (>5)
+  ok: setup-wizard-client=560x480
+  shot: ui-smoke\setup-wizard.png
+  dump: setup-wizard.json
+  ok: setup-wizard DOCK_OK (0 overlaps)
+  [PASS] setup-wizard
+  ok: dialog-action-visible-box:确认设置 →
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: setup-password-controls=20 (>5)
+  ok: setup-password-cancelbtn(ESC绑定)
+  ok: setup-password-client=560x480
+  shot: ui-smoke\setup-password.png
+  dump: setup-password.json
+  ok: setup-password DOCK_OK (0 overlaps)
+  [PASS] setup-password
+  ok: credential-password-visible-height
+  ok: credential-password-usable-width
+  ok: credential-password-masked
+  ok: credential-editor-roundtrip
+  ok: dialog-action-visible-box:保存
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: keepass-entry-controls=36 (>5)
+  ok: keepass-entry-cancelbtn(ESC绑定)
+  ok: keepass-entry-client=520x640
+  shot: ui-smoke\keepass-entry.png
+  dump: keepass-entry.json
+  ok: keepass-entry DOCK_OK (0 overlaps)
+  [PASS] keepass-entry
+  ok: ssh-login-password-discoverable
+  ok: connection-create-result
+  ok: connection-password-vault-binding
+  ok: ssh-login-password-discoverable
+  ok: vault-failure-keeps-dialog-open
+  ok: vault-failure-visible
+  ok: bound-password-not-overwritten
+  ok: connection-edit-keeps-credential
+  ok: connection-cancel-no-write
+  connection-persistence scenarios completed
+  ok: credential-editor-key-fields-visible
+  ok: dialog-action-visible-box:保存
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: credential-ssh-key-controls=36 (>5)
+  ok: credential-ssh-key-cancelbtn(ESC绑定)
+  ok: credential-ssh-key-client=520x640
+  shot: ui-smoke\credential-ssh-key.png
+  dump: credential-ssh-key.json
+  ok: credential-ssh-key DOCK_OK (0 overlaps)
+  [PASS] credential-ssh-key
+  ok: key-entry-on-ssh-connection
+  ok: key-editor-seeded
+  ok: pending-key-not-yet-saved
+  ok: cancel-key-connection-no-vault-write
+  ok: key-entry-on-ssh-connection
+  ok: key-editor-seeded
+  ok: pending-key-not-yet-saved
+  ok: key-vault-write-failure-keeps-draft-for-retry
+  ok: save-key-connection-persists-and-binds-key
+  ok: edit-existing-key-without-source-file
+  ok: key-editor-preserves-key-and-passphrase
+  ok: key-editor-switch-to-password
+  ok: reopened-connection-shows-key-authentication
+  ok: enabled-empty-chain-blocks-save
+  ok: jump credential editor inherits jump host
+  ok: jump credential editor inherits jump host
+  ok: hop credentials remain drafts until connection save
+  ok: two hop rows actually render in table
+  ok: move-up changes hop order
+  ok: move-down restores hop order
+  ok: remove-hop discards pending credential
+  ok: jump credential editor inherits jump host
+  ok: editing never mutates original connection
+  ok: cancel outer connection discards all hop credentials
+  ok: enabled-empty-chain-blocks-save
+  ok: jump credential editor inherits jump host
+  ok: jump credential editor inherits jump host
+  ok: hop credentials remain drafts until connection save
+  ok: two hop rows actually render in table
+  ok: move-up changes hop order
+  ok: move-down restores hop order
+  ok: remove-hop discards pending credential
+  ok: jump credential editor inherits jump host
+  ok: partial hop write failure rolls back created entries and retains drafts
+  ok: editing never mutates original connection
+  ok: retry saves target and both hop credentials exactly once
+  ok: failed hop save restores target password draft
+  ok: password hop binds its own credential
+  ok: key hop binds its own encrypted private key
+  ok: rename retains complete chain
+  ok: reopen disk retains hop order and credential references
+  ok: SFTP real UI entry routes direct
+  ok: SFTP receives manager endpoint direct
+  ok: RDP real pending connect routes direct
+  ok: RDP receives manager endpoint direct
+  ok: SFTP real UI entry routes jump-only
+  ok: SFTP receives manager endpoint jump-only
+  ok: RDP real pending connect routes jump-only
+  ok: RDP receives manager endpoint jump-only
+  ok: SFTP real UI entry routes tunnel
+  ok: SFTP receives manager endpoint tunnel
+  ok: RDP real pending connect routes tunnel
+  ok: RDP receives manager endpoint tunnel
+  ok: sftp runs within production WinForms message loop
+  ok: sftp permission initializes 600
+  ok: sftp octal updates checkboxes
+  ok: sftp checkbox updates octal
+  ok: sftp apply retains selected mode
+  ok: sftp permission initializes 640
+  ok: sftp octal updates checkboxes
+  ok: sftp checkbox updates octal
+  ok: sftp apply retains selected mode
+  ok: sftp permission initializes 644
+  ok: sftp octal updates checkboxes
+  ok: sftp checkbox updates octal
+  ok: sftp apply retains selected mode
+  ok: sftp permission initializes 755
+  ok: sftp octal updates checkboxes
+  ok: sftp checkbox updates octal
+  ok: sftp apply retains selected mode
+  ok: sftp missing rwx uses bit value
+  ok: uppercase S/T do not imply execute
+  ok: sftp navigation retains UI synchronization context after pumping messages
+  shot: ui-smoke\sftp-dual-pane-wide.png
+  ok: narrow file pane exposes overflow actions
+  ok: narrow overflow retains refresh action
+  ok: sftp accepts actual opposite pane drag
+  ok: sftp rejects other server drag
+  ok: sftp rejects same side drag
+  ok: sftp empty pane receives valid drop
+  ok: actual drop downloads into captured local directory
+  ok: sftp follow rejects same host different connection
+  ok: sftp follow checks port and identity
+  ok: sftp busy navigation retains latest followed path
+  ok: sftp disconnect disables stale pane and offers reconnect
+  ok: sftp reconnect replaces old pane and service
+  ok: production transfer dialog puts current filename before long path
+  shot: ui-smoke\transfer-progress-active.png
+  ok: transfer-progress-active renders _titleLabel text (pixels=66)
+  ok: transfer-progress-active renders _detailLabel text (pixels=394)
+  ok: production cancel reaches active transfer and allows reconnect
+  shot: ui-smoke\transfer-progress-canceled.png
+  ok: transfer-progress-canceled renders _titleLabel text (pixels=66)
+  ok: transfer-progress-canceled renders _detailLabel text (pixels=500)
+  ok: sftp panel close cancels connection without resurrection
+  ok: unshown panel does not start background connection
+  ok: dialog-action-visible-box:确定
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: jump-hop-controls=19 (>5)
+  ok: jump-hop-cancelbtn(ESC绑定)
+  ok: jump-hop-client=560x430
+  shot: ui-smoke\jump-hop.png
+  dump: jump-hop.json
+  ok: jump-hop DOCK_OK (0 overlaps)
+  [PASS] jump-hop
+  ok: dialog-action-visible-box:保存
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: jump-chain-controls=127 (>5)
+  ok: jump-chain-cancelbtn(ESC绑定)
+  ok: jump-chain-client=560x688
+  shot: ui-smoke\jump-chain.png
+  dump: jump-chain.json
+  ok: jump-chain DOCK_OK (0 overlaps)
+  [PASS] jump-chain
+  ok: dialog-action-visible-box:保存
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: jump-chain-empty-controls=127 (>5)
+  ok: jump-chain-empty-cancelbtn(ESC绑定)
+  ok: jump-chain-empty-client=560x688
+  shot: ui-smoke\jump-chain-empty.png
+  dump: jump-chain-empty.json
+  ok: jump-chain-empty DOCK_OK (0 overlaps)
+  [PASS] jump-chain-empty
+  ok: dialog-action-visible-box:保存
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: jump-chain-rdp-controls=127 (>5)
+  ok: jump-chain-rdp-cancelbtn(ESC绑定)
+  ok: jump-chain-rdp-client=560x688
+  shot: ui-smoke\jump-chain-rdp.png
+  dump: jump-chain-rdp.json
+  ok: jump-chain-rdp DOCK_OK (0 overlaps)
+  [PASS] jump-chain-rdp
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-visible-box:选择
+  ok: dialog-action-row-consistent:选择
+  ok: dialog-actions-checked=2
+  ok: jump-picker-empty-controls=16 (>5)
+  ok: jump-picker-empty-cancelbtn(ESC绑定)
+  ok: jump-picker-empty-client=520x420
+  shot: ui-smoke\jump-picker-empty.png
+  dump: jump-picker-empty.json
+  ok: jump-picker-empty DOCK_OK (0 overlaps)
+  [PASS] jump-picker-empty
+  ok: dialog-action-visible-box:导入到密码库
+  ok: dialog-action-visible-box:关闭
+  ok: dialog-action-row-consistent:关闭
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: sshkey-manager-controls=17 (>5)
+  ok: sshkey-manager-cancelbtn(ESC绑定)
+  ok: sshkey-manager-client=616x569
+  shot: ui-smoke\sshkey-manager.png
+  dump: sshkey-manager.json
+  ok: sshkey-manager DOCK_OK (0 overlaps)
+  [PASS] sshkey-manager
+  ok: dialog-action-visible-box:取消
+  ok: dialog-actions-checked=1
+  ok: transfer-progress-controls=8 (>5)
+  ok: transfer-progress-client=436x212
+  shot: ui-smoke\transfer-progress.png
+  dump: transfer-progress.json
+  ok: transfer-progress DOCK_OK (0 overlaps)
+  [PASS] transfer-progress
+  ok: dialog-action-visible-box:关闭
+  ok: dialog-actions-checked=1
+  ok: trash-controls=28 (>5)
+  ok: trash-client=636x439
+  shot: ui-smoke\trash.png
+  dump: trash.json
+  ok: trash DOCK_OK (0 overlaps)
+  [PASS] trash
+  ok: dialog-action-visible-box:导入
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: import-preview-controls=12 (>5)
+  ok: import-preview-cancelbtn(ESC绑定)
+  ok: import-preview-client=576x459
+  shot: ui-smoke\import-preview.png
+  dump: import-preview.json
+  ok: import-preview DOCK_OK (0 overlaps)
+  [PASS] import-preview
+  ok: dialog-action-visible-box:取消并断开 (Esc)
+  ok: dialog-action-visible-box:信任并记住
+  ok: dialog-action-row-consistent:信任并记住
+  ok: dialog-action-visible-gap:8
+  ok: dialog-action-visible-box:仅本次信任
+  ok: dialog-action-row-consistent:仅本次信任
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=3
+  ok: hostkey-unknown-controls=11 (>5)
+  ok: hostkey-unknown-cancelbtn(ESC绑定)
+  ok: hostkey-unknown-client=600x440
+  shot: ui-smoke\hostkey-unknown.png
+  dump: hostkey-unknown.json
+  ok: hostkey-unknown DOCK_OK (0 overlaps)
+  [PASS] hostkey-unknown
+  ok: dialog-action-visible-box:取消并断开 (Esc)
+  ok: dialog-action-visible-box:信任并记住
+  ok: dialog-action-row-consistent:信任并记住
+  ok: dialog-action-visible-gap:8
+  ok: dialog-action-visible-box:仅本次信任
+  ok: dialog-action-row-consistent:仅本次信任
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=3
+  ok: hostkey-changed-controls=11 (>5)
+  ok: hostkey-changed-cancelbtn(ESC绑定)
+  ok: hostkey-changed-client=600x500
+  shot: ui-smoke\hostkey-changed.png
+  dump: hostkey-changed.json
+  ok: hostkey-changed DOCK_OK (0 overlaps)
+  [PASS] hostkey-changed
+  ok: dialog-action-visible-box:关闭
+  ok: dialog-actions-checked=1
+  ok: log-viewer-controls=43 (>5)
+  ok: log-viewer-cancelbtn(ESC绑定)
+  ok: log-viewer-client=1044x699
+  shot: ui-smoke\log-viewer.png
+  dump: log-viewer.json
+  ok: log-viewer DOCK_OK (0 overlaps)
+  [PASS] log-viewer
+  ok: session-recordings-list-one=1 (==1)
+  ok: session-recordings-renderer
+  ok: session-recordings-replayed-text (回放的内容必须真出现在网格里)
+  ok: dialog-action-visible-box:关闭
+  ok: dialog-actions-checked=1
+  ok: session-recordings-controls=42 (>5)
+  ok: session-recordings-cancelbtn(ESC绑定)
+  ok: session-recordings-client=1016x679
+  shot: ui-smoke\session-recordings.png
+  dump: session-recordings.json
+  ok: session-recordings DOCK_OK (0 overlaps)
+  [PASS] session-recordings
+  ok: dialog-action-visible-box:应用
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: sftp-permission-controls=18 (>5)
+  ok: sftp-permission-cancelbtn(ESC绑定)
+  ok: sftp-permission-client=381x295
+  shot: ui-smoke\sftp-permission.png
+  dump: sftp-permission.json
+  ok: sftp-permission DOCK_OK (0 overlaps)
+  [PASS] sftp-permission
+  ok: dialogs-one-fail=0 (==0)
+  dialogs done
+[PASS] Dialogs
+  shot: ui-smoke\editor-bookmark.png
+  ok: dialog-action-visible-box:保存
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-bookmark captured and cancelled
+  shot: ui-smoke\editor-forward.png
+  ok: dialog-action-visible-box:保存
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-forward captured and cancelled
+  shot: ui-smoke\editor-highlight.png
+  ok: dialog-action-visible-box:保存
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-highlight captured and cancelled
+  shot: ui-smoke\editor-logon.png
+  ok: dialog-action-visible-box:保存
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-logon captured and cancelled
+  shot: ui-smoke\editor-logon-step.png
+  ok: dialog-action-visible-box:添加
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-logon-step captured and cancelled
+  shot: ui-smoke\editor-key-binding.png
+  ok: dialog-action-visible-box:保存
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-key-binding captured and cancelled
+  shot: ui-smoke\editor-template.png
+  ok: dialog-action-visible-box:执行
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-template captured and cancelled
+  shot: ui-smoke\editor-snippet.png
+  ok: dialog-action-visible-box:执行
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-snippet captured and cancelled
+  shot: ui-smoke\editor-file-input.png
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-visible-box:确定
+  ok: dialog-action-row-consistent:确定
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-file-input captured and cancelled
+  shot: ui-smoke\editor-file-preview.png
+  ok: dialog-action-visible-box:关闭
+  ok: dialog-actions-checked=1
+  ok: editor-file-preview captured and cancelled
+  shot: ui-smoke\editor-side-close.png
+  shot: ui-smoke\editor-focus-exit.png
+  shot: ui-smoke\editor-update.png
+  ok: dialog-action-visible-box:打开项目主页
+  ok: dialog-action-visible-box:关闭
+  ok: dialog-action-row-consistent:关闭
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-update captured and cancelled
+  shot: ui-smoke\editor-secret-details.png
+  ok: editor-secret-details captured and cancelled
+  shot: ui-smoke\editor-master-password.png
+  ok: dialog-action-visible-box:验证
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-master-password captured and cancelled
+  shot: ui-smoke\editor-bookmark-f14.png
+  ok: dialog-action-visible-box:保存
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-bookmark-f14 captured and cancelled
+  shot: ui-smoke\editor-forward-f14.png
+  ok: dialog-action-visible-box:保存
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-forward-f14 captured and cancelled
+  shot: ui-smoke\editor-highlight-f14.png
+  ok: dialog-action-visible-box:保存
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-highlight-f14 captured and cancelled
+  shot: ui-smoke\editor-logon-f14.png
+  ok: dialog-action-visible-box:保存
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-logon-f14 captured and cancelled
+  shot: ui-smoke\editor-logon-step-f14.png
+  ok: dialog-action-visible-box:添加
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-logon-step-f14 captured and cancelled
+  shot: ui-smoke\editor-key-binding-f14.png
+  ok: dialog-action-visible-box:保存
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-key-binding-f14 captured and cancelled
+  shot: ui-smoke\editor-template-f14.png
+  ok: dialog-action-visible-box:执行
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-template-f14 captured and cancelled
+  shot: ui-smoke\editor-snippet-f14.png
+  ok: dialog-action-visible-box:执行
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-snippet-f14 captured and cancelled
+  shot: ui-smoke\editor-file-input-f14.png
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-visible-box:确定
+  ok: dialog-action-row-consistent:确定
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-file-input-f14 captured and cancelled
+  shot: ui-smoke\editor-file-preview-f14.png
+  ok: dialog-action-visible-box:关闭
+  ok: dialog-actions-checked=1
+  ok: editor-file-preview-f14 captured and cancelled
+  shot: ui-smoke\editor-side-close-f14.png
+  shot: ui-smoke\editor-focus-exit-f14.png
+  shot: ui-smoke\editor-update-f14.png
+  ok: dialog-action-visible-box:打开项目主页
+  ok: dialog-action-visible-box:关闭
+  ok: dialog-action-row-consistent:关闭
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-update-f14 captured and cancelled
+  shot: ui-smoke\editor-secret-details-f14.png
+  ok: editor-secret-details-f14 captured and cancelled
+  shot: ui-smoke\editor-master-password-f14.png
+  ok: dialog-action-visible-box:验证
+  ok: dialog-action-visible-box:取消
+  ok: dialog-action-row-consistent:取消
+  ok: dialog-action-visible-gap:8
+  ok: dialog-actions-checked=2
+  ok: editor-master-password-f14 captured and cancelled
+[PASS] ButtonEditors
+  section: unlock-states
+    label[Label] fore=#E8EEF3 text=🔐 密码库已锁定
+    label[Label] fore=#E8EEF3 text=密码不能为空
+  ok: state-unlock: AcceptButton 可定位（Enter 可提交）
+  shot: ui-smoke\state-unlock-disabled.png
+  dump: state-unlock-disabled.json
+  ok: state-unlock: 空密码时「解锁」置灰（预防式校验）
+  ok: state-unlock: 禁用态给出具体原因「密码不能为空」(实际标签=🔐 密码库已锁定/#E8EEF3 | 密码不能为空/#E8EEF3)
+  ok: state-unlock: 原因文案可见
+  ok: state-unlock: 原因文案有面积=94x21
+  ok: state-unlock: 错误文案在屏幕上渲染成 Danger 色（矩形={X=24,Y=68,Width=94,Height=21} 像素=120/≥20）
+  ok: state-unlock: 密码输入框可定位
+  ok: state-unlock: 输入密码后「解锁」转可用（禁用态不是死的）
+  shot: ui-smoke\state-unlock-ready.png
+  dump: state-unlock-ready.json
+  ok: state-unlock: 校验通过后提示改回引导语「请输入主密码以解锁 KeePass 密码库」(实际=🔐 密码库已锁定/#E8EEF3 | 请输入主密码以解锁 KeePass 密码/#E8EEF3)
+  ok: state-unlock: 校验通过后提示区红色收回（残留像素=0/<5）
+  shot: ui-smoke\state-unlock-busy.png
+  dump: state-unlock-busy.json
+  ok: state-unlock: 忙碌中主操作禁用（防重复提交）
+  ok: state-unlock: 忙碌中文案可见=解锁中...
+  ok: state-unlock: 成功解锁后 IsUnlocked=true
+  ok: state-unlock: 密码原样送达服务（未被清洗/截断）=smoke-master-password
+  section done: unlock-states
+  section: busy-scope
+  ok: busy-scope: 进入后 IsBusy=true
+  ok: busy-scope: 状态文案可读回（此前 status 是死参数，用户看不到任何进度文案）
+  ok: busy-scope: 状态文案对读屏可见
+  ok: busy-scope: 指定主操作被禁用
+  ok: busy-scope: 光标变沙漏
+  ok: busy-scope: 重入返回 AlreadyBusy（不静默丢弃）
+  ok: busy-scope: 重入作用域 Dispose 不得关掉外层
+  ok: busy-scope: Dispose 后 IsBusy=false
+  ok: busy-scope: Dispose 后按钮复位（finally 契约）
+  ok: busy-scope: Dispose 后光标复位
+  ok: busy-scope: Dispose 后状态文案收回
+  busy-scope done
+  section done: busy-scope
+  section: narrow-panels
+  ok: command-history-narrow DOCK_OK (0 overlaps)
+  ok: command-history-narrow: 控件数=29 (>3)
+  ok: command-history-narrow: 主操作控件在窄窗下仍可见且有面积= 76x38
+  ok: command-history-narrow: 主操作控件右缘=80 未越出窄窗宽=240
+  ok: command-history-narrow: 标签被裁「共 0 条记录」需 67px 可用 237px
+  shot: ui-smoke\command-history-narrow.png
+  dump: command-history-narrow.json
+  ok: port-forward-narrow DOCK_OK (0 overlaps)
+  ok: port-forward-narrow: 控件数=28 (>3)
+  ok: port-forward-narrow: 主操作控件在窄窗下仍可见且有面积= 100x38
+  ok: port-forward-narrow: 主操作控件右缘=104 未越出窄窗宽=240
+  shot: ui-smoke\port-forward-narrow.png
+  dump: port-forward-narrow.json
+  ok: toolbox-narrow DOCK_OK (0 overlaps)
+  ok: toolbox-narrow: 控件数=17 (>3)
+  ok: toolbox-narrow: 主操作控件在窄窗下仍可见且有面积= 240x38
+  ok: toolbox-narrow: 主操作控件右缘=240 未越出窄窗宽=240
+  ok: toolbox-narrow: 标签被裁「运维工具箱」需 107px 可用 210px
+  shot: ui-smoke\toolbox-narrow.png
+  dump: toolbox-narrow.json
+  section done: narrow-panels
+[PASS] StateAxis
+  section: conn-validation
+  ok: fail-conn: 主机输入框可定位
+  ok: fail-conn: 主按钮可定位（Enter 可提交）
+  shot: ui-smoke\fail-conn-emptyhost.png
+  dump: fail-conn-emptyhost.json
+  ok: fail-conn: 空主机点「创建」后窗口不能关掉（此前会直接保存成功）
+  ok: fail-conn: 空主机不应产生 OK 结果（实际=None）
+  ok: fail-conn: 校验错误行在树上（Name=ConnDialogErrorLabel）
+  ok: fail-conn: 错误行可见
+  ok: fail-conn: 错误文案给出具体原因（期望「主机不能为空」实际「主机不能为空」）
+  ok: fail-conn: 错误文案渲染成 Danger 色（像素=114/≥20）
+  ok: fail-conn: 焦点落在主机框（实际=）
+  shot: ui-smoke\fail-conn-recovered.png
+  dump: fail-conn-recovered.json
+  ok: fail-conn: 补上主机后错误行收回（残留在屏上=失败态粘住）
+  ok: fail-conn: 校验通过后主按钮真的提交（DialogResult=OK）
+  section done: conn-validation
+  section: unlock-wrong-password
+  ok: fail-unlock: 密码框/主按钮可定位
+  shot: ui-smoke\fail-unlock-wrongpwd.png
+  dump: fail-unlock-wrongpwd.json
+  ok: fail-unlock: 密码错时不能置 IsUnlocked
+  ok: fail-unlock: 密码错时窗口不能关（否则用户连重试入口都没有）
+  ok: fail-unlock: 状态行可定位（Name=UnlockStatusLabel）
+  ok: fail-unlock: 失败文案可见
+  ok: fail-unlock: 失败原因是常驻文案而不是 toast（期望「密码错误或密码库文件损坏」实际「密码错误或密码库文件损坏」）
+  ok: fail-unlock: 失败文案渲染成 Danger 色（像素=255/≥20）
+  ok: fail-unlock: 失败后清空密码框（实际「」）
+  ok: fail-unlock: 清空后主按钮回到置灰（不会拿旧密码重复提交）
+  shot: ui-smoke\fail-unlock-recovered.png
+  dump: fail-unlock-recovered.json
+  ok: fail-unlock: 重新输入后旧错误收回（实际「请输入主密码以解锁 KeePass 密码库」）
+  ok: fail-unlock: 重新输入后主按钮可用（失败态不是死的）
+  section done: unlock-wrong-password
+  section: history-load-error
+  shot: ui-smoke\fail-history-load.png
+  dump: fail-history-load.json
+  ok: fail-history: 空态层在树上（读取失败也走同一套引导层）
+  ok: fail-history: 读取失败时引导层可见（此前静默当空列表）
+  ok: fail-history: 标题说明是「读取失败」而不是「还没有记录」（实际「命令历史读取失败」）
+  ok: fail-history: 失败标题渲染成 Danger 色（像素=258/≥20）
+  ok: fail-history: 主按钮改文案为「重试」（实际=Label:命令历史读取失败 | Label:smoke: 命令历史存储不可读 | Button:重试）
+  ok: fail-history: 「重试」真的重新查询（调用次数 1→2）
+  ok: fail-history: 仍失败时错误态保持可见
+  section done: history-load-error
+  section: scan-error
+  ok: fail-scan: 失败处理函数存在（ErrorOccurred 的订阅端）
+  shot: ui-smoke\fail-scan-error.png
+  dump: fail-scan-error.json
+  ok: fail-scan: 状态行可定位
+  ok: fail-scan: 状态行写出具体原因（实际「错误: 磁盘不可读（冒烟注入）」）
+  ok: fail-scan: 错误状态行渲染成 Danger 色（像素=235/≥15）
+  ok: fail-scan: 失败后「开始扫描」回到可用（可重试）
+  section done: scan-error
+[PASS] FailureStates
+
+UI smoke Passed: 10  Failed: 0

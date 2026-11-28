@@ -1,0 +1,19 @@
+=== ui-matrix-check on ui-matrix ===
+  ok: 矩阵形状完整：6 格（几何轴 4 + 主题轴 2）
+  ok: 目标清单：64 页（31 侧栏 / 33 对话框）
+  ok: 覆盖度棘轮对齐：64 页（扩页必须同时改棘轮）
+  ok: 形态覆盖齐全：表格, 多行输入, 搜索, 进度, 树, 空态
+  ok: Dark-d100-f09 L1 全过 (64 dumps)
+  ok: Dark-d100-f14 L1 全过 (64 dumps)
+  ok: Dark-d150-f09 L1 全过 (64 dumps)
+  ok: Dark-d150-f14 L1 全过 (64 dumps)
+  ok: Darker-d100-f09 L1 全过 (64 dumps)
+  ok: OLED-d100-f09 L1 全过 (64 dumps)
+  ok: 字号轴生效 128/128 点，DPI 轴生效 128/128 点
+  ok: 主题轴调色板已切换：Dark=#0D1116 / Darker=#080B0E / OLED=#030404
+  ok: 主题轴生效 OLED：62/64 页色集合随主题变化
+  info: OLED 下色集合未变的页面 2 个: tool-action, tool-network
+  ok: 主题轴生效 Darker：62/64 页色集合随主题变化
+  info: Darker 下色集合未变的页面 2 个: tool-action, tool-network
+
+UI-MATRIX-CHECK ALL OK

@@ -1,0 +1,83 @@
+{
+  "mode": "audit-only",
+  "source_commit": "9f7f0effa21a70b489ba5b5d35d24d389175575e",
+  "scope_code_modified": false,
+  "agents_dispatched": 0,
+  "coverage": {
+    "full_read": [
+      "src/Gdterm.UI/Controls/PortForwardPanel.cs",
+      "src/Gdterm.Tunnel/PortForwardManager.cs",
+      "src/Gdterm.Tunnel/ISshPortForwardHost.cs",
+      "src/Gdterm.Terminal/SshPortForwardHost.cs",
+      "src/Gdterm.Core/Models/PortForwardRule.cs",
+      "src/Gdterm.UI/Services/ActiveSessionBridge.cs",
+      "src/Gdterm.UI/Services/TabActiveSessionQuery.cs",
+      "src/Gdterm.UI/Services/SidePanelHost.cs",
+      "src/Gdterm.UI/Services/TrashStore.cs"
+    ],
+    "partial_read": [
+      "src/Gdterm.UI/Services/SidePanelFactory.cs",
+      "src/Gdterm.UI/Forms/MainForm.cs",
+      "src/Gdterm.UI/Controls/TabContainerControl.cs",
+      "src/Gdterm.UI/Controls/ListShell.cs",
+      "src/Gdterm.Tests/Ui/UiPageCatalog.cs",
+      "src/Gdterm.Tests/Ui/UiStateSmoke.cs",
+      "src/Gdterm.Tests/Ui/ButtonEditorsSmoke.cs"
+    ],
+    "source_files": 16
+  },
+  "findings": {
+    "P0": 0,
+    "P1": 5,
+    "P2": 4,
+    "candidates": 11,
+    "excluded": 2
+  },
+  "dynamic": {
+    "command": "GDT_NUGET_SOURCE=/home/aerostone/.nuget/packages python3 /tmp/gdterm-forward-audit/run.py",
+    "replay_command": "python3 .codestable/changes/2026-11-28-port-forward-audit/evidence/run.py",
+    "exit_code": 0,
+    "observations": 13,
+    "unmatched": 0,
+    "runtime": "Linux / net8.0 / SSH.NET 2026.0.0",
+    "fixture": "isolated loopback OpenSSH, temporary keys, stopped on exit",
+    "kind": "observations of current defects, not fix acceptance"
+  },
+  "ui_evidence": {
+    "github_run": 46138278324,
+    "source_commit": "644edce",
+    "inspected": [
+      "editor-forward-f14.png"
+    ],
+    "available": [
+      "editor-forward.png",
+      "port-forward.png"
+    ],
+    "current_module_diff": "unchanged",
+    "network_actions_through_winforms": "not executed"
+  },
+  "limitations": [
+    "No Windows/net462 real network end-to-end run",
+    "No user server or credentials used",
+    "No broad memory profiling",
+    "No IPv6/public exposure or SOCKS interoperability tests"
+  ],
+  "sha256": {
+    "src/Gdterm.UI/Controls/PortForwardPanel.cs": "d60d4bc18f1a5d250d1b48efcaafd0438d22070eb89d60b8eea3dc57adb1f14e",
+    "src/Gdterm.Tunnel/PortForwardManager.cs": "9ffd5fe4a61d2f072b981b4f9c30c8121c39b65c8b65faaea3c321c4da5b368e",
+    "src/Gdterm.Tunnel/ISshPortForwardHost.cs": "d940a803cfebe4306e12eca8548ee6a5e7f60a1930addfb8b621ab8aac0b5bf9",
+    "src/Gdterm.Terminal/SshPortForwardHost.cs": "cf63ce1845817a39b4135c57b7241662b802958a9c405f76ed5d3a5a228a691a",
+    "src/Gdterm.Core/Models/PortForwardRule.cs": "f5abcdaa4f26bb3cfbff6d721b57186422c82bcbed11be65aa3d9d13f2fe15d0",
+    "src/Gdterm.UI/Services/ActiveSessionBridge.cs": "bd4d51c27fea4a09a44ba5277760f47887aaac1f3725f27d4b970cad749567f5",
+    "src/Gdterm.UI/Services/TabActiveSessionQuery.cs": "82229922cb4303dc934d46194ba0466503a7363a7bbee434647dfa26b2d280d3",
+    "src/Gdterm.UI/Services/SidePanelHost.cs": "8d3b527518a04e8e8a65636850e5d02114ea10f587509880f873ea8d954cb783",
+    "src/Gdterm.UI/Services/TrashStore.cs": "39a1023de1debcf8411b266819805ca8a488b978bf8432ae3e51327db78e349a",
+    "src/Gdterm.UI/Services/SidePanelFactory.cs": "05891d383501eecd58b4774fe246dd3f1bb2bbf06ee1f091b27f0091b1027499",
+    "src/Gdterm.UI/Forms/MainForm.cs": "b228259212d8ec3406ab41de6e46d18aaee803c67c806d45d689f0ac319a84d7",
+    "src/Gdterm.UI/Controls/TabContainerControl.cs": "18107e1d0404bed6337051129b26fe967bae139e373ae76c4bd02273dc138c74",
+    "src/Gdterm.UI/Controls/ListShell.cs": "cb3db790e5fa8a46cf02f3a913b45b74bcefe48f6bdab4c10cee455a9f73ff6e",
+    "src/Gdterm.Tests/Ui/UiPageCatalog.cs": "1ced709982c7924988f8a33d3296ccf6eee2ecd9d152d4d76c1851f7450e6732",
+    "src/Gdterm.Tests/Ui/UiStateSmoke.cs": "16fbb4c98ba6bfc1ecb976ecd36a2800e74540b2dd6aaf81d32052326b3d0d94",
+    "src/Gdterm.Tests/Ui/ButtonEditorsSmoke.cs": "2b849bc18b320db842905e769e78b837fe63082babbae05272a9bf94db38042a"
+  }
+}

@@ -1,0 +1,21 @@
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:06.05
+CONFIRMED baseline local forwarding starts
+CONFIRMED baseline forwarding carries SSH banner
+CONFIRMED disconnect stops port but manager continues reporting active
+CONFIRMED stale rule blocks restart on replacement connected SSH client
+CONFIRMED explicit stop clears disconnected record (excluded candidate)
+CONFIRMED occupied local port start rejected 0
+CONFIRMED occupied local port start rejected 1
+CONFIRMED occupied local port start rejected 2
+CONFIRMED failed start retains one port in SSH client per attempt
+CONFIRMED manager dispose leaves forwarded port registered in live SSH client
+CONFIRMED pause only isolated SSH session process
+CONFIRMED remote start synchronously blocks caller while server delayed: 1008ms
+CONFIRMED zero port starts at random actual port but rule remains port zero
+observations=13 unmatched=0
+Fixture stopped; temporary SSH keys removed on scope exit
