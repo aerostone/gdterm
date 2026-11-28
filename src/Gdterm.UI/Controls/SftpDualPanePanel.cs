@@ -181,8 +181,9 @@ namespace Gdterm.UI.Controls
         private static void AddPane(SplitterPanel host, FilePaneControl pane, string title, Color titleColor, Control extraTop = null)
         {
             var header = new AntdUI.Label {
+                Name = "SftpPaneTitle",
                 Dock = DockStyle.Top,
-                Height = FormFontPolicy.RowStep(pane) - 9,
+                Height = FormFontPolicy.LineBox(FormFontPolicy.UiFont(0f, FontStyle.Bold), pane),
                 AutoEllipsis = true,
                 Text = "  " + title,
                 ForeColor = titleColor,

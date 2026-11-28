@@ -140,15 +140,21 @@ namespace Gdterm.UI.Controls
                         if (show) used += button.Width + button.Margin.Horizontal;
                     }
                     overflow.Visible = more;
-                    buttons.Height = Math.Max(overflow.Height, toolbarButtons.Max(button => button.Height));
+                    buttons.Height = Math.Max(overflow.Height + overflow.Margin.Vertical,
+                        toolbarButtons.Max(button => button.Height + button.Margin.Vertical));
                     int height = _pathBox.Height + buttons.Height + top.Padding.Vertical;
                     if (top.Height != height) top.Height = height;
                 }
                 finally { fittingToolbar = false; }
             };
             buttons.SizeChanged += (s, e) => fitToolbar();
-            foreach (var button in toolbarButtons) button.SizeChanged += (s, e) => fitToolbar();
+            foreach (var button in toolbarButtons)
+            {
+                button.SizeChanged += (s, e) => fitToolbar();
+                button.MarginChanged += (s, e) => fitToolbar();
+            }
             overflow.SizeChanged += (s, e) => fitToolbar();
+            overflow.MarginChanged += (s, e) => fitToolbar();
             _pathBox.SizeChanged += (s, e) => fitToolbar();
             fitToolbar();
 
