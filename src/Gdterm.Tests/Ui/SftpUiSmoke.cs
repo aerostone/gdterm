@@ -162,7 +162,8 @@ namespace Gdterm.Tests.Ui
             {
                 var label = Field<AntdUI.Label>(form, field);
                 var bounds = form.RectangleToClient(label.RectangleToScreen(label.ClientRectangle));
-                int ink = UiStateSmoke.CountColorPixels(Path.Combine(directory, name + ".png"), bounds, label.ForeColor, 40);
+                int ink = UiStateSmoke.CountColorPixels(Path.Combine(directory, name + ".png"), bounds,
+                    label.ForeColor ?? Gdterm.UI.Diagnostics.GdtermColorTable.Foreground, 40);
                 check(ink >= 20, name + " renders " + field + " text (pixels=" + ink + ")");
             }
         }
